@@ -1,0 +1,445 @@
+{
+    "audio.noAudio": {
+        "where": "Perform mode, audio track viewer: empty state when the row has no audio file",
+        "who": "musicians and leaders",
+        "maxLength": 40
+    },
+    "audio.loading": {
+        "where": "Perform mode, audio track viewer: spinner label while the audio loads",
+        "who": "musicians and leaders",
+        "maxLength": 30
+    },
+    "audio.notFound": {
+        "where": "Perform mode, audio track viewer: error when the audio can't be played",
+        "who": "musicians and leaders",
+        "maxLength": 40
+    },
+    "audio.labelWithTitle": {
+        "where": "Perform mode, audio track viewer: screen-reader label of the audio player",
+        "who": "musicians and leaders",
+        "maxLength": 80,
+        "context": "{songTitle} is the song's title"
+    },
+    "audio.label": {
+        "where": "Perform mode, audio track viewer: screen-reader label of the audio player when the song has no title",
+        "who": "musicians and leaders",
+        "maxLength": 20
+    },
+    "suggestions.opening": {
+        "where": "Perform mode, chart failed to load: toast after tapping a suggested chart",
+        "who": "musicians and leaders",
+        "maxLength": 60,
+        "context": "{fileName} is the chart file's name; 'chart' = sheet music"
+    },
+    "suggestions.searching": {
+        "where": "Perform mode, chart failed to load: line while looking for similar charts in the library",
+        "who": "musicians and leaders",
+        "maxLength": 50,
+        "context": "library = the congregation's collection of charts (sheet music)"
+    },
+    "suggestions.noMatches": {
+        "where": "Perform mode, chart failed to load: no similar charts were found",
+        "who": "musicians and leaders",
+        "maxLength": 80
+    },
+    "suggestions.searchLibrary": {
+        "where": "Perform mode, chart failed to load: button that opens the library search",
+        "who": "musicians and leaders",
+        "maxLength": 20
+    },
+    "suggestions.prompt": {
+        "where": "Perform mode, chart failed to load: heading above up to 3 suggested charts",
+        "who": "musicians and leaders",
+        "maxLength": 50
+    },
+    "chordEdit.editingChords": {
+        "where": "Perform mode, chord edit bar at the bottom of the screen: label while chord editing is on",
+        "who": "leaders",
+        "maxLength": 25,
+        "context": "Chords = the chord symbols over a chart (sheet music)"
+    },
+    "chordEdit.editCount": {
+        "where": "Perform mode, chord edit bar: small badge counting unsaved chord edits",
+        "who": "leaders",
+        "maxLength": 12,
+        "context": "{count} is the number of edits"
+    },
+    "chordEdit.hint": {
+        "where": "Perform mode, chord edit bar: hint text (hidden on small screens)",
+        "who": "leaders",
+        "maxLength": 50
+    },
+    "chordEdit.cancel": {
+        "where": "Perform mode, chord edit bar: button that leaves chord editing",
+        "who": "leaders",
+        "maxLength": 15
+    },
+    "chordEdit.verifyDone": {
+        "where": "Perform mode, chord edit bar: button that marks the chart's chords as checked and leaves editing",
+        "who": "leaders",
+        "maxLength": 20,
+        "context": "Verify = confirm the chords on this chart are correct"
+    },
+    "chordEdit.popoverTitle": {
+        "where": "Perform mode, chord edit popover: small heading (shown uppercase)",
+        "who": "leaders",
+        "maxLength": 15
+    },
+    "chordEdit.deleteChord": {
+        "where": "Perform mode, chord edit popover: tooltip of the trash button",
+        "who": "leaders",
+        "maxLength": 25
+    },
+    "chordEdit.chordPlaceholder": {
+        "where": "Perform mode, chord edit popover: placeholder of the chord text field",
+        "who": "leaders",
+        "maxLength": 15,
+        "context": "The field takes a chord symbol like Am7 (not translated)"
+    },
+    "chordEdit.set": {
+        "where": "Perform mode, chord edit popover: button that applies the typed chord",
+        "who": "leaders",
+        "maxLength": 8
+    },
+    "chordEdit.size": {
+        "where": "Perform mode, chord edit popover: label of the width nudge controls (shown uppercase)",
+        "who": "leaders",
+        "maxLength": 10
+    },
+    "chordEdit.narrower": {
+        "where": "Perform mode, chord edit popover: tooltip of the button that narrows the chord's cover box",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "chordEdit.wider": {
+        "where": "Perform mode, chord edit popover: tooltip of the button that widens the chord's cover box",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "viewer.noChart": {
+        "where": "Perform mode, image chart viewer: empty state",
+        "who": "musicians and leaders",
+        "maxLength": 40,
+        "context": "chart = sheet music"
+    },
+    "viewer.imageLoadFailed": {
+        "where": "Perform mode, image chart viewer: error when the chart image fails to load",
+        "who": "musicians and leaders",
+        "maxLength": 50
+    },
+    "viewer.retry": {
+        "where": "Perform mode, chart viewers: button that tries loading the chart again",
+        "who": "musicians and leaders",
+        "maxLength": 15
+    },
+    "viewer.retryWithCount": {
+        "where": "Perform mode, PDF chart viewer: Retry button after a failed attempt",
+        "who": "musicians and leaders",
+        "maxLength": 20,
+        "context": "{attempt} is how many retries were made, {max} the limit (e.g. 'Retry (1/3)')"
+    },
+    "viewer.chartAlt": {
+        "where": "Perform mode, image chart viewer: alt text of the chart image when it has no title",
+        "who": "musicians and leaders",
+        "maxLength": 20,
+        "context": "chart = sheet music"
+    },
+    "viewer.loadingChart": {
+        "where": "Perform mode, PDF chart viewer: line under the loading skeleton",
+        "who": "musicians and leaders",
+        "maxLength": 30
+    },
+    "viewer.loadExhausted": {
+        "where": "Perform mode, PDF chart viewer: error heading after all retries failed",
+        "who": "musicians and leaders",
+        "maxLength": 60
+    },
+    "viewer.renderTimedOut": {
+        "where": "Perform mode, PDF chart viewer: error heading when drawing the chart timed out",
+        "who": "musicians and leaders",
+        "maxLength": 50
+    },
+    "viewer.renderTimedOutDetail": {
+        "where": "Perform mode, PDF chart viewer: detail line under the timeout heading",
+        "who": "musicians and leaders",
+        "maxLength": 70,
+        "context": "'Retry' is the button label music.viewer.retry"
+    },
+    "viewer.pdfLoadFailed": {
+        "where": "Perform mode, PDF chart viewer: error heading when the chart file fails to load",
+        "who": "musicians and leaders",
+        "maxLength": 40
+    },
+    "viewer.rendering": {
+        "where": "Perform mode, PDF chart viewer: spinner label while pages are drawn",
+        "who": "musicians and leaders",
+        "maxLength": 20
+    },
+    "viewer.pdfRenderError": {
+        "where": "Perform mode, PDF chart viewer: error when the PDF can't be drawn",
+        "who": "musicians and leaders",
+        "maxLength": 30
+    },
+    "viewer.measuring": {
+        "where": "Perform mode, PDF chart viewer: brief spinner label while the screen size is measured",
+        "who": "musicians and leaders",
+        "maxLength": 20
+    },
+    "viewer.pageOf": {
+        "where": "Perform mode, PDF chart viewer: floating page counter pill",
+        "who": "musicians and leaders",
+        "maxLength": 20,
+        "context": "{current} is the page in view, {total} the number of pages"
+    },
+    "viewer.scoreLabel": {
+        "where": "Perform mode, MusicXML chart viewer: screen-reader label of the score area",
+        "who": "musicians and leaders",
+        "maxLength": 30
+    },
+    "viewer.writtenKey": {
+        "where": "Perform mode, MusicXML chart viewer: key header, label before the key written in the score",
+        "who": "leaders",
+        "maxLength": 12,
+        "context": "Followed by a key name like F#m (not translated)"
+    },
+    "viewer.labeledKey": {
+        "where": "Perform mode, MusicXML chart viewer: key header, label before the key set on the setlist row",
+        "who": "leaders",
+        "maxLength": 12,
+        "context": "Followed by a key name like Bb (not translated)"
+    },
+    "viewer.key": {
+        "where": "Perform mode, MusicXML chart viewer: key header label (shown uppercase) before the musical key",
+        "who": "musicians and leaders",
+        "maxLength": 8,
+        "context": "Musical key; followed by a key name like D (not translated)"
+    },
+    "viewer.matchKeyLabel": {
+        "where": "Perform mode, MusicXML chart viewer: screen-reader label of the button that sets the row's key to the score's key",
+        "who": "leaders",
+        "maxLength": 60,
+        "context": "{key} is a musical key name like F#m"
+    },
+    "viewer.matched": {
+        "where": "Perform mode, MusicXML chart viewer: match-key button after it worked",
+        "who": "leaders",
+        "maxLength": 12
+    },
+    "viewer.matching": {
+        "where": "Perform mode, MusicXML chart viewer: match-key button while saving",
+        "who": "leaders",
+        "maxLength": 12
+    },
+    "viewer.matchTo": {
+        "where": "Perform mode, MusicXML chart viewer: button that sets the row's key to the score's key",
+        "who": "leaders",
+        "maxLength": 15,
+        "context": "{key} is a musical key name like F#m; the arrow means 'to'"
+    },
+    "viewer.renderingScore": {
+        "where": "Perform mode, MusicXML chart viewer: overlay while the score is drawn",
+        "who": "musicians and leaders",
+        "maxLength": 25
+    },
+    "viewer.musicXmlLoadFailed": {
+        "where": "Perform mode, MusicXML chart viewer: error when the score can't be loaded",
+        "who": "musicians and leaders",
+        "maxLength": 40,
+        "context": "MusicXML is a file format name"
+    },
+    "viewer.textFileLoadFailed": {
+        "where": "Perform mode, text chord-chart viewer: error when the chart file can't be downloaded",
+        "who": "musicians and leaders",
+        "maxLength": 40
+    },
+    "viewer.chartLoadFailed": {
+        "where": "Perform mode, text chord-chart viewer: error when the chart can't be shown",
+        "who": "musicians and leaders",
+        "maxLength": 40,
+        "context": "chart = sheet music"
+    },
+    "viewer.wrap": {
+        "where": "Perform mode, text chord-chart viewer: floating control bar, layout toggle showing 'wrap lines' mode",
+        "who": "musicians and leaders",
+        "maxLength": 10,
+        "context": "Short toggle label; the other state is music.viewer.fit"
+    },
+    "viewer.fit": {
+        "where": "Perform mode, text chord-chart viewer: floating control bar, layout toggle showing 'fit to width' mode",
+        "who": "musicians and leaders",
+        "maxLength": 10,
+        "context": "Short toggle label; the other state is music.viewer.wrap"
+    },
+    "viewer.zoomOut": {
+        "where": "Perform mode, text chord-chart viewer: screen-reader label of the - button",
+        "who": "musicians and leaders",
+        "maxLength": 20
+    },
+    "viewer.zoomIn": {
+        "where": "Perform mode, text chord-chart viewer: screen-reader label of the + button",
+        "who": "musicians and leaders",
+        "maxLength": 20
+    },
+    "transposer.errorTitle": {
+        "where": "Perform mode, PDF chart: fallback title when the chord overlay crashes",
+        "who": "musicians and leaders",
+        "maxLength": 30,
+        "context": "Transposer = the chord transposing tool"
+    },
+    "transposer.editHint": {
+        "where": "Perform mode, PDF chart: hint pill at the top of the page while editing chords",
+        "who": "leaders",
+        "maxLength": 60
+    },
+    "transposer.aiBadge": {
+        "where": "Perform mode, PDF chart: tiny badge on the spot where a new chord is being detected",
+        "who": "leaders",
+        "maxLength": 4,
+        "context": "AI = artificial intelligence"
+    },
+    "transposer.autoTransposed": {
+        "where": "Perform mode, transpose menu: note beside the musician's instrument when the chart was transposed for it",
+        "who": "musicians and leaders",
+        "maxLength": 25
+    },
+    "transposer.saving": {
+        "where": "Perform mode, transpose menu: status while saving the musician's transposition",
+        "who": "musicians and leaders",
+        "maxLength": 12
+    },
+    "transposer.saved": {
+        "where": "Perform mode, transpose menu: status after the musician's transposition saved",
+        "who": "musicians and leaders",
+        "maxLength": 12
+    },
+    "transposer.playingIn": {
+        "where": "Perform mode, transpose menu: the key the setlist row is played in",
+        "who": "musicians and leaders",
+        "maxLength": 25,
+        "context": "{key} is a musical key name like Am (not translated)"
+    },
+    "transposer.chartKey": {
+        "where": "Perform mode, transpose menu: the key the chart is written in, shown after 'Playing in'",
+        "who": "musicians and leaders",
+        "maxLength": 20,
+        "context": "{key} is a musical key name; chart = sheet music"
+    },
+    "transposer.scanning": {
+        "where": "Perform mode, transpose menu: small uppercase heading while chords are detected on the chart",
+        "who": "musicians and leaders",
+        "maxLength": 20
+    },
+    "transposer.detectedKey": {
+        "where": "Perform mode, transpose menu: small uppercase heading above the chart's detected musical key",
+        "who": "musicians and leaders",
+        "maxLength": 20
+    },
+    "transposer.waitingForScan": {
+        "where": "Perform mode, transpose menu: small uppercase heading before chord detection ran",
+        "who": "musicians and leaders",
+        "maxLength": 25
+    },
+    "transposer.reset": {
+        "where": "Perform mode, transpose menu: button that returns to the original key",
+        "who": "musicians and leaders",
+        "maxLength": 12
+    },
+    "transposer.transposeDown": {
+        "where": "Perform mode, transpose menu: screen-reader label of the down-a-semitone button",
+        "who": "musicians and leaders",
+        "maxLength": 25
+    },
+    "transposer.transposeUp": {
+        "where": "Perform mode, transpose menu: screen-reader label of the up-a-semitone button",
+        "who": "musicians and leaders",
+        "maxLength": 25
+    },
+    "transposer.originalKey": {
+        "where": "Perform mode, transpose menu: stepper value when not transposed",
+        "who": "musicians and leaders",
+        "maxLength": 15
+    },
+    "transposer.semitones": {
+        "where": "Perform mode, transpose menu: unit after the transposition amount (e.g. '+2 semitones'); same word for any amount in English",
+        "who": "musicians and leaders",
+        "maxLength": 12
+    },
+    "transposer.playAs": {
+        "where": "Perform mode, transpose menu: small uppercase heading above guitar shape buttons that set a capo",
+        "who": "musicians and leaders",
+        "maxLength": 25,
+        "context": "capo = guitar capo"
+    },
+    "transposer.capoShort": {
+        "where": "Perform mode, transpose menu: small line under a guitar shape button",
+        "who": "musicians and leaders",
+        "maxLength": 10,
+        "context": "{fret} is the capo fret number"
+    },
+    "transposer.sameKey": {
+        "where": "Perform mode, transpose menu: small line under a guitar shape that is already the chart's key",
+        "who": "musicians and leaders",
+        "maxLength": 8
+    },
+    "transposer.shapes": {
+        "where": "Perform mode, transpose menu: chain 'G shapes → Capo 3 → sounds Bb', first part",
+        "who": "musicians and leaders",
+        "maxLength": 15,
+        "context": "{shape} is a chord shape name like G or Am (not translated)"
+    },
+    "transposer.capoFret": {
+        "where": "Perform mode, transpose menu: capo position (chain text and screen-reader label of the capo fret buttons)",
+        "who": "musicians and leaders",
+        "maxLength": 10,
+        "context": "{fret} is the capo fret number"
+    },
+    "transposer.soundsIn": {
+        "where": "Perform mode, transpose menu: chain 'G shapes → Capo 3 → sounds Bb', last part",
+        "who": "musicians and leaders",
+        "maxLength": 15,
+        "context": "{key} is a musical key name"
+    },
+    "transposer.capoYourGuitar": {
+        "where": "Perform mode, transpose menu: small uppercase heading above the 12 capo fret buttons",
+        "who": "musicians and leaders",
+        "maxLength": 25
+    },
+    "transposer.clearCapo": {
+        "where": "Perform mode, transpose menu: screen-reader label of the Off button",
+        "who": "musicians and leaders",
+        "maxLength": 20
+    },
+    "transposer.off": {
+        "where": "Perform mode, transpose menu: small button that removes the capo",
+        "who": "musicians and leaders",
+        "maxLength": 6
+    },
+    "transposer.capoOff": {
+        "where": "Perform mode, transpose menu: screen-reader label of the first capo fret button (no capo)",
+        "who": "musicians and leaders",
+        "maxLength": 15
+    },
+    "transposer.playInShapes": {
+        "where": "Perform mode, transpose menu: hint after 'Capo 3 →' telling the guitarist which chord shapes to play",
+        "who": "musicians and leaders",
+        "maxLength": 30,
+        "context": "{key} is a musical key name"
+    },
+    "transposer.chordsDetected": {
+        "where": "Perform mode, transpose menu: small footer line",
+        "who": "leaders",
+        "maxLength": 50,
+        "context": "{chords} is the number of chords found, {count} the number of chart pages"
+    },
+    "transposer.verifiedBy": {
+        "where": "Perform mode, transpose menu: badge saying who checked the chart's chords",
+        "who": "musicians and leaders",
+        "maxLength": 40,
+        "context": "{verifier} is a person's name"
+    },
+    "transposer.editChords": {
+        "where": "Perform mode, transpose menu: button that turns on chord editing",
+        "who": "leaders",
+        "maxLength": 20
+    }
+}

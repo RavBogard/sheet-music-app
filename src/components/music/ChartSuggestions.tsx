@@ -8,6 +8,7 @@ import { FileText, Music, PlusCircle } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
+import { useT } from '@/i18n/client'
 
 interface ChartSuggestionsProps {
     trackName?: string
@@ -19,13 +20,14 @@ export function ChartSuggestions({ trackName, currentFileId }: ChartSuggestionsP
     const { allFiles, initialized } = useLibraryStore()
     const { isLoading: searching } = useLibrary()
     const router = useRouter()
+    const t = useT()
 
     // Simple fuzzy match algorithm (since fuse might not be initialized cleanly if allFiles is fresh)
     const suggestions = useMemo(() => {
         if (!trackName || !initialized || allFiles.length === 0) return []
 
         const query = trackName.toLowerCase().replace(/[^a-z0-9]/g, ' ')
-        const terms = query.split(/\s+/).filter(t => t.length > 2)
+        const terms = query.split(/\s+/).filter(term => term.length > 2)
 
         if (terms.length === 0) return []
 
@@ -75,34 +77,34 @@ export function ChartSuggestions({ trackName, currentFileId }: ChartSuggestionsP
 
     const handleSelect = (file: DriveFile) => {
         // No file assigned — perhaps we just navigate
-        toast.success(`Opening ${getCleanName(file.name)}`)
+        toast.success(t("music.suggestions.opening", { fileName: getCleanName(file.name) }))
         router.push(`/perform/${file.id}`)
     }
 
     if (!trackName) return null
 
     if (searching) {
-        return <div className="text-sm text-muted-foreground animate-pulse mt-6">Searching library for suggestions...</div>
+        return <div className="text-sm text-muted-foreground animate-pulse mt-6">{t("music.suggestions.searching")}</div>
     }
 
     if (suggestions.length === 0) {
         return (
             <div className="mt-6">
-                <p className="text-sm text-muted-foreground">We couldn&apos;t find any obvious matches in your library.</p>
+                <p className="text-sm text-muted-foreground">{t("music.suggestions.noMatches")}</p>
                 <Button
                     variant="outline"
                     onClick={() => router.push(`/library?q=${encodeURIComponent(trackName)}`)}
                     className="mt-3"
                 >
-                    Search Library
+                    {t("music.suggestions.searchLibrary")}
                 </Button>
             </div>
         )
     }
 
     return (
-        <div className="mt-8 text-left max-w-sm w-full mx-auto">
-            <p className="text-sm text-muted-foreground mb-3 text-center">Are you looking for one of these?</p>
+        <div className="mt-8 text-start max-w-sm w-full mx-auto">
+            <p className="text-sm text-muted-foreground mb-3 text-center">{t("music.suggestions.prompt")}</p>
             <div className="space-y-2">
                 {suggestions.map(file => {
                     const isAudio = file.mimeType.startsWith('audio/') || /\.(mp3|m4a|wav|aac|ogg|flac)$/i.test(file.name)
@@ -112,7 +114,7 @@ export function ChartSuggestions({ trackName, currentFileId }: ChartSuggestionsP
                             variant="outline"
                             key={file.id}
                             onClick={() => handleSelect(file)}
-                            className="w-full h-auto justify-start gap-3 p-3 rounded-lg bg-muted/50 text-left group"
+                            className="w-full h-auto justify-start gap-3 p-3 rounded-lg bg-muted/50 text-start group"
                         >
                             <Icon className="w-5 h-5 text-primary shrink-0" />
                             <div className="flex-1 min-w-0">

@@ -5,6 +5,7 @@ import { Loader2, AlertCircle, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useMusicStore } from "@/lib/store"
 import { useChartContentDir } from "@/components/i18n/ChartContent"
+import { useT } from "@/i18n/client"
 
 interface ImageScoreViewerProps {
     url: string
@@ -14,6 +15,7 @@ interface ImageScoreViewerProps {
 export function ImageScoreViewer({ url, alt }: ImageScoreViewerProps) {
     // Phase 7: the chart keeps its own (ltr) direction on an rtl page.
     const chartDir = useChartContentDir()
+    const t = useT()
     const [status, setStatus] = useState<"loading" | "loaded" | "error">("loading")
     // WS-15: bump to remount the <img> and re-attempt the load. Remount (NOT a
     // cache-bust query param) keeps signed Storage URLs valid — their signature
@@ -37,7 +39,7 @@ export function ImageScoreViewer({ url, alt }: ImageScoreViewerProps) {
     if (!url) {
         return (
             <div className="flex h-full items-center justify-center bg-background">
-                <p className="text-muted-foreground">No chart to display</p>
+                <p className="text-muted-foreground">{t("music.viewer.noChart")}</p>
             </div>
         )
     }
@@ -68,7 +70,7 @@ export function ImageScoreViewer({ url, alt }: ImageScoreViewerProps) {
                     className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-muted-foreground"
                 >
                     <AlertCircle className="h-8 w-8" aria-hidden="true" />
-                    <p>Couldn&apos;t load this image.</p>
+                    <p>{t("music.viewer.imageLoadFailed")}</p>
                     <Button
                         variant="secondary"
                         className="h-11"
@@ -78,7 +80,7 @@ export function ImageScoreViewer({ url, alt }: ImageScoreViewerProps) {
                         }}
                     >
                         <RefreshCw className="h-4 w-4" />
-                        Retry
+                        {t("music.viewer.retry")}
                     </Button>
                 </div>
             )}
@@ -89,7 +91,7 @@ export function ImageScoreViewer({ url, alt }: ImageScoreViewerProps) {
             <img
                 key={reloadNonce}
                 src={url}
-                alt={alt ?? "Chart"}
+                alt={alt ?? t("music.viewer.chartAlt")}
                 style={{ zoom }}
                 className={
                     // `m-auto` is the centring mechanism (see the container

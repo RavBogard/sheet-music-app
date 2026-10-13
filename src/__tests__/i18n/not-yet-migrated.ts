@@ -91,8 +91,6 @@ export const NOT_YET_MIGRATED: readonly string[] = [
 
     "src/components/admin/people/*", // 4 strings, 1 files
 
-    "src/components/audio/*", // 7 strings, 1 files
-
     "src/components/auth/*", // 7 strings, 1 files
 
     "src/components/calendar/*", // 9 strings, 3 files
@@ -104,8 +102,6 @@ export const NOT_YET_MIGRATED: readonly string[] = [
     "src/components/legal/*", // 174 strings, 1 files
 
     "src/components/library/*", // 205 strings, 11 files
-
-    "src/components/music/*", // 87 strings, 10 files
 
     "src/components/nav/*", // 38 strings, 6 files
 

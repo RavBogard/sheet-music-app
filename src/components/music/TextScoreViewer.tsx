@@ -7,6 +7,13 @@ import { maxRenderedLineLength, fitFontSize } from "./text-score-layout"
 import { Loader2, WrapText, Maximize2, ZoomIn, ZoomOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useChartContentDir } from "@/components/i18n/ChartContent"
+import { useT } from "@/i18n/client"
+
+/** Thrown when the network fallback answers !ok (rendered via t()). */
+class TextFileLoadError extends Error {}
+
+/** Load failure: a known kind (translated at render) or a raw technical message. */
+type LoadError = "chart" | "textFile" | { message: string }
 
 /**
  * Text-bonded chart viewer (chord-over-lyrics monospace .txt charts).
@@ -36,6 +43,7 @@ interface TextScoreViewerProps {
 export function TextScoreViewer({ fileId }: TextScoreViewerProps) {
     // Phase 7: chord lines never flip — the chart keeps its own (ltr) direction on an rtl page.
     const chartDir = useChartContentDir()
+    const t = useT()
     const transposition = useMusicStore((s) => s.transposition)
     /**
      * WAVE1 Bug 4 (2026-08-31) — the toolbar's zoom buttons used to do NOTHING
@@ -58,7 +66,7 @@ export function TextScoreViewer({ fileId }: TextScoreViewerProps) {
     const setZoom = useMusicStore((s) => s.setZoom)
     const [content, setContent] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
-    const [error, setError] = useState<string | null>(null)
+    const [error, setError] = useState<LoadError | null>(null)
     const [wrapMode, setWrapMode] = useState(false)
 
     // Auto-enable wrap mode on small screens on initial load
@@ -75,7 +83,7 @@ export function TextScoreViewer({ fileId }: TextScoreViewerProps) {
             setError(null)
             if (!fileId) {
                 if (!cancelled) {
-                    setError("Failed to load chart")
+                    setError("chart")
                     setLoading(false)
                 }
                 return
@@ -103,7 +111,7 @@ export function TextScoreViewer({ fileId }: TextScoreViewerProps) {
                 if (text === null) {
                     const res = await fetch(`/api/drive/file/${fileId}`)
                     if (cancelled) return
-                    if (!res.ok) throw new Error("Failed to load text file")
+                    if (!res.ok) throw new TextFileLoadError("Failed to load text file")
                     text = await res.text()
                     if (cancelled) return
                 }
@@ -111,7 +119,7 @@ export function TextScoreViewer({ fileId }: TextScoreViewerProps) {
                 setLoading(false)
             } catch (err: unknown) {
                 if (!cancelled) {
-                    setError(err instanceof Error ? err.message : "Failed to load chart")
+                    setError(err instanceof TextFileLoadError ? "textFile" : err instanceof Error ? { message: err.message } : "chart")
                     setLoading(false)
                 }
             }
@@ -131,7 +139,13 @@ export function TextScoreViewer({ fileId }: TextScoreViewerProps) {
     if (error || !content) {
         return (
             <div className="flex h-full items-center justify-center bg-background">
-                <p className="text-muted-foreground">{error || "Failed to load chart"}</p>
+                <p className="text-muted-foreground">
+                    {error === "textFile"
+                        ? t("music.viewer.textFileLoadFailed")
+                        : error && typeof error === "object" && error.message
+                          ? error.message
+                          : t("music.viewer.chartLoadFailed")}
+                </p>
             </div>
         )
     }
@@ -152,7 +166,7 @@ export function TextScoreViewer({ fileId }: TextScoreViewerProps) {
         const tokens = line.trim().split(/\s+/)
         if (tokens.length === 0 || tokens[0] === "") return false
         
-        const validChords = tokens.filter(t => isChordToken(t)).length
+        const validChords = tokens.filter(tok => isChordToken(tok)).length
         return (validChords / tokens.length) >= 0.75
     }
 
@@ -286,7 +300,7 @@ export function TextScoreViewer({ fileId }: TextScoreViewerProps) {
     return (
         <div className="min-h-full bg-background text-foreground overflow-auto relative">
             {/* Control Bar */}
-            <div className="fixed bottom-24 right-4 sm:right-8 z-20 flex gap-2 bg-card border border-border p-1.5 rounded-lg shadow-lg">
+            <div className="fixed bottom-24 end-4 sm:end-8 z-20 flex gap-2 bg-card border border-border p-1.5 rounded-lg shadow-lg">
                 <Button
                     variant={wrapMode ? "default" : "outline"}
                     size="sm"
@@ -294,7 +308,7 @@ export function TextScoreViewer({ fileId }: TextScoreViewerProps) {
                     onClick={() => setWrapMode(!wrapMode)}
                 >
                     {wrapMode ? <WrapText className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-                    {wrapMode ? "Wrap" : "Fit"}
+                    {wrapMode ? t("music.viewer.wrap") : t("music.viewer.fit")}
                 </Button>
                 <div className="w-px bg-border my-1" />
                 {/* WAVE1 Bug 4: these write the SAME store slot the toolbar
@@ -303,13 +317,13 @@ export function TextScoreViewer({ fileId }: TextScoreViewerProps) {
                     text charts genuinely need more than the toolbar's 2.0 cap);
                     the toolbar clamps to 2.0 but is guarded against dragging a
                     higher value back down. */}
-                <Button variant="outline" size="icon" aria-label="Zoom out" className="h-11 w-11" onClick={() => setZoom(Math.max(0.5, zoomLevel - 0.1))}>
+                <Button variant="outline" size="icon" aria-label={t("music.viewer.zoomOut")} className="h-11 w-11" onClick={() => setZoom(Math.max(0.5, zoomLevel - 0.1))}>
                     <ZoomOut className="h-4 w-4" />
                 </Button>
                 <div className="flex items-center justify-center w-12 text-xs font-medium tabular-nums">
                     {Math.round(zoomLevel * 100)}%
                 </div>
-                <Button variant="outline" size="icon" aria-label="Zoom in" className="h-11 w-11" onClick={() => setZoom(Math.min(3.0, zoomLevel + 0.1))}>
+                <Button variant="outline" size="icon" aria-label={t("music.viewer.zoomIn")} className="h-11 w-11" onClick={() => setZoom(Math.min(3.0, zoomLevel + 0.1))}>
                     <ZoomIn className="h-4 w-4" />
                 </Button>
             </div>

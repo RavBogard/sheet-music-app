@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { Loader2, AlertCircle } from "lucide-react"
+import { useT } from "@/i18n/client"
 
 /**
  * Audio-bond first-class viewer (F7 — audio-viewer-f7, 2026-05-24).
@@ -39,6 +40,7 @@ export interface AudioViewerProps {
 }
 
 export function AudioViewer({ fileId, title }: AudioViewerProps) {
+    const t = useT()
     const [src, setSrc] = useState<string>("")
     const [status, setStatus] = useState<"loading" | "ready" | "error">("loading")
 
@@ -103,7 +105,7 @@ export function AudioViewer({ fileId, title }: AudioViewerProps) {
     if (!fileId) {
         return (
             <div className="flex h-full items-center justify-center bg-background">
-                <p className="text-muted-foreground">No audio to play</p>
+                <p className="text-muted-foreground">{t("music.audio.noAudio")}</p>
             </div>
         )
     }
@@ -113,13 +115,13 @@ export function AudioViewer({ fileId, title }: AudioViewerProps) {
             {status === "loading" && !src && (
                 <div className="flex items-center gap-2 text-muted-foreground">
                     <Loader2 className="h-6 w-6 animate-spin" aria-hidden="true" />
-                    <span>Loading audio…</span>
+                    <span>{t("music.audio.loading")}</span>
                 </div>
             )}
             {status === "error" && (
                 <div className="flex flex-col items-center gap-2 text-muted-foreground">
                     <AlertCircle className="h-8 w-8" aria-hidden="true" />
-                    <p>Audio file not found</p>
+                    <p>{t("music.audio.notFound")}</p>
                 </div>
             )}
             {src && status !== "error" && (
@@ -138,7 +140,7 @@ export function AudioViewer({ fileId, title }: AudioViewerProps) {
                         src={src}
                         controls
                         preload="metadata"
-                        aria-label={title ? `Audio: ${title}` : "Audio"}
+                        aria-label={title ? t("music.audio.labelWithTitle", { songTitle: title }) : t("music.audio.label")}
                         className="w-full max-w-2xl"
                         onLoadedMetadata={() => setStatus("ready")}
                         onError={() => setStatus("error")}

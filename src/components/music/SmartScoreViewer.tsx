@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { logger } from "@/lib/logger"
 import { useChartContentDir } from "@/components/i18n/ChartContent"
+import { useT } from "@/i18n/client"
 
 interface SmartScoreViewerProps {
     /**
@@ -112,11 +113,13 @@ const findScrollableAncestor = (el: HTMLElement | null): HTMLElement | null => {
 export function SmartScoreViewer({ fileId, trackId, trackKey }: SmartScoreViewerProps) {
     // Phase 7: the chart keeps its own (ltr) direction on an rtl page.
     const chartDir = useChartContentDir()
+    const t = useT()
     const containerRef = useRef<HTMLDivElement>(null)
     const osmdRef = useRef<OpenSheetMusicDisplay | null>(null)
     const [loading, setLoading] = useState(true)
     const [transposing, setTransposing] = useState(false)
-    const [error, setError] = useState<string | null>(null)
+    // Error code (rendered through t() below), null when healthy.
+    const [error, setError] = useState<"load_failed" | null>(null)
 
     const { transposition, zoom, aiXmlContent, setMusicXmlKey, musicXmlKey } = useMusicStore()
     // Match-button feedback state: 'idle' → 'pending' (write in flight) →
@@ -347,7 +350,7 @@ export function SmartScoreViewer({ fileId, trackId, trackKey }: SmartScoreViewer
             } catch (err) {
                 logger.error("OSMD Load Error", err)
                 if (!cancelled) {
-                    setError("Failed to load music XML.")
+                    setError("load_failed")
                     setLoading(false)
                 }
             }
@@ -521,7 +524,7 @@ export function SmartScoreViewer({ fileId, trackId, trackKey }: SmartScoreViewer
     }
 
     return (
-        <div className="relative flex flex-col items-center w-full" aria-label="Sheet music score">
+        <div className="relative flex flex-col items-center w-full" aria-label={t("music.viewer.scoreLabel")}>
             {/* ── Detected-key header (Phase-2 MED) ─────────────────────────
                  Surfaces the MusicXML's native key signature ("written key")
                  above the score. When the bound track has a different
@@ -536,18 +539,18 @@ export function SmartScoreViewer({ fileId, trackId, trackKey }: SmartScoreViewer
                 >
                     {keyMismatch ? (
                         <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-muted-foreground">Written:</span>
-                            <span className="font-bold text-foreground">{musicXmlKey}</span>
+                            <span className="text-muted-foreground">{t("music.viewer.writtenKey")}</span>
+                            <span {...chartDir} className="font-bold text-foreground">{musicXmlKey}</span>
                             <span className="text-muted-foreground/60">·</span>
-                            <span className="text-muted-foreground">Labeled:</span>
-                            <span className="font-bold text-violet-300">{trackKey}</span>
+                            <span className="text-muted-foreground">{t("music.viewer.labeledKey")}</span>
+                            <span {...chartDir} className="font-bold text-violet-300">{trackKey}</span>
                         </div>
                     ) : (
                         <div className="flex items-center gap-2">
                             <span className="text-muted-foreground font-bold uppercase tracking-wider">
-                                Key
+                                {t("music.viewer.key")}
                             </span>
-                            <span className="text-foreground font-bold">{musicXmlKey}</span>
+                            <span {...chartDir} className="text-foreground font-bold">{musicXmlKey}</span>
                         </div>
                     )}
                     {showMatchButton && (
@@ -555,20 +558,20 @@ export function SmartScoreViewer({ fileId, trackId, trackKey }: SmartScoreViewer
                             type="button"
                             variant="ghost"
                             size="sm"
-                            aria-label={`Match label to written key ${musicXmlKey}`}
+                            aria-label={t("music.viewer.matchKeyLabel", { key: musicXmlKey })}
                             onClick={handleMatchKey}
                             disabled={matchState !== 'idle'}
                             className="h-7 px-2 text-[11px] text-violet-300 hover:bg-violet-500/10"
                         >
                             {matchState === 'done' ? (
                                 <>
-                                    <Check className="h-3 w-3 mr-1" aria-hidden="true" />
-                                    Matched
+                                    <Check className="h-3 w-3 me-1" aria-hidden="true" />
+                                    {t("music.viewer.matched")}
                                 </>
                             ) : matchState === 'pending' ? (
-                                'Matching…'
+                                t("music.viewer.matching")
                             ) : (
-                                `Match → ${musicXmlKey}`
+                                t("music.viewer.matchTo", { key: musicXmlKey })
                             )}
                         </Button>
                     )}
@@ -597,7 +600,7 @@ export function SmartScoreViewer({ fileId, trackId, trackKey }: SmartScoreViewer
                 >
                     <div className="flex flex-col items-center text-zinc-600">
                         <Loader2 className="h-10 w-10 animate-spin motion-reduce:animate-none mb-3" aria-hidden="true" />
-                        <p className="text-sm font-medium">Rendering Score…</p>
+                        <p className="text-sm font-medium">{t("music.viewer.renderingScore")}</p>
                     </div>
                 </div>
             )}
@@ -605,7 +608,7 @@ export function SmartScoreViewer({ fileId, trackId, trackKey }: SmartScoreViewer
             {error && (
                 <div className="flex flex-col items-center justify-center p-12 text-destructive">
                     <Music2 className="h-10 w-10 mb-4" aria-hidden="true" />
-                    <p>{error}</p>
+                    <p>{t("music.viewer.musicXmlLoadFailed")}</p>
                 </div>
             )}
         </div>
