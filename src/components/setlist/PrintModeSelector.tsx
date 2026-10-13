@@ -4,6 +4,7 @@ import { User, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { MusicianProfile } from "@/types/models"
 import { INSTRUMENT_PRESETS } from "@/lib/musician-profile"
+import { useT } from "@/i18n/client"
 
 export type PrintMode = "standard" | "just-me" | "select-musicians"
 
@@ -23,9 +24,10 @@ export function PrintModeSelector({
     hasMyProfile, myLabel,
     musicians, selectedUids, setSelectedUids, toggleMusician,
 }: PrintModeSelectorProps) {
+    const t = useT()
     return (
         <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">Print for:</label>
+            <label className="text-sm font-medium text-foreground">{t("setlistPrint.printFor")}</label>
 
             {/* Standard */}
             <label className="flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted/50 cursor-pointer transition-colors">
@@ -36,8 +38,8 @@ export function PrintModeSelector({
                     className="accent-blue-500"
                 />
                 <div className="flex-1 min-w-0">
-                    <span className="text-sm font-medium">Generic (concert pitch)</span>
-                    <span className="text-xs text-muted-foreground ml-2">For guests, no transposition</span>
+                    <span className="text-sm font-medium">{t("setlistPrint.modeGeneric")}</span>
+                    <span className="text-xs text-muted-foreground ms-2">{t("setlistPrint.modeGenericHint")}</span>
                 </div>
             </label>
 
@@ -56,8 +58,8 @@ export function PrintModeSelector({
                     />
                     <User className="h-4 w-4 text-violet-500 shrink-0" />
                     <div className="flex-1 min-w-0">
-                        <span className="text-sm font-medium">Personalized (transposed)</span>
-                        <span className="text-xs text-muted-foreground ml-2">{myLabel}</span>
+                        <span className="text-sm font-medium">{t("setlistPrint.modeJustMe")}</span>
+                        <span className="text-xs text-muted-foreground ms-2">{myLabel}</span>
                     </div>
                 </label>
             )}
@@ -78,11 +80,12 @@ export function PrintModeSelector({
                         />
                         <Users className="h-4 w-4 text-violet-500 shrink-0" />
                         <div className="flex-1 min-w-0">
-                            <span className="text-sm font-medium">Personalized (per musician)</span>
+                            <span className="text-sm font-medium">{t("setlistPrint.modePerMusician")}</span>
                             {printMode === "select-musicians" && selectedUids.length > 0 && (
-                                <span className="text-xs text-violet-500 ml-2">
-                                    {selectedUids.length} selected
-                                    {selectedUids.length > 1 && " → ZIP"}
+                                <span className="text-xs text-violet-500 ms-2">
+                                    {selectedUids.length > 1
+                                        ? t("setlistPrint.selectedCountZip", { count: selectedUids.length })
+                                        : t("setlistPrint.selectedCount", { count: selectedUids.length })}
                                 </span>
                             )}
                         </div>
@@ -97,7 +100,7 @@ export function PrintModeSelector({
                                     onClick={() => setSelectedUids(musicians.map(m => m.uid))}
                                     className="h-auto p-0 text-xs text-muted-foreground hover:text-foreground"
                                 >
-                                    Select all
+                                    {t("setlistPrint.selectAll")}
                                 </Button>
                                 <span className="text-muted-foreground/30">·</span>
                                 <Button
@@ -106,7 +109,7 @@ export function PrintModeSelector({
                                     onClick={() => setSelectedUids([])}
                                     className="h-auto p-0 text-xs text-muted-foreground hover:text-foreground"
                                 >
-                                    Deselect all
+                                    {t("setlistPrint.deselectAll")}
                                 </Button>
                             </div>
                             {musicians.map(m => {

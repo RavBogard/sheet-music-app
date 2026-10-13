@@ -1,0 +1,329 @@
+{
+    "title": {
+        "where": "Print dialog: title",
+        "who": "leaders, musicians",
+        "maxLength": 15
+    },
+    "closeDialog": {
+        "where": "Print dialog: close button (screen-reader label)",
+        "who": "leaders, musicians",
+        "maxLength": 30
+    },
+    "noChartAttached": {
+        "where": "Print dialog: missing-charts list, reason under a song title",
+        "who": "leaders, musicians",
+        "maxLength": 60,
+        "context": "chart = the sheet-music file"
+    },
+    "me": {
+        "where": "Print dialog: personalized option, shown when the user has no display name",
+        "who": "leaders, musicians",
+        "maxLength": 10
+    },
+    "capoFret": {
+        "where": "Print dialog: personalized option detail, the user's capo position",
+        "who": "leaders, musicians",
+        "maxLength": 10,
+        "context": "{fret} is a fret number"
+    },
+    "emailNotSaved": {
+        "where": "Print dialog: error toast when emailing before the setlist is saved",
+        "who": "leaders",
+        "maxLength": 60
+    },
+    "emailSelectRecipient": {
+        "where": "Print dialog: error toast when no email recipient is selected",
+        "who": "leaders",
+        "maxLength": 50
+    },
+    "emailSendFailed": {
+        "where": "Print dialog: error toast when the email request fails",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "emailSent": {
+        "where": "Print dialog: success toast after emailing packet links",
+        "who": "leaders",
+        "maxLength": 60,
+        "context": "{count} is the number of musicians emailed; a packet is the printable set of charts"
+    },
+    "emailFailedCount": {
+        "where": "Print dialog: warning toast when some emails failed",
+        "who": "leaders",
+        "maxLength": 50,
+        "context": "{count} is the number of failed emails"
+    },
+    "emailPacketsFailed": {
+        "where": "Print dialog: error toast (fallback) when emailing fails",
+        "who": "leaders",
+        "maxLength": 50
+    },
+    "progressGenerating": {
+        "where": "Print dialog: progress message while the PDF is built",
+        "who": "leaders, musicians",
+        "maxLength": 40
+    },
+    "progressPackets": {
+        "where": "Print dialog: progress message while building one packet per musician",
+        "who": "leaders",
+        "maxLength": 50,
+        "context": "{completed} and {total} are numbers of packets"
+    },
+    "progressZipping": {
+        "where": "Print dialog: progress message while building the ZIP file",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "generateFailed": {
+        "where": "Print dialog: error message when the PDF cannot be built",
+        "who": "leaders, musicians",
+        "maxLength": 40
+    },
+    "missingChartsTitle": {
+        "where": "Print dialog: warning heading when songs are missing their chart",
+        "who": "leaders, musicians",
+        "maxLength": 40,
+        "context": "{count} is the number of songs without a chart; chart = the sheet-music file"
+    },
+    "missingChartsLeftOutEmail": {
+        "where": "Print dialog: missing-charts warning, first sentence when emailing",
+        "who": "leaders",
+        "maxLength": 90,
+        "context": "count = number of missing charts (only chooses this/these)"
+    },
+    "missingChartsLeftOutDownload": {
+        "where": "Print dialog: missing-charts warning, first sentence when downloading",
+        "who": "leaders, musicians",
+        "maxLength": 90,
+        "context": "count = number of missing charts (only chooses this/these)"
+    },
+    "missingChartsRepairHint": {
+        "where": "Print dialog: missing-charts warning, second sentence",
+        "who": "leaders, musicians",
+        "maxLength": 140,
+        "context": "count = number of missing charts; an omission notice is a page in the packet listing the missing charts"
+    },
+    "missingChartsListLabel": {
+        "where": "Print dialog: missing-charts list (screen-reader label)",
+        "who": "leaders, musicians",
+        "maxLength": 30
+    },
+    "emailRecipientsTitle": {
+        "where": "Print dialog: email step heading",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "emailRecipientsHint": {
+        "where": "Print dialog: email step explanation",
+        "who": "leaders",
+        "maxLength": 100
+    },
+    "noActiveMusicians": {
+        "where": "Print dialog: email step empty state",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "generating": {
+        "where": "Print dialog: progress message fallback",
+        "who": "leaders, musicians",
+        "maxLength": 25
+    },
+    "whatToPrint": {
+        "where": "Print dialog: label above the Setlist Only / Full Packet switch",
+        "who": "leaders, musicians",
+        "maxLength": 25
+    },
+    "setlistOnly": {
+        "where": "Print dialog: option to print just the song list (one page)",
+        "who": "leaders, musicians",
+        "maxLength": 20
+    },
+    "fullPacket": {
+        "where": "Print dialog: option to print the song list plus every chart",
+        "who": "leaders, musicians",
+        "maxLength": 22
+    },
+    "headerDetails": {
+        "where": "Print dialog: label above the title/date/event fields printed on the cover",
+        "who": "leaders, musicians",
+        "maxLength": 25
+    },
+    "headerTitle": {
+        "where": "Print dialog: title field placeholder and label",
+        "who": "leaders, musicians",
+        "maxLength": 25
+    },
+    "headerDate": {
+        "where": "Print dialog: date field placeholder and label",
+        "who": "leaders, musicians",
+        "maxLength": 15
+    },
+    "headerEvent": {
+        "where": "Print dialog: event field placeholder and label",
+        "who": "leaders, musicians",
+        "maxLength": 25
+    },
+    "cancel": {
+        "where": "Print dialog: Cancel button (missing-charts and email steps)",
+        "who": "leaders, musicians",
+        "maxLength": 15
+    },
+    "continueWithout": {
+        "where": "Print dialog: button that prints anyway, leaving missing charts out",
+        "who": "leaders, musicians",
+        "maxLength": 30,
+        "context": "{count} is the number of missing charts"
+    },
+    "sendEmails": {
+        "where": "Print dialog: email step confirm button",
+        "who": "leaders",
+        "maxLength": 22,
+        "context": "{count} is the number of recipients"
+    },
+    "downloadZip": {
+        "where": "Print dialog: main button when several musicians' packets are zipped",
+        "who": "leaders, musicians",
+        "maxLength": 20
+    },
+    "downloadPdf": {
+        "where": "Print dialog: main button",
+        "who": "leaders, musicians",
+        "maxLength": 20
+    },
+    "emailPacketLinks": {
+        "where": "Print dialog: button that emails each musician a link to their packet",
+        "who": "leaders",
+        "maxLength": 35
+    },
+    "printFor": {
+        "where": "Print dialog: label above the audience choices",
+        "who": "leaders, musicians",
+        "maxLength": 20
+    },
+    "modeGeneric": {
+        "where": "Print dialog: audience option, untransposed charts",
+        "who": "leaders, musicians",
+        "maxLength": 30,
+        "context": "Concert pitch = charts as written, not transposed for an instrument"
+    },
+    "modeGenericHint": {
+        "where": "Print dialog: hint beside the generic option",
+        "who": "leaders, musicians",
+        "maxLength": 35
+    },
+    "modeJustMe": {
+        "where": "Print dialog: audience option, transposed for the signed-in musician's instrument",
+        "who": "musicians",
+        "maxLength": 30
+    },
+    "modePerMusician": {
+        "where": "Print dialog: audience option, one transposed packet per chosen musician",
+        "who": "leaders",
+        "maxLength": 32
+    },
+    "selectedCount": {
+        "where": "Print dialog: number of musicians chosen",
+        "who": "leaders",
+        "maxLength": 15,
+        "context": "{count} is the number of musicians"
+    },
+    "selectedCountZip": {
+        "where": "Print dialog: number of musicians chosen, when they will be zipped together",
+        "who": "leaders",
+        "maxLength": 22,
+        "context": "{count} is the number of musicians; '→ ZIP' means the packets come as one ZIP file (use ← in a right-to-left language)"
+    },
+    "selectAll": {
+        "where": "Print dialog: link that selects every musician",
+        "who": "leaders",
+        "maxLength": 15
+    },
+    "deselectAll": {
+        "where": "Print dialog: link that clears the musician selection",
+        "who": "leaders",
+        "maxLength": 15
+    },
+    "statSongs": {
+        "where": "Print dialog summary: label for the number of songs",
+        "who": "leaders, musicians",
+        "maxLength": 15
+    },
+    "statOutput": {
+        "where": "Print dialog summary: label for what will be printed",
+        "who": "leaders, musicians",
+        "maxLength": 15
+    },
+    "statOutputCoverOnly": {
+        "where": "Print dialog summary: value when only the song list is printed",
+        "who": "leaders, musicians",
+        "maxLength": 30
+    },
+    "statPdfsIncluded": {
+        "where": "Print dialog summary: label for the number of charts included",
+        "who": "leaders, musicians",
+        "maxLength": 20
+    },
+    "statTransposed": {
+        "where": "Print dialog summary: label for the number of transposed songs",
+        "who": "leaders, musicians",
+        "maxLength": 15
+    },
+    "songsWithoutPdfs": {
+        "where": "Print dialog summary: warning about songs that have no chart PDF",
+        "who": "leaders, musicians",
+        "maxLength": 60,
+        "context": "{count} is the number of songs; English keeps 'song(s)' for every count, translate with a correct plural"
+    },
+    "include": {
+        "where": "Print dialog, full packet: label before the All/None buttons",
+        "who": "leaders, musicians",
+        "maxLength": 15
+    },
+    "includeAll": {
+        "where": "Print dialog, full packet: include every chart",
+        "who": "leaders, musicians",
+        "maxLength": 8
+    },
+    "includeNone": {
+        "where": "Print dialog, full packet: include no charts",
+        "who": "leaders, musicians",
+        "maxLength": 8
+    },
+    "transposeLabel": {
+        "where": "Print dialog, full packet: label before the semitone buttons",
+        "who": "leaders, musicians",
+        "maxLength": 15
+    },
+    "transposeReset": {
+        "where": "Print dialog, full packet: reset every song's transposition",
+        "who": "leaders, musicians",
+        "maxLength": 10
+    },
+    "transposeTrack": {
+        "where": "Print dialog, full packet: per-song transpose control (screen-reader label)",
+        "who": "leaders, musicians",
+        "maxLength": 60,
+        "context": "{title} is the song title"
+    },
+    "transposeDown": {
+        "where": "Print dialog, full packet: minus button (screen-reader label)",
+        "who": "leaders, musicians",
+        "maxLength": 40
+    },
+    "transposeUp": {
+        "where": "Print dialog, full packet: plus button (screen-reader label)",
+        "who": "leaders, musicians",
+        "maxLength": 40
+    },
+    "songsWillBeTransposed": {
+        "where": "Print dialog, full packet: note under the song list",
+        "who": "leaders, musicians",
+        "maxLength": 40,
+        "context": "{count} is the number of songs"
+    },
+    "chordsDetectedNote": {
+        "where": "Print dialog, full packet: explanation after the transposed-songs count",
+        "who": "leaders, musicians",
+        "maxLength": 110
+    }
+}

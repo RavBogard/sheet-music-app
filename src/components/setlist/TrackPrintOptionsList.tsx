@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { SetlistTrack } from "@/types/models"
 import { getTransposedKeyName } from "@/lib/music-math"
+import { useT } from "@/i18n/client"
 
 export interface TrackTranspose {
     transposition: number
@@ -35,21 +36,22 @@ export function TrackPrintOptionsList({
     onSelectAll,
     onSelectNone,
 }: TrackPrintOptionsListProps) {
-    const printableTracks = tracks.filter(t => t.type !== 'header' && !!t.fileId)
+    const t = useT()
+    const printableTracks = tracks.filter(tr => tr.type !== 'header' && !!tr.fileId)
 
     return (
         <div className="space-y-3" data-testid="transpose-track-list">
             {/* Quick Actions */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-xs">
-                    <span className="text-muted-foreground mr-1">Include:</span>
+                    <span className="text-muted-foreground me-1">{t("setlistPrint.include")}</span>
                     <Button
                         variant="ghost"
                         size="xs"
                         onClick={onSelectAll}
                         className="bg-muted text-muted-foreground hover:text-foreground hover:bg-accent px-3"
                     >
-                        All
+                        {t("setlistPrint.includeAll")}
                     </Button>
                     <Button
                         variant="ghost"
@@ -57,12 +59,12 @@ export function TrackPrintOptionsList({
                         onClick={onSelectNone}
                         className="bg-muted text-muted-foreground hover:text-foreground border border-border hover:bg-destructive/10 px-3"
                     >
-                        None
+                        {t("setlistPrint.includeNone")}
                     </Button>
                 </div>
 
                 <div className="flex items-center gap-2 text-xs hidden sm:flex">
-                    <span className="text-muted-foreground mr-1">Transpose:</span>
+                    <span className="text-muted-foreground me-1">{t("setlistPrint.transposeLabel")}</span>
                     {[-2, -1, 1, 2, 3, 5, 7].map(s => (
                         <Button
                             key={s}
@@ -80,7 +82,7 @@ export function TrackPrintOptionsList({
                         onClick={() => onApplyGlobal(0)}
                         className="bg-muted text-muted-foreground hover:text-foreground hover:bg-accent"
                     >
-                        Reset
+                        {t("setlistPrint.transposeReset")}
                     </Button>
                 </div>
             </div>
@@ -127,11 +129,11 @@ export function TrackPrintOptionsList({
                             </label>
 
                             {/* Transpose stepper */}
-                            <div role="group" aria-label={`Transpose ${track.title}`} className="flex items-center gap-0.5 bg-muted rounded-md shrink-0">
+                            <div role="group" aria-label={t("setlistPrint.transposeTrack", { title: track.title })} className="flex items-center gap-0.5 bg-muted rounded-md shrink-0">
                                 <Button
                                     variant="ghost"
                                     size="icon-xs"
-                                    aria-label="Transpose down one semitone"
+                                    aria-label={t("setlistPrint.transposeDown")}
                                     className="h-7 w-7 text-muted-foreground hover:text-foreground"
                                     onClick={() => onUpdateTrack(
                                         track.id,
@@ -149,7 +151,7 @@ export function TrackPrintOptionsList({
                                 <Button
                                     variant="ghost"
                                     size="icon-xs"
-                                    aria-label="Transpose up one semitone"
+                                    aria-label={t("setlistPrint.transposeUp")}
                                     className="h-7 w-7 text-muted-foreground hover:text-foreground"
                                     onClick={() => onUpdateTrack(
                                         track.id,
@@ -167,8 +169,8 @@ export function TrackPrintOptionsList({
 
             {activeTranspositions > 0 && (
                 <p className="text-xs text-violet-500 dark:text-violet-400/70">
-                    {activeTranspositions} song{activeTranspositions !== 1 ? 's' : ''} will be transposed.
-                    Chords are detected from the PDF text layer and replaced in the printed output.
+                    {t("setlistPrint.songsWillBeTransposed", { count: activeTranspositions })}{" "}
+                    {t("setlistPrint.chordsDetectedNote")}
                 </p>
             )}
         </div>

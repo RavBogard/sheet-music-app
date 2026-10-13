@@ -16,8 +16,7 @@ import { ImporterModal } from "./importer/ImporterModal"
 import { SetlistToolbar } from "./SetlistToolbar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
 import { useCongregation } from "@/lib/congregation-store"
-import { useOrg } from "@/lib/org/org-context"
-import { label as orgLabel } from "@/lib/org/vocab"
+import { useT } from "@/i18n/client"
 import { useSetlistDashboard, type UseSetlistDashboardProps } from "@/hooks/use-setlist-dashboard"
 import { canEditSetlist } from "@/lib/setlist-permissions"
 import { CreationWizard } from "./wizard/CreationWizard"
@@ -31,7 +30,7 @@ const UnifiedCalendar = dynamic(
 
 export function SetlistDashboard(props: UseSetlistDashboardProps) {
     const congregation = useCongregation()
-    const org = useOrg()
+    const t = useT()
     const [showWizard, setShowWizard] = useState(false)
     const [wizardPrefilledDate, setWizardPrefilledDate] = useState<Date | null>(null)
     const openWizardForDate = useCallback((date: Date) => {
@@ -84,7 +83,7 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
                                     {greetingText}
                                 </h2>
                                 <p className="text-lg text-muted-foreground">
-                                    Your stage is ready. {upcoming.length} upcoming setlists scheduled.
+                                    {t("setlist.stageReady")}{" "}{t("setlist.upcomingScheduled", { count: upcoming.length })}
                                 </p>
                             </section>
                         )}
@@ -115,7 +114,7 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
                         ) : (
                             <div className="space-y-8">
                                 {!loading && error && (
-                                    <ErrorState title="Unable to Load Setlists" description={error} onRetry={() => window.location.reload()} />
+                                    <ErrorState title={t("setlist.loadErrorTitle")} description={error} retryLabel={t("setlist.tryAgain")} onRetry={() => window.location.reload()} />
                                 )}
 
                                 {loading && (
@@ -134,8 +133,8 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
                                                         <Plus className="w-8 h-8 text-white" />
                                                     </div>
                                                     <div className="z-10 mt-2">
-                                                        <h3 className="text-xl font-bold text-foreground">{orgLabel(org, 'createNewSetlistHeading')}</h3>
-                                                        <p className="text-sm text-muted-foreground mt-1">Start fresh or build from a template</p>
+                                                        <h3 className="text-xl font-bold text-foreground">{t("org.createNewSetlistHeading")}</h3>
+                                                        <p className="text-sm text-muted-foreground mt-1">{t("setlist.createCardHint")}</p>
                                                     </div>
                                                 </div>
                                             </section>
@@ -144,7 +143,7 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
                                         {hasUpcoming && (
                                             <section>
                                                 <div className="flex justify-between items-center px-2 mb-4">
-                                                    <h4 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{orgLabel(org, 'upcomingSection')}</h4>
+                                                    <h4 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{t("org.upcomingSection")}</h4>
                                                 </div>
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                     {upcoming.map(setlist => (
@@ -176,10 +175,10 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
 
                                         <section className="mt-8">
                                             <div className="flex justify-between items-center px-2 mb-4">
-                                                <h4 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Library & Past Events</h4>
+                                                <h4 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{t("setlist.pastEventsSection")}</h4>
                                             </div>
                                             {pastOrNoDate.length === 0 ? (
-                                                <div className="text-muted-foreground italic py-10 text-center bg-card rounded-2xl border border-border">No other setlists found.</div>
+                                                <div className="text-muted-foreground italic py-10 text-center bg-card rounded-2xl border border-border">{t("setlist.noOtherSetlists")}</div>
                                             ) : (
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                     {pastOrNoDate.map(setlist => (
@@ -208,9 +207,9 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
                                                         variant="outline"
                                                         onClick={loadMore}
                                                         disabled={loadingMore}
-                                                        aria-label="Load older setlists"
+                                                        aria-label={t("setlist.loadOlder")}
                                                     >
-                                                        {loadingMore ? "Loading…" : "Load older setlists"}
+                                                        {loadingMore ? t("setlist.loadingEllipsis") : t("setlist.loadOlder")}
                                                     </Button>
                                                 </div>
                                             )}

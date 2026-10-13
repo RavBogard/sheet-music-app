@@ -16,6 +16,7 @@ import { PrintStats } from "./PrintStats"
 import { logger } from "@/lib/logger"
 import { useFeature } from "@/lib/org/use-feature"
 import { toast } from "sonner"
+import { useT, useFormat } from "@/i18n/client"
 import {
     generatePdfBlob,
     generateZipBlob,
@@ -76,12 +77,14 @@ interface PrintModalProps {
 
 export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMusicians, eventDate, rabbi, bookTitle }: PrintModalProps) {
     const { user, profile } = useAuth()
+    const t = useT()
+    const fmt = useFormat()
     // Multi-tenant phase 6: emailing packet links to the band is notifyBand.
     const notifyBandOn = useFeature("notifyBand")
     const [title, setTitle] = useState(setlistName)
     const [date, setDate] = useState(() => {
         const d = eventDate ? new Date(eventDate) : new Date()
-        return d.toLocaleDateString('en-US', {
+        return fmt.date(d, {
             weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
         })
     })
@@ -231,25 +234,25 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
         for (const track of tracks.filter(isPacketSongMissingChart)) {
             items.set(track.id, {
                 title: track.title,
-                reason: "No chart is attached to this song.",
+                reason: t("setlistPrint.noChartAttached"),
             })
         }
         for (const omission of detectedOmissions) {
             items.set(omission.fileId ?? `title:${omission.title}`, omission)
         }
         return [...items.values()]
-    }, [tracks, detectedOmissions])
+    }, [tracks, detectedOmissions, t])
 
     const myLabel = useMemo(() => {
         if (!myProfile?.instrument) return null
         const preset = INSTRUMENT_PRESETS[myProfile.instrument]
-        const parts = [user?.displayName?.split(' ')[0] || "Me"]
+        const parts = [user?.displayName?.split(' ')[0] || t("setlistPrint.me")]
         if (preset?.label) parts.push(preset.label)
-        if (myProfile.preferredCapoFret) parts.push(`Capo ${myProfile.preferredCapoFret}`)
+        if (myProfile.preferredCapoFret) parts.push(t("setlistPrint.capoFret", { fret: myProfile.preferredCapoFret }))
         return parts.join(" — ")
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [myProfile, user?.uid])
+    }, [myProfile, user?.uid, t])
 
     // ── PDF Generation (direct blob fetch — no Inngest, no Firestore polling) ──
     const generateForMusician = async (
@@ -296,11 +299,11 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
 
     const executeEmailPackets = async () => {
         if (!setlistId) {
-            toast.error('Cannot email packets: setlist not saved yet')
+            toast.error(t("setlistPrint.emailNotSaved"))
             return
         }
         if (emailRecipientUids.size === 0) {
-            toast.error('Please select at least one recipient')
+            toast.error(t("setlistPrint.emailSelectRecipient"))
             return
         }
         setSendingEmails(true)
@@ -314,16 +317,16 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
             })
             if (!response.ok) {
                 const err = await response.json()
-                throw new Error(err.error || 'Failed to send emails')
+                throw new Error(err.error || t("setlistPrint.emailSendFailed"))
             }
             const result = await response.json()
-            toast.success(`Packet links emailed to ${result.sent} musician${result.sent !== 1 ? 's' : ''}`)
+            toast.success(t("setlistPrint.emailSent", { count: result.sent }))
             if (result.failed > 0) {
-                toast.warning(`${result.failed} email${result.failed !== 1 ? 's' : ''} failed to send`)
+                toast.warning(t("setlistPrint.emailFailedCount", { count: result.failed }))
             }
             setShowEmailConfirm(false)
         } catch (e) {
-            toast.error(e instanceof Error ? e.message : 'Failed to send packet emails')
+            toast.error(e instanceof Error ? e.message : t("setlistPrint.emailPacketsFailed"))
         } finally {
             setSendingEmails(false)
         }
@@ -332,7 +335,7 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
     const handleGenerate = async (allowOmissions = false) => {
         setGenerating(true)
         setError(null)
-        setProgressMsg("Generating printout...")
+        setProgressMsg(t("setlistPrint.progressGenerating"))
 
         try {
             if (printMode === "select-musicians" && selectedUids.length > 1) {
@@ -353,7 +356,7 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
                     )
                     
                     completed++
-                    setProgressMsg(`Processing packets... (${completed}/${total})`)
+                    setProgressMsg(t("setlistPrint.progressPackets", { completed, total }))
 
                     return {
                         name: `${m.displayName.replace(/[^a-z0-9]/gi, '_')}_print.pdf`,
@@ -361,7 +364,7 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
                     }
                 }))
 
-                setProgressMsg("Zipping files...")
+                setProgressMsg(t("setlistPrint.progressZipping"))
                 const validFiles = files.filter(f => f !== null) as { name: string, blob: Blob }[]
                 const zipBlob = await generateZipBlob(validFiles)
                 
@@ -405,7 +408,7 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
                 return
             }
             logger.error('Print generation failed:', e)
-            setError(e instanceof Error ? e.message : 'Failed to generate PDF')
+            setError(e instanceof Error ? e.message : t("setlistPrint.generateFailed"))
         } finally {
             setGenerating(false)
         }
@@ -450,8 +453,8 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
             <div className="bg-card rounded-2xl w-full max-w-lg max-h-[90dvh] sm:max-h-[85dvh] flex flex-col shadow-2xl border border-border overflow-hidden">
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 sm:px-6 sm:py-5 border-b border-border shrink-0 bg-muted/30">
-                    <h2 className="text-xl font-bold">Print</h2>
-                    <Button size="icon" variant="ghost" onClick={onClose} aria-label="Close print dialog">
+                    <h2 className="text-xl font-bold">{t("setlistPrint.title")}</h2>
+                    <Button size="icon" variant="ghost" onClick={onClose} aria-label={t("setlistPrint.closeDialog")}>
                         <X className="h-5 w-5" />
                     </Button>
                 </div>
@@ -464,14 +467,17 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
                                 <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden />
                                 <div className="min-w-0 space-y-1">
                                     <h3 id="missing-chart-title" className="font-semibold text-foreground">
-                                        {missingChartItems.length} chart{missingChartItems.length !== 1 ? "s need" : " needs"} attention
+                                        {t("setlistPrint.missingChartsTitle", { count: missingChartItems.length })}
                                     </h3>
                                     <p className="text-sm text-muted-foreground">
-                                        {pendingPacketAction === "email" ? "The emailed full packets" : "The full packet"} will leave {missingChartItems.length === 1 ? "this chart" : "these charts"} out. You can cancel and repair the {missingChartItems.length === 1 ? "chart" : "charts"}, or continue with the available charts and an omission notice.
+                                        {pendingPacketAction === "email"
+                                            ? t("setlistPrint.missingChartsLeftOutEmail", { count: missingChartItems.length })
+                                            : t("setlistPrint.missingChartsLeftOutDownload", { count: missingChartItems.length })}{" "}
+                                        {t("setlistPrint.missingChartsRepairHint", { count: missingChartItems.length })}
                                     </p>
                                 </div>
                             </div>
-                            <ul className="max-h-56 space-y-1 overflow-y-auto rounded-lg border border-border bg-muted/30 p-3 text-sm" aria-label="Songs missing charts">
+                            <ul className="max-h-56 space-y-1 overflow-y-auto rounded-lg border border-border bg-muted/30 p-3 text-sm" aria-label={t("setlistPrint.missingChartsListLabel")}>
                                 {missingChartItems.map((item, index) => (
                                     <li key={`${item.fileId ?? item.title}-${index}`}>
                                         <span className="font-medium">{item.title}</span>
@@ -483,9 +489,9 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
                     ) : showEmailConfirm ? (
                         <div className="space-y-4 pb-4">
                             <div className="space-y-2">
-                                <h3 className="font-semibold text-lg text-foreground">Select Email Recipients</h3>
+                                <h3 className="font-semibold text-lg text-foreground">{t("setlistPrint.emailRecipientsTitle")}</h3>
                                 <p className="text-sm text-muted-foreground">
-                                    Send personalized printout download links directly to these band members.
+                                    {t("setlistPrint.emailRecipientsHint")}
                                 </p>
                             </div>
                             <div className="block border border-border rounded-lg bg-card overflow-hidden">
@@ -519,7 +525,7 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
                                 })}
                                 {musicians.length === 0 && (
                                     <div className="p-4 text-center text-sm text-muted-foreground">
-                                        No active musicians found.
+                                        {t("setlistPrint.noActiveMusicians")}
                                     </div>
                                 )}
                             </div>
@@ -527,13 +533,13 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
                     ) : generating ? (
                         <div className="flex flex-col items-center justify-center py-12 space-y-4">
                             <Loader2 className="h-10 w-10 text-primary animate-spin" />
-                            <p className="text-sm text-muted-foreground">{progressMsg || 'Generating...'}</p>
+                            <p className="text-sm text-muted-foreground">{progressMsg || t("setlistPrint.generating")}</p>
                         </div>
                     ) : (
                         <>
                             {/* 1. Packet Type Toggle - MOST PROMINENT */}
                             <div className="space-y-2 pb-1">
-                                <label className="text-sm font-medium text-foreground">What to print:</label>
+                                <label className="text-sm font-medium text-foreground">{t("setlistPrint.whatToPrint")}</label>
                                 <div className="flex rounded-lg border border-border overflow-hidden">
                                     <button
                                         type="button"
@@ -545,7 +551,7 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
                                         onClick={() => setCoverOnly(true)}
                                     >
                                         <ListChecks className="h-4 w-4" />
-                                        Setlist Only
+                                        {t("setlistPrint.setlistOnly")}
                                     </button>
                                     <button
                                         type="button"
@@ -557,7 +563,7 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
                                         onClick={() => setCoverOnly(false)}
                                     >
                                         <FileStack className="h-4 w-4" />
-                                        Full Packet (PDFs)
+                                        {t("setlistPrint.fullPacket")}
                                     </button>
                                 </div>
                             </div>
@@ -582,16 +588,16 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
 
                             {/* 3. Header Metadata */}
                             <div className="space-y-2">
-                                <label className="text-sm font-medium text-foreground">Header Details:</label>
+                                <label className="text-sm font-medium text-foreground">{t("setlistPrint.headerDetails")}</label>
                                 <div className="grid grid-cols-2 gap-3 bg-muted/30 p-3 rounded-lg border border-border/50">
                                     <div className="col-span-2">
-                                        <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Setlist title" aria-label="Setlist title" className="bg-background h-9" />
+                                        <Input value={title} onChange={e => setTitle(e.target.value)} placeholder={t("setlistPrint.headerTitle")} aria-label={t("setlistPrint.headerTitle")} className="bg-background h-9" />
                                     </div>
                                     <div>
-                                        <Input value={date} onChange={e => setDate(e.target.value)} placeholder="Date" aria-label="Date" className="bg-background h-9" />
+                                        <Input value={date} onChange={e => setDate(e.target.value)} placeholder={t("setlistPrint.headerDate")} aria-label={t("setlistPrint.headerDate")} className="bg-background h-9" />
                                     </div>
                                     <div>
-                                        <Input value={eventName} onChange={e => setEventName(e.target.value)} placeholder="Event (optional)" aria-label="Event (optional)" className="bg-background h-9" />
+                                        <Input value={eventName} onChange={e => setEventName(e.target.value)} placeholder={t("setlistPrint.headerEvent")} aria-label={t("setlistPrint.headerEvent")} className="bg-background h-9" />
                                     </div>
                                 </div>
                             </div>
@@ -637,16 +643,16 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
                                 setPendingPacketAction(null)
                                 setDetectedOmissions([])
                             }}>
-                                Cancel
+                                {t("setlistPrint.cancel")}
                             </Button>
                             <Button className="flex-[2]" onClick={proceedWithoutMissingCharts}>
-                                Continue without {missingChartItems.length} chart{missingChartItems.length !== 1 ? "s" : ""}
+                                {t("setlistPrint.continueWithout", { count: missingChartItems.length })}
                             </Button>
                         </div>
                     ) : showEmailConfirm ? (
                         <div className="flex gap-3 w-full">
                             <Button variant="outline" className="flex-1" onClick={() => setShowEmailConfirm(false)} disabled={sendingEmails}>
-                                Cancel
+                                {t("setlistPrint.cancel")}
                             </Button>
                             <Button 
                                 className="flex-[2] gap-2 transition-all" 
@@ -654,7 +660,7 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
                                 disabled={sendingEmails || emailRecipientUids.size === 0}
                             >
                                 {sendingEmails ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
-                                Send {emailRecipientUids.size} Email{emailRecipientUids.size !== 1 ? 's' : ''}
+                                {t("setlistPrint.sendEmails", { count: emailRecipientUids.size })}
                             </Button>
                         </div>
                     ) : (
@@ -666,7 +672,7 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
                                     disabled={!canGenerate}
                                 >
                                     {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                                    {printMode === "select-musicians" && selectedUids.length > 1 ? "Download ZIP" : "Download PDF"}
+                                    {printMode === "select-musicians" && selectedUids.length > 1 ? t("setlistPrint.downloadZip") : t("setlistPrint.downloadPdf")}
                                 </Button>
                             </div>
                             {setlistId && isSignedIn && notifyBandOn && (
@@ -677,7 +683,7 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
                                     disabled={sendingEmails}
                                 >
                                     <Mail className="h-4 w-4" />
-                                    Email Packet Links to Band
+                                    {t("setlistPrint.emailPacketLinks")}
                                 </Button>
                             )}
                         </>
