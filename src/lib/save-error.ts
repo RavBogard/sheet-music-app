@@ -6,8 +6,7 @@
  * v4.3 B01.
  */
 import { toast } from "sonner"
-import { createTranslator, type T, type UiLanguage } from "@/i18n/core"
-import { peekCompleteMessages, peekMessages } from "@/i18n/message-cache"
+import { plainT } from "@/i18n/plain"
 import { logger } from "@/lib/logger"
 
 export interface ReportSaveErrorOpts {
@@ -21,20 +20,8 @@ export interface ReportSaveErrorOpts {
     label?: string
 }
 
-/**
- * Phase 7: a translator for plain (non-React) client code such as this
- * helper and the Firestore recovery toasts in firebase.ts. In the browser the
- * root <I18nProvider> primes exactly the active language's messages into the
- * message cache; on the server and in tests every language is primed as a
- * COMPLETE catalogue, and there is no user, so English is used.
- */
-export function plainT(): T {
-    for (const lang of ["he", "qps-rtl", "qps"] as const satisfies readonly UiLanguage[]) {
-        const m = peekMessages(lang)
-        if (m && !peekCompleteMessages(lang)) return createTranslator({ lang, messages: m })
-    }
-    return createTranslator({ lang: "en", messages: peekCompleteMessages("en") ?? peekMessages("en") ?? {} })
-}
+/** Moved to src/i18n/plain.ts; re-exported so existing imports keep working. */
+export { plainT }
 
 export function reportSaveError(
     err: unknown,

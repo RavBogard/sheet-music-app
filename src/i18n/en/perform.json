@@ -157,5 +157,6 @@
         "allSavedAria": "All charts saved for offline use",
         "partialAria": "{ready} of {total} charts saved offline — tap to save the rest",
         "idleAria": "Save all charts for offline use"
-    }
+    },
+    "saveLabelPlaybackSpeed": "metronome speed"
 }

@@ -49,5 +49,7 @@
     "minutesAgo": "{minutes}m ago",
     "hoursAgo": "{hours}h ago",
     "daysAgo": "{days}d ago",
-    "orgLogoAlt": "{orgName} logo"
+    "orgLogoAlt": "{orgName} logo",
+    "saveLabelNotification": "notification",
+    "saveLabelNotifications": "notifications"
 }

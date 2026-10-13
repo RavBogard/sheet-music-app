@@ -255,7 +255,7 @@ if (typeof window !== "undefined") {
         logger.warn("[FirestoreRecovery] Firestore IDB assertion failure — prompting user")
         // Dynamic import keeps sonner out of the module-top dep graph (firebase.ts
         // is imported very early; sonner is a UI lib).
-        void Promise.all([import("sonner"), import("@/lib/save-error")]).then(([{ toast }, { plainT }]) => {
+        void Promise.all([import("sonner"), import("@/i18n/plain")]).then(([{ toast }, { plainT }]) => {
             const t = plainT()
             toast.error(t("appSync.syncErrorTitle"), {
                 description: t("appSync.syncErrorBody"),
@@ -311,7 +311,7 @@ export function recoverFromFirestoreShutdown(err: unknown): boolean {
 
     sessionStorage.setItem(SHUTDOWN_RECOVERY_FLAG, '1')
     logger.warn('[FirestoreRecovery] Firestore shut down — prompting user')
-    void Promise.all([import('sonner'), import('@/lib/save-error')]).then(([{ toast }, { plainT }]) => {
+    void Promise.all([import('sonner'), import('@/i18n/plain')]).then(([{ toast }, { plainT }]) => {
         const t = plainT()
         toast.error(t('appSync.syncPausedTitle'), {
             description: t('appSync.syncPausedBody'),

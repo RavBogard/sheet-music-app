@@ -70,7 +70,7 @@ export function NotificationBell() {
 
     const handleClick = async (notif: Notification) => {
         if (!notif.read) {
-            await markAsRead(user.uid, notif.id).catch(err => reportSaveError(err, "notification"))
+            await markAsRead(user.uid, notif.id).catch(err => reportSaveError(err, "notification", { label: t("nav.saveLabelNotification") }))
         }
         if (notif.link) {
             router.push(notif.link)
@@ -79,7 +79,7 @@ export function NotificationBell() {
     }
 
     const handleMarkAllRead = async () => {
-        await markAllAsRead(user.uid).catch(err => reportSaveError(err, "notifications"))
+        await markAllAsRead(user.uid).catch(err => reportSaveError(err, "notifications", { label: t("nav.saveLabelNotifications") }))
     }
 
     return (
