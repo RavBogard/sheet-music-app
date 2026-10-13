@@ -33,8 +33,6 @@ export const NOT_YET_MIGRATED: readonly string[] = [
 
     "src/app/(main)/setlists/", // 4 strings, 1 files
 
-    "src/app/(main)/settings/*", // 30 strings, 1 files
-
     "src/app/(main)/sms-consent/*", // 79 strings, 1 files
 
     "src/app/(main)/terms/*", // 58 strings, 1 files
@@ -122,8 +120,6 @@ export const NOT_YET_MIGRATED: readonly string[] = [
     "src/components/setlist/modals/*", // 34 strings, 4 files
 
     "src/components/setlist/wizard/*", // 18 strings, 1 files
-
-    "src/components/settings/*", // 57 strings, 3 files
 
     "src/components/ui/*", // 14 strings, 6 files
 

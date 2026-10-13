@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { apiFetch } from "@/lib/api-client"
 import { toast } from "sonner"
+import { useFormat, useT } from "@/i18n/client"
+import type { Formatter } from "@/i18n/format"
 
 /**
  * Settings section: "Claude / MCP Access". Lets a user mint and revoke the
@@ -20,9 +22,9 @@ interface McpToken {
     lastUsedAt: number | null
 }
 
-function formatDate(ms: number | null): string {
+function formatDate(fmt: Formatter, ms: number | null): string {
     if (!ms) return "—"
-    return new Date(ms).toLocaleDateString(undefined, {
+    return fmt.date(ms, {
         month: "short",
         day: "numeric",
         year: "numeric",
@@ -30,6 +32,8 @@ function formatDate(ms: number | null): string {
 }
 
 export function McpAccessSettings() {
+    const t = useT()
+    const fmt = useFormat()
     const [tokens, setTokens] = useState<McpToken[]>([])
     const [loading, setLoading] = useState(true)
     const [creating, setCreating] = useState(false)
@@ -45,11 +49,11 @@ export function McpAccessSettings() {
             const data = await res.json()
             setTokens(data.tokens ?? [])
         } catch {
-            toast.error("Could not load MCP tokens")
+            toast.error(t("settings.mcp.loadFailed"))
         } finally {
             setLoading(false)
         }
-    }, [])
+    }, [t])
 
     useEffect(() => {
         void load()
@@ -71,7 +75,7 @@ export function McpAccessSettings() {
             setCopied(false)
             await load()
         } catch {
-            toast.error("Could not create token")
+            toast.error(t("settings.mcp.createFailed"))
         } finally {
             setCreating(false)
         }
@@ -82,9 +86,9 @@ export function McpAccessSettings() {
         try {
             await navigator.clipboard.writeText(newToken)
             setCopied(true)
-            toast.success("Token copied")
+            toast.success(t("settings.mcp.copied"))
         } catch {
-            toast.error("Copy failed — select and copy manually")
+            toast.error(t("settings.mcp.copyFailed"))
         }
     }
 
@@ -93,10 +97,10 @@ export function McpAccessSettings() {
         try {
             const res = await apiFetch(`/api/mcp/tokens/${id}`, { method: "DELETE" })
             if (!res.ok) throw new Error()
-            toast.success("Token revoked")
+            toast.success(t("settings.mcp.revoked"))
             await load()
         } catch {
-            toast.error("Could not revoke token")
+            toast.error(t("settings.mcp.revokeFailed"))
         } finally {
             setRevoking(null)
         }
@@ -109,9 +113,9 @@ export function McpAccessSettings() {
                     <KeyRound className="w-5 h-5 text-indigo-500" />
                 </div>
                 <div>
-                    <h3 className="font-semibold text-foreground">Claude / MCP Access</h3>
+                    <h3 className="font-semibold text-foreground">{t("settings.mcp.title")}</h3>
                     <p className="text-sm text-muted-foreground">
-                        Generate a token to connect Claude to your setlists and library.
+                        {t("settings.mcp.description")}
                     </p>
                 </div>
             </div>
@@ -120,7 +124,7 @@ export function McpAccessSettings() {
             {newToken && (
                 <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 space-y-2">
                     <p className="text-xs font-medium text-amber-600 dark:text-amber-400">
-                        Copy this token now — you will not be able to see it again.
+                        {t("settings.mcp.revealWarning")}
                     </p>
                     <div className="flex items-center gap-2">
                         <code className="flex-1 text-xs font-mono bg-background/60 border border-border rounded-lg px-3 py-2 break-all">
@@ -131,7 +135,7 @@ export function McpAccessSettings() {
                             size="icon"
                             variant="ghost"
                             onClick={handleCopy}
-                            aria-label="Copy token"
+                            aria-label={t("settings.mcp.copyToken")}
                             className="shrink-0"
                         >
                             {copied ? (
@@ -146,7 +150,7 @@ export function McpAccessSettings() {
                         onClick={() => setNewToken(null)}
                         className="text-xs text-muted-foreground hover:text-foreground"
                     >
-                        Done
+                        {t("settings.mcp.done")}
                     </button>
                 </div>
             )}
@@ -156,7 +160,7 @@ export function McpAccessSettings() {
                 <Input
                     value={label}
                     onChange={(e) => setLabel(e.target.value)}
-                    placeholder="Token label (e.g. Claude Desktop)"
+                    placeholder={t("settings.mcp.labelPlaceholder")}
                     maxLength={80}
                     className="h-9 text-sm"
                 />
@@ -171,40 +175,42 @@ export function McpAccessSettings() {
                     ) : (
                         <Plus className="h-4 w-4" />
                     )}
-                    Generate
+                    {t("settings.mcp.generate")}
                 </Button>
             </form>
 
             {/* Token list */}
             {loading ? (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Loader2 className="h-4 w-4 animate-spin" /> Loading tokens…
+                    <Loader2 className="h-4 w-4 animate-spin" /> {t("settings.mcp.loading")}
                 </div>
             ) : tokens.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No tokens yet.</p>
+                <p className="text-sm text-muted-foreground">{t("settings.mcp.empty")}</p>
             ) : (
                 <div className="border border-border rounded-xl divide-y divide-border">
-                    {tokens.map((t) => (
-                        <div key={t.id} className="flex items-center gap-3 px-3 py-2.5">
+                    {tokens.map((tok) => (
+                        <div key={tok.id} className="flex items-center gap-3 px-3 py-2.5">
                             <div className="flex-1 min-w-0">
                                 <p className="text-sm font-medium text-foreground truncate">
-                                    {t.label}
+                                    {tok.label}
                                 </p>
                                 <p className="text-xs text-muted-foreground">
-                                    Created {formatDate(t.createdAt)} · Last used{" "}
-                                    {formatDate(t.lastUsedAt)}
+                                    {t("settings.mcp.tokenDates", {
+                                        created: formatDate(fmt, tok.createdAt),
+                                        lastUsed: formatDate(fmt, tok.lastUsedAt),
+                                    })}
                                 </p>
                             </div>
                             <Button
                                 type="button"
                                 size="icon"
                                 variant="ghost"
-                                onClick={() => handleRevoke(t.id)}
-                                disabled={revoking === t.id}
-                                aria-label={`Revoke ${t.label}`}
+                                onClick={() => handleRevoke(tok.id)}
+                                disabled={revoking === tok.id}
+                                aria-label={t("settings.mcp.revoke", { tokenLabel: tok.label })}
                                 className="shrink-0 text-muted-foreground hover:text-destructive"
                             >
-                                {revoking === t.id ? (
+                                {revoking === tok.id ? (
                                     <Loader2 className="h-4 w-4 animate-spin" />
                                 ) : (
                                     <Trash2 className="h-4 w-4" />
