@@ -46,6 +46,8 @@ export default defineConfig({
     },
     resolve: {
         alias: {
+            // Phase 7: see vitest.config.ts (require.context stand-in).
+            '@/i18n/catalogue-source': resolve(__dirname, './src/i18n/catalogue-source.vitest.ts'),
             '@': resolve(__dirname, './src'),
             // v70-08-04 'server-only' is a Next.js bundler guard — runtime
             // throws in browser bundles. Vitest isn't a Next.js runtime, so

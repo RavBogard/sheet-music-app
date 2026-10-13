@@ -17,6 +17,8 @@ import type { OrgConfig } from "@/lib/org/config-schema"
 export const tenantState: {
     org: string
     nonce?: string
+    /** Request cookies the mocked `next/headers` cookies() returns (phase 7: `ui-lang`). */
+    cookies?: Record<string, string>
     /** Optional rewrite of the resolved config (to prove a field is read from config). */
     configOverride?: (cfg: OrgConfig) => OrgConfig
 } = { org: "crc" }
@@ -28,6 +30,12 @@ export function headersMock() {
             if (tenantState.nonce) h.set("x-nonce", tenantState.nonce)
             return h
         },
+        cookies: async () => ({
+            get: (name: string) => {
+                const value = tenantState.cookies?.[name]
+                return value === undefined ? undefined : { name, value }
+            },
+        }),
     }
 }
 

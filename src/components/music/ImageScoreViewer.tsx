@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { Loader2, AlertCircle, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useMusicStore } from "@/lib/store"
+import { useChartContentDir } from "@/components/i18n/ChartContent"
 
 interface ImageScoreViewerProps {
     url: string
@@ -11,6 +12,8 @@ interface ImageScoreViewerProps {
 }
 
 export function ImageScoreViewer({ url, alt }: ImageScoreViewerProps) {
+    // Phase 7: the chart keeps its own (ltr) direction on an rtl page.
+    const chartDir = useChartContentDir()
     const [status, setStatus] = useState<"loading" | "loaded" | "error">("loading")
     // WS-15: bump to remount the <img> and re-attempt the load. Remount (NOT a
     // cache-bust query param) keeps signed Storage URLs valid — their signature
@@ -51,6 +54,7 @@ export function ImageScoreViewer({ url, alt }: ImageScoreViewerProps) {
         // top-left when it does not. See e2e/flex-scroll-reachability.spec.ts.
         <div
             data-image-scroll=""
+            {...chartDir}
             className="relative flex h-full w-full items-start justify-start overflow-auto bg-background"
         >
             {status === "loading" && (

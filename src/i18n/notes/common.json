@@ -1,0 +1,3 @@
+{
+    "skipToMain": { "where": "Root layout: the first, visually hidden link on every page; appears when a keyboard user presses Tab.", "who": "everyone (keyboard and screen-reader users)", "maxLength": 40 }
+}

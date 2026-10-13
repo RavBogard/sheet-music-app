@@ -9,6 +9,7 @@ import { changeTrackKey } from '@/lib/live-director'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { logger } from "@/lib/logger"
+import { useChartContentDir } from "@/components/i18n/ChartContent"
 
 interface SmartScoreViewerProps {
     /**
@@ -109,6 +110,8 @@ const findScrollableAncestor = (el: HTMLElement | null): HTMLElement | null => {
 }
 
 export function SmartScoreViewer({ fileId, trackId, trackKey }: SmartScoreViewerProps) {
+    // Phase 7: the chart keeps its own (ltr) direction on an rtl page.
+    const chartDir = useChartContentDir()
     const containerRef = useRef<HTMLDivElement>(null)
     const osmdRef = useRef<OpenSheetMusicDisplay | null>(null)
     const [loading, setLoading] = useState(true)
@@ -581,6 +584,7 @@ export function SmartScoreViewer({ fileId, trackId, trackKey }: SmartScoreViewer
                 <div
                     ref={containerRef}
                     data-print-target="musicxml-score"
+                    {...chartDir}
                     className="w-full text-black min-h-[400px]"
                 />
             </Card>

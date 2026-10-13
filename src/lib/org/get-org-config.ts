@@ -7,6 +7,9 @@ import { codeOrgConfig } from "@/lib/org/config-code"
 import { primeOrgConfig } from "@/lib/org/config-cache"
 import { parseOrgConfig, type OrgConfig } from "@/lib/org/config-schema"
 import type { OrgId } from "@/lib/org/types"
+// Phase 7: loading the catalogues primes the isomorphic message cache, so any
+// server path that resolves a tenant can translate synchronously (orgString).
+import "@/i18n/catalogues"
 
 /**
  * Multi-tenant phase 1 — the tenant's config, from `orgs/{orgId}`.

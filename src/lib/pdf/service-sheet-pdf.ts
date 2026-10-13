@@ -1,5 +1,7 @@
-import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib"
+import { PDFDocument, StandardFonts, rgb, type Color, type PDFFont, type PDFPage } from "pdf-lib"
 import { toWinAnsi } from "./text-chart-pdf"
+import { firstStrongDirection, hasHebrew, toVisual, type Direction } from "./bidi-visual"
+import { embedTtf, type EmbeddedTtf } from "./embed-ttf"
 
 /**
  * The rabbi's service sheet: the printed order of a service, with the printed
@@ -10,9 +12,18 @@ import { toWinAnsi } from "./text-chart-pdf"
  * Charts, keys and BPM deliberately do NOT appear; that is the musicians' lens
  * (Perform mode / gig packet).
  *
- * All text passes through toWinAnsi: pdf-lib StandardFonts are WinAnsi-only, so
- * Hebrew degrades to '?' rather than corrupting the document. v1 is an
- * English/transliteration sheet by design.
+ * Two font paths:
+ *  - No Hebrew anywhere in the input (CRC's English/transliteration sheet):
+ *    pdf-lib StandardFonts (Helvetica), all text through toWinAnsi. This path
+ *    is pinned byte-for-byte by service-sheet-pdf.golden.test.ts.
+ *  - Any Hebrew character in any field: the vendored Alef TTFs (Latin +
+ *    Hebrew) are embedded via embed-ttf.ts (no fontkit) and used for ALL text
+ *    in the document; each drawn line is reordered for display by
+ *    bidi-visual.ts. Characters Alef lacks fall back to toWinAnsi's ASCII
+ *    stand-ins, else '?'.
+ *
+ * `direction: "rtl"` (or, when absent, a Hebrew-first setlist name) mirrors the
+ * layout: text right-aligned, the folio on the left of the title line.
  */
 
 export interface ServiceSheetTrack {
@@ -44,6 +55,13 @@ export interface ServiceSheetInput {
      * saying so would be noise.
      */
     sectionLabel?: string
+    /**
+     * Layout direction. Default: "rtl" when the input has Hebrew and the
+     * setlist name's first strong character is Hebrew, else "ltr". Only the
+     * layout mirrors; each string is still reordered for display by its own
+     * content.
+     */
+    direction?: Direction
     tracks: ServiceSheetTrack[]
 }
 
@@ -61,6 +79,86 @@ function clean(s: unknown): string {
     return typeof s === "string" ? toWinAnsi(s).trim() : ""
 }
 
+/** Anything that can measure a line: a StandardFont or an embedded TTF. */
+type Face = PDFFont | EmbeddedTtf
+
+interface DrawOpts {
+    x: number
+    y: number
+    size: number
+    font: Face
+    color: Color
+    /** Paragraph direction used to reorder the line for display. */
+    base: Direction
+}
+
+/**
+ * How text is cleaned, measured and drawn for one document. The WinAnsi
+ * typography with `reorder: false` is exactly the pre-Hebrew renderer (same
+ * pdf-lib calls, same bytes).
+ */
+interface Typography {
+    bold: Face
+    body: Face
+    clean(s: unknown): string
+    text(page: PDFPage, line: string, o: DrawOpts): void
+}
+
+function winAnsiTypography(bold: PDFFont, body: PDFFont, reorder: boolean): Typography {
+    return {
+        bold,
+        body,
+        clean,
+        text(page, line, { x, y, size, font, color, base }) {
+            const shown = reorder ? toVisual(line, { base }) : line
+            page.drawText(shown, { x, y, size, font: font as PDFFont, color })
+        },
+    }
+}
+
+function unicodeTypography(bold: EmbeddedTtf, body: EmbeddedTtf): Typography {
+    const cleanUnicode = (s: unknown): string => {
+        if (typeof s !== "string") return ""
+        let out = ""
+        // Controls out; tabs/newlines/NBSP become plain spaces (one line per field).
+        for (const ch of s.replace(/[\u0000-\u0008\u000E-\u001F\u007F]/g, "")) {
+            if (/[\t\n\v\f\r\u00A0]/.test(ch)) {
+                out += " "
+                continue
+            }
+            // Both faces are Alef, so one coverage check serves both. A mark the
+            // font lacks is dropped by the embedder; anything else it lacks gets
+            // toWinAnsi's stand-in (smart quotes -> ASCII, else '?').
+            out += body.hasGlyph(ch.codePointAt(0)!) || /\p{M}/u.test(ch) ? ch : toWinAnsi(ch)
+        }
+        return out.trim()
+    }
+    return {
+        bold,
+        body,
+        clean: cleanUnicode,
+        text(page, line, { x, y, size, font, color, base }) {
+            ;(font as EmbeddedTtf).drawText(page, toVisual(line, { base }), { x, y, size, color })
+        },
+    }
+}
+
+function inputStrings(input: ServiceSheetInput): unknown[] {
+    const out: unknown[] = [
+        input.setlistName,
+        input.eventDate,
+        input.rabbi,
+        input.book,
+        input.bookTitle,
+        input.sectionLabel,
+    ]
+    for (const t of input.tracks) {
+        out.push(t.title, t.performer, t.leadMusician, t.description)
+        for (const h of t.honors ?? []) out.push(h.name, h.note)
+    }
+    return out
+}
+
 /**
  * Greedy word wrap against a real font metric.
  *
@@ -70,7 +168,7 @@ function clean(s: unknown): string {
  * document cannot afford: the sheet still looks fine, and the rabbi reading it
  * aloud has no way to know a name was cut.
  */
-function wrap(text: string, font: PDFFont, size: number, maxW: number): string[] {
+function wrap(text: string, font: Face, size: number, maxW: number): string[] {
     const words = text.split(/\s+/).filter(Boolean)
     const lines: string[] = []
     let line = ""
@@ -88,9 +186,10 @@ function wrap(text: string, font: PDFFont, size: number, maxW: number): string[]
             line = w
             continue
         }
-        // Unbreakable token wider than the column: split on character boundaries.
+        // Unbreakable token wider than the column: split on character boundaries
+        // (a letter keeps its combining marks).
         let chunk = ""
-        for (const ch of w) {
+        for (const ch of w.match(/\P{M}\p{M}*|\p{M}+/gu) ?? []) {
             if (chunk && font.widthOfTextAtSize(chunk + ch, size) > maxW) {
                 lines.push(chunk)
                 chunk = ch
@@ -108,8 +207,30 @@ export async function renderServiceSheetPdf(
     input: ServiceSheetInput,
 ): Promise<Uint8Array> {
     const pdf = await PDFDocument.create()
-    const bold = await pdf.embedFont(StandardFonts.HelveticaBold)
-    const body = await pdf.embedFont(StandardFonts.Helvetica)
+    const hebrew = inputStrings(input).some((s) => typeof s === "string" && hasHebrew(s))
+    const dir: Direction =
+        input.direction ?? (hebrew ? (firstStrongDirection(input.setlistName) ?? "ltr") : "ltr")
+    const rtl = dir === "rtl"
+
+    let ty: Typography
+    if (hebrew) {
+        // Only the Hebrew path loads the font module (keeps ~240 KB of base64
+        // out of English renders).
+        const { loadAlefFonts } = await import("./hebrew-fonts")
+        const alef = await loadAlefFonts()
+        ty = unicodeTypography(embedTtf(pdf, alef.bold), embedTtf(pdf, alef.regular))
+    } else {
+        const bold = await pdf.embedFont(StandardFonts.HelveticaBold)
+        const body = await pdf.embedFont(StandardFonts.Helvetica)
+        ty = winAnsiTypography(bold, body, rtl)
+    }
+    const { bold, body } = ty
+    const clean = ty.clean
+    /** Paragraph direction of a single field: its own first strong char. */
+    const own = (s: string): Direction => firstStrongDirection(s) ?? dir
+    /** Left edge for a line of width w: `left` in LTR, flush to `right` in RTL. */
+    const alignX = (left: number, w: number, right: number) => (rtl ? right - w : left)
+    const RIGHT = PAGE_W - MARGIN
 
     let page: PDFPage = pdf.addPage([PAGE_W, PAGE_H])
     let y = PAGE_H - MARGIN
@@ -124,7 +245,8 @@ export async function renderServiceSheetPdf(
     // ---- Header -----------------------------------------------------------
     const title = clean(input.setlistName) || "Service"
     for (const line of wrap(title, bold, 18, CONTENT_W)) {
-        page.drawText(line, { x: MARGIN, y: y - 18, size: 18, font: bold, color: INK })
+        const x = alignX(MARGIN, bold.widthOfTextAtSize(line, 18), RIGHT)
+        ty.text(page, line, { x, y: y - 18, size: 18, font: bold, color: INK, base: own(title) })
         y -= 22
     }
     y -= 4
@@ -139,7 +261,8 @@ export async function renderServiceSheetPdf(
         .join("   ·   ")
     if (meta) {
         for (const line of wrap(meta, body, 10, CONTENT_W)) {
-            page.drawText(line, { x: MARGIN, y: y - 10, size: 10, font: body, color: MUTED })
+            const x = alignX(MARGIN, body.widthOfTextAtSize(line, 10), RIGHT)
+            ty.text(page, line, { x, y: y - 10, size: 10, font: body, color: MUTED, base: dir })
             y -= 13
         }
         y -= 5
@@ -189,16 +312,19 @@ export async function renderServiceSheetPdf(
                 borderColor: RULE,
                 borderWidth: 1,
             })
-            page.drawText(first ? "HONORS" : "HONORS (CONT.)", {
-                x: MARGIN + 8,
+            const label = first ? "HONORS" : "HONORS (CONT.)"
+            ty.text(page, label, {
+                x: alignX(MARGIN + 8, bold.widthOfTextAtSize(label, 8), RIGHT - 8),
                 y: y - 14,
                 size: 8,
                 font: bold,
                 color: MUTED,
+                base: dir,
             })
             let hy = y - 26
             for (const line of chunk) {
-                page.drawText(line, { x: MARGIN + 8, y: hy, size: 9, font: body, color: INK })
+                const x = alignX(MARGIN + 8, body.widthOfTextAtSize(line, 9), RIGHT - 8)
+                ty.text(page, line, { x, y: hy, size: 9, font: body, color: INK, base: dir })
                 hy -= 12
             }
             y -= boxH + 14
@@ -223,12 +349,13 @@ export async function renderServiceSheetPdf(
             let ly = y - 13
             for (const label of labelLines) {
                 const w = bold.widthOfTextAtSize(label, 9)
-                page.drawText(label, {
+                ty.text(page, label, {
                     x: MARGIN + Math.max(0, (CONTENT_W - w) / 2),
                     y: ly,
                     size: 9,
                     font: bold,
                     color: MUTED,
+                    base: own(rowTitle),
                 })
                 ly -= 12
             }
@@ -267,27 +394,34 @@ export async function renderServiceSheetPdf(
         need(rowH)
 
         const rowTop = y
+        const titleBase = own(rowTitle || "(untitled)")
         for (const line of titleLines) {
-            page.drawText(line, { x: MARGIN, y: y - 12, size: 11, font: bold, color: INK })
+            const x = alignX(MARGIN, bold.widthOfTextAtSize(line, 11), RIGHT)
+            ty.text(page, line, { x, y: y - 12, size: 11, font: bold, color: INK, base: titleBase })
             y -= 16
         }
 
         if (folio) {
-            page.drawText(folio, {
-                x: PAGE_W - MARGIN - folioW,
+            // The folio closes the title line: right edge in LTR, left edge in RTL.
+            ty.text(page, folio, {
+                x: rtl ? MARGIN : PAGE_W - MARGIN - folioW,
                 y: rowTop - 13,
                 size: 14,
                 font: bold,
                 color: INK,
+                base: dir,
             })
         }
 
         for (const line of cueLines) {
-            page.drawText(line, { x: MARGIN, y: y - 8, size: 9, font: body, color: MUTED })
+            const x = alignX(MARGIN, body.widthOfTextAtSize(line, 9), RIGHT)
+            ty.text(page, line, { x, y: y - 8, size: 9, font: body, color: MUTED, base: dir })
             y -= 11
         }
+        const descBase = own(clean(t.description))
         for (const line of descLines) {
-            page.drawText(line, { x: MARGIN + 10, y: y - 7, size: 8, font: body, color: MUTED })
+            const x = alignX(MARGIN + 10, body.widthOfTextAtSize(line, 8), RIGHT - 10)
+            ty.text(page, line, { x, y: y - 7, size: 8, font: body, color: MUTED, base: descBase })
             y -= 10
         }
         y -= 6

@@ -16,6 +16,7 @@ import { logger } from "@/lib/logger"
 import { getFile } from '@/lib/offline-idb'
 import { desiredWorkerSrc, ensureOfflineWorkerReady } from '@/lib/pdf-worker-offline'
 import { shouldStartRenderWatchdog, isRotateScaleResize, computeFitPageWidth } from './pdf-viewer-state'
+import { useChartContentDir } from "@/components/i18n/ChartContent"
 
 // Configure PDF.js worker — use local copy from public/ (copied by
 // scripts/ops/copy-pdf-worker.js during postinstall + build). Local worker
@@ -70,6 +71,8 @@ interface PDFViewerProps {
 }
 
 export function PDFViewer({ url, trackName }: PDFViewerProps) {
+    // Phase 7: the chart keeps its own (ltr) direction on an rtl page.
+    const chartDir = useChartContentDir()
     const [numPages, setNumPages] = useState<number>(0)
     const [width, setWidth] = useState<number>(0)
     // WS-14: container height + first-page aspect ratio feed the fit-page math.
@@ -449,6 +452,7 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
             <div
                 ref={containerRef}
                 data-pdf-scroll=""
+                {...chartDir}
                 /* WAVE1 Bug 2 (2026-08-31) — THIS ELEMENT MUST CARRY NO PADDING.
                    It is the element the ResizeObserver below measures, and
                    `ResizeObserver.contentRect` reports the CONTENT box, which

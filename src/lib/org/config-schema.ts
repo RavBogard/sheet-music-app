@@ -91,6 +91,14 @@ export const LocaleSchema = z.object({
      * as-is rather than "fixed" to local 05:00 — CRC unchanged wins).
      */
     reminderUtcHour: z.number().int().min(0).max(23).nullable().default(null),
+    /**
+     * Phase 7: the zone the UI formats dates in. "tenant": `timeZone` (a
+     * Hebrew tenant sees Asia/Jerusalem wherever the viewer is). "runtime": the
+     * viewer's browser zone / the server's zone, which is what every date in
+     * the app used before phase 7. Absent: "runtime" for an English tenant
+     * (CRC, BL unchanged), "tenant" otherwise (src/i18n/language.ts).
+     */
+    formatTimeZone: z.enum(["tenant", "runtime"]).optional(),
 })
 
 export const EmailSchema = z.object({

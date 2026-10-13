@@ -14,8 +14,21 @@ vi.mock("@/lib/org/registry", async (orig) => (await import("./tenant-mocks")).r
 vi.mock("@/lib/org/get-org-config", async (orig) => (await import("./tenant-mocks")).getOrgConfigMock(orig))
 vi.mock("@/lib/firebase-admin", async () => (await import("./tenant-mocks")).firebaseAdminMock())
 vi.mock("next/font/google", () => {
-    const font = (name: string) => () => ({ variable: `__var_${name}`, className: `__cls_${name}`, style: {} })
-    return { Poppins: font("poppins"), Righteous: font("righteous"), Geist_Mono: font("geistMono"), Zilla_Slab: font("zillaSlab") }
+    // Phase 7 adds the Hebrew faces; a Hebrew face declared for --font-display gets a "_display" suffix.
+    const font = (name: string) => (o: { variable?: string } = {}) => ({
+        variable: `__var_${name}${o.variable === "--font-display" && ["rubik", "heebo", "frankRuhlLibre"].includes(name) ? "_display" : ""}`,
+        className: `__cls_${name}`,
+        style: {},
+    })
+    return {
+        Poppins: font("poppins"),
+        Righteous: font("righteous"),
+        Geist_Mono: font("geistMono"),
+        Zilla_Slab: font("zillaSlab"),
+        Rubik: font("rubik"),
+        Heebo: font("heebo"),
+        Frank_Ruhl_Libre: font("frankRuhlLibre"),
+    }
 })
 vi.mock("@/app/globals.css", () => ({}))
 vi.mock("@/components/theme-provider", () => ({ ThemeProvider: ({ children }: { children: ReactNode }) => children }))
@@ -87,6 +100,8 @@ describe("multi-tenant P1: root layout reads the tenant's locale and fonts", () 
         expect(html.props.lang).toBe("he")
         expect(html.props.dir).toBe("rtl")
         expect(html.props["data-org"]).toBe("testshul")
-        expect(body.props.className).toBe("__var_poppins __var_geistMono __var_righteous antialiased")
+        // Phase 7: the Hebrew faces arrived; a Latin-only choice (Poppins,
+        // Righteous) renders Hebrew in Heebo (body) and Rubik (display).
+        expect(body.props.className).toBe("__var_heebo __var_geistMono __var_rubik_display antialiased")
     })
 })

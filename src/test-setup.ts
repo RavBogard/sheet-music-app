@@ -57,3 +57,8 @@ if (typeof Blob !== 'undefined' && typeof Blob.prototype.text !== 'function') {
         },
     })
 }
+
+// Multi-tenant phase 7: prime the i18n message cache (every language) so a
+// component rendered without <I18nProvider> shows English from the real
+// catalogue, exactly as it does in the app.
+import '@/i18n/catalogues'
