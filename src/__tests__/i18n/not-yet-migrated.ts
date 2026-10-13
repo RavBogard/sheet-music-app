@@ -23,8 +23,6 @@ export const NOT_YET_MIGRATED: readonly string[] = [
 
     "src/app/(main)/changelog/*", // 1 strings, 1 files
 
-    "src/app/(main)/library/*", // 5 strings, 1 files
-
     "src/app/(main)/manage/", // 115 strings, 4 files
 
     "src/app/(main)/monitor/", // 12 strings, 3 files
@@ -32,8 +30,6 @@ export const NOT_YET_MIGRATED: readonly string[] = [
     "src/app/(main)/privacy/*", // 66 strings, 1 files
 
     "src/app/(main)/schedule/*", // 13 strings, 1 files
-
-    "src/app/(main)/setlists/", // 4 strings, 1 files
 
     "src/app/(main)/settings/*", // 30 strings, 1 files
 
@@ -51,23 +47,11 @@ export const NOT_YET_MIGRATED: readonly string[] = [
 
     "src/app/api/auth/", // 23 strings, 5 files
 
-    "src/app/api/charts/", // 3 strings, 2 files
-
-    "src/app/api/intake/", // 3 strings, 1 files
-
-    "src/app/api/library/", // 15 strings, 5 files
-
     "src/app/api/nudge-admin/*", // 1 strings, 1 files
 
     "src/app/api/push/", // 2 strings, 1 files
 
-    "src/app/api/recordings/", // 13 strings, 2 files
-
     "src/app/api/scheduling/", // 11 strings, 5 files
-
-    "src/app/api/setlist/", // 23 strings, 9 files
-
-    "src/app/api/setlists/", // 15 strings, 6 files
 
     "src/app/api/tenant/", // 1 strings, 1 files
 
@@ -107,8 +91,6 @@ export const NOT_YET_MIGRATED: readonly string[] = [
 
     "src/components/legal/*", // 174 strings, 1 files
 
-    "src/components/library/*", // 205 strings, 11 files
-
     "src/components/monitor/*", // 71 strings, 8 files
 
     "src/components/music/*", // 87 strings, 10 files
@@ -123,16 +105,6 @@ export const NOT_YET_MIGRATED: readonly string[] = [
 
     "src/components/scheduling/*", // 12 strings, 1 files
 
-    "src/components/setlist/*", // 177 strings, 11 files
-
-    "src/components/setlist/grid/", // 120 strings, 23 files
-
-    "src/components/setlist/importer/*", // 75 strings, 1 files
-
-    "src/components/setlist/modals/*", // 34 strings, 4 files
-
-    "src/components/setlist/wizard/*", // 18 strings, 1 files
-
     "src/components/settings/*", // 57 strings, 3 files
 
     "src/components/ui/*", // 14 strings, 6 files
@@ -140,6 +112,4 @@ export const NOT_YET_MIGRATED: readonly string[] = [
     "src/components/v2/*", // 9 strings, 2 files
 
     "src/hooks/*", // 46 strings, 7 files
-
-    "src/lib/*", // 5 strings, 2 files
 ]

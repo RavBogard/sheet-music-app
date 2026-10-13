@@ -255,12 +255,13 @@ if (typeof window !== "undefined") {
         logger.warn("[FirestoreRecovery] Firestore IDB assertion failure — prompting user")
         // Dynamic import keeps sonner out of the module-top dep graph (firebase.ts
         // is imported very early; sonner is a UI lib).
-        void import("sonner").then(({ toast }) => {
-            toast.error("Sync error", {
-                description: "Local cache is corrupted. Reload to clear it and reconnect.",
+        void Promise.all([import("sonner"), import("@/lib/save-error")]).then(([{ toast }, { plainT }]) => {
+            const t = plainT()
+            toast.error(t("appSync.syncErrorTitle"), {
+                description: t("appSync.syncErrorBody"),
                 duration: Infinity,
                 action: {
-                    label: "Reload",
+                    label: t("appSync.reload"),
                     onClick: () => {
                         void clearFirestoreIndexedDB().finally(() => window.location.reload())
                     },
@@ -310,11 +311,12 @@ export function recoverFromFirestoreShutdown(err: unknown): boolean {
 
     sessionStorage.setItem(SHUTDOWN_RECOVERY_FLAG, '1')
     logger.warn('[FirestoreRecovery] Firestore shut down — prompting user')
-    void import('sonner').then(({ toast }) => {
-        toast.error('Sync paused', {
-            description: 'Firestore disconnected. Reload to resume.',
+    void Promise.all([import('sonner'), import('@/lib/save-error')]).then(([{ toast }, { plainT }]) => {
+        const t = plainT()
+        toast.error(t('appSync.syncPausedTitle'), {
+            description: t('appSync.syncPausedBody'),
             duration: Infinity,
-            action: { label: 'Reload', onClick: () => window.location.reload() },
+            action: { label: t('appSync.reload'), onClick: () => window.location.reload() },
         })
     })
     return true

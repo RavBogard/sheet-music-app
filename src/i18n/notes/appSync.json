@@ -1,0 +1,8 @@
+{
+    "saveFailed": { "where": "Error toast on any screen when a change fails to save (notes, preferences, notifications)", "who": "leaders and musicians", "maxLength": 80, "context": "{action} is the thing that failed to save, e.g. \"track details\" or \"metronome speed\" (a noun phrase supplied by the screen; today often English)" },
+    "syncErrorTitle": { "where": "Sticky error toast title when the browser's offline cache breaks", "who": "anyone signed in", "maxLength": 30 },
+    "syncErrorBody": { "where": "Sticky error toast body under \"Sync error\"", "who": "anyone signed in", "maxLength": 90 },
+    "syncPausedTitle": { "where": "Sticky error toast title when the live database connection shuts down", "who": "anyone signed in", "maxLength": 30 },
+    "syncPausedBody": { "where": "Sticky error toast body under \"Sync paused\"; Firestore is the database product name", "who": "anyone signed in", "maxLength": 90 },
+    "reload": { "where": "Button inside the sync error toasts that reloads the page", "who": "anyone signed in", "maxLength": 15 }
+}
