@@ -2,5 +2,10 @@
     "invalidJsonBody": "Invalid JSON body",
     "messagesRequired": "Messages array is required",
     "searchDefaultReply": "Here are some results I found.",
-    "searchFailed": "Failed to search"
+    "searchFailed": "Failed to search",
+    "scrapeFetchStatus": "Failed to fetch URL: {detail}",
+    "scrapeFetchFailed": "Fetch failed: {detail}",
+    "scrapeInputRequired": "url or rawText is required",
+    "scrapeNoChart": "No chord chart detected on this page (or the page is gated/empty). Try a different URL or paste raw text via rawText.",
+    "scrapeFailed": "Failed to scrape chart: {detail}"
 }
