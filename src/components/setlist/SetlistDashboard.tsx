@@ -28,7 +28,7 @@ const UnifiedCalendar = dynamic(
     { ssr: false, loading: () => <Skeleton className="h-64 w-full rounded-xl" /> }
 )
 
-export function SetlistDashboard(props: UseSetlistDashboardProps) {
+export function SetlistDashboard({ serverShortName, ...props }: UseSetlistDashboardProps & { serverShortName?: string }) {
     const congregation = useCongregation()
     const { t, lang } = useI18n()
     const [showWizard, setShowWizard] = useState(false)
@@ -66,10 +66,10 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
         return getContextualGreeting(
             firstName,
             undefined,
-            congregation.shortName || DEFAULT_SHORT_NAME,
+            serverShortName || congregation.shortName || DEFAULT_SHORT_NAME,
             { t, lang },
         ).text
-    }, [user?.displayName, congregation.shortName, t, lang])
+    }, [user?.displayName, serverShortName, congregation.shortName, t, lang])
 
     return (
         <div className="flex min-h-[100dvh] bg-background text-foreground relative overflow-hidden">
