@@ -9,6 +9,7 @@ import {
 } from "@/lib/mcp/error-envelopes"
 import { getTenantAccess } from "@/lib/org/access"
 import type { OrgId } from "@/lib/org/types"
+import { bridgeConfigOrg, MIXER_ORG_ID } from "@/lib/org/mixer"
 
 /**
  * Admin-SDK helpers shared by the MCP monitor tools.
@@ -36,11 +37,12 @@ export interface MonitorUser {
 /**
  * Multi-tenant P2: the mixer belongs to the bridge tenant (CRC's X32), so the
  * caller's mixer rights are read from their membership THERE — never from the
- * MCP token's tenant. A CRC admin (e.g. David, admin of crc and BL) keeps the
- * mixer from a BL token exactly as today; a BL-only member gets none. Phase 6
- * moves the bridge tenant into tenant config.
+ * MCP token's tenant. Multi-tenant phase 6: the mixer is CRC-only behind its
+ * flag, so the MCP mixer tools now also refuse any caller whose TOKEN is not
+ * crc's (tenant-tools.ts withFeatureGates); `config/monitor.orgId` (absent =
+ * crc) must name this tenant too (loadMonitorConfig).
  */
-export const BRIDGE_ORG: OrgId = "crc"
+export const BRIDGE_ORG: OrgId = MIXER_ORG_ID
 
 export async function loadMonitorUser(db: DB, uid: string): Promise<MonitorUser> {
     const access = await getTenantAccess(uid, BRIDGE_ORG, { db })
@@ -50,9 +52,17 @@ export async function loadMonitorUser(db: DB, uid: string): Promise<MonitorUser>
     }
 }
 
+/**
+ * CRC's `config/monitor`, or null when absent or when it names a different
+ * tenant than the bridge tenant (multi-tenant phase 6: the bridge config's
+ * `orgId` must match; absent is crc).
+ */
 export async function loadMonitorConfig(db: DB): Promise<MonitorConfig | null> {
     const snap = await db.collection("config").doc("monitor").get()
-    return snap.exists ? (snap.data() as MonitorConfig) : null
+    if (!snap.exists) return null
+    const data = snap.data()
+    if (bridgeConfigOrg(data) !== BRIDGE_ORG) return null
+    return data as MonitorConfig
 }
 
 export interface MixerStateMeta {

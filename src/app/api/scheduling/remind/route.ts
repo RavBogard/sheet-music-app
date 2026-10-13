@@ -9,6 +9,7 @@ import { BASE_URL } from "@/lib/constants"
 import { formatEventDate } from "@/lib/firestore-helpers"
 import { coerceOrgId } from "@/lib/org/registry"
 import { rowOrg } from "@/lib/org/membership"
+import { requireFeature } from "@/lib/org/features"
 
 const remindSchema = z.object({
     setlistId: z.string().min(1),
@@ -29,6 +30,9 @@ export const POST = createApiHandler(
         // 'crc'). Applied to BOTH branches — even the setlistId branch is walled
         // so a cross-org setlistId can't trigger another tenant's reminders.
         const org = coerceOrgId(ctx.req.headers.get('x-org-id'))
+        // Multi-tenant phase 6: reminders are scheduling email/SMS.
+        const off = await requireFeature(org, "schedulingEmails")
+        if (off) return off
 
         // Get pending assignments
         let query: FirebaseFirestore.Query = db.collection('scheduling_assignments')

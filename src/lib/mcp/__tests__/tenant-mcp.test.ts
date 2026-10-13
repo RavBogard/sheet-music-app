@@ -6,7 +6,7 @@
  */
 import fs from "node:fs"
 import path from "node:path"
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 vi.mock("@/lib/logger", () => ({
     logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
@@ -160,13 +160,12 @@ describe("per-tenant MCP instructions", () => {
 })
 
 describe("per-tenant MCP tool lists", () => {
-    afterEach(() => {
-        delete process.env.MCP_FEATURE_FILTER
-    })
-
-    it("crc and brotherslazaroff list exactly today's tools", async () => {
+    it("crc lists exactly today's tools; BL loses only its switched-off features' tools (phase 6)", async () => {
         expect((await asTenant("crc")).tools).toEqual(BEFORE.crc)
-        expect((await asTenant("brotherslazaroff", "www.brotherslazaroff.live")).tools).toEqual(BEFORE.brotherslazaroff)
+        const blOff = new Set([...FEATURE_TOOLS.mixer, ...FEATURE_TOOLS.driveInbox])
+        expect((await asTenant("brotherslazaroff", "www.brotherslazaroff.live")).tools).toEqual(
+            BEFORE.brotherslazaroff.filter((t) => !blOff.has(t)),
+        )
     })
 
     it("testshul with mixer and notifyBand off lacks those tools, keeps the rest", async () => {
@@ -178,14 +177,10 @@ describe("per-tenant MCP tool lists", () => {
         expect(tools).toEqual(BEFORE.crc.filter((t) => !removed.has(t)))
     })
 
-    it("MCP_FEATURE_FILTER=1 applies the filter to BL too (phase 6 switch)", async () => {
-        process.env.MCP_FEATURE_FILTER = "1"
+    it("phase 6: the filter applies to BL with no switch; BL keeps notify_band (notifyBand on)", async () => {
         const { tools } = await asTenant("brotherslazaroff", "www.brotherslazaroff.live")
-        for (const t of [...FEATURE_TOOLS.mixer, ...FEATURE_TOOLS.driveInbox, ...FEATURE_TOOLS.notifyBand]) {
-            expect(tools).not.toContain(t)
-        }
-        // crc has every flag on: unchanged even with the switch.
-        expect((await asTenant("crc")).tools).toEqual(BEFORE.crc)
+        for (const t of [...FEATURE_TOOLS.mixer, ...FEATURE_TOOLS.driveInbox]) expect(tools).not.toContain(t)
+        for (const t of FEATURE_TOOLS.notifyBand) expect(tools).toContain(t)
     })
 
     it("every feature-mapped tool exists on a surface (no stale names)", () => {

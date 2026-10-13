@@ -20,7 +20,8 @@ import {
 import { wrapWithValidationRemap } from "@/lib/mcp/zod-envelope-remap"
 import { withScopedBearer } from "@/lib/mcp/scoped-bearer-gate"
 import { forSurface, type Surface } from "@/lib/mcp/surfaces"
-import { withoutTools } from "@/lib/mcp/tenant-tools"
+import { withFeatureGates, withoutTools } from "@/lib/mcp/tenant-tools"
+import { hasFeature } from "@/lib/org/features"
 import { createTenantDispatcher } from "@/lib/mcp/tenant-dispatch"
 
 /**
@@ -96,7 +97,9 @@ async function verifyToken(
 
 /**
  * Multi-tenant phase 4: one surface's mcp-handler with the given instructions,
- * minus `dropTools` (a tenant's switched-off features; empty for crc, BL, ops).
+ * minus `dropTools` (a tenant's switched-off features; empty for ops).
+ * Phase 6: every feature tool's handler also checks the caller's tenant
+ * (withFeatureGates), on both surfaces.
  */
 function createSurfaceHandler(
     surface: Surface,
@@ -106,7 +109,7 @@ function createSurfaceHandler(
 ) {
     return createMcpHandler(
         (rawServer) => {
-            const server = withoutTools(forSurface(rawServer, surface), dropTools)
+            const server = withoutTools(withFeatureGates(forSurface(rawServer, surface), hasFeature), dropTools)
             registerReadTools(server)
             registerWriteTools(server)
             registerMonitorTools(server)

@@ -13,6 +13,13 @@ import { clearPrimedOrgConfigs } from "@/lib/org/config-cache"
  */
 
 let db: FakeFirestore
+// Multi-tenant phase 6: this file pins the reminder's per-tenant timing with
+// every tenant's schedulingEmails on (as before the flag). The flag's own
+// loop is tested in src/__tests__/mt-p6/feature-gates.test.ts.
+vi.mock("@/lib/org/features", async () => {
+    const { cronTenantIds } = await import("@/lib/org/cron-tenants")
+    return { tenantsWithFeature: () => cronTenantIds(), hasFeature: async () => true, requireFeature: async () => null }
+})
 vi.mock("@/lib/firebase-admin", () => ({ initAdmin: () => true, getFirestore: () => db }))
 vi.mock("next/cache", () => ({ unstable_cache: (fn: () => unknown) => fn }))
 const sendSchedulingEmail = vi.fn(async (_a: Record<string, unknown>) => ({ ok: true }))

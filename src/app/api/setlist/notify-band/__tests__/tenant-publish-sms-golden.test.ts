@@ -15,6 +15,9 @@ const h = vi.hoisted(() => ({
 vi.mock("@/lib/api-wrapper", () => ({
     createApiHandler: (fn: (ctx: unknown) => unknown) => (ctx: unknown) => fn(ctx),
 }))
+// Multi-tenant phase 6: this file pins the SMS text; the notifyBand gate on
+// this route is tested in src/__tests__/mt-p6/feature-gates.test.ts.
+vi.mock("@/lib/org/features", () => ({ requireFeature: vi.fn(async () => null) }))
 vi.mock("@/lib/rate-limit", () => ({ checkRateLimit: vi.fn(async () => null) }))
 vi.mock("@/lib/logger", () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }))
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }))

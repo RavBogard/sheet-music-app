@@ -6,6 +6,7 @@ import { logger } from "@/lib/logger"
 import { checkIdentityConsistency, type IdentityConsistency } from "@/lib/org/identity-consistency"
 import { env } from "@/env.mjs"
 import { captureException, captureMessage } from "@/lib/error-reporting"
+import { bridgeConfigOrg, mixerOn, MIXER_ORG_ID } from "@/lib/org/mixer"
 import {
     STORAGE_BACKUP_STALENESS_HOURS,
     STORAGE_BACKUP_STALENESS_MS,
@@ -183,7 +184,10 @@ export async function GET(req: NextRequest) {
         const libraryBytesHealth = await readAndAlertLibraryBytesHealth(db)
 
         // Bridge-health — silence + error-spike + X32-disconnect alarms.
-        const bridgeHealth = await readAndAlertBridgeHealth(db, Date.now())
+        // Multi-tenant phase 6: only while crc's mixer flag is on.
+        const bridgeHealth: BridgeHealthResponse = (await mixerOn(MIXER_ORG_ID))
+            ? await readAndAlertBridgeHealth(db, Date.now())
+            : { status: "feature_off" }
 
         return NextResponse.json({
             checked,
@@ -560,6 +564,7 @@ async function readAndAlertLibraryBytesHealth(
  */
 type BridgeHealthResponse =
     | { status: "unavailable" }
+    | { status: "feature_off" }
     | {
           status: "ok"
           lastSeen: string | null
@@ -614,6 +619,8 @@ async function readAndAlertBridgeHealth(
         const monitorDoc = await db.collection("config").doc("monitor").get()
         if (monitorDoc.exists) {
             const data = monitorDoc.data() as Record<string, unknown> | undefined
+            // Multi-tenant phase 6: the bridge config must be crc's.
+            if (bridgeConfigOrg(data) !== MIXER_ORG_ID) return { status: "unavailable" }
             const b = data?.bridge
             if (b && typeof b === "object") {
                 bridge = b as Record<string, unknown>

@@ -141,6 +141,8 @@ const CRC: OrgConfigInput = {
     email: { ...crcEmail, fromAddress: "", replyTo: "" },
     legal: { operatorName: "Central Reform Congregation", contactEmail: "music@centralreform.live", useCrcText: true },
     features: { mixer: true, driveInbox: true, schedulingEmails: true, todayFeed: true, notifyBand: true, perform: true },
+    // "" means CHART_INBOX_DRIVE_FOLDER_ID, CRC's inbox since before phase 6.
+    driveInbox: { folderId: "" },
     library: {
         collections: [
             { id: "core", label: "CRC Charts" },
@@ -198,8 +200,15 @@ const BL: OrgConfigInput = {
     email: { ...blEmail, fromAddress: "", replyTo: "" },
     // Frozen: BL has always been served CRC's legal pages.
     legal: { operatorName: "Central Reform Congregation", contactEmail: "music@centralreform.live", useCrcText: true },
-    // Phase 6 sets these flag by flag to what BL does today; nothing reads them before then.
-    features: { mixer: false, driveInbox: false, schedulingEmails: false, todayFeed: false, notifyBand: false, perform: true },
+    // Phase 6: flag by flag, what BL does today, from production evidence
+    // (docs/planning/2026-10-12-multitenant/P6-BL-FLAGS.md). todayFeed: BL's
+    // today.json is emitted every 15 minutes. notifyBand: on because the packet
+    // email (/api/setlist/email-packets) leaves no record, so BL's use of it
+    // cannot be ruled out (when in doubt, on). mixer: CRC's console (and
+    // CRC-only regardless). driveInbox, schedulingEmails: never used by BL (no
+    // inbox folder, no Drive-synced rows, no assignment ever made).
+    features: { mixer: false, driveInbox: false, schedulingEmails: false, todayFeed: true, notifyBand: true, perform: true },
+    driveInbox: { folderId: "" },
     library: {
         collections: [
             { id: "core", label: "Charts" },

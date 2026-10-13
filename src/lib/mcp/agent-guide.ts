@@ -1,4 +1,5 @@
 import fs from "node:fs"
+import { featuresOf } from "@/lib/org/features-client"
 import path from "node:path"
 import { logger } from "@/lib/logger"
 import type { OrgConfig, OrgFeatures } from "@/lib/org/config-schema"
@@ -178,7 +179,9 @@ export function renderTenantGuide({ config, authors }: TenantGuideFacts): string
     facts.push(
         `- Time zone: ${config.locale.timeZone}. Language: ${LANGUAGE_NAMES[config.locale.language] ?? config.locale.language}.`,
     )
-    const on = (Object.keys(FEATURE_LABELS) as Array<keyof OrgFeatures>).filter((k) => config.features[k])
+    // Phase 6: the effective flags (the mixer is crc-only whatever the flag says).
+    const features = featuresOf(config)
+    const on = (Object.keys(FEATURE_LABELS) as Array<keyof OrgFeatures>).filter((k) => features[k])
     if (on.length > 0) facts.push(`- Switched on: ${on.map((k) => FEATURE_LABELS[k]).join(", ")}.`)
 
     const intro = band
@@ -186,7 +189,7 @@ export function renderTenantGuide({ config, authors }: TenantGuideFacts): string
         : `This connection serves ${name}, a congregation, and no one else. Everything you read or change here is ${name}'s: its ${setlistWord}s, charts and people.`
 
     let core = AGENT_GUIDE_CORE
-    if (config.features.driveInbox) {
+    if (features.driveInbox) {
         core = core.replace("- A Drive folder the author already has:", `${INBOX_LINE}\n- A Drive folder the author already has:`)
     }
 

@@ -7,8 +7,9 @@
  *   - the ops list (one handler, not dispatched by tenant)
  *
  * After phase 6: crc and ops identical; BL = before minus ONLY the tools of
- * features BL does not use (P6-BL-FLAGS.md), asserted in
- * p6-feature-gates.test.ts against this same fixture.
+ * features BL does not use (P6-BL-FLAGS.md), listed in BL_DROPPED_P6. (The
+ * fixture was written, and this test passed with BL equal to it, on the
+ * unchanged code at 530beb83.)
  *
  * Regenerate (only before the change): P6_WRITE_GOLDEN=1 npx vitest run <this file>
  */
@@ -38,6 +39,26 @@ vi.mock("@/lib/org/get-org-config", async () => {
 import { buildMcpHandler } from "@/lib/mcp/build-handler"
 import { listToolNames } from "./helpers/mcp-rpc"
 
+/** The tools phase 6 removes from BL's authoring list, by feature. */
+export const BL_DROPPED_P6 = [
+    // mixer (CRC-only; the 7 bridge_* recovery tools are on ops, not authoring)
+    "list_monitor_buses",
+    "get_mix",
+    "get_matrix",
+    "set_send_level",
+    "set_send_mute",
+    "set_bus_fader",
+    "set_matrix_fader",
+    "set_matrix_mute",
+    "get_command_status",
+    "assign_monitor_bus",
+    "unassign_monitor_bus",
+    "get_bridge_health",
+    // driveInbox
+    "get_chart_inbox",
+    "sync_chart_inbox",
+]
+
 export const P6_GOLDEN_PATH = path.join(__dirname, "fixtures", "p6-tool-lists-before.json")
 
 const authoring = buildMcpHandler("authoring", "/api")
@@ -62,6 +83,11 @@ describe("phase 6 golden: MCP tool lists", () => {
         const golden = JSON.parse(fs.readFileSync(P6_GOLDEN_PATH, "utf8")) as typeof now
         expect(now.crc).toEqual(golden.crc)
         expect(now.ops).toEqual(golden.ops)
-        expect(now.brotherslazaroff).toEqual(golden.brotherslazaroff)
+        // Phase 6: BL = today's list minus ONLY the tools of the features BL
+        // does not use (P6-BL-FLAGS.md): mixer (its 12 authoring tools) and
+        // driveInbox. Nothing else may differ.
+        const blDropped = new Set(BL_DROPPED_P6)
+        expect(now.brotherslazaroff).toEqual(golden.brotherslazaroff.filter((t) => !blDropped.has(t)))
+        for (const t of BL_DROPPED_P6) expect(golden.brotherslazaroff, t).toContain(t)
     })
 })

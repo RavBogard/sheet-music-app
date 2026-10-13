@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { timingSafeEqual } from "crypto"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { runDriveSyncProd } from "@/lib/drive-sync/poller"
-import { resolveChartInboxFolderId } from "@/lib/drive-sync/inbox"
+import { tenantInboxFolder } from "@/lib/drive-sync/tenant-inbox"
+import { tenantsWithFeature } from "@/lib/org/features"
 import { logger } from "@/lib/logger"
 import { captureException } from "@/lib/error-reporting"
 import { env } from "@/env.mjs"
@@ -36,6 +37,12 @@ export const maxDuration = 300
  * Dormant by default: if `DAVID_DRIVE_DROP_FOLDER_ID` is unset, returns
  * `{watching: false}` and no-ops. Set the env var in Vercel to activate.
  *
+ * Multi-tenant phase 6: one tick per tenant with the `driveInbox` flag on and
+ * an inbox folder (tenant-inbox.ts: `orgs/{id}.driveInbox.folderId`, CRC's
+ * fallback the env var). Each tenant's files are stamped with that tenant.
+ * The response is CRC's tick as before; with more than one tenant ticking,
+ * `tenants` lists every tick.
+ *
  * Auth: `Authorization: Bearer ${CRON_SECRET}` (same shape as the existing
  * crons). Vercel cron sets this automatically when `crons` is configured
  * in `vercel.json`.
@@ -61,10 +68,15 @@ export async function GET(req: NextRequest) {
             )
         }
 
-        // Chart Inbox (CHART_INBOX_DRIVE_FOLDER_ID) with the legacy
-        // DAVID_DRIVE_DROP_FOLDER_ID as fallback — see src/lib/drive-sync/inbox.ts.
-        const parentFolderId = resolveChartInboxFolderId(env)
-        if (!parentFolderId) {
+        // Chart Inbox per tenant (flag on + a folder). CRC's folder is
+        // CHART_INBOX_DRIVE_FOLDER_ID with the legacy DAVID_DRIVE_DROP_FOLDER_ID
+        // as fallback — see src/lib/drive-sync/tenant-inbox.ts.
+        const inboxes: Array<{ org: string; folderId: string }> = []
+        for (const org of await tenantsWithFeature("driveInbox")) {
+            const inbox = await tenantInboxFolder(org, env)
+            if (inbox.folderId) inboxes.push({ org, folderId: inbox.folderId })
+        }
+        if (inboxes.length === 0) {
             logger.info(
                 "[drive-sync] CHART_INBOX_DRIVE_FOLDER_ID unset — cron is dormant",
             )
@@ -87,18 +99,39 @@ export async function GET(req: NextRequest) {
         }
         const db = getFirestore()
 
-        const result = await runDriveSyncProd(db, parentFolderId)
-        logger.info("[drive-sync] tick complete", {
-            parentFolderId,
-            filesScanned: result.filesScanned,
-            imported: result.imported,
-            renamed: result.renamed,
-            replaced: result.replaced,
-            moved: result.moved,
-            skipped: result.skipped,
-            queued: result.queued,
+        const ticks: Array<{ org: string } & Awaited<ReturnType<typeof runDriveSyncProd>>> = []
+        for (const { org, folderId: parentFolderId } of inboxes) {
+            let result: Awaited<ReturnType<typeof runDriveSyncProd>>
+            try {
+                result = await runDriveSyncProd(db, parentFolderId, org)
+            } catch (err) {
+                // One tenant's failure must not starve the others; with a
+                // single inbox (CRC today) it fails the run as before.
+                if (inboxes.length === 1) throw err
+                logger.error(`[drive-sync] tick failed for ${org}:`, err)
+                captureException(err, { source: "cron", location: "drive-sync", extra: { org } })
+                continue
+            }
+            logger.info("[drive-sync] tick complete", {
+                org,
+                parentFolderId,
+                filesScanned: result.filesScanned,
+                imported: result.imported,
+                renamed: result.renamed,
+                replaced: result.replaced,
+                moved: result.moved,
+                skipped: result.skipped,
+                queued: result.queued,
+            })
+            ticks.push({ org, ...result })
+        }
+        const primary = ticks.find((t) => t.org === "crc") ?? ticks[0]
+        const { org: _primaryOrg, ...primaryResult } = primary ?? { org: "", watching: false, filesScanned: 0, imported: 0, renamed: 0, replaced: 0, moved: 0, skipped: 0, queued: 0, errors: [] }
+        return NextResponse.json({
+            success: true,
+            ...primaryResult,
+            ...(inboxes.length > 1 ? { tenants: ticks } : {}),
         })
-        return NextResponse.json({ success: true, ...result })
     } catch (err) {
         logger.error("[drive-sync] cron failed:", err)
         captureException(err, { source: "cron", location: "drive-sync" })

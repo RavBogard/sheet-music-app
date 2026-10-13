@@ -6,14 +6,14 @@ import type { OrgConfig } from "@/lib/org/config-schema"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 import { agentGuideModeOf, tenantInstructions } from "@/lib/mcp/agent-guide"
-import { featureFilterApplies, toolsForDisabledFeatures } from "@/lib/mcp/tenant-tools"
+import { droppedToolsFor } from "@/lib/mcp/tenant-tools"
 
 /**
  * Multi-tenant phase 4: the authoring MCP server answers each request with the
  * handler of the TOKEN's tenant (not the host's, so existing connectors keep
  * working: a CRC token at any address still acts as CRC). The handler differs
- * per tenant only in its `instructions` and, for tenants the feature filter
- * applies to, in the tools its switched-off features remove.
+ * per tenant only in its `instructions` and in the tools its switched-off
+ * features remove (phase 6: every tenant).
  */
 
 export type RouteHandler = (req: Request) => Promise<Response>
@@ -66,7 +66,7 @@ export async function planTenantMcp(orgId: OrgId): Promise<TenantMcpPlan> {
     // pays for the members read.
     const authors = config && agentGuideModeOf(config) === "generated" ? await tenantAuthors(orgId) : []
     const instructions = tenantInstructions(orgId, config, authors)
-    const dropTools = featureFilterApplies(orgId, config) && config ? toolsForDisabledFeatures(config.features) : new Set<string>()
+    const dropTools = droppedToolsFor(orgId, config)
     const digest = createHash("sha1")
         .update(instructions ?? "<none>")
         .update("\0")

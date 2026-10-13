@@ -8,7 +8,7 @@ import {
     evaluateTodayFreshness,
     type OrgEmitOutcome,
 } from "./evaluate"
-import { cronTenantIds } from "@/lib/org/cron-tenants"
+import { tenantsWithFeature } from "@/lib/org/features"
 import { logger } from "@/lib/logger"
 import { env } from "@/env.mjs"
 import { httpError } from "@/lib/http/error-envelope"
@@ -217,13 +217,15 @@ export async function GET(req: NextRequest) {
         const outcomes: OrgEmitOutcome[] = []
         const serviceCounts: Record<string, number | undefined> = {}
 
-        // Every tenant, each to its own file. Never one file for two orgs.
+        // Every tenant with `todayFeed` on (multi-tenant phase 6), each to its
+        // own file. Never one file for two orgs. A tenant with the flag off is
+        // not emitted and not in the freshness verdict, so it cannot alarm.
         //
         // Emit, then READ THE OBJECT BACK. `emitToday` never throws and returns
         // `{ok:false}` on failure, and since Publish was retired this cron is
         // the only writer — so its own return value is not enough to say the
         // reader is looking at fresh bytes. See `evaluate.ts`.
-        for (const org of await cronTenantIds()) {
+        for (const org of await tenantsWithFeature("todayFeed")) {
             const res = await emitToday(org)
             if (!res.ok) {
                 outcomes.push({ org, ok: false, error: res.error })
