@@ -1,0 +1,13 @@
+{
+    "createSessionFailed": { "where": "QR device sign-in (POST /api/auth/qr): error when the shared iPad cannot start a sign-in code", "who": "musicians at a shared iPad", "maxLength": 60 },
+    "missingCode": { "where": "QR device sign-in (GET /api/auth/qr): error when the status check has no code", "who": "musicians at a shared iPad", "maxLength": 40, "context": "'code' = the 6-character sign-in code shown as a QR" },
+    "invalidCodeFormat": { "where": "QR device sign-in (GET/PUT /api/auth/qr): error when the sign-in code is malformed; shown on the phone's approve page", "who": "musicians approving a sign-in from their phone", "maxLength": 40, "context": "'code' = the 6-character sign-in code shown as a QR" },
+    "sessionNotFound": { "where": "QR device sign-in (GET/PUT /api/auth/qr): error when the sign-in code does not exist; shown on the phone's approve page", "who": "musicians approving a sign-in from their phone", "maxLength": 40, "context": "'session' = a pending device sign-in request" },
+    "sessionExpired": { "where": "QR device sign-in (GET/PUT /api/auth/qr): error when the sign-in code timed out; shown on the phone's approve page", "who": "musicians approving a sign-in from their phone", "maxLength": 40, "context": "'session' = a pending device sign-in request" },
+    "checkSessionFailed": { "where": "QR device sign-in (GET /api/auth/qr): error when the iPad's status check fails", "who": "musicians at a shared iPad", "maxLength": 60 },
+    "authRequired": { "where": "QR device sign-in (PUT /api/auth/qr): error on the phone's approve page when the phone is not signed in", "who": "musicians approving a sign-in from their phone", "maxLength": 60 },
+    "invalidToken": { "where": "QR device sign-in (PUT /api/auth/qr): error on the phone's approve page when the phone's sign-in is no longer valid", "who": "musicians approving a sign-in from their phone", "maxLength": 40 },
+    "approvalNeedsMember": { "where": "QR device sign-in (PUT /api/auth/qr): error on the phone's approve page when the account is not an approved band member", "who": "people approving a sign-in from their phone", "maxLength": 80 },
+    "sessionAlreadyUsed": { "where": "QR device sign-in (PUT /api/auth/qr): error on the phone's approve page when the code was already approved", "who": "musicians approving a sign-in from their phone", "maxLength": 40, "context": "'session' = a pending device sign-in request" },
+    "approveSessionFailed": { "where": "QR device sign-in (PUT /api/auth/qr): error on the phone's approve page when approval fails unexpectedly", "who": "musicians approving a sign-in from their phone", "maxLength": 60 }
+}

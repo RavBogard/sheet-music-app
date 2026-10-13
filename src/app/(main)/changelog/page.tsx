@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { requestOrg } from "@/lib/org/request-org"
+import { getI18n } from "@/i18n/server"
 
 // C5D-007: changelog is public and indexable. Root noindex applies to
 // the authed app; legal/marketing pages override.
@@ -7,12 +8,16 @@ import { requestOrg } from "@/lib/org/request-org"
 // other tenants get "Changelog" and the root template adds their name.
 export async function generateMetadata(): Promise<Metadata> {
     const { config } = await requestOrg()
+    const { t } = await getI18n()
     return {
-        title: config && !config.legal.useCrcText ? "Changelog" : "Changelog | CentralReform.live",
+        title: config && !config.legal.useCrcText ? t("changelog.title") : "Changelog | CentralReform.live",
         robots: { index: true, follow: true },
     }
 }
 
+// CRC's own release history is content, not UI: it stays in English on every
+// tenant (phase 7 lead decision) and renders in an lang="en" dir="ltr" box on a
+// non-English page. i18n-ignore: CRC release history is content, kept in English (lead decision)
 const versions = [
     {
         version: "v1.7",
@@ -61,12 +66,21 @@ const versions = [
     },
 ]
 
-export default function ChangelogPage() {
+export default async function ChangelogPage() {
+    const { t, lang } = await getI18n()
+    // English pages keep today's markup exactly (golden); elsewhere the English
+    // content box declares its own language and direction.
+    const nonEnglishPage = lang !== "en"
     return (
         <div className="max-w-2xl mx-auto px-4 py-8">
-            <h1 className="text-2xl font-bold mb-6">Changelog</h1>
-            <div className="space-y-6">
+            <h1 className="text-2xl font-bold mb-6">{t("changelog.title")}</h1>
+            <div
+                className="space-y-6"
+                lang={nonEnglishPage ? "en" : undefined}
+                dir={nonEnglishPage ? "ltr" : undefined}
+            >
                 {versions.map((v) => (
+                    // Physical border-l/pl on purpose: the box is always left-to-right content.
                     <div key={v.version} className="border-l-2 border-brand pl-4">
                         <div className="flex items-baseline gap-3">
                             <span className="text-lg font-semibold text-brand">{v.version}</span>

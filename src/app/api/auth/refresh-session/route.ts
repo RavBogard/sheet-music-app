@@ -29,6 +29,7 @@ export const POST = createApiHandler(
 
         if (!initAdmin()) {
             return NextResponse.json(
+                // i18n-ignore: background auth call (auth-context / drift repair); the response is logged, never shown
                 { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
                 { status: 500 },
             )

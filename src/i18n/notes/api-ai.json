@@ -1,0 +1,6 @@
+{
+    "noImage": { "where": "AI chord check (POST /api/ai/chord-validate): error when no page image was sent", "who": "leaders using the AI chord tools", "maxLength": 40 },
+    "missingFileId": { "where": "AI music reading (POST /api/ai/omr): error when no chart file was given", "who": "leaders using the AI chord tools", "maxLength": 40, "context": "'fileId' is a parameter name; keep it as is" },
+    "noStrips": { "where": "AI transposer (POST /api/ai/transposer): error when no image strips were sent", "who": "leaders using the AI transposer", "maxLength": 40, "context": "'strips' = horizontal slices of a chart page image" },
+    "missingImage": { "where": "AI transposer page scan (POST /api/ai/transposer/scan): error when no page image was sent", "who": "musicians using the smart transposer", "maxLength": 60, "context": "'base64Image' is a parameter name; keep it as is" }
+}

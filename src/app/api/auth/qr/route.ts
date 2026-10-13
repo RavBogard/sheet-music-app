@@ -9,6 +9,7 @@
  * PUT    /api/auth/qr          Approve session (requires auth)
  */
 
+import { getT } from "@/i18n/server"
 import { NextRequest, NextResponse } from "next/server"
 import { coerceOrgId } from "@/lib/org/registry"
 import { getTenantAccess } from "@/lib/org/access"
@@ -43,6 +44,7 @@ const TEST_LOGIN_CODE_RE = /^[A-Za-z0-9_-]{32}$/
  * Accepts an optional client-generated code for instant QR display.
  */
 export async function POST(req: NextRequest) {
+    const t = await getT()
     try {
         const limited = await checkRateLimit(req, 'telemetry')
         if (limited) return limited
@@ -75,7 +77,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ code, expiresAt: now + EXPIRY_MS })
     } catch (err) {
         logger.error("[QR] Create error:", err)
-        return NextResponse.json({ error: "Failed to create session" }, { status: 500 })
+        return NextResponse.json({ error: t("api-auth.createSessionFailed") }, { status: 500 })
     }
 }
 
@@ -87,10 +89,11 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
     const limited = await checkRateLimit(req, 'telemetry')
     if (limited) return limited
+    const t = await getT()
 
     const code = req.nextUrl.searchParams.get("code")
     if (!code) {
-        return NextResponse.json({ error: "Missing code" }, { status: 400 })
+        return NextResponse.json({ error: t("api-auth.missingCode") }, { status: 400 })
     }
 
     // BUG-7 (run-2 §BUG-7): reject malformed codes (e.g. containing '/') with a
@@ -105,7 +108,7 @@ export async function GET(req: NextRequest) {
     // fixed-length, and exclude '/' and '.', so the BUG-7 guarantee holds — a
     // 31/33-char string, a '/'-bearing code, or `..%2Fetc` all still 400 here.
     if (!DEVICE_CODE_RE.test(code) && !TEST_LOGIN_CODE_RE.test(code)) {
-        return NextResponse.json({ error: "Invalid code format" }, { status: 400 })
+        return NextResponse.json({ error: t("api-auth.invalidCodeFormat") }, { status: 400 })
     }
 
     try {
@@ -116,7 +119,7 @@ export async function GET(req: NextRequest) {
         const doc = await db.collection(COLLECTION).doc(code).get()
 
         if (!doc.exists) {
-            return NextResponse.json({ error: "Session not found" }, { status: 404 })
+            return NextResponse.json({ error: t("api-auth.sessionNotFound") }, { status: 404 })
         }
 
         const data = doc.data()!
@@ -125,7 +128,7 @@ export async function GET(req: NextRequest) {
         if (Date.now() > data.expiresAt) {
             // Clean up expired doc
             await db.collection(COLLECTION).doc(code).delete().catch(e => logger.warn('[QR] Failed to clean up expired session:', e))
-            return NextResponse.json({ error: "Session expired" }, { status: 410 })
+            return NextResponse.json({ error: t("api-auth.sessionExpired") }, { status: 410 })
         }
 
         if (data.status === "approved" && data.customToken) {
@@ -145,7 +148,7 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ status: data.status })
     } catch (err) {
         logger.error("[QR] Poll error:", err)
-        return NextResponse.json({ error: "Failed to check session" }, { status: 500 })
+        return NextResponse.json({ error: t("api-auth.checkSessionFailed") }, { status: 500 })
     }
 }
 
@@ -155,6 +158,7 @@ export async function GET(req: NextRequest) {
  * Mints a custom token for the iPad to sign in as this user.
  */
 export async function PUT(req: NextRequest) {
+    const t = await getT()
     try {
         const limited = await checkRateLimit(req, 'telemetry')
         if (limited) return limited
@@ -163,7 +167,7 @@ export async function PUT(req: NextRequest) {
         const authHeader = req.headers.get("Authorization")
         const rawToken = authHeader?.startsWith("Bearer ") ? authHeader.split(" ")[1] : null
         if (!rawToken) {
-            return NextResponse.json({ error: "Authentication required" }, { status: 401 })
+            return NextResponse.json({ error: t("api-auth.authRequired") }, { status: 401 })
         }
 
         if (!initAdmin()) {
@@ -171,7 +175,7 @@ export async function PUT(req: NextRequest) {
         }
         const decoded = await verifyIdToken(rawToken)
         if (!decoded) {
-            return NextResponse.json({ error: "Invalid token" }, { status: 403 })
+            return NextResponse.json({ error: t("api-auth.invalidToken") }, { status: 403 })
         }
 
         // v4.3 P6-S04: QR approval is a session-mint operation. Gate to band
@@ -235,7 +239,7 @@ export async function PUT(req: NextRequest) {
         }
         if (!effectiveRole || !allowedRoles.has(effectiveRole)) {
             return NextResponse.json(
-                { error: "Approval requires an approved member account" },
+                { error: t("api-auth.approvalNeedsMember") },
                 { status: 403 },
             )
         }
@@ -243,25 +247,25 @@ export async function PUT(req: NextRequest) {
         const body = await req.json()
         const { code } = body
         if (!code || typeof code !== "string" || !/^[A-Z0-9]{6}$/.test(code)) {
-            return NextResponse.json({ error: "Invalid code format" }, { status: 400 })
+            return NextResponse.json({ error: t("api-auth.invalidCodeFormat") }, { status: 400 })
         }
 
         const docRef = db.collection(COLLECTION).doc(code)
         const doc = await docRef.get()
 
         if (!doc.exists) {
-            return NextResponse.json({ error: "Session not found" }, { status: 404 })
+            return NextResponse.json({ error: t("api-auth.sessionNotFound") }, { status: 404 })
         }
 
         const data = doc.data()!
 
         if (Date.now() > data.expiresAt) {
             await docRef.delete().catch(e => logger.warn('[QR] Failed to clean up expired session:', e))
-            return NextResponse.json({ error: "Session expired" }, { status: 410 })
+            return NextResponse.json({ error: t("api-auth.sessionExpired") }, { status: 410 })
         }
 
         if (data.status !== "pending") {
-            return NextResponse.json({ error: "Session already used" }, { status: 409 })
+            return NextResponse.json({ error: t("api-auth.sessionAlreadyUsed") }, { status: 409 })
         }
 
         // Mint a custom token for this user
@@ -283,6 +287,6 @@ export async function PUT(req: NextRequest) {
         })
     } catch (err) {
         logger.error("[QR] Approve error:", err)
-        return NextResponse.json({ error: "Failed to approve session" }, { status: 500 })
+        return NextResponse.json({ error: t("api-auth.approveSessionFailed") }, { status: 500 })
     }
 }

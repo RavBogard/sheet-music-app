@@ -17,6 +17,7 @@ export const POST = createApiHandler(async (ctx) => {
             nudgedAdmin: true
         })
 
+        // i18n-ignore: the caller (NudgeAdminButton) reads only res.ok and shows its own translated text
         return NextResponse.json({ success: true, message: "Admin notified" })
     } catch (error) {
         logger.error("Nudge admin error:", error)

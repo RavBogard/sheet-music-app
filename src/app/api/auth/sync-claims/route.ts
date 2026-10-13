@@ -32,6 +32,7 @@ export const POST = createApiHandler(
 
         if (!initAdmin()) {
             return NextResponse.json(
+                // i18n-ignore: background auth call (auth-context / drift repair); the response is logged, never shown
                 { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
                 { status: 500 },
             )
@@ -48,6 +49,7 @@ export const POST = createApiHandler(
         } catch (e) {
             const msg = e instanceof Error ? e.message : String(e)
             logger.error(`[sync-claims] uid=${uid} rebuild failed: ${msg}`)
+            // i18n-ignore: background auth call (auth-context / drift repair); the response is logged, never shown
             return NextResponse.json({ error: "Sync failed" }, { status: 500 })
         }
 

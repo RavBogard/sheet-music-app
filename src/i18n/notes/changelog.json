@@ -1,0 +1,3 @@
+{
+    "title": { "where": "Changelog page: the page heading, and the browser tab title on tenants without CRC's text", "who": "anyone with the link", "maxLength": 25, "context": "The version list under it is CRC's release history and stays in English." }
+}

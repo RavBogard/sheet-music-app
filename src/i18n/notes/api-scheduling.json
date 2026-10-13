@@ -1,0 +1,13 @@
+{
+    "assignmentNotFound": { "where": "Scheduling (POST /api/scheduling/respond, /unassign): error toast when the assignment no longer exists", "who": "musicians answering a request; band leaders cancelling one", "maxLength": 50, "context": "'assignment' = a request for a musician to play a service" },
+    "notYourAssignment": { "where": "Scheduling (POST /api/scheduling/respond): error toast when a musician answers someone else's assignment", "who": "musicians", "maxLength": 50, "context": "'assignment' = a request for a musician to play a service" },
+    "assignmentAlready": { "where": "Scheduling (POST /api/scheduling/respond): error toast when the musician already answered", "who": "musicians", "maxLength": 60, "context": "{status} is one of the status words in this file (statusConfirmed, statusDeclined, …), already translated; an unknown status is inserted as its raw English code" },
+    "cannotCancelAssignment": { "where": "Scheduling (POST /api/scheduling/unassign): error toast when the assignment cannot be cancelled in its current state", "who": "band leaders", "maxLength": 70, "context": "{status} is one of the status words in this file (statusDeclined, statusCancelled, …), already translated; an unknown status is inserted as its raw English code" },
+    "statusPending": { "where": "Scheduling API errors: assignment status word inserted as {status}", "who": "musicians and band leaders", "maxLength": 15, "context": "the musician has not answered yet" },
+    "statusConfirmed": { "where": "Scheduling API errors: assignment status word inserted as {status}", "who": "musicians and band leaders", "maxLength": 15, "context": "the musician accepted" },
+    "statusDeclined": { "where": "Scheduling API errors: assignment status word inserted as {status}", "who": "musicians and band leaders", "maxLength": 15, "context": "the musician said no" },
+    "statusCancelled": { "where": "Scheduling API errors: assignment status word inserted as {status}", "who": "musicians and band leaders", "maxLength": 15, "context": "a band leader withdrew the request" },
+    "setlistIdRequired": { "where": "Band suggestions (GET /api/scheduling/suggest-band): error when no setlist is given", "who": "band leaders", "maxLength": 50, "context": "'setlistId' is a parameter name; keep it as is" },
+    "setlistIdParamRequired": { "where": "Musician suggestions (GET /api/scheduling/suggest): error when no setlist is given", "who": "band leaders", "maxLength": 50, "context": "'setlistId' is a parameter name; keep it as is" },
+    "suggestionsFailed": { "where": "Band suggestions (GET /api/scheduling/suggest-band): error when the suggestions cannot be computed", "who": "band leaders", "maxLength": 50 }
+}

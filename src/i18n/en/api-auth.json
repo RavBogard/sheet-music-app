@@ -1,0 +1,13 @@
+{
+    "createSessionFailed": "Failed to create session",
+    "missingCode": "Missing code",
+    "invalidCodeFormat": "Invalid code format",
+    "sessionNotFound": "Session not found",
+    "sessionExpired": "Session expired",
+    "checkSessionFailed": "Failed to check session",
+    "authRequired": "Authentication required",
+    "invalidToken": "Invalid token",
+    "approvalNeedsMember": "Approval requires an approved member account",
+    "sessionAlreadyUsed": "Session already used",
+    "approveSessionFailed": "Failed to approve session"
+}

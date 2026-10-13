@@ -1,3 +1,4 @@
+import { getT } from "@/i18n/server"
 import { NextResponse } from "next/server"
 import { z } from "zod"
 import { createApiHandler, apiError } from "@/lib/api-wrapper"
@@ -36,8 +37,9 @@ export const POST = createApiHandler(
         if (limited) return limited
 
         if (!initAdmin()) {
+            const t = await getT()
             return NextResponse.json(
-                { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
+                { error: t("api-admin.serverNotReady"), code: "FIREBASE_NOT_INITIALIZED" },
                 { status: 500 },
             )
         }

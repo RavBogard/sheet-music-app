@@ -92,8 +92,17 @@ describe("multi-tenant P1: a tenant without CRC text gets the platform-run versi
 
     it("testshul /changelog keeps the shared version list", async () => {
         const crc = await load("changelog", "crc")
-        const ts = await load("changelog", "testshul")
-        expect(ts.html).toBe(crc.html)
+        // Phase 7: testshul is a Hebrew tenant, so its page chrome is translated and
+        // the (English) version list sits in a lang="en" dir="ltr" box
+        // (src/__tests__/mt-p7-lane3/changelog-i18n.test.tsx). In English it is
+        // still exactly CRC's page.
+        tenantState.configOverride = (cfg) => ({ ...cfg, locale: { ...cfg.locale, language: "en", direction: "ltr" } })
+        try {
+            const ts = await load("changelog", "testshul")
+            expect(ts.html).toBe(crc.html)
+        } finally {
+            tenantState.configOverride = undefined
+        }
     })
 
     it("a tenant with no contact email falls back to the platform contact", async () => {

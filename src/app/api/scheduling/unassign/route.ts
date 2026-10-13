@@ -1,3 +1,4 @@
+import { getT } from "@/i18n/server"
 import { NextResponse } from "next/server"
 import { getFirestore } from "@/lib/firebase-admin"
 import { createApiHandler } from "@/lib/api-wrapper"
@@ -8,6 +9,18 @@ import { unassignAssignmentService } from "@/lib/scheduling/assignment-service"
 const unassignSchema = z.object({
     assignmentId: z.string().min(1),
 })
+
+/** Assignment status → its translated word (unknown statuses pass through raw). */
+const STATUS_WORD = {
+    pending: "api-scheduling.statusPending",
+    confirmed: "api-scheduling.statusConfirmed",
+    declined: "api-scheduling.statusDeclined",
+    cancelled: "api-scheduling.statusCancelled",
+} as const
+function statusWord(t: (key: string) => string, status: string): string {
+    const key = (STATUS_WORD as Record<string, string>)[status]
+    return key ? t(key) : status
+}
 
 export const POST = createApiHandler(
     async (ctx) => {
@@ -23,16 +36,17 @@ export const POST = createApiHandler(
         const result = await unassignAssignmentService(db, assignmentId)
 
         if (!result.ok) {
+            const t = await getT()
             if (result.kind === "not_found") {
                 return NextResponse.json(
-                    { error: "Assignment not found" },
+                    { error: t("api-scheduling.assignmentNotFound") },
                     { status: 404 },
                 )
             }
             // invalid_transition
             return NextResponse.json(
                 {
-                    error: `Cannot cancel assignment in '${result.currentStatus}' state`,
+                    error: t("api-scheduling.cannotCancelAssignment", { status: statusWord(t, result.currentStatus) }),
                     currentStatus: result.currentStatus,
                 },
                 { status: 400 },

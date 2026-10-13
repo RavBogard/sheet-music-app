@@ -1,3 +1,4 @@
+import { getT } from "@/i18n/server"
 import { NextResponse } from "next/server";
 import { GoogleGenerativeAI, Schema, SchemaType } from "@google/generative-ai";
 import { createApiHandler } from "@/lib/api-wrapper";
@@ -19,6 +20,7 @@ export const POST = createApiHandler(
 
         if (!apiKey) {
             return NextResponse.json(
+                // i18n-ignore: server misconfiguration (ops), not something a musician can act on
                 { error: "GEMINI_API_KEY environment variable is missing" },
                 { status: 500 }
             );
@@ -28,8 +30,9 @@ export const POST = createApiHandler(
         const { base64Image } = body;
 
         if (!base64Image) {
+            const t = await getT()
             return NextResponse.json(
-                { error: "Missing base64Image in request body" },
+                { error: t("api-ai.missingImage") },
                 { status: 400 }
             );
         }
