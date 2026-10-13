@@ -35,13 +35,13 @@ vi.mock('@/lib/setlist-firebase', () => ({
   })),
 }))
 
-// SetlistCards re-exports SERVICE_TYPE_LABELS; mock to avoid pulling in the
+// SetlistCards exports SERVICE_TYPE_LABEL_KEYS; mock to avoid pulling in the
 // full component graph (lucide-react icons, dropdown-menu, etc.) for a
 // hook-only test.
 vi.mock('@/components/setlist/SetlistCards', () => ({
-  SERVICE_TYPE_LABELS: {
-    shabbat_morning: 'Shabbat Morning',
-    friday_night: 'Friday Night',
+  SERVICE_TYPE_LABEL_KEYS: {
+    shabbat_morning: 'setlist.serviceTypeShabbatMorning',
+    friday_night: 'setlist.serviceTypeFridayNight',
   },
 }))
 

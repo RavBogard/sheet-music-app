@@ -23,12 +23,7 @@ import {
 // + label map, no schema migration).
 const PHASE_1_DEFAULT_TYPES: ReadonlyArray<ServiceType> = ['shabbat_morning', 'friday_night']
 
-export const SERVICE_TYPE_LABELS: Partial<Record<ServiceType, string>> = {
-    shabbat_morning: 'Shabbat Morning',
-    friday_night: 'Friday Night',
-}
-
-/** Catalogue keys for SERVICE_TYPE_LABELS (the English map above stays for non-React callers). */
+/** Catalogue keys of the service-type labels (English: "Shabbat Morning", "Friday Night"). */
 export const SERVICE_TYPE_LABEL_KEYS: Partial<Record<ServiceType, string>> = {
     shabbat_morning: "setlist.serviceTypeShabbatMorning",
     friday_night: "setlist.serviceTypeFridayNight",
