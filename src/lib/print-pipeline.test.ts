@@ -390,6 +390,7 @@ describe('Print Pipeline — Error Resilience', () => {
                 title: 'Song 2',
                 fileId: 'missing',
                 reason: 'The chart file is missing or empty.',
+                code: 'file_missing',
             },
         ])
     })
