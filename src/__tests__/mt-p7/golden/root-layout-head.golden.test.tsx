@@ -11,13 +11,7 @@ import { clearPrimedOrgConfigs } from "@/lib/org/config-cache"
  * Captured on master 745c1c16; matches golden/http-before/{crc,brotherslazaroff}
  * (`html lang=en dir=null`, no font <link>, "Skip to main content").
  */
-vi.mock("next/headers", async () => {
-    const m = await import("../../mt-p1-lane2/tenant-mocks")
-    return {
-        ...m.headersMock(),
-        cookies: async () => ({ get: (name: string) => (m.tenantState as { cookies?: Record<string, string> }).cookies?.[name] !== undefined ? { name, value: (m.tenantState as { cookies?: Record<string, string> }).cookies![name] } : undefined }),
-    }
-})
+vi.mock("next/headers", async () => (await import("../../mt-p1-lane2/tenant-mocks")).headersMock())
 vi.mock("@/lib/org/registry", async (orig) => (await import("../../mt-p1-lane2/tenant-mocks")).registryMock(orig))
 vi.mock("@/lib/org/get-org-config", async (orig) => (await import("../../mt-p1-lane2/tenant-mocks")).getOrgConfigMock(orig))
 vi.mock("@/lib/firebase-admin", async () => (await import("../../mt-p1-lane2/tenant-mocks")).firebaseAdminMock())
@@ -64,7 +58,7 @@ function find(el: unknown, type: string): El | null {
 
 export async function renderRootLayout(org: string, cookies?: Record<string, string>) {
     tenantState.org = org
-    ;(tenantState as { cookies?: Record<string, string> }).cookies = cookies
+    tenantState.cookies = cookies
     const { default: RootLayout } = await import("@/app/layout")
     const html = (await RootLayout({ children: null })) as El
     return { html, head: find(html, "head")!, body: find(html, "body")!, skip: find(html, "a")! }
@@ -99,4 +93,62 @@ describe("phase 7 golden: root layout head, html and body for CRC and BL", () =>
             expect(skip.props.children).toBe("Skip to main content")
         })
     }
+})
+
+describe("phase 7: root layout language, direction, fonts and provider for other tenants", () => {
+    beforeEach(() => clearPrimedOrgConfigs())
+
+    const provider = (body: El): El => findProvider(body)!
+    function findProvider(el: unknown): El | null {
+        if (!el || typeof el !== "object") return null
+        if (Array.isArray(el)) {
+            for (const c of el) {
+                const hit = findProvider(c)
+                if (hit) return hit
+            }
+            return null
+        }
+        const e = el as El
+        if (typeof e.type === "function" && (e.type as { name?: string }).name === "I18nProvider") return e
+        return findProvider((e.props as { children?: unknown })?.children)
+    }
+
+    it("crc ignores a ui-lang=he cookie", async () => {
+        const { html, body } = await renderRootLayout("crc", { "ui-lang": "he" })
+        expect(html.props.lang).toBe("en")
+        expect("dir" in html.props).toBe(false)
+        expect(body.props.className).toBe("__var_poppins __var_geistMono __var_righteous antialiased")
+        const p = provider(body)
+        expect(p.props.lang).toBe("en")
+        expect(p.props.timeZone).toBeNull()
+    })
+
+    it("a Hebrew tenant: lang=he dir=rtl, Heebo + Rubik, Hebrew messages, Jerusalem zone", async () => {
+        const { html, head, body, skip } = await renderRootLayout("testshul")
+        expect(html.props.lang).toBe("he")
+        expect(html.props.dir).toBe("rtl")
+        expect(children(head)).toHaveLength(4)
+        expect(body.props.className).toBe("__var_heebo __var_geistMono __var_rubik_display antialiased")
+        expect(skip.props.children).toBe("דילוג לתוכן הראשי")
+        const p = provider(body)
+        expect(p.props.lang).toBe("he")
+        expect(p.props.dir).toBe("rtl")
+        expect(p.props.timeZone).toBe("Asia/Jerusalem")
+        expect((p.props.messages as Record<string, string>)["common.skipToMain"]).toBe("דילוג לתוכן הראשי")
+    })
+
+    it("a Hebrew tenant's user who picked English: lang=en, no dir, English messages", async () => {
+        const { html, skip, body } = await renderRootLayout("testshul", { "ui-lang": "en" })
+        expect(html.props.lang).toBe("en")
+        expect("dir" in html.props).toBe(false)
+        expect(skip.props.children).toBe("Skip to main content")
+        expect(provider(body).props.lang).toBe("en")
+    })
+
+    it("pseudo-locale by cookie outside production (rtl variant sets dir)", async () => {
+        const { html, skip } = await renderRootLayout("crc", { "ui-lang": "qps-rtl" })
+        expect(html.props.lang).toBe("ar-XB")
+        expect(html.props.dir).toBe("rtl")
+        expect(String(skip.props.children)).toMatch(/^⟦.*⟧$/)
+    })
 })

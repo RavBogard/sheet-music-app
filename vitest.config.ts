@@ -71,6 +71,10 @@ export default defineConfig({
     },
     resolve: {
         alias: {
+            // Phase 7: webpack/Turbopack `require.context` has no Vite
+            // equivalent; the vitest stand-in uses `import.meta.glob`. Listed
+            // before '@' so it wins.
+            '@/i18n/catalogue-source': resolve(__dirname, './src/i18n/catalogue-source.vitest.ts'),
             '@': resolve(__dirname, './src'),
             // The `server-only` package throws outside a React Server
             // environment (incl. vitest jsdom). Alias it to a no-op so modules
