@@ -32,9 +32,9 @@ const PARSED = {
 
 // Data: file name, setlist name, song/chart titles, people, section names, keys,
 // the "x.x KB" file size (unit, i18n-ignore), the Google Sheets example URL
-// placeholder (i18n-ignore), numbers, and the shared ui/dialog "Close" button.
+// placeholder (i18n-ignore), and numbers.
 const ALLOW: Array<string | RegExp> = [
-    "Close", "test-outline.docx", "test-outline", "Section One", "Opening",
+"test-outline.docx", "test-outline", "Section One", "Opening",
     "Test Song A", "Test Song B", "Test Song C", "Test Song D", "Test Chart A", "Singer X",
     /^\d+(\.\d+)? KB$/, /^\d+%?$/, /^[A-G][#b]?$/, "https://docs.google.com/spreadsheets/d/...", "*",
     "https://drive.example/a",

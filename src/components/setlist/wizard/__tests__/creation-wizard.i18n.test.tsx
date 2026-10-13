@@ -35,7 +35,7 @@ const STATES: Array<Record<string, unknown>> = [
 ]
 
 // "Close" is the shared ui/dialog close button (not this lane's file); "·" is a separator glyph.
-const ALLOW: Array<string | RegExp> = ["Close", "·"]
+const ALLOW: Array<string | RegExp> = ["·"]
 
 function renderStates(rtl: boolean) {
     let last

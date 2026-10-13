@@ -95,9 +95,6 @@ const ALLOW: Array<string | RegExp> = [
     'G',
     'Dm',
     'Take One',
-    // The shared Dialog / Sheet primitive's sr-only close label
-    // (src/components/ui/* — not this lane's file).
-    'Close',
 ]
 // Collection chips show the tenant's configured collection labels (data).
 const IGNORE = '[data-collection]'

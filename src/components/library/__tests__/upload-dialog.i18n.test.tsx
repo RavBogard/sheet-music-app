@@ -16,8 +16,7 @@ import { UploadDialog } from "../UploadDialog"
 
 const SETLISTS = [{ id: "s1", name: "Test Setlist A" }] as unknown as Setlist[]
 // Data: file name, auto-filled title, collection names, setlist name, key names (C#, Bbm…).
-// "Close" is the shared Dialog close button (src/components/ui/dialog.tsx, not this lane's file).
-const ALLOW: Array<string | RegExp> = ["Close", "test-song-a.pdf", "Test Setlist A", "CRC Charts", "Shireinu", "Nava Tehilah", /^[A-G][#b]?m?$/]
+const ALLOW: Array<string | RegExp> = ["test-song-a.pdf", "Test Setlist A", "CRC Charts", "Shireinu", "Nava Tehilah", /^[A-G][#b]?m?$/]
 
 function openWithFile(rtl: boolean) {
     renderPseudo(<UploadDialog setlists={SETLISTS} />, { rtl })

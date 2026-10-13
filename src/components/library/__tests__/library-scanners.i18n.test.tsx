@@ -20,8 +20,7 @@ const FILES: DriveFile[] = [
     { id: "b", name: "Test Song A (1).pdf", mimeType: "application/pdf" },
     { id: "c", name: "Test Song B.pdf", mimeType: "application/pdf" },
 ]
-// "Close" is the shared Dialog close button (src/components/ui/dialog.tsx, not this lane's file).
-const DATA = ["Test Song A.pdf", "Test Song A (1).pdf", "Test Song B.pdf", "PDF", "Close"]
+const DATA = ["Test Song A.pdf", "Test Song A (1).pdf", "Test Song B.pdf", "PDF"]
 
 async function clickLastButton() {
     const buttons = Array.from(document.querySelectorAll('[role="dialog"] button')).filter((b) => !b.querySelector(".sr-only") && b.textContent)
