@@ -48,7 +48,7 @@ export function buildCreateInput(v: NewTenantValues): CreateTenantInput {
             metaDescription: "",
             ogTitle: v.name.trim(),
             themeColor: DEFAULT_COLOUR,
-            manifestPath: "/manifest.json",
+            manifestPath: "/site.webmanifest",
             baseUrl: `https://${host}`,
         },
         vocabulary: { mode: v.kind },

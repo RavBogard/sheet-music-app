@@ -1,5 +1,4 @@
 import { readFileSync } from "node:fs"
-import { createHash } from "node:crypto"
 import path from "node:path"
 import { describe, expect, it, vi } from "vitest"
 
@@ -18,41 +17,40 @@ import { orgString } from "@/lib/org/strings"
  *  - The static `alt` export is baked at build; a per-tenant alt needs
  *    generateImageMetadata, which changes the URL shape (`/opengraph-image/<id>`).
  *
- * This pins the source and proves the tenant catalogue already reproduces the
- * three CRC literals, so a later phase can switch to orgString(...) knowing
- * crc/BL output stays the same.
+ * Before phase 7 the image was pinned byte-identical. It is now request-aware
+ * through generateImageMetadata (a per-tenant alt), which changes CRC's and
+ * BL's og:image URL (`/opengraph-image/card?<hash>`) but not the alt text or the
+ * image: this test proves crc and BL still get exactly CRC's three literals.
  */
 vi.mock("next/og", () => ({ ImageResponse: class {} }))
+const state = { org: "crc" }
+vi.mock("next/headers", () => ({ headers: async () => new Map([["x-org-id", state.org]]) }))
+vi.mock("@/lib/org/get-org-config", () => ({ getOrgConfig: async () => null }))
 
 const SRC = path.join(process.cwd(), "src", "app", "opengraph-image.tsx")
 const CRLF = new RegExp(String.fromCharCode(13, 10), "g")
 /** LF-normalised (as on the Linux build) so the pin does not depend on the checkout's line endings. */
 const source = () => readFileSync(SRC, "utf8").replace(CRLF, String.fromCharCode(10))
-const NL = String.fromCharCode(10)
 
-describe("multi-tenant P1 golden: social image", () => {
-    it("source file is byte-identical (keeps the og:image ?hash on every page)", () => {
-        const sha = createHash("sha256").update(source()).digest("hex")
-        expect(sha).toBe("8de131af2c81aec5d5e57b80903c9468d3486e96fda5560a28e5ea503c9bcd85")
-    })
-
-    it("static exports are CRC's", async () => {
+describe("multi-tenant golden: social image", () => {
+    it("size and type are unchanged; twitter re-exports the OpenGraph image", async () => {
         const og = await import("@/app/opengraph-image")
         const tw = await import("@/app/twitter-image")
-        expect(og.alt).toBe("Central Reform Congregation — Digital Sheet Music Library")
         expect(og.size).toEqual({ width: 1200, height: 630 })
         expect(og.contentType).toBe("image/png")
-        expect(tw.alt).toBe(og.alt)
         expect(tw.default).toBe(og.default)
+        expect(tw.generateImageMetadata).toBe(og.generateImageMetadata)
     })
 
     for (const org of ["crc", "brotherslazaroff"]) {
-        it(`${org}: the catalogue reproduces the hardcoded alt / monogram / title`, () => {
-            const src = source()
-            expect(orgString(org, "og.alt")).toBe("Central Reform Congregation — Digital Sheet Music Library")
-            expect(src).toContain(`export const alt = '${orgString(org, "og.alt")}'`)
-            expect(src).toContain(`>${NL}                                ${orgString(org, "og.monogram")}${NL}`)
-            expect(src).toContain(`>${NL}                            ${orgString(org, "og.title")}${NL}`)
+        it(`${org}: alt, monogram and title are CRC's literals, as before`, async () => {
+            state.org = org
+            const og = await import("@/app/opengraph-image")
+            const [meta] = await og.generateImageMetadata()
+            expect(meta.alt).toBe("Central Reform Congregation — Digital Sheet Music Library")
+            expect(orgString(org, "og.monogram")).toBe("CRC")
+            expect(orgString(org, "og.title")).toBe("Central Reform Congregation")
+            expect(source()).not.toContain("Central Reform")
         })
     }
 })

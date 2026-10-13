@@ -77,6 +77,8 @@ const publicExactRoutes = [
     '/sms-consent',
     '/changelog',
     '/accessibility',
+    // Per-tenant PWA manifest for tenants created through config (crc/BL use static files).
+    '/site.webmanifest',
     // /test-login — headless test-account sign-in harness. Pre-auth like /login
     // and /qr: it consumes a single-use `?code` and signs in via Firebase custom
     // token; the capability is the code, not the path. EXACT match (not a prefix)

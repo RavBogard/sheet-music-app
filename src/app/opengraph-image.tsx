@@ -1,19 +1,42 @@
 import { ImageResponse } from 'next/og'
 import { readFileSync } from 'fs'
 import path from 'path'
+import { headers } from 'next/headers'
+import { coerceOrgId } from '@/lib/org/registry'
+import { getOrgConfig } from '@/lib/org/get-org-config'
+import { codeOrgConfig } from '@/lib/org/config-code'
+import { orgString } from '@/lib/org/strings'
 
-export const alt = 'Central Reform Congregation — Digital Sheet Music Library'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
+
+/** The request's tenant, its config primed so orgString reads it. */
+async function requestOrg() {
+    const orgId = coerceOrgId((await headers()).get('x-org-id'))
+    await getOrgConfig(orgId).catch(() => null)
+    return orgId
+}
+
+/**
+ * Multi-tenant: per-tenant alt text (a static `alt` export is baked at build).
+ * crc and Brothers Lazaroff read the same catalogue text they always showed.
+ */
+export async function generateImageMetadata() {
+    const orgId = await requestOrg()
+    return [{ id: 'card', alt: orgString(orgId, 'og.alt'), size, contentType }]
+}
 
 /**
  * OpenGraph social sharing image — congregation-forward design.
  * Features the 12 Tribes mandala artwork prominently,
  * with elegant serif text identifying the congregation.
  */
-export default function OpenGraphImage() {
+export default async function OpenGraphImage() {
+    const orgId = await requestOrg()
+    // The mandala artwork is CRC's; tenants created through config get the monogram.
+    const ownArtwork = codeOrgConfig(orgId) !== null
     let base64Logo: string | null = null
-    try {
+    if (ownArtwork) try {
         const logo = readFileSync(path.join(process.cwd(), 'public', 'logo.jpg'))
         base64Logo = `data:image/jpeg;base64,${logo.toString('base64')}`
     } catch {
@@ -95,7 +118,7 @@ export default function OpenGraphImage() {
                                     fontWeight: 'bold',
                                 }}
                             >
-                                CRC
+                                {orgString(orgId, 'og.monogram')}
                             </div>
                         )}
                     </div>
@@ -119,7 +142,7 @@ export default function OpenGraphImage() {
                                 letterSpacing: '-0.01em',
                             }}
                         >
-                            Central Reform Congregation
+                            {orgString(orgId, 'og.title')}
                         </div>
 
                         {/* Decorative separator */}

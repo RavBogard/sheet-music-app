@@ -47,7 +47,7 @@ export function newTenantDefaults(orgId: OrgId, name: string, subdomain: string)
             metaDescription: `Charts and setlists for ${name}.`,
             ogTitle: name,
             themeColor: NEW_TENANT_THEME,
-            manifestPath: "/manifest.json",
+            manifestPath: "/site.webmanifest",
             baseUrl: `https://${host}`,
         },
         vocabulary: { mode: "shul" },
