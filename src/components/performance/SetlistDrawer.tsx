@@ -15,7 +15,8 @@ import { useRouter } from "next/navigation"
 import { logger } from "@/lib/logger"
 import { getDb } from "@/lib/local/schema"
 import { getTracksForSetlistClient, fetchTracksForSetlistClient } from "@/lib/client-tracks"
-import { useFormat, useT } from "@/i18n/client"
+import { useT } from "@/i18n/client"
+import { useFormat } from "@/i18n/format-client"
 
 /**
  * Flow-item type tag under a queue row. The stored `trackType` used to be

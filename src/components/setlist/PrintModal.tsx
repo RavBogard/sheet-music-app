@@ -17,7 +17,8 @@ import { PrintStats } from "./PrintStats"
 import { logger } from "@/lib/logger"
 import { useFeature } from "@/lib/org/use-feature"
 import { toast } from "sonner"
-import { useT, useFormat } from "@/i18n/client"
+import { useT } from "@/i18n/client"
+import { useFormat } from "@/i18n/format-client"
 import {
     generatePdfBlob,
     generateZipBlob,

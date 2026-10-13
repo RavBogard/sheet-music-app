@@ -16,7 +16,8 @@ import {
 } from "@/components/ui/alert-dialog"
 import { SetlistTrack } from "@/types/models"
 import { toDate } from "@/lib/firestore-helpers"
-import { useT, useFormat } from "@/i18n/client"
+import { useT } from "@/i18n/client"
+import { useFormat } from "@/i18n/format-client"
 
 interface TrackSnapshot {
     title: string

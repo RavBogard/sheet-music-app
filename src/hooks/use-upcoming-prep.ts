@@ -11,7 +11,8 @@ import { useSafeFirestoreSync } from "@/hooks/use-safe-firestore-sync"
 import { reportSaveError } from "@/lib/save-error"
 import { useDexieTracksForSetlists } from "@/hooks/use-dexie-tracks-for-setlists"
 import { getTracksForSetlistClient } from "@/lib/client-tracks"
-import { useT, useFormat } from "@/i18n/client"
+import { useT } from "@/i18n/client"
+import { useFormat } from "@/i18n/format-client"
 
 interface SongPref {
     lastViewedAt?: string | { seconds: number }

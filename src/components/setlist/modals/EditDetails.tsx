@@ -13,7 +13,8 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useT, useFormat } from "@/i18n/client"
+import { useT } from "@/i18n/client"
+import { useFormat } from "@/i18n/format-client"
 import { cn } from "@/lib/utils"
 import { useCongregation } from "@/lib/congregation-store"
 

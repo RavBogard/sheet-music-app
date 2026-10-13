@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { DirectionalIcon } from "@/components/i18n/DirectionalIcon"
 import { useI18n } from "@/i18n/client"
+import { useFormat } from "@/i18n/format-client"
 
 function Calendar({
   className,
@@ -36,7 +37,8 @@ function Calendar({
   // grid and its keyboard navigation in the page direction. English (CRC/BL)
   // passes neither, exactly as before. The prev/next chevrons mirror through
   // DirectionalIcon (replacing shadcn's rtl:rotate-180 classes).
-  const { lang, isRtl, fmt } = useI18n()
+  const { lang, isRtl } = useI18n()
+  const fmt = useFormat()
 
   return (
     <DayPicker

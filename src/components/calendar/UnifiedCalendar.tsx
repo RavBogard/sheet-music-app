@@ -7,7 +7,8 @@ import { useCalendarData, type CalendarMode } from "@/hooks/use-calendar-data"
 import { CalendarHeader } from "./CalendarHeader"
 import { CalendarGrid } from "./CalendarGrid"
 import type { Setlist } from "@/lib/setlist-firebase"
-import { useT, useFormat } from "@/i18n/client"
+import { useT } from "@/i18n/client"
+import { useFormat } from "@/i18n/format-client"
 
 interface UnifiedCalendarProps {
     /** Role-based rendering mode */

@@ -19,6 +19,7 @@ import { OrgLogo } from "@/components/nav/OrgLogo"
 import { cn } from "@/lib/utils"
 import { formatError } from "@/lib/format-error"
 import { useI18n } from "@/i18n/client"
+import { useFormat } from "@/i18n/format-client"
 
 // Dashboard complexity components -- commented out per Phase 3 Plan 03 redesign.
 // Retained for potential use in Phase 4 (template management) or Phase 6 (notifications).
@@ -43,7 +44,8 @@ export interface DashboardServerProps {
 
 export default function DashboardClient({ serverGreeting, serverShortName, serverLogoUrl = null, serverIsMember = false, serverIsBandLeader = false, serverIsAdmin = false, serverUid = null }: DashboardServerProps) {
     const router = useRouter()
-    const { t, fmt, lang } = useI18n()
+    const { t, lang } = useI18n()
+    const fmt = useFormat()
     const { user: authUser, profile, role, cachedUser, signIn, isMember: authIsMember, isBandLeader, loading: authLoading } = useAuth()
     const congregation = useCongregation()
 

@@ -10,7 +10,8 @@ import { Button } from "@/components/ui/button"
 import { apiFetch } from "@/lib/api-client"
 import { toast } from "sonner"
 import { useFeature } from "@/lib/org/use-feature"
-import { useFormat, useT } from "@/i18n/client"
+import { useT } from "@/i18n/client"
+import { useFormat } from "@/i18n/format-client"
 import { DirectionalIcon } from "@/components/i18n/DirectionalIcon"
 
 interface ArchivedFile {

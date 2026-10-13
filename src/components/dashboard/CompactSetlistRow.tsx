@@ -7,7 +7,8 @@ import { Music2, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
-import { useT, useFormat } from "@/i18n/client"
+import { useT } from "@/i18n/client"
+import { useFormat } from "@/i18n/format-client"
 import { DirectionalIcon } from "@/components/i18n/DirectionalIcon"
 
 /**

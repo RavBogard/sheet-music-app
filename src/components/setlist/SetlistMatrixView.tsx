@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react"
 import { useAuth } from "@/lib/auth-context"
-import { useT, useFormat } from "@/i18n/client"
+import { useT } from "@/i18n/client"
+import { useFormat } from "@/i18n/format-client"
 import { Loader2 } from "lucide-react"
 
 interface MatrixColumn {

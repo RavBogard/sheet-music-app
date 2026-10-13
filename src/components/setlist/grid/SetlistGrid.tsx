@@ -41,7 +41,8 @@ import {
     ContextMenuSeparator,
     ContextMenuTrigger,
 } from '@/components/ui/context-menu'
-import { useFormat, useT } from '@/i18n/client'
+import { useT } from '@/i18n/client'
+import { useFormat } from '@/i18n/format-client'
 import type { T } from '@/i18n/core'
 import { toDate } from '@/lib/firestore-helpers'
 import { getDb } from '@/lib/local/schema'

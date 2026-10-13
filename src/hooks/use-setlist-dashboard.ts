@@ -17,7 +17,8 @@ import { useLibrary } from "@/hooks/use-library"
 import { logger } from "@/lib/logger"
 import { toDate as toDateHelper } from "@/lib/firestore-helpers"
 import { isNonTestSetlist } from "@/components/performance/public-setlist-order"
-import { useT, useFormat } from "@/i18n/client"
+import { useT } from "@/i18n/client"
+import { useFormat } from "@/i18n/format-client"
 
 /** v11.5-05-03 (Q4): a real, non-empty setlist has at least one track. Empty
  *  drafts ("New Setlist"/"testing") are hidden from ANON browsers (owners keep

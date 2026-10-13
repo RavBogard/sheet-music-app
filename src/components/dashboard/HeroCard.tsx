@@ -8,7 +8,8 @@ import { type UpcomingSetlistWithPrep } from "@/hooks/use-upcoming-prep"
 import { PlayCircle, ArrowRight, CheckCircle2, Circle, Clock, Download, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { useT, useFormat } from "@/i18n/client"
+import { useT } from "@/i18n/client"
+import { useFormat } from "@/i18n/format-client"
 import { DirectionalIcon } from "@/components/i18n/DirectionalIcon"
 
 /**

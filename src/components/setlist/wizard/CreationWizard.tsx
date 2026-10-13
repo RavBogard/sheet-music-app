@@ -17,7 +17,8 @@ import { toDate } from "@/lib/firestore-helpers"
 import type { ServiceType } from "@/lib/liturgical-calendar"
 import { useOrg } from "@/lib/org/org-context"
 import { hidesLiturgicalFields } from "@/lib/org/vocab"
-import { useT, useFormat } from "@/i18n/client"
+import { useT } from "@/i18n/client"
+import { useFormat } from "@/i18n/format-client"
 
 interface CreationWizardProps {
     open: boolean

@@ -12,10 +12,16 @@ import { toast } from "sonner"
 import type { SchedulingTier } from "@/types/models"
 import { useFeature } from "@/lib/org/use-feature"
 import { useT } from "@/i18n/client"
+import { useOrg, useOrgConfig } from "@/lib/org/org-context"
 
 export function MusicianProfileSettings() {
     const { user } = useAuth()
     const t = useT()
+    // The calendar hints said "your CRC schedule" on CRC and Brothers Lazaroff
+    // before phase 7; they keep that, and every other tenant gets its own name.
+    const org = useOrg()
+    const orgConfig = useOrgConfig()
+    const scheduleOwner = org === "crc" || org === "brotherslazaroff" ? "CRC" : (orgConfig?.branding.shortName ?? "")
     // Multi-tenant phase 6: the Email toggle is for scheduling emails.
     const schedulingEmailsOn = useFeature("schedulingEmails")
     const [profile, setProfile] = useState<MusicianProfile>({})
@@ -337,7 +343,7 @@ export function MusicianProfileSettings() {
                                 </Button>
                             </div>
                             <p className="text-xs text-muted-foreground">
-                                {t("settings.scheduling.calendarAddHint")}
+                                {t("settings.scheduling.calendarAddHint", { community: scheduleOwner })}
                             </p>
                         </>
                     ) : (
@@ -366,7 +372,7 @@ export function MusicianProfileSettings() {
                                 {generatingCal ? t("settings.scheduling.calendarGenerating") : t("settings.scheduling.calendarGenerate")}
                             </Button>
                             <p className="text-xs text-muted-foreground mt-1.5">
-                                {t("settings.scheduling.calendarGenerateHint")}
+                                {t("settings.scheduling.calendarGenerateHint", { community: scheduleOwner })}
                             </p>
                         </div>
                     )}

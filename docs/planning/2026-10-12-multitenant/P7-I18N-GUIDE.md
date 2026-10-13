@@ -9,7 +9,8 @@ Rules that do not bend: no liturgical text anywhere in the repo (UI strings are 
 Client components:
 
 ```tsx
-import { useT, useFormat, useI18n, useReadingDirection } from "@/i18n/client"
+import { useT, useI18n, useReadingDirection } from "@/i18n/client"
+import { useFormat } from "@/i18n/format-client"   // its own module: keeps date-fns off /login
 
 const t = useT()
 <Button aria-label={t("common.close")}>{t("setlists.newSetlist")}</Button>

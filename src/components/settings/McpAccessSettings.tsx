@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { apiFetch } from "@/lib/api-client"
 import { toast } from "sonner"
-import { useFormat, useT } from "@/i18n/client"
+import { useT } from "@/i18n/client"
+import { useFormat } from "@/i18n/format-client"
 import type { Formatter } from "@/i18n/format"
 
 /**

@@ -1,6 +1,6 @@
 import { directionOf, isPseudo, isUiLanguage, type Direction, type TenantLanguage, type TenantTokens, type UiLanguage } from "@/i18n/core"
 import type { OrgConfig } from "@/lib/org/config-schema"
-import { tokensFor } from "@/lib/org/strings-base"
+import { tokensFor } from "@/lib/org/string-tokens"
 
 /**
  * Multi-tenant phase 7 — which language a request renders in. Isomorphic.

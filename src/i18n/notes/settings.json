@@ -1,128 +1,657 @@
 {
     "$comment": "Settings page (/settings) and its cards. Seen by every signed-in user (musicians, band leaders, admins). 'chart' = sheet music.",
-    "back": { "where": "Settings page header: accessible name of the back-arrow button (mobile only)", "who": "everyone signed in", "maxLength": 20 },
-    "title": { "where": "Settings page: main heading", "who": "everyone signed in", "maxLength": 30 },
-    "subtitle": { "where": "Settings page: grey line under the main heading", "who": "everyone signed in", "maxLength": 50 },
-    "account": { "where": "Settings page: small uppercase section heading above the profile, appearance and password cards", "who": "everyone signed in", "maxLength": 25 },
-    "profilePhotoAlt": { "where": "Settings page, account card: alt text of the user's profile photo", "who": "everyone signed in", "maxLength": 30 },
-    "saveName": { "where": "Settings page, account card: accessible name of the check-mark button that saves an edited display name", "who": "everyone signed in", "maxLength": 25 },
-    "defaultDisplayName": { "where": "Settings page, account card: shown as the user's name when they have no display name", "who": "everyone signed in", "maxLength": 25, "context": "A generic noun for a band member." },
-    "role.admin": { "where": "Settings page, account card: small badge showing the user's role", "who": "admins", "maxLength": 14, "context": "Shown in capitals (English writes it in capitals)." },
-    "role.bandLeader": { "where": "Settings page, account card: role badge", "who": "band leaders", "maxLength": 14, "context": "Glossary: band leader. Shown in capitals." },
-    "role.musician": { "where": "Settings page, account card: role badge", "who": "musicians", "maxLength": 14, "context": "Shown in capitals." },
-    "role.member": { "where": "Settings page, account card: role badge (also the fallback when no role is known)", "who": "members", "maxLength": 14, "context": "Shown in capitals." },
-    "role.pending": { "where": "Settings page, account card: role badge for a user still awaiting approval", "who": "pending users", "maxLength": 14, "context": "Shown in capitals." },
-    "appearance": { "where": "Settings page: heading of the theme card", "who": "everyone signed in", "maxLength": 25 },
-    "theme.light": { "where": "Settings page, Appearance card: theme button", "who": "everyone signed in", "maxLength": 12 },
-    "theme.dark": { "where": "Settings page, Appearance card: theme button", "who": "everyone signed in", "maxLength": 12 },
-    "theme.system": { "where": "Settings page, Appearance card: theme button (follow the device setting)", "who": "everyone signed in", "maxLength": 12 },
-    "performDarkHint": { "where": "Settings page, Appearance card: small grey note under the theme buttons", "who": "everyone signed in", "maxLength": 90, "context": "'Performance mode' = Perform mode, the on-stage chart view." },
-    "gigMode.title": { "where": "Settings page: heading of the Live Gig Mode toggle card", "who": "everyone signed in", "maxLength": 25 },
-    "gigMode.description": { "where": "Settings page, Live Gig Mode card: explanation under the heading", "who": "everyone signed in", "maxLength": 100 },
-    "password.title": { "where": "Settings page: heading of the change-password card (email/password accounts only)", "who": "users who sign in with email and password", "maxLength": 25 },
-    "password.description": { "where": "Settings page, change-password card: line under the heading", "who": "users who sign in with email and password", "maxLength": 60 },
-    "password.current": { "where": "Settings page, change-password card: field label", "who": "users who sign in with email and password", "maxLength": 30 },
-    "password.new": { "where": "Settings page, change-password card: field label", "who": "users who sign in with email and password", "maxLength": 30 },
-    "password.newPlaceholder": { "where": "Settings page, change-password card: placeholder inside the new-password field", "who": "users who sign in with email and password", "maxLength": 30 },
-    "password.confirm": { "where": "Settings page, change-password card: field label", "who": "users who sign in with email and password", "maxLength": 30 },
-    "password.success": { "where": "Settings page, change-password card: green confirmation box after saving", "who": "users who sign in with email and password", "maxLength": 50 },
-    "password.submit": { "where": "Settings page, change-password card: submit button", "who": "users who sign in with email and password", "maxLength": 20 },
-    "password.mismatch": { "where": "Settings page, change-password card: red error box", "who": "users who sign in with email and password", "maxLength": 60 },
-    "password.tooShort": { "where": "Settings page, change-password card: red error box", "who": "users who sign in with email and password", "maxLength": 60 },
-    "password.incorrect": { "where": "Settings page, change-password card: red error box", "who": "users who sign in with email and password", "maxLength": 60 },
-    "password.weak": { "where": "Settings page, change-password card: red error box", "who": "users who sign in with email and password", "maxLength": 70 },
-    "password.tooManyAttempts": { "where": "Settings page, change-password card: red error box", "who": "users who sign in with email and password", "maxLength": 60 },
-    "password.failed": { "where": "Settings page, change-password card: red error box", "who": "users who sign in with email and password", "maxLength": 60 },
-    "myInstrument": { "where": "Settings page: small uppercase section heading above the musician profile card", "who": "everyone signed in", "maxLength": 25 },
-    "integrations": { "where": "Settings page: small uppercase section heading above the Claude / MCP access card", "who": "everyone signed in", "maxLength": 25 },
-    "logOut": { "where": "Settings page footer: sign-out button", "who": "everyone signed in", "maxLength": 20 },
-    "version": { "where": "Settings page footer: faint build label", "who": "everyone signed in", "maxLength": 30, "context": "{version} is the app version number, {commit} a short code id; 'v' abbreviates 'version'." },
-    "mcp.title": { "where": "Settings page, Integrations: heading of the Claude connector card", "who": "everyone signed in", "maxLength": 30, "context": "'Claude' (an AI assistant) and 'MCP' (Model Context Protocol) are product names: keep them in Latin letters." },
-    "mcp.description": { "where": "Settings page, Claude / MCP card: line under the heading", "who": "everyone signed in", "maxLength": 90, "context": "'Claude' is a product name; keep it as is. A token is a secret access key." },
-    "mcp.loadFailed": { "where": "Settings page, Claude / MCP card: error toast", "who": "everyone signed in", "maxLength": 60, "context": "MCP is a product name; keep it." },
-    "mcp.createFailed": { "where": "Settings page, Claude / MCP card: error toast", "who": "everyone signed in", "maxLength": 60 },
-    "mcp.copied": { "where": "Settings page, Claude / MCP card: success toast after copying the new token", "who": "everyone signed in", "maxLength": 40 },
-    "mcp.copyFailed": { "where": "Settings page, Claude / MCP card: error toast when the clipboard is unavailable", "who": "everyone signed in", "maxLength": 60 },
-    "mcp.revoked": { "where": "Settings page, Claude / MCP card: success toast after deleting a token", "who": "everyone signed in", "maxLength": 40 },
-    "mcp.revokeFailed": { "where": "Settings page, Claude / MCP card: error toast", "who": "everyone signed in", "maxLength": 60 },
-    "mcp.revealWarning": { "where": "Settings page, Claude / MCP card: amber warning above a newly generated token (shown once)", "who": "everyone signed in", "maxLength": 90 },
-    "mcp.copyToken": { "where": "Settings page, Claude / MCP card: accessible name of the copy icon button", "who": "everyone signed in", "maxLength": 25 },
-    "mcp.done": { "where": "Settings page, Claude / MCP card: link that hides the newly generated token", "who": "everyone signed in", "maxLength": 15 },
-    "mcp.labelPlaceholder": { "where": "Settings page, Claude / MCP card: placeholder in the token name field", "who": "everyone signed in", "maxLength": 45, "context": "'Claude Desktop' is a product name; keep it as is." },
-    "mcp.generate": { "where": "Settings page, Claude / MCP card: button that creates a token", "who": "everyone signed in", "maxLength": 15 },
-    "mcp.loading": { "where": "Settings page, Claude / MCP card: loading line", "who": "everyone signed in", "maxLength": 30 },
-    "mcp.empty": { "where": "Settings page, Claude / MCP card: shown when the user has no tokens", "who": "everyone signed in", "maxLength": 30 },
-    "mcp.tokenDates": { "where": "Settings page, Claude / MCP card: grey line under each token's name", "who": "everyone signed in", "maxLength": 60, "context": "{created} and {lastUsed} are dates (e.g. Oct 3, 2026) or a dash when unknown." },
-    "mcp.revoke": { "where": "Settings page, Claude / MCP card: accessible name of the trash-can button on each token", "who": "everyone signed in", "maxLength": 50, "context": "{tokenLabel} is the name the user gave the token." },
-    "push.title": { "where": "Settings page: heading of the push-notification toggle card", "who": "everyone signed in", "maxLength": 30 },
-    "push.description": { "where": "Settings page, push notification card: line under the heading", "who": "everyone signed in", "maxLength": 70 },
-    "push.enabled": { "where": "Settings page, push notification card: success toast", "who": "everyone signed in", "maxLength": 50 },
-    "push.disabled": { "where": "Settings page, push notification card: success toast", "who": "everyone signed in", "maxLength": 50 },
-    "push.blockedToast": { "where": "Settings page, push notification card: error toast when the browser blocks notifications", "who": "everyone signed in", "maxLength": 80 },
-    "push.enableFailed": { "where": "Settings page, push notification card: error toast", "who": "everyone signed in", "maxLength": 60 },
-    "push.updateFailed": { "where": "Settings page, push notification card: error toast", "who": "everyone signed in", "maxLength": 60 },
-    "push.unsupported": { "where": "Settings page, push notification card: shown instead of the toggle on browsers without push", "who": "everyone signed in", "maxLength": 70 },
-    "push.blockedHint": { "where": "Settings page, push notification card: amber note under the toggle when the browser blocks notifications", "who": "everyone signed in", "maxLength": 120 },
-    "profile.title": { "where": "Settings page, My Instrument: heading of the musician profile card", "who": "everyone signed in", "maxLength": 30 },
-    "profile.description": { "where": "Settings page, musician profile card: line under the heading", "who": "everyone signed in", "maxLength": 90 },
-    "profile.nudge": { "where": "Settings page, musician profile card: amber nudge shown when no instrument is chosen", "who": "everyone signed in", "maxLength": 130, "context": "{emphasis} is replaced by the bold phrase 'automatically transposed charts' (key profile.nudgeEmphasis); place it where it reads naturally. Charts = sheet music." },
-    "profile.nudgeEmphasis": { "where": "Settings page, musician profile card: bold phrase inside the instrument nudge sentence", "who": "everyone signed in", "maxLength": 50, "context": "Inserted into profile.nudge at {emphasis}. Charts = sheet music." },
-    "profile.saved": { "where": "Settings page, musician profile card: success toast", "who": "everyone signed in", "maxLength": 30 },
-    "profile.saveFailed": { "where": "Settings page, musician profile card: error toast", "who": "everyone signed in", "maxLength": 80, "context": "{error} is a technical error message (often English) or the 'Unknown error' text." },
-    "profile.unknownError": { "where": "Settings page, musician profile card: inserted into the save-failed toast when no error detail exists", "who": "everyone signed in", "maxLength": 30 },
-    "profile.instrument": { "where": "Settings page, musician profile card: label above the instrument buttons", "who": "everyone signed in", "maxLength": 20 },
-    "profile.semitones": { "where": "Settings page, musician profile card: small line under a transposing instrument's name", "who": "everyone signed in", "maxLength": 20, "context": "{offset} is a signed number like +2 or -3 (the count is its absolute value). English uses 'semitones' for every number." },
-    "profile.transpositionOffset": { "where": "Settings page, musician profile card: label above the − / + transposition stepper", "who": "everyone signed in", "maxLength": 40 },
-    "profile.showCapo": { "where": "Settings page, musician profile card: toggle label (guitar-like instruments)", "who": "everyone signed in", "maxLength": 30, "context": "Capo: the clamp guitarists put on the neck." },
-    "profile.defaultCapoFret": { "where": "Settings page, musician profile card: label above the capo fret number buttons", "who": "everyone signed in", "maxLength": 30 },
-    "profile.preferFlats": { "where": "Settings page, musician profile card: toggle label", "who": "everyone signed in", "maxLength": 45, "context": "Bb and A# are note names: keep them exactly as written (Latin letters)." },
-    "profile.saving": { "where": "Settings page, musician profile card: save button while saving", "who": "everyone signed in", "maxLength": 20 },
-    "profile.save": { "where": "Settings page, musician profile card: save button", "who": "everyone signed in", "maxLength": 20 },
-    "instruments.acousticGuitar": { "where": "Settings page, musician profile card: instrument button", "who": "everyone signed in", "maxLength": 24 },
-    "instruments.electricBass": { "where": "Settings page, musician profile card: instrument button", "who": "everyone signed in", "maxLength": 24 },
-    "instruments.mandolin": { "where": "Settings page, musician profile card: instrument button", "who": "everyone signed in", "maxLength": 24 },
-    "instruments.electricGuitar": { "where": "Settings page, musician profile card: instrument button", "who": "everyone signed in", "maxLength": 24 },
-    "instruments.classicalGuitar": { "where": "Settings page, musician profile card: instrument button", "who": "everyone signed in", "maxLength": 24 },
-    "instruments.voice": { "where": "Settings page, musician profile card: instrument button (singers)", "who": "everyone signed in", "maxLength": 24 },
-    "instruments.handDrums": { "where": "Settings page, musician profile card: instrument button", "who": "everyone signed in", "maxLength": 24 },
-    "instruments.violin": { "where": "Settings page, musician profile card: instrument button", "who": "everyone signed in", "maxLength": 24 },
-    "instruments.ebAltoSax": { "where": "Settings page, musician profile card: instrument button", "who": "everyone signed in", "maxLength": 24, "context": "'Eb' is the instrument's key (E-flat); keep the note name as written." },
-    "instruments.bbTenorSax": { "where": "Settings page, musician profile card: instrument button", "who": "everyone signed in", "maxLength": 24, "context": "'Bb' = B-flat; keep the note name as written." },
-    "instruments.bbSopranoSax": { "where": "Settings page, musician profile card: instrument button", "who": "everyone signed in", "maxLength": 24, "context": "'Bb' = B-flat; keep the note name as written." },
-    "instruments.bbClarinet": { "where": "Settings page, musician profile card: instrument button", "who": "everyone signed in", "maxLength": 24, "context": "'Bb' = B-flat; keep the note name as written." },
-    "instruments.bbTrumpet": { "where": "Settings page, musician profile card: instrument button", "who": "everyone signed in", "maxLength": 24, "context": "'Bb' = B-flat; keep the note name as written." },
-    "instruments.fHorn": { "where": "Settings page, musician profile card: instrument button", "who": "everyone signed in", "maxLength": 24, "context": "(F) is the horn's key; keep the note name." },
-    "instruments.trombone": { "where": "Settings page, musician profile card: instrument button", "who": "everyone signed in", "maxLength": 24 },
-    "instruments.piano": { "where": "Settings page, musician profile card: instrument button", "who": "everyone signed in", "maxLength": 24 },
-    "instruments.ukulele": { "where": "Settings page, musician profile card: instrument button", "who": "everyone signed in", "maxLength": 24 },
-    "instruments.other": { "where": "Settings page, musician profile card: instrument button for anything not listed", "who": "everyone signed in", "maxLength": 24 },
-    "instrumentNotes.concertPitch": { "where": "Settings page, musician profile card: line describing the chosen instrument's transposition", "who": "everyone signed in", "maxLength": 50 },
-    "instrumentNotes.concertPitchOctaveLower": { "where": "Settings page, musician profile card: transposition description (bass)", "who": "everyone signed in", "maxLength": 50 },
-    "instrumentNotes.rhythmOnly": { "where": "Settings page, musician profile card: transposition description (drums)", "who": "everyone signed in", "maxLength": 50 },
-    "instrumentNotes.major6thLower": { "where": "Settings page, musician profile card: transposition description", "who": "everyone signed in", "maxLength": 50 },
-    "instrumentNotes.major9thLower": { "where": "Settings page, musician profile card: transposition description", "who": "everyone signed in", "maxLength": 50 },
-    "instrumentNotes.wholeStepLower": { "where": "Settings page, musician profile card: transposition description", "who": "everyone signed in", "maxLength": 50 },
-    "instrumentNotes.fifthLower": { "where": "Settings page, musician profile card: transposition description", "who": "everyone signed in", "maxLength": 50 },
-    "instrumentNotes.custom": { "where": "Settings page, musician profile card: description for the 'Other' instrument", "who": "everyone signed in", "maxLength": 50 },
-    "scheduling.title": { "where": "Settings page, musician profile card: heading of the scheduling section", "who": "everyone signed in", "maxLength": 25 },
-    "scheduling.description": { "where": "Settings page, scheduling section: line under the heading", "who": "everyone signed in", "maxLength": 70 },
-    "scheduling.phone": { "where": "Settings page, scheduling section: phone field label", "who": "everyone signed in", "maxLength": 25 },
-    "scheduling.phonePlaceholder": { "where": "Settings page, scheduling section: example phone number inside the empty phone field", "who": "everyone signed in", "maxLength": 20, "context": "A fake sample number in the local format; replace with a local-format example." },
-    "scheduling.phoneHint": { "where": "Settings page, scheduling section: grey note under the phone field", "who": "everyone signed in", "maxLength": 60 },
-    "scheduling.notifications": { "where": "Settings page, scheduling section: label above the Email / SMS / Push toggles", "who": "everyone signed in", "maxLength": 35 },
-    "scheduling.email": { "where": "Settings page, scheduling notifications: toggle name", "who": "everyone signed in", "maxLength": 12 },
-    "scheduling.emailDescription": { "where": "Settings page, scheduling notifications: grey line under the Email toggle", "who": "everyone signed in", "maxLength": 45 },
-    "scheduling.sms": { "where": "Settings page, scheduling notifications: toggle name (text messages)", "who": "everyone signed in", "maxLength": 12 },
-    "scheduling.smsDescription": { "where": "Settings page, scheduling notifications: grey line under the SMS toggle", "who": "everyone signed in", "maxLength": 45 },
-    "scheduling.push": { "where": "Settings page, scheduling notifications: toggle name (browser/device push notifications)", "who": "everyone signed in", "maxLength": 12 },
-    "scheduling.pushDescription": { "where": "Settings page, scheduling notifications: grey line under the Push toggle", "who": "everyone signed in", "maxLength": 45 },
-    "scheduling.calendarTitle": { "where": "Settings page, scheduling section: label of the calendar feed box", "who": "everyone signed in", "maxLength": 30 },
-    "scheduling.copy": { "where": "Settings page, calendar feed box: button that copies the feed URL", "who": "everyone signed in", "maxLength": 12 },
-    "scheduling.calendarCopied": { "where": "Settings page, calendar feed box: success toast", "who": "everyone signed in", "maxLength": 40 },
-    "scheduling.calendarAddHint": { "where": "Settings page, calendar feed box: note under the feed URL", "who": "everyone signed in", "maxLength": 110, "context": "Google Calendar, Apple Calendar and Outlook are product names. 'CRC' is written literally today (not a tenant token); keep it." },
-    "scheduling.calendarGenerated": { "where": "Settings page, calendar feed box: success toast", "who": "everyone signed in", "maxLength": 45 },
-    "scheduling.calendarGenerateFailed": { "where": "Settings page, calendar feed box: error toast", "who": "everyone signed in", "maxLength": 50 },
-    "scheduling.calendarGenerating": { "where": "Settings page, calendar feed box: button text while working", "who": "everyone signed in", "maxLength": 25 },
-    "scheduling.calendarGenerate": { "where": "Settings page, calendar feed box: button that creates the feed URL", "who": "everyone signed in", "maxLength": 25 },
-    "scheduling.calendarGenerateHint": { "where": "Settings page, calendar feed box: note under the generate button", "who": "everyone signed in", "maxLength": 100, "context": "'CRC' is written literally today (not a tenant token); keep it." }
+    "back": {
+        "where": "Settings page header: accessible name of the back-arrow button (mobile only)",
+        "who": "everyone signed in",
+        "maxLength": 20
+    },
+    "title": {
+        "where": "Settings page: main heading",
+        "who": "everyone signed in",
+        "maxLength": 30
+    },
+    "subtitle": {
+        "where": "Settings page: grey line under the main heading",
+        "who": "everyone signed in",
+        "maxLength": 50
+    },
+    "account": {
+        "where": "Settings page: small uppercase section heading above the profile, appearance and password cards",
+        "who": "everyone signed in",
+        "maxLength": 25
+    },
+    "profilePhotoAlt": {
+        "where": "Settings page, account card: alt text of the user's profile photo",
+        "who": "everyone signed in",
+        "maxLength": 30
+    },
+    "saveName": {
+        "where": "Settings page, account card: accessible name of the check-mark button that saves an edited display name",
+        "who": "everyone signed in",
+        "maxLength": 25
+    },
+    "defaultDisplayName": {
+        "where": "Settings page, account card: shown as the user's name when they have no display name",
+        "who": "everyone signed in",
+        "maxLength": 25,
+        "context": "A generic noun for a band member."
+    },
+    "role.admin": {
+        "where": "Settings page, account card: small badge showing the user's role",
+        "who": "admins",
+        "maxLength": 14,
+        "context": "Shown in capitals (English writes it in capitals)."
+    },
+    "role.bandLeader": {
+        "where": "Settings page, account card: role badge",
+        "who": "band leaders",
+        "maxLength": 14,
+        "context": "Glossary: band leader. Shown in capitals."
+    },
+    "role.musician": {
+        "where": "Settings page, account card: role badge",
+        "who": "musicians",
+        "maxLength": 14,
+        "context": "Shown in capitals."
+    },
+    "role.member": {
+        "where": "Settings page, account card: role badge (also the fallback when no role is known)",
+        "who": "members",
+        "maxLength": 14,
+        "context": "Shown in capitals."
+    },
+    "role.pending": {
+        "where": "Settings page, account card: role badge for a user still awaiting approval",
+        "who": "pending users",
+        "maxLength": 14,
+        "context": "Shown in capitals."
+    },
+    "appearance": {
+        "where": "Settings page: heading of the theme card",
+        "who": "everyone signed in",
+        "maxLength": 25
+    },
+    "theme.light": {
+        "where": "Settings page, Appearance card: theme button",
+        "who": "everyone signed in",
+        "maxLength": 12
+    },
+    "theme.dark": {
+        "where": "Settings page, Appearance card: theme button",
+        "who": "everyone signed in",
+        "maxLength": 12
+    },
+    "theme.system": {
+        "where": "Settings page, Appearance card: theme button (follow the device setting)",
+        "who": "everyone signed in",
+        "maxLength": 12
+    },
+    "performDarkHint": {
+        "where": "Settings page, Appearance card: small grey note under the theme buttons",
+        "who": "everyone signed in",
+        "maxLength": 90,
+        "context": "'Performance mode' = Perform mode, the on-stage chart view."
+    },
+    "gigMode.title": {
+        "where": "Settings page: heading of the Live Gig Mode toggle card",
+        "who": "everyone signed in",
+        "maxLength": 25
+    },
+    "gigMode.description": {
+        "where": "Settings page, Live Gig Mode card: explanation under the heading",
+        "who": "everyone signed in",
+        "maxLength": 100
+    },
+    "password.title": {
+        "where": "Settings page: heading of the change-password card (email/password accounts only)",
+        "who": "users who sign in with email and password",
+        "maxLength": 25
+    },
+    "password.description": {
+        "where": "Settings page, change-password card: line under the heading",
+        "who": "users who sign in with email and password",
+        "maxLength": 60
+    },
+    "password.current": {
+        "where": "Settings page, change-password card: field label",
+        "who": "users who sign in with email and password",
+        "maxLength": 30
+    },
+    "password.new": {
+        "where": "Settings page, change-password card: field label",
+        "who": "users who sign in with email and password",
+        "maxLength": 30
+    },
+    "password.newPlaceholder": {
+        "where": "Settings page, change-password card: placeholder inside the new-password field",
+        "who": "users who sign in with email and password",
+        "maxLength": 30
+    },
+    "password.confirm": {
+        "where": "Settings page, change-password card: field label",
+        "who": "users who sign in with email and password",
+        "maxLength": 30
+    },
+    "password.success": {
+        "where": "Settings page, change-password card: green confirmation box after saving",
+        "who": "users who sign in with email and password",
+        "maxLength": 50
+    },
+    "password.submit": {
+        "where": "Settings page, change-password card: submit button",
+        "who": "users who sign in with email and password",
+        "maxLength": 20
+    },
+    "password.mismatch": {
+        "where": "Settings page, change-password card: red error box",
+        "who": "users who sign in with email and password",
+        "maxLength": 60
+    },
+    "password.tooShort": {
+        "where": "Settings page, change-password card: red error box",
+        "who": "users who sign in with email and password",
+        "maxLength": 60
+    },
+    "password.incorrect": {
+        "where": "Settings page, change-password card: red error box",
+        "who": "users who sign in with email and password",
+        "maxLength": 60
+    },
+    "password.weak": {
+        "where": "Settings page, change-password card: red error box",
+        "who": "users who sign in with email and password",
+        "maxLength": 70
+    },
+    "password.tooManyAttempts": {
+        "where": "Settings page, change-password card: red error box",
+        "who": "users who sign in with email and password",
+        "maxLength": 60
+    },
+    "password.failed": {
+        "where": "Settings page, change-password card: red error box",
+        "who": "users who sign in with email and password",
+        "maxLength": 60
+    },
+    "myInstrument": {
+        "where": "Settings page: small uppercase section heading above the musician profile card",
+        "who": "everyone signed in",
+        "maxLength": 25
+    },
+    "integrations": {
+        "where": "Settings page: small uppercase section heading above the Claude / MCP access card",
+        "who": "everyone signed in",
+        "maxLength": 25
+    },
+    "logOut": {
+        "where": "Settings page footer: sign-out button",
+        "who": "everyone signed in",
+        "maxLength": 20
+    },
+    "version": {
+        "where": "Settings page footer: faint build label",
+        "who": "everyone signed in",
+        "maxLength": 30,
+        "context": "{version} is the app version number, {commit} a short code id; 'v' abbreviates 'version'."
+    },
+    "mcp.title": {
+        "where": "Settings page, Integrations: heading of the Claude connector card",
+        "who": "everyone signed in",
+        "maxLength": 30,
+        "context": "'Claude' (an AI assistant) and 'MCP' (Model Context Protocol) are product names: keep them in Latin letters."
+    },
+    "mcp.description": {
+        "where": "Settings page, Claude / MCP card: line under the heading",
+        "who": "everyone signed in",
+        "maxLength": 90,
+        "context": "'Claude' is a product name; keep it as is. A token is a secret access key."
+    },
+    "mcp.loadFailed": {
+        "where": "Settings page, Claude / MCP card: error toast",
+        "who": "everyone signed in",
+        "maxLength": 60,
+        "context": "MCP is a product name; keep it."
+    },
+    "mcp.createFailed": {
+        "where": "Settings page, Claude / MCP card: error toast",
+        "who": "everyone signed in",
+        "maxLength": 60
+    },
+    "mcp.copied": {
+        "where": "Settings page, Claude / MCP card: success toast after copying the new token",
+        "who": "everyone signed in",
+        "maxLength": 40
+    },
+    "mcp.copyFailed": {
+        "where": "Settings page, Claude / MCP card: error toast when the clipboard is unavailable",
+        "who": "everyone signed in",
+        "maxLength": 60
+    },
+    "mcp.revoked": {
+        "where": "Settings page, Claude / MCP card: success toast after deleting a token",
+        "who": "everyone signed in",
+        "maxLength": 40
+    },
+    "mcp.revokeFailed": {
+        "where": "Settings page, Claude / MCP card: error toast",
+        "who": "everyone signed in",
+        "maxLength": 60
+    },
+    "mcp.revealWarning": {
+        "where": "Settings page, Claude / MCP card: amber warning above a newly generated token (shown once)",
+        "who": "everyone signed in",
+        "maxLength": 90
+    },
+    "mcp.copyToken": {
+        "where": "Settings page, Claude / MCP card: accessible name of the copy icon button",
+        "who": "everyone signed in",
+        "maxLength": 25
+    },
+    "mcp.done": {
+        "where": "Settings page, Claude / MCP card: link that hides the newly generated token",
+        "who": "everyone signed in",
+        "maxLength": 15
+    },
+    "mcp.labelPlaceholder": {
+        "where": "Settings page, Claude / MCP card: placeholder in the token name field",
+        "who": "everyone signed in",
+        "maxLength": 45,
+        "context": "'Claude Desktop' is a product name; keep it as is."
+    },
+    "mcp.generate": {
+        "where": "Settings page, Claude / MCP card: button that creates a token",
+        "who": "everyone signed in",
+        "maxLength": 15
+    },
+    "mcp.loading": {
+        "where": "Settings page, Claude / MCP card: loading line",
+        "who": "everyone signed in",
+        "maxLength": 30
+    },
+    "mcp.empty": {
+        "where": "Settings page, Claude / MCP card: shown when the user has no tokens",
+        "who": "everyone signed in",
+        "maxLength": 30
+    },
+    "mcp.tokenDates": {
+        "where": "Settings page, Claude / MCP card: grey line under each token's name",
+        "who": "everyone signed in",
+        "maxLength": 60,
+        "context": "{created} and {lastUsed} are dates (e.g. Oct 3, 2026) or a dash when unknown."
+    },
+    "mcp.revoke": {
+        "where": "Settings page, Claude / MCP card: accessible name of the trash-can button on each token",
+        "who": "everyone signed in",
+        "maxLength": 50,
+        "context": "{tokenLabel} is the name the user gave the token."
+    },
+    "push.title": {
+        "where": "Settings page: heading of the push-notification toggle card",
+        "who": "everyone signed in",
+        "maxLength": 30
+    },
+    "push.description": {
+        "where": "Settings page, push notification card: line under the heading",
+        "who": "everyone signed in",
+        "maxLength": 70
+    },
+    "push.enabled": {
+        "where": "Settings page, push notification card: success toast",
+        "who": "everyone signed in",
+        "maxLength": 50
+    },
+    "push.disabled": {
+        "where": "Settings page, push notification card: success toast",
+        "who": "everyone signed in",
+        "maxLength": 50
+    },
+    "push.blockedToast": {
+        "where": "Settings page, push notification card: error toast when the browser blocks notifications",
+        "who": "everyone signed in",
+        "maxLength": 80
+    },
+    "push.enableFailed": {
+        "where": "Settings page, push notification card: error toast",
+        "who": "everyone signed in",
+        "maxLength": 60
+    },
+    "push.updateFailed": {
+        "where": "Settings page, push notification card: error toast",
+        "who": "everyone signed in",
+        "maxLength": 60
+    },
+    "push.unsupported": {
+        "where": "Settings page, push notification card: shown instead of the toggle on browsers without push",
+        "who": "everyone signed in",
+        "maxLength": 70
+    },
+    "push.blockedHint": {
+        "where": "Settings page, push notification card: amber note under the toggle when the browser blocks notifications",
+        "who": "everyone signed in",
+        "maxLength": 120
+    },
+    "profile.title": {
+        "where": "Settings page, My Instrument: heading of the musician profile card",
+        "who": "everyone signed in",
+        "maxLength": 30
+    },
+    "profile.description": {
+        "where": "Settings page, musician profile card: line under the heading",
+        "who": "everyone signed in",
+        "maxLength": 90
+    },
+    "profile.nudge": {
+        "where": "Settings page, musician profile card: amber nudge shown when no instrument is chosen",
+        "who": "everyone signed in",
+        "maxLength": 130,
+        "context": "{emphasis} is replaced by the bold phrase 'automatically transposed charts' (key profile.nudgeEmphasis); place it where it reads naturally. Charts = sheet music."
+    },
+    "profile.nudgeEmphasis": {
+        "where": "Settings page, musician profile card: bold phrase inside the instrument nudge sentence",
+        "who": "everyone signed in",
+        "maxLength": 50,
+        "context": "Inserted into profile.nudge at {emphasis}. Charts = sheet music."
+    },
+    "profile.saved": {
+        "where": "Settings page, musician profile card: success toast",
+        "who": "everyone signed in",
+        "maxLength": 30
+    },
+    "profile.saveFailed": {
+        "where": "Settings page, musician profile card: error toast",
+        "who": "everyone signed in",
+        "maxLength": 80,
+        "context": "{error} is a technical error message (often English) or the 'Unknown error' text."
+    },
+    "profile.unknownError": {
+        "where": "Settings page, musician profile card: inserted into the save-failed toast when no error detail exists",
+        "who": "everyone signed in",
+        "maxLength": 30
+    },
+    "profile.instrument": {
+        "where": "Settings page, musician profile card: label above the instrument buttons",
+        "who": "everyone signed in",
+        "maxLength": 20
+    },
+    "profile.semitones": {
+        "where": "Settings page, musician profile card: small line under a transposing instrument's name",
+        "who": "everyone signed in",
+        "maxLength": 20,
+        "context": "{offset} is a signed number like +2 or -3 (the count is its absolute value). English uses 'semitones' for every number."
+    },
+    "profile.transpositionOffset": {
+        "where": "Settings page, musician profile card: label above the − / + transposition stepper",
+        "who": "everyone signed in",
+        "maxLength": 40
+    },
+    "profile.showCapo": {
+        "where": "Settings page, musician profile card: toggle label (guitar-like instruments)",
+        "who": "everyone signed in",
+        "maxLength": 30,
+        "context": "Capo: the clamp guitarists put on the neck."
+    },
+    "profile.defaultCapoFret": {
+        "where": "Settings page, musician profile card: label above the capo fret number buttons",
+        "who": "everyone signed in",
+        "maxLength": 30
+    },
+    "profile.preferFlats": {
+        "where": "Settings page, musician profile card: toggle label",
+        "who": "everyone signed in",
+        "maxLength": 45,
+        "context": "Bb and A# are note names: keep them exactly as written (Latin letters)."
+    },
+    "profile.saving": {
+        "where": "Settings page, musician profile card: save button while saving",
+        "who": "everyone signed in",
+        "maxLength": 20
+    },
+    "profile.save": {
+        "where": "Settings page, musician profile card: save button",
+        "who": "everyone signed in",
+        "maxLength": 20
+    },
+    "instruments.acousticGuitar": {
+        "where": "Settings page, musician profile card: instrument button",
+        "who": "everyone signed in",
+        "maxLength": 24
+    },
+    "instruments.electricBass": {
+        "where": "Settings page, musician profile card: instrument button",
+        "who": "everyone signed in",
+        "maxLength": 24
+    },
+    "instruments.mandolin": {
+        "where": "Settings page, musician profile card: instrument button",
+        "who": "everyone signed in",
+        "maxLength": 24
+    },
+    "instruments.electricGuitar": {
+        "where": "Settings page, musician profile card: instrument button",
+        "who": "everyone signed in",
+        "maxLength": 24
+    },
+    "instruments.classicalGuitar": {
+        "where": "Settings page, musician profile card: instrument button",
+        "who": "everyone signed in",
+        "maxLength": 24
+    },
+    "instruments.voice": {
+        "where": "Settings page, musician profile card: instrument button (singers)",
+        "who": "everyone signed in",
+        "maxLength": 24
+    },
+    "instruments.handDrums": {
+        "where": "Settings page, musician profile card: instrument button",
+        "who": "everyone signed in",
+        "maxLength": 24
+    },
+    "instruments.violin": {
+        "where": "Settings page, musician profile card: instrument button",
+        "who": "everyone signed in",
+        "maxLength": 24
+    },
+    "instruments.ebAltoSax": {
+        "where": "Settings page, musician profile card: instrument button",
+        "who": "everyone signed in",
+        "maxLength": 24,
+        "context": "'Eb' is the instrument's key (E-flat); keep the note name as written."
+    },
+    "instruments.bbTenorSax": {
+        "where": "Settings page, musician profile card: instrument button",
+        "who": "everyone signed in",
+        "maxLength": 24,
+        "context": "'Bb' = B-flat; keep the note name as written."
+    },
+    "instruments.bbSopranoSax": {
+        "where": "Settings page, musician profile card: instrument button",
+        "who": "everyone signed in",
+        "maxLength": 24,
+        "context": "'Bb' = B-flat; keep the note name as written."
+    },
+    "instruments.bbClarinet": {
+        "where": "Settings page, musician profile card: instrument button",
+        "who": "everyone signed in",
+        "maxLength": 24,
+        "context": "'Bb' = B-flat; keep the note name as written."
+    },
+    "instruments.bbTrumpet": {
+        "where": "Settings page, musician profile card: instrument button",
+        "who": "everyone signed in",
+        "maxLength": 24,
+        "context": "'Bb' = B-flat; keep the note name as written."
+    },
+    "instruments.fHorn": {
+        "where": "Settings page, musician profile card: instrument button",
+        "who": "everyone signed in",
+        "maxLength": 24,
+        "context": "(F) is the horn's key; keep the note name."
+    },
+    "instruments.trombone": {
+        "where": "Settings page, musician profile card: instrument button",
+        "who": "everyone signed in",
+        "maxLength": 24
+    },
+    "instruments.piano": {
+        "where": "Settings page, musician profile card: instrument button",
+        "who": "everyone signed in",
+        "maxLength": 24
+    },
+    "instruments.ukulele": {
+        "where": "Settings page, musician profile card: instrument button",
+        "who": "everyone signed in",
+        "maxLength": 24
+    },
+    "instruments.other": {
+        "where": "Settings page, musician profile card: instrument button for anything not listed",
+        "who": "everyone signed in",
+        "maxLength": 24
+    },
+    "instrumentNotes.concertPitch": {
+        "where": "Settings page, musician profile card: line describing the chosen instrument's transposition",
+        "who": "everyone signed in",
+        "maxLength": 50
+    },
+    "instrumentNotes.concertPitchOctaveLower": {
+        "where": "Settings page, musician profile card: transposition description (bass)",
+        "who": "everyone signed in",
+        "maxLength": 50
+    },
+    "instrumentNotes.rhythmOnly": {
+        "where": "Settings page, musician profile card: transposition description (drums)",
+        "who": "everyone signed in",
+        "maxLength": 50
+    },
+    "instrumentNotes.major6thLower": {
+        "where": "Settings page, musician profile card: transposition description",
+        "who": "everyone signed in",
+        "maxLength": 50
+    },
+    "instrumentNotes.major9thLower": {
+        "where": "Settings page, musician profile card: transposition description",
+        "who": "everyone signed in",
+        "maxLength": 50
+    },
+    "instrumentNotes.wholeStepLower": {
+        "where": "Settings page, musician profile card: transposition description",
+        "who": "everyone signed in",
+        "maxLength": 50
+    },
+    "instrumentNotes.fifthLower": {
+        "where": "Settings page, musician profile card: transposition description",
+        "who": "everyone signed in",
+        "maxLength": 50
+    },
+    "instrumentNotes.custom": {
+        "where": "Settings page, musician profile card: description for the 'Other' instrument",
+        "who": "everyone signed in",
+        "maxLength": 50
+    },
+    "scheduling.title": {
+        "where": "Settings page, musician profile card: heading of the scheduling section",
+        "who": "everyone signed in",
+        "maxLength": 25
+    },
+    "scheduling.description": {
+        "where": "Settings page, scheduling section: line under the heading",
+        "who": "everyone signed in",
+        "maxLength": 70
+    },
+    "scheduling.phone": {
+        "where": "Settings page, scheduling section: phone field label",
+        "who": "everyone signed in",
+        "maxLength": 25
+    },
+    "scheduling.phonePlaceholder": {
+        "where": "Settings page, scheduling section: example phone number inside the empty phone field",
+        "who": "everyone signed in",
+        "maxLength": 20,
+        "context": "A fake sample number in the local format; replace with a local-format example."
+    },
+    "scheduling.phoneHint": {
+        "where": "Settings page, scheduling section: grey note under the phone field",
+        "who": "everyone signed in",
+        "maxLength": 60
+    },
+    "scheduling.notifications": {
+        "where": "Settings page, scheduling section: label above the Email / SMS / Push toggles",
+        "who": "everyone signed in",
+        "maxLength": 35
+    },
+    "scheduling.email": {
+        "where": "Settings page, scheduling notifications: toggle name",
+        "who": "everyone signed in",
+        "maxLength": 12
+    },
+    "scheduling.emailDescription": {
+        "where": "Settings page, scheduling notifications: grey line under the Email toggle",
+        "who": "everyone signed in",
+        "maxLength": 45
+    },
+    "scheduling.sms": {
+        "where": "Settings page, scheduling notifications: toggle name (text messages)",
+        "who": "everyone signed in",
+        "maxLength": 12
+    },
+    "scheduling.smsDescription": {
+        "where": "Settings page, scheduling notifications: grey line under the SMS toggle",
+        "who": "everyone signed in",
+        "maxLength": 45
+    },
+    "scheduling.push": {
+        "where": "Settings page, scheduling notifications: toggle name (browser/device push notifications)",
+        "who": "everyone signed in",
+        "maxLength": 12
+    },
+    "scheduling.pushDescription": {
+        "where": "Settings page, scheduling notifications: grey line under the Push toggle",
+        "who": "everyone signed in",
+        "maxLength": 45
+    },
+    "scheduling.calendarTitle": {
+        "where": "Settings page, scheduling section: label of the calendar feed box",
+        "who": "everyone signed in",
+        "maxLength": 30
+    },
+    "scheduling.copy": {
+        "where": "Settings page, calendar feed box: button that copies the feed URL",
+        "who": "everyone signed in",
+        "maxLength": 12
+    },
+    "scheduling.calendarCopied": {
+        "where": "Settings page, calendar feed box: success toast",
+        "who": "everyone signed in",
+        "maxLength": 40
+    },
+    "scheduling.calendarAddHint": {
+        "where": "Settings page, calendar feed box: note under the feed URL",
+        "who": "everyone signed in",
+        "maxLength": 110,
+        "context": "Google Calendar, Apple Calendar and Outlook are product names. {community} is the community's short name. It reads 'CRC' on CRC and on Brothers Lazaroff exactly as before phase 7; other tenants get their own short name."
+    },
+    "scheduling.calendarGenerated": {
+        "where": "Settings page, calendar feed box: success toast",
+        "who": "everyone signed in",
+        "maxLength": 45
+    },
+    "scheduling.calendarGenerateFailed": {
+        "where": "Settings page, calendar feed box: error toast",
+        "who": "everyone signed in",
+        "maxLength": 50
+    },
+    "scheduling.calendarGenerating": {
+        "where": "Settings page, calendar feed box: button text while working",
+        "who": "everyone signed in",
+        "maxLength": 25
+    },
+    "scheduling.calendarGenerate": {
+        "where": "Settings page, calendar feed box: button that creates the feed URL",
+        "who": "everyone signed in",
+        "maxLength": 25
+    },
+    "scheduling.calendarGenerateHint": {
+        "where": "Settings page, calendar feed box: note under the generate button",
+        "who": "everyone signed in",
+        "maxLength": 100,
+        "context": "{community} is the community's short name. It reads 'CRC' on CRC and on Brothers Lazaroff exactly as before phase 7; other tenants get their own short name."
+    }
 }

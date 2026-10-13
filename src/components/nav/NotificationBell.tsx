@@ -13,7 +13,8 @@ import {
 import { useMusicStore } from "@/lib/store"
 import { Bell, ListMusic, Upload, Shield, Calendar, CalendarCheck, CalendarX } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { useFormat, useT } from "@/i18n/client"
+import { useT } from "@/i18n/client"
+import { useFormat } from "@/i18n/format-client"
 import type { T } from "@/i18n/core"
 import type { Formatter } from "@/i18n/format"
 

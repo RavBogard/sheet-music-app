@@ -3,7 +3,6 @@
 import { createContext, useContext, useEffect, useMemo, type ReactNode } from "react"
 import { DirectionProvider } from "@radix-ui/react-direction"
 import { createTranslator, isPseudo, type Direction, type T, type TenantTokens, type UiLanguage } from "@/i18n/core"
-import { createFormatter, type Formatter } from "@/i18n/format"
 import { tenantTokensOf } from "@/i18n/language"
 import { peekCompleteMessages, peekMessages, primeMessages, setActiveUiLanguage } from "@/i18n/message-cache"
 import { pseudoize } from "@/i18n/pseudo"
@@ -34,7 +33,8 @@ interface I18nValue {
     dir: Direction
     isRtl: boolean
     t: T
-    fmt: Formatter
+    /** The tenant zone; useFormat() builds the formatter from it on demand. */
+    timeZone: string | undefined
 }
 
 const I18nContext = createContext<I18nValue | null>(null)
@@ -67,7 +67,7 @@ export function I18nProvider({ lang, dir, timeZone, messages, overrides, tokens,
             tokens: tokens ?? null,
             transformOverride: isPseudo(lang) ? pseudoize : undefined,
         })
-        return { lang, dir, isRtl: dir === "rtl", t, fmt: createFormatter({ lang, timeZone: timeZone ?? undefined }) }
+        return { lang, dir, isRtl: dir === "rtl", t, timeZone: timeZone ?? undefined }
     }, [lang, dir, timeZone, messages, overrides, tokens])
     // Radix menus, selects and scroll areas read direction from their own
     // context, not from <html dir>: without this, submenus open and arrow keys
@@ -91,7 +91,7 @@ function useFallback(): I18nValue {
             overrides: cfg?.vocabulary.overrides,
             tokens: tenantTokensOf(cfg),
         })
-        return { lang: "en", dir: "ltr", isRtl: false, t, fmt: createFormatter({ lang: "en" }) }
+        return { lang: "en", dir: "ltr", isRtl: false, t, timeZone: undefined }
     }, [cfg])
 }
 
@@ -105,9 +105,6 @@ export function useT(): T {
     return useI18n().t
 }
 
-export function useFormat(): Formatter {
-    return useI18n().fmt
-}
 
 export interface ReadingDirection {
     dir: Direction
