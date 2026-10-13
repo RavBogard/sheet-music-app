@@ -3,7 +3,7 @@
     "title": "הצהרת נגישות",
     "lastUpdated": "עדכון אחרון: 19 במאי 2026",
     "intro": "Central Reform Congregation מחויבת להנגיש את אפליקציית האינטרנט CRC Music לנגנים, לחברי הקהילה ולאנשי הדת, על כל מגוון יכולותיהם. אנו שואפים לעמוד בהנחיות לנגישות תוכן באינטרנט (WCAG) 2.1 ברמה AA, או לעלות עליהן, בכל חלקי האפליקציה.",
-    "whatWeAreDoing.heading": "מה אנחנו עושים",
+    "whatWeAreDoing.heading": "מה אנו עושים",
     "whatWeAreDoing.semanticHtmlLandmarks": "ציוני דרך סמנטיים של HTML ({code1}, {code2}, כותרות) בכל דף באפליקציה.",
     "whatWeAreDoing.accessibleNamesIcon": "שמות נגישים לכל הלחצנים שמכילים סמל בלבד ({code1}) ולשדות הטפסים ({code2} או {code3}, ולעולם לא טקסט ממלא מקום בתפקיד תווית).",
     "whatWeAreDoing.wcagContrast": "ניגודיות ברמת WCAG 2.1 AA בטקסט הרציף ובמשטחים האינטראקטיביים.",
