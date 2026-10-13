@@ -19,17 +19,13 @@
 export const NOT_YET_MIGRATED: readonly string[] = [
     "src/app/(main)/*", // 18 strings, 2 files
 
-    "src/app/(main)/accessibility/*", // 30 strings, 1 files
 
-    "src/app/(main)/changelog/*", // 1 strings, 1 files
 
     "src/app/(main)/library/*", // 5 strings, 1 files
 
-    "src/app/(main)/manage/", // 115 strings, 4 files
 
     "src/app/(main)/monitor/", // 12 strings, 3 files
 
-    "src/app/(main)/privacy/*", // 66 strings, 1 files
 
     "src/app/(main)/schedule/*", // 13 strings, 1 files
 
@@ -37,19 +33,14 @@ export const NOT_YET_MIGRATED: readonly string[] = [
 
     "src/app/(main)/settings/*", // 30 strings, 1 files
 
-    "src/app/(main)/sms-consent/*", // 79 strings, 1 files
 
-    "src/app/(main)/terms/*", // 58 strings, 1 files
 
     "src/app/(v2)/v2/*", // 10 strings, 1 files
 
     "src/app/*", // 8 strings, 3 files
 
-    "src/app/api/admin/", // 4 strings, 3 files
 
-    "src/app/api/ai/", // 5 strings, 4 files
 
-    "src/app/api/auth/", // 23 strings, 5 files
 
     "src/app/api/charts/", // 3 strings, 2 files
 
@@ -57,19 +48,15 @@ export const NOT_YET_MIGRATED: readonly string[] = [
 
     "src/app/api/library/", // 15 strings, 5 files
 
-    "src/app/api/nudge-admin/*", // 1 strings, 1 files
 
-    "src/app/api/push/", // 2 strings, 1 files
 
     "src/app/api/recordings/", // 13 strings, 2 files
 
-    "src/app/api/scheduling/", // 11 strings, 5 files
 
     "src/app/api/setlist/", // 23 strings, 9 files
 
     "src/app/api/setlists/", // 15 strings, 6 files
 
-    "src/app/api/tenant/", // 1 strings, 1 files
 
     "src/app/auth-error/*", // 4 strings, 1 files
 
@@ -89,11 +76,8 @@ export const NOT_YET_MIGRATED: readonly string[] = [
 
     "src/components/*", // 11 strings, 2 files
 
-    "src/components/admin/*", // 136 strings, 6 files
 
-    "src/components/admin/library/*", // 15 strings, 1 files
 
-    "src/components/admin/people/*", // 4 strings, 1 files
 
     "src/components/audio/*", // 7 strings, 1 files
 
@@ -105,7 +89,6 @@ export const NOT_YET_MIGRATED: readonly string[] = [
 
     "src/components/home/*", // 10 strings, 1 files
 
-    "src/components/legal/*", // 174 strings, 1 files
 
     "src/components/library/*", // 205 strings, 11 files
 
