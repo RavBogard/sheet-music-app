@@ -7,6 +7,7 @@ import { useCalendarData, type CalendarMode } from "@/hooks/use-calendar-data"
 import { CalendarHeader } from "./CalendarHeader"
 import { CalendarGrid } from "./CalendarGrid"
 import type { Setlist } from "@/lib/setlist-firebase"
+import { useT, useFormat } from "@/i18n/client"
 
 interface UnifiedCalendarProps {
     /** Role-based rendering mode */
@@ -34,6 +35,8 @@ export function UnifiedCalendar({
     onCreateSetlist,
     className,
 }: UnifiedCalendarProps) {
+    const t = useT()
+    const fmt = useFormat()
     const [currentDate, setCurrentDate] = useState(new Date())
 
     const { dayMap, loading } = useCalendarData(mode, setlists)
@@ -41,13 +44,15 @@ export function UnifiedCalendar({
     const { monthLabel, year, month } = useMemo(() => {
         const y = currentDate.getFullYear()
         const m = currentDate.getMonth()
-        const firstDay = new Date(y, m, 1)
+        // Mid-month instant: the label shows month + year only, and a tenant
+        // formatting in its own zone can never slip into the previous month.
+        const midMonth = new Date(y, m, 15)
         return {
-            monthLabel: firstDay.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+            monthLabel: fmt.date(midMonth, { month: 'long', year: 'numeric' }),
             year: y,
             month: m,
         }
-    }, [currentDate])
+    }, [currentDate, fmt])
 
     const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1))
     const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1))
@@ -68,7 +73,7 @@ export function UnifiedCalendar({
             {loading ? (
                 <div className="flex flex-col items-center justify-center py-20 gap-3">
                     <Loader2 className="h-6 w-6 animate-spin text-brand/60" />
-                    <p className="text-xs text-muted-foreground">Loading calendar...</p>
+                    <p className="text-xs text-muted-foreground">{t("calendar.loading")}</p>
                 </div>
             ) : (
                 <CalendarGrid

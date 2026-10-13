@@ -2,6 +2,7 @@
 
 import { type UpcomingSetlistWithPrep } from "@/hooks/use-upcoming-prep"
 import { Bell } from "lucide-react"
+import { useT } from "@/i18n/client"
 
 /**
  * Banner showing setlists that were updated since the user's last visit.
@@ -12,6 +13,7 @@ export function WhatsChangedBanner({
 }: {
     items: UpcomingSetlistWithPrep[]
 }) {
+    const t = useT()
     const changedItems = items.filter(i => i.isNew)
     if (changedItems.length === 0) return null
 
@@ -20,11 +22,15 @@ export function WhatsChangedBanner({
             <Bell className="w-4 h-4 text-blue-400 mt-0.5 shrink-0" />
             <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-blue-400">
-                    {changedItems.length === 1 ? 'Setlist updated' : `${changedItems.length} setlists updated`}
+                    {t("dashboard.setlistsUpdated", { count: changedItems.length })}
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                    {changedItems.map(i => `"${i.setlist.name}"`).join(', ')}{' '}
-                    {changedItems.length === 1 ? 'was' : 'were'} changed since your last visit
+                    {t("dashboard.changedSinceLastVisit", {
+                        count: changedItems.length,
+                        setlistNames: changedItems
+                            .map(i => t("dashboard.quotedSetlistName", { setlistName: i.setlist.name }))
+                            .join(t("dashboard.listSeparator")),
+                    })}
                 </p>
             </div>
         </div>

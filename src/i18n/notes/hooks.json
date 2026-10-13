@@ -1,0 +1,285 @@
+{
+    "loadOlderSetlistsFailed": {
+        "where": "Setlists page: toast when \"Load more\" fails to fetch older setlists",
+        "who": "everyone",
+        "maxLength": 80
+    },
+    "loadSetlistsFailed": {
+        "where": "Setlists page: error message when the setlist list cannot load",
+        "who": "everyone",
+        "maxLength": 80
+    },
+    "deleteOwnOnly": {
+        "where": "Setlists page: toast when someone tries to delete another person's setlist",
+        "who": "musicians",
+        "maxLength": 60
+    },
+    "setlistDeleted": {
+        "where": "Setlists page: toast after a setlist is deleted",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "deleteSetlistFailed": {
+        "where": "Setlists page: toast when deleting a setlist fails",
+        "who": "leaders",
+        "maxLength": 50
+    },
+    "setlistDuplicated": {
+        "where": "Setlists page: toast after a setlist is duplicated",
+        "who": "leaders",
+        "maxLength": 50
+    },
+    "duplicateSetlistFailed": {
+        "where": "Setlists page: toast when duplicating a setlist fails",
+        "who": "leaders",
+        "maxLength": 50
+    },
+    "cloningNextWeek": {
+        "where": "Setlists page: loading toast while copying a setlist to next week",
+        "who": "leaders",
+        "maxLength": 50
+    },
+    "clonedNextWeek": {
+        "where": "Setlists page: toast after a setlist is copied to next week",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "cloneSetlistFailed": {
+        "where": "Setlists page: toast when copying a setlist to next week fails",
+        "who": "leaders",
+        "maxLength": 50
+    },
+    "savingTemplate": {
+        "where": "Setlists page: loading toast while saving a setlist as a template",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "templateSaved": {
+        "where": "Setlists page: toast after a setlist is saved as a template",
+        "who": "leaders",
+        "maxLength": 80,
+        "context": "{setlistName} is the setlist's name"
+    },
+    "saveTemplateFailed": {
+        "where": "Setlists page: toast when saving a template fails",
+        "who": "leaders",
+        "maxLength": 50
+    },
+    "savingDefault": {
+        "where": "Setlists page (admins): loading toast while setting a setlist as the default for a service type",
+        "who": "admins",
+        "maxLength": 40
+    },
+    "savedAsDefault": {
+        "where": "Setlists page (admins): toast after setting the default setlist for a service type",
+        "who": "admins",
+        "maxLength": 80,
+        "context": "{serviceType} is a service type label such as \"Shabbat Morning\""
+    },
+    "saveAsDefaultFailed": {
+        "where": "Setlists page (admins): toast when setting the default fails",
+        "who": "admins",
+        "maxLength": 50
+    },
+    "transferSucceeded": {
+        "where": "Setlists page: toast after transferring a setlist to another owner",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "transferFailed": {
+        "where": "Setlists page: toast when transferring a setlist fails",
+        "who": "leaders",
+        "maxLength": 120,
+        "context": "{error} is the technical error message"
+    },
+    "buildingFromTemplate": {
+        "where": "Setlists page / calendar / new-setlist wizard: loading toast while a setlist is built from a template",
+        "who": "leaders",
+        "maxLength": 50
+    },
+    "createdFromTemplate": {
+        "where": "Setlists page / calendar: toast after a setlist is built from a template",
+        "who": "leaders",
+        "maxLength": 100,
+        "context": "{setlistName} is the new setlist's name; {matched} of {total} songs were matched to charts (sheet music) in the library"
+    },
+    "createSetlistFailedWithReason": {
+        "where": "Setlists page / calendar: toast when creating a setlist fails",
+        "who": "leaders",
+        "maxLength": 120,
+        "context": "{error} is the technical error message"
+    },
+    "createTemplateSetlistFailed": {
+        "where": "Setlists page: toast when creating a setlist from a template fails",
+        "who": "leaders",
+        "maxLength": 120,
+        "context": "{error} is the technical error message"
+    },
+    "unknownError": {
+        "where": "Toasts: shown in place of {error} when the failure has no message",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "newSetlistName": {
+        "where": "Calendar: default NAME given to a blank setlist created from a calendar day (saved as the setlist's name)",
+        "who": "leaders",
+        "maxLength": 50,
+        "context": "{date} is a month and day such as \"October 9\""
+    },
+    "createSetlistFailed": {
+        "where": "Toasts: creating a setlist failed",
+        "who": "leaders",
+        "maxLength": 50
+    },
+    "noTracksToDownload": {
+        "where": "Setlists page: toast when downloading an empty setlist for offline use",
+        "who": "everyone",
+        "maxLength": 60
+    },
+    "loadForDownloadFailed": {
+        "where": "Setlists page: toast when a setlist cannot be loaded for offline download",
+        "who": "everyone",
+        "maxLength": 60
+    },
+    "defaultServiceName": {
+        "where": "New-setlist wizard: fallback setlist NAME filled in when a template's name cannot be generated",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "cloningFrom": {
+        "where": "New-setlist wizard: loading toast while copying an earlier setlist",
+        "who": "leaders",
+        "maxLength": 80,
+        "context": "{setlistName} is the source setlist's name"
+    },
+    "clonedFrom": {
+        "where": "New-setlist wizard: toast after copying an earlier setlist",
+        "who": "leaders",
+        "maxLength": 100,
+        "context": "{setlistName} is the source setlist's name; {count} is the number of rows (songs and other items) copied"
+    },
+    "schedulingFailedAfterCreate": {
+        "where": "New-setlist wizard: toast when the setlist was saved but assigning musicians failed",
+        "who": "leaders",
+        "maxLength": 80
+    },
+    "createdFromNamedTemplate": {
+        "where": "New-setlist wizard: toast after a setlist is created from a template",
+        "who": "leaders",
+        "maxLength": 120,
+        "context": "{setlistName} is the new setlist's name; {templateName} is the template (service type) name; {matched} of {total} songs were matched to charts (sheet music)"
+    },
+    "setlistCreated": {
+        "where": "New-setlist wizard: toast after a blank setlist is created",
+        "who": "leaders",
+        "maxLength": 80,
+        "context": "{setlistName} is the new setlist's name"
+    },
+    "untitledSong": {
+        "where": "Add-to-setlist: fallback song TITLE (saved on the setlist row) when a file name is empty after cleaning",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "songAlreadyInSetlist": {
+        "where": "Library → Add to setlist: toast when the one song added was already in the setlist",
+        "who": "leaders",
+        "maxLength": 100,
+        "context": "{songName} is the song title"
+    },
+    "addedSongToSetlist": {
+        "where": "Library → Add to setlist: toast after adding one song",
+        "who": "leaders",
+        "maxLength": 100,
+        "context": "{songName} is the song title; {setlistName} is the setlist's name"
+    },
+    "addedSongsToSetlist": {
+        "where": "Library → Add to setlist: toast after adding several songs",
+        "who": "leaders",
+        "maxLength": 100,
+        "context": "{count} is the number of songs (always 2 or more here); {setlistName} is the setlist's name"
+    },
+    "undo": {
+        "where": "Toast action button that reverses the last change (add to setlist, batch delete)",
+        "who": "leaders",
+        "maxLength": 10
+    },
+    "setlistNotFound": {
+        "where": "Library → Add to setlist: toast when the chosen setlist no longer exists",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "createdSetlistWithSongs": {
+        "where": "Library → Add to setlist → New setlist: toast after creating a setlist from the selected songs",
+        "who": "leaders",
+        "maxLength": 100,
+        "context": "{setlistName} is the new setlist's name; {count} is the number of songs. English keeps \"songs\" for 1 (current behaviour)"
+    },
+    "errorCreatingSetlist": {
+        "where": "Library → Add to setlist → New setlist: toast when creating fails without a message",
+        "who": "leaders",
+        "maxLength": 50
+    },
+    "itemsDeleted": {
+        "where": "Setlist editor: toast after deleting the selected rows (with an Undo button)",
+        "who": "leaders",
+        "maxLength": 40,
+        "context": "{count} is the number of rows (songs, headers, notes)"
+    },
+    "itemsDuplicated": {
+        "where": "Setlist editor: toast after duplicating the selected rows",
+        "who": "leaders",
+        "maxLength": 40,
+        "context": "{count} is the number of rows"
+    },
+    "alreadyOffline": {
+        "where": "Setlist download: toast when every chart is already saved on the device",
+        "who": "everyone",
+        "maxLength": 50,
+        "context": "\"chart\" = sheet music"
+    },
+    "offlineSaveNone": {
+        "where": "Setlist download: toast when no file could be saved on the device",
+        "who": "everyone",
+        "maxLength": 60
+    },
+    "offlineSavePartial": {
+        "where": "Setlist download: warning toast when some files failed to save offline",
+        "who": "everyone",
+        "maxLength": 60,
+        "context": "{succeeded}, {total}, {failed} are numbers of files"
+    },
+    "offlineSaved": {
+        "where": "Setlist download: toast after every file was saved on the device",
+        "who": "everyone",
+        "maxLength": 50,
+        "context": "{count} is the number of files. English keeps \"files\" for 1 (current behaviour)"
+    },
+    "scanFailed": {
+        "where": "Chart viewer, chord transposer: error when scanning a chart page for chords fails",
+        "who": "everyone",
+        "maxLength": 30,
+        "context": "\"chart\" = sheet music"
+    },
+    "urgencyInHours": {
+        "where": "Dashboard: badge on an upcoming service starting within 4 hours today",
+        "who": "everyone signed in",
+        "maxLength": 12,
+        "context": "{count} is the number of hours. English: 1 → \"In 1 hour\", more → \"In 3h\" (abbreviated)"
+    },
+    "urgencyToday": {
+        "where": "Dashboard: badge on a service happening today",
+        "who": "everyone signed in",
+        "maxLength": 10
+    },
+    "urgencyTomorrow": {
+        "where": "Dashboard: badge on a service happening tomorrow",
+        "who": "everyone signed in",
+        "maxLength": 10
+    },
+    "urgencyInDays": {
+        "where": "Dashboard: badge on a service a few days away",
+        "who": "everyone signed in",
+        "maxLength": 12,
+        "context": "{count} is the number of days (2 or more in practice)"
+    }
+}

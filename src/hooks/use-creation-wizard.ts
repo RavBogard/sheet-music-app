@@ -12,6 +12,7 @@ import { serviceTypeKeysFor } from "@/lib/org/tenant-lists"
 import { getFullServiceContext, getServiceContext, ServiceType } from "@/lib/liturgical-calendar"
 import { useLibraryStore } from "@/lib/library-store"
 import { useCustomTemplates } from "@/lib/template-firebase"
+import { useT } from "@/i18n/client"
 
 export type CreationMode = 'idle' | 'clone' | 'template' | 'scratch'
 
@@ -56,6 +57,7 @@ export interface UseCreationWizardReturn {
 
 export function useCreationWizard(): UseCreationWizardReturn {
     const router = useRouter()
+    const t = useT()
     const { user } = useAuth()
     // Multi-tenant phase 1: the parasha follows the tenant's calendar and zone,
     // and the template list is the tenant's.
@@ -117,10 +119,10 @@ export function useCreationWizard(): UseCreationWizardReturn {
             setName(generateSetlistName(context))
             if (!eventDate) setEventDate(targetDate)
         } catch {
-            const label = TEMPLATE_LABELS[key]?.label || 'Service'
+            const label = TEMPLATE_LABELS[key]?.label || t("hooks.defaultServiceName")
             setName(label)
         }
-    }, [eventDate, org])
+    }, [eventDate, org, t])
 
     // When eventDate changes, query for the most recent prior setlist of the
     // inferred service type so the wizard can surface a Clone CTA. The lookup
@@ -200,11 +202,11 @@ export function useCreationWizard(): UseCreationWizardReturn {
 
             // ── Clone branch ──────────────────────────────────────────────
             if (mode === 'clone' && cloneSource && eventDate) {
-                loadingId = toast.loading(`Cloning from ${cloneSource.name}…`)
+                loadingId = toast.loading(t("hooks.cloningFrom", { setlistName: cloneSource.name }))
                 const setlistId = await service.cloneSetlist(cloneSource, eventDate)
                 const trackCount = cloneSource.trackCount ?? 0
                 toast.success(
-                    `Cloned from ${cloneSource.name} — ${trackCount} ${trackCount === 1 ? 'track' : 'tracks'}`,
+                    t("hooks.clonedFrom", { setlistName: cloneSource.name, count: trackCount }),
                     loadingId ? { id: loadingId } : undefined,
                 )
                 router.push(`/setlists/${setlistId}`)
@@ -216,7 +218,7 @@ export function useCreationWizard(): UseCreationWizardReturn {
             if (selectedTemplate && finalTracks.length === 0) {
                 const template = getTemplate(selectedTemplate, customTemplates)
                 if (template && eventDate) {
-                    loadingId = toast.loading('Building setlist from template...')
+                    loadingId = toast.loading(t("hooks.buildingFromTemplate"))
                     const baseContext = await getFullServiceContext(eventDate, org)
                     baseContext.type = selectedTemplate as ServiceType
                     const context = rabbi ? { ...baseContext, rabbi } : baseContext
@@ -251,18 +253,18 @@ export function useCreationWizard(): UseCreationWizardReturn {
                             musicians: musiciansToAssign,
                         })
                     } catch {
-                        toast.error('Setlist created but musician scheduling failed')
+                        toast.error(t("hooks.schedulingFailedAfterCreate"))
                     }
                 }
             }
 
             const successOpts = loadingId ? { id: loadingId } : undefined
             if (selectedTemplate) {
-                const matched = finalTracks.filter(t => t.fileId).length
-                const total = finalTracks.filter(t => t.type === 'song').length
-                toast.success(`Created "${name}" from ${TEMPLATE_LABELS[selectedTemplate]?.label || selectedTemplate} — ${matched}/${total} songs matched`, successOpts)
+                const matched = finalTracks.filter(tr => tr.fileId).length
+                const total = finalTracks.filter(tr => tr.type === 'song').length
+                toast.success(t("hooks.createdFromNamedTemplate", { setlistName: name, templateName: TEMPLATE_LABELS[selectedTemplate]?.label || selectedTemplate, matched, total }), successOpts)
             } else {
-                toast.success(`"${name}" created!`, successOpts)
+                toast.success(t("hooks.setlistCreated", { setlistName: name }), successOpts)
             }
 
             router.push(`/setlists/${setlistId}`)
@@ -271,13 +273,13 @@ export function useCreationWizard(): UseCreationWizardReturn {
             // see WHY a save failed (was: bare catch swallowed the message).
             const detail = formatError(err)
             toast.error(
-                detail ? `Failed to create setlist: ${detail}` : 'Failed to create setlist',
+                detail ? t("hooks.createSetlistFailedWithReason", { error: detail }) : t("hooks.createSetlistFailed"),
                 loadingId ? { id: loadingId } : undefined,
             )
         } finally {
             setCreating(false)
         }
-    }, [user, creating, mode, cloneSource, name, tracks, eventDate, rabbi, musicians, selectedTemplate, router, customTemplates, org])
+    }, [user, creating, mode, cloneSource, name, tracks, eventDate, rabbi, musicians, selectedTemplate, router, customTemplates, org, t])
 
     return {
         selectedTemplate,

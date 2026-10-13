@@ -4,6 +4,7 @@ import { Setlist } from "@/lib/setlist-firebase"
 import { toDate } from "@/lib/firestore-helpers"
 import { PlayCircle, Clock, Pencil } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useT, useFormat } from "@/i18n/client"
 
 /**
  * NextServiceCard -- single focused card for the home screen.
@@ -27,11 +28,13 @@ export function NextServiceCard({
     isPastSetlist?: boolean
     isBandLeader?: boolean
 }) {
+    const t = useT()
+    const fmt = useFormat()
     const eventDate = toDate(setlist.eventDate)
 
     // Format the date in a human-friendly way
     const dateLabel = (() => {
-        if (!eventDate) return isPastSetlist ? "Recent" : "Upcoming"
+        if (!eventDate) return isPastSetlist ? t("home.recent") : t("home.upcoming")
 
         const now = new Date()
         const d = new Date(eventDate)
@@ -39,11 +42,11 @@ export function NextServiceCard({
         d.setHours(0, 0, 0, 0)
         const diffDays = Math.ceil((d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
 
-        if (isPastSetlist) return "Recent"
-        if (diffDays <= 0) return "Today"
-        if (diffDays === 1) return "Tomorrow"
+        if (isPastSetlist) return t("home.recent")
+        if (diffDays <= 0) return t("home.today")
+        if (diffDays === 1) return t("home.tomorrow")
 
-        return eventDate.toLocaleDateString(undefined, {
+        return fmt.date(eventDate, {
             weekday: "long",
             month: "long",
             day: "numeric",
@@ -65,8 +68,8 @@ export function NextServiceCard({
                     <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                         {dateLabel}
                     </span>
-                    <span className="text-xs text-muted-foreground ml-auto">
-                        {songCount} song{songCount !== 1 ? "s" : ""}
+                    <span className="text-xs text-muted-foreground ms-auto">
+                        {t("home.songCount", { count: songCount })}
                     </span>
                 </div>
 
@@ -96,17 +99,17 @@ export function NextServiceCard({
                         className="flex-1 py-3 rounded-xl font-semibold bg-brand/10 group-hover:bg-brand/15 text-foreground transition-colors"
                     >
                         <PlayCircle className="h-4 w-4" />
-                        Practice
+                        {t("home.practice")}
                     </Button>
                     {isBandLeader && onEdit && (
                         <Button
                             variant="ghost"
                             onClick={(e) => { e.stopPropagation(); onEdit() }}
-                            aria-label="Edit setlist"
+                            aria-label={t("home.editSetlistAria")}
                             className="h-11 px-3 rounded-xl text-muted-foreground hover:text-foreground hover:bg-brand/10"
                         >
                             <Pencil className="h-4 w-4" />
-                            <span className="text-xs font-medium">Edit</span>
+                            <span className="text-xs font-medium">{t("home.edit")}</span>
                         </Button>
                     )}
                 </div>
@@ -127,7 +130,7 @@ export function NextServiceCard({
                     {dateLabel}
                 </span>
                 <span className="text-white/50 text-xs font-medium">
-                    {songCount} song{songCount !== 1 ? "s" : ""}
+                    {t("home.songCount", { count: songCount })}
                 </span>
             </div>
 
@@ -158,17 +161,17 @@ export function NextServiceCard({
                     className="flex-1 py-3 rounded-xl font-bold bg-white text-brand group-hover:bg-white/90 transition-colors"
                 >
                     <PlayCircle className="h-4 w-4" />
-                    Perform
+                    {t("home.perform")}
                 </Button>
                 {isBandLeader && onEdit && (
                     <Button
                         variant="ghost"
                         onClick={(e) => { e.stopPropagation(); onEdit() }}
-                        aria-label="Edit setlist"
+                        aria-label={t("home.editSetlistAria")}
                         className="h-11 px-3 rounded-xl bg-white/15 text-white hover:bg-white/25"
                     >
                         <Pencil className="h-4 w-4" />
-                        <span className="text-xs font-medium">Edit</span>
+                        <span className="text-xs font-medium">{t("home.edit")}</span>
                     </Button>
                 )}
             </div>

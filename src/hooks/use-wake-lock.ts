@@ -283,6 +283,7 @@ export function useWakeLock(options: UseWakeLockOptions = {}) {
                         `Wake lock request denied (${verdict === "hidden" ? "document hidden" : "browser or system refusal"})`,
                     )
                 } else {
+                    // i18n-ignore: machine verdict code (WakeLockError), not UI text
                     setLastError("denied")
                     logger.error("Failed to acquire Wake Lock:", err)
                 }

@@ -3,6 +3,7 @@
 import { useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { logger } from "@/lib/logger"
+import { useT } from "@/i18n/client"
 
 export default function MainError({
     error,
@@ -11,6 +12,7 @@ export default function MainError({
     error: Error & { digest?: string }
     reset: () => void
 }) {
+    const t = useT()
     useEffect(() => {
         logger.error("[MainError] Caught:", error)
     }, [error])
@@ -18,18 +20,18 @@ export default function MainError({
     return (
         <div className="min-h-[50vh] flex flex-col items-center justify-center gap-4 px-6 text-center">
             <div className="text-4xl">⚠️</div>
-            <h2 className="text-xl font-semibold">Something went wrong</h2>
+            <h2 className="text-xl font-semibold">{t("dashboard.errorTitle")}</h2>
             <p className="text-muted-foreground max-w-sm">
-                This page failed to load. Please try again.
+                {t("dashboard.errorBody")}
             </p>
             {error?.message && (
-                <pre className="text-xs text-red-400/80 bg-red-500/5 border border-red-500/20 rounded-lg p-3 max-w-md overflow-auto text-left">
+                <pre className="text-xs text-red-400/80 bg-red-500/5 border border-red-500/20 rounded-lg p-3 max-w-md overflow-auto text-start">
                     {error.message}
                 </pre>
             )}
             <div className="flex items-center gap-3">
                 <Button onClick={reset} variant="default">
-                    Retry
+                    {t("dashboard.errorRetry")}
                 </Button>
                 <Button 
                     variant="outline" 
@@ -40,7 +42,7 @@ export default function MainError({
                         }
                     }}
                 >
-                    Hard Reset
+                    {t("dashboard.errorHardReset")}
                 </Button>
             </div>
         </div>

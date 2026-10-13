@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useState } from 'react'
+import { useReadingDirection } from '@/i18n/client'
 
 /**
  * Roving-focus controller for the spreadsheet editor grid. Tracks which cell
@@ -51,6 +52,11 @@ export function useGridKeyboard({
     onShiftTabPastFirstCell,
 }: UseGridKeyboardOptions): UseGridKeyboardResult {
     const [focusedCell, setFocusedCell] = useState<FocusedCell | null>(null)
+    // 'left'/'right' in moveFocus are LOGICAL previous/next column (Tab uses
+    // them too). The arrow keys map through the reading direction: on an rtl
+    // page ArrowLeft moves to the next column, which sits visually to the left.
+    // In ltr backKey/forwardKey are ArrowLeft/ArrowRight, exactly as before.
+    const { forwardKey, backKey } = useReadingDirection()
 
     const isCellFocused = useCallback(
         (rowIndex: number, colId: string) =>
@@ -171,13 +177,13 @@ export function useGridKeyboard({
                 moveFocus('down')
                 return true
             }
-            if (key === 'ArrowLeft') {
+            if (key === backKey) {
                 // Don't intercept when editing — input has its own arrow keys.
                 event.preventDefault()
                 moveFocus('left')
                 return true
             }
-            if (key === 'ArrowRight') {
+            if (key === forwardKey) {
                 event.preventDefault()
                 moveFocus('right')
                 return true
@@ -189,7 +195,7 @@ export function useGridKeyboard({
             void colId
             return false
         },
-        [moveFocus],
+        [moveFocus, forwardKey, backKey],
     )
 
     return {

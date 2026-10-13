@@ -9,6 +9,7 @@ import { PendingAccountIllustration } from "@/components/ui/illustrations"
 import { NudgeAdminButton } from "@/components/people/NudgeAdminButton"
 import { INSTRUMENT_PRESETS, ONBOARDING_INSTRUMENT_KEYS } from "@/lib/musician-profile"
 import { cn } from "@/lib/utils"
+import { useT } from "@/i18n/client"
 
 interface Props {
     role: string | undefined
@@ -39,6 +40,7 @@ function pickVariant(role: string | undefined, isMember: boolean, profile: Props
 }
 
 export function OnboardingCard({ role, isMember, profile, congregationShortName, userId, staggerClass }: Props) {
+    const t = useT()
     const variant = pickVariant(role, isMember, profile)
     const [showQuickSetup, setShowQuickSetup] = useState(false)
     const [selectedInstrument, setSelectedInstrument] = useState("")
@@ -75,7 +77,7 @@ export function OnboardingCard({ role, isMember, profile, congregationShortName,
     const pickerBlock = (
         <div className="space-y-3">
             <label htmlFor={selectId} className="text-sm font-medium text-foreground">
-                What do you play?
+                {t("dashboard.onboardingInstrumentQuestion")}
             </label>
             <select
                 id={selectId}
@@ -83,7 +85,7 @@ export function OnboardingCard({ role, isMember, profile, congregationShortName,
                 onChange={e => setSelectedInstrument(e.target.value)}
                 className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm"
             >
-                <option value="">Select instrument...</option>
+                <option value="">{t("dashboard.onboardingSelectInstrument")}</option>
                 {ONBOARDING_INSTRUMENT_KEYS.map(key => (
                     <option key={key} value={key}>{INSTRUMENT_PRESETS[key].label}</option>
                 ))}
@@ -94,7 +96,7 @@ export function OnboardingCard({ role, isMember, profile, congregationShortName,
                     disabled={!selectedInstrument || saving}
                     onClick={() => saveInstrument(variant === "approved")}
                 >
-                    {saving ? "Saving..." : "Save & Continue"}
+                    {saving ? t("dashboard.onboardingSaving") : t("dashboard.onboardingSaveContinue")}
                 </Button>
                 {variant === "approved" && (
                     <Button
@@ -105,7 +107,7 @@ export function OnboardingCard({ role, isMember, profile, congregationShortName,
                             setShowQuickSetup(false)
                         }}
                     >
-                        Skip
+                        {t("dashboard.onboardingSkip")}
                     </Button>
                 )}
             </div>
@@ -118,9 +120,9 @@ export function OnboardingCard({ role, isMember, profile, congregationShortName,
                 <div className="flex flex-col items-center text-center gap-3">
                     <PendingAccountIllustration className="w-20 h-20 text-muted-foreground" />
                     <div>
-                        <h2 className="text-lg font-semibold">Welcome to {congregationShortName}!</h2>
+                        <h2 className="text-lg font-semibold">{t("dashboard.onboardingWelcome", { congregation: congregationShortName })}</h2>
                         <p className="text-sm text-muted-foreground mt-1">
-                            Your account is being reviewed. An admin will approve you shortly.
+                            {t("dashboard.onboardingPendingBody")}
                         </p>
                     </div>
                 </div>
@@ -128,7 +130,7 @@ export function OnboardingCard({ role, isMember, profile, congregationShortName,
                     {!showQuickSetup ? (
                         <Button variant="outline" className="w-full gap-2" onClick={() => setShowQuickSetup(true)}>
                             <Music2 className="w-4 h-4" />
-                            Set Up My Instrument
+                            {t("dashboard.onboardingSetUpMyInstrument")}
                         </Button>
                     ) : (
                         pickerBlock
@@ -144,19 +146,19 @@ export function OnboardingCard({ role, isMember, profile, congregationShortName,
         <div className={cn("bg-card border-2 border-brand/30 rounded-2xl p-6 space-y-4", staggerClass)}>
             <div className="text-center">
                 <span className="text-2xl">{"\u{1F389}"}</span>
-                <h2 className="text-lg font-semibold mt-2">You&apos;re approved!</h2>
+                <h2 className="text-lg font-semibold mt-2">{t("dashboard.onboardingApprovedTitle")}</h2>
                 <p className="text-sm text-muted-foreground mt-1">
-                    Set up your instrument to get transposed charts and personalized printouts.
+                    {t("dashboard.onboardingApprovedBody")}
                 </p>
             </div>
             {!showQuickSetup ? (
                 <div className="flex gap-2">
                     <Button className="flex-1 gap-2" onClick={() => setShowQuickSetup(true)}>
                         <Music2 className="w-4 h-4" />
-                        Set Up Instrument
+                        {t("dashboard.onboardingSetUpInstrument")}
                     </Button>
                     <Button variant="ghost" className="text-muted-foreground" onClick={dismissWelcome}>
-                        Skip
+                        {t("dashboard.onboardingSkip")}
                     </Button>
                 </div>
             ) : (

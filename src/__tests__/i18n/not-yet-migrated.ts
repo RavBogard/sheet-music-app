@@ -17,8 +17,6 @@
  * the time the list was generated (phase 7 infra, on master 745c1c16).
  */
 export const NOT_YET_MIGRATED: readonly string[] = [
-    "src/app/(main)/*", // 18 strings, 2 files
-
     "src/app/(main)/accessibility/*", // 30 strings, 1 files
 
     "src/app/(main)/changelog/*", // 1 strings, 1 files
@@ -67,12 +65,6 @@ export const NOT_YET_MIGRATED: readonly string[] = [
 
     "src/components/admin/people/*", // 4 strings, 1 files
 
-    "src/components/calendar/*", // 9 strings, 3 files
-
-    "src/components/dashboard/*", // 41 strings, 7 files
-
-    "src/components/home/*", // 10 strings, 1 files
-
     "src/components/legal/*", // 174 strings, 1 files
 
     "src/components/library/*", // 205 strings, 11 files
@@ -86,8 +78,6 @@ export const NOT_YET_MIGRATED: readonly string[] = [
     "src/components/setlist/modals/*", // 34 strings, 4 files
 
     "src/components/setlist/wizard/*", // 18 strings, 1 files
-
-    "src/hooks/*", // 46 strings, 7 files
 
     "src/lib/*", // 5 strings, 2 files
 ]

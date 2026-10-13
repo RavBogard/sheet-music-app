@@ -4,6 +4,7 @@ import Link from "next/link"
 import { FileMusic, ListMusic, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { useT } from "@/i18n/client"
 
 /**
  * Compact horizontal command row — always above the fold.
@@ -24,15 +25,16 @@ export function CommandRow({
     onNewSetlist?: () => void
     className?: string
 }) {
+    const t = useT()
     if (!isLoggedIn && !isMember) return null
 
     const actions: { icon: typeof FileMusic; label: string; href?: string; onClick?: () => void; color: string }[] = []
 
-    actions.push({ icon: FileMusic, label: 'Library', href: '/library', color: 'text-blue-500 bg-blue-500/10' })
-    actions.push({ icon: ListMusic, label: 'Setlists', href: '/setlists', color: 'text-emerald-500 bg-emerald-500/10' })
+    actions.push({ icon: FileMusic, label: t("dashboard.navLibrary"), href: '/library', color: 'text-blue-500 bg-blue-500/10' })
+    actions.push({ icon: ListMusic, label: t("dashboard.navSetlists"), href: '/setlists', color: 'text-emerald-500 bg-emerald-500/10' })
 
     if (isBandLeader) {
-        actions.push({ icon: Plus, label: 'New', href: '/setlists/new', color: 'text-amber-500 bg-amber-500/10' })
+        actions.push({ icon: Plus, label: t("dashboard.navNew"), href: '/setlists/new', color: 'text-amber-500 bg-amber-500/10' })
     }
 
     const sharedClasses = "flex items-center justify-center gap-2 py-3 px-2 bg-card hover:bg-accent rounded-xl transition-all active:scale-95 border border-border group"

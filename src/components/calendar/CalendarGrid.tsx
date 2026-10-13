@@ -45,7 +45,7 @@ export function CalendarGrid({
                     return (
                         <div
                             key={`empty-${i}`}
-                            className="min-h-[72px] sm:min-h-[100px] bg-background/20 border-b border-r border-border/20"
+                            className="min-h-[72px] sm:min-h-[100px] bg-background/20 border-b border-e border-border/20"
                         />
                     )
                 }

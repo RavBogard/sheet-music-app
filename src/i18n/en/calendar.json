@@ -1,0 +1,11 @@
+{
+    "loading": "Loading calendar...",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "legendFullyStaffed": "Fully staffed",
+    "legendNeedsAttention": "Needs attention",
+    "legendNoMusicians": "No musicians",
+    "noAssignments": "none",
+    "createShabbatMorning": "Shabbat AM",
+    "createFridayEvening": "Friday Eve"
+}

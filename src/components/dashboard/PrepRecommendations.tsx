@@ -2,6 +2,7 @@
 
 import { type UpcomingSetlistWithPrep } from "@/hooks/use-upcoming-prep"
 import { AlertTriangle } from "lucide-react"
+import { useT } from "@/i18n/client"
 
 /**
  * Practice recommendations based on unviewed charts approaching their event date.
@@ -12,13 +13,14 @@ export function PrepRecommendations({
 }: {
     items: UpcomingSetlistWithPrep[]
 }) {
+    const t = useT()
     // Find tracks that haven't been viewed in upcoming setlists within 3 days
     const urgent: { songTitle: string; setlistName: string; daysUntil: number }[] = []
 
     for (const item of items) {
         if (item.daysUntil === null || item.daysUntil > 3) continue
         // v60-06-04: iterate canonical tracks (Dexie + fallback) instead of embedded array
-        const tracks = item.localTracks.filter(t => t.fileId && t.type !== 'header')
+        const tracks = item.localTracks.filter(tr => tr.fileId && tr.type !== 'header')
         for (const track of tracks) {
             if (!track.fileId || item.viewedFileIds.has(track.fileId)) continue
             urgent.push({
@@ -38,19 +40,19 @@ export function PrepRecommendations({
         <div className="bg-amber-500/8 border border-amber-500/15 rounded-xl px-4 py-3 space-y-2">
             <div className="flex items-center gap-2 text-amber-500 text-xs font-semibold">
                 <AlertTriangle className="w-3.5 h-3.5" />
-                Practice Recommendations
+                {t("dashboard.practiceRecommendations")}
             </div>
             <div className="space-y-1">
                 {shown.map((r, i) => (
                     <p key={i} className="text-xs text-muted-foreground">
                         <span className="text-foreground font-medium">{r.songTitle}</span>
                         {' — '}
-                        {r.daysUntil <= 0 ? 'today' : r.daysUntil === 1 ? 'tomorrow' : `in ${r.daysUntil} days`}
+                        {r.daysUntil <= 0 ? t("dashboard.prepWhenToday") : r.daysUntil === 1 ? t("dashboard.prepWhenTomorrow") : t("dashboard.prepWhenInDays", { count: r.daysUntil })}
                     </p>
                 ))}
                 {urgent.length > 3 && (
                     <p className="text-[10px] text-muted-foreground/60">
-                        +{urgent.length - 3} more unreviewed charts
+                        {t("dashboard.moreUnreviewedCharts", { count: urgent.length - 3 })}
                     </p>
                 )}
             </div>

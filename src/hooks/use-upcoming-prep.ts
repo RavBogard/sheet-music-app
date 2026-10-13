@@ -11,6 +11,7 @@ import { useSafeFirestoreSync } from "@/hooks/use-safe-firestore-sync"
 import { reportSaveError } from "@/lib/save-error"
 import { useDexieTracksForSetlists } from "@/hooks/use-dexie-tracks-for-setlists"
 import { getTracksForSetlistClient } from "@/lib/client-tracks"
+import { useT, useFormat } from "@/i18n/client"
 
 interface SongPref {
     lastViewedAt?: string | { seconds: number }
@@ -45,6 +46,8 @@ export interface UpcomingSetlistWithPrep {
 export function useUpcomingPrep() {
     const { user, isMember } = useAuth()
     const org = useOrg()
+    const t = useT()
+    const fmt = useFormat()
     const [setlists, setSetlists] = useState<Setlist[]>([])
     const [songPrefs, setSongPrefs] = useState<Record<string, SongPref>>({})
     const [lastVisitedAt, setLastVisitedAt] = useState<Date | null>(null)
@@ -195,7 +198,7 @@ export function useUpcomingPrep() {
             const isNew = lastVisitedAt && updatedAt ? updatedAt > lastVisitedAt : false
 
             const dateStr = eventDate
-                ? eventDate.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
+                ? fmt.date(eventDate, { weekday: 'short', month: 'short', day: 'numeric' })
                 : ''
 
             // Urgency label
@@ -203,14 +206,14 @@ export function useUpcomingPrep() {
             if (daysUntil !== null) {
                 if (daysUntil <= 0) {
                     if (hoursUntil !== null && hoursUntil > 0 && hoursUntil <= 4) {
-                        urgencyLabel = hoursUntil === 1 ? 'In 1 hour' : `In ${hoursUntil}h`
+                        urgencyLabel = t('hooks.urgencyInHours', { count: hoursUntil })
                     } else {
-                        urgencyLabel = 'Today'
+                        urgencyLabel = t('hooks.urgencyToday')
                     }
                 } else if (daysUntil === 1) {
-                    urgencyLabel = 'Tomorrow'
+                    urgencyLabel = t('hooks.urgencyTomorrow')
                 } else {
-                    urgencyLabel = `In ${daysUntil} days`
+                    urgencyLabel = t('hooks.urgencyInDays', { count: daysUntil })
                 }
             }
 
@@ -226,7 +229,7 @@ export function useUpcomingPrep() {
                 localTracks,
             }
         })
-    }, [setlists, songPrefs, lastVisitedAt, nowMinute, tracksMap])
+    }, [setlists, songPrefs, lastVisitedAt, nowMinute, tracksMap, t, fmt])
 
     return {
         items: enriched,

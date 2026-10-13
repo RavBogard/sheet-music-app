@@ -18,6 +18,7 @@ import { isNonTestSetlist } from "@/components/performance/public-setlist-order"
 import { OrgLogo } from "@/components/nav/OrgLogo"
 import { cn } from "@/lib/utils"
 import { formatError } from "@/lib/format-error"
+import { useT, useFormat } from "@/i18n/client"
 
 // Dashboard complexity components -- commented out per Phase 3 Plan 03 redesign.
 // Retained for potential use in Phase 4 (template management) or Phase 6 (notifications).
@@ -42,6 +43,8 @@ export interface DashboardServerProps {
 
 export default function DashboardClient({ serverGreeting, serverShortName, serverLogoUrl = null, serverIsMember = false, serverIsBandLeader = false, serverIsAdmin = false, serverUid = null }: DashboardServerProps) {
     const router = useRouter()
+    const t = useT()
+    const fmt = useFormat()
     const { user: authUser, profile, role, cachedUser, signIn, isMember: authIsMember, isBandLeader, loading: authLoading } = useAuth()
     const congregation = useCongregation()
 
@@ -208,7 +211,7 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
                 setAllSetlists(visible)
                 setSetlistsLoaded(true)
                 setSubscriptionError(null)
-                setDiagInfo({ count: setlists.length, fromCache, firedAt: new Date().toLocaleTimeString() })
+                setDiagInfo({ count: setlists.length, fromCache, firedAt: fmt.time(new Date()) })
 
                 console.info(`[Dashboard] subscription fired: ${setlists.length} setlists, fromCache=${fromCache}`)
             },
@@ -230,6 +233,7 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
         authUser?.uid,
         serverUid,
         effectiveUid,
+        fmt,
     ])
 
     // Content is ready once setlists have loaded.
@@ -320,7 +324,7 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
                         )}>
                             {greeting.text}
                             {greeting.isSpecial && (
-                                <span className="inline-block ml-2 text-lg align-middle opacity-80">
+                                <span className="inline-block ms-2 text-lg align-middle opacity-80">
                                     {greeting.atmosphere === 'shabbat' ? '\u2728' : '\uD83C\uDF89'}
                                 </span>
                             )}
@@ -374,26 +378,32 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
                             // setlists couldn't load instead of "No services scheduled yet"
                             // (which is misleading when a subscription error is the cause).
                             <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-4 space-y-2">
-                                <p className="text-sm font-semibold text-destructive">Couldn’t load setlists</p>
+                                <p className="text-sm font-semibold text-destructive">{t("dashboard.loadErrorTitle")}</p>
                                 <p className="text-xs text-muted-foreground break-words">{subscriptionError}</p>
-                                <p className="text-[10px] text-muted-foreground">If this keeps happening, share this message with support.</p>
+                                <p className="text-[10px] text-muted-foreground">{t("dashboard.loadErrorHint")}</p>
                             </div>
                         ) : (
                             <div className="space-y-2">
                                 <p className="text-sm text-muted-foreground text-center py-4">
-                                    No services scheduled yet
+                                    {t("dashboard.noServicesYet")}
                                 </p>
                                 {/* v60-13-02b diagnostic strip — visible only when no
                                     setlist + no error; tells us whether the subscription
                                     truly returned 0 docs or never fired at all. */}
                                 {diagInfo && (
                                     <p className="text-[10px] text-muted-foreground text-center font-mono">
-                                        diag: subscription returned {diagInfo.count} setlists, fromCache={String(diagInfo.fromCache)}, fired @ {diagInfo.firedAt}, authUid={authUser?.uid?.slice(0, 8) ?? 'null'}, serverUid={serverUid?.slice(0, 8) ?? 'null'}
+                                        {t("dashboard.diagSubscriptionReturned", {
+                                            count: diagInfo.count,
+                                            fromCache: String(diagInfo.fromCache),
+                                            firedAt: diagInfo.firedAt,
+                                            authUid: authUser?.uid?.slice(0, 8) ?? 'null',
+                                            serverUid: serverUid?.slice(0, 8) ?? 'null',
+                                        })}
                                     </p>
                                 )}
                                 {!diagInfo && (
                                     <p className="text-[10px] text-muted-foreground text-center font-mono">
-                                        diag: subscription has not fired yet (still subscribing or auth-blocked)
+                                        {t("dashboard.diagSubscriptionPending")}
                                     </p>
                                 )}
                             </div>
@@ -423,7 +433,7 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
                 {setlistsReady && !tonightSetlist && recentSetlists.length > 0 && (
                     <div className={cn("flex flex-col gap-2", stagger(3))}>
                         <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                            Recent Setlists
+                            {t("dashboard.recentSetlists")}
                         </h2>
                         {recentSetlists.slice(0, 4).map(s => (
                             <CompactSetlistRow
@@ -440,14 +450,14 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
                         <QRSignIn />
                         <div className="flex items-center gap-3">
                             <div className="h-px flex-1 bg-border" />
-                            <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">or</span>
+                            <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">{t("dashboard.signInOr")}</span>
                             <div className="h-px flex-1 bg-border" />
                         </div>
                         <Button
                             onClick={signIn}
                             className="w-full h-11 rounded-xl font-semibold bg-primary text-primary-foreground hover:opacity-90"
                         >
-                            Sign In with Google
+                            {t("dashboard.signInWithGoogle")}
                         </Button>
                     </div>
                 )}

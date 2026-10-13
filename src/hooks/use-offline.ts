@@ -5,6 +5,7 @@ import { SetlistTrack } from '@/types/models'
 import { toast } from 'sonner'
 import { logger } from '@/lib/logger'
 import { getFile, hasFile, putFile } from '@/lib/offline-idb'
+import { useT } from '@/i18n/client'
 
 /**
  * Unified offline hook, backed by IndexedDB (via offline-idb).
@@ -13,6 +14,7 @@ import { getFile, hasFile, putFile } from '@/lib/offline-idb'
  * its blob is in IDB. Failed downloads do NOT mark it available.
  */
 export function useOffline() {
+    const t = useT()
     const [downloading, setDownloading] = useState<Record<string, boolean>>({})
     const [offlineStatus, setOfflineStatus] = useState<Record<string, boolean>>({})
     const [bulkProgress, setBulkProgress] = useState<{ current: number; total: number } | null>(null)
@@ -94,7 +96,7 @@ export function useOffline() {
         }
 
         if (filesToDownload.length === 0) {
-            if (!silent) toast.success('Already available offline')
+            if (!silent) toast.success(t('hooks.alreadyOffline'))
             return
         }
 
@@ -122,14 +124,14 @@ export function useOffline() {
         if (!silent) {
             setBulkProgress(null)
             if (succeeded === 0) {
-                toast.error('Could not save any files for offline use')
+                toast.error(t('hooks.offlineSaveNone'))
             } else if (failed > 0) {
-                toast.warning(`${succeeded} of ${filesToDownload.length} files saved — ${failed} failed`)
+                toast.warning(t('hooks.offlineSavePartial', { succeeded, total: filesToDownload.length, failed }))
             } else {
-                toast.success(`${succeeded} files saved for offline use`)
+                toast.success(t('hooks.offlineSaved', { count: succeeded }))
             }
         }
-    }, [fetchAndStore])
+    }, [fetchAndStore, t])
 
     /** Get a cached file blob (returns null if not cached) */
     const getCachedFile = useCallback(async (fileId: string) => {
