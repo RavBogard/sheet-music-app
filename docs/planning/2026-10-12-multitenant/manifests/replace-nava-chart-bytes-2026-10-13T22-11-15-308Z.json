@@ -1,0 +1,93 @@
+{
+  "kind": "replace-nava-chart-bytes",
+  "at": "2026-10-13T22-11-15-308Z",
+  "projectId": "crcmusiccharts",
+  "bucket": "crcmusiccharts.firebasestorage.app",
+  "org": "navatehila",
+  "actorUid": "93Xn3DbS0bSNb8zmfzLyfOMX1A13",
+  "ruling": "R-1012-mt-8",
+  "rows": [
+    {
+      "fileId": "upload-737e52a7-fa67-4560-8a3f-f3653b131e7b",
+      "title": "Ehyeh Asher Ehyeh (Daphna Rosenberg)",
+      "rowName": "Ehyeh Asher Ehyeh (Daphna Rosenberg)",
+      "note": "row held the engraved notation (15.6 KB); Nava's chord chart is G / C9 / D4 / F C/E G, (c) 2008",
+      "orgId": "navatehila",
+      "visibleToOrgs": [
+        "navatehila",
+        "crc"
+      ],
+      "backupDriveId": "1Ch7Tpq6nJXESqZFA0TstLzSoqnpNYACQ",
+      "before": {
+        "bytes": 15607,
+        "sha256": "64eab8d9bcdd52599e5959497a76e887b2cc6a90a5ae27799e0f14ddbf01cb2d",
+        "contentHash": {
+          "alg": "sha256",
+          "value": "64eab8d9bcdd52599e5959497a76e887b2cc6a90a5ae27799e0f14ddbf01cb2d",
+          "sizeBytes": 15607,
+          "at": "2026-09-03T20:32:14.837Z",
+          "source": "firebase-storage"
+        }
+      },
+      "after": {
+        "bytes": 104465,
+        "sha256": "5761f3de25aea6ebc8bfc89d22ca2a6513b77873b08dc4ad92ddc1d60018a425",
+        "source": "drive/ehyeh-asher-ehyeh_2026-08-17.pdf"
+      },
+      "identical": false,
+      "curationPreserved": {
+        "key": "G",
+        "bpm": 100,
+        "tags": [
+          "nava-tehila",
+          "chants"
+        ],
+        "name": "Ehyeh Asher Ehyeh (Daphna Rosenberg)"
+      },
+      "backupPath": "C:\\Users\\dsbog\\CentralReform.live\\work\\nava-chart-bytes-backup\\upload-737e52a7-fa67-4560-8a3f-f3653b131e7b.before-2026-10-13T22-11-15-308Z.pdf",
+      "sourceCopyPath": "C:\\Users\\dsbog\\CentralReform.live\\work\\nava-chart-bytes-backup\\upload-737e52a7-fa67-4560-8a3f-f3653b131e7b.after-2026-10-13T22-11-15-308Z.pdf"
+    },
+    {
+      "fileId": "upload-f03dc4c0-0930-4358-abe6-cd983364c829",
+      "title": "Yedaber Aleihem (Yoel Sykes)",
+      "rowName": "Yedaber Aleihem (Yoel Sykes)",
+      "note": "row held the engraved notation (33 KB); Nava's chord chart is Em B7 / C7 Adim7, (c) 2007",
+      "orgId": "navatehila",
+      "visibleToOrgs": [
+        "navatehila",
+        "crc"
+      ],
+      "backupDriveId": "16HBiTG4SJ5Cuq1DOq22yo15BRrD__9wi",
+      "before": {
+        "bytes": 33145,
+        "sha256": "a18b4c01719367ae0cf1481c725cd422f0e46a97770b3758dc43d8148e35419e",
+        "contentHash": {
+          "alg": "sha256",
+          "value": "a18b4c01719367ae0cf1481c725cd422f0e46a97770b3758dc43d8148e35419e",
+          "sizeBytes": 33145,
+          "at": "2026-09-03T20:33:00.220Z",
+          "source": "firebase-storage"
+        }
+      },
+      "after": {
+        "bytes": 204906,
+        "sha256": "2732c04341c353524f6a2676d6f33eb47292adba4ccfffa25769b484ca17b11f",
+        "source": "drive/shamru-edotav_KS-Ps99_2025-08-03.pdf"
+      },
+      "identical": false,
+      "curationPreserved": {
+        "key": "Em",
+        "bpm": null,
+        "tags": [
+          "nava-tehila",
+          "kabbalat-shabbat",
+          "psalm-99",
+          "nava-album"
+        ],
+        "name": "Yedaber Aleihem (Yoel Sykes)"
+      },
+      "backupPath": "C:\\Users\\dsbog\\CentralReform.live\\work\\nava-chart-bytes-backup\\upload-f03dc4c0-0930-4358-abe6-cd983364c829.before-2026-10-13T22-11-15-308Z.pdf",
+      "sourceCopyPath": "C:\\Users\\dsbog\\CentralReform.live\\work\\nava-chart-bytes-backup\\upload-f03dc4c0-0930-4358-abe6-cd983364c829.after-2026-10-13T22-11-15-308Z.pdf"
+    }
+  ]
+}

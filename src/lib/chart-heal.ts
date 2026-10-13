@@ -17,6 +17,7 @@ import {
     type LibraryRowCreatedEvent,
 } from "@/lib/library/library-events"
 import { createHash } from "node:crypto"
+import { contentHashFor } from "@/lib/library/content-hash"
 
 /**
  * Shared HEAL contract for chart-byte mutation onto an EXISTING fileId
@@ -33,9 +34,10 @@ import { createHash } from "node:crypto"
  *      tags, leadMusician, composer, arranger, bondCorrectionHistory) and
  *      RECOMPUTES the derived dedup/search fields (normalizedName, stem,
  *      titleSpecificity) from the row's title so a healed row carries the
- *      same keys a fresh upload would; sets mimeType, fileSize,
- *      source:'salvage', status:'active', salvaged* meta, and
- *      enrichmentStatus:'pending'
+ *      same keys a fresh upload would; sets mimeType, fileSize, contentHash
+ *      (of the NEW bytes — a row that kept the old hash would claim bytes it
+ *      no longer holds), hashFailed:null, source:'salvage', status:'active',
+ *      salvaged* meta, and enrichmentStatus:'pending'
  *   4. compensating-delete on Firestore failure — never leave a reverse
  *      orphan (bytes-without-index-update)
  *   5. `library_signals/latest` broadcast — invalidates in-tab caches
@@ -201,6 +203,12 @@ export async function healChartBytes(
         stem: meta.stem,
         titleSpecificity: meta.titleSpecificity,
         enrichmentStatus: meta.enrichmentStatus,
+        // The row's hash is of the bytes the row points at, so a heal must
+        // rewrite it or the row keeps claiming the bytes it no longer holds.
+        // It was left stale here until phase 8, which caught it replacing two
+        // Nava charts; `hashFailed` clears because these bytes hashed fine.
+        contentHash: contentHashFor(buffer, "upload", nowIso),
+        hashFailed: null,
     }
 
     try {

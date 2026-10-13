@@ -1,5 +1,10 @@
 # Phase 8 (Nava Tehila onboarding): state at pause, 2026-10-13
 
+> **Superseded 2026-10-13 by `RETURN-CODE-MULTITENANT-2026-10-12-P8.md`.** The phase is
+> closed; the work listed under "Left in phase 8" is done. Kept as the record of where the
+> first sitting stopped. The chart finding here ("existing library rows for both new songs")
+> was right, and the return says what the bytes settled.
+
 Paused because Daniel shut the computer down. Not a return; `RETURN-CODE-MULTITENANT-2026-10-12-P8.md` is written when the phase gate passes.
 
 ## Done and verified in production

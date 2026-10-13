@@ -149,13 +149,13 @@ Size: large. Gate: CRC and BL English output matches the golden captures; on a H
 
 Size: small. Gate: Nava is live at its vercel.app alias in Hebrew, right to left, with its flags as set; the `nava` collection is owned by Nava and CRC sees and uses it exactly as before (every CRC setlist resolves); the platform-owner MCP token test passes.
 
-- [ ] Create the tenant through the new path (`create_tenant`, dry run first, or the console). Slug (your choice, logged), name "Nava Tehila", time zone Asia/Jerusalem, language `he`, direction `rtl`, calendar `israel`, vocabulary mode `shul`, service types from their catalogue (Kabbalat Shabbat, Shacharit, High Holidays, Hallel), shared books only.
-- [ ] Flags: `perform` on; `mixer`, `driveInbox`, `schedulingEmails`, `todayFeed`, `notifyBand` off. Charts, setlists and MCP on.
-- [ ] vercel.app alias and Firebase authorized domain added by the phase 3 path.
-- [ ] Run the phase 5 `nava` move in production: Nava owns the collection, shared to CRC. Then confirm every CRC setlist still resolves and CRC's tab is unchanged.
-- [ ] **Chart updates per ruling 8**: replace in place only the songs whose chord PDF changed (from the analysis diff: Lakh Amar Libi, Niggun Tishrei, Arba'im Shana, Bati Legani if its change is to the chord chart, and Shamru Edotav if the library holds the album copy). The five notation-only changes need nothing. Check Ehyeh Asher Ehyeh first. Add Pitchu Li Sha'arei Tsedek and Kol Haneshama (Daphna) as new Nava-owned charts; leave Anan Va'arafel until it has files. PDF upload or Drive import only, never the URL scraper. Dry run and manifest first.
-- [ ] No tenant admin yet; Daniel administers it as platform owner.
-- [ ] **Platform-owner MCP token test**: Daniel's token through Nava's address sees Nava's library and no CRC-only data; a CRC-only throwaway user is refused at Nava's address.
+- [x] Create the tenant through the new path (`create_tenant`, dry run first, or the console). Slug (your choice, logged), name "Nava Tehila", time zone Asia/Jerusalem, language `he`, direction `rtl`, calendar `israel`, vocabulary mode `shul`, service types from their catalogue (Kabbalat Shabbat, Shacharit, High Holidays, Hallel), shared books only.
+- [x] Flags: `perform` on; `mixer`, `driveInbox`, `schedulingEmails`, `todayFeed`, `notifyBand` off. Charts, setlists and MCP on.
+- [x] vercel.app alias and Firebase authorized domain added by the phase 3 path.
+- [x] Run the phase 5 `nava` move in production: Nava owns the collection, shared to CRC. Then confirm every CRC setlist still resolves and CRC's tab is unchanged.
+- [x] **Chart updates per ruling 8**: replace in place only the songs whose chord PDF changed (from the analysis diff: Lakh Amar Libi, Niggun Tishrei, Arba'im Shana, Bati Legani if its change is to the chord chart, and Shamru Edotav if the library holds the album copy). The five notation-only changes need nothing. Check Ehyeh Asher Ehyeh first. Add Pitchu Li Sha'arei Tsedek and Kol Haneshama (Daphna) as new Nava-owned charts; leave Anan Va'arafel until it has files. PDF upload or Drive import only, never the URL scraper. Dry run and manifest first.
+- [x] No tenant admin yet; Daniel administers it as platform owner.
+- [x] **Platform-owner MCP token test**: Daniel's token through Nava's address sees Nava's library and no CRC-only data; a CRC-only throwaway user is refused at Nava's address.
 
 ## Phase 9 — Proof
 
