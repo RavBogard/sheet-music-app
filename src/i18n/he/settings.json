@@ -21,8 +21,8 @@
     },
     "performDarkHint": "מצב נגינה מוצג תמיד בערכת צבעים כהה, כדי שיהיה קל לקרוא על הבמה.",
     "gigMode": {
-        "title": "מצב יציבות בנגינה",
-        "description": "מבטל סנכרון ברקע ואיסוף נתוני שימוש, ליציבות מרבית בזמן הנגינה."
+        "title": "מצב במה",
+        "description": "מבטל סנכרון ברקע ואיסוף נתוני שימוש, ליציבות מרבית על הבמה."
     },
     "password": {
         "title": "שינוי סיסמה",
@@ -61,7 +61,7 @@
         "loading": "האסימונים נטענים…",
         "empty": "אין עדיין אסימונים.",
         "tokenDates": "נוצר {created} · שימוש אחרון {lastUsed}",
-        "revoke": "ביטול {tokenLabel}"
+        "revoke": "ביטול האסימון {tokenLabel}"
     },
     "push": {
         "title": "התראות דחיפה",
@@ -87,7 +87,7 @@
         "semitones_other": "{offset} חצאי טונים",
         "transpositionOffset": "היסט העברת סולם (בחצאי טונים)",
         "showCapo": "הצגת סימון Capo",
-        "defaultCapoFret": "שריג Capo כברירת מחדל",
+        "defaultCapoFret": "סריג Capo כברירת מחדל",
         "preferFlats": "העדפת במול (Bb) על פני דיאז (A#)",
         "saving": "בשמירה...",
         "save": "שמירת הפרופיל"
@@ -114,12 +114,12 @@
     },
     "instrumentNotes": {
         "concertPitch": "בסולם קונצרט",
-        "concertPitchOctaveLower": "בסולם קונצרט (אוקטבה נמוכה יותר)",
+        "concertPitchOctaveLower": "בסולם קונצרט (נשמע נמוך באוקטבה)",
         "rhythmOnly": "קצב בלבד — ללא העברת סולם",
-        "major6thLower": "נשמע סקסטה גדולה נמוך יותר",
-        "major9thLower": "נשמע נונה גדולה נמוך יותר",
-        "wholeStepLower": "נשמע טון שלם נמוך יותר",
-        "fifthLower": "נשמע קווינטה נמוך יותר",
+        "major6thLower": "נשמע נמוך בסקסטה גדולה",
+        "major9thLower": "נשמע נמוך בנונה גדולה",
+        "wholeStepLower": "נשמע נמוך בטון שלם",
+        "fifthLower": "נשמע נמוך בקווינטה",
         "custom": "הגדרת העברת סולם מותאמת אישית"
     },
     "scheduling": {
