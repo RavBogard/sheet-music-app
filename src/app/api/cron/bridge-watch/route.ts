@@ -8,6 +8,7 @@ import { sendPushToUsers } from "@/lib/push-send"
 import { captureException } from "@/lib/error-reporting"
 import { env } from "@/env.mjs"
 import { evaluateBridge, toMillis, type BridgeHeartbeat, type BridgeVerdict } from "./evaluate"
+import { bridgeConfigOrg, mixerOn, MIXER_ORG_ID } from "@/lib/org/mixer"
 
 /**
  * GET /api/cron/bridge-watch — the pre-service bridge tripwire (R8).
@@ -89,13 +90,28 @@ export async function GET(req: Request) {
         const db = getFirestore()
         const now = Date.now()
 
+        // Multi-tenant phase 6: the mixer is CRC-only behind its flag. With
+        // crc's `mixer` off there is no bridge to watch.
+        if (!(await mixerOn(MIXER_ORG_ID))) {
+            logger.info("[Cron/BridgeWatch] mixer is switched off — skipping")
+            return NextResponse.json({ success: true, skipped: "feature_off" })
+        }
+
         const [monitorDoc, stateDoc, watchDoc] = await Promise.all([
             db.collection("config").doc("monitor").get(),
             db.collection("monitor-live").doc("state").get(),
             db.collection("config").doc("bridgeWatch").get(),
         ])
 
-        const monitor = monitorDoc.exists ? (monitorDoc.data() as Record<string, unknown>) : undefined
+        const monitorData = monitorDoc.exists ? (monitorDoc.data() as Record<string, unknown>) : undefined
+        // The bridge config must be the mixer tenant's (absent orgId = crc).
+        if (monitorData && bridgeConfigOrg(monitorData) !== MIXER_ORG_ID) {
+            logger.warn("[Cron/BridgeWatch] config/monitor names another tenant — skipping", {
+                orgId: bridgeConfigOrg(monitorData),
+            })
+            return NextResponse.json({ success: true, skipped: "bridge_tenant_mismatch" })
+        }
+        const monitor = monitorData
         const bridge = (monitor?.bridge as BridgeHeartbeat | undefined) ?? undefined
         const lease = monitor?.bridgeLease as { expiresAt?: number } | undefined
 

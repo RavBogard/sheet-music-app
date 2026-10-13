@@ -5,6 +5,7 @@ import { BASE_URL } from "@/lib/constants"
 import { formatEventDate } from "@/lib/firestore-helpers"
 import { detectNewSongs, type TrackRef } from "@/lib/new-song-detector"
 import { sendSchedulingEmail } from "@/lib/email-scheduling"
+import { hasFeature } from "@/lib/org/features"
 import {
     sendSchedulingAssignmentSMS,
     sendSchedulingCancellationSMS,
@@ -288,16 +289,21 @@ export async function assignMusiciansService(
     }
 
     // Notification cascade — runs AFTER each musician's transaction commits.
+    // Multi-tenant phase 6: email and SMS only for tenants with
+    // `schedulingEmails` on; push and in-app are not email and always run.
     const baseUrl = BASE_URL
+    const outboundByOrg = new Map<string, boolean>()
     for (const { musician, assignmentId, newSongs, org } of created) {
         const isCore = musician.schedulingTier === "core"
+        if (!outboundByOrg.has(org)) outboundByOrg.set(org, await hasFeature(org, "schedulingEmails"))
+        const outbound = outboundByOrg.get(org) === true
 
         const musicianDoc = await db.collection("users").doc(musician.uid).get()
         const musicianData = musicianDoc.data()
         const notifPrefs =
             musicianData?.musicianProfile?.notificationPreferences || {}
-        const emailEnabled = notifPrefs.email !== false // default true
-        const smsEnabled = notifPrefs.sms === true // default false
+        const emailEnabled = outbound && notifPrefs.email !== false // default true
+        const smsEnabled = outbound && notifPrefs.sms === true // default false
         const pushEnabled = notifPrefs.push !== false // default true
 
         if (emailEnabled) {
@@ -561,7 +567,10 @@ export async function unassignAssignmentService(
     // v4.3 D05: formatEventDate handles string + {seconds} + Timestamp shapes.
     const eventDateStr = formatEventDate(assignment.eventDate) ?? "TBD"
 
-    if (emailEnabled && assignment.musicianEmail) {
+    // Multi-tenant phase 6: no cancellation email/SMS for a tenant with
+    // `schedulingEmails` off.
+    const outbound = await hasFeature(rowOrg(assignment.orgId), "schedulingEmails")
+    if (outbound && emailEnabled && assignment.musicianEmail) {
         sendSchedulingEmail({
             to: assignment.musicianEmail,
             recipientName: musicianName,
@@ -580,7 +589,7 @@ export async function unassignAssignmentService(
         )
     }
 
-    if (smsEnabled && assignment.musicianPhone) {
+    if (outbound && smsEnabled && assignment.musicianPhone) {
         sendSchedulingCancellationSMS({
             to: assignment.musicianPhone,
             musicianName,

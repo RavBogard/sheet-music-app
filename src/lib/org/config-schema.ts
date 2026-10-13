@@ -122,6 +122,16 @@ export const FeaturesSchema = z.object({
 })
 export type OrgFeatures = z.infer<typeof FeaturesSchema>
 
+/**
+ * Multi-tenant phase 6: the tenant's Chart Inbox (a shared Google Drive folder
+ * the drive-sync cron and get_chart_inbox / sync_chart_inbox read). "" means
+ * none, except crc, whose fallback is the CHART_INBOX_DRIVE_FOLDER_ID env var
+ * (src/lib/drive-sync/tenant-inbox.ts). Only read when features.driveInbox is on.
+ */
+export const DriveInboxSchema = z.object({
+    folderId: z.string().default(""),
+})
+
 export const LibrarySchema = z.object({
     /** Library tabs in order. `id` is the row's `collection` value. */
     collections: z.array(z.object({ id: z.string().min(1), label: z.string().min(1) })).default([]),
@@ -186,6 +196,7 @@ export const OrgConfigSchema = z.object({
     email: EmailSchema,
     legal: LegalSchema,
     features: FeaturesSchema,
+    driveInbox: DriveInboxSchema.default({ folderId: "" }),
     library: LibrarySchema,
     liturgy: LiturgySchema,
     congregationDefaults: CongregationDefaultsSchema,

@@ -3,6 +3,7 @@ import { coerceOrgId } from "@/lib/org/registry"
 import { readStoredToday } from "@/lib/today/emit-today"
 import { TODAY_CACHE_CONTROL } from "@/lib/today/types"
 import { logger } from "@/lib/logger"
+import { requireFeature } from "@/lib/org/features"
 
 /**
  * `GET /api/today` — serve the emitted `today.json`.
@@ -20,6 +21,10 @@ import { logger } from "@/lib/logger"
  * 404 with `{error:"not_found"}` before the first emit. Both consumers treat
  * an absent file as "fall back to the calendar", so a 404 is a normal state,
  * not an incident.
+ *
+ * Multi-tenant phase 6: a tenant with `todayFeed` off gets 404
+ * `{error:"feature_off", feature:"todayFeed"}` (same CORS), which both
+ * consumers treat like the not-yet-emitted 404.
  */
 
 export const dynamic = "force-dynamic"
@@ -36,6 +41,12 @@ export async function OPTIONS() {
 
 export async function GET(req: NextRequest) {
     const org = coerceOrgId(req.headers.get("x-org-id"))
+    const off = await requireFeature(org, "todayFeed")
+    if (off) {
+        for (const [k, v] of Object.entries(CORS)) off.headers.set(k, v)
+        off.headers.set("Cache-Control", TODAY_CACHE_CONTROL)
+        return off
+    }
     try {
         const doc = await readStoredToday(org)
         if (!doc) {

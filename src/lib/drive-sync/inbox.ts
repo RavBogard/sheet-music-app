@@ -227,7 +227,7 @@ export async function syncChartInboxNow(
  * Production deps — real Drive client + the real upload pipeline. Lazy imports
  * so unit tests of this module never load googleapis or the upload pipeline.
  */
-export async function buildProdDriveSyncDeps(db: Firestore): Promise<DriveSyncDeps> {
+export async function buildProdDriveSyncDeps(db: Firestore, orgId?: string): Promise<DriveSyncDeps> {
     const [{ DriveClient }, { processChartUpload }] = await Promise.all([
         import("@/lib/google-drive"),
         import("@/lib/library-upload"),
@@ -237,5 +237,6 @@ export async function buildProdDriveSyncDeps(db: Firestore): Promise<DriveSyncDe
         db,
         processor: processChartUpload,
         now: () => new Date(),
+        ...(orgId ? { orgId } : {}),
     }
 }

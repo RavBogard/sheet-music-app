@@ -1,20 +1,18 @@
 import { z } from "zod"
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 
-import { env } from "@/env.mjs"
 import { getFirestore, initAdmin } from "@/lib/firebase-admin"
-import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import { orgFrom, type AuthExtra } from "@/lib/mcp/org-context"
 import { richError } from "@/lib/mcp/error-envelopes"
 import { checkUserRateLimit } from "@/lib/rate-limit"
 import {
     buildProdDriveSyncDeps,
     readChartInboxStatus,
-    resolveChartInboxFolderId,
     syncChartInboxNow,
     INBOX_POLL_INTERVAL_MINUTES,
     MCP_SYNC_FILE_CAP,
 } from "@/lib/drive-sync/inbox"
+import { tenantInboxFolder, type TenantInbox } from "@/lib/drive-sync/tenant-inbox"
 import { isErrorEnvelope } from "./result-iserror"
 import {
     isTrustedLeader,
@@ -64,19 +62,23 @@ function db(): FirebaseFirestore.Firestore {
 }
 
 /**
- * The inbox is a single shared folder today and it belongs to the primary
- * tenant. A second tenant gets a clear "not configured for your organization"
- * instead of silently importing into someone else's library.
+ * Multi-tenant phase 6: each tenant's own inbox folder (tenant config, CRC's
+ * fallback the env var), and only with its `driveInbox` flag on. Imports are
+ * stamped with the caller's tenant. A tenant with no folder gets a clear
+ * "not configured" instead of importing into someone else's library.
  */
-function inboxFolderFor(org: string): string | null {
-    if (org !== DEFAULT_ORG_ID) return null
-    return resolveChartInboxFolderId(env)
-}
-
-function notConfigured(org: string) {
+function notConfigured(org: string, inbox: Extract<TenantInbox, { folderId: null }>) {
+    if (inbox.reason === "feature_off") {
+        return richError(
+            "feature_off",
+            "The Chart Inbox is switched off for this organization.",
+            { org, feature: "driveInbox", errorCode: 404 },
+            "For a Google Drive folder the user already has, use import_drive_folder with its link instead.",
+        )
+    }
     return richError(
         "chart_inbox_not_configured",
-        org === DEFAULT_ORG_ID
+        org === "crc"
             ? "The Chart Inbox folder is not configured on this deployment (CHART_INBOX_DRIVE_FOLDER_ID is unset)."
             : `The Chart Inbox is not set up for the ${org} organization yet.`,
         { org, errorCode: 404 },
@@ -109,8 +111,9 @@ export function registerChartInboxTools(server: McpServer): void {
         async (args, extra) => {
             uidFrom(extra as AuthExtra)
             const org = orgFrom(extra as AuthExtra)
-            const folderId = inboxFolderFor(org)
-            if (!folderId) return jsonResult(notConfigured(org))
+            const inbox = await tenantInboxFolder(org)
+            if (inbox.folderId === null) return jsonResult(notConfigured(org, inbox))
+            const folderId = inbox.folderId
             const status = await readChartInboxStatus(db(), folderId, {
                 recentLimit: (args as { recentLimit?: number }).recentLimit,
             })
@@ -141,8 +144,9 @@ export function registerChartInboxTools(server: McpServer): void {
         async (args, extra) => {
             const uid = uidFrom(extra as AuthExtra)
             const org = orgFrom(extra as AuthExtra)
-            const folderId = inboxFolderFor(org)
-            if (!folderId) return jsonResult(notConfigured(org))
+            const inbox = await tenantInboxFolder(org)
+            if (inbox.folderId === null) return jsonResult(notConfigured(org, inbox))
+            const folderId = inbox.folderId
 
             const store = db()
             const roles = await loadUploader(store, uid, org)
@@ -152,7 +156,7 @@ export function registerChartInboxTools(server: McpServer): void {
             })
             if (limited) return jsonResult(rateLimitEnvelope(limited.error))
 
-            const deps = await buildProdDriveSyncDeps(store)
+            const deps = await buildProdDriveSyncDeps(store, org)
             const result = await syncChartInboxNow(folderId, deps, {
                 fileCap: (args as { maxFiles?: number }).maxFiles,
             })

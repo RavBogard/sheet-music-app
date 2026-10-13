@@ -40,6 +40,7 @@ import { emailAllMembers } from '@/lib/email'
 import { sendPushToUsers } from '@/lib/push-send'
 import { sendSMS } from '@/lib/sms'
 import { rowOrg } from '@/lib/org/membership'
+import { requireFeature } from '@/lib/org/features'
 import { orgString } from '@/lib/org/strings'
 import { logger } from '@/lib/logger'
 import { revalidatePath } from 'next/cache'
@@ -110,6 +111,10 @@ export const POST = createApiHandler(
         if (!isOwner && !ctx.auth.isBandLeader) {
             return NextResponse.json({ error: 'Unauthorized — must be owner, band leader, or admin' }, { status: 403 })
         }
+
+        // Multi-tenant phase 6: the setlist's tenant must have notifyBand on.
+        const off = await requireFeature(rowOrg(setlist.orgId), 'notifyBand')
+        if (off) return off
 
         // Validate: must have at least one song
         // v60-04-01: hydration-aware read via shared helper. For hydrated

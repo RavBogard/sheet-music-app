@@ -4,6 +4,7 @@ import { checkRateLimit } from "@/lib/rate-limit"
 import { getFirestore } from "@/lib/firebase-admin"
 import { sendSetlistEmail } from "@/lib/email"
 import { rowOrg } from "@/lib/org/membership"
+import { requireFeature } from "@/lib/org/features"
 import { listTenantMembers } from "@/lib/org/access"
 import { logger } from "@/lib/logger"
 import { z } from "zod"
@@ -47,6 +48,10 @@ export const POST = createApiHandler(
         if (!isOwner && !isBandLeaderOrAdmin) {
             return NextResponse.json({ error: 'Must be owner or leader' }, { status: 403 })
         }
+
+        // Multi-tenant phase 6: emailing the band is notifyBand.
+        const off = await requireFeature(org, 'notifyBand')
+        if (off) return off
 
         // Load band members (musicians and above — not plain community members).
         // Multi-tenant phase 2: the setlist tenant's members by MEMBERSHIP role

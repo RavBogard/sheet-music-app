@@ -14,6 +14,7 @@ import { checkRateLimit } from '@/lib/rate-limit'
 import { initAdmin, getFirestore } from '@/lib/firebase-admin'
 import { emailAllMembers } from '@/lib/email'
 import { rowOrg } from '@/lib/org/membership'
+import { requireFeature } from '@/lib/org/features'
 import { logger } from '@/lib/logger'
 import { z } from 'zod'
 import { getTracksForSetlist } from '@/lib/server-tracks'
@@ -64,6 +65,10 @@ export async function POST(request: NextRequest) {
                 { status: 403 }
             )
         }
+
+        // Multi-tenant phase 6: a resend of the band notification (notifyBand).
+        const off = await requireFeature(rowOrg(setlist.orgId), 'notifyBand')
+        if (off) return off
 
         // 2026-05-28: publishedAt-as-gate killed per Daniel's
         // err-public-not-gated binding invariant (decisions.md

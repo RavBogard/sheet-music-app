@@ -8,7 +8,7 @@ import { rowOrg } from "@/lib/org/membership"
 import { BASE_URL } from "@/lib/constants"
 import { env } from "@/env.mjs"
 import { captureException } from "@/lib/error-reporting"
-import { cronTenantIds } from "@/lib/org/cron-tenants"
+import { tenantsWithFeature } from "@/lib/org/features"
 import { reminderDue } from "@/lib/org/locale"
 import { scopeRowsToTenant } from "@/lib/org/tenant-query"
 import type { OrgId } from "@/lib/org/types"
@@ -71,7 +71,8 @@ export async function GET(req: Request) {
         let emailsSent = 0
         let smsSent = 0
 
-        for (const org of await cronTenantIds()) {
+        // Multi-tenant phase 6: only tenants with `schedulingEmails` on.
+        for (const org of await tenantsWithFeature("schedulingEmails")) {
             if (!reminderDue(org, now)) continue
 
             // This tenant's pending assignments

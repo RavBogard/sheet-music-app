@@ -61,6 +61,11 @@ export interface DriveSyncDeps {
         input: Parameters<typeof processChartUpload>[0],
     ) => Promise<ProcessChartUploadResult>
     now: () => Date
+    /**
+     * Multi-tenant phase 6: the tenant whose inbox this is; new files are
+     * stamped with it. Absent means "crc", the only inbox before phase 6.
+     */
+    orgId?: string
 }
 
 export interface DriveSyncResult {
@@ -330,9 +335,9 @@ async function handleNewFile(
         uploaderUid: "cron:drive-sync",
         uploaderEmail: "drive-sync@cron.internal",
         source: "drive-sync",
-        // Multi-tenant phase 2 (W5): the Drive inbox / sync folder is CRC's
-        // (phase 6 makes it per-tenant config). Shared by drive-sync/inbox.ts.
-        orgId: "crc",
+        // Multi-tenant phase 6: the inbox's tenant (deps.orgId); absent is
+        // crc, the only inbox before phase 6. Shared by drive-sync/inbox.ts.
+        orgId: rowOrg(deps.orgId),
         driveMetadata: {
             driveFileId: file.id!,
             modifiedTime: file.modifiedTime,
@@ -841,6 +846,7 @@ export async function runDriveSync(opts: {
 export async function runDriveSyncProd(
     db: Firestore,
     parentFolderId: string,
+    orgId?: string,
 ): Promise<DriveSyncResult> {
     const drive = new DriveClient()
     return runDriveSync({
@@ -849,6 +855,7 @@ export async function runDriveSyncProd(
             db,
             processor: processChartUpload,
             now: () => new Date(),
+            ...(orgId ? { orgId } : {}),
         },
         parentFolderId,
     })

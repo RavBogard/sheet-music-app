@@ -5,6 +5,10 @@ import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
 import { sendBridgeRedemptionAlert } from "@/lib/email"
 import { randomBytes } from "crypto"
+import { bridgeConfigOrg, mixerOn, MIXER_ORG_ID } from "@/lib/org/mixer"
+
+/** Multi-tenant phase 6: the bridge is the mixer, CRC-only behind its flag. */
+const featureOff = () => NextResponse.json({ error: "feature_off", feature: "mixer" }, { status: 404 })
 
 /**
  * Bridge Setup Code API
@@ -15,6 +19,10 @@ import { randomBytes } from "crypto"
  *
  * POST /api/bridge/setup-code  — Admin-only: generate a new setup code
  * GET  /api/bridge/setup-code?code=ABC123  — Bridge: redeem code for credentials
+ *
+ * Multi-tenant phase 6: both refuse (404 feature_off) unless the mixer is on
+ * for the tenant — only crc, the bridge's tenant. A code carries the tenant
+ * it was made for (`orgId`; absent = crc) and redeems only for that tenant.
  */
 
 const CODE_LENGTH = 10
@@ -31,6 +39,7 @@ function generateCode(): string {
 
 // POST: Admin generates a setup code
 export const POST = createApiHandler(async (ctx) => {
+    if (!(await mixerOn(ctx.auth!.orgId))) return featureOff()
     if (!initAdmin()) {
         return NextResponse.json(
             { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
@@ -57,6 +66,7 @@ export const POST = createApiHandler(async (ctx) => {
 
     await db.collection("bridge-setup-codes").doc(code).set({
         createdBy: ctx.auth!.uid,
+        orgId: ctx.auth!.orgId,
         createdAt: now,
         expiresAt,
         used: false,
@@ -87,6 +97,8 @@ export async function GET(req: NextRequest) {
         }
         const db = getFirestore()
 
+        if (!(await mixerOn(MIXER_ORG_ID))) return featureOff()
+
         // Atomically check and mark as used in a single transaction
         // Prevents race condition where two requests both pass the check
         const codeRef = db.collection("bridge-setup-codes").doc(code)
@@ -97,6 +109,8 @@ export async function GET(req: NextRequest) {
             if (!snap.exists) return { error: "Invalid code", status: 404 }
 
             const data = snap.data()!
+            // A code made for another tenant is not a bridge code.
+            if (bridgeConfigOrg(data) !== MIXER_ORG_ID) return { error: "Invalid code", status: 404 }
             if (data.used) return { error: "Code already used", status: 410 }
             if (Date.now() > data.expiresAt) return { error: "Code expired", status: 410 }
 
