@@ -312,9 +312,9 @@ The third pass decided each finding, applied the systemic rulings across all nam
 | Severity | Findings | Applied as proposed | Applied, reworded | Kept translator / reversed | Skipped |
 |---|---|---|---|---|---|
 | wrong | 5 | 5 | 0 | 0 | 0 |
-| should | 46 | 45 | 1 | 0 | 0 |
-| could | 57 | 50 | 6 | 1 | 0 |
-| **Total** | **108** | **100** | **7** | **1** | **0** |
+| should | 46 | 42 | 4 | 0 | 0 |
+| could | 57 | 48 | 8 | 1 | 0 |
+| **Total** | **108** | **95** | **12** | **1** | **0** |
 
 "Applied, reworded" means the reviewer's point was taken but the final text differs. That happens for one of two reasons: the CRC legal copy now uses the `legal.*` wording, or the proposal conflicted with a ruling. These cases are in the log below.
 
@@ -355,7 +355,8 @@ Edits beyond the 108 rows, made under the systemic rulings:
 | hooks.alreadyOffline | "הכול כבר זמין במצב לא מקוון" | "כל התווים כבר זמינים במצב לא מקוון" | The note says the toast means every chart; naming the charts is clearer than "הכול". |
 | privacy.rights.haveRight | "יש לך הזכות:" | "עומדת לך הזכות:" | Legal alignment (legal.privacy.rights.lead); same definite, formal reading. |
 | terms.acceptanceTerms.accessingUsingCrc | Minimal fix ("אם אינך מסכים/ה…") | Full `legal.terms.acceptance.body` wording | Legal alignment. It includes the reviewer's fix. |
-| smsConsent.programDescription.operatorAndPurpose, privacy.smsMobileMessaging.optReceiveSms, terms.smsMessagingTerms.messageTypesInclude, terms.smsMessagingTerms.optOutSms | As proposed | `legal.*` wording (יישום, "שיבוצים" without "בלוח הזמנים", "התראות על שיבוץ", "יש לשלוח") | Legal alignment; each reviewer point is kept. |
+| smsConsent.programDescription.operatorAndPurpose, privacy.smsMobileMessaging.optReceiveSms, privacy.smsMobileMessaging.messageFrequencyVaries, privacy.changesPolicy.updatePrivacyPolicy, terms.smsMessagingTerms.messageTypesInclude, terms.smsMessagingTerms.messageFrequencyVaries, terms.smsMessagingTerms.optOutSms | As proposed | `legal.*` wording (יישום; "שיבוצים" without "בלוח הזמנים"; "פעילות השיבוצים"; ״עודכן לאחרונה״; "התראות על שיבוץ"; "יש לשלוח") | Legal alignment; each reviewer point is kept. |
+| legal.privacy.sms.optIn | Parallelism fix only | Parallelism fix plus "אנו נשלח" | The reviewer's "אנו נשלח" fix for the CRC copy (a could) applies equally here; both copies stay identical. |
 
 ### Length warnings
 
