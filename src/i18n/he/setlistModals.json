@@ -29,5 +29,10 @@
     "save": "שמירה",
     "nameYourSetlist": "מתן שם לרשימת השירים",
     "namePromptPlaceholder": "למשל: שבת בבוקר, קבלת שבת…",
-    "continue": "המשך"
+    "continue": "המשך",
+    "suggestionStaple_one": "ברשימה אחת — {setlistName}",
+    "suggestionStaple_other": "ב-{count} רשימות — {setlistName}",
+    "suggestionStale_one": "לא נוגן כבר יום אחד",
+    "suggestionStale_other": "לא נוגן כבר {count} ימים",
+    "suggestionNeverPlayed": "עוד לא נוגן"
 }

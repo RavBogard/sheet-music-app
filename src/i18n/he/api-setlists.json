@@ -11,5 +11,15 @@
     "spreadsheetEmpty": "נראה שהגיליון ריק.",
     "spreadsheetTooLarge": "הגיליון גדול מדי (עד {maxRows} שורות).",
     "geminiKeyMissing": "מפתח ה-API של Gemini לא הוגדר בשרת.",
-    "broadcastLeadersOnly": "רק ראשי להקה ומנהלים יכולים לשלוח לנגנים עדכון על רשימת השירים"
+    "broadcastLeadersOnly": "רק ראשי להקה ומנהלים יכולים לשלוח לנגנים עדכון על רשימת השירים",
+    "extractUnsupportedFormat": "נתמכים רק מסמכי .docx, .pdf ו-.txt.",
+    "extractPdfPageLimit": "קובץ ה-PDF חורג ממגבלת {maxPages} העמודים.",
+    "extractFailed": "חילוץ הטקסט ממסמך ה-{format} נכשל.",
+    "extractEmpty": "לא נמצא טקסט במסמך.",
+    "structureNoText": "לא התקבל טקסט מסמך לחילוץ.",
+    "structureAiFailed": "חילוץ המבנה באמצעות Gemini נכשל.",
+    "structureAiEmpty": "התקבלה מ-Gemini תשובה ריקה.",
+    "structureAiNotJson": "התשובה שהתקבלה מ-Gemini אינה JSON תקין.",
+    "structureAiMismatch": "התשובה שהתקבלה מ-Gemini אינה תואמת למבנה הצפוי של רשימת שירים: {detail}",
+    "resolveLibraryUnavailable": "טעינת אינדקס הספרייה נכשלה."
 }

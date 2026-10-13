@@ -65,5 +65,17 @@
     "diagSubscriptionPending": "אבחון: ההאזנה עוד לא הופעלה (עדיין נרשמת או חסומה באימות)",
     "recentSetlists": "רשימות שירים אחרונות",
     "signInOr": "או",
-    "signInWithGoogle": "התחברות עם Google"
+    "signInWithGoogle": "התחברות עם Google",
+    "greetingGoodMorning": "בוקר טוב",
+    "greetingGoodAfternoon": "צהריים טובים",
+    "greetingGoodEvening": "ערב טוב",
+    "greetingShabbatShalom": "שבת שלום",
+    "greetingShanahTovah": "שנה טובה",
+    "greetingGmarChatimahTovah": "גמר חתימה טובה",
+    "greetingChagSameach": "חג שמח",
+    "greetingChagUrimSameach": "חנוכה שמח",
+    "greetingChagPurimSameach": "פורים שמח",
+    "greetingChagPesachSameach": "פסח שמח",
+    "greetingWithName": "{greeting}, {firstName}",
+    "welcomeTo": "ברוכים הבאים ל-{appName}"
 }
