@@ -1,0 +1,15 @@
+{
+    "serverNotReady": "השרת עדיין לא מוכן",
+    "importSucceeded": "הייבוא הושלם בהצלחה.",
+    "noFileProvided": "לא צורף קובץ",
+    "fileTooLarge": "הקובץ גדול מדי. הגודל המרבי הוא {maxMb}MB",
+    "unsupportedDocument": "נתמכים רק מסמכי .docx, .pdf ו-.txt.",
+    "noTextProvided": "לא התקבל טקסט",
+    "missingUrlOrCsv": "חסר 'url' או 'csvText' בגוף הבקשה.",
+    "sheetFetchFailed": "לא ניתן לקבל את נתוני הגיליון. יש לוודא שהגישה ל-Google Sheet מוגדרת ל״כל מי שקיבל את הקישור״ עם הרשאת צפייה. ({detail})",
+    "sheetFetchUnknownError": "שגיאה לא ידועה בקריאת הגיליון.",
+    "spreadsheetEmpty": "נראה שהגיליון ריק.",
+    "spreadsheetTooLarge": "הגיליון גדול מדי (עד {maxRows} שורות).",
+    "geminiKeyMissing": "מפתח ה-API של Gemini לא הוגדר בשרת.",
+    "broadcastLeadersOnly": "רק ראשי להקה ומנהלים יכולים לשלוח לנגנים עדכון על רשימת השירים"
+}

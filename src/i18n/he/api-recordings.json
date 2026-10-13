@@ -1,0 +1,14 @@
+{
+    "serverNotReady": "השרת עדיין לא מוכן",
+    "authRequired": "נדרשת התחברות",
+    "invalidRecordingId": "מזהה ההקלטה אינו תקין",
+    "recordingNotFound": "ההקלטה לא נמצאה",
+    "noStoredFile": "אין קובץ שמור להקלטה",
+    "fileNotFound": "קובץ ההקלטה לא נמצא",
+    "fileUnavailable": "קובץ ההקלטה אינו זמין",
+    "leadersOnly": "רק ראשי להקה ומנהלים יכולים להעלות הקלטות.",
+    "noFileProvided": "לא צורף קובץ",
+    "songIdRequired": "נדרש songId",
+    "audioOnly": "נתמכים קובצי שמע בלבד (mp3, m4a, wav, ogg, webm, aac)",
+    "fileTooLarge": "הקובץ גדול מדי. הגודל המרבי הוא {maxMb}MB"
+}

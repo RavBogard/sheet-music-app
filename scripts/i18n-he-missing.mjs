@@ -10,7 +10,8 @@
  * Mirrors src/__tests__/i18n/catalogue.test.ts: a key marked `"translate": false`
  * in its note needs no Hebrew; a plural English key (`_one`/`_other`) is covered
  * by any Hebrew variant of the same base. Also reports Hebrew keys with no English
- * key, placeholder mismatches and values over the note's maxLength (warning only).
+ * key, placeholder mismatches and values over the note's maxLength (warning only; a
+ * placeholder counts as 3 characters).
  * The `org` namespace's English is STRING_BASE (src/lib/org/strings-base.ts).
  * Exit code 1 when anything is missing or wrong.
  */
@@ -42,7 +43,9 @@ function flatten(o, prefix = "", out = {}) {
     }
     return out
 }
-const readJson = (p) => (existsSync(p) ? JSON.parse(readFileSync(p, "utf8")) : {})
+// Length as shown: each {placeholder} counts as 3 characters (a typical number or short value).
+const shown = (s) => s.replace(/\{[A-Za-z_][A-Za-z0-9_]*\}/g, "###")
+const readJson =(p) => (existsSync(p) ? JSON.parse(readFileSync(p, "utf8")) : {})
 
 const namespaces = readdirSync(join(I18N, "en")).filter((f) => f.endsWith(".json")).map((f) => f.slice(0, -5))
 namespaces.push("org")
@@ -78,8 +81,8 @@ for (const ns of namespaces.sort()) {
         })
         .filter(Boolean)
     const long = Object.entries(he)
-        .filter(([k, v]) => note(k).maxLength && v.length > note(k).maxLength)
-        .map(([k, v]) => `${k} (${v.length} > ${note(k).maxLength})`)
+        .filter(([k, v]) => note(k).maxLength && shown(v).length > note(k).maxLength)
+        .map(([k, v]) => `${k} (${shown(v).length} > ${note(k).maxLength})`)
 
     bad += missing.length + orphans.length + phBad.length
     rows.push([ns, Object.keys(en).length, Object.keys(he).length, missing.length])

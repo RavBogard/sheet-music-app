@@ -1,0 +1,18 @@
+{
+    "serverNotReady": "השרת עדיין לא מוכן",
+    "setlistNotFound": "רשימת השירים לא נמצאה",
+    "deleteOwnerOrAdminOnly": "רק הבעלים של רשימת השירים או מנהל/ת יכולים למחוק אותה",
+    "ownerOrLeaderRequired": "נדרשת הרשאת בעלים או ראש להקה",
+    "atLeastOneMusician": "יש לשבץ לפחות נגן/ית אחד/ת",
+    "ownerLeaderOrAdminRequired": "אין הרשאה – נדרשת הרשאת בעלים, ראש להקה או מנהל/ת",
+    "needsLinkedChart": "ברשימת השירים צריך להיות לפחות שיר אחד עם תווים מקושרים",
+    "setlistIdRequired": "נדרש הפרמטר setlistId",
+    "packetFailed": "לא ניתן ליצור את החוברת להדפסה",
+    "chartsOmitted": "חלק מקובצי התווים לא נכללו בחוברת.",
+    "renameNotAllowed": "אין הרשאה לשנות את שם רשימת השירים",
+    "invalidRequestSetlistId": "בקשה לא תקינה: נדרש setlistId",
+    "noEmailRecipients": "לא נמצאו כתובות דוא״ל לנגנים ברשימת השירים הזו",
+    "resendFailed": "השליחה החוזרת של המיילים נכשלה",
+    "transferUserNotFound": "לא נמצא חשבון עם הכתובת {email}. צריך להירשם קודם.",
+    "transferred": "רשימת השירים \"{setlistName}\" הועברה ל-{email}"
+}

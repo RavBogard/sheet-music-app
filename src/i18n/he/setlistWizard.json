@@ -1,0 +1,33 @@
+{
+    "intro": "יש לבחור תאריך — נציע לשכפל את התפילה מהשבוע שעבר, להשתמש בתבנית או להתחיל מאפס.",
+    "serviceDateLabel": "תאריך התפילה",
+    "pickDate": "בחירת תאריך",
+    "lookingForLast": "מחפשים את {service} הקודמת…",
+    "cloneLast": "שכפול {service} הקודמת",
+    "cloneSourceDate": "({date})",
+    "noPriorService": "אין עדיין {service} קודמת לשכפול — אפשר לבחור תבנית או להתחיל מאפס למטה.",
+    "useTemplate": "שימוש בתבנית",
+    "startFromScratch": "התחלה מאפס",
+    "templateOptionalLabel": "תבנית (לא חובה)",
+    "startFromBlank": "התחלה מדף ריק",
+    "regularServices": "תפילות רגילות",
+    "holidayServices": "תפילות חג",
+    "nameLabel": "שם",
+    "rabbiOptionalLabel": "רב/ה (לא חובה)",
+    "selectRabbi": "בחירת רב/ה",
+    "cancel": "ביטול",
+    "creating": "ביצירה…",
+    "serviceType": {
+        "friday_night": "תפילת ערב שבת",
+        "shabbat_morning": "תפילת שבת בבוקר",
+        "rosh_hashanah": "תפילת ראש השנה",
+        "yom_kippur": "תפילת יום כיפור",
+        "sukkot": "תפילת סוכות",
+        "simchat_torah": "תפילת שמחת תורה",
+        "hanukkah_shabbat": "תפילת שבת חנוכה",
+        "purim": "תפילת פורים",
+        "passover": "תפילת פסח",
+        "shavuot": "תפילת שבועות",
+        "regular": "תפילה"
+    }
+}

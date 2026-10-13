@@ -1,0 +1,150 @@
+{
+    "page": {
+        "restrictedTitle": "גישה מוגבלת",
+        "restrictedBody": "ספריית השירים המלאה זמינה רק למשתמשים מחוברים.",
+        "pendingTitle": "החשבון ממתין לאישור",
+        "pendingBody": "החשבון שלך בבדיקה. בינתיים אפשר לצפות ברשימות שירים ציבוריות.",
+        "uid": "מזהה משתמש: {uid}..."
+    },
+    "header": {
+        "back": "חזרה לספרייה",
+        "title": "תווים לשירים",
+        "exitSelectMode": "יציאה ממצב בחירה",
+        "selectFiles": "בחירת קבצים",
+        "uploadDone": "הספרייה עודכנה עם הקובץ שהעלית"
+    },
+    "search": {
+        "audioPlaceholder": "חיפוש קובצי שמע...",
+        "audioLabel": "חיפוש קובצי שמע",
+        "chartsPlaceholder": "חיפוש לפי שם, סולם, נושא...",
+        "chartsLabel": "חיפוש תווים לפי שם, סולם או נושא"
+    },
+    "usage": {
+        "partial": "נתוני השימוש האחרון לא נטענו במלואם, ולכן הסינון לפי מועד נגינה אינו זמין.",
+        "retry": "ניסיון חוזר"
+    },
+    "sections": {
+        "groupLabel": "אוספי הספרייה",
+        "tabWithCount": "{label} ({n})",
+        "audioWithCount": "שמע ({n})"
+    },
+    "shared": {
+        "chipGroupLabel": "אוספים משותפים",
+        "chipGroupHeading": "אוספים משותפים:",
+        "chipAria": "הצגת {label} מ-{owner}",
+        "fromOwner": "מ-{owner}",
+        "readOnly": "משותף מ-{owner}. אפשר להשתמש בתווים אבל לא לשנות אותם.",
+        "loadFailed": "לא ניתן לטעון תווים משותפים."
+    },
+    "allSites": {
+        "label": "הצגת תווים מכל הקהילות",
+        "off": "כל הקהילות",
+        "on": "כל הקהילות · פעיל"
+    },
+    "list": {
+        "errorTitle": "שגיאה בספרייה",
+        "errorFallback": "טעינת הקבצים נכשלה",
+        "noMatchesTitle": "לא נמצאו תוצאות",
+        "noMatchesBody": "לא נמצא שום דבר שתואם ל-״{query}״",
+        "noAudioTitle": "אין עדיין קובצי שמע",
+        "noAudioBody": "קובצי שמע (.mp3, .m4a וכו׳) יופיעו כאן אחרי שיתווספו ל-Drive.",
+        "noChartsTitle": "אין עדיין תווים בספרייה",
+        "noChartsBody": "התווים יופיעו כאן אחרי שיתווספו לספרייה.",
+        "chartCount_one": "קובץ תווים אחד",
+        "chartCount_other": "{count} קובצי תווים"
+    },
+    "filters": {
+        "key": "סולם",
+        "keyWithCount": "סולם ({n})",
+        "topic": "נושא",
+        "topicWithCount": "נושא ({n})",
+        "recency": "מועד נגינה",
+        "recent": "לאחרונה",
+        "stale": "60+ ימים",
+        "never": "לא נוגן מעולם",
+        "clear": "ניקוי",
+        "optionAll": "הכול",
+        "optionRecent": "30 יום אחרונים",
+        "optionStale": "לפני 60+ ימים",
+        "optionNever": "לא נוגן מעולם"
+    },
+    "row": {
+        "openFolderLabel": "פתיחת התיקייה {name}",
+        "playLabel": "ניגון {name}",
+        "pauseLabel": "השהיית {name}",
+        "viewLabel": "צפייה ב-{name}",
+        "audio": "שמע",
+        "bpm": "{bpm} BPM",
+        "cachedTitle": "הקובץ הורד למכשיר וזמין גם במצב לא מקוון",
+        "cached": "במכשיר",
+        "lastUsedTitle": "שימוש אחרון: {date}",
+        "usageBadge": "אחרון {date} · {uses}×",
+        "usageBadgeNoDate": "{uses}×",
+        "digitizing": "בהמרה...",
+        "addToSetlist": "הוספה לרשימת שירים...",
+        "openFolder": "פתיחת תיקייה",
+        "play": "ניגון",
+        "selectView": "בחירה / צפייה",
+        "digitize": "המרה דיגיטלית (AI)",
+        "rename": "שינוי שם",
+        "archive": "העברה לארכיון"
+    },
+    "selection": {
+        "selectedCount_one": "קובץ אחד נבחר",
+        "selectedCount_other": "{count} קבצים נבחרו",
+        "selectAll": "בחירת הכול",
+        "clear": "ניקוי",
+        "copyNames": "העתקת שמות",
+        "copiedNames_one": "שם קובץ אחד הועתק",
+        "copiedNames_other": "{count} שמות קבצים הועתקו",
+        "addToSetlist_one": "הוספה לרשימת שירים",
+        "addToSetlist_other": "הוספת {count} לרשימה"
+    },
+    "actions": {
+        "digitizingToast": "המרת ״{name}״ בתהליך... זה עשוי להימשך כ-20 שניות",
+        "digitizeTimeout": "ה-AI התעכב יותר מדי. ייתכן שהקובץ מורכב או גדול מדי.",
+        "digitizationFailed": "ההמרה הדיגיטלית נכשלה",
+        "serverError": "שגיאת שרת ({status}): {detail}...",
+        "savingMusicXml": "שמירת קובץ MusicXML...",
+        "saveXmlFailed": "שמירת ה-XML נכשלה",
+        "savedMusicXml": "נשמר! קובץ ה-MusicXML נמצא עכשיו בספרייה.",
+        "digitizeFailed": "ההמרה נכשלה",
+        "archiveConfirm": "להעביר את ״{name}״ לארכיון? הקובץ יוסתר מהספרייה הראשית.",
+        "archiving": "העברה לארכיון...",
+        "archived": "קובץ התווים הועבר לארכיון",
+        "archiveFailed": "העברת קובץ התווים לארכיון נכשלה",
+        "renamePrompt": "שם חדש לקובץ התווים:",
+        "renaming": "שינוי השם...",
+        "renamed": "השם שונה",
+        "renameFailed": "שינוי השם נכשל"
+    },
+    "addSheet": {
+        "title": "הוספה לרשימת שירים",
+        "titleMany_one": "הוספת שיר אחד לרשימה",
+        "titleMany_other": "הוספת {count} שירים לרשימה",
+        "description": "יש לבחור רשימת שירים שאליה יתווספו השירים שנבחרו",
+        "searchPlaceholder": "חיפוש רשימות שירים...",
+        "searchLabel": "חיפוש רשימות שירים",
+        "createLabel": "יצירת רשימת שירים חדשה",
+        "newNamePlaceholder": "שם הרשימה החדשה (למשל: קבלת שבת)",
+        "newNameLabel": "שם רשימת השירים החדשה",
+        "create": "יצירה",
+        "noMatch": "אין רשימות שירים שתואמות ל-״{query}״",
+        "noEditable": "לא נמצאו רשימות שירים שאפשר לערוך",
+        "songCount_one": "שיר אחד",
+        "songCount_other": "{count} שירים"
+    },
+    "overlay": {
+        "close": "סגירת החיפוש",
+        "replacePlaceholder": "חיפוש שיר חלופי...",
+        "replaceLabel": "חיפוש שיר חלופי",
+        "addPlaceholder": "חיפוש שירים להוספה...",
+        "addLabel": "חיפוש שירים להוספה",
+        "collectionGroup": "אוסף בספרייה",
+        "noResults": "לא נמצאו שירים עבור ״{query}״",
+        "empty": "אין עדיין שירים בספרייה",
+        "keyLabel": "סולם: {key}",
+        "added": "נוסף",
+        "addToSetlist": "הוספה לרשימת שירים..."
+    }
+}

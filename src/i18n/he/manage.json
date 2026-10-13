@@ -1,0 +1,15 @@
+{
+    "back": "חזרה",
+    "title": "ניהול",
+    "subtitle": "ניהול הלהקה, הספרייה ומערכת הסאונד",
+    "tabPeople": "אנשים",
+    "tabLibrary": "ספרייה",
+    "tabSound": "סאונד",
+    "tabAudit": "ביקורת",
+    "sectionPeople": "אנשים",
+    "sectionLibrary": "ספרייה",
+    "sectionSound": "מערכת סאונד",
+    "sectionAudit": "ביקורת גישה",
+    "libraryToolsTitle": "כלי ספרייה",
+    "libraryToolsHint": "סריקת תווים כפולים או בדיקת קובצי PDF פגומים."
+}
