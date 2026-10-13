@@ -18,6 +18,7 @@ import { SongNavigation } from "./SongNavigation"
 import { QuickMonitorPanel } from "@/components/monitor/QuickMonitorPanel"
 import { useMonitorAccess } from "@/hooks/use-monitor-access"
 import { useMonitorConnection } from "@/hooks/use-monitor-connection"
+import { useFeature } from "@/lib/org/use-feature"
 import { cn } from "@/lib/utils"
 
 /** Wake-lock controls threaded from the parent Perform surface so the
@@ -76,6 +77,8 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint, onPrintC
     const transposeDisabledReason =
         "Transposing isn't available for image charts. Re-upload as a PDF or MusicXML to change keys."
     const { hasAccess: hasMonitorAccess } = useMonitorAccess()
+    // Multi-tenant phase 6: the monitor button is the mixer's (crc only).
+    const mixerOn = useFeature("mixer")
     const { isBandLeader, isAdmin, isMusician } = useAuth()
     const params = useParams()
     const router = useRouter()
@@ -84,7 +87,7 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint, onPrintC
 
     // Establish WebSocket connection immediately so the bridge is
     // ready *before* the user opens the Audio popover (zero latency).
-    useMonitorConnection()
+    useMonitorConnection({ enabled: mixerOn })
 
     // Track which popovers are open to keep bars visible
     const [openPopovers, setOpenPopovers] = useState<Set<string>>(new Set())
@@ -405,7 +408,7 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint, onPrintC
                     {zoomControls(true)}
                     <MetronomeControl />
                     {transposerPopover(transposerOpenMobile, setTransposerOpenMobile, 'transposer', true, 'top')}
-                    {monitorPopover('tools', monitorOpenMobile, setMonitorOpenMobile, true)}
+                    {mixerOn && monitorPopover('tools', monitorOpenMobile, setMonitorOpenMobile, true)}
                     {/* C10I1-003: in-chart "Keep screen on" — reachable on the
                         iPad-portrait two-row toolbar (the header toggle is
                         z-stacked behind this overlay on a deep-linked entry). */}
@@ -534,7 +537,7 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint, onPrintC
                     )}
 
                     {/* Monitor Mix popover */}
-                    {monitorPopover('tools-desktop', monitorOpenDesktop, setMonitorOpenDesktop, false)}
+                    {mixerOn && monitorPopover('tools-desktop', monitorOpenDesktop, setMonitorOpenDesktop, false)}
 
                     <div className="w-px h-8 bg-border/50" />
 

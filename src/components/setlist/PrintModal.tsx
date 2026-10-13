@@ -14,6 +14,7 @@ import { TrackPrintOptionsList, TrackTranspose } from "./TrackPrintOptionsList"
 import { PrintModeSelector, PrintMode } from "./PrintModeSelector"
 import { PrintStats } from "./PrintStats"
 import { logger } from "@/lib/logger"
+import { useFeature } from "@/lib/org/use-feature"
 import { toast } from "sonner"
 import {
     generatePdfBlob,
@@ -75,6 +76,8 @@ interface PrintModalProps {
 
 export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMusicians, eventDate, rabbi, bookTitle }: PrintModalProps) {
     const { user, profile } = useAuth()
+    // Multi-tenant phase 6: emailing packet links to the band is notifyBand.
+    const notifyBandOn = useFeature("notifyBand")
     const [title, setTitle] = useState(setlistName)
     const [date, setDate] = useState(() => {
         const d = eventDate ? new Date(eventDate) : new Date()
@@ -666,7 +669,7 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
                                     {printMode === "select-musicians" && selectedUids.length > 1 ? "Download ZIP" : "Download PDF"}
                                 </Button>
                             </div>
-                            {setlistId && isSignedIn && (
+                            {setlistId && isSignedIn && notifyBandOn && (
                                 <Button
                                     variant="outline"
                                     className="w-full gap-2 text-muted-foreground"

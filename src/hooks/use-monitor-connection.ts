@@ -197,9 +197,12 @@ function registerTeardownListeners(): void {
  *
  * Returns the client for sending commands.
  */
-export function useMonitorConnection(): { client: FirestoreMonitorClient | null } {
+export function useMonitorConnection(opts?: { enabled?: boolean }): { client: FirestoreMonitorClient | null } {
     const { user } = useAuth()
-    const userUid = user?.uid ?? null
+    // Multi-tenant phase 6: a tenant without the mixer never opens the
+    // connection (the mixer data is CRC's; other tenants are refused it).
+    const enabled = opts?.enabled ?? true
+    const userUid = enabled ? (user?.uid ?? null) : null
 
     // Track previous uid to avoid effect churn during transient auth nulls.
     // Firebase Auth can briefly report null during token refresh on iPad —

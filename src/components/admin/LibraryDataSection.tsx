@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { apiFetch } from "@/lib/api-client"
 import { toast } from "sonner"
 import { formatDistanceToNow } from "date-fns"
+import { useFeature } from "@/lib/org/use-feature"
 
 interface ArchivedFile {
     id: string
@@ -42,6 +43,9 @@ export function LibraryDataSection() {
     const [archivedExpanded, setArchivedExpanded] = useState(false)
     const [archivedLoading, setArchivedLoading] = useState(false)
     const [restoringId, setRestoringId] = useState<string | null>(null)
+    // Multi-tenant phase 6: "Sync Now" pulls the Drive folder into the
+    // library, the browser's only Drive entry point: it follows driveInbox.
+    const driveOn = useFeature("driveInbox")
 
     const loadArchived = useCallback(async () => {
         setArchivedLoading(true)
@@ -156,7 +160,7 @@ export function LibraryDataSection() {
                     </div>
 
                     {/* Sync Now Card */}
-                    <LibrarySyncCard />
+                    {driveOn && <LibrarySyncCard />}
                 </div>
             )}
 

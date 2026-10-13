@@ -7,8 +7,8 @@ import { cn } from "@/lib/utils"
 import { useMonitorAccess } from "@/hooks/use-monitor-access"
 import { useMonitorConnection } from "@/hooks/use-monitor-connection"
 import { useAuth } from "@/lib/auth-context"
-import { useCongregation } from "@/lib/congregation-store"
 import { useOrg } from "@/lib/org/org-context"
+import { useFeature } from "@/lib/org/use-feature"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { QuickMonitorPanel } from "@/components/monitor/QuickMonitorPanel"
 import { Input } from "@/components/ui/input"
@@ -31,17 +31,20 @@ export function MobileTabBar(props: AppNavigationProps) {
         serverIsAdmin: props.serverIsAdmin,
         serverIsSoundEngineer: props.serverIsSoundEngineer
     })
-    const congregation = useCongregation()
+    // Multi-tenant phase 6: the mixer (crc only) and Perform are tenant flags.
+    const mixerOn = useFeature("mixer")
+    const performOn = useFeature("perform")
     const [keyboardOpen, setKeyboardOpen] = useState(false)
     const [monitorOpen, setMonitorOpen] = useState(false)
     const [searchOpen, setSearchOpen] = useState(false)
     const [searchQuery, setSearchQuery] = useState("")
     const inputRef = useRef<HTMLInputElement>(null)
 
-    const showMonitor = hasMonitorAccess && congregation.features.monitor
+    const showMonitor = mixerOn && hasMonitorAccess
 
     // Establish monitor connection early so QuickMonitorPanel has data
-    useMonitorConnection()
+    // (only where the mixer exists).
+    useMonitorConnection({ enabled: mixerOn })
 
     // Hide when keyboard is open
     useEffect(() => {
@@ -105,6 +108,12 @@ export function MobileTabBar(props: AppNavigationProps) {
 
     // --- Setlist navigation ---
     const handleSetlistTap = useCallback(async () => {
+        // Without Perform the setlist button opens the setlists page.
+        if (!performOn) {
+            router.push("/setlists")
+            return
+        }
+
         // UNAUTH-004: unauth visitors skip the authed-only Firestore
         // lookup + the /setlists fallback (both bounce to /login). They
         // land on the public /perform discovery surface instead.
@@ -143,7 +152,7 @@ export function MobileTabBar(props: AppNavigationProps) {
 
         // Priority 3: fallback
         router.push("/setlists")
-    }, [router, isAuthed, org])
+    }, [router, isAuthed, org, performOn])
 
     if (isPdfView) return null
 
