@@ -5,7 +5,7 @@ import { SESSION_ROLE_COOKIE, verifyRoleCookie } from '@/lib/session-role'
 import { httpError } from '@/lib/http/error-envelope'
 import { resolveRequestOrg } from '@/lib/org/host-resolution'
 import { getHostList } from '@/lib/org/host-list-client'
-import { noSuchSiteResponse } from '@/lib/org/no-such-site'
+import { noSuchSiteResponse, startingUpResponse } from '@/lib/org/no-such-site'
 import { tenantRoleFromClaims } from '@/lib/org/membership-types'
 
 // Base64Url decode for Edge Runtime without Buffer
@@ -143,7 +143,9 @@ export async function proxy(request: NextRequest) {
         () => getHostList(request.nextUrl.origin),
     )
     if (resolution.orgId === null) {
-        return noSuchSiteResponse(pathname, request.method)
+        return resolution.via === 'list-unavailable'
+            ? startingUpResponse(pathname, request.method)
+            : noSuchSiteResponse(pathname, request.method)
     }
     const orgId = resolution.orgId
 

@@ -39,6 +39,35 @@ const COMMON_HEADERS: Record<string, string> = {
     "X-Robots-Tag": "noindex",
 }
 
+export const STARTING_UP_TITLE = "Just a moment"
+export const STARTING_UP_LINE = "This site is starting up. Please try again in a moment."
+
+const STARTING_UP_HTML = NO_SUCH_SITE_HTML.split(NO_SUCH_SITE_TITLE)
+    .join(STARTING_UP_TITLE)
+    .split(NO_SUCH_SITE_LINE)
+    .join(STARTING_UP_LINE)
+
+/**
+ * The address list could not be read, so we cannot say whether this host is a
+ * tenant. 503 with `Retry-After`, never the 404 — a listed tenant served "No
+ * such site" because of a cold cache is a live site going dark, and a 404
+ * invites caches and crawlers to believe it.
+ */
+export function startingUpResponse(pathname: string, method = "GET"): NextResponse {
+    const headers = { ...COMMON_HEADERS, "Retry-After": "2" }
+    if (pathname === "/api" || pathname.startsWith("/api/")) {
+        return httpError(503, "address_list_unavailable", STARTING_UP_LINE, { errorCode: 503 }, undefined, headers)
+    }
+    return new NextResponse(method === "HEAD" ? null : STARTING_UP_HTML, {
+        status: 503,
+        headers: {
+            ...headers,
+            "Content-Type": "text/html; charset=utf-8",
+            "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+        },
+    })
+}
+
 export function noSuchSiteResponse(pathname: string, method = "GET"): NextResponse {
     if (pathname === "/api" || pathname.startsWith("/api/")) {
         return httpError(404, "no_such_site", NO_SUCH_SITE_LINE, { errorCode: 404 }, undefined, COMMON_HEADERS)

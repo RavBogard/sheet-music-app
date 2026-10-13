@@ -11,6 +11,15 @@ import { ORG_HOSTS_PATH, sanitizeHostMap, type HostMap } from "@/lib/org/host-re
  */
 export const HOST_LIST_TTL_MS = 60_000
 export const FETCH_TIMEOUT_MS = 1_500
+/**
+ * The budget for the first fetch on a cold instance, which has no last good
+ * list to fall back on. The short budget above exists so a request never
+ * waits on a refresh we don't need — but when there is nothing cached, giving
+ * up early does not serve something stale, it serves "No such site" to a real
+ * tenant. A cold instance waits instead. (Found in phase 8: every fresh
+ * deployment served "No such site" on Nava's address until an instance warmed.)
+ */
+export const COLD_FETCH_TIMEOUT_MS = 6_000
 export const RETRY_AFTER_FAILURE_MS = 10_000
 
 interface Memo {
@@ -22,9 +31,9 @@ interface Memo {
 
 const memo: Memo = { hosts: null, fetchedAt: 0, failedAt: 0, inflight: null }
 
-async function fetchList(origin: string, fetchImpl: typeof fetch): Promise<HostMap | null> {
+async function fetchList(origin: string, fetchImpl: typeof fetch, timeoutMs: number): Promise<HostMap | null> {
     const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
+    const timer = setTimeout(() => controller.abort(), timeoutMs)
     try {
         const res = await fetchImpl(`${origin}${ORG_HOSTS_PATH}`, {
             signal: controller.signal,
@@ -49,7 +58,8 @@ export async function getHostList(
     if (memo.failedAt && now - memo.failedAt < RETRY_AFTER_FAILURE_MS) return memo.hosts
     if (!memo.inflight) {
         const fetchImpl = opts.fetchImpl ?? fetch
-        memo.inflight = fetchList(origin, fetchImpl)
+        const timeoutMs = memo.hosts ? FETCH_TIMEOUT_MS : COLD_FETCH_TIMEOUT_MS
+        memo.inflight = fetchList(origin, fetchImpl, timeoutMs)
             .then((hosts) => {
                 memo.hosts = hosts
                 memo.fetchedAt = Date.now()

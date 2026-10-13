@@ -12,9 +12,9 @@ vi.mock("@/lib/logger", () => ({
 }))
 
 import { proxy } from "@/proxy"
-import { getHostList, resetHostListMemo, HOST_LIST_TTL_MS, RETRY_AFTER_FAILURE_MS } from "@/lib/org/host-list-client"
+import { getHostList, resetHostListMemo, HOST_LIST_TTL_MS, RETRY_AFTER_FAILURE_MS, COLD_FETCH_TIMEOUT_MS } from "@/lib/org/host-list-client"
 import { resolveRequestOrg, isServerToServerPath, isOwnVercelHost } from "@/lib/org/host-resolution"
-import { NO_SUCH_SITE_HTML } from "@/lib/org/no-such-site"
+import { NO_SUCH_SITE_HTML, startingUpResponse, STARTING_UP_LINE } from "@/lib/org/no-such-site"
 
 const LIST = {
     "centralreform.live": "crc",
@@ -175,10 +175,16 @@ describe("production", () => {
         expect(fetchMock).not.toHaveBeenCalled()
     })
 
-    it("list fetch failure with no list yet → no such site, not CRC", async () => {
+    it("list fetch failure with no list yet → 503, never CRC and never 404", async () => {
+        // Was 404 until phase 8. A 404 asserts the address does not exist,
+        // which we cannot know when the lookup itself failed — and the one
+        // tenant that needs the list (Nava) was being told it did not exist
+        // on every cold instance. Falling back to crc stays forbidden.
         listStatus = 500
         const res = await proxy(req("testshul.vercel.app", "/perform"))
-        expect(res.status).toBe(404)
+        expect(res.status).toBe(503)
+        expect(res.headers.get("Retry-After")).toBe("2")
+        expect(orgOf(res)).toBeNull()
     })
 
     it("list fetch failure keeps the last good list", async () => {
@@ -191,9 +197,16 @@ describe("production", () => {
         expect(fetchMock).toHaveBeenCalledTimes(2)
     })
 
-    it("a malformed list body counts as a failure", async () => {
+    it("a malformed list body counts as a failure (503, not 404)", async () => {
         listBody = { nope: true }
-        expect((await proxy(req("testshul.vercel.app", "/perform"))).status).toBe(404)
+        expect((await proxy(req("testshul.vercel.app", "/perform"))).status).toBe(503)
+    })
+
+    it("an address that is genuinely absent from a readable list still gets 404", async () => {
+        // The 404 must survive the change above: an unknown address is still
+        // "no such site", only an unreadable list is not.
+        const res = await proxy(req("nobody.example.org", "/perform"))
+        expect(res.status).toBe(404)
     })
 })
 
@@ -246,6 +259,37 @@ describe("resolveRequestOrg (pure)", () => {
         expect(r.orgId).toBeNull()
     })
 
+    it("an unreadable list is 'list-unavailable', not 'no-such-site'", async () => {
+        // A listed tenant must never be told it does not exist because the
+        // lookup failed. Phase 8: every fresh deployment served "No such site"
+        // on Nava's address until an instance warmed up.
+        const r = await resolveRequestOrg(
+            { host: "testshul.vercel.app", pathname: "/perform", vercelEnv: "production" },
+            async () => null,
+        )
+        expect(r).toEqual({ orgId: null, via: "list-unavailable" })
+    })
+
+    it("a throwing list getter is 'list-unavailable' too", async () => {
+        const r = await resolveRequestOrg({ host: "nobody.org", pathname: "/", vercelEnv: "production" }, async () => {
+            throw new Error("boom")
+        })
+        expect(r).toEqual({ orgId: null, via: "list-unavailable" })
+    })
+
+    it("a readable list that simply lacks the host stays 'no-such-site'", async () => {
+        const r = await resolveRequestOrg({ host: "nobody.org", pathname: "/", vercelEnv: "production" }, list)
+        expect(r).toEqual({ orgId: null, via: "no-such-site" })
+    })
+
+    it("never falls back to crc when the list is unreadable", async () => {
+        const r = await resolveRequestOrg(
+            { host: "testshul.vercel.app", pathname: "/library", vercelEnv: "production" },
+            async () => null,
+        )
+        expect(r.orgId).toBeNull()
+    })
+
     it("server-to-server paths", () => {
         expect(isServerToServerPath("/api/cron/backup")).toBe(true)
         expect(isServerToServerPath("/api/webhooks/resend")).toBe(true)
@@ -288,7 +332,9 @@ describe("host list client", () => {
         expect(await getHostList("https://a.example")).toEqual(LIST)
     })
 
-    it("never waits more than ~1.5 s for a hung fetch", async () => {
+    it("waits the cold budget for a hung fetch when nothing is cached", async () => {
+        // A cold instance has no stale list to serve, so giving up at 1.5 s
+        // bought nothing and cost a live tenant its site (phase 8).
         const hung = vi.fn(
             (_u: string | URL, init?: RequestInit) =>
                 new Promise<Response>((_, reject) => {
@@ -299,7 +345,27 @@ describe("host list client", () => {
         const result = await getHostList("https://a.example", { fetchImpl: hung as unknown as typeof fetch })
         const waited = Date.now() - started
         expect(result).toBeNull()
-        expect(waited).toBeGreaterThanOrEqual(1400)
+        expect(waited).toBeGreaterThanOrEqual(COLD_FETCH_TIMEOUT_MS - 100)
+        expect(waited).toBeLessThan(COLD_FETCH_TIMEOUT_MS + 1500)
+    })
+
+    it("still caps the wait at ~1.5 s once a list is cached", async () => {
+        // The short budget keeps its original job: a refresh never makes a
+        // request wait when we already have something good to serve.
+        await getHostList("https://a.example")
+        vi.useFakeTimers({ toFake: ["Date"] })
+        vi.setSystemTime(new Date(Date.now() + HOST_LIST_TTL_MS + 1))
+        vi.useRealTimers()
+        const hung = vi.fn(
+            (_u: string | URL, init?: RequestInit) =>
+                new Promise<Response>((_, reject) => {
+                    init?.signal?.addEventListener("abort", () => reject(new Error("aborted")))
+                }),
+        )
+        const started = Date.now()
+        const result = await getHostList("https://a.example", { fetchImpl: hung as unknown as typeof fetch })
+        const waited = Date.now() - started
+        expect(result).toEqual(LIST)
         expect(waited).toBeLessThan(2500)
     })
 })
@@ -315,5 +381,27 @@ describe("multi-tenant phase 4: ?viewAs switches the read-only view cookie", () 
         expect(set.toLowerCase()).not.toContain("domain=")
         const off = await proxy(req("www.centralreform.live", "/?viewAs=0"))
         expect(off.headers.get("set-cookie") ?? "").toMatch(/__view_as=;|__view_as=$|Max-Age=0/i)
+    })
+})
+
+describe("startingUpResponse", () => {
+    it("is a 503 with Retry-After, not a 404", async () => {
+        const res = startingUpResponse("/perform")
+        expect(res.status).toBe(503)
+        expect(res.headers.get("Retry-After")).toBe("2")
+        expect(res.headers.get("Cache-Control")).toBe("no-store")
+        const body = await res.text()
+        expect(body).toContain(STARTING_UP_LINE)
+        expect(body).not.toContain("There is no site at this address.")
+    })
+
+    it("api paths get a json envelope", async () => {
+        const res = startingUpResponse("/api/setlists")
+        expect(res.status).toBe(503)
+        expect(await res.json()).toMatchObject({ error: { machine_code: "address_list_unavailable" } })
+    })
+
+    it("HEAD gets no body", async () => {
+        expect(await startingUpResponse("/perform", "HEAD").text()).toBe("")
     })
 })

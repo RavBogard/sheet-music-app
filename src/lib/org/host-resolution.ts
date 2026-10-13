@@ -24,6 +24,13 @@ export type HostMap = Record<string, OrgId>
 export type OrgResolution =
     | { orgId: OrgId; via: "compiled" | "own-vercel" | "list" | "localhost" | "non-production" | "server-to-server" }
     | { orgId: null; via: "no-such-site" }
+    /**
+     * The address list could not be read at all, so this host is unresolved,
+     * not absent. Saying "no such site" here would be asserting from
+     * ignorance — and on a tenant whose address IS in the list, that is a
+     * live site going dark. The caller answers 503 and asks for a retry.
+     */
+    | { orgId: null; via: "list-unavailable" }
 
 /** The address-list endpoint (outside /api/platform; lane 2 owns that tree). */
 export const ORG_HOSTS_PATH = "/api/org-hosts"
@@ -174,6 +181,7 @@ export async function resolveRequestOrg(
     if (isLocalHost(host)) return { orgId: DEFAULT_ORG_ID, via: "localhost" }
 
     // (c) the address list — never for the list endpoint itself (recursion)
+    let listUnavailable = false
     if (host && input.pathname !== ORG_HOSTS_PATH) {
         let list: HostMap | null = null
         try {
@@ -181,6 +189,7 @@ export async function resolveRequestOrg(
         } catch {
             list = null
         }
+        if (!list) listUnavailable = true
         const hit = list?.[host]
         if (hit && isValidOrgId(hit)) return { orgId: hit, via: "list" }
     }
@@ -190,5 +199,9 @@ export async function resolveRequestOrg(
 
     // (e) production, unknown or suspended address
     if (isServerToServerPath(input.pathname)) return { orgId: DEFAULT_ORG_ID, via: "server-to-server" }
+    // The list never arrived, so we don't know this host is unknown — only
+    // that we couldn't look it up. A tenant whose address IS listed would
+    // otherwise be told it does not exist.
+    if (listUnavailable) return { orgId: null, via: "list-unavailable" }
     return { orgId: null, via: "no-such-site" }
 }
