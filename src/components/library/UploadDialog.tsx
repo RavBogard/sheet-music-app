@@ -13,6 +13,7 @@ import { toast } from "sonner"
 import { useOrg } from "@/lib/org/org-context"
 import { coreSectionLabel } from "@/lib/songs/picker-scope"
 import { useT, useFormat } from "@/i18n/client"
+import { interpolateNodes } from "@/components/i18n/interpolate-nodes"
 
 const ACCEPTED_TYPES = ".pdf,.xml,.musicxml,.mxl,.mscz,.mscx,.txt"
 const MAX_SIZE_MB = 25
@@ -228,7 +229,7 @@ export function UploadDialog({ onUploadComplete, setlists = [], onAddToSetlist }
                             >
                                 <FileUp className="h-8 w-8 text-zinc-500 mx-auto mb-3" />
                                 <p className="text-sm text-zinc-400 mb-1">
-                                    {t("libraryUpload.dropPrompt")}
+                                    {interpolateNodes(t("libraryUpload.dropPrompt"), { browse: <span className="text-brand">{t("libraryUpload.browse")}</span> })}
                                 </p>
                                 <p className="text-xs text-zinc-600">{t("libraryUpload.acceptedHint", { max: MAX_SIZE_MB })}</p>
                                 <input

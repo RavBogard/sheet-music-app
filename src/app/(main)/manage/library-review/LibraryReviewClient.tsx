@@ -23,7 +23,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
-import { interpolateNodes } from "@/components/admin/interpolate-nodes"
+import { interpolateNodes } from "@/components/i18n/interpolate-nodes"
 import { Check, ChevronDown, ChevronRight, Loader2, RefreshCw, Sparkles, X } from "lucide-react"
 import { toast } from "sonner"
 

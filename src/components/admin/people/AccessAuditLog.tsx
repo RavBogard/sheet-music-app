@@ -11,7 +11,7 @@ import { SectionErrorBoundary } from "@/components/ui/SectionErrorBoundary"
 import { useOrg } from "@/lib/org/org-context"
 import { useFormat, useT } from "@/i18n/client"
 import { DirectionalIcon } from "@/components/i18n/DirectionalIcon"
-import { interpolateNodes } from "@/components/admin/interpolate-nodes"
+import { interpolateNodes } from "@/components/i18n/interpolate-nodes"
 
 interface AuditLog {
     id: string

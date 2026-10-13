@@ -45,6 +45,7 @@ src/i18n/notes/<ns>.json   translator notes, one per key
 - Each lane owns its namespaces; never add keys to another lane's file. Shared words (Save, Cancel, Close, Delete, Loading…) go in `common` — **only the lead adds to `common`**; until then, put the word in your own namespace (duplicates are fine, the translators see the notes).
 - File names: lower camelCase or kebab (`setlistGrid`, `perform`, `admin-users`). The `org` namespace has no `en/org.json` (its English is `STRING_BASE`).
 - Values are strings; nested objects are allowed and become dotted keys (`{"dialog": {"title": …}}` → `ns.dialog.title`). Keys starting with `$` are ignored (use `"$comment"` for file notes).
+- **Notes files are flat**, even when the English file nests: one entry per dotted key below the namespace (`{"dialog.title": {"where": …}}`). The catalogue test looks notes up by the dotted key only (corrected at the lane merge; all three lanes found this).
 
 ### Key naming
 

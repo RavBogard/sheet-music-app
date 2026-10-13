@@ -19,7 +19,23 @@ import { STRING_BASE } from "@/lib/org/strings-base"
  */
 
 /** Keys never sent to the browser: server-only surfaces (AI prompt, feed ids, email/SMS, SEO). */
-export const SERVER_ONLY_KEY_PREFIXES = ["org.ai.", "org.feed.", "org.email.", "org.sms.", "org.seo."] as const
+/**
+ * Keys never sent to the browser. Phase 7 adds the legal pages (server-rendered,
+ * ~32 KB) and API route messages (built in route handlers).
+ */
+export const SERVER_ONLY_KEY_PREFIXES = [
+    "org.ai.",
+    "org.feed.",
+    "org.email.",
+    "org.sms.",
+    "org.seo.",
+    "legal.",
+    "privacy.",
+    "terms.",
+    "smsConsent.",
+    "accessibility.",
+    "api-",
+] as const
 
 export interface Catalogues {
     en: Messages

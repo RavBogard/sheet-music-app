@@ -1,6 +1,7 @@
 "use client"
 
 import { Loader2 } from "lucide-react"
+import { interpolateNodes } from "@/components/i18n/interpolate-nodes"
 import {
     AlertDialog,
     AlertDialogAction,
@@ -96,7 +97,7 @@ export function TransferSetlistDialog({ open, onClose, setlistName, email, onEma
                 <AlertDialogHeader>
                     <AlertDialogTitle>{t("setlist.transferDialogTitle")}</AlertDialogTitle>
                     <AlertDialogDescription>
-                        {t("setlist.transferDialogBody", { name: setlistName })}{" "}{t("setlist.transferDialogLoseAccess")}
+                        {interpolateNodes(t("setlist.transferDialogBody"), { setlist: <strong>{setlistName}</strong> })}{" "}{t("setlist.transferDialogLoseAccess")}
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <input

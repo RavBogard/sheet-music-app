@@ -1,6 +1,7 @@
 "use client"
 
 import { createContext, useContext, useMemo, type ReactNode } from "react"
+import { DirectionProvider } from "@radix-ui/react-direction"
 import { createTranslator, isPseudo, type Direction, type T, type TenantTokens, type UiLanguage } from "@/i18n/core"
 import { createFormatter, type Formatter } from "@/i18n/format"
 import { tenantTokensOf } from "@/i18n/language"
@@ -64,7 +65,14 @@ export function I18nProvider({ lang, dir, timeZone, messages, overrides, tokens,
         })
         return { lang, dir, isRtl: dir === "rtl", t, fmt: createFormatter({ lang, timeZone: timeZone ?? undefined }) }
     }, [lang, dir, timeZone, messages, overrides, tokens])
-    return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>
+    // Radix menus, selects and scroll areas read direction from their own
+    // context, not from <html dir>: without this, submenus open and arrow keys
+    // move left to right on a Hebrew tenant.
+    return (
+        <I18nContext.Provider value={value}>
+            <DirectionProvider dir={dir}>{children}</DirectionProvider>
+        </I18nContext.Provider>
+    )
 }
 
 /** English fallback when no provider is mounted (tests, isolated renders). */

@@ -21,7 +21,7 @@
     "duplicateDialogQuestion": "Create a personal copy of \"{name}\"?",
     "duplicate": "Duplicate",
     "transferDialogTitle": "Transfer Ownership",
-    "transferDialogBody": "Transferring {name} to another user.",
+    "transferDialogBody": "Transferring {setlist} to another user.",
     "transferDialogLoseAccess": "You will lose access unless they share it back with you.",
     "transferEmailPlaceholder": "New Owner's Email",
     "transferring": "Transferring...",

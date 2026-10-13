@@ -23,7 +23,13 @@
     "dropPrompt": {
         "where": "Library > Upload dialog: drop zone text; the zone can also be clicked to browse for a file",
         "who": "leaders",
-        "maxLength": 60
+        "maxLength": 60,
+        "context": "{browse} is the word 'browse' (key browse), shown in the accent colour"
+    },
+    "browse": {
+        "where": "Library > Upload dialog: the accent-coloured word inside dropPrompt; clicking the zone opens the file picker",
+        "who": "leaders",
+        "maxLength": 15
     },
     "acceptedHint": {
         "where": "Library > Upload dialog: small hint under the drop zone",

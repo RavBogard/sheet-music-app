@@ -92,10 +92,10 @@ describe.each([false, true])("setlist toolbar + dialogs i18n (rtl=%s)", (rtl) =>
 
     it("TransferSetlistDialog, idle and transferring", () => {
         renderPseudo(<TransferSetlistDialog open onClose={noop} setlistName={NAME} email="" onEmailChange={noop} onConfirm={noop} />, { rtl })
-        expectNoUntranslatedText(document.body)
+        expectNoUntranslatedText(document.body, { allow: [NAME] })
         cleanup()
         renderPseudo(<TransferSetlistDialog open onClose={noop} setlistName={NAME} email="x@example.com" onEmailChange={noop} onConfirm={noop} transferring />, { rtl })
-        expectNoUntranslatedText(document.body)
+        expectNoUntranslatedText(document.body, { allow: [NAME] })
     })
 
     it("SetlistDashboard: list view with upcoming, past, placeholder, load-older", () => {
@@ -158,7 +158,10 @@ describe("toolbar + dialogs English output is unchanged", () => {
         cleanup()
 
         render(<TransferSetlistDialog open onClose={noop} setlistName={NAME} email="" onEmailChange={noop} onConfirm={noop} />)
-        expect(screen.getByText(`Transferring ${NAME} to another user. You will lose access unless they share it back with you.`)).toBeDefined()
+        // The setlist name is bold inside the sentence, as before phase 7, so match the paragraph's text.
+        const transferBody = `Transferring ${NAME} to another user. You will lose access unless they share it back with you.`
+        expect(screen.getByText((_, el) => el?.tagName === "P" && el.textContent === transferBody)).toBeDefined()
+        expect(screen.getByText(NAME).tagName).toBe("STRONG")
         expect(screen.getByPlaceholderText("New Owner's Email")).toBeDefined()
         cleanup()
 

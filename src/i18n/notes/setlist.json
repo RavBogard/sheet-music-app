@@ -118,7 +118,7 @@
         "where": "Setlists dashboard: transfer-ownership dialog, first sentence",
         "who": "leaders",
         "maxLength": 80,
-        "context": "{name} is the setlist's name"
+        "context": "{setlist} is the setlist's name, shown in bold"
     },
     "transferDialogLoseAccess": {
         "where": "Setlists dashboard: transfer-ownership dialog, warning sentence",
