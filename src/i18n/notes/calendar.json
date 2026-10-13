@@ -1,0 +1,49 @@
+{
+    "loading": {
+        "where": "Calendar: text under the spinner while the month's data loads",
+        "who": "everyone signed in",
+        "maxLength": 30
+    },
+    "previousMonth": {
+        "where": "Calendar header: screen-reader label of the back arrow",
+        "who": "everyone signed in",
+        "maxLength": 30
+    },
+    "nextMonth": {
+        "where": "Calendar header: screen-reader label of the forward arrow",
+        "who": "everyone signed in",
+        "maxLength": 30
+    },
+    "legendFullyStaffed": {
+        "where": "Calendar legend (planning mode): green dot, the service has enough confirmed musicians",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "legendNeedsAttention": {
+        "where": "Calendar legend (planning mode): amber dot, some musicians unconfirmed or missing",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "legendNoMusicians": {
+        "where": "Calendar legend (planning mode): red dot, nobody scheduled",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "noAssignments": {
+        "where": "Calendar day cell (planning mode): under a setlist when no musician is scheduled",
+        "who": "leaders",
+        "maxLength": 8
+    },
+    "createShabbatMorning": {
+        "where": "Calendar day cell: small button on an empty Saturday that starts a Shabbat-morning setlist",
+        "who": "leaders",
+        "maxLength": 12,
+        "context": "Shabbat = the Jewish sabbath; AM = morning service"
+    },
+    "createFridayEvening": {
+        "where": "Calendar day cell: small button on an empty Friday that starts a Friday-evening setlist",
+        "who": "leaders",
+        "maxLength": 12,
+        "context": "Friday-evening (Shabbat eve) service"
+    }
+}

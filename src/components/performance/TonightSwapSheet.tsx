@@ -32,6 +32,7 @@ import { candidateTitle, swapCandidates } from "@/lib/performance/swap-candidate
 import { commitTonightSwap, fetchMomentFileIds } from "@/lib/performance/tonight-client"
 import type { WithTonight, WritePlan } from "@/lib/performance/tonight"
 import { cn } from "@/lib/utils"
+import { useT } from "@/i18n/client"
 import type { DriveFile, SetlistTrack } from "@/types/models"
 
 /** Read at tap time, inside the handler — never during render. */
@@ -50,6 +51,7 @@ export interface TonightSwapSheetProps {
 }
 
 export function TonightSwapSheet({ open, onOpenChange, setlistId, track, planned, serviceDay }: TonightSwapSheetProps) {
+    const t = useT()
     const { user } = useAuth()
     const org = useOrg()
     const allFiles = useLibraryStore((s) => s.allFiles)
@@ -120,7 +122,9 @@ export function TonightSwapSheet({ open, onOpenChange, setlistId, track, planned
     const finish = (plan: WritePlan) => {
         if (plan.kind === "stale") {
             setMessage(
-                `Another leader just changed this row to ${plan.currentTitle || "another chart"}. Pick again.`,
+                t("perform.tonight.staleChanged", {
+                    chartTitle: plan.currentTitle || t("perform.tonight.anotherChart"),
+                }),
             )
             setBusy(false)
             return
@@ -171,7 +175,7 @@ export function TonightSwapSheet({ open, onOpenChange, setlistId, track, planned
             })
             finish(plan)
         } catch {
-            setMessage("Couldn't swap — check the connection and try again. The plan is still showing.")
+            setMessage(t("perform.tonight.swapFailed"))
             setBusy(false)
         }
     }
@@ -211,8 +215,8 @@ export function TonightSwapSheet({ open, onOpenChange, setlistId, track, planned
                 className="h-[85vh] bg-background border-t border-border p-0 flex flex-col sm:max-w-2xl sm:mx-auto sm:rounded-t-2xl sm:shadow-2xl sm:border-x"
             >
                 <SheetHeader className="p-4 border-b border-border bg-muted/40 sm:rounded-t-2xl">
-                    <SheetTitle className="text-left text-base font-semibold truncate">Swap for tonight</SheetTitle>
-                    <p className="text-xs text-muted-foreground truncate text-left">{planned.title}</p>
+                    <SheetTitle className="text-start text-base font-semibold truncate">{t("perform.tonight.title")}</SheetTitle>
+                    <p className="text-xs text-muted-foreground truncate text-start">{planned.title}</p>
                 </SheetHeader>
 
                 <div className="flex-1 min-h-0 overflow-y-auto">
@@ -222,12 +226,12 @@ export function TonightSwapSheet({ open, onOpenChange, setlistId, track, planned
                         </p>
                     )}
 
-                    <Section label="Planned">
+                    <Section label={t("perform.tonight.planned")}>
                         {planned.fileId ? (
                             <CandidateRow
                                 fileId={planned.fileId}
                                 title={planned.title}
-                                detail={swapped ? "Back to the plan" : "The plan"}
+                                detail={swapped ? t("perform.tonight.backToPlan") : t("perform.tonight.thePlan")}
                                 mimeType={planned.mimeType}
                                 showing={!swapped}
                                 disabled={busy}
@@ -235,38 +239,38 @@ export function TonightSwapSheet({ open, onOpenChange, setlistId, track, planned
                                 onPick={() => pick({ fileId: planned.fileId!, title: planned.title })}
                             />
                         ) : (
-                            <p className="px-4 py-2 text-sm text-muted-foreground">No chart in the plan.</p>
+                            <p className="px-4 py-2 text-sm text-muted-foreground">{t("perform.tonight.noChartInPlan")}</p>
                         )}
                     </Section>
 
                     {sections.moment.length + (sharedSections?.moment.length ?? 0) > 0 && (
-                        <Section label="Same moment">
+                        <Section label={t("perform.tonight.sameMoment")}>
                             {sections.moment.map((f) => row(f, "moment"))}
                             {sharedSections?.moment.map((f) => sharedRow(f, "moment"))}
                         </Section>
                     )}
                     {sections.stem.length + (sharedSections?.stem.length ?? 0) > 0 && (
-                        <Section label="Same title">
+                        <Section label={t("perform.tonight.sameTitle")}>
                             {sections.stem.map((f) => row(f, "stem"))}
                             {sharedSections?.stem.map((f) => sharedRow(f, "stem"))}
                         </Section>
                     )}
 
-                    <Section label="Search">
+                    <Section label={t("perform.tonight.search")}>
                         <div className="relative px-4 pb-2">
                             <Input
                                 value={query}
                                 onChange={(e) => setQuery(e.target.value)}
-                                placeholder="Search this site's library…"
-                                aria-label="Search this site's library"
-                                className="h-11 text-base pr-10 [touch-action:manipulation]"
+                                placeholder={t("perform.tonight.searchPlaceholder")}
+                                aria-label={t("perform.tonight.searchAria")}
+                                className="h-11 text-base pe-10 [touch-action:manipulation]"
                             />
                             {query && (
                                 <button
                                     type="button"
-                                    aria-label="Clear search"
+                                    aria-label={t("perform.tonight.clearSearch")}
                                     onClick={() => setQuery("")}
-                                    className="absolute right-5 top-1/2 -translate-y-1/2 h-9 w-9 flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted"
+                                    className="absolute end-5 top-1/2 -translate-y-1/2 h-9 w-9 flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted"
                                 >
                                     <X className="h-4 w-4" aria-hidden="true" />
                                 </button>
@@ -290,14 +294,14 @@ export function TonightSwapSheet({ open, onOpenChange, setlistId, track, planned
                                         className="min-h-11 rounded-full border border-dashed border-border px-4 text-sm text-muted-foreground [touch-action:manipulation] aria-pressed:border-solid aria-pressed:border-brand/30 aria-pressed:bg-brand/15 aria-pressed:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                                     >
                                         {c.label}
-                                        <span className="ml-1.5 text-xs text-muted-foreground">{SHARED_COPY.fromOwner(c.owner)}</span>
+                                        <span className="ms-1.5 text-xs text-muted-foreground">{SHARED_COPY.fromOwner(c.owner)}</span>
                                     </button>
                                 ))}
                             </div>
                         )}
                         {query.trim() && sections.search.length + (sharedSections?.search.length ?? 0) === 0 && (
                             <p className="px-4 py-2 text-sm text-muted-foreground">
-                                {allFiles.length === 0 ? "The library is still loading." : "No charts match."}
+                                {allFiles.length === 0 ? t("perform.tonight.libraryLoading") : t("perform.tonight.noMatches")}
                             </p>
                         )}
                         {sections.search.map((f) => row(f, "search"))}
@@ -314,12 +318,12 @@ export function TonightSwapSheet({ open, onOpenChange, setlistId, track, planned
                         className="h-5 w-5"
                     />
                     <span>
-                        Also save to setlist
+                        {t("perform.tonight.alsoSave")}
                         <span className="block text-xs text-muted-foreground">
-                            Off: tonight only; the saved setlist stays as planned.
+                            {t("perform.tonight.alsoSaveHint")}
                         </span>
                     </span>
-                    {busy && <Loader2 className="ml-auto h-4 w-4 animate-spin" aria-hidden="true" />}
+                    {busy && <Loader2 className="ms-auto h-4 w-4 animate-spin" aria-hidden="true" />}
                 </label>
             </SheetContent>
         </Sheet>
@@ -357,6 +361,7 @@ function CandidateRow({
     /** Owner tenant of a shared chart (data hook for tests and probes). */
     sharedFrom?: string
 }) {
+    const t = useT()
     return (
         <li className="flex items-center gap-3 px-4 border-b border-border/40 min-h-14">
             <ChartThumb fileId={fileId} title={title} mimeType={mimeType} />
@@ -366,16 +371,16 @@ function CandidateRow({
                 data-file-id={fileId}
                 data-shared-from={sharedFrom}
                 disabled={disabled || showing}
-                aria-label={showing ? `${title}, showing now` : `Swap to ${title}`}
+                aria-label={showing ? t("perform.tonight.showingNowAria", { songName: title }) : t("perform.tonight.swapToAria", { songName: title })}
                 onClick={onPick}
                 className={cn(
-                    "flex-1 min-w-0 min-h-14 py-2 text-left [touch-action:manipulation]",
+                    "flex-1 min-w-0 min-h-14 py-2 text-start [touch-action:manipulation]",
                     "disabled:opacity-60 disabled:pointer-events-none",
                 )}
             >
                 <span className="block text-sm font-semibold truncate">{title}</span>
                 <span className="block text-[11px] text-muted-foreground truncate">
-                    {showing ? "Showing now" : detail}
+                    {showing ? t("perform.tonight.showingNow") : detail}
                 </span>
             </button>
         </li>

@@ -8,6 +8,7 @@ import { type UpcomingSetlistWithPrep } from "@/hooks/use-upcoming-prep"
 import { Clock, ChevronRight, CheckCircle2, Circle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { useT, useFormat, useI18n } from "@/i18n/client"
 
 /**
  * Upcoming timeline with day groupings and inline progress bars.
@@ -20,9 +21,12 @@ export function UpcomingTimeline({
     items: UpcomingSetlistWithPrep[]
     onSelect?: (s: Setlist) => void
 }) {
+    const t = useT()
+    const fmt = useFormat()
+    const { isRtl } = useI18n()
     // Group by day
     const grouped = useMemo(() => {
-        const groups: { label: string; key: string; items: UpcomingSetlistWithPrep[] }[] = []
+        const groups: { label: string; key: string; isToday: boolean; items: UpcomingSetlistWithPrep[] }[] = []
         const seen = new Map<string, UpcomingSetlistWithPrep[]>()
 
         for (const item of items) {
@@ -36,20 +40,21 @@ export function UpcomingTimeline({
             const diff = Math.ceil((d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
 
             let label: string
-            if (diff <= 0) label = 'Today'
-            else if (diff === 1) label = 'Tomorrow'
-            else label = eventDate.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }).toUpperCase()
+            if (diff <= 0) label = t("dashboard.urgencyToday")
+            else if (diff === 1) label = t("dashboard.urgencyTomorrow")
+            // Day label renders through CSS `uppercase` (no toUpperCase(): it does nothing for Hebrew).
+            else label = fmt.date(eventDate, { weekday: 'short', month: 'short', day: 'numeric' })
 
             const key = d.toISOString().split('T')[0]
             if (!seen.has(key)) {
                 seen.set(key, [])
-                groups.push({ label, key, items: seen.get(key)! })
+                groups.push({ label, key, isToday: diff <= 0, items: seen.get(key)! })
             }
             seen.get(key)!.push(item)
         }
 
         return groups
-    }, [items])
+    }, [items, t, fmt])
 
     const [expanded, setExpanded] = useState<string | null>(null)
 
@@ -59,14 +64,14 @@ export function UpcomingTimeline({
         <div className="flex flex-col gap-4">
             <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
                 <Clock className="w-3.5 h-3.5 text-brand" />
-                Coming Up
+                {t("dashboard.comingUp")}
             </h2>
 
             <div className="flex flex-col gap-3">
                 {grouped.map((group) => (
                     <div key={group.key}>
                         {/* Day label */}
-                        <div className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest mb-1.5 pl-1">
+                        <div className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest mb-1.5 ps-1">
                             {group.label}
                         </div>
 
@@ -74,7 +79,7 @@ export function UpcomingTimeline({
                         <div className="flex flex-col gap-1.5">
                             {group.items.map((item) => {
                                 const { setlist: s, prep, isNew } = item
-                                const isToday = group.label === 'Today'
+                                const isToday = group.isToday
                                 const isExp = expanded === s.id
 
                                 return (
@@ -82,7 +87,7 @@ export function UpcomingTimeline({
                                         <Link
                                             href={`/perform/setlist/${s.id}`}
                                             onClick={onSelect ? () => onSelect(s) : undefined}
-                                            className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-brand/5 transition-colors text-left"
+                                            className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-brand/5 transition-colors text-start"
                                         >
                                             {/* Status dot */}
                                             <div className={cn(
@@ -96,7 +101,7 @@ export function UpcomingTimeline({
                                                     {s.name}
                                                     {isNew && (
                                                         <span className="text-[9px] font-bold bg-brand/15 text-foreground px-1.5 py-0.5 rounded-full shrink-0">
-                                                            Updated
+                                                            {t("dashboard.updatedBadge")}
                                                         </span>
                                                     )}
                                                 </div>
@@ -113,8 +118,8 @@ export function UpcomingTimeline({
                                                                 style={{ width: `${prep.percent}%` }}
                                                             />
                                                         </div>
-                                                        <span className="text-[10px] text-muted-foreground font-medium w-8 text-right">
-                                                            {prep.viewed}/{prep.total}
+                                                        <span className="text-[10px] text-muted-foreground font-medium w-8 text-end">
+                                                            {t("dashboard.viewedOfTotal", { viewed: prep.viewed, total: prep.total })}
                                                         </span>
                                                     </div>
                                                 )}
@@ -125,10 +130,11 @@ export function UpcomingTimeline({
                                                 variant="ghost"
                                                 size="icon"
                                                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); setExpanded(isExp ? null : s.id!) }}
-                                                aria-label={isExp ? "Collapse track list" : "Expand track list"}
+                                                aria-label={isExp ? t("dashboard.collapseTrackList") : t("dashboard.expandTrackList")}
                                                 className="text-muted-foreground/50 hover:bg-brand/10 shrink-0"
                                             >
-                                                <ChevronRight className={cn("w-4 h-4 transition-transform", isExp && "rotate-90")} />
+                                                {/* Points along the reading direction; rotates to point down when open. */}
+                                                <ChevronRight className={cn("w-4 h-4 transition-transform", isRtl && "-scale-x-100", isExp && (isRtl ? "-rotate-90" : "rotate-90"))} />
                                             </Button>
                                         </Link>
 
@@ -174,7 +180,7 @@ function ExpandedTrackList({ tracks: rawTracks, viewedFileIds }: { tracks: Setli
                             {track.title}
                         </span>
                         {track.key && (
-                            <span className="text-[10px] text-muted-foreground/50 font-mono ml-auto shrink-0">
+                            <span className="text-[10px] text-muted-foreground/50 font-mono ms-auto shrink-0">
                                 {track.key}
                             </span>
                         )}

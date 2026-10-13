@@ -4,6 +4,7 @@ import { Component, ReactNode, ErrorInfo } from "react"
 import { ShieldAlert } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { logger } from "@/lib/logger"
+import { useT } from "@/i18n/client"
 
 /**
  * Lightweight error boundary that contains crashes within a single section.
@@ -26,26 +27,38 @@ export class SectionErrorBoundary extends Component<
     render() {
         if (this.state.hasError) {
             return (
-                <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-6 text-center space-y-3">
-                    <ShieldAlert className="w-8 h-8 text-red-500 mx-auto" />
-                    <h3 className="font-semibold text-red-600 dark:text-red-400">
-                        {this.props.label} failed to load
-                    </h3>
-                    {this.state.error && (
-                        <pre className="text-xs text-red-400/80 bg-red-500/5 rounded-lg p-3 overflow-auto max-h-32 text-left">
-                            {this.state.error.message}
-                        </pre>
-                    )}
-                    <Button
-                        variant="link"
-                        onClick={() => this.setState({ hasError: false, error: undefined })}
-                        className="text-sm font-medium text-red-500 hover:text-red-400"
-                    >
-                        Retry
-                    </Button>
-                </div>
+                <SectionErrorFallback
+                    label={this.props.label}
+                    error={this.state.error}
+                    onRetry={() => this.setState({ hasError: false, error: undefined })}
+                />
             )
         }
         return this.props.children
     }
+}
+
+/** The boundary's fallback (a function component, so it can use `useT()`). */
+function SectionErrorFallback({ label, error, onRetry }: { label: string; error?: Error; onRetry: () => void }) {
+    const t = useT()
+    return (
+        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-6 text-center space-y-3">
+            <ShieldAlert className="w-8 h-8 text-red-500 mx-auto" />
+            <h3 className="font-semibold text-red-600 dark:text-red-400">
+                {t("ui.sectionFailed", { label })}
+            </h3>
+            {error && (
+                <pre className="text-xs text-red-400/80 bg-red-500/5 rounded-lg p-3 overflow-auto max-h-32 text-start">
+                    {error.message}
+                </pre>
+            )}
+            <Button
+                variant="link"
+                onClick={onRetry}
+                className="text-sm font-medium text-red-500 hover:text-red-400"
+            >
+                {t("ui.retry")}
+            </Button>
+        </div>
+    )
 }

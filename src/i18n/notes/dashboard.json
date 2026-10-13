@@ -1,0 +1,322 @@
+{
+    "countdownHoursMinutes": {
+        "where": "Dashboard hero card: countdown inside the \"Starts in\" badge when the next service is under 4 hours away",
+        "who": "everyone signed in",
+        "maxLength": 10,
+        "context": "{hours} and {minutes} are whole numbers; \"h\"/\"m\" are hour/minute abbreviations"
+    },
+    "countdownMinutes": {
+        "where": "Dashboard hero card: countdown inside the \"Starts in\" badge when the service is under an hour away",
+        "who": "everyone signed in",
+        "maxLength": 6,
+        "context": "{minutes} is a whole number; \"m\" abbreviates minutes"
+    },
+    "urgencyUpcoming": {
+        "where": "Dashboard hero card: badge on the next setlist when it has no date",
+        "who": "everyone signed in",
+        "maxLength": 12
+    },
+    "urgencyToday": {
+        "where": "Dashboard hero card and timeline: badge when the service is today",
+        "who": "everyone signed in",
+        "maxLength": 10
+    },
+    "urgencyTomorrow": {
+        "where": "Dashboard hero card and timeline: badge when the service is tomorrow",
+        "who": "everyone signed in",
+        "maxLength": 10
+    },
+    "startsIn": {
+        "where": "Dashboard hero card: badge shown when the next service starts within 4 hours",
+        "who": "everyone signed in",
+        "maxLength": 22,
+        "context": "{countdown} is a short duration like \"2h 15m\""
+    },
+    "songCount": {
+        "where": "Dashboard hero card and service cards: number of songs in the setlist",
+        "who": "everyone signed in",
+        "maxLength": 12,
+        "context": "{count} is the number of songs"
+    },
+    "chartsReviewed": {
+        "where": "Dashboard hero card: prep progress label above the progress bar",
+        "who": "musicians",
+        "maxLength": 30,
+        "context": "\"chart\" = sheet music; {viewed} charts opened out of {total}"
+    },
+    "percent": {
+        "where": "Dashboard hero card: prep progress percentage beside the progress bar",
+        "who": "musicians",
+        "maxLength": 5,
+        "context": "{percent} is a whole number 0-100"
+    },
+    "allChartsCached": {
+        "where": "Dashboard hero card: status when every chart is saved on the device for offline use",
+        "who": "musicians",
+        "maxLength": 28,
+        "context": "\"chart\" = sheet music; {total} is the number of charts"
+    },
+    "chartsCachedProgress": {
+        "where": "Dashboard hero card: how many charts are saved on the device for offline use",
+        "who": "musicians",
+        "maxLength": 14,
+        "context": "{cached} of {total} charts (sheet music) saved offline"
+    },
+    "downloadAllAria": {
+        "where": "Dashboard hero card: screen-reader label of the Download all button",
+        "who": "musicians",
+        "maxLength": 60,
+        "context": "\"chart\" = sheet music"
+    },
+    "downloading": {
+        "where": "Dashboard hero card: Download all button while charts are downloading",
+        "who": "musicians",
+        "maxLength": 16
+    },
+    "downloadAll": {
+        "where": "Dashboard hero card: button that saves every chart of the setlist for offline use",
+        "who": "musicians",
+        "maxLength": 16
+    },
+    "perform": {
+        "where": "Dashboard hero card and next-service card: action that opens the setlist in Perform mode",
+        "who": "everyone signed in",
+        "maxLength": 14,
+        "context": "Perform mode = the full-screen view used on stage"
+    },
+    "editSetlist": {
+        "where": "Dashboard hero card and next-service card: link/button label that opens the setlist editor",
+        "who": "leaders",
+        "maxLength": 18
+    },
+    "openSetlist": {
+        "where": "Dashboard hero card: main action that opens the next setlist",
+        "who": "everyone signed in",
+        "maxLength": 18
+    },
+    "compactSongCount": {
+        "where": "Dashboard: compact setlist row, number of songs under the setlist name",
+        "who": "everyone signed in",
+        "maxLength": 12,
+        "context": "{count} is the number of songs. English shows \"songs\" even for 1 (current behaviour); translate the plural naturally"
+    },
+    "navLibrary": {
+        "where": "Dashboard command row: shortcut button to the chart library",
+        "who": "everyone signed in",
+        "maxLength": 12,
+        "context": "\"chart\" = sheet music; the library is the collection of charts"
+    },
+    "navSetlists": {
+        "where": "Dashboard command row: shortcut button to the setlists list",
+        "who": "everyone signed in",
+        "maxLength": 12
+    },
+    "navNew": {
+        "where": "Dashboard command row: shortcut button that starts a new setlist",
+        "who": "leaders",
+        "maxLength": 10,
+        "context": "Short for \"new setlist\""
+    },
+    "onboardingInstrumentQuestion": {
+        "where": "Dashboard onboarding card: label above the instrument picker",
+        "who": "new musicians",
+        "maxLength": 30
+    },
+    "onboardingSelectInstrument": {
+        "where": "Dashboard onboarding card: empty first option of the instrument picker",
+        "who": "new musicians",
+        "maxLength": 24
+    },
+    "onboardingSaving": {
+        "where": "Dashboard onboarding card: save button while the instrument is being saved",
+        "who": "new musicians",
+        "maxLength": 20
+    },
+    "onboardingSaveContinue": {
+        "where": "Dashboard onboarding card: button that saves the chosen instrument",
+        "who": "new musicians",
+        "maxLength": 20
+    },
+    "onboardingSkip": {
+        "where": "Dashboard onboarding card: button that dismisses the instrument setup",
+        "who": "new musicians",
+        "maxLength": 12
+    },
+    "onboardingWelcome": {
+        "where": "Dashboard onboarding card: heading for a newly signed-up user awaiting approval",
+        "who": "new users awaiting approval",
+        "maxLength": 40,
+        "context": "{congregation} is the congregation's short name"
+    },
+    "onboardingPendingBody": {
+        "where": "Dashboard onboarding card: text under the welcome heading while the account is pending",
+        "who": "new users awaiting approval",
+        "maxLength": 120
+    },
+    "onboardingSetUpMyInstrument": {
+        "where": "Dashboard onboarding card (pending account): button that opens the instrument picker",
+        "who": "new users awaiting approval",
+        "maxLength": 24
+    },
+    "onboardingApprovedTitle": {
+        "where": "Dashboard onboarding card: heading once an admin has approved the account",
+        "who": "new musicians",
+        "maxLength": 30
+    },
+    "onboardingApprovedBody": {
+        "where": "Dashboard onboarding card: text under \"You're approved!\"",
+        "who": "new musicians",
+        "maxLength": 120,
+        "context": "\"chart\" = sheet music; transposed = shown in the key of the musician's instrument"
+    },
+    "onboardingSetUpInstrument": {
+        "where": "Dashboard onboarding card (approved): button that opens the instrument picker",
+        "who": "new musicians",
+        "maxLength": 20
+    },
+    "practiceRecommendations": {
+        "where": "Dashboard: heading of the nudge listing songs not yet reviewed before a service within 3 days",
+        "who": "musicians",
+        "maxLength": 30
+    },
+    "prepWhenToday": {
+        "where": "Dashboard practice recommendations: after a song title, when the service is today (shown as \"Song — today\")",
+        "who": "musicians",
+        "maxLength": 12
+    },
+    "prepWhenTomorrow": {
+        "where": "Dashboard practice recommendations: after a song title, when the service is tomorrow",
+        "who": "musicians",
+        "maxLength": 12
+    },
+    "prepWhenInDays": {
+        "where": "Dashboard practice recommendations: after a song title, days until the service (2 or 3 in practice)",
+        "who": "musicians",
+        "maxLength": 14,
+        "context": "{count} is the number of days"
+    },
+    "moreUnreviewedCharts": {
+        "where": "Dashboard practice recommendations: footer when more than 3 songs are unreviewed",
+        "who": "musicians",
+        "maxLength": 36,
+        "context": "\"chart\" = sheet music; {count} is how many more. English keeps \"charts\" even for 1 (current behaviour)"
+    },
+    "setlistsUpdated": {
+        "where": "Dashboard \"what changed\" banner: heading when setlists changed since the last visit",
+        "who": "musicians",
+        "maxLength": 30,
+        "context": "{count} is the number of changed setlists"
+    },
+    "changedSinceLastVisit": {
+        "where": "Dashboard \"what changed\" banner: line under the heading listing the changed setlists",
+        "who": "musicians",
+        "maxLength": 200,
+        "context": "{setlistNames} is the list of quoted setlist names; {count} is how many"
+    },
+    "quotedSetlistName": {
+        "where": "Dashboard \"what changed\" banner: one setlist name in the list, in quotation marks",
+        "who": "musicians",
+        "maxLength": 60,
+        "context": "{setlistName} is the setlist's name; use the language's quotation marks"
+    },
+    "listSeparator": {
+        "where": "Dashboard \"what changed\" banner: separator between setlist names in the list",
+        "who": "musicians",
+        "maxLength": 3,
+        "context": "A comma and a space; keep the trailing space"
+    },
+    "yourTasks": {
+        "where": "Dashboard: heading of the list of prep tasks assigned to the user (shown in CSS uppercase)",
+        "who": "musicians",
+        "maxLength": 24
+    },
+    "comingUp": {
+        "where": "Dashboard: heading of the upcoming-services timeline (shown in CSS uppercase)",
+        "who": "everyone signed in",
+        "maxLength": 24
+    },
+    "updatedBadge": {
+        "where": "Dashboard timeline: small badge on a setlist changed since the user's last visit",
+        "who": "musicians",
+        "maxLength": 10
+    },
+    "viewedOfTotal": {
+        "where": "Dashboard timeline: prep progress beside the bar (charts reviewed out of total)",
+        "who": "musicians",
+        "maxLength": 7,
+        "context": "{viewed} and {total} are numbers of charts (sheet music)"
+    },
+    "collapseTrackList": {
+        "where": "Dashboard timeline: screen-reader label of the chevron that hides a setlist's song list",
+        "who": "everyone signed in",
+        "maxLength": 40
+    },
+    "expandTrackList": {
+        "where": "Dashboard timeline: screen-reader label of the chevron that shows a setlist's song list",
+        "who": "everyone signed in",
+        "maxLength": 40
+    },
+    "errorTitle": {
+        "where": "Error screen for any signed-in page that crashed while loading: heading",
+        "who": "everyone signed in",
+        "maxLength": 40
+    },
+    "errorBody": {
+        "where": "Error screen for a page that crashed while loading: text under the heading",
+        "who": "everyone signed in",
+        "maxLength": 90
+    },
+    "errorRetry": {
+        "where": "Error screen: button that tries to load the page again",
+        "who": "everyone signed in",
+        "maxLength": 14
+    },
+    "errorHardReset": {
+        "where": "Error screen: button that clears the app's saved local data and reloads the home page",
+        "who": "everyone signed in",
+        "maxLength": 18
+    },
+    "loadErrorTitle": {
+        "where": "Dashboard: heading of the error box when the setlists could not be loaded (the technical error follows)",
+        "who": "everyone",
+        "maxLength": 40
+    },
+    "loadErrorHint": {
+        "where": "Dashboard: small hint under the setlist load error",
+        "who": "everyone",
+        "maxLength": 80
+    },
+    "noServicesYet": {
+        "where": "Dashboard: empty state when there is no upcoming or past setlist",
+        "who": "everyone",
+        "maxLength": 40
+    },
+    "diagSubscriptionReturned": {
+        "where": "Dashboard empty state: small monospace diagnostic line for support",
+        "who": "everyone (support diagnostics)",
+        "maxLength": 200,
+        "context": "Technical diagnostic for support; may stay in English. {count} setlists loaded; {fromCache} is true/false; {firedAt} is a time; {authUid}/{serverUid} are id prefixes. Keep the key=value parts verbatim"
+    },
+    "diagSubscriptionPending": {
+        "where": "Dashboard empty state: small monospace diagnostic line for support when nothing has loaded yet",
+        "who": "everyone (support diagnostics)",
+        "maxLength": 100,
+        "context": "Technical diagnostic for support; may stay in English"
+    },
+    "recentSetlists": {
+        "where": "Dashboard: heading above the recent setlists list (shown in CSS uppercase)",
+        "who": "everyone",
+        "maxLength": 30
+    },
+    "signInOr": {
+        "where": "Dashboard sign-in box: word on the divider between the QR sign-in and the Google button (shown in CSS uppercase)",
+        "who": "signed-out visitors",
+        "maxLength": 6
+    },
+    "signInWithGoogle": {
+        "where": "Dashboard sign-in box: button that signs in with a Google account",
+        "who": "signed-out visitors",
+        "maxLength": 28,
+        "context": "\"Google\" is a brand name, do not translate it"
+    }
+}

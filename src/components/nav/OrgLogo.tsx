@@ -1,12 +1,16 @@
+"use client"
+
+import { useT } from "@/i18n/client"
 import { cn } from "@/lib/utils"
 
 /**
  * v11.1-01: org-aware nav logo. Renders the host org's logo image when a
  * `logoUrl` is set, otherwise a brand-colored circular initials monogram.
  *
- * Pure/presentational (no hooks) so it renders correctly during SSR from the
- * server-resolved branding props in `(main)/layout.tsx` — no client hydration
- * delay, no CRC-default flash. The monogram inherits the per-org brand color
+ * Presentational: it renders from the server-resolved branding props in
+ * `(main)/layout.tsx` (SSR'd like any client component), so there is no
+ * CRC-default flash. Phase 7: a client component only for `useT()` (the alt
+ * text); the server login page renders it as a client island. The monogram inherits the per-org brand color
  * automatically: `bg-brand`/`text-brand-foreground` flip to navy under
  * `[data-org="brotherslazaroff"]` (set on <html> server-side), indigo for CRC.
  *
@@ -32,8 +36,11 @@ export function OrgLogo({
     /** Tailwind size for the circle, e.g. "w-8 h-8" (desktop) / "w-7 h-7" (mobile). */
     sizeClass: string
 }) {
-    // CRC keeps its canonical descriptive alt; other orgs derive from shortName.
-    const alt = logoUrl === "/logo.jpg" ? "Central Reform Congregation logo" : `${shortName} logo`
+    const t = useT()
+    // CRC keeps its canonical descriptive alt (its full name, a brand: verbatim);
+    // other orgs derive from shortName.
+    const crcName = "Central Reform Congregation"
+    const alt = t("nav.orgLogoAlt", { orgName: logoUrl === "/logo.jpg" ? crcName : shortName })
 
     if (logoUrl) {
         return (
@@ -49,7 +56,7 @@ export function OrgLogo({
     return (
         <span
             role="img"
-            aria-label={`${shortName} logo`}
+            aria-label={t("nav.orgLogoAlt", { orgName: shortName })}
             className={cn(
                 sizeClass,
                 "flex items-center justify-center rounded-full border border-border",

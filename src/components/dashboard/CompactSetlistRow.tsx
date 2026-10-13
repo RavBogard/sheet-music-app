@@ -7,6 +7,8 @@ import { Music2, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
+import { useT, useFormat } from "@/i18n/client"
+import { DirectionalIcon } from "@/components/i18n/DirectionalIcon"
 
 /**
  * Compact setlist row for non-prep-tracked lists.
@@ -14,11 +16,13 @@ import { useState } from "react"
  */
 export function CompactSetlistRow({ setlist, onSelect }: { setlist: Setlist; onSelect?: (setlist: Setlist) => void }) {
     const router = useRouter()
+    const t = useT()
+    const fmt = useFormat()
     const [navigatingTo, setNavigatingTo] = useState<string | null>(null)
 
     const eventDate = toDate(setlist.eventDate)
     const dateStr = eventDate
-        ? eventDate.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
+        ? fmt.date(eventDate, { weekday: 'short', month: 'short', day: 'numeric' })
         : ''
 
     // Wrap onSelect to show immediate feedback before navigation
@@ -42,10 +46,10 @@ export function CompactSetlistRow({ setlist, onSelect }: { setlist: Setlist; onS
                 <div className="font-medium text-sm text-foreground truncate">{setlist.name}</div>
                 <div className="text-xs text-muted-foreground flex items-center gap-2">
                     {dateStr && <span>{dateStr}</span>}
-                    <span>{setlist.trackCount ?? 0} songs</span>
+                    <span>{t("dashboard.compactSongCount", { count: setlist.trackCount ?? 0 })}</span>
                 </div>
             </div>
-            <ChevronRight className="w-4 h-4 text-brand/30 group-hover:text-brand/60 transition-colors shrink-0" />
+            <DirectionalIcon icon={ChevronRight} className="w-4 h-4 text-brand/30 group-hover:text-brand/60 transition-colors shrink-0" />
         </>
     )
 
@@ -54,7 +58,7 @@ export function CompactSetlistRow({ setlist, onSelect }: { setlist: Setlist; onS
             <Button
                 variant="ghost"
                 onClick={handleSelect}
-                className={`w-full h-auto flex items-center gap-3 bg-card hover:bg-brand/5 rounded-xl px-3 py-2.5 text-left group border border-brand/10 active:scale-100 ${navigatingTo ? 'opacity-50 pointer-events-none' : ''}`}
+                className={`w-full h-auto flex items-center gap-3 bg-card hover:bg-brand/5 rounded-xl px-3 py-2.5 text-start group border border-brand/10 active:scale-100 ${navigatingTo ? 'opacity-50 pointer-events-none' : ''}`}
             >
                 {content}
             </Button>
@@ -64,7 +68,7 @@ export function CompactSetlistRow({ setlist, onSelect }: { setlist: Setlist; onS
     return (
         <Link
             href={href}
-            className="w-full flex items-center gap-3 bg-card hover:bg-brand/5 rounded-xl px-3 py-2.5 transition-colors text-left group border border-brand/10"
+            className="w-full flex items-center gap-3 bg-card hover:bg-brand/5 rounded-xl px-3 py-2.5 transition-colors text-start group border border-brand/10"
         >
             {content}
         </Link>

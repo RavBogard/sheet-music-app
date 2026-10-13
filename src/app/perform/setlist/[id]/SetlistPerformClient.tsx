@@ -43,6 +43,8 @@ import type { OverridesDoc } from "@/lib/performance/tonight"
 import { commitTonightReset } from "@/lib/performance/tonight-client"
 import { logger } from "@/lib/logger"
 import { TonightSwapSheet } from "@/components/performance/TonightSwapSheet"
+import { DirectionalIcon } from "@/components/i18n/DirectionalIcon"
+import { useT } from "@/i18n/client"
 
 const PrintModal = dynamic(
     () => import("@/components/setlist/PrintModal").then(m => m.PrintModal),
@@ -86,6 +88,7 @@ export function SetlistPerformClient({
     initialOverrides = null,
     initialTrackId,
 }: SetlistPerformClientProps) {
+    const t = useT()
     const {
         tracks,
         plannedTracks,
@@ -134,13 +137,13 @@ export function SetlistPerformClient({
         // `isSectionRow` check in `SetlistGrid.tsx:168` (both values appear in
         // the wild — TrackType union uses 'header'; TypeCell picker writes
         // 'section').
-        const t = initialTracks[idx]
+        const seed = initialTracks[idx]
         // Cast through `string` because the SetlistGrid editor's TypeCell
         // picker writes `'section'` for the "Section header" option (see
         // `TypeCell.tsx:42` + `SetlistGrid.tsx:168`'s `isSectionRow`), while
         // the canonical `TrackType` union in `types/models.ts:34` only lists
         // `'header'`. Both literals appear in real setlist data.
-        const tt = t.type as string | undefined
+        const tt = seed.type as string | undefined
         if (tt === "header" || tt === "section") return null
         return idx
     })
@@ -230,12 +233,12 @@ export function SetlistPerformClient({
         if (!error) return null
         const code = (error as { code?: string })?.code
         if (code === "permission-denied") {
-            return "This setlist hasn't been published yet, or you don't have access."
+            return t("performSetlist.error.noAccess")
         }
         if (code === "not-found") {
-            return "Setlist not found -- it may have been deleted."
+            return t("performSetlist.error.notFound")
         }
-        return "Couldn't load setlist -- check your connection and try again."
+        return t("performSetlist.error.loadFailed")
     })()
 
     if (loading) {
@@ -243,7 +246,7 @@ export function SetlistPerformClient({
             <div className="flex items-center justify-center min-h-[60vh] md:pt-20">
                 <div className="flex flex-col items-center gap-3">
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground font-medium">Loading setlist...</p>
+                    <p className="text-sm text-muted-foreground font-medium">{t("performSetlist.loadingSetlist")}</p>
                 </div>
             </div>
         )
@@ -258,7 +261,7 @@ export function SetlistPerformClient({
             <div className="flex flex-col items-center justify-center min-h-[60vh] md:pt-20 gap-4">
                 <p className="text-muted-foreground">{errorMessage}</p>
                 <Button asChild variant="outline">
-                    <Link href={backHref}>Back to {isPublicView ? "Home" : "Setlists"}</Link>
+                    <Link href={backHref}>{isPublicView ? t("performSetlist.backToHome") : t("performSetlist.backToSetlists")}</Link>
                 </Button>
             </div>
         )
@@ -277,16 +280,17 @@ export function SetlistPerformClient({
             <div className="flex items-center gap-2 px-4 py-2 glass border-b-0 z-20 relative">
                 <Link
                     href={backHref}
-                    aria-label={isPublicView ? "Back to home" : "Back to setlists"}
+                    aria-label={isPublicView ? t("performSetlist.backToHomeLabel") : t("performSetlist.backToSetlistsLabel")}
                     className="h-11 w-11 flex items-center justify-center rounded-xl hover:bg-muted transition-colors shrink-0"
                 >
-                    <ArrowLeft className="h-5 w-5 text-muted-foreground" />
+                    <DirectionalIcon icon={ArrowLeft} className="h-5 w-5 text-muted-foreground" />
                 </Link>
                 <div className="flex-1 min-w-0">
                     <h1 className="text-base font-bold truncate">{name}</h1>
                     <p className="text-[11px] text-muted-foreground">
-                        {songCount} song{songCount !== 1 ? "s" : ""}
-                        {totalCount > songCount ? ` · ${totalCount} items` : ""}
+                        {totalCount > songCount
+                            ? t("performSetlist.header.songsAndItems", { count: songCount, totalCount })
+                            : t("performSetlist.songCount", { count: songCount })}
                     </p>
                     {bookName && (
                         <p className="text-sm text-muted-foreground truncate">{bookName}</p>
@@ -322,8 +326,8 @@ export function SetlistPerformClient({
                             aria-pressed={liturgyCollapsed}
                             aria-label={
                                 liturgyCollapsed
-                                    ? `Show ${foldableLiturgyRows} liturgy rows`
-                                    : `Hide ${foldableLiturgyRows} liturgy rows`
+                                    ? t("performSetlist.toolbar.showLiturgyRows", { count: foldableLiturgyRows })
+                                    : t("performSetlist.toolbar.hideLiturgyRows", { count: foldableLiturgyRows })
                             }
                             className="h-11 min-w-11 gap-1.5 text-muted-foreground cursor-pointer"
                         >
@@ -333,21 +337,21 @@ export function SetlistPerformClient({
                                 <ListCollapse className="h-4 w-4" />
                             )}
                             <span className="text-xs hidden sm:inline">
-                                {liturgyCollapsed ? "Liturgy" : "Songs only"}
+                                {liturgyCollapsed ? t("performSetlist.toolbar.liturgy") : t("performSetlist.toolbar.songsOnly")}
                             </span>
                         </Button>
                     )}
                     {canPrint && (
-                        <Button onClick={() => setShowPrintModal(true)} size="sm" variant="ghost" aria-label="Print setlist" className="h-11 min-w-11 gap-1.5 text-muted-foreground">
+                        <Button onClick={() => setShowPrintModal(true)} size="sm" variant="ghost" aria-label={t("performSetlist.toolbar.printSetlist")} className="h-11 min-w-11 gap-1.5 text-muted-foreground">
                             <Printer className="h-4 w-4" />
-                            <span className="text-xs hidden sm:inline">Print</span>
+                            <span className="text-xs hidden sm:inline">{t("performSetlist.toolbar.print")}</span>
                         </Button>
                     )}
                     {isLeader && (
                         <Button asChild size="sm" variant="ghost" className="h-11 min-w-11 gap-1.5 text-muted-foreground">
-                            <Link href={`/setlists/${setlistId}`} aria-label="Edit setlist">
+                            <Link href={`/setlists/${setlistId}`} aria-label={t("performSetlist.toolbar.editSetlist")}>
                                 <Pencil className="h-4 w-4" />
-                                <span className="text-xs hidden sm:inline">Edit</span>
+                                <span className="text-xs hidden sm:inline">{t("performSetlist.toolbar.edit")}</span>
                             </Link>
                         </Button>
                     )}
@@ -367,7 +371,7 @@ export function SetlistPerformClient({
                             key={m.uid || i}
                             className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted text-xs text-muted-foreground whitespace-nowrap shrink-0"
                         >
-                            <span className="font-medium text-foreground">{(m.name || '').split(' ')[0] || 'Unknown'}</span>
+                            <span className="font-medium text-foreground">{(m.name || '').split(' ')[0] || t("performSetlist.unknownMusician")}</span>
                             {m.instrument && (
                                 <span className="text-muted-foreground/70">{m.instrument}</span>
                             )}
@@ -383,7 +387,7 @@ export function SetlistPerformClient({
             {isLeader && user && serviceDay && tonightOverrides && Object.keys(tonightOverrides.rows).length > 0 && (
                 <div className="flex items-center gap-2 px-4 py-2 border-b border-border/50 text-sm">
                     <span className="flex-1 text-amber-800 dark:text-amber-300">
-                        {Object.keys(tonightOverrides.rows).length} row{Object.keys(tonightOverrides.rows).length === 1 ? "" : "s"} swapped for tonight
+                        {t("performSetlist.tonight.rowsSwapped", { count: Object.keys(tonightOverrides.rows).length })}
                     </span>
                     <Button
                         size="sm"
@@ -409,7 +413,7 @@ export function SetlistPerformClient({
                             }
                         }}
                     >
-                        Reset to plan
+                        {t("performSetlist.tonight.resetToPlan")}
                     </Button>
                 </div>
             )}
@@ -469,10 +473,10 @@ export function SetlistPerformClient({
             {tracks.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
                     <Music className="h-12 w-12 mb-3 opacity-30" />
-                    <p className="text-lg font-medium">No tracks yet</p>
+                    <p className="text-lg font-medium">{t("performSetlist.noTracksYet")}</p>
                     {!isPublicView && (
                         <Button asChild variant="outline" className="mt-4">
-                            <Link href={`/setlists/${setlistId}`}>Add tracks</Link>
+                            <Link href={`/setlists/${setlistId}`}>{t("performSetlist.addTracks")}</Link>
                         </Button>
                     )}
                 </div>

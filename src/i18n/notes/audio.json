@@ -1,0 +1,37 @@
+{
+    "selectFile": {
+        "where": "Audio player: empty state before an audio file is chosen",
+        "who": "everyone",
+        "maxLength": 40
+    },
+    "skipBack": {
+        "where": "Audio player: screen-reader label of the skip-back button",
+        "who": "everyone",
+        "maxLength": 30
+    },
+    "pause": {
+        "where": "Audio player: screen-reader label of the play/pause button while playing",
+        "who": "everyone",
+        "maxLength": 12
+    },
+    "play": {
+        "where": "Audio player: screen-reader label of the play/pause button while paused",
+        "who": "everyone",
+        "maxLength": 12
+    },
+    "skipForward": {
+        "where": "Audio player: screen-reader label of the skip-forward button",
+        "who": "everyone",
+        "maxLength": 30
+    },
+    "unmute": {
+        "where": "Audio player: screen-reader label of the mute button while muted",
+        "who": "everyone",
+        "maxLength": 12
+    },
+    "mute": {
+        "where": "Audio player: screen-reader label of the mute button",
+        "who": "everyone",
+        "maxLength": 12
+    }
+}

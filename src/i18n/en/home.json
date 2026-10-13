@@ -1,0 +1,12 @@
+{
+    "recent": "Recent",
+    "upcoming": "Upcoming",
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "songCount_one": "{count} song",
+    "songCount_other": "{count} songs",
+    "practice": "Practice",
+    "perform": "Perform",
+    "editSetlistAria": "Edit setlist",
+    "edit": "Edit"
+}

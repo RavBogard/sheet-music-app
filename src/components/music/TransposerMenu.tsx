@@ -8,6 +8,9 @@ import { cn } from "@/lib/utils"
 import { calculateCapo, estimateKey, transposeChord } from "@/lib/music-math"
 import { useMusicianTransposition } from "@/hooks/use-musician-transposition"
 import { loadLibraryMeta } from "@/lib/chord-cache"
+import { useT } from "@/i18n/client"
+import { useChartContentDir } from "@/components/i18n/ChartContent"
+import { useMirrorClass } from "@/components/i18n/DirectionalIcon"
 
 // Common guitar-friendly shapes for the "Play As" grid
 const SHAPES = [
@@ -40,6 +43,12 @@ export function TransposerMenu({ onRequestClose }: TransposerMenuProps) {
         fileUrl,
         musicXmlKey,
     } = useMusicStore()
+    const t = useT()
+    // Phase 7: the key preview ("Dm → F") is chart content and keeps ltr;
+    // the capo-chain arrows are UI flow and mirror on an rtl page.
+    const chartDir = useChartContentDir()
+    const mirror = useMirrorClass()
+    const flowArrowClass = mirror ? `inline-block ${mirror}` : undefined
 
     // Musician profile for auto-transposition indicator
     const { isAutoTransposed, instrumentLabel, saving } = useMusicianTransposition()
@@ -181,13 +190,13 @@ export function TransposerMenu({ onRequestClose }: TransposerMenuProps) {
                 <div className="flex items-center gap-2 px-3 py-2 bg-violet-500/10 rounded-lg border border-violet-500/20 text-xs">
                     <span className="text-violet-400 font-semibold">{instrumentLabel}</span>
                     {isAutoTransposed && (
-                        <span className="text-violet-400/60">• auto-transposed</span>
+                        <span className="text-violet-400/60">{t("music.transposer.autoTransposed")}</span>
                     )}
                     {saving && (
-                        <span className="text-violet-400/60 ml-auto">saving...</span>
+                        <span className="text-violet-400/60 ms-auto">{t("music.transposer.saving")}</span>
                     )}
                     {!saving && isAutoTransposed && (
-                        <span className="text-green-400/60 ml-auto">✓ saved</span>
+                        <span className="text-green-400/60 ms-auto">{t("music.transposer.saved")}</span>
                     )}
                 </div>
             )}
@@ -196,10 +205,10 @@ export function TransposerMenu({ onRequestClose }: TransposerMenuProps) {
             {showSetlistKey && (
                 <div className="bg-violet-600/10 border border-violet-500/20 rounded-lg px-3 py-2 text-center">
                     <span className="text-violet-300 text-sm font-medium">
-                        Playing in {setlistKey}
+                        {t("music.transposer.playingIn", { key: setlistKey })}
                     </span>
-                    <span className="text-muted-foreground text-sm ml-1.5">
-                        (chart: {libraryMeta?.nativeKey || detectedKey})
+                    <span className="text-muted-foreground text-sm ms-1.5">
+                        {t("music.transposer.chartKey", { key: libraryMeta?.nativeKey || detectedKey })}
                     </span>
                 </div>
             )}
@@ -208,13 +217,13 @@ export function TransposerMenu({ onRequestClose }: TransposerMenuProps) {
             <div className="flex items-center justify-between">
                 <div>
                     <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">
-                        {isScanning ? "Scanning..." : hasChords ? "Detected Key" : "Waiting for scan..."}
+                        {isScanning ? t("music.transposer.scanning") : hasChords ? t("music.transposer.detectedKey") : t("music.transposer.waitingForScan")}
                     </div>
                     {detectedKey && (
-                        <div className="text-2xl font-bold text-foreground leading-tight">
+                        <div {...chartDir} className="text-2xl font-bold text-foreground leading-tight">
                             {detectedKey}
                             {isModified && (
-                                <span className="text-violet-400 text-lg ml-2">
+                                <span className="text-violet-400 text-lg ms-2">
                                     → {transposeChord(detectedKey, transposition)}
                                 </span>
                             )}
@@ -228,8 +237,8 @@ export function TransposerMenu({ onRequestClose }: TransposerMenuProps) {
                         onClick={handleReset}
                         className="text-muted-foreground hover:text-foreground h-8 px-2"
                     >
-                        <RotateCcw className="h-3.5 w-3.5 mr-1" />
-                        Reset
+                        <RotateCcw className="h-3.5 w-3.5 me-1" />
+                        {t("music.transposer.reset")}
                     </Button>
                 )}
             </div>
@@ -239,7 +248,7 @@ export function TransposerMenu({ onRequestClose }: TransposerMenuProps) {
                 <Button
                     variant="ghost"
                     size="icon"
-                    aria-label="Transpose down"
+                    aria-label={t("music.transposer.transposeDown")}
                     onClick={() => {
                         setTransposition(transposition - 1)
                         setCapoFret(null)
@@ -254,17 +263,17 @@ export function TransposerMenu({ onRequestClose }: TransposerMenuProps) {
                         "font-bold text-base",
                         isModified ? "text-violet-400" : "text-muted-foreground"
                     )}>
-                        {transposition === 0 ? "Original Key" : (transposition > 0 ? `+${transposition}` : `${transposition}`)}
+                        {transposition === 0 ? t("music.transposer.originalKey") : (transposition > 0 ? `+${transposition}` : `${transposition}`)}
                     </span>
                     {transposition !== 0 && (
-                        <span className="text-muted-foreground/60 text-xs ml-1.5">semitones</span>
+                        <span className="text-muted-foreground/60 text-xs ms-1.5">{t("music.transposer.semitones")}</span>
                     )}
                 </div>
 
                 <Button
                     variant="ghost"
                     size="icon"
-                    aria-label="Transpose up"
+                    aria-label={t("music.transposer.transposeUp")}
                     onClick={() => {
                         setTransposition(transposition + 1)
                         setCapoFret(null)
@@ -279,7 +288,7 @@ export function TransposerMenu({ onRequestClose }: TransposerMenuProps) {
             {effectiveKey && (
                 <div className="space-y-2">
                     <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">
-                        Play As (with capo)
+                        {t("music.transposer.playAs")}
                     </div>
                     <div className="grid grid-cols-4 gap-1.5">
                         {SHAPES.map(shape => {
@@ -307,12 +316,12 @@ export function TransposerMenu({ onRequestClose }: TransposerMenuProps) {
                                             "text-[10px] leading-tight mt-0.5",
                                             isActive ? "text-violet-400" : "text-muted-foreground"
                                         )}>
-                                            capo {result.fret}
+                                            {t("music.transposer.capoShort", { fret: result.fret })}
                                         </div>
                                     )}
                                     {isSameKey && (
                                         <div className="text-[10px] leading-tight mt-0.5 text-muted-foreground/40">
-                                            same
+                                            {t("music.transposer.sameKey")}
                                         </div>
                                     )}
                                 </button>
@@ -324,15 +333,15 @@ export function TransposerMenu({ onRequestClose }: TransposerMenuProps) {
                     {activeShape && capoFret && capoFret > 0 && (
                         <div className="bg-violet-600/10 border border-violet-500/20 rounded-lg px-3 py-2 text-center">
                             <span className="text-violet-300 text-sm font-medium">
-                                {activeShape} shapes
+                                {t("music.transposer.shapes", { shape: activeShape })}
                             </span>
-                            <span className="text-muted-foreground text-sm mx-2">→</span>
+                            <span className="text-muted-foreground text-sm mx-2"><span className={flowArrowClass}>→</span></span>
                             <span className="text-violet-400 text-sm font-bold">
-                                Capo {capoFret}
+                                {t("music.transposer.capoFret", { fret: capoFret })}
                             </span>
-                            <span className="text-muted-foreground text-sm mx-2">→</span>
+                            <span className="text-muted-foreground text-sm mx-2"><span className={flowArrowClass}>→</span></span>
                             <span className="text-foreground text-sm font-medium">
-                                sounds {effectiveKey}
+                                {t("music.transposer.soundsIn", { key: effectiveKey })}
                             </span>
                         </div>
                     )}
@@ -350,17 +359,17 @@ export function TransposerMenu({ onRequestClose }: TransposerMenuProps) {
                 <div className="space-y-2 pt-1">
                     <div className="flex items-center justify-between">
                         <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">
-                            Capo (your guitar)
+                            {t("music.transposer.capoYourGuitar")}
                         </div>
                         {capoSemitones > 0 && (
                             <Button
                                 variant="ghost"
                                 size="sm"
-                                aria-label="Clear capo"
+                                aria-label={t("music.transposer.clearCapo")}
                                 onClick={() => handleCapoSemitones(0)}
                                 className="text-muted-foreground hover:text-foreground h-6 px-2 text-[10px]"
                             >
-                                Off
+                                {t("music.transposer.off")}
                             </Button>
                         )}
                     </div>
@@ -371,7 +380,7 @@ export function TransposerMenu({ onRequestClose }: TransposerMenuProps) {
                                 <button
                                     key={fret}
                                     type="button"
-                                    aria-label={fret === 0 ? "Capo off" : `Capo ${fret}`}
+                                    aria-label={fret === 0 ? t("music.transposer.capoOff") : t("music.transposer.capoFret", { fret })}
                                     aria-pressed={isActive}
                                     onClick={() => handleCapoSemitones(fret)}
                                     className={cn(
@@ -388,9 +397,9 @@ export function TransposerMenu({ onRequestClose }: TransposerMenuProps) {
                     </div>
                     {capoSemitones > 0 && playingShapeKey && (
                         <div className="bg-violet-600/10 border border-violet-500/20 rounded-lg px-3 py-2 text-center">
-                            <span className="text-muted-foreground text-sm">Capo {capoSemitones} →</span>
-                            <span className="text-violet-300 text-sm font-bold ml-2">
-                                play in {playingShapeKey} shapes
+                            <span className="text-muted-foreground text-sm">{t("music.transposer.capoFret", { fret: capoSemitones })}{" "}<span className={flowArrowClass}>→</span></span>
+                            <span className="text-violet-300 text-sm font-bold ms-2">
+                                {t("music.transposer.playInShapes", { key: playingShapeKey })}
                             </span>
                         </div>
                     )}
@@ -401,12 +410,12 @@ export function TransposerMenu({ onRequestClose }: TransposerMenuProps) {
             {hasChords && (
                 <div className="text-[10px] text-muted-foreground/60 text-center space-y-1">
                     <div>
-                        {allChords.length} chords detected across {Object.keys(aiState.pageData).length} page{Object.keys(aiState.pageData).length !== 1 ? 's' : ''}
+                        {t("music.transposer.chordsDetected", { chords: allChords.length, count: Object.keys(aiState.pageData).length })}
                     </div>
                     {libraryMeta?.chordsVerified && libraryMeta?.chordsVerifiedBy && (
                         <div className="flex items-center justify-center gap-1 text-green-400/80">
                             <CheckCircle2 className="h-3 w-3" />
-                            <span>Verified by {libraryMeta.chordsVerifiedBy}</span>
+                            <span>{t("music.transposer.verifiedBy", { verifier: libraryMeta.chordsVerifiedBy })}</span>
                         </div>
                     )}
                 </div>
@@ -419,7 +428,7 @@ export function TransposerMenu({ onRequestClose }: TransposerMenuProps) {
                     className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-muted hover:bg-muted/80 border border-border hover:border-border/80 rounded-lg text-sm text-foreground/80 hover:text-foreground transition-all"
                 >
                     <Pencil className="h-3.5 w-3.5" />
-                    Edit Chords
+                    {t("music.transposer.editChords")}
                 </button>
             )}
         </div>

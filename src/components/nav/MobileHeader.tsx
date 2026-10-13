@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils"
 import { useCongregation } from "@/lib/congregation-store"
 import { MobileMenuDrawer } from "@/components/nav/MobileMenuDrawer"
 import { OrgLogo } from "@/components/nav/OrgLogo"
+import { useT } from "@/i18n/client"
 
 export function MobileHeader({
     serverOrgShortName,
@@ -21,17 +22,18 @@ export function MobileHeader({
     // v11.1-05: when set, render this wordmark lockup instead of monogram+text.
     serverWordmarkUrl?: string
 } = {}) {
+    const t = useT()
     const congregation = useCongregation()
     const [drawerOpen, setDrawerOpen] = useState(false)
 
     return (
         <>
-            <header className="fixed top-0 left-0 right-0 h-14 z-50 flex md:hidden items-center justify-between px-3 material-thick border-b border-brand/10">
-                {/* Left: Hamburger */}
+            <header className="fixed top-0 inset-x-0 h-14 z-50 flex md:hidden items-center justify-between px-3 material-thick border-b border-brand/10">
+                {/* Start: Hamburger */}
                 <Button
                     variant="ghost"
                     size="icon"
-                    aria-label="Open menu"
+                    aria-label={t("nav.openMenu")}
                     onClick={() => setDrawerOpen(true)}
                     className={cn(
                         "rounded-full transition-colors",
@@ -64,7 +66,7 @@ export function MobileHeader({
                     )}
                 </Link>
 
-                {/* Right: spacer for symmetry */}
+                {/* End: spacer for symmetry */}
                 <div className="w-10" />
             </header>
 

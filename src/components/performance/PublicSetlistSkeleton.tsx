@@ -3,6 +3,7 @@
 import { Music } from "lucide-react"
 import { useOrg } from "@/lib/org/org-context"
 import { orgString } from "@/lib/org/strings"
+import { useT } from "@/i18n/client"
 
 /**
  * Cycle-3.5 P2-005 — SSR skeleton matching the post-hydration
@@ -23,6 +24,7 @@ export function PublicSetlistSkeleton({
     cards?: number
 } = {}) {
     const brand = orgString(useOrg(), "page.skeletonBrand")
+    const t = useT()
     return (
         <div
             className="flex flex-col gap-4 px-4 pt-6 pb-20 max-w-2xl mx-auto w-full"
@@ -33,7 +35,7 @@ export function PublicSetlistSkeleton({
                 <Music className="h-6 w-6 text-muted-foreground" />
                 <div>
                     <h1 className="text-xl font-bold">{brand}</h1>
-                    <p className="text-sm text-muted-foreground">Public setlists</p>
+                    <p className="text-sm text-muted-foreground">{t("performSetlist.publicSetlists")}</p>
                 </div>
             </div>
             <div className="flex flex-col gap-3" aria-hidden="true">

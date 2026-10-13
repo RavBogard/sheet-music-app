@@ -1,0 +1,6 @@
+{
+    "usingCachedData": { "where": "Floating pill at the bottom corner when the device has no network", "who": "everyone", "maxLength": 40 },
+    "availableOffline": { "where": "Setlist toolbar: disabled button showing every chart of the setlist is saved on the device", "who": "musicians", "maxLength": 20, "context": "chart = sheet music file" },
+    "downloadAllTitle": { "where": "Setlist toolbar: tooltip of the Save offline button", "who": "musicians", "maxLength": 60, "context": "charts = sheet music files" },
+    "saveOffline": { "where": "Setlist toolbar: button that downloads every chart of the setlist to the device", "who": "musicians", "maxLength": 16 }
+}

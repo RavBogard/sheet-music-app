@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { WifiOff, Wifi } from "lucide-react"
 import { listFileIds } from "@/lib/offline-idb"
 import { logger } from "@/lib/logger"
+import { useT } from "@/i18n/client"
 
 interface Props {
     /** Song-track fileIds on the current setlist; used to report N/M offline-ready. */
@@ -17,6 +18,7 @@ interface Props {
  * OFFLINE MODE when no fileIds or IDB is unavailable.
  */
 export function PerformanceOfflineIndicator({ setlistFileIds }: Props = {}) {
+    const t = useT()
     const [isOnline, setIsOnline] = useState(true)
     const [showReconnected, setShowReconnected] = useState(false)
     const [readyCount, setReadyCount] = useState<number | null>(null)
@@ -74,7 +76,7 @@ export function PerformanceOfflineIndicator({ setlistFileIds }: Props = {}) {
     const showFraction = !isOnline && total > 0 && readyCount !== null
 
     return (
-        <div className="fixed top-safe pt-2 left-0 right-0 z-splash flex justify-center pointer-events-none">
+        <div className="fixed top-safe pt-2 inset-x-0 z-splash flex justify-center pointer-events-none">
             <div className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold tracking-wider transition-all duration-500 shadow-xl
                 ${!isOnline
                     ? "glass border-amber-500/30 text-amber-200"
@@ -86,14 +88,14 @@ export function PerformanceOfflineIndicator({ setlistFileIds }: Props = {}) {
                         <WifiOff className="h-3.5 w-3.5" />
                         <span>
                             {showFraction
-                                ? `OFFLINE \u2014 ${readyCount}/${total} CHARTS READY`
-                                : "OFFLINE MODE"}
+                                ? t("perform.offline.offlineChartsReady", { ready: readyCount, total })
+                                : t("perform.offline.offlineMode")}
                         </span>
                     </>
                 ) : (
                     <>
                         <Wifi className="h-3.5 w-3.5" />
-                        <span>RECONNECTED</span>
+                        <span>{t("perform.offline.reconnected")}</span>
                     </>
                 )}
             </div>

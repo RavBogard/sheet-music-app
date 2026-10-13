@@ -6,6 +6,7 @@ import { loadChordCache, saveChordCache, saveNativeKey, toCache, type CachedChor
 import { acquireAiSlot, releaseAiSlot } from "@/lib/ai-concurrency"
 import { apiFetch } from "@/lib/api-client"
 import { logger } from "@/lib/logger"
+import { useT } from "@/i18n/client"
 
 // Re-export for consumers that import from here
 export type { ChordOverlay } from "@/lib/chord-cache"
@@ -77,6 +78,7 @@ export interface UseSmartTransposerProps {
 }
 
 export function useSmartTransposer({ pageRef, pageNumber, isRendered }: UseSmartTransposerProps) {
+    const t = useT()
     const {
         aiState,
         setPageScanning,
@@ -213,8 +215,8 @@ export function useSmartTransposer({ pageRef, pageNumber, isRendered }: UseSmart
 
         } catch (err) {
             logger.error("Scan Error:", err)
-            setLocalError(err instanceof Error ? err.message : "Scan failed")
-            setAiError(err instanceof Error ? err.message : "Scan failed")
+            setLocalError(err instanceof Error ? err.message : t("hooks.scanFailed"))
+            setAiError(err instanceof Error ? err.message : t("hooks.scanFailed"))
             setPageScanning(pageNumber, false)
         }
     }

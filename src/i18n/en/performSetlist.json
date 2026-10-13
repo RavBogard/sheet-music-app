@@ -1,0 +1,113 @@
+{
+    "songCount_one": "{count} song",
+    "songCount_other": "{count} songs",
+    "signedInAs": "Signed in as {userName} — open settings",
+    "musicianFallback": "musician",
+    "signInTo": "Sign in to {orgName}",
+    "or": "or",
+    "signInWithGoogle": "Sign In with Google",
+    "noPublicSetlists": "No public setlists available",
+    "goToNextService": "Go to next service: {setlistName}",
+    "nextService": "Next service",
+    "perform": "Perform",
+    "upcoming": "Upcoming",
+    "publicSetlists": "Public setlists",
+    "upNext": "Up Next",
+    "estimatedMinutes": "~{minutes} min",
+    "trackType": {
+        "reading": "Reading",
+        "prayer": "Prayer",
+        "transition": "Transition",
+        "note": "Note",
+        "section": "Section"
+    },
+    "queueTrackType": {
+        "header": "header",
+        "reading": "reading",
+        "prayer": "prayer",
+        "transition": "transition",
+        "note": "note"
+    },
+    "liturgyRun": {
+        "page": "p. {page}",
+        "pageRange": "pp. {firstPage}–{lastPage}",
+        "rows_one": "{count} liturgy row",
+        "rows_other": "{count} liturgy rows",
+        "hideRow": "Hide {rowTitle}",
+        "hideRows_one": "Hide {count} liturgy row",
+        "hideRows_other": "Hide {count} liturgy rows"
+    },
+    "row": {
+        "folio": "p. {page}",
+        "bpm": "{bpm} BPM",
+        "openChart": "Open chart: {songTitle}",
+        "tonightPlanned": "Tonight · planned: {plannedTitle}",
+        "swapForTonight": "Swap {songTitle} for tonight",
+        "swap": "Swap"
+    },
+    "noTracksYet": "No tracks yet",
+    "drawer": {
+        "connect": "Connect",
+        "setlist": "Setlist",
+        "joinSetlist": "Join a Setlist",
+        "currentSetlist": "Current Setlist",
+        "loadingActive": "Loading active setlists...",
+        "noneActive": "No public setlists active right now.",
+        "songCount_one": "{count} songs",
+        "songCount_other": "{count} songs",
+        "close": "Close"
+    },
+    "error": {
+        "noAccess": "This setlist hasn't been published yet, or you don't have access.",
+        "notFound": "Setlist not found -- it may have been deleted.",
+        "loadFailed": "Couldn't load setlist -- check your connection and try again."
+    },
+    "loadingSetlist": "Loading setlist...",
+    "loadingSetlistEllipsis": "Loading setlist…",
+    "backToHome": "Back to Home",
+    "backToSetlists": "Back to Setlists",
+    "backToHomeLabel": "Back to home",
+    "backToSetlistsLabel": "Back to setlists",
+    "header": {
+        "songsAndItems_one": "{count} song · {totalCount} items",
+        "songsAndItems_other": "{count} songs · {totalCount} items"
+    },
+    "toolbar": {
+        "showLiturgyRows_one": "Show {count} liturgy rows",
+        "showLiturgyRows_other": "Show {count} liturgy rows",
+        "hideLiturgyRows_one": "Hide {count} liturgy rows",
+        "hideLiturgyRows_other": "Hide {count} liturgy rows",
+        "liturgy": "Liturgy",
+        "songsOnly": "Songs only",
+        "printSetlist": "Print setlist",
+        "print": "Print",
+        "editSetlist": "Edit setlist",
+        "edit": "Edit"
+    },
+    "unknownMusician": "Unknown",
+    "tonight": {
+        "rowsSwapped_one": "{count} row swapped for tonight",
+        "rowsSwapped_other": "{count} rows swapped for tonight",
+        "resetToPlan": "Reset to plan"
+    },
+    "addTracks": "Add tracks",
+    "chartError": {
+        "title": "Chart failed to load",
+        "body": "There was a problem rendering this chart. Try reloading, or skip to the next one.",
+        "goBack": "Go Back"
+    },
+    "retry": "Retry",
+    "retrying": "Retrying…",
+    "chartLoad": {
+        "title": "Couldn't load chart",
+        "libraryFailed": "Failed to load library",
+        "signInRequired": "Sign in required to view this chart",
+        "timedOut": "Chart load timed out",
+        "notFound": "Chart not found",
+        "fileId": "File ID: {fileId}",
+        "signIn": "Sign in",
+        "back": "Back",
+        "library": "Library",
+        "loading": "Loading chart..."
+    }
+}

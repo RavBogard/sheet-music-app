@@ -12,12 +12,33 @@ import { Button } from "@/components/ui/button"
 import { captureMessage } from "@/lib/error-reporting"
 import { KeepAwakeAutoArm, useKeepAwake } from "@/components/performance/keep-awake-context"
 import Link from "next/link"
+import { DirectionalIcon } from "@/components/i18n/DirectionalIcon"
+import { useT } from "@/i18n/client"
 
 const LOAD_TIMEOUT_MS = 15_000
+
+type ChartLoadError = "library" | "signIn" | "timeout" | "notFound"
+
+/** Telemetry text (English, never shown) — unchanged from before extraction. */
+const ERROR_TELEMETRY: Record<ChartLoadError, string> = {
+    library: "Failed to load library",
+    signIn: "Sign in required to view this chart",
+    timeout: "Chart load timed out",
+    notFound: "Chart not found",
+}
+
+/** What the reader sees for each failure. */
+const ERROR_MESSAGE = {
+    library: "performSetlist.chartLoad.libraryFailed",
+    signIn: "performSetlist.chartLoad.signInRequired",
+    timeout: "performSetlist.chartLoad.timedOut",
+    notFound: "performSetlist.chartLoad.notFound",
+} as const
 
 export default function StandalonePerformPage() {
     const params = useParams()
     const router = useRouter()
+    const t = useT()
     const fileId = params?.fileId as string
 
     const { allFiles, initialized } = useLibraryStore()
@@ -49,20 +70,24 @@ export default function StandalonePerformPage() {
     const [timedOut, setTimedOut] = useState(false)
     useEffect(() => {
         if (initialized) return
-        const t = setTimeout(() => setTimedOut(true), LOAD_TIMEOUT_MS)
-        return () => clearTimeout(t)
+        const timer = setTimeout(() => setTimedOut(true), LOAD_TIMEOUT_MS)
+        return () => clearTimeout(timer)
     }, [initialized])
 
     // Once we know it's a failed/empty load, report it once for telemetry.
-    const errorReason = useMemo(() => {
+    // `kind` drives the UI; `reason` is the English telemetry text (the query
+    // error's own message when there is one, as before).
+    const loadError = useMemo((): { kind: ChartLoadError; reason: string; detail: string | null } | null => {
         if (isError) {
-            return queryError instanceof Error ? queryError.message : "Failed to load library"
+            const detail = queryError instanceof Error ? queryError.message : null
+            return { kind: "library", reason: detail ?? ERROR_TELEMETRY.library, detail }
         }
-        if (!authLoading && !user) return "Sign in required to view this chart"
-        if (timedOut && !initialized) return "Chart load timed out"
-        if (initialized && !file) return "Chart not found"
+        if (!authLoading && !user) return { kind: "signIn", reason: ERROR_TELEMETRY.signIn, detail: null }
+        if (timedOut && !initialized) return { kind: "timeout", reason: ERROR_TELEMETRY.timeout, detail: null }
+        if (initialized && !file) return { kind: "notFound", reason: ERROR_TELEMETRY.notFound, detail: null }
         return null
     }, [isError, queryError, authLoading, user, timedOut, initialized, file])
+    const errorReason = loadError?.reason ?? null
 
     useEffect(() => {
         if (!errorReason) return
@@ -73,21 +98,23 @@ export default function StandalonePerformPage() {
         })
     }, [errorReason, fileId])
 
-    if (errorReason) {
-        const isAuthError = errorReason.startsWith("Sign in")
+    if (loadError) {
+        const isAuthError = loadError.kind === "signIn"
+        // A query error's own message is shown as-is (developer text, as before).
+        const shownReason = loadError.detail ?? t(ERROR_MESSAGE[loadError.kind])
         return (
             <div className="flex flex-col h-[100dvh] items-center justify-center gap-4 bg-background p-6 text-center">
                 <AlertTriangle className="h-10 w-10 text-amber-400" aria-hidden="true" />
                 <div>
-                    <p className="text-foreground font-semibold text-lg">Couldn&apos;t load chart</p>
-                    <p className="mt-1 text-sm text-muted-foreground max-w-md">{errorReason}</p>
-                    <p className="mt-1 text-xs text-muted-foreground/70 break-all">File ID: {fileId}</p>
+                    <p className="text-foreground font-semibold text-lg">{t("performSetlist.chartLoad.title")}</p>
+                    <p className="mt-1 text-sm text-muted-foreground max-w-md">{shownReason}</p>
+                    <p className="mt-1 text-xs text-muted-foreground/70 break-all">{t("performSetlist.chartLoad.fileId", { fileId })}</p>
                 </div>
                 <div className="flex flex-wrap items-center justify-center gap-2 mt-2">
                     {isAuthError ? (
                         <Button asChild variant="default">
                             <Link href={`/login?next=${encodeURIComponent(`/perform/${fileId}`)}`}>
-                                Sign in
+                                {t("performSetlist.chartLoad.signIn")}
                             </Link>
                         </Button>
                     ) : (
@@ -99,18 +126,18 @@ export default function StandalonePerformPage() {
                             }}
                             disabled={isFetching}
                         >
-                            <RotateCw className="h-4 w-4 mr-2" />
-                            {isFetching ? "Retrying…" : "Retry"}
+                            <RotateCw className="h-4 w-4 me-2" />
+                            {isFetching ? t("performSetlist.retrying") : t("performSetlist.retry")}
                         </Button>
                     )}
                     <Button variant="outline" onClick={() => router.back()}>
-                        <ArrowLeft className="h-4 w-4 mr-2" />
-                        Back
+                        <DirectionalIcon icon={ArrowLeft} className="h-4 w-4 me-2" />
+                        {t("performSetlist.chartLoad.back")}
                     </Button>
                     <Button asChild variant="ghost">
                         <Link href="/library">
-                            <Library className="h-4 w-4 mr-2" />
-                            Library
+                            <Library className="h-4 w-4 me-2" />
+                            {t("performSetlist.chartLoad.library")}
                         </Link>
                     </Button>
                 </div>
@@ -122,7 +149,7 @@ export default function StandalonePerformPage() {
         return (
             <div className="flex flex-col h-[100dvh] items-center justify-center bg-background">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                <p className="mt-4 text-muted-foreground text-sm">Loading chart...</p>
+                <p className="mt-4 text-muted-foreground text-sm">{t("performSetlist.chartLoad.loading")}</p>
             </div>
         )
     }

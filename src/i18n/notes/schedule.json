@@ -1,0 +1,164 @@
+{
+    "signInToView": {
+        "where": "Schedule page, message when nobody is signed in",
+        "who": "everyone",
+        "maxLength": 50
+    },
+    "back": {
+        "where": "Schedule page header, accessible name (aria-label) of the back arrow button",
+        "who": "musicians and leaders",
+        "maxLength": 15
+    },
+    "title": {
+        "where": "Schedule page header title",
+        "who": "musicians and leaders",
+        "maxLength": 20,
+        "context": "the musicians' service schedule (who plays which service)"
+    },
+    "mine": {
+        "where": "Schedule page header, toggle pill that shows only the viewer's own assignments",
+        "who": "musicians and leaders",
+        "maxLength": 10
+    },
+    "switchToList": {
+        "where": "Schedule page header, accessible name of the view toggle while the calendar is shown",
+        "who": "band leaders",
+        "maxLength": 40
+    },
+    "switchToCalendar": {
+        "where": "Schedule page header, accessible name of the view toggle while the list is shown",
+        "who": "band leaders",
+        "maxLength": 40
+    },
+    "confirmedStat": {
+        "where": "Schedule page stats bar, word after a number of confirmed assignments (e.g. '3 confirmed'; the number is a separate element before it)",
+        "who": "musicians and leaders",
+        "maxLength": 15,
+        "context": "count is the number shown just before this word; use it for plural agreement"
+    },
+    "pendingStat": {
+        "where": "Schedule page stats bar, word after a number of assignments awaiting a reply (e.g. '2 pending')",
+        "who": "musicians and leaders",
+        "maxLength": 15,
+        "context": "count is the number shown just before this word; use it for plural agreement"
+    },
+    "noMusiciansAssigned": {
+        "where": "Schedule page, dashed box under a service that has no musicians yet",
+        "who": "musicians and leaders",
+        "maxLength": 40
+    },
+    "emptyMineTitle": {
+        "where": "Schedule page empty state heading with 'Mine' turned on",
+        "who": "musicians",
+        "maxLength": 40
+    },
+    "emptyAllTitle": {
+        "where": "Schedule page empty state heading",
+        "who": "musicians and leaders",
+        "maxLength": 40
+    },
+    "emptyMineBody": {
+        "where": "Schedule page empty state text with 'Mine' turned on",
+        "who": "musicians",
+        "maxLength": 140
+    },
+    "emptyAllBody": {
+        "where": "Schedule page empty state text",
+        "who": "musicians and leaders",
+        "maxLength": 140,
+        "context": "'musician picker' and 'setlist editor' are parts of the app where leaders assign musicians"
+    },
+    "dateTbd": {
+        "where": "Schedule page, beside a service name when the service has no date ('to be determined')",
+        "who": "musicians and leaders",
+        "maxLength": 10
+    },
+    "statusPending": {
+        "where": "Schedule page, small status pill on a musician's row (shown capitalised by CSS)",
+        "who": "musicians and leaders",
+        "maxLength": 12,
+        "context": "the musician has not replied yet"
+    },
+    "statusConfirmed": {
+        "where": "Schedule page, small status pill on a musician's row (shown capitalised by CSS)",
+        "who": "musicians and leaders",
+        "maxLength": 12
+    },
+    "statusDeclined": {
+        "where": "Schedule page, small status pill on a musician's row (shown capitalised by CSS)",
+        "who": "musicians and leaders",
+        "maxLength": 12
+    },
+    "statusCancelled": {
+        "where": "Schedule page, small status pill on a musician's row (shown capitalised by CSS)",
+        "who": "musicians and leaders",
+        "maxLength": 12
+    },
+    "toastConfirmed": {
+        "where": "Assignment card, toast after the musician accepted a service",
+        "who": "musicians",
+        "maxLength": 25
+    },
+    "toastDeclined": {
+        "where": "Assignment card, toast after the musician declined a service",
+        "who": "musicians",
+        "maxLength": 25
+    },
+    "respondFailed": {
+        "where": "Assignment card, error toast when accept/decline failed",
+        "who": "musicians",
+        "maxLength": 40
+    },
+    "musicianWithInstrument": {
+        "where": "Assignment card, small pill naming another musician on the same service and their instrument",
+        "who": "musicians",
+        "maxLength": 40,
+        "context": "{musicianName} is a person's name, {instrument} their instrument (e.g. 'Guitar')"
+    },
+    "moreMusicians": {
+        "where": "Assignment card, after the first five other musicians ('+3 more')",
+        "who": "musicians",
+        "maxLength": 12,
+        "context": "{count} is how many more musicians are not listed"
+    },
+    "accept": {
+        "where": "Assignment card, button to accept playing the service",
+        "who": "musicians",
+        "maxLength": 12
+    },
+    "decline": {
+        "where": "Assignment card, button to decline playing the service",
+        "who": "musicians",
+        "maxLength": 12
+    },
+    "viewSetlist": {
+        "where": "Assignment card, link to the service's setlist",
+        "who": "musicians",
+        "maxLength": 20
+    },
+    "badgeAutoConfirmed": {
+        "where": "Assignment card, status badge (top corner) when the musician was confirmed automatically",
+        "who": "musicians",
+        "maxLength": 16
+    },
+    "badgeConfirmed": {
+        "where": "Assignment card, status badge (top corner)",
+        "who": "musicians",
+        "maxLength": 12
+    },
+    "badgePending": {
+        "where": "Assignment card, status badge (top corner) while waiting for the musician's reply",
+        "who": "musicians",
+        "maxLength": 12
+    },
+    "badgeDeclined": {
+        "where": "Assignment card, status badge (top corner)",
+        "who": "musicians",
+        "maxLength": 12
+    },
+    "cardDateTbd": {
+        "where": "Assignment card, under the service name when the service has no date",
+        "who": "musicians",
+        "maxLength": 15
+    }
+}

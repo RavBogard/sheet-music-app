@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react"
 import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useT } from "@/i18n/client"
 
 interface AudioPlayerProps {
     src: string | null
@@ -11,6 +12,7 @@ interface AudioPlayerProps {
 }
 
 export function AudioPlayer({ src, title, onEnded }: AudioPlayerProps) {
+    const t = useT()
     const audioRef = useRef<HTMLAudioElement>(null)
     const [isPlaying, setIsPlaying] = useState(false)
     const [currentTime, setCurrentTime] = useState(0)
@@ -86,7 +88,7 @@ export function AudioPlayer({ src, title, onEnded }: AudioPlayerProps) {
     if (!src) {
         return (
             <div className="bg-card rounded-lg p-4 text-center text-muted-foreground">
-                Select an audio file to play
+                {t("audio.selectFile")}
             </div>
         )
     }
@@ -129,7 +131,7 @@ export function AudioPlayer({ src, title, onEnded }: AudioPlayerProps) {
                 <Button
                     size="icon"
                     variant="ghost"
-                    aria-label="Skip back 10 seconds"
+                    aria-label={t("audio.skipBack")}
                     onClick={() => {
                         if (audioRef.current) {
                             audioRef.current.currentTime = Math.max(0, currentTime - 10)
@@ -142,7 +144,7 @@ export function AudioPlayer({ src, title, onEnded }: AudioPlayerProps) {
 
                 <Button
                     size="icon"
-                    aria-label={isPlaying ? "Pause" : "Play"}
+                    aria-label={isPlaying ? t("audio.pause") : t("audio.play")}
                     onClick={togglePlay}
                     className="h-14 w-14 rounded-full bg-blue-600 hover:bg-blue-500"
                 >
@@ -152,7 +154,7 @@ export function AudioPlayer({ src, title, onEnded }: AudioPlayerProps) {
                 <Button
                     size="icon"
                     variant="ghost"
-                    aria-label="Skip forward 10 seconds"
+                    aria-label={t("audio.skipForward")}
                     onClick={() => {
                         if (audioRef.current) {
                             audioRef.current.currentTime = Math.min(duration, currentTime + 10)
@@ -163,8 +165,8 @@ export function AudioPlayer({ src, title, onEnded }: AudioPlayerProps) {
                     <SkipForward className="h-5 w-5" />
                 </Button>
 
-                <div className="flex items-center gap-2 ml-4">
-                    <Button size="icon" variant="ghost" aria-label={isMuted ? "Unmute" : "Mute"} onClick={toggleMute} className="h-8 w-8">
+                <div className="flex items-center gap-2 ms-4">
+                    <Button size="icon" variant="ghost" aria-label={isMuted ? t("audio.unmute") : t("audio.mute")} onClick={toggleMute} className="h-8 w-8">
                         {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
                     </Button>
                     <input

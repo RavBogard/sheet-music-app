@@ -20,14 +20,27 @@ import {
 import { Label } from "@/components/ui/label"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
+import { useT } from "@/i18n/client"
+import { DirectionalIcon } from "@/components/i18n/DirectionalIcon"
 import {
     EmailAuthProvider,
     reauthenticateWithCredential,
     updatePassword,
 } from "firebase/auth"
 
+/** Role id → badge text key. `leader` is the legacy id for band_leader. */
+const ROLE_LABEL = {
+    admin: "settings.role.admin",
+    band_leader: "settings.role.bandLeader",
+    musician: "settings.role.musician",
+    member: "settings.role.member",
+    leader: "settings.role.bandLeader",
+    pending: "settings.role.pending",
+} as const
+
 export default function SettingsPage() {
     const { user, profile, role, loading: authLoading, signOut } = useAuth()
+    const t = useT()
     const { theme, setTheme } = useTheme()
     const router = useRouter()
     const [editingName, setEditingName] = useState(false)
@@ -52,11 +65,11 @@ export default function SettingsPage() {
         setPasswordSuccess(false)
 
         if (newPassword !== confirmPassword) {
-            setPasswordError("New passwords do not match.")
+            setPasswordError(t("settings.password.mismatch"))
             return
         }
         if (newPassword.length < 6) {
-            setPasswordError("New password must be at least 6 characters.")
+            setPasswordError(t("settings.password.tooShort"))
             return
         }
         if (!user?.email) return
@@ -74,16 +87,16 @@ export default function SettingsPage() {
             if (err && typeof err === "object" && "code" in err) {
                 const code = (err as { code: string }).code
                 if (code === "auth/wrong-password" || code === "auth/invalid-credential") {
-                    setPasswordError("Current password is incorrect.")
+                    setPasswordError(t("settings.password.incorrect"))
                 } else if (code === "auth/weak-password") {
-                    setPasswordError("New password is too weak. Use at least 6 characters.")
+                    setPasswordError(t("settings.password.weak"))
                 } else if (code === "auth/too-many-requests") {
-                    setPasswordError("Too many attempts. Please try again later.")
+                    setPasswordError(t("settings.password.tooManyAttempts"))
                 } else {
-                    setPasswordError("Failed to change password. Please try again.")
+                    setPasswordError(t("settings.password.failed"))
                 }
             } else {
-                setPasswordError("Failed to change password. Please try again.")
+                setPasswordError(t("settings.password.failed"))
             }
         } finally {
             setPasswordLoading(false)
@@ -102,22 +115,22 @@ export default function SettingsPage() {
 
                 {/* Header */}
                 <div className="flex items-center gap-4 mb-8">
-                    <Button variant="ghost" size="icon" aria-label="Back" onClick={() => router.back()} className="rounded-full hover:bg-accent md:hidden">
-                        <ArrowLeft className="w-5 h-5" />
+                    <Button variant="ghost" size="icon" aria-label={t("settings.back")} onClick={() => router.back()} className="rounded-full hover:bg-accent md:hidden">
+                        <DirectionalIcon icon={ArrowLeft} className="w-5 h-5" />
                     </Button>
                     <div>
-                        <h1 className="text-2xl font-semibold">Settings</h1>
-                        <p className="text-muted-foreground text-sm">Profile and preferences</p>
+                        <h1 className="text-2xl font-semibold">{t("settings.title")}</h1>
+                        <p className="text-muted-foreground text-sm">{t("settings.subtitle")}</p>
                     </div>
                 </div>
 
                 {/* Account */}
                 <section className="space-y-4">
-                    <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Account</h2>
+                    <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("settings.account")}</h2>
 
                     <div className="bg-card border border-border p-5 rounded-2xl flex items-center gap-4">
                         <Avatar className="h-14 w-14 border border-border">
-                            <AvatarImage src={user?.photoURL ?? undefined} alt="Profile" />
+                            <AvatarImage src={user?.photoURL ?? undefined} alt={t("settings.profilePhotoAlt")} />
                             <AvatarFallback className="bg-muted">
                                 <User className="w-7 h-7 text-muted-foreground" />
                             </AvatarFallback>
@@ -144,7 +157,7 @@ export default function SettingsPage() {
                                         className="h-8 text-sm font-semibold"
                                         autoFocus
                                     />
-                                    <Button type="submit" size="icon" variant="ghost" aria-label="Save name" className="h-8 w-8 shrink-0" disabled={savingName}>
+                                    <Button type="submit" size="icon" variant="ghost" aria-label={t("settings.saveName")} className="h-8 w-8 shrink-0" disabled={savingName}>
                                         <Check className="h-4 w-4" />
                                     </Button>
                                 </form>
@@ -156,7 +169,7 @@ export default function SettingsPage() {
                                         setEditingName(true)
                                     }}
                                 >
-                                    <h3 className="font-semibold text-foreground">{profile?.displayName || user?.displayName || "Musician"}</h3>
+                                    <h3 className="font-semibold text-foreground">{profile?.displayName || user?.displayName || t("settings.defaultDisplayName")}</h3>
                                     <Pencil className="h-3 w-3 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors" />
                                 </button>
                             )}
@@ -164,20 +177,21 @@ export default function SettingsPage() {
                         </div>
                         <div className="text-xs font-mono bg-muted px-2.5 py-1 rounded-lg text-muted-foreground border border-border">
                             {(() => {
-                                const labels: Record<string, string> = { admin: 'ADMIN', band_leader: 'BAND LEADER', musician: 'MUSICIAN', member: 'MEMBER', leader: 'BAND LEADER', pending: 'PENDING' }
-                                return labels[role ?? 'pending'] || role?.toUpperCase() || 'MEMBER'
+                                const r = role ?? 'pending'
+                                // Unknown role ids fall through to the raw id (data, as before).
+                                return Object.hasOwn(ROLE_LABEL, r) ? t(ROLE_LABEL[r as keyof typeof ROLE_LABEL]) : role?.toUpperCase() || t("settings.role.member")
                             })()}
                         </div>
                     </div>
 
                     {/* Appearance */}
                     <div className="bg-card border border-border p-5 rounded-2xl">
-                        <h3 className="font-semibold text-foreground mb-3">Appearance</h3>
+                        <h3 className="font-semibold text-foreground mb-3">{t("settings.appearance")}</h3>
                         <div className="flex gap-2">
                             {[
-                                { value: "light", icon: Sun, label: "Light" },
-                                { value: "dark", icon: Moon, label: "Dark" },
-                                { value: "system", icon: Monitor, label: "System" },
+                                { value: "light", icon: Sun, label: t("settings.theme.light") },
+                                { value: "dark", icon: Moon, label: t("settings.theme.dark") },
+                                { value: "system", icon: Monitor, label: t("settings.theme.system") },
                             ].map(({ value, icon: Icon, label }) => (
                                 <button
                                     key={value}
@@ -194,7 +208,7 @@ export default function SettingsPage() {
                             ))}
                         </div>
                         <p className="text-xs text-muted-foreground mt-3">
-                            Performance mode always uses dark theme for stage visibility.
+                            {t("settings.performDarkHint")}
                         </p>
                     </div>
 
@@ -205,9 +219,9 @@ export default function SettingsPage() {
                     <div className="bg-card border border-border p-5 rounded-2xl">
                         <div className="flex items-center justify-between mb-3">
                             <div>
-                                <h3 className="font-semibold text-foreground">Live Gig Mode</h3>
+                                <h3 className="font-semibold text-foreground">{t("settings.gigMode.title")}</h3>
                                 <p className="text-sm text-muted-foreground mt-1">
-                                    Disables background syncing and analytics for bulletproof stability on stage.
+                                    {t("settings.gigMode.description")}
                                 </p>
                             </div>
                             <Switch checked={gigModeActive} onCheckedChange={setGigModeActive} />
@@ -222,13 +236,13 @@ export default function SettingsPage() {
                     {/* Change Password (email/password users only) */}
                     {isEmailPasswordUser && (
                         <div className="bg-card border border-border p-5 rounded-2xl">
-                            <h3 className="font-semibold text-foreground mb-1">Change Password</h3>
+                            <h3 className="font-semibold text-foreground mb-1">{t("settings.password.title")}</h3>
                             <p className="text-sm text-muted-foreground mb-4">
-                                Update the password for your email account.
+                                {t("settings.password.description")}
                             </p>
                             <form onSubmit={handleChangePassword} className="space-y-3">
                                 <div className="space-y-1.5">
-                                    <Label htmlFor="current-password">Current password</Label>
+                                    <Label htmlFor="current-password">{t("settings.password.current")}</Label>
                                     <Input
                                         id="current-password"
                                         type="password"
@@ -239,11 +253,11 @@ export default function SettingsPage() {
                                     />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <Label htmlFor="new-password">New password</Label>
+                                    <Label htmlFor="new-password">{t("settings.password.new")}</Label>
                                     <Input
                                         id="new-password"
                                         type="password"
-                                        placeholder="At least 6 characters"
+                                        placeholder={t("settings.password.newPlaceholder")}
                                         value={newPassword}
                                         onChange={(e) => setNewPassword(e.target.value)}
                                         required
@@ -252,7 +266,7 @@ export default function SettingsPage() {
                                     />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <Label htmlFor="confirm-password">Confirm new password</Label>
+                                    <Label htmlFor="confirm-password">{t("settings.password.confirm")}</Label>
                                     <Input
                                         id="confirm-password"
                                         type="password"
@@ -271,7 +285,7 @@ export default function SettingsPage() {
                                 )}
                                 {passwordSuccess && (
                                     <div className="bg-success/10 border border-success/20 text-success text-sm rounded-xl p-3">
-                                        Password updated successfully.
+                                        {t("settings.password.success")}
                                     </div>
                                 )}
 
@@ -285,7 +299,7 @@ export default function SettingsPage() {
                                     ) : (
                                         <Lock className="h-4 w-4" />
                                     )}
-                                    Update password
+                                    {t("settings.password.submit")}
                                 </Button>
                             </form>
                         </div>
@@ -294,7 +308,7 @@ export default function SettingsPage() {
 
                 {/* My Instrument */}
                 <section className="space-y-4">
-                    <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">My Instrument</h2>
+                    <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("settings.myInstrument")}</h2>
                     <div className="bg-card border border-border p-5 rounded-2xl">
                         <MusicianProfileSettings />
                     </div>
@@ -302,7 +316,7 @@ export default function SettingsPage() {
 
                 {/* Integrations */}
                 <section className="space-y-4">
-                    <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Integrations</h2>
+                    <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("settings.integrations")}</h2>
                     <div className="bg-card border border-border p-5 rounded-2xl">
                         <McpAccessSettings />
                     </div>
@@ -316,10 +330,10 @@ export default function SettingsPage() {
                         className="text-destructive hover:text-destructive/80 hover:bg-destructive/10 gap-2 px-8 rounded-xl"
                     >
                         <LogOut className="w-4 h-4" />
-                        Log Out
+                        {t("settings.logOut")}
                     </Button>
                     <div className="text-muted-foreground/40 text-xs">
-                        v{buildInfo.version} • {buildInfo.commit?.slice(0, 7)}
+                        {t("settings.version", { version: buildInfo.version, commit: buildInfo.commit?.slice(0, 7) })}
                     </div>
                 </div>
             </div>

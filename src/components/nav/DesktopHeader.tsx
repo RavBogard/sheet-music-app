@@ -22,11 +22,23 @@ import {
 import { useRouter } from "next/navigation"
 import { DriveFile } from "@/types/models"
 import { NotificationBell } from "@/components/nav/NotificationBell"
+import { useT } from "@/i18n/client"
 import { OrgLogo } from "@/components/nav/OrgLogo"
 
 import { AppNavigationProps } from "./AppNavigation"
 
+/** The desktop user menu shows the raw role code (CSS-uppercased); keys keep that English. */
+const ROLE_CODE = {
+    admin: "nav.roleCode.admin",
+    band_leader: "nav.roleCode.bandLeader",
+    musician: "nav.roleCode.musician",
+    member: "nav.roleCode.member",
+    pending: "nav.roleCode.pending",
+    denied: "nav.roleCode.denied",
+} as const
+
 export function DesktopHeader(props: AppNavigationProps) {
+    const t = useT()
     const pathname = usePathname()
     const router = useRouter()
     const { user, profile, role, isMember: authIsMember, isBandLeader: authIsBandLeader, isPlatformOwner: authIsPlatformOwner, signIn, signOut } = useAuth()
@@ -67,10 +79,10 @@ export function DesktopHeader(props: AppNavigationProps) {
     const setlistsHref = isAuthed || !performOn ? "/setlists" : "/perform"
 
     const navLinks = [
-        { label: "Setlists", href: setlistsHref, show: true },
-        { label: "Schedule", href: "/schedule", show: isMusician },
-        { label: "Library", href: "/library", show: isMember },
-        { label: "Monitor", href: "/monitor", show: mixerOn && hasMonitorAccess },
+        { label: t("nav.setlists"), href: setlistsHref, show: true },
+        { label: t("nav.schedule"), href: "/schedule", show: isMusician },
+        { label: t("nav.library"), href: "/library", show: isMember },
+        { label: t("nav.monitor"), href: "/monitor", show: mixerOn && hasMonitorAccess },
     ]
 
     const searchResults = searchQuery.length > 1
@@ -96,6 +108,11 @@ export function DesktopHeader(props: AppNavigationProps) {
         setShowResults(false)
     }
 
+    // Known role codes are translated; an unknown code shows as stored (as today).
+    const roleText = role
+        ? (Object.prototype.hasOwnProperty.call(ROLE_CODE, role) ? t(ROLE_CODE[role as keyof typeof ROLE_CODE]) : role)
+        : t("nav.pendingRole")
+
     const [isOnline, setIsOnline] = useState(true)
     useEffect(() => {
         setIsOnline(navigator.onLine)
@@ -107,7 +124,7 @@ export function DesktopHeader(props: AppNavigationProps) {
     }, [])
 
     return (
-        <header className="fixed top-0 left-0 right-0 h-16 z-50 hidden md:flex items-center justify-between px-4 lg:px-6 material-thick border-b border-brand/10 overflow-x-clip">
+        <header className="fixed top-0 inset-x-0 h-16 z-50 hidden md:flex items-center justify-between px-4 lg:px-6 material-thick border-b border-brand/10 overflow-x-clip">
             {/* Logo + Nav */}
             <div className="flex items-center gap-8">
                 <Link href="/" className="flex items-center gap-3 group min-h-11">
@@ -167,27 +184,27 @@ export function DesktopHeader(props: AppNavigationProps) {
                     <>
                         {!isOnline && (
                             <div className="hidden lg:flex items-center gap-2 px-3 py-1 bg-red-500/10 text-red-500 rounded-full text-xs font-medium border border-red-500/20">
-                                <CloudOff className="h-3 w-3" /> Offline
+                                <CloudOff className="h-3 w-3" /> {t("nav.offline")}
                             </div>
                         )}
 
                         {/* Search */}
                         <div className="relative group" ref={searchRef}>
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-brand transition-colors" />
+                            <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-brand transition-colors" />
                             <Input
-                                placeholder="Search songs..."
-                                aria-label="Search songs"
+                                placeholder={t("nav.searchSongsPlaceholder")}
+                                aria-label={t("nav.searchSongs")}
                                 value={searchQuery}
                                 onChange={(e) => { setSearchQuery(e.target.value); setShowResults(true) }}
                                 onFocus={() => setShowResults(true)}
-                                className="w-48 lg:w-64 bg-brand/5 border-border/50 rounded-full pl-9 h-11 text-sm focus:ring-brand/10 focus:bg-background focus:border-brand/30 transition-all fluid-interaction shadow-inner"
+                                className="w-48 lg:w-64 bg-brand/5 border-border/50 rounded-full ps-9 h-11 text-sm focus:ring-brand/10 focus:bg-background focus:border-brand/30 transition-all fluid-interaction shadow-inner"
                             />
                             {showResults && searchResults.length > 0 && (
-                                <div className="absolute top-full mt-2 left-0 right-0 material-thin rounded-xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200 border border-brand/10">
+                                <div className="absolute top-full mt-2 inset-x-0 material-thin rounded-xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200 border border-brand/10">
                                     <div className="p-2 space-y-1">
                                         {searchResults.map(file => (
                                             <button key={file.id} onClick={() => handleSelectSong(file)}
-                                                className="w-full text-left px-3 py-2 rounded-lg hover:bg-brand/10 transition-colors group">
+                                                className="w-full text-start px-3 py-2 rounded-lg hover:bg-brand/10 transition-colors group">
                                                 <div className="text-sm font-medium text-foreground group-hover:text-foreground truncate">
                                                     {file.name.replace(/\.[^/.]+$/, "")}
                                                 </div>
@@ -208,9 +225,9 @@ export function DesktopHeader(props: AppNavigationProps) {
                             <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="icon"
                                     className={cn("text-muted-foreground hover:text-foreground rounded-full overflow-hidden transition-all", !isOnline && "ring-2 ring-red-500")}
-                                    aria-label="User menu">
+                                    aria-label={t("nav.userMenu")}>
                                     <Avatar className="h-8 w-8 border border-border">
-                                        <AvatarImage src={user?.photoURL ?? undefined} alt="Profile" />
+                                        <AvatarImage src={user?.photoURL ?? undefined} alt={t("nav.profilePhotoAlt")} />
                                         <AvatarFallback><UserCircle className="w-5 h-5" /></AvatarFallback>
                                     </Avatar>
                                 </Button>
@@ -218,15 +235,15 @@ export function DesktopHeader(props: AppNavigationProps) {
                             <DropdownMenuContent className="w-56 bg-popover border-border text-popover-foreground" align="end">
                                 <DropdownMenuLabel className="font-normal">
                                     <div className="flex flex-col space-y-1">
-                                        <p className="text-sm font-medium leading-none">{user?.displayName || "Musician"}</p>
+                                        <p className="text-sm font-medium leading-none">{user?.displayName || t("nav.musicianFallback")}</p>
                                         <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
-                                        <p className="text-[10px] uppercase font-bold text-brand mt-1">{role || "Pending"}</p>
+                                        <p className="text-[10px] uppercase font-bold text-brand mt-1">{roleText}</p>
                                     </div>
                                 </DropdownMenuLabel>
                                 <DropdownMenuSeparator className="bg-border" />
                                 <DropdownMenuItem asChild className="hover:bg-accent cursor-pointer">
                                     <Link href="/settings">
-                                        <Settings className="mr-2 h-4 w-4" /> Settings
+                                        <Settings className="me-2 h-4 w-4" /> {t("nav.settings")}
                                     </Link>
                                 </DropdownMenuItem>
                                 {isBandLeader && (
@@ -234,7 +251,7 @@ export function DesktopHeader(props: AppNavigationProps) {
                                         <DropdownMenuSeparator className="bg-border" />
                                         <DropdownMenuItem asChild className="hover:bg-accent cursor-pointer">
                                             <Link href="/manage">
-                                                <ShieldAlert className="mr-2 h-4 w-4 text-brand" /> Manage
+                                                <ShieldAlert className="me-2 h-4 w-4 text-brand" /> {t("nav.manage")}
                                             </Link>
                                         </DropdownMenuItem>
                                     </>
@@ -242,20 +259,20 @@ export function DesktopHeader(props: AppNavigationProps) {
                                 {isPlatformOwner && (
                                     <DropdownMenuItem asChild className="hover:bg-accent cursor-pointer">
                                         <Link href="/platform">
-                                            <Building2 className="mr-2 h-4 w-4 text-brand" /> Platform
+                                            <Building2 className="me-2 h-4 w-4 text-brand" /> {t("nav.platform")}
                                         </Link>
                                     </DropdownMenuItem>
                                 )}
                                 <DropdownMenuSeparator className="bg-border" />
                                 <DropdownMenuItem className="text-red-500 hover:bg-red-500/10 cursor-pointer" onClick={() => signOut()}>
-                                    <LogOut className="mr-2 h-4 w-4" /> Log out
+                                    <LogOut className="me-2 h-4 w-4" /> {t("nav.logOut")}
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </>
                 ) : (
                     <Button onClick={async () => { try { await signIn() } catch { } }} variant="outline" className="border-border hover:bg-accent hover:text-foreground">
-                        Sign In
+                        {t("nav.signIn")}
                     </Button>
                 )}
             </div>

@@ -3,6 +3,7 @@
 import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Hand } from "lucide-react"
+import { useT } from "@/i18n/client"
 
 interface TapTempoButtonProps {
     onBpmChange: (bpm: number) => void
@@ -10,6 +11,7 @@ interface TapTempoButtonProps {
 }
 
 export function TapTempoButton({ onBpmChange, currentBpm: _currentBpm }: TapTempoButtonProps) {
+    const t = useT()
     const [_taps, setTaps] = useState<number[]>([])
     const [calculatedBpm, setCalculatedBpm] = useState<number | null>(null)
     const [tapCount, setTapCount] = useState(0)
@@ -79,14 +81,14 @@ export function TapTempoButton({ onBpmChange, currentBpm: _currentBpm }: TapTemp
             className={`min-w-[80px] transition-all duration-100 ${
                 pulsing ? 'scale-110' : 'scale-100'
             } ${calculatedBpm ? 'border-primary text-primary bg-primary/10' : 'border-input hover:bg-accent'}`}
-            title="Tap repeatedly to set tempo"
+            title={t("ui.tapTempoTitle")}
         >
-            <Hand className="mr-2 h-4 w-4" />
+            <Hand className="me-2 h-4 w-4" />
             {calculatedBpm
                 ? `${calculatedBpm}`
                 : tapCount === 1
-                    ? "Tap..."
-                    : "Tap"}
+                    ? t("ui.tapAgain")
+                    : t("ui.tap")}
         </Button>
     )
 }

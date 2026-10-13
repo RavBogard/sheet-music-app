@@ -1,0 +1,15 @@
+{
+    "tryBeta": { "where": "Page footer: link opting into the v2 beta design", "who": "everyone", "maxLength": 40 },
+    "backToClassic": { "where": "v2 beta footer: link returning to the classic design", "who": "everyone using the beta", "maxLength": 24 },
+    "footerBeta": { "where": "v2 beta footer: small label", "who": "everyone using the beta", "maxLength": 12 },
+    "eyebrow": { "where": "v2 beta landing page: small eyebrow above the heading", "who": "everyone using the beta", "maxLength": 40, "context": "the beta's design-language name" },
+    "heroTitle": { "where": "v2 beta landing page: heading", "who": "everyone using the beta", "maxLength": 40, "context": "'CRC Music' is the product's name; keep it as written" },
+    "intro": { "where": "v2 beta landing page: introduction paragraph", "who": "everyone using the beta", "maxLength": 240 },
+    "welcomeBack": { "where": "v2 beta landing page: demo card heading", "who": "everyone using the beta", "maxLength": 30 },
+    "showcaseNote": { "where": "v2 beta landing page: demo card text", "who": "everyone using the beta", "maxLength": 100 },
+    "beta": { "where": "v2 beta landing page: badge", "who": "everyone using the beta", "maxLength": 8 },
+    "recentSetlistsDemo": { "where": "v2 beta landing page: section heading over a demo list", "who": "everyone using the beta", "maxLength": 30 },
+    "demoListLabel": { "where": "v2 beta landing page: accessible label of the demo list", "who": "everyone using the beta", "maxLength": 50 },
+    "openClassicSetlists": { "where": "v2 beta landing page: link to the classic setlists page", "who": "everyone using the beta", "maxLength": 30 },
+    "openClassicLibrary": { "where": "v2 beta landing page: link to the classic library page", "who": "everyone using the beta", "maxLength": 30 }
+}

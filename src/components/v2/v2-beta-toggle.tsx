@@ -3,6 +3,7 @@
 import Link from "next/link"
 import * as React from "react"
 import { cn } from "@/lib/utils"
+import { useT } from "@/i18n/client"
 
 const COOKIE_NAME = "v2_beta_optin"
 const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365
@@ -23,6 +24,7 @@ function clearOptInCookie() {
  * Read by RSCs via next/headers.cookies() — never used to rewrite v1 URLs.
  */
 export function V2BetaOptInLink({ className, label }: { className?: string; label?: string }) {
+  const t = useT()
   return (
     <Link
       href="/v2"
@@ -33,7 +35,7 @@ export function V2BetaOptInLink({ className, label }: { className?: string; labe
       )}
     >
       <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-400" aria-hidden />
-      {label ?? "Try the new experience (beta)"}
+      {label ?? t("v2.tryBeta")}
     </Link>
   )
 }
@@ -43,6 +45,7 @@ export function V2BetaOptInLink({ className, label }: { className?: string; labe
  * Clears the cookie and routes back to "/".
  */
 export function V2BetaOptOutLink({ className, label }: { className?: string; label?: string }) {
+  const t = useT()
   return (
     <Link
       href="/"
@@ -52,7 +55,7 @@ export function V2BetaOptOutLink({ className, label }: { className?: string; lab
         className
       )}
     >
-      {label ?? "Back to classic"}
+      {label ?? t("v2.backToClassic")}
     </Link>
   )
 }

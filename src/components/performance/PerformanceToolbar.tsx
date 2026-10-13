@@ -20,6 +20,8 @@ import { useMonitorAccess } from "@/hooks/use-monitor-access"
 import { useMonitorConnection } from "@/hooks/use-monitor-connection"
 import { useFeature } from "@/lib/org/use-feature"
 import { cn } from "@/lib/utils"
+import { useT } from "@/i18n/client"
+import { useChartContentDir } from "@/components/i18n/ChartContent"
 
 /** Wake-lock controls threaded from the parent Perform surface so the
  *  in-chart toolbar can arm "Keep screen on" without exiting back to the
@@ -59,6 +61,10 @@ interface PerformanceToolbarProps {
 }
 
 export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint, onPrintChart, wakeLock }: PerformanceToolbarProps) {
+    const t = useT()
+    // Musical key labels ("G#m → A#m +2") are chart content: they keep
+    // left-to-right order on a right-to-left page (no attribute on ltr).
+    const musicalDir = useChartContentDir()
     const {
         aiState, setAiEnabled, capoFret, transposition, zoom, setZoom, musicXmlKey,
         fitMode, setFitMode
@@ -74,8 +80,7 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint, onPrintC
     // WS-14: fit-page is PDF-only (text/MusicXML/image viewers ignore fitMode),
     // so the fit-mode toggle is shown only when the current chart is a PDF.
     const isPdfChart = currentType === 'pdf'
-    const transposeDisabledReason =
-        "Transposing isn't available for image charts. Re-upload as a PDF or MusicXML to change keys."
+    const transposeDisabledReason = t("perform.toolbar.transposeUnavailableImage")
     const { hasAccess: hasMonitorAccess } = useMonitorAccess()
     // Multi-tenant phase 6: the monitor button is the mixer's (crc only).
     const mixerOn = useFeature("mixer")
@@ -116,11 +121,11 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint, onPrintC
         try {
             await onPrintChart()
         } catch (err) {
-            setPrintChartError(err instanceof Error ? err.message : "Couldn't print this chart.")
+            setPrintChartError(err instanceof Error ? err.message : t("perform.toolbar.printChartFailed"))
         } finally {
             setIsPrintingChart(false)
         }
-    }, [onPrintChart, isPrintingChart])
+    }, [onPrintChart, isPrintingChart, t])
 
     const trackPopover = useCallback((id: string, open: boolean) => {
         setOpenPopovers(prev => {
@@ -161,16 +166,29 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint, onPrintC
         () => `${transposition >= 0 ? "+" : ""}${transposition}`,
         [transposition],
     )
-    const buttonLabel = useMemo(() => {
-        if (aiState.scanningPages.length > 0) return "Scan"
-        if (capoFret !== null && capoFret > 0 && detectedKey) return `Capo ${capoFret}`
-        if (transposition !== 0 && detectedKey) {
-            return `${detectedKey} → ${transposeChord(detectedKey, transposition)} ${signedOffset}`
+    // `compact` is the touch-layout label; `caps` the desktop one (written in
+    // capitals). UI words come from the catalogue in both cases; only the
+    // musical part (key names + offset, data — never translated) is
+    // upper-cased in code, exactly as before.
+    const buttonLabel = useMemo((): { compact: string; caps: string; musical: boolean } => {
+        if (aiState.scanningPages.length > 0) {
+            return { compact: t("perform.toolbar.scan"), caps: t("perform.toolbar.scanCaps"), musical: false }
         }
-        if (transposition !== 0) return signedOffset
-        if (detectedKey) return `${detectedKey} ${signedOffset}`
-        return signedOffset
-    }, [aiState.scanningPages.length, capoFret, transposition, detectedKey, signedOffset])
+        if (capoFret !== null && capoFret > 0 && detectedKey) {
+            return {
+                compact: t("perform.capo", { fret: capoFret }),
+                caps: t("perform.toolbar.capoCaps", { fret: capoFret }),
+                musical: false,
+            }
+        }
+        let musical = signedOffset
+        if (transposition !== 0 && detectedKey) {
+            musical = `${detectedKey} → ${transposeChord(detectedKey, transposition)} ${signedOffset}`
+        } else if (transposition === 0 && detectedKey) {
+            musical = `${detectedKey} ${signedOffset}`
+        }
+        return { compact: musical, caps: musical.toUpperCase(), musical: true }
+    }, [aiState.scanningPages.length, capoFret, transposition, detectedKey, signedOffset, t])
 
     // M3-004 peripheral cue: when the chart is transposed away from +0 the
     // button gets a stronger primary-tinted pill accent so the band can
@@ -197,7 +215,7 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint, onPrintC
                     // (40px) on the non-compact/desktop+iPad-landscape branch.
                     "text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg h-11 w-11"
                 )}
-                aria-label="Zoom out"
+                aria-label={t("perform.toolbar.zoomOut")}
             >
                 <ZoomOut className="h-5 w-5" />
             </Button>
@@ -215,8 +233,8 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint, onPrintC
             <Button
                 variant="ghost"
                 onClick={() => setZoom(1)}
-                aria-label="Reset zoom to 100%"
-                title="Reset to 100%"
+                aria-label={t("perform.toolbar.resetZoomAria")}
+                title={t("perform.toolbar.resetZoomTitle")}
                 className={cn(
                     "font-medium text-foreground text-center flex items-center justify-center cursor-pointer rounded-lg hover:bg-muted hover:text-foreground h-11 min-w-11 px-1 text-xs"
                 )}
@@ -235,7 +253,7 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint, onPrintC
                     // C10I1-001: ≥44px (h-11 w-11) on all viewports.
                     "text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg h-11 w-11"
                 )}
-                aria-label="Zoom in"
+                aria-label={t("perform.toolbar.zoomIn")}
             >
                 <ZoomIn className="h-5 w-5" />
             </Button>
@@ -250,8 +268,8 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint, onPrintC
                 <Button
                     variant="ghost" size="icon"
                     onClick={() => setFitMode(fitMode === 'width' ? 'page' : 'width')}
-                    aria-label={fitMode === 'width' ? 'Fit whole page to screen' : 'Fit chart to full width'}
-                    title={fitMode === 'width' ? 'Fit whole page' : 'Fit to width'}
+                    aria-label={fitMode === 'width' ? t("perform.toolbar.fitPageAria") : t("perform.toolbar.fitWidthAria")}
+                    title={fitMode === 'width' ? t("perform.toolbar.fitPageTitle") : t("perform.toolbar.fitWidthTitle")}
                     className={cn(
                         "rounded-lg h-11 w-11",
                         fitMode === 'page'
@@ -281,9 +299,9 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint, onPrintC
                 <Button variant="ghost" className={cn(
                     "rounded-xl fluid-interaction glass-card text-foreground/80 hover:text-foreground flex items-center justify-center",
                     compact ? "h-11 w-11 md:w-auto md:px-3 overflow-hidden text-xs font-semibold gap-1.5" : "h-11 px-4 text-xs font-bold gap-2 group"
-                )} aria-label="Monitor mix">
+                )} aria-label={t("perform.toolbar.monitorAria")}>
                     <Speaker className={compact ? "h-4 w-4 md:h-3.5 md:w-3.5 shrink-0" : "h-3.5 w-3.5 shrink-0"} />
-                    <span className="hidden md:inline">{compact ? "Monitor" : "MONITOR"}</span>
+                    <span className="hidden md:inline">{compact ? t("perform.toolbar.monitor") : t("perform.toolbar.monitorCaps")}</span>
                 </Button>
             </PopoverTrigger>
             {/* 2026-05-26 monitor-popup-fullbottom-redesign (coder-5): popup spans the FULL
@@ -300,7 +318,7 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint, onPrintC
                 {hasMonitorAccess ? (
                     <QuickMonitorPanel onClose={() => setOpenState(false)} />
                 ) : (
-                    <div className="flex h-full items-center justify-center text-xs text-muted-foreground/60 px-4 py-6">No monitor connected</div>
+                    <div className="flex h-full items-center justify-center text-xs text-muted-foreground/60 px-4 py-6">{t("perform.toolbar.noMonitor")}</div>
                 )}
             </PopoverContent>
         </Popover>
@@ -347,7 +365,7 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint, onPrintC
                         aria-hidden="true"
                     />
                     <span className="truncate">
-                        {compact ? "Transpose" : "TRANSPOSE"}
+                        {compact ? t("perform.toolbar.transpose") : t("perform.toolbar.transposeCaps")}
                     </span>
                 </Button>
             )
@@ -386,7 +404,9 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint, onPrintC
                         ) : (
                             <Sparkles className={cn("shrink-0", compact ? "h-4 w-4" : "h-3.5 w-3.5")} />
                         )}
-                        <span className="truncate">{compact ? buttonLabel : buttonLabel.toUpperCase()}</span>
+                        <span className="truncate" {...(buttonLabel.musical ? musicalDir : {})}>
+                            {compact ? buttonLabel.compact : buttonLabel.caps}
+                        </span>
                     </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-80 max-w-[85vw] p-0 bg-popover border-border" align={side === "left" ? "start" : "end"} side={side}>
@@ -433,7 +453,7 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint, onPrintC
                     <div className="shrink-0">
                         <Button variant="ghost" onClick={onHome} className="h-12 px-4 glass-card text-foreground/80 hover:text-foreground fluid-interaction rounded-xl flex items-center gap-2">
                             <X className="h-5 w-5" />
-                            <span className="text-xs font-bold uppercase tracking-wider hidden sm:inline">Exit</span>
+                            <span className="text-xs font-bold uppercase tracking-wider hidden sm:inline">{t("perform.toolbar.exit")}</span>
                         </Button>
                     </div>
 
@@ -459,9 +479,9 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint, onPrintC
 
                 {/* LEFT: System & Navigation */}
                 <div className="flex items-center gap-3 shrink-0">
-                    <Button variant="ghost" onClick={onHome} className="h-11 px-4 glass-card text-foreground/80 hover:text-foreground fluid-interaction rounded-xl flex items-center gap-2" title="Exit Gig Mode">
+                    <Button variant="ghost" onClick={onHome} className="h-11 px-4 glass-card text-foreground/80 hover:text-foreground fluid-interaction rounded-xl flex items-center gap-2" title={t("perform.toolbar.exitTitle")}>
                         <X className="h-5 w-5" />
-                        <span className="text-xs font-bold uppercase tracking-wider">Exit</span>
+                        <span className="text-xs font-bold uppercase tracking-wider">{t("perform.toolbar.exit")}</span>
                     </Button>
 
                     {/* Scale Controls */}
@@ -478,9 +498,9 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint, onPrintC
                                 variant="ghost" size="icon"
                                 onClick={handlePrintChart}
                                 disabled={isPrintingChart}
-                                aria-label={isPrintingChart ? "Printing this chart…" : "Print this chart"}
+                                aria-label={isPrintingChart ? t("perform.toolbar.printingChart") : t("perform.toolbar.printChart")}
                                 aria-describedby={printChartError ? "print-chart-error" : undefined}
-                                title="Print this chart"
+                                title={t("perform.toolbar.printChart")}
                                 className={cn(
                                     "rounded-lg h-11 w-11 cursor-pointer",
                                     "text-muted-foreground hover:text-foreground hover:bg-muted",
@@ -503,7 +523,7 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint, onPrintC
                                     id="print-chart-error"
                                     role="alert"
                                     data-testid="print-chart-error"
-                                    className="absolute bottom-full left-0 mb-2 z-50 w-56 whitespace-normal rounded-md border border-destructive/40 bg-destructive/95 px-2.5 py-1.5 text-[11px] font-medium text-destructive-foreground shadow-lg"
+                                    className="absolute bottom-full start-0 mb-2 z-50 w-56 whitespace-normal rounded-md border border-destructive/40 bg-destructive/95 px-2.5 py-1.5 text-[11px] font-medium text-destructive-foreground shadow-lg"
                                 >
                                     {printChartError}
                                 </div>

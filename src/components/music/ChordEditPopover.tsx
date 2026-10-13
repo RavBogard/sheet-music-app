@@ -6,6 +6,8 @@ import { Trash2, Minus, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { transposeChord } from "@/lib/music-math"
 import type { ChordOverlay } from "@/lib/chord-cache"
+import { useT } from "@/i18n/client"
+import { useChartContentDir } from "@/components/i18n/ChartContent"
 
 interface ChordEditPopoverProps {
     chord: ChordOverlay
@@ -25,6 +27,9 @@ export function ChordEditPopover({
     transposition, preferFlats,
     onCorrect, onDelete, onResize, onClose,
 }: ChordEditPopoverProps) {
+    const t = useT()
+    // Phase 7: chord symbols are chart content — they keep ltr on an rtl page.
+    const chartDir = useChartContentDir()
     const [inputValue, setInputValue] = useState(chord.text)
     const inputRef = useRef<HTMLInputElement>(null)
     const popoverRef = useRef<HTMLDivElement>(null)
@@ -32,11 +37,11 @@ export function ChordEditPopover({
 
     // Focus and select on mount
     useEffect(() => {
-        const t = setTimeout(() => {
+        const timer = setTimeout(() => {
             inputRef.current?.focus()
             inputRef.current?.select()
         }, 50)
-        return () => clearTimeout(t)
+        return () => clearTimeout(timer)
     }, [])
 
     // Sync input when switching to a different chord
@@ -106,14 +111,14 @@ export function ChordEditPopover({
                 {/* Header with delete */}
                 <div className="flex items-center justify-between px-3 pt-2.5 pb-2 border-b border-zinc-800">
                     <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">
-                        Edit Chord
+                        {t("music.chordEdit.popoverTitle")}
                     </span>
                     <Button
                         variant="ghost"
                         size="icon-xs"
                         onClick={() => onDelete(chordIndex)}
                         className="hover:bg-red-500/15 text-zinc-600 hover:text-red-400"
-                        title="Delete chord"
+                        title={t("music.chordEdit.deleteChord")}
                     >
                         <Trash2 className="h-3.5 w-3.5" />
                     </Button>
@@ -121,7 +126,7 @@ export function ChordEditPopover({
 
                 {/* Suggestion chips */}
                 {suggestions.length > 0 && (
-                    <div className="flex gap-1 px-3 pt-2.5">
+                    <div {...chartDir} className="flex gap-1 px-3 pt-2.5">
                         {suggestions.map(s => (
                             <Button
                                 key={s}
@@ -140,6 +145,7 @@ export function ChordEditPopover({
                     <input
                         ref={inputRef}
                         type="text"
+                        {...chartDir}
                         value={inputValue}
                         onChange={e => setInputValue(e.target.value)}
                         onKeyDown={e => {
@@ -147,7 +153,7 @@ export function ChordEditPopover({
                             if (e.key === 'Escape') onClose()
                         }}
                         className="flex-1 min-w-0 bg-zinc-950 border border-zinc-700 focus:border-violet-500 rounded-lg px-2.5 py-2 text-sm text-white font-mono placeholder:text-zinc-600 focus:outline-none transition-colors"
-                        placeholder="Chord..."
+                        placeholder={t("music.chordEdit.chordPlaceholder")}
                     />
                     <Button
                         variant="ghost"
@@ -155,22 +161,22 @@ export function ChordEditPopover({
                         onClick={handleSubmit}
                         className="shrink-0 px-2.5 bg-violet-600 hover:bg-violet-500 active:bg-violet-700 rounded-lg text-white text-xs font-semibold"
                     >
-                        Set
+                        {t("music.chordEdit.set")}
                     </Button>
                 </div>
 
                 {/* Size nudge controls */}
                 <div className="flex items-center gap-2 px-3 pb-2.5 border-t border-zinc-800 pt-2">
                     <span className="text-[10px] text-zinc-600 uppercase tracking-wider font-bold">
-                        Size
+                        {t("music.chordEdit.size")}
                     </span>
-                    <div className="flex items-center gap-1 ml-auto">
+                    <div className="flex items-center gap-1 ms-auto">
                         <Button
                             variant="ghost"
                             size="icon-sm"
                             onClick={() => onResize(chordIndex, -0.3)}
                             className="h-7 w-7 bg-zinc-800 hover:bg-zinc-700 rounded text-zinc-400 hover:text-white"
-                            title="Narrower"
+                            title={t("music.chordEdit.narrower")}
                         >
                             <Minus className="h-3 w-3" />
                         </Button>
@@ -182,7 +188,7 @@ export function ChordEditPopover({
                             size="icon-sm"
                             onClick={() => onResize(chordIndex, 0.3)}
                             className="h-7 w-7 bg-zinc-800 hover:bg-zinc-700 rounded text-zinc-400 hover:text-white"
-                            title="Wider"
+                            title={t("music.chordEdit.wider")}
                         >
                             <Plus className="h-3 w-3" />
                         </Button>

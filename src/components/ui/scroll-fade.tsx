@@ -2,6 +2,7 @@
 
 import { useRef, useState, useEffect, useCallback } from "react"
 import { cn } from "@/lib/utils"
+import { useI18n } from "@/i18n/client"
 
 interface ScrollFadeProps {
     children: React.ReactNode
@@ -12,14 +13,18 @@ interface ScrollFadeProps {
 
 export function ScrollFade({ children, className, scrollClassName, snap }: ScrollFadeProps) {
     const scrollRef = useRef<HTMLDivElement>(null)
-    const [canScrollLeft, setCanScrollLeft] = useState(false)
-    const [canScrollRight, setCanScrollRight] = useState(false)
+    const { isRtl } = useI18n()
+    // Logical edges: on an rtl page scrollLeft runs 0 → negative, so measure
+    // the distance from the start edge with Math.abs (identical in ltr).
+    const [canScrollStart, setCanScrollStart] = useState(false)
+    const [canScrollEnd, setCanScrollEnd] = useState(false)
 
     const updateScrollState = useCallback(() => {
         const el = scrollRef.current
         if (!el) return
-        setCanScrollLeft(el.scrollLeft > 0)
-        setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1)
+        const fromStart = Math.abs(el.scrollLeft)
+        setCanScrollStart(fromStart > 0)
+        setCanScrollEnd(fromStart + el.clientWidth < el.scrollWidth - 1)
     }, [])
 
     useEffect(() => {
@@ -48,11 +53,11 @@ export function ScrollFade({ children, className, scrollClassName, snap }: Scrol
                 {children}
             </div>
 
-            {canScrollLeft && (
-                <div className="absolute left-0 top-0 bottom-0 w-6 pointer-events-none bg-gradient-to-r from-background to-transparent z-10" />
+            {canScrollStart && (
+                <div className={cn("absolute start-0 top-0 bottom-0 w-6 pointer-events-none from-background to-transparent z-10", isRtl ? "bg-gradient-to-l" : "bg-gradient-to-r")} />
             )}
-            {canScrollRight && (
-                <div className="absolute right-0 top-0 bottom-0 w-6 pointer-events-none bg-gradient-to-l from-background to-transparent z-10" />
+            {canScrollEnd && (
+                <div className={cn("absolute end-0 top-0 bottom-0 w-6 pointer-events-none from-background to-transparent z-10", isRtl ? "bg-gradient-to-r" : "bg-gradient-to-l")} />
             )}
         </div>
     )

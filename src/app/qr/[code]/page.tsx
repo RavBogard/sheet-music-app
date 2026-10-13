@@ -8,7 +8,7 @@
  * If not: sign in with Google first, then approve.
  */
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, type ReactNode } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
 import { auth } from "@/lib/firebase"
@@ -17,6 +17,7 @@ import { getOrgBranding } from "@/lib/org/branding"
 import { Button } from "@/components/ui/button"
 import { CheckCircle2, Loader2, Monitor, AlertCircle, LogIn } from "lucide-react"
 import { logger } from "@/lib/logger"
+import { useT } from "@/i18n/client"
 
 type PageState = "loading" | "ready" | "approving" | "success" | "expired" | "error"
 
@@ -25,6 +26,7 @@ export default function QRApprovePage() {
     const router = useRouter()
     const code = params?.code as string
     const { user, signIn, loading: authLoading } = useAuth()
+    const t = useT()
     const [state, setState] = useState<PageState>("loading")
     const [error, setError] = useState<string | null>(null)
     const [autoApproveAttempted, setAutoApproveAttempted] = useState(false)
@@ -93,7 +95,7 @@ export default function QRApprovePage() {
         setState("approving")
         try {
             const idToken = await auth.currentUser?.getIdToken()
-            if (!idToken) throw new Error("No auth token")
+            if (!idToken) throw new Error(t("auth.approveNoToken"))
 
             const res = await fetch("/api/auth/qr", {
                 method: "PUT",
@@ -111,13 +113,13 @@ export default function QRApprovePage() {
 
             if (!res.ok) {
                 const data = await res.json()
-                throw new Error(data.error || "Approval failed")
+                throw new Error(data.error || t("auth.approveFailed"))
             }
 
             setState("success")
         } catch (err) {
             logger.error("[QR Approve]", err)
-            setError(err instanceof Error ? err.message : "Something went wrong")
+            setError(err instanceof Error ? err.message : t("auth.approveSomethingWrong"))
             setState("error")
         }
     }
@@ -133,7 +135,7 @@ export default function QRApprovePage() {
         return (
             <Shell>
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                <p className="text-muted-foreground text-sm">Checking session…</p>
+                <p className="text-muted-foreground text-sm">{t("auth.approveChecking")}</p>
             </Shell>
         )
     }
@@ -142,9 +144,9 @@ export default function QRApprovePage() {
         return (
             <Shell>
                 <AlertCircle className="h-12 w-12 text-amber-500" />
-                <h1 className="text-xl font-bold text-foreground">Sign-in code expired</h1>
+                <h1 className="text-xl font-bold text-foreground">{t("auth.approveExpiredTitle")}</h1>
                 <p className="text-muted-foreground text-sm text-center">
-                    This {orgName} sign-in code expired or was already used. Ask for a fresh QR code on the device you&rsquo;re signing in to.
+                    {t("auth.approveExpiredBody", { orgName })}
                 </p>
             </Shell>
         )
@@ -154,9 +156,9 @@ export default function QRApprovePage() {
         return (
             <Shell>
                 <AlertCircle className="h-12 w-12 text-red-500" />
-                <h1 className="text-xl font-bold text-foreground">Something Went Wrong</h1>
-                <p className="text-muted-foreground text-sm text-center">{error || "Please try again."}</p>
-                <Button variant="outline" onClick={() => router.push("/")}>Go Home</Button>
+                <h1 className="text-xl font-bold text-foreground">{t("auth.approveErrorTitle")}</h1>
+                <p className="text-muted-foreground text-sm text-center">{error || t("auth.approveTryAgain")}</p>
+                <Button variant="outline" onClick={() => router.push("/")}>{t("auth.approveGoHome")}</Button>
             </Shell>
         )
     }
@@ -167,10 +169,9 @@ export default function QRApprovePage() {
                 <div className="h-16 w-16 rounded-full bg-success/10 flex items-center justify-center">
                     <CheckCircle2 className="h-10 w-10 text-success" />
                 </div>
-                <h1 className="text-xl font-bold text-foreground">Signed In!</h1>
+                <h1 className="text-xl font-bold text-foreground">{t("auth.approveSignedInTitle")}</h1>
                 <p className="text-muted-foreground text-sm text-center">
-                    The iPad is now signed in as <span className="font-semibold text-foreground">{user?.displayName || user?.email}</span>.
-                    You can close this page.
+                    {withBoldName(t("auth.approveSignedInBody", { userName: NAME_SLOT }), user?.displayName || user?.email)}
                 </p>
             </Shell>
         )
@@ -180,7 +181,7 @@ export default function QRApprovePage() {
         return (
             <Shell>
                 <Loader2 className="h-8 w-8 animate-spin text-violet-500" />
-                <p className="text-foreground font-medium">Signing in on iPad…</p>
+                <p className="text-foreground font-medium">{t("auth.approveSigningInOnIpad")}</p>
             </Shell>
         )
     }
@@ -190,16 +191,16 @@ export default function QRApprovePage() {
         return (
             <Shell>
                 <Monitor className="h-12 w-12 text-violet-500" />
-                <h1 className="text-xl font-bold text-foreground">Sign In on iPad</h1>
+                <h1 className="text-xl font-bold text-foreground">{t("auth.approveTitle")}</h1>
                 <p className="text-muted-foreground text-sm text-center">
-                    Sign in with your Google account to continue on the nearby device.
+                    {t("auth.approveSignInPrompt")}
                 </p>
                 <Button
                     onClick={handleSignInThenApprove}
                     className="w-full max-w-xs h-12 rounded-xl font-semibold text-base"
                 >
-                    <LogIn className="h-5 w-5 mr-2" />
-                    Sign In with Google
+                    <LogIn className="h-5 w-5 me-2" />
+                    {t("auth.approveSignInWithGoogle")}
                 </Button>
             </Shell>
         )
@@ -210,18 +211,34 @@ export default function QRApprovePage() {
     return (
         <Shell>
             <Monitor className="h-12 w-12 text-violet-500" />
-            <h1 className="text-xl font-bold text-foreground">Sign In on iPad</h1>
+            <h1 className="text-xl font-bold text-foreground">{t("auth.approveTitle")}</h1>
             <p className="text-muted-foreground text-sm text-center">
-                Tap below to sign in as <span className="font-semibold text-foreground">{user.displayName || user.email}</span> on the nearby device.
+                {withBoldName(t("auth.approveTapToSignInAs", { userName: NAME_SLOT }), user.displayName || user.email)}
             </p>
             <Button
                 onClick={handleApprove}
                 className="w-full max-w-xs h-14 rounded-xl font-bold text-lg bg-violet-600 hover:bg-violet-500"
             >
-                <CheckCircle2 className="h-5 w-5 mr-2" />
-                Approve Sign-In
+                <CheckCircle2 className="h-5 w-5 me-2" />
+                {t("auth.approveButton")}
             </Button>
         </Shell>
+    )
+}
+
+/** Marks where the bold name goes inside a translated sentence (never shown). */
+const NAME_SLOT = "\u0000"
+
+/** A translated sentence with the person's name in bold at its `{userName}` slot. */
+function withBoldName(text: string, name: ReactNode): ReactNode {
+    const [before, ...rest] = text.split(NAME_SLOT)
+    if (rest.length === 0) return text
+    return (
+        <>
+            {before}
+            <span className="font-semibold text-foreground">{name}</span>
+            {rest.join("")}
+        </>
     )
 }
 

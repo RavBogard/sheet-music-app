@@ -3,8 +3,14 @@
 import { useMusicStore } from "@/lib/store"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight } from "lucide-react"
+import { DirectionalIcon } from "@/components/i18n/DirectionalIcon"
+import { useT } from "@/i18n/client"
 
+// Phase 7 ruling: song-to-song previous/next follows the reading direction.
+// The buttons sit in a flex row, so on a right-to-left page "previous" lands
+// on the right and its chevron mirrors to point outward (DirectionalIcon).
 export function SongNavigation() {
+    const t = useT()
     const {
         playbackQueue,
         queueIndex,
@@ -30,17 +36,19 @@ export function SongNavigation() {
                 onClick={handlePrev}
                 disabled={queueIndex <= 0}
                 className="text-muted-foreground hover:text-foreground hover:bg-brand/10 rounded-full h-14 w-14 shrink-0 transition-transform active:scale-95"
-                aria-label="Previous song"
+                aria-label={t("perform.nav.previousSong")}
             >
-                <ChevronLeft className="h-10 w-10" />
+                <DirectionalIcon icon={ChevronLeft} className="h-10 w-10" />
             </Button>
 
             <div className="flex flex-col items-center overflow-hidden min-w-0 flex-1 px-2">
                 <span className="text-xl sm:text-3xl font-bold truncate text-center w-full leading-tight text-foreground drop-shadow-md">
-                    {currentTrack?.name || "No Song Selected"}
+                    {currentTrack?.name || t("perform.nav.noSongSelected")}
                 </span>
                 <span className="text-sm sm:text-base text-muted-foreground font-medium tracking-wide uppercase mt-0.5">
-                    {playbackQueue.length > 0 ? `Song ${queueIndex + 1} of ${playbackQueue.length}` : "Setlist Empty"}
+                    {playbackQueue.length > 0
+                        ? t("perform.songPosition", { position: queueIndex + 1, total: playbackQueue.length })
+                        : t("perform.nav.setlistEmpty")}
                 </span>
             </div>
 
@@ -50,9 +58,9 @@ export function SongNavigation() {
                 onClick={handleNext}
                 disabled={queueIndex >= playbackQueue.length - 1}
                 className="text-foreground hover:bg-brand/10 rounded-full h-14 w-14 shrink-0 transition-transform active:scale-95 bg-brand/10 border border-brand/20"
-                aria-label="Next song"
+                aria-label={t("perform.nav.nextSong")}
             >
-                <ChevronRight className="h-10 w-10" />
+                <DirectionalIcon icon={ChevronRight} className="h-10 w-10" />
             </Button>
         </div>
     )

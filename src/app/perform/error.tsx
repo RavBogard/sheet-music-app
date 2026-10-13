@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
 import { useEffect } from "react"
 import { captureException } from "@/lib/error-reporting"
+import { useT } from "@/i18n/client"
 
 export default function PerformError({
     error,
@@ -13,6 +14,7 @@ export default function PerformError({
     reset: () => void
 }) {
     const router = useRouter()
+    const t = useT()
 
     // PGR-11: surface the band's hot-route chart-render crashes to Sentry.
     // Previously the prop was `_error` (discarded) so an iPad failure
@@ -28,16 +30,16 @@ export default function PerformError({
     return (
         <div className="h-[100dvh] flex flex-col items-center justify-center gap-4 px-6 text-center bg-background text-foreground">
             <div className="text-4xl">🎵</div>
-            <h2 className="text-xl font-semibold">Chart failed to load</h2>
+            <h2 className="text-xl font-semibold">{t("performSetlist.chartError.title")}</h2>
             <p className="text-muted-foreground max-w-sm">
-                There was a problem rendering this chart. Try reloading, or skip to the next one.
+                {t("performSetlist.chartError.body")}
             </p>
             <div className="flex gap-3">
                 <Button variant="outline" onClick={() => router.back()} className="border-border bg-transparent text-foreground hover:bg-muted">
-                    Go Back
+                    {t("performSetlist.chartError.goBack")}
                 </Button>
                 <Button onClick={reset} className="bg-foreground text-background hover:bg-secondary">
-                    Retry
+                    {t("performSetlist.retry")}
                 </Button>
             </div>
         </div>

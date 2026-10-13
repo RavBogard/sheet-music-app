@@ -1,0 +1,49 @@
+{
+    "recent": {
+        "where": "Home: next-service card date badge for the most recent past setlist (shown in CSS uppercase)",
+        "who": "everyone signed in",
+        "maxLength": 14
+    },
+    "upcoming": {
+        "where": "Home: next-service card date badge when the setlist has no date",
+        "who": "everyone signed in",
+        "maxLength": 14
+    },
+    "today": {
+        "where": "Home: next-service card date badge when the service is today",
+        "who": "everyone signed in",
+        "maxLength": 14
+    },
+    "tomorrow": {
+        "where": "Home: next-service card date badge when the service is tomorrow",
+        "who": "everyone signed in",
+        "maxLength": 14
+    },
+    "songCount": {
+        "where": "Home: next-service card, number of songs in the setlist",
+        "who": "everyone signed in",
+        "maxLength": 12,
+        "context": "{count} is the number of songs"
+    },
+    "practice": {
+        "where": "Home: next-service card main button for a past setlist (opens it to practice)",
+        "who": "everyone signed in",
+        "maxLength": 18
+    },
+    "perform": {
+        "where": "Home: next-service card main button that opens the setlist in Perform mode",
+        "who": "everyone signed in",
+        "maxLength": 18,
+        "context": "Perform mode = the full-screen view used on stage"
+    },
+    "editSetlistAria": {
+        "where": "Home: next-service card, screen-reader label of the Edit button",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "edit": {
+        "where": "Home: next-service card, small button that opens the setlist editor",
+        "who": "leaders",
+        "maxLength": 10
+    }
+}

@@ -12,6 +12,10 @@ import { subscribeToAllUpcomingAssignments, subscribeToUpcomingSetlists } from "
 import { ScheduleCard } from "@/components/scheduling/ScheduleCard"
 import { UnifiedCalendar } from "@/components/calendar/UnifiedCalendar"
 import type { SchedulingAssignment } from "@/types/models"
+import { DirectionalIcon } from "@/components/i18n/DirectionalIcon"
+import { useFormat, useT } from "@/i18n/client"
+import type { T } from "@/i18n/core"
+import type { Formatter } from "@/i18n/format"
 
 type ViewMode = 'services' | 'calendar'
 
@@ -19,6 +23,8 @@ export default function SchedulePage() {
     const router = useRouter()
     const { user, isBandLeader } = useAuth()
     const orgId = useOrg()
+    const t = useT()
+    const fmt = useFormat()
     const [viewMode, setViewMode] = useState<ViewMode>('services')
     const [mineOnly, setMineOnly] = useState(false)
     const [assignments, setAssignments] = useState<SchedulingAssignment[]>([])
@@ -127,7 +133,7 @@ export default function SchedulePage() {
     if (!user) {
         return (
             <div className="flex items-center justify-center h-[60vh]">
-                <p className="text-muted-foreground">Sign in to view your schedule.</p>
+                <p className="text-muted-foreground">{t("schedule.signInToView")}</p>
             </div>
         )
     }
@@ -136,11 +142,11 @@ export default function SchedulePage() {
         <div className="flex flex-col bg-background text-foreground min-h-screen">
             {/* Header */}
             <div className="h-20 border-b border-border/60 flex items-center px-3 md:px-6 gap-3 md:gap-4 shrink-0 bg-card/50 backdrop-blur-sm">
-                <Button size="icon" variant="ghost" aria-label="Back" className="h-10 w-10 rounded-xl fluid-interaction" onClick={() => router.back()}>
-                    <ChevronLeft className="h-5 w-5" />
+                <Button size="icon" variant="ghost" aria-label={t("schedule.back")} className="h-10 w-10 rounded-xl fluid-interaction" onClick={() => router.back()}>
+                    <DirectionalIcon icon={ChevronLeft} className="h-5 w-5" />
                 </Button>
                 <div className="flex-1">
-                    <h1 className="text-title">Schedule</h1>
+                    <h1 className="text-title">{t("schedule.title")}</h1>
                 </div>
 
                 {/* Controls */}
@@ -159,14 +165,14 @@ export default function SchedulePage() {
                             )}
                         >
                             <User className="h-3.5 w-3.5" />
-                            Mine
+                            {t("schedule.mine")}
                         </button>
                     )}
                     {isBandLeader && (
                         <Button
                             size="icon"
                             variant={viewMode === 'calendar' ? 'default' : 'ghost'}
-                            aria-label={viewMode === 'calendar' ? 'Switch to list view' : 'Switch to calendar view'}
+                            aria-label={viewMode === 'calendar' ? t("schedule.switchToList") : t("schedule.switchToCalendar")}
                             className={cn(
                                 "h-9 w-9 rounded-xl",
                                 viewMode === 'calendar' && "bg-brand text-white"
@@ -185,13 +191,13 @@ export default function SchedulePage() {
                     <div className="flex items-center gap-1.5">
                         <div className="w-2 h-2 rounded-full bg-emerald-500" />
                         <span className="font-medium">{confirmedCount}</span>
-                        <span>confirmed</span>
+                        <span>{t("schedule.confirmedStat", { count: confirmedCount })}</span>
                     </div>
                     {pendingCount > 0 && (
                         <div className="flex items-center gap-1.5">
                             <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
                             <span className="font-medium">{pendingCount}</span>
-                            <span>pending</span>
+                            <span>{t("schedule.pendingStat", { count: pendingCount })}</span>
                         </div>
                     )}
                 </div>
@@ -235,13 +241,13 @@ export default function SchedulePage() {
                                         <CalendarDays className="h-4 w-4" />
                                         {name}
                                         <span className="text-muted-foreground font-normal normal-case tracking-normal">
-                                            {formatDateShort(eventDate)}
+                                            {formatDateShort(eventDate, t, fmt)}
                                         </span>
                                     </h2>
                                     {setlistAssignments.length === 0 ? (
                                         <div className="flex items-center gap-2 p-3 rounded-xl border border-dashed border-border/60 bg-muted/20 text-sm text-muted-foreground">
                                             <User className="h-4 w-4 shrink-0" />
-                                            No musicians assigned yet
+                                            {t("schedule.noMusiciansAssigned")}
                                         </div>
                                     ) : (
                                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -263,7 +269,16 @@ export default function SchedulePage() {
 // ── Sub-components ──
 
 /** Compact card showing a single musician's status */
+const STATUS_LABEL = {
+    pending: "schedule.statusPending",
+    confirmed: "schedule.statusConfirmed",
+    declined: "schedule.statusDeclined",
+    cancelled: "schedule.statusCancelled",
+} as const
+
 function MusicianStatusCard({ assignment }: { assignment: SchedulingAssignment }) {
+    const t = useT()
+    const statusKey = STATUS_LABEL[assignment.status as keyof typeof STATUS_LABEL]
     return (
         <div className={cn(
             "flex items-center gap-3 p-3 rounded-xl border bg-card/70 backdrop-blur-sm transition-all duration-200 hover:shadow-sm",
@@ -288,24 +303,23 @@ function MusicianStatusCard({ assignment }: { assignment: SchedulingAssignment }
                 assignment.status === 'confirmed' && "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
                 assignment.status === 'pending' && "bg-amber-500/10 text-amber-700 dark:text-amber-300",
                 assignment.status === 'declined' && "bg-red-500/10 text-red-600 dark:text-red-400",
-            )}>{assignment.status}</span>
+            )}>{statusKey ? t(statusKey) : assignment.status}</span>
         </div>
     )
 }
 
 function EmptySchedule({ mineOnly }: { mineOnly?: boolean }) {
+    const t = useT()
     return (
         <div className="flex flex-col items-center justify-center py-20 text-center dash-stagger dash-stagger-0">
             <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center mb-5">
                 <CalendarDays className="h-8 w-8 text-muted-foreground/40" />
             </div>
             <h3 className="text-lg font-semibold text-foreground mb-1.5">
-                {mineOnly ? 'No services scheduled for you' : 'No upcoming services'}
+                {mineOnly ? t("schedule.emptyMineTitle") : t("schedule.emptyAllTitle")}
             </h3>
             <p className="text-sm text-muted-foreground max-w-sm leading-relaxed">
-                {mineOnly
-                    ? 'You haven\'t been assigned to any upcoming services yet. You\'ll receive a notification when assigned.'
-                    : 'No upcoming services found. Assign musicians to setlists using the musician picker in the setlist editor.'}
+                {mineOnly ? t("schedule.emptyMineBody") : t("schedule.emptyAllBody")}
             </p>
         </div>
     )
@@ -325,12 +339,10 @@ function getDateMs(eventDate: unknown): number {
     return Infinity
 }
 
-function formatDateShort(eventDate: unknown): string {
+function formatDateShort(eventDate: unknown, t: T, fmt: Formatter): string {
     const ms = getDateMs(eventDate)
-    if (ms === Infinity) return 'TBD'
-    try {
-        return new Date(ms).toLocaleDateString('en-US', {
-            weekday: 'short', month: 'short', day: 'numeric',
-        })
-    } catch { return 'TBD' }
+    if (ms === Infinity) return t("schedule.dateTbd")
+    return fmt.date(ms, {
+        weekday: 'short', month: 'short', day: 'numeric',
+    }) || t("schedule.dateTbd")
 }

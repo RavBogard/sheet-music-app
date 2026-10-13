@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth-context"
 import { Button } from "@/components/ui/button"
 import { Loader2, Smartphone, ChevronDown } from "lucide-react"
 import { QRSignIn } from "@/components/auth/QRSignIn"
+import { useT } from "@/i18n/client"
 
 /** Inline Google logo — avoids DNS+TLS to svgrepo.com. Used in the SSR'd
  * button shell AND the live hydrated button, so it must produce identical
@@ -23,6 +24,7 @@ function GoogleIcon({ className }: { className?: string }) {
 
 export default function LoginClient() {
     const { user, loading, signIn } = useAuth()
+    const t = useT()
     const router = useRouter()
     const [signInState, setSignInState] = useState<"idle" | "loading">("idle")
     const [error, setError] = useState<string | null>(null)
@@ -49,11 +51,9 @@ export default function LoginClient() {
     useEffect(() => {
         if (signInState === "loading" && !loading && !user) {
             setSignInState("idle")
-            setError(
-                "Sign-in didn't complete. Check your connection and try again. If this keeps happening, clear cookies for this site and retry.",
-            )
+            setError(t("auth.signInIncomplete"))
         }
-    }, [signInState, loading, user])
+    }, [signInState, loading, user, t])
 
     const handleGoogleSignIn = async () => {
         setError(null)
@@ -64,7 +64,7 @@ export default function LoginClient() {
             // The follow-up effect handles popup-cancelled / session-POST-failed cases.
         } catch {
             setSignInState("idle")
-            setError("Sign-in failed. Please try again.")
+            setError(t("auth.signInFailed"))
         }
     }
 
@@ -93,11 +93,11 @@ export default function LoginClient() {
                 disabled={inFlight}
             >
                 {inFlight ? (
-                    <Loader2 className="h-5 w-5 mr-3 animate-spin" />
+                    <Loader2 className="h-5 w-5 me-3 animate-spin" />
                 ) : (
-                    <GoogleIcon className="h-5 w-5 mr-3" />
+                    <GoogleIcon className="h-5 w-5 me-3" />
                 )}
-                {inFlight ? "Signing in..." : "Sign in with Google"}
+                {inFlight ? t("auth.signingInClick") : t("auth.signInWithGoogle")}
             </Button>
 
             {error && (
@@ -110,7 +110,7 @@ export default function LoginClient() {
             <div className="pt-1">
                 <div className="flex items-center gap-3 pb-1" aria-hidden="true">
                     <div className="h-px flex-1 bg-border/60" />
-                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60">or</span>
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60">{t("auth.or")}</span>
                     <div className="h-px flex-1 bg-border/60" />
                 </div>
 
@@ -122,7 +122,7 @@ export default function LoginClient() {
                         className="flex w-full items-center justify-center gap-2 rounded-xl border border-border/60 bg-transparent px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-foreground/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
                         <Smartphone className="h-4 w-4" />
-                        Set up this device — sign in with phone
+                        {t("auth.setUpDevice")}
                         <ChevronDown className="h-4 w-4 text-muted-foreground" />
                     </button>
                 ) : (
@@ -133,7 +133,7 @@ export default function LoginClient() {
                             onClick={() => setShowQr(false)}
                             className="mt-3 w-full text-center text-xs text-muted-foreground hover:text-foreground focus-visible:underline focus-visible:outline-none"
                         >
-                            Hide
+                            {t("auth.hide")}
                         </button>
                     </div>
                 )}

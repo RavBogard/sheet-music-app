@@ -9,19 +9,21 @@ import { applyEdit } from "@/lib/local/write"
 import { rowOrg } from "@/lib/org/membership"
 import { createSetlistService } from "@/lib/setlist-firebase"
 import type { DriveFile, Setlist, SetlistTrack } from "@/types/models"
+import { useT } from "@/i18n/client"
 
 // v60-08-01: this hook reads only denormalized parent-doc fields
 // (trackCount + fileIds). Order indices for new tracks are computed off
 // trackCount; duplicate detection uses fileIds. Top-level tracks/{id}
 // writes via the engine path remain unchanged.
 
-/** Clean a filename into a display title (same logic as addSongsFromLibrary) */
-function cleanFileName(name: string): string {
+/** Clean a filename into a display title (same logic as addSongsFromLibrary).
+ *  `untitled` is the translated fallback title (hooks.untitledSong). */
+function cleanFileName(name: string, untitled: string): string {
   return name
     .replace(/\.(pdf|musicxml|xml|mxl|txt)$/i, '')
     .replace(/_/g, ' ')
     .replace(/-/g, ' ')
-    .trim() || "Untitled"
+    .trim() || untitled
 }
 
 /** Ensure the fileName has the correct extension based on mimeType */
@@ -49,6 +51,8 @@ function toTimestamp(date: unknown): number {
 
 export function useAddToSetlist() {
   const { user, isAdmin, isBandLeader } = useAuth()
+  const t = useT()
+  const untitled = t("hooks.untitledSong")
 
   // Core state
   const [isOpen, setIsOpen] = useState(false)
@@ -125,7 +129,7 @@ export function useAddToSetlist() {
     const now = Date.now()
     const newTracks: SetlistTrack[] = pendingSongs.map((file, index) => ({
       id: `track-${now}-${file.id}-${index}`,
-      title: cleanFileName(file.name),
+      title: cleanFileName(file.name, untitled),
       fileId: file.id,
       fileName: getFileNameWithExtension(file),
       key: file.metadata?.key || "",
@@ -180,14 +184,14 @@ export function useAddToSetlist() {
     // Build toast message
     let message: string
     if (pendingSongs.length === 1) {
-      const songName = cleanFileName(pendingSongs[0].name)
+      const songName = cleanFileName(pendingSongs[0].name, untitled)
       if (hasDuplicates) {
-        message = `"${songName}" is already in this setlist. Added again.`
+        message = t("hooks.songAlreadyInSetlist", { songName })
       } else {
-        message = `Added "${songName}" to ${setlist.name}`
+        message = t("hooks.addedSongToSetlist", { songName, setlistName: setlist.name })
       }
     } else {
-      message = `Added ${pendingSongs.length} songs to "${setlist.name}"`
+      message = t("hooks.addedSongsToSetlist", { count: pendingSongs.length, setlistName: setlist.name })
     }
 
     // Capture values for undo closure
@@ -196,7 +200,7 @@ export function useAddToSetlist() {
 
     toast(message, {
       action: {
-        label: "Undo",
+        label: t("hooks.undo"),
         onClick: async () => {
           // v60-07-01: per-track deletes via the engine — inverse of the
           // Promise.all applyEdit('set', ...) cascade above.
@@ -238,7 +242,7 @@ export function useAddToSetlist() {
 
     // Clear pending songs
     setPendingSongs([])
-  }, [pendingSongs, setlistService])
+  }, [pendingSongs, setlistService, t, untitled])
 
   // Allows adding songs without passing through the pendingSongs state
   const addDirectlyToSetlist = useCallback(async (setlistId: string, files: { id: string, name: string, mimeType: string, metadata?: any }[]) => {
@@ -246,7 +250,7 @@ export function useAddToSetlist() {
 
     const setlist = allSetlists.find(s => s.id === setlistId)
     if (!setlist) {
-        toast.error("Setlist not found")
+        toast.error(t("hooks.setlistNotFound"))
         return
     }
 
@@ -256,7 +260,7 @@ export function useAddToSetlist() {
     const now = Date.now()
     const newTracks: SetlistTrack[] = files.map((file, index) => ({
       id: `track-${now}-${file.id}-${index}`,
-      title: cleanFileName(file.name),
+      title: cleanFileName(file.name, untitled),
       fileId: file.id,
       fileName: getFileNameWithExtension(file as any),
       key: file.metadata?.key || "",
@@ -302,18 +306,18 @@ export function useAddToSetlist() {
 
     let message: string
     if (files.length === 1) {
-      const songName = cleanFileName(files[0].name)
+      const songName = cleanFileName(files[0].name, untitled)
       if (hasDuplicates) {
-        message = `"${songName}" is already in this setlist. Added again.`
+        message = t("hooks.songAlreadyInSetlist", { songName })
       } else {
-        message = `Added "${songName}" to ${setlist.name}`
+        message = t("hooks.addedSongToSetlist", { songName, setlistName: setlist.name })
       }
     } else {
-      message = `Added ${files.length} songs to "${setlist.name}"`
+      message = t("hooks.addedSongsToSetlist", { count: files.length, setlistName: setlist.name })
     }
 
     toast.success(message)
-  }, [allSetlists, setlistService])
+  }, [allSetlists, setlistService, t, untitled])
 
   const createNewSetlist = useCallback(async (name: string) => {
     if (pendingSongs.length === 0) return
@@ -321,7 +325,7 @@ export function useAddToSetlist() {
     const now = Date.now()
     const newTracks: SetlistTrack[] = pendingSongs.map((file, index) => ({
       id: `track-${now}-${file.id}-${index}`,
-      title: cleanFileName(file.name),
+      title: cleanFileName(file.name, untitled),
       fileId: file.id,
       fileName: getFileNameWithExtension(file),
       key: file.metadata?.key || "",
@@ -333,12 +337,12 @@ export function useAddToSetlist() {
 
     try {
       await setlistService.createSetlist(name, newTracks)
-      toast.success(`Created setlist "${name}" with ${pendingSongs.length} songs.`)
+      toast.success(t("hooks.createdSetlistWithSongs", { setlistName: name, count: pendingSongs.length }))
       setPendingSongs([])
     } catch (err: any) {
-      toast.error(err.message || 'Error creating setlist')
+      toast.error(err.message || t("hooks.errorCreatingSetlist"))
     }
-  }, [pendingSongs, setlistService])
+  }, [pendingSongs, setlistService, t, untitled])
 
   return {
     isOpen,

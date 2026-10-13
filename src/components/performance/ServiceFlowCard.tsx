@@ -2,6 +2,8 @@
 
 import { BookOpen, Heart, ArrowLeftRight, StickyNote, Music, ChevronRight } from "lucide-react"
 import { QueueItem } from "@/lib/store"
+import { useT } from "@/i18n/client"
+import { DirectionalIcon } from "@/components/i18n/DirectionalIcon"
 
 interface ServiceFlowCardProps {
     item: QueueItem
@@ -14,22 +16,24 @@ interface ServiceFlowCardProps {
 const TYPE_STYLES: Record<string, {
     icon: typeof BookOpen
     color: string
-    label: string
+    /** performSetlist catalogue key for the type's label. */
+    labelKey: string
 }> = {
-    reading: { icon: BookOpen, color: 'text-amber-400', label: 'Reading' },
-    prayer: { icon: Heart, color: 'text-blue-400', label: 'Prayer' },
-    transition: { icon: ArrowLeftRight, color: 'text-zinc-400', label: 'Transition' },
-    note: { icon: StickyNote, color: 'text-zinc-500', label: 'Note' },
-    header: { icon: ArrowLeftRight, color: 'text-zinc-300', label: 'Section' },
+    reading: { icon: BookOpen, color: 'text-amber-400', labelKey: 'performSetlist.trackType.reading' },
+    prayer: { icon: Heart, color: 'text-blue-400', labelKey: 'performSetlist.trackType.prayer' },
+    transition: { icon: ArrowLeftRight, color: 'text-zinc-400', labelKey: 'performSetlist.trackType.transition' },
+    note: { icon: StickyNote, color: 'text-zinc-500', labelKey: 'performSetlist.trackType.note' },
+    header: { icon: ArrowLeftRight, color: 'text-zinc-300', labelKey: 'performSetlist.trackType.section' },
 }
 
 function UpNextPreview({ items }: { items: QueueItem[] }) {
+    const t = useT()
     if (items.length === 0) return null
 
     return (
         <div className="w-full max-w-sm mt-auto pt-8">
             <p className="text-[10px] uppercase tracking-[0.15em] font-bold text-zinc-600 mb-3 text-center">
-                Up Next
+                {t("performSetlist.upNext")}
             </p>
             <div className="space-y-1.5">
                 {items.map((item, i) => {
@@ -47,7 +51,7 @@ function UpNextPreview({ items }: { items: QueueItem[] }) {
                                 {item.name}
                             </span>
                             {isSong && (
-                                <ChevronRight className="h-3.5 w-3.5 text-zinc-600 shrink-0 ml-auto" />
+                                <DirectionalIcon icon={ChevronRight} className="h-3.5 w-3.5 text-zinc-600 shrink-0 ms-auto" />
                             )}
                         </div>
                     )
@@ -58,6 +62,7 @@ function UpNextPreview({ items }: { items: QueueItem[] }) {
 }
 
 export function ServiceFlowCard({ item, index, total, upNext = [] }: ServiceFlowCardProps) {
+    const t = useT()
     const trackType = item.trackType || 'note'
     const style = TYPE_STYLES[trackType] || TYPE_STYLES.note
     const Icon = style.icon
@@ -91,7 +96,7 @@ export function ServiceFlowCard({ item, index, total, upNext = [] }: ServiceFlow
 
             {/* Type Label */}
             <span className="text-xs uppercase tracking-[0.15em] text-zinc-500 font-semibold mb-4">
-                {style.label}
+                {t(style.labelKey)}
             </span>
 
             {/* Performer */}
@@ -104,7 +109,7 @@ export function ServiceFlowCard({ item, index, total, upNext = [] }: ServiceFlow
             {/* Duration */}
             {item.estimatedMinutes && (
                 <p className="text-lg text-zinc-500">
-                    ~{item.estimatedMinutes} min
+                    {t("performSetlist.estimatedMinutes", { minutes: item.estimatedMinutes })}
                 </p>
             )}
 

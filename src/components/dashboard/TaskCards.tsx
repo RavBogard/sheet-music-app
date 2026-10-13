@@ -7,6 +7,7 @@ import { collection, query, where, orderBy, limit, onSnapshot } from "firebase/f
 import { toDate } from "@/lib/firestore-helpers"
 import { CheckSquare, Square, Clock } from "lucide-react"
 import { logger } from "@/lib/logger"
+import { useT, useFormat } from "@/i18n/client"
 
 interface TaskItem {
     id: string
@@ -23,6 +24,8 @@ interface TaskItem {
  */
 export function TaskCards() {
     const { user } = useAuth()
+    const t = useT()
+    const fmt = useFormat()
     const [tasks, setTasks] = useState<TaskItem[]>([])
 
     useEffect(() => {
@@ -65,13 +68,13 @@ export function TaskCards() {
         <div className="flex flex-col gap-2">
             <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
                 <CheckSquare className="w-3.5 h-3.5 text-brand" />
-                Your Tasks
+                {t("dashboard.yourTasks")}
             </h2>
             <div className="flex flex-col gap-1.5">
                 {tasks.map(task => (
                     <div
                         key={task.id}
-                        className="bg-card border border-brand/10 border-l-2 border-l-brand/20 rounded-xl px-3 py-2.5 flex items-start gap-2.5"
+                        className="bg-card border border-brand/10 border-s-2 border-s-brand/20 rounded-xl px-3 py-2.5 flex items-start gap-2.5"
                     >
                         <Square className="w-4 h-4 text-brand/30 mt-0.5 shrink-0" />
                         <div className="flex-1 min-w-0">
@@ -85,7 +88,7 @@ export function TaskCards() {
                                 {task.eventDate && (
                                     <span className="text-[10px] text-muted-foreground/60 flex items-center gap-0.5 shrink-0">
                                         <Clock className="w-2.5 h-2.5" />
-                                        {task.eventDate.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                                        {fmt.date(task.eventDate, { weekday: 'short', month: 'short', day: 'numeric' })}
                                     </span>
                                 )}
                             </div>

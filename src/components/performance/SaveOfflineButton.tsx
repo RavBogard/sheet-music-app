@@ -7,6 +7,7 @@ import { prefetchSetlistPDFs } from "@/lib/prefetch"
 import { listFileIds } from "@/lib/offline-idb"
 import { logger } from "@/lib/logger"
 import { PERFORM_PRECACHE_DONE_EVENT } from "@/hooks/use-perform-entry-precache"
+import { useT } from "@/i18n/client"
 
 interface Props {
     /** Song-track fileIds for this setlist (cacheable charts). */
@@ -39,6 +40,7 @@ type Phase = "idle" | "saving"
  * only signal — the icon (Download → spinner → Check) changes too.
  */
 export function SaveOfflineButton({ fileIds }: Props) {
+    const t = useT()
     // Dedupe + drop pseudo (`flow-`) items and falsy ids; `prefetchSetlistPDFs`
     // guards these too, but the count/fraction must reflect only real charts.
     const cacheable = useMemo(
@@ -206,20 +208,20 @@ export function SaveOfflineButton({ fileIds }: Props) {
     // (not a bare "Saved") so a player can confirm EVERY chart is cached before
     // leaving wifi — symmetric with the partial "Save M/N".
     const label = saving
-        ? `Saving ${progress}/${total}`
+        ? t("perform.saveOffline.saving", { progress, total })
         : allReady
-          ? `Saved ${total}/${total}`
+          ? t("perform.saveOffline.saved", { total })
           : partial
-            ? `Save ${readyCount}/${total}`
-            : "Save offline"
+            ? t("perform.saveOffline.partial", { ready: readyCount, total })
+            : t("perform.saveOffline.idle")
 
     const ariaLabel = saving
-        ? `Saving charts for offline use, ${progress} of ${total}`
+        ? t("perform.saveOffline.savingAria", { progress, total })
         : allReady
-          ? "All charts saved for offline use"
+          ? t("perform.saveOffline.allSavedAria")
           : partial
-            ? `${readyCount} of ${total} charts saved offline — tap to save the rest`
-            : "Save all charts for offline use"
+            ? t("perform.saveOffline.partialAria", { ready: readyCount, total })
+            : t("perform.saveOffline.idleAria")
 
     return (
         <Button

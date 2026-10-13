@@ -17,6 +17,7 @@ import { useLibrary } from "@/hooks/use-library"
 import { logger } from "@/lib/logger"
 import { toDate as toDateHelper } from "@/lib/firestore-helpers"
 import { isNonTestSetlist } from "@/components/performance/public-setlist-order"
+import { useT, useFormat } from "@/i18n/client"
 
 /** v11.5-05-03 (Q4): a real, non-empty setlist has at least one track. Empty
  *  drafts ("New Setlist"/"testing") are hidden from ANON browsers (owners keep
@@ -57,6 +58,8 @@ export function useSetlistDashboard({
     serverUid = null
 }: UseSetlistDashboardProps) {
     const router = useRouter()
+    const t = useT()
+    const fmt = useFormat()
     const { user: authUser, signIn, isMember: authIsMember, isBandLeader: authIsBandLeader, isAdmin: authIsAdmin } = useAuth()
     // v11-04-03: scope the dashboard subscription to the host's tenant.
     const org = useOrg()
@@ -107,7 +110,7 @@ export function useSetlistDashboard({
             setNextCursor(data.nextCursor)
         } catch (err) {
             logger.warn("Load-more setlists failed:", err)
-            toast.error("Could not load older setlists. Please retry.")
+            toast.error(t("hooks.loadOlderSetlistsFailed"))
         } finally {
             setLoadingMore(false)
         }
@@ -151,7 +154,7 @@ export function useSetlistDashboard({
             (data) => { setSetlists(data); setLoading(false) },
             (err) => {
                 logger.error("Setlist subscription error:", err)
-                setError("Failed to load setlists. Please check your connection.")
+                setError(t("hooks.loadSetlistsFailed"))
                 setLoading(false)
             },
             org,
@@ -178,7 +181,7 @@ export function useSetlistDashboard({
     const handleDeleteClick = (setlist: Setlist, e: React.MouseEvent) => {
         e.stopPropagation()
         if (setlist.ownerId !== user?.uid && !isAdmin && !isBandLeader) {
-            toast.error("You can only delete setlists you created")
+            toast.error(t("hooks.deleteOwnOnly"))
             return
         }
         setSetlistToDelete(setlist)
@@ -189,9 +192,9 @@ export function useSetlistDashboard({
         if (!setlistService || !setlistToDelete) return
         try {
             await setlistService.deleteSetlist(setlistToDelete.id)
-            toast.success("Setlist deleted")
+            toast.success(t("hooks.setlistDeleted"))
         } catch {
-            toast.error("Failed to delete setlist")
+            toast.error(t("hooks.deleteSetlistFailed"))
         }
         setDeleteConfirmOpen(false)
         setSetlistToDelete(null)
@@ -207,9 +210,9 @@ export function useSetlistDashboard({
         if (!setlistService || !user || !setlistToDuplicate) return
         try {
             await setlistService.duplicateSetlist(setlistToDuplicate.id, setlistToDuplicate)
-            toast.success("Setlist duplicated successfully!")
+            toast.success(t("hooks.setlistDuplicated"))
         } catch {
-            toast.error("Failed to duplicate setlist.")
+            toast.error(t("hooks.duplicateSetlistFailed"))
         }
         setDuplicateConfirmOpen(false)
         setSetlistToDuplicate(null)
@@ -218,25 +221,25 @@ export function useSetlistDashboard({
     const handleCloneNextWeekClick = async (setlist: Setlist, e: React.MouseEvent) => {
         e.stopPropagation()
         if (!setlistService || !user) return
-        const toastId = toast.loading("Creating next week’s setlist…")
+        const toastId = toast.loading(t("hooks.cloningNextWeek"))
         try {
             const newId = await setlistService.cloneForNextWeek(setlist)
-            toast.success("Cloned for next week!", { id: toastId })
+            toast.success(t("hooks.clonedNextWeek"), { id: toastId })
             router.push(`/setlists/${newId}`)
         } catch {
-            toast.error("Failed to clone setlist", { id: toastId })
+            toast.error(t("hooks.cloneSetlistFailed"), { id: toastId })
         }
     }
 
     const handleSaveAsTemplateClick = async (setlist: Setlist, e: React.MouseEvent) => {
         e.stopPropagation()
         if (!setlistService || !user) return
-        const toastId = toast.loading("Saving template…")
+        const toastId = toast.loading(t("hooks.savingTemplate"))
         try {
             await setlistService.saveAsTemplate(setlist)
-            toast.success(`Template "${setlist.name}" saved!`, { id: toastId })
+            toast.success(t("hooks.templateSaved", { setlistName: setlist.name }), { id: toastId })
         } catch {
-            toast.error("Failed to save template", { id: toastId })
+            toast.error(t("hooks.saveTemplateFailed"), { id: toastId })
         }
     }
 
@@ -252,12 +255,12 @@ export function useSetlistDashboard({
         e.stopPropagation()
         if (!setlistService || !user) return
         const friendly = SERVICE_TYPE_LABELS[serviceType] ?? serviceType
-        const toastId = toast.loading("Saving default…")
+        const toastId = toast.loading(t("hooks.savingDefault"))
         try {
             await setlistService.setDefaultForServiceType(serviceType, setlist.id, org)
-            toast.success(`Saved as default for ${friendly}`, { id: toastId })
+            toast.success(t("hooks.savedAsDefault", { serviceType: friendly }), { id: toastId })
         } catch {
-            toast.error("Failed to save as default", { id: toastId })
+            toast.error(t("hooks.saveAsDefaultFailed"), { id: toastId })
         }
     }
 
@@ -275,13 +278,13 @@ export function useSetlistDashboard({
             })
             if (!res.ok) throw new Error(await res.text())
             if (!isMountedRef.current) return
-            toast.success("Transfer Successful!")
+            toast.success(t("hooks.transferSucceeded"))
             setShowTransferDialog(false)
             setTransferEmail("")
             setSelectedSetlistForTransfer(null)
         } catch (err: unknown) {
             if (!isMountedRef.current) return
-            toast.error(`Transfer Failed: ${formatError(err)}`)
+            toast.error(t("hooks.transferFailed", { error: formatError(err) }))
         } finally {
             if (isMountedRef.current) setTransferring(false)
         }
@@ -301,7 +304,7 @@ export function useSetlistDashboard({
             if (template) {
                 let toastId: string | number | undefined
                 try {
-                    toastId = toast.loading('Building setlist from template...')
+                    toastId = toast.loading(t("hooks.buildingFromTemplate"))
                     const context = await getFullServiceContext(date, org)
                     context.type = templateType as ServiceType
                     const { allFiles } = useLibraryStore.getState()
@@ -314,29 +317,29 @@ export function useSetlistDashboard({
                         isTemplate: false,
                     })
 
-                    const matched = tracks.filter(t => t.fileId).length
-                    const total = tracks.filter(t => t.type === 'song').length
-                    toast.success(`Created "${name}" — ${matched}/${total} songs matched`, { id: toastId })
+                    const matched = tracks.filter(tr => tr.fileId).length
+                    const total = tracks.filter(tr => tr.type === 'song').length
+                    toast.success(t("hooks.createdFromTemplate", { setlistName: name, matched, total }), { id: toastId })
 
                     router.push(`/setlists/${id}`)
                     return
                 } catch (err: unknown) {
-                    toast.error("Failed to create setlist: " + (err instanceof Error ? err.message : "Unknown"), { id: toastId })
+                    toast.error(t("hooks.createSetlistFailedWithReason", { error: err instanceof Error ? err.message : t("hooks.unknownError") }), { id: toastId })
                     return
                 }
             }
         }
 
         // Fallback: no matching template, create blank setlist
-        const formattedDate = date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
-        const name = 'New Setlist — ' + formattedDate
+        const formattedDate = fmt.date(date, { month: 'long', day: 'numeric' })
+        const name = t("hooks.newSetlistName", { date: formattedDate })
         try {
             const id = await setlistService.createSetlist(name, [], {
                 eventDate: date.toISOString(),
             })
             router.push(`/setlists/${id}`)
         } catch {
-            toast.error("Failed to create setlist")
+            toast.error(t("hooks.createSetlistFailed"))
         }
     }
 
@@ -350,7 +353,7 @@ export function useSetlistDashboard({
 
         let templateToastId: string | number | undefined
         try {
-            templateToastId = toast.loading('Building setlist from template...')
+            templateToastId = toast.loading(t("hooks.buildingFromTemplate"))
             const context = await getFullServiceContext(targetDate, org)
             context.type = templateType as ServiceType
             const { allFiles } = useLibraryStore.getState()
@@ -363,9 +366,9 @@ export function useSetlistDashboard({
                 isTemplate: false,
             })
 
-            const matched = tracks.filter(t => t.fileId).length
-            const total = tracks.filter(t => t.type === 'song').length
-            toast.success(`Created "${name}" — ${matched}/${total} songs matched`, { id: templateToastId })
+            const matched = tracks.filter(tr => tr.fileId).length
+            const total = tracks.filter(tr => tr.type === 'song').length
+            toast.success(t("hooks.createdFromTemplate", { setlistName: name, matched, total }), { id: templateToastId })
 
             handleSelect({
                 id, name, trackCount: tracks.length,
@@ -373,7 +376,7 @@ export function useSetlistDashboard({
                 eventDate: targetDate.toISOString(), ownerId: user.uid,
             })
         } catch (err: unknown) {
-            toast.error("Failed to create template setlist: " + (err instanceof Error ? err.message : "Unknown"), { id: templateToastId })
+            toast.error(t("hooks.createTemplateSetlistFailed", { error: err instanceof Error ? err.message : t("hooks.unknownError") }), { id: templateToastId })
         }
     }
 
@@ -381,12 +384,12 @@ export function useSetlistDashboard({
         try {
             const tracks = await fetchTracksForSetlistClient(setlist.id, setlist)
             if (tracks.length === 0) {
-                toast.error("No tracks to download in this setlist")
+                toast.error(t("hooks.noTracksToDownload"))
                 return
             }
             await downloadSetlist(tracks)
         } catch {
-            toast.error("Failed to load setlist for download")
+            toast.error(t("hooks.loadForDownloadFailed"))
         }
     }
 
@@ -423,6 +426,7 @@ export function useSetlistDashboard({
                 if (s.eventDate) {
                     const d = toDateHelper(s.eventDate)
                     if (d) {
+                        // Search keys stay en-US on purpose: search must keep matching English input.
                         const long = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).toLowerCase()
                         const short = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toLowerCase()
                         const numeric = d.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })

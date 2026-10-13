@@ -4,6 +4,7 @@ import { Lock, LockOpen } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import type { WakeLockError } from "@/hooks/use-wake-lock"
+import { useT } from "@/i18n/client"
 
 /**
  * "🔒 Keep screen on" toggle — gesture-gated WakeLock surface.
@@ -71,10 +72,10 @@ export interface KeepAwakeToggleProps {
     className?: string
 }
 
-const ERROR_COPY: Record<Exclude<WakeLockError, null>, string> = {
-    hidden: "Tab not focused — tap chart to retry",
-    denied: "Wake-lock blocked — tap again to retry",
-}
+const ERROR_COPY = {
+    hidden: "perform.keepAwake.errorHidden",
+    denied: "perform.keepAwake.errorDenied",
+} as const satisfies Record<Exclude<WakeLockError, null>, string>
 
 export function KeepAwakeToggle({
     isActive,
@@ -85,6 +86,7 @@ export function KeepAwakeToggle({
     compact = true,
     className,
 }: KeepAwakeToggleProps) {
+    const t = useT()
     const handleClick = () => {
         if (isActive) {
             void onRelease()
@@ -100,11 +102,11 @@ export function KeepAwakeToggle({
     // rejection — this is belt+braces, and aligns with the dispatch AC1.
     const engaged = isActive && !lastError
 
-    const label = engaged ? "Screen lock on — tap to release" : "Keep screen on"
+    const label = engaged ? t("perform.keepAwake.lockOnAria") : t("perform.keepAwake.keepScreenOn")
     const ariaLabel = isSupported
         ? label
-        : "Keep screen on — wake-lock unavailable on this device"
-    const errorText = lastError ? ERROR_COPY[lastError] : null
+        : t("perform.keepAwake.unavailableAria")
+    const errorText = lastError ? t(ERROR_COPY[lastError]) : null
 
     return (
         <div className={cn("relative inline-flex", className)}>
@@ -118,7 +120,7 @@ export function KeepAwakeToggle({
                 title={
                     isSupported
                         ? undefined
-                        : "Wake-lock unavailable on this device (needs iOS 16.4+ or a modern browser)"
+                        : t("perform.keepAwake.unavailableTitle")
                 }
                 size="sm"
                 variant="ghost"
@@ -148,7 +150,7 @@ export function KeepAwakeToggle({
                         compact ? "hidden sm:inline" : "inline",
                     )}
                 >
-                    {engaged ? "Screen on" : "Keep on"}
+                    {engaged ? t("perform.keepAwake.screenOn") : t("perform.keepAwake.keepOn")}
                 </span>
                 {/* M3-001 peripheral confirmation pulse — readable in
                     peripheral vision from a music stand. aria-hidden because
@@ -157,7 +159,7 @@ export function KeepAwakeToggle({
                     <span
                         aria-hidden="true"
                         data-testid="keep-awake-pulse"
-                        className="pointer-events-none absolute top-1 right-1 h-1.5 w-1.5 rounded-full bg-primary animate-pulse"
+                        className="pointer-events-none absolute top-1 end-1 h-1.5 w-1.5 rounded-full bg-primary animate-pulse"
                     />
                 )}
             </Button>
@@ -170,7 +172,7 @@ export function KeepAwakeToggle({
                     role="alert"
                     data-testid="keep-awake-error"
                     className={cn(
-                        "absolute bottom-full right-0 mb-2 z-50 whitespace-nowrap",
+                        "absolute bottom-full end-0 mb-2 z-50 whitespace-nowrap",
                         "rounded-md border border-destructive/40 bg-destructive/95 text-destructive-foreground",
                         "px-2.5 py-1.5 text-[11px] font-medium shadow-lg",
                     )}

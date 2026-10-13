@@ -13,6 +13,9 @@ import {
 import { useMusicStore } from "@/lib/store"
 import { Bell, ListMusic, Upload, Shield, Calendar, CalendarCheck, CalendarX } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useFormat, useT } from "@/i18n/client"
+import type { T } from "@/i18n/core"
+import type { Formatter } from "@/i18n/format"
 
 const ICON_MAP: Record<string, typeof Bell> = {
     setlist_published: ListMusic,
@@ -28,6 +31,8 @@ const ICON_MAP: Record<string, typeof Bell> = {
 }
 
 export function NotificationBell() {
+    const t = useT()
+    const fmt = useFormat()
     const { user } = useAuth()
     const router = useRouter()
     const [notifications, setNotifications] = useState<Notification[]>([])
@@ -85,11 +90,11 @@ export function NotificationBell() {
                 size="icon"
                 onClick={() => setOpen(!open)}
                 className="relative"
-                aria-label="Notifications"
+                aria-label={t("nav.notifications")}
             >
                 <Bell className="w-5 h-5" />
                 {unreadCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+                    <span className="absolute -top-0.5 -end-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
                         {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                 )}
@@ -97,10 +102,10 @@ export function NotificationBell() {
 
             {/* Dropdown */}
             {open && (
-                <div className="absolute right-0 top-full mt-2 w-80 bg-card border border-border rounded-xl shadow-xl z-50 overflow-hidden">
+                <div className="absolute end-0 top-full mt-2 w-80 bg-card border border-border rounded-xl shadow-xl z-50 overflow-hidden">
                     {/* Header */}
                     <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
-                        <span className="text-sm font-semibold text-foreground">Notifications</span>
+                        <span className="text-sm font-semibold text-foreground">{t("nav.notifications")}</span>
                         {unreadCount > 0 && (
                             <Button
                                 variant="link"
@@ -108,7 +113,7 @@ export function NotificationBell() {
                                 onClick={handleMarkAllRead}
                                 className="h-auto p-0 text-xs text-muted-foreground hover:text-foreground"
                             >
-                                Mark all read
+                                {t("nav.markAllRead")}
                             </Button>
                         )}
                     </div>
@@ -117,13 +122,13 @@ export function NotificationBell() {
                     <div className="max-h-80 overflow-y-auto">
                         {notifications.length === 0 ? (
                             <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-                                No notifications yet
+                                {t("nav.noNotifications")}
                             </div>
                         ) : (
                             notifications.map(notif => {
                                 const Icon = ICON_MAP[notif.type] || Bell
                                 const timeAgo = notif.createdAt
-                                    ? formatTimeAgo(notif.createdAt.toDate())
+                                    ? formatTimeAgo(notif.createdAt.toDate(), t, fmt)
                                     : ''
 
                                 return (
@@ -131,7 +136,7 @@ export function NotificationBell() {
                                         variant="ghost"
                                         key={notif.id}
                                         onClick={() => handleClick(notif)}
-                                        className={`w-full h-auto items-start gap-3 px-4 py-3 rounded-none justify-start text-left hover:bg-accent/50 ${!notif.read ? 'bg-violet-500/5' : ''}`}
+                                        className={`w-full h-auto items-start gap-3 px-4 py-3 rounded-none justify-start text-start hover:bg-accent/50 ${!notif.read ? 'bg-violet-500/5' : ''}`}
                                     >
                                         <div className={`mt-0.5 p-1.5 rounded-lg shrink-0 ${!notif.read ? 'bg-violet-500/10 text-violet-500' : 'bg-muted text-muted-foreground'}`}>
                                             <Icon className="w-3.5 h-3.5" />
@@ -163,11 +168,11 @@ export function NotificationBell() {
     )
 }
 
-function formatTimeAgo(date: Date): string {
+function formatTimeAgo(date: Date, t: T, fmt: Formatter): string {
     const seconds = Math.floor((Date.now() - date.getTime()) / 1000)
-    if (seconds < 60) return 'Just now'
-    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`
-    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`
-    if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`
-    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+    if (seconds < 60) return t("nav.justNow")
+    if (seconds < 3600) return t("nav.minutesAgo", { minutes: Math.floor(seconds / 60) })
+    if (seconds < 86400) return t("nav.hoursAgo", { hours: Math.floor(seconds / 3600) })
+    if (seconds < 604800) return t("nav.daysAgo", { days: Math.floor(seconds / 86400) })
+    return fmt.date(date, { month: 'short', day: 'numeric' })
 }

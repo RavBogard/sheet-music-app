@@ -7,6 +7,8 @@ import { ChordEditPopover } from "./ChordEditPopover"
 import { ErrorBoundary } from "react-error-boundary"
 import { FallbackError } from "@/components/ui/fallback-error"
 import type { ChordOverlay } from "@/lib/chord-cache"
+import { useI18n } from "@/i18n/client"
+import { useChartContentDir } from "@/components/i18n/ChartContent"
 
 interface SmartTransposerProps {
     pageRef: React.RefObject<HTMLDivElement | null>
@@ -15,6 +17,11 @@ interface SmartTransposerProps {
 }
 
 export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransposerProps) {
+    const { t, isRtl } = useI18n()
+    // Phase 7: chord overlays are chart content (ltr, positioned over the
+    // page by physical x%); the edit hint is UI chrome and takes the page dir.
+    const chartDir = useChartContentDir()
+    const uiDir = isRtl ? ({ dir: "rtl" } as const) : {}
     const {
         aiState,
         pageData,
@@ -76,17 +83,18 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
     }
 
     return (
-        <ErrorBoundary FallbackComponent={(props) => <FallbackError {...props} title="Transposer Error" compact />}>
+        <ErrorBoundary FallbackComponent={(props) => <FallbackError {...props} title={t("music.transposer.errorTitle")} compact />}>
             <div
+                {...chartDir}
                 className="absolute inset-0 z-10 pointer-events-none"
                 onDoubleClick={isEditingChords ? handleBgDoubleClick : undefined}
                 style={isEditingChords ? { pointerEvents: 'auto' } : undefined}
             >
                 {/* Edit mode hint */}
                 {isEditingChords && (
-                    <div className="absolute top-2 left-0 right-0 flex justify-center pointer-events-none z-splash">
+                    <div {...uiDir} className="absolute top-2 inset-x-0 flex justify-center pointer-events-none z-splash">
                         <span className="bg-zinc-900/80 text-zinc-400 text-[10px] px-3 py-1 rounded-full border border-zinc-700/50 backdrop-blur-sm">
-                            Tap chord to edit &middot; Double-click empty space to add
+                            {t("music.transposer.editHint")}
                         </span>
                     </div>
                 )}
@@ -101,7 +109,7 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
                             transform: 'translate(-50%, -50%)',
                         }}
                     >
-                        <span className="text-violet-300 text-[10px] font-bold">AI</span>
+                        <span className="text-violet-300 text-[10px] font-bold">{t("music.transposer.aiBadge")}</span>
                     </div>
                 )}
 

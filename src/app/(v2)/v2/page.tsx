@@ -2,18 +2,18 @@ import Link from "next/link"
 import { GlassCard } from "@/components/v2/glass-card"
 import { DenseList, DenseRow } from "@/components/v2/dense-list"
 import { V2Footer } from "@/components/v2/v2-footer"
+import { getT } from "@/i18n/server"
 
-export default function V2LandingPage() {
+export default async function V2LandingPage() {
+  const t = await getT()
   return (
     <>
       <main id="main-content" className="mx-auto w-full max-w-4xl flex-1 px-6 py-12 md:py-20">
         <header className="mb-10 flex flex-col gap-3">
-          <span className="text-eyebrow text-v2-accent">v2 · Pro Performance Aesthetic</span>
-          <h1 className="text-title-large">CRC Music — concert‑stage pro</h1>
+          <span className="text-eyebrow text-v2-accent">{t("v2.eyebrow")}</span>
+          <h1 className="text-title-large">{t("v2.heroTitle")}</h1>
           <p className="max-w-2xl text-base text-muted-foreground">
-            You&rsquo;re in the v2 beta. New shell, dense rows, no album art. Routes
-            migrate over here one at a time. Your existing setlists, library, and
-            performance views still live in the classic UI.
+            {t("v2.intro")}
           </p>
         </header>
 
@@ -21,22 +21,22 @@ export default function V2LandingPage() {
           <GlassCard className="p-6 md:p-8">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h2 className="font-display text-2xl tracking-tight">Welcome back</h2>
+                <h2 className="font-display text-2xl tracking-tight">{t("v2.welcomeBack")}</h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  This is a primitive showcase. Production pages are not migrated yet.
+                  {t("v2.showcaseNote")}
                 </p>
               </div>
               <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-300">
-                Beta
+                {t("v2.beta")}
               </span>
             </div>
           </GlassCard>
         </section>
 
         <section className="mb-10">
-          <h2 className="mb-3 text-eyebrow text-muted-foreground">Recent setlists (demo)</h2>
+          <h2 className="mb-3 text-eyebrow text-muted-foreground">{t("v2.recentSetlistsDemo")}</h2>
           <GlassCard className="overflow-hidden p-0">
-            <DenseList aria-label="Demo dense list of setlists">
+            <DenseList aria-label={t("v2.demoListLabel")}>
               {DEMO_ROWS.map((row) => (
                 <DenseRow key={row.id} interactive>
                   <span className="w-12 shrink-0 font-mono text-xs text-muted-foreground tabular-nums">
@@ -46,7 +46,7 @@ export default function V2LandingPage() {
                   <span className="hidden w-24 shrink-0 text-xs text-muted-foreground md:inline">
                     {row.service}
                   </span>
-                  <span className="w-12 shrink-0 text-right font-mono text-xs tabular-nums text-muted-foreground">
+                  <span className="w-12 shrink-0 text-end font-mono text-xs tabular-nums text-muted-foreground">
                     {row.tracks}
                   </span>
                 </DenseRow>
@@ -60,13 +60,13 @@ export default function V2LandingPage() {
             href="/setlists"
             className="rounded-full border border-border bg-card/40 px-4 py-2 text-sm font-medium text-foreground/90 backdrop-blur transition hover:bg-card/60"
           >
-            Open classic setlists
+            {t("v2.openClassicSetlists")}
           </Link>
           <Link
             href="/library"
             className="rounded-full border border-border bg-card/40 px-4 py-2 text-sm font-medium text-foreground/90 backdrop-blur transition hover:bg-card/60"
           >
-            Open classic library
+            {t("v2.openClassicLibrary")}
           </Link>
         </section>
       </main>

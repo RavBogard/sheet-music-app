@@ -10,9 +10,58 @@ import { Guitar, Check, Phone, CalendarDays, Bell, Shield, Users, Star, Loader2 
 import { toast } from "sonner"
 import type { SchedulingTier } from "@/types/models"
 import { useFeature } from "@/lib/org/use-feature"
+import { useT } from "@/i18n/client"
+
+/**
+ * Display text for the fixed instrument options. Stored values stay the
+ * INSTRUMENT_PRESETS slug keys; a preset missing here shows its own label.
+ */
+const INSTRUMENT_LABEL: Record<string, string> = {
+    acoustic_guitar: "settings.instruments.acousticGuitar",
+    electric_bass: "settings.instruments.electricBass",
+    mandolin: "settings.instruments.mandolin",
+    electric_guitar: "settings.instruments.electricGuitar",
+    classical_guitar: "settings.instruments.classicalGuitar",
+    voice: "settings.instruments.voice",
+    hand_drums: "settings.instruments.handDrums",
+    violin: "settings.instruments.violin",
+    eb_alto_sax: "settings.instruments.ebAltoSax",
+    bb_tenor_sax: "settings.instruments.bbTenorSax",
+    bb_soprano_sax: "settings.instruments.bbSopranoSax",
+    bb_clarinet: "settings.instruments.bbClarinet",
+    bb_trumpet: "settings.instruments.bbTrumpet",
+    f_horn: "settings.instruments.fHorn",
+    trombone: "settings.instruments.trombone",
+    piano: "settings.instruments.piano",
+    ukulele: "settings.instruments.ukulele",
+    other: "settings.instruments.other",
+}
+
+/** Transposition description per preset (same English as INSTRUMENT_PRESETS[k].description). */
+const INSTRUMENT_NOTE: Record<string, string> = {
+    acoustic_guitar: "settings.instrumentNotes.concertPitch",
+    electric_bass: "settings.instrumentNotes.concertPitchOctaveLower",
+    mandolin: "settings.instrumentNotes.concertPitch",
+    electric_guitar: "settings.instrumentNotes.concertPitch",
+    classical_guitar: "settings.instrumentNotes.concertPitch",
+    voice: "settings.instrumentNotes.concertPitch",
+    hand_drums: "settings.instrumentNotes.rhythmOnly",
+    violin: "settings.instrumentNotes.concertPitch",
+    eb_alto_sax: "settings.instrumentNotes.major6thLower",
+    bb_tenor_sax: "settings.instrumentNotes.major9thLower",
+    bb_soprano_sax: "settings.instrumentNotes.wholeStepLower",
+    bb_clarinet: "settings.instrumentNotes.wholeStepLower",
+    bb_trumpet: "settings.instrumentNotes.wholeStepLower",
+    f_horn: "settings.instrumentNotes.fifthLower",
+    trombone: "settings.instrumentNotes.concertPitch",
+    piano: "settings.instrumentNotes.concertPitch",
+    ukulele: "settings.instrumentNotes.concertPitch",
+    other: "settings.instrumentNotes.custom",
+}
 
 export function MusicianProfileSettings() {
     const { user } = useAuth()
+    const t = useT()
     // Multi-tenant phase 6: the Email toggle is for scheduling emails.
     const schedulingEmailsOn = useFeature("schedulingEmails")
     const [profile, setProfile] = useState<MusicianProfile>({})
@@ -59,9 +108,9 @@ export function MusicianProfileSettings() {
         try {
             await saveMusicianProfile(profile)
             setHasChanges(false)
-            toast.success("Profile saved")
+            toast.success(t("settings.profile.saved"))
         } catch (err: unknown) {
-            toast.error("Failed to save: " + (err instanceof Error ? err.message : "Unknown error"))
+            toast.error(t("settings.profile.saveFailed", { error: err instanceof Error ? err.message : t("settings.profile.unknownError") }))
         } finally {
             setSaving(false)
         }
@@ -77,6 +126,8 @@ export function MusicianProfileSettings() {
     }
 
     const currentPreset = profile.instrument ? INSTRUMENT_PRESETS[profile.instrument] : null
+    // One sentence with a bold phrase inside it: split the template at {emphasis}.
+    const [nudgeBefore, nudgeAfter = ""] = t("settings.profile.nudge").split("{emphasis}")
 
     return (
         <div className="space-y-6">
@@ -86,9 +137,9 @@ export function MusicianProfileSettings() {
                     <Guitar className="w-5 h-5 text-brand" />
                 </div>
                 <div>
-                    <h3 className="text-lg font-semibold text-foreground">Musician Profile</h3>
+                    <h3 className="text-lg font-semibold text-foreground">{t("settings.profile.title")}</h3>
                     <p className="text-sm text-muted-foreground">
-                        Set your instrument for automatic transposition and personalized printouts
+                        {t("settings.profile.description")}
                     </p>
                 </div>
             </div>
@@ -98,21 +149,21 @@ export function MusicianProfileSettings() {
                 <div className="flex items-start gap-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
                     <span className="text-lg mt-0.5">🎵</span>
                     <p className="text-sm text-amber-700 dark:text-amber-400">
-                        Set your instrument below to get <strong>automatically transposed charts</strong> in your key and personalized printout PDFs.
+                        {nudgeBefore}<strong>{t("settings.profile.nudgeEmphasis")}</strong>{nudgeAfter}
                     </p>
                 </div>
             )}
 
             {/* Instrument Selection */}
             <div className="space-y-3">
-                <label className="text-sm font-medium text-foreground">Instrument</label>
+                <label className="text-sm font-medium text-foreground">{t("settings.profile.instrument")}</label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {Object.entries(INSTRUMENT_PRESETS).map(([key, preset]) => (
                         <button
                             key={key}
                             onClick={() => selectInstrument(key)}
                             className={`
-                                relative px-3 py-2.5 rounded-xl text-left transition-all duration-200 text-sm
+                                relative px-3 py-2.5 rounded-xl text-start transition-all duration-200 text-sm
                                 ${profile.instrument === key
                                     ? 'bg-brand/10 border-brand/50 text-foreground ring-1 ring-brand/30'
                                     : 'bg-muted/50 border-border text-muted-foreground hover:bg-muted hover:text-foreground'
@@ -120,14 +171,17 @@ export function MusicianProfileSettings() {
                                 border
                             `}
                         >
-                            <div className="font-medium">{preset.label}</div>
+                            <div className="font-medium">{key in INSTRUMENT_LABEL ? t(INSTRUMENT_LABEL[key]) : preset.label}</div>
                             {preset.transposition !== 0 && (
                                 <div className="text-xs opacity-60 mt-0.5">
-                                    {preset.transposition > 0 ? '+' : ''}{preset.transposition} semitones
+                                    {t("settings.profile.semitones", {
+                                        count: Math.abs(preset.transposition),
+                                        offset: `${preset.transposition > 0 ? '+' : ''}${preset.transposition}`,
+                                    })}
                                 </div>
                             )}
                             {profile.instrument === key && (
-                                <Check className="absolute top-2 right-2 w-3.5 h-3.5 text-brand" />
+                                <Check className="absolute top-2 end-2 w-3.5 h-3.5 text-brand" />
                             )}
                         </button>
                     ))}
@@ -137,12 +191,12 @@ export function MusicianProfileSettings() {
             {/* Transposition Details (shown when instrument selected) */}
             {currentPreset && (
                 <div className="space-y-4 p-4 rounded-xl bg-muted/30 border border-border">
-                    <p className="text-sm text-muted-foreground">{currentPreset.description}</p>
+                    <p className="text-sm text-muted-foreground">{profile.instrument && profile.instrument in INSTRUMENT_NOTE ? t(INSTRUMENT_NOTE[profile.instrument]) : currentPreset.description}</p>
 
                     {/* Custom Transposition Override */}
                     <div className="space-y-2">
                         <label className="text-sm font-medium text-foreground">
-                            Transposition Offset (semitones)
+                            {t("settings.profile.transpositionOffset")}
                         </label>
                         <div className="flex items-center gap-3">
                             <button
@@ -168,7 +222,7 @@ export function MusicianProfileSettings() {
                         <div className="space-y-3 pt-2 border-t border-border">
                             <div className="flex items-center justify-between">
                                 <label className="text-sm font-medium text-foreground">
-                                    Show capo notation
+                                    {t("settings.profile.showCapo")}
                                 </label>
                                 <button
                                     onClick={() => updateField('preferCapo', !profile.preferCapo)}
@@ -179,14 +233,14 @@ export function MusicianProfileSettings() {
                                 >
                                     <div className={`
                                         w-5 h-5 rounded-full bg-white shadow-sm absolute top-0.5 transition-all duration-200
-                                        ${profile.preferCapo ? 'translate-x-5' : 'translate-x-0.5'}
+                                        ${profile.preferCapo ? 'translate-x-5 rtl:-translate-x-5' : 'translate-x-0.5 rtl:-translate-x-0.5'}
                                     `} />
                                 </button>
                             </div>
                             {profile.preferCapo && (
                                 <div className="space-y-2">
                                     <label className="text-sm text-muted-foreground">
-                                        Default capo fret
+                                        {t("settings.profile.defaultCapoFret")}
                                     </label>
                                     <div className="flex gap-1.5">
                                         {[0, 1, 2, 3, 4, 5, 6, 7].map(fret => (
@@ -213,7 +267,7 @@ export function MusicianProfileSettings() {
                     {/* Flat/Sharp Preference */}
                     <div className="flex items-center justify-between pt-2 border-t border-border">
                         <label className="text-sm font-medium text-foreground">
-                            Prefer flats (Bb) over sharps (A#)
+                            {t("settings.profile.preferFlats")}
                         </label>
                         <button
                             onClick={() => updateField('preferFlats', !profile.preferFlats)}
@@ -224,7 +278,7 @@ export function MusicianProfileSettings() {
                         >
                             <div className={`
                                 w-5 h-5 rounded-full bg-white shadow-sm absolute top-0.5 transition-all duration-200
-                                ${profile.preferFlats ? 'translate-x-5' : 'translate-x-0.5'}
+                                ${profile.preferFlats ? 'translate-x-5 rtl:-translate-x-5' : 'translate-x-0.5 rtl:-translate-x-0.5'}
                             `} />
                         </button>
                     </div>
@@ -238,8 +292,8 @@ export function MusicianProfileSettings() {
                         <CalendarDays className="w-5 h-5 text-brand" />
                     </div>
                     <div>
-                        <h4 className="text-base font-semibold text-foreground">Scheduling</h4>
-                        <p className="text-sm text-muted-foreground">Phone, availability, and notification preferences</p>
+                        <h4 className="text-base font-semibold text-foreground">{t("settings.scheduling.title")}</h4>
+                        <p className="text-sm text-muted-foreground">{t("settings.scheduling.description")}</p>
                     </div>
                 </div>
 
@@ -247,29 +301,29 @@ export function MusicianProfileSettings() {
                 <div className="space-y-2 p-4 rounded-xl bg-muted/20 border border-border/40">
                     <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
                         <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-                        Phone Number
+                        {t("settings.scheduling.phone")}
                     </label>
                     <Input
                         type="tel"
-                        placeholder="(555) 123-4567"
+                        placeholder={t("settings.scheduling.phonePlaceholder")}
                         value={profile.phone || ''}
                         onChange={(e) => updateField('phone', e.target.value)}
                         className="h-10 text-sm rounded-lg"
                     />
-                    <p className="text-xs text-muted-foreground">For SMS scheduling notifications (optional)</p>
+                    <p className="text-xs text-muted-foreground">{t("settings.scheduling.phoneHint")}</p>
                 </div>
 
                 {/* Notification Preferences */}
                 <div className="space-y-3 p-4 rounded-xl bg-muted/20 border border-border/40">
                     <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
                         <Bell className="h-3.5 w-3.5 text-muted-foreground" />
-                        Scheduling Notifications
+                        {t("settings.scheduling.notifications")}
                     </label>
                     <div className="space-y-3">
                         {([
-                            { key: 'email' as const, label: 'Email', desc: 'Assignment and reminder emails' },
-                            { key: 'sms' as const, label: 'SMS', desc: 'Text message notifications' },
-                            { key: 'push' as const, label: 'Push', desc: 'Browser push notifications' },
+                            { key: 'email' as const, label: t("settings.scheduling.email"), desc: t("settings.scheduling.emailDescription") },
+                            { key: 'sms' as const, label: t("settings.scheduling.sms"), desc: t("settings.scheduling.smsDescription") },
+                            { key: 'push' as const, label: t("settings.scheduling.push"), desc: t("settings.scheduling.pushDescription") },
                         ]).filter(({ key }) => key !== 'email' || schedulingEmailsOn).map(({ key, label, desc }) => (
                             <div key={key} className="flex items-center justify-between py-1">
                                 <div>
@@ -293,7 +347,7 @@ export function MusicianProfileSettings() {
                                     <div className={`
                                         w-5 h-5 rounded-full bg-white shadow-sm absolute top-0.5 transition-all duration-200
                                         ${(profile.notificationPreferences?.[key] ?? (key === 'email' || key === 'push'))
-                                            ? 'translate-x-5' : 'translate-x-0.5'}
+                                            ? 'translate-x-5 rtl:-translate-x-5' : 'translate-x-0.5 rtl:-translate-x-0.5'}
                                     `} />
                                 </button>
                             </div>
@@ -305,7 +359,7 @@ export function MusicianProfileSettings() {
                 <div className="space-y-2 p-4 rounded-xl bg-muted/20 border border-border/40">
                     <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
                         <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
-                        Calendar Subscription
+                        {t("settings.scheduling.calendarTitle")}
                     </label>
                     {profile.calendarFeedToken ? (
                         <>
@@ -322,14 +376,14 @@ export function MusicianProfileSettings() {
                                     onClick={() => {
                                         const url = `${window.location.origin}/api/scheduling/calendar-feed/${profile.calendarFeedToken}`
                                         navigator.clipboard.writeText(url)
-                                        toast.success('Calendar URL copied!')
+                                        toast.success(t("settings.scheduling.calendarCopied"))
                                     }}
                                 >
-                                    Copy
+                                    {t("settings.scheduling.copy")}
                                 </Button>
                             </div>
                             <p className="text-xs text-muted-foreground">
-                                Add this URL to Google Calendar, Apple Calendar, or Outlook to see your CRC schedule.
+                                {t("settings.scheduling.calendarAddHint")}
                             </p>
                         </>
                     ) : (
@@ -346,19 +400,19 @@ export function MusicianProfileSettings() {
                                         const { generateCalendarFeedToken } = await import('@/lib/scheduling-firebase')
                                         const token = await generateCalendarFeedToken(user.uid)
                                         setProfile(prev => ({ ...prev, calendarFeedToken: token }))
-                                        toast.success('Calendar feed URL generated!')
+                                        toast.success(t("settings.scheduling.calendarGenerated"))
                                     } catch {
-                                        toast.error('Failed to generate calendar URL')
+                                        toast.error(t("settings.scheduling.calendarGenerateFailed"))
                                     } finally {
                                         setGeneratingCal(false)
                                     }
                                 }}
                             >
                                 {generatingCal ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CalendarDays className="h-3.5 w-3.5" />}
-                                {generatingCal ? "Generating..." : "Generate Calendar URL"}
+                                {generatingCal ? t("settings.scheduling.calendarGenerating") : t("settings.scheduling.calendarGenerate")}
                             </Button>
                             <p className="text-xs text-muted-foreground mt-1.5">
-                                Generate a URL to subscribe to your CRC schedule in your personal calendar app.
+                                {t("settings.scheduling.calendarGenerateHint")}
                             </p>
                         </div>
                     )}
@@ -373,7 +427,7 @@ export function MusicianProfileSettings() {
                         disabled={saving}
                         className="w-full h-11 rounded-xl bg-brand hover:bg-brand/90 text-brand-foreground font-semibold fluid-interaction shadow-sm shadow-brand/20"
                     >
-                        {saving ? "Saving..." : "Save Profile"}
+                        {saving ? t("settings.profile.saving") : t("settings.profile.save")}
                     </Button>
                 </div>
             )}

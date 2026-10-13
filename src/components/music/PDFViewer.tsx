@@ -17,6 +17,7 @@ import { getFile } from '@/lib/offline-idb'
 import { desiredWorkerSrc, ensureOfflineWorkerReady } from '@/lib/pdf-worker-offline'
 import { shouldStartRenderWatchdog, isRotateScaleResize, computeFitPageWidth } from './pdf-viewer-state'
 import { useChartContentDir } from "@/components/i18n/ChartContent"
+import { useI18n } from "@/i18n/client"
 
 // Configure PDF.js worker — use local copy from public/ (copied by
 // scripts/ops/copy-pdf-worker.js during postinstall + build). Local worker
@@ -73,6 +74,10 @@ interface PDFViewerProps {
 export function PDFViewer({ url, trackName }: PDFViewerProps) {
     // Phase 7: the chart keeps its own (ltr) direction on an rtl page.
     const chartDir = useChartContentDir()
+    const { t, isRtl } = useI18n()
+    // Viewer chrome (status text, the page pill) sits inside the ltr chart
+    // scroller; on an rtl page it takes the page direction back.
+    const uiDir = isRtl ? ({ dir: "rtl" } as const) : {}
     const [numPages, setNumPages] = useState<number>(0)
     const [width, setWidth] = useState<number>(0)
     // WS-14: container height + first-page aspect ratio feed the fit-page math.
@@ -309,7 +314,7 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
     // A failed state is either a fetch/render error OR the render watchdog
     // tripping. `renderMessage` gives the watchdog its own user-facing copy.
     const renderMessage = renderTimedOut
-        ? 'The chart took too long to render. Tap Retry.'
+        ? t("music.viewer.renderTimedOutDetail")
         : null
     const failed = !!error || renderTimedOut
     const exhausted = retryCountRef.current >= MAX_RETRIES && failed
@@ -471,17 +476,17 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
             >
                 <div data-pdf-scroll-content="" className="relative mx-auto">
                     {loading && (
-                        <div className="flex flex-col items-center mt-4 gap-3">
+                        <div {...uiDir} className="flex flex-col items-center mt-4 gap-3">
                             <Skeleton className="w-full max-w-[600px] aspect-[8.5/11] rounded-lg" />
                             <Skeleton className="h-4 w-32 rounded" />
-                            <p className="text-sm text-muted-foreground">Loading Chart...</p>
+                            <p className="text-sm text-muted-foreground">{t("music.viewer.loadingChart")}</p>
                         </div>
                     )}
 
                     {failed && !loading && (
-                        <div className="p-10 text-center space-y-3">
+                        <div {...uiDir} className="p-10 text-center space-y-3">
                             <p className="font-semibold text-destructive text-lg">
-                                {exhausted ? 'Could not load chart — please try again later' : (renderTimedOut ? 'Chart took too long to render' : 'Failed to load PDF')}
+                                {exhausted ? t("music.viewer.loadExhausted") : (renderTimedOut ? t("music.viewer.renderTimedOut") : t("music.viewer.pdfLoadFailed"))}
                             </p>
                             <p className="text-sm text-muted-foreground max-w-xs mx-auto break-words">
                                 {error ?? renderMessage}
@@ -492,7 +497,7 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
                                     onClick={handleRetry}
                                 >
                                     <RefreshCw className="h-4 w-4" />
-                                    Retry{retryCountRef.current > 0 ? ` (${retryCountRef.current}/${MAX_RETRIES})` : ''}
+                                    {retryCountRef.current > 0 ? t("music.viewer.retryWithCount", { attempt: retryCountRef.current, max: MAX_RETRIES }) : t("music.viewer.retry")}
                                 </Button>
                             )}
                             <ChartSuggestions
@@ -509,21 +514,21 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
                             onLoadSuccess={onDocumentLoadSuccess}
                             onLoadError={onDocumentLoadError}
                             loading={
-                                <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-4 mt-20">
+                                <div {...uiDir} className="flex flex-col items-center justify-center h-full text-muted-foreground gap-4 mt-20">
                                     <Loader2 className="animate-spin h-10 w-10" />
-                                    <p>Rendering…</p>
+                                    <p>{t("music.viewer.rendering")}</p>
                                 </div>
                             }
                             error={
-                                <div className="text-destructive p-10 text-center space-y-2">
-                                    <p className="font-semibold">PDF render error</p>
+                                <div {...uiDir} className="text-destructive p-10 text-center space-y-2">
+                                    <p className="font-semibold">{t("music.viewer.pdfRenderError")}</p>
                                     {retryCountRef.current < MAX_RETRIES && (
                                         <Button
                                             variant="secondary"
                                             onClick={handleRetry}
                                         >
                                             <RefreshCw className="h-4 w-4" />
-                                            Retry
+                                            {t("music.viewer.retry")}
                                         </Button>
                                     )}
                                 </div>
@@ -545,9 +550,9 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
                                       </div>
                                   ))
                                 : numPages > 0 && (
-                                      <div className="flex flex-col items-center justify-center gap-3 mt-20 text-muted-foreground">
+                                      <div {...uiDir} className="flex flex-col items-center justify-center gap-3 mt-20 text-muted-foreground">
                                           <Loader2 className="animate-spin h-8 w-8" />
-                                          <p className="text-sm">Measuring…</p>
+                                          <p className="text-sm">{t("music.viewer.measuring")}</p>
                                       </div>
                                   )}
                         </Document>
@@ -556,8 +561,8 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
                     {/* WS-07: multi-page indicator so page 2+ below the fold is
                         discoverable. Single-page charts show nothing. */}
                     {source && !loading && !renderTimedOut && numPages > 1 && width > 0 && (
-                        <div className="pointer-events-none fixed bottom-28 left-1/2 -translate-x-1/2 z-20 rounded-full bg-card/90 border border-border px-3 py-1 text-xs font-medium text-foreground shadow-lg">
-                            Page {currentPage} of {numPages}
+                        <div {...uiDir} className="pointer-events-none fixed bottom-28 left-1/2 -translate-x-1/2 z-20 rounded-full bg-card/90 border border-border px-3 py-1 text-xs font-medium text-foreground shadow-lg">
+                            {t("music.viewer.pageOf", { current: currentPage, total: numPages })}
                         </div>
                     )}
 

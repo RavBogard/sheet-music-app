@@ -1,0 +1,16 @@
+{
+    "footerCredit": { "where": "Page footer: credit line; {author} renders as a link with the author's name", "who": "everyone", "maxLength": 50, "context": "{author} is a person's name (stays as written)" },
+    "version": { "where": "Page footer: app version", "who": "everyone", "maxLength": 12, "context": "{version} is the version number", "translate": false },
+    "commitTitle": { "where": "Page footer: tooltip on the version showing the code commit", "who": "everyone", "maxLength": 30, "context": "{commit} is a code commit id" },
+    "changelog": { "where": "Page footer link: release notes", "who": "everyone", "maxLength": 16 },
+    "privacy": { "where": "Page footer link: privacy policy", "who": "everyone", "maxLength": 16 },
+    "terms": { "where": "Page footer link: terms of service", "who": "everyone", "maxLength": 16 },
+    "accessibility": { "where": "Page footer link: accessibility statement", "who": "everyone", "maxLength": 16 },
+    "somethingWentWrong": { "where": "Full-page crash screen and the last-resort global error page: heading", "who": "everyone", "maxLength": 40 },
+    "criticalError": { "where": "Full-page crash screen: explanation", "who": "everyone", "maxLength": 100 },
+    "reloadApplication": { "where": "Full-page crash screen: button that reloads the app", "who": "everyone", "maxLength": 24 },
+    "tryAgain": { "where": "Last-resort global error page: retry button", "who": "everyone", "maxLength": 16 },
+    "notFoundTitle": { "where": "404 page: heading", "who": "anyone with the link", "maxLength": 30 },
+    "notFoundBody": { "where": "404 page: explanation", "who": "anyone with the link", "maxLength": 100 },
+    "backToHome": { "where": "404 page: button back to the home page", "who": "anyone with the link", "maxLength": 20 }
+}

@@ -2,6 +2,7 @@
 
 import { ChevronDown } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useT } from "@/i18n/client"
 
 export interface LiturgyRunDividerProps {
     /** Titles of the folded rows, in order. */
@@ -38,17 +39,25 @@ export function LiturgyRunDivider({
     onToggle,
     controls,
 }: LiturgyRunDividerProps) {
+    const t = useT()
     const count = labels.length
     const pages =
         folios.length === 0
             ? null
             : folios.length === 1 || folios[0] === folios[folios.length - 1]
-              ? `p. ${folios[0]}`
-              : `pp. ${folios[0]}–${folios[folios.length - 1]}`
+              ? t("performSetlist.liturgyRun.page", { page: folios[0] })
+              : t("performSetlist.liturgyRun.pageRange", { firstPage: folios[0], lastPage: folios[folios.length - 1] })
 
     // One row folds to its own name; several fold to a count. Either way the
     // label says what is behind the bar rather than "3 items".
-    const label = count === 1 ? labels[0] : `${count} liturgy rows`
+    // A single row's name is data (shown as-is, and lowercased after "Hide" as
+    // before); the count label and its "Hide" form are one key each, so the
+    // sentence is never assembled from fragments.
+    const label = count === 1 ? labels[0] : t("performSetlist.liturgyRun.rows", { count })
+    const hideLabel =
+        count === 1
+            ? t("performSetlist.liturgyRun.hideRow", { rowTitle: labels[0].toLowerCase() })
+            : t("performSetlist.liturgyRun.hideRows", { count })
 
     return (
         <button
@@ -57,7 +66,7 @@ export function LiturgyRunDivider({
             aria-expanded={expanded}
             aria-controls={controls}
             className={cn(
-                "flex w-full items-center gap-3 px-4 min-h-11 text-left cursor-pointer",
+                "flex w-full items-center gap-3 px-4 min-h-11 text-start cursor-pointer",
                 "border-y border-border/40 bg-muted/30",
                 "hover:bg-muted/60 active:bg-muted/80 transition-colors duration-200",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset",
@@ -73,13 +82,13 @@ export function LiturgyRunDivider({
                 )}
             />
             <span className="text-sm text-muted-foreground truncate min-w-0">
-                {expanded ? `Hide ${label.toLowerCase()}` : label}
+                {expanded ? hideLabel : label}
             </span>
             <span className="h-px flex-1 bg-border/60" />
             {pages && (
                 // Same fixed right-hand column the rows use, so a folded run's
                 // pages land under the folios above and below it.
-                <span className="shrink-0 w-16 text-right text-sm tabular-nums text-muted-foreground">
+                <span className="shrink-0 w-16 text-end text-sm tabular-nums text-muted-foreground">
                     {pages}
                 </span>
             )}

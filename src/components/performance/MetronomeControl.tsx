@@ -6,8 +6,10 @@ import { useMetronome } from "@/hooks/use-metronome"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { useT } from "@/i18n/client"
 
 export function MetronomeControl() {
+    const t = useT()
     const { playbackQueue, queueIndex } = useMusicStore()
     const currentTrack = playbackQueue[queueIndex]
 
@@ -27,7 +29,8 @@ export function MetronomeControl() {
                 BPM number input disappears on iPad-portrait-lg and narrower desktop widths
                 where LEFT+RIGHT toolbar content would otherwise overlap chart navigation.
                 The blink/tap button below stays visible at all sizes. */}
-            <div className="hidden min-[1280px]:flex items-center gap-1 bg-background/40 rounded-lg pl-2 pr-1 h-11 border border-border">
+            <div className="hidden min-[1280px]:flex items-center gap-1 bg-background/40 rounded-lg ps-2 pe-1 h-11 border border-border">
+                {/* i18n-ignore: BPM is a musical unit, shown verbatim in every language */}
                 <span className="text-[10px] text-muted-foreground/60 font-bold uppercase tracking-wider">BPM</span>
                 <Input
                     type="number"
@@ -48,8 +51,8 @@ export function MetronomeControl() {
                         ? "border-red-500/50"
                         : "border-border hover:border-white/30 hover:bg-muted",
                 )}
-                title={isPlaying ? "Stop Metronome" : "Start Metronome"}
-                aria-label={isPlaying ? "Stop metronome" : "Start metronome"}
+                title={isPlaying ? t("perform.metronome.stopTitle") : t("perform.metronome.startTitle")}
+                aria-label={isPlaying ? t("perform.metronome.stopAria") : t("perform.metronome.startAria")}
             >
                 <div className={cn(
                     "rounded-full transition-all duration-75 shrink-0",
@@ -65,6 +68,7 @@ export function MetronomeControl() {
                     "text-xs font-semibold min-[1280px]:hidden",
                     isPlaying ? "text-red-400" : "text-muted-foreground"
                 )}>
+                    {/* i18n-ignore: BPM is a musical unit, shown verbatim in every language */}
                     {isPlaying ? currentBpm : "BPM"}
                 </span>
             </Button>

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { AlertTriangle, LockOpen } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useKeepAwakeContext } from "./keep-awake-context"
+import { useT } from "@/i18n/client"
 
 /**
  * The honest keep-awake status surface (2026-08-31, wake-lock-durability wave).
@@ -75,6 +76,7 @@ export function isLegacyStandaloneIpad(): boolean {
 }
 
 export function KeepAwakeBanner() {
+    const t = useT()
     const keepAwake = useKeepAwakeContext()
     const [legacyStandalone, setLegacyStandalone] = useState(false)
     const [dismissedOsWarning, setDismissedOsWarning] = useState(false)
@@ -108,7 +110,7 @@ export function KeepAwakeBanner() {
                     type="button"
                     onClick={() => setDismissedOsWarning(true)}
                     className={cn(
-                        "pointer-events-auto flex items-start gap-2 max-w-md text-left",
+                        "pointer-events-auto flex items-start gap-2 max-w-md text-start",
                         "rounded-lg border border-amber-500/30 bg-background/90 backdrop-blur",
                         "px-3 py-2 text-[11px] leading-snug text-muted-foreground shadow-lg",
                         "[touch-action:manipulation]",
@@ -120,12 +122,10 @@ export function KeepAwakeBanner() {
                     />
                     <span>
                         <span className="font-medium text-foreground">
-                            This iPad can&apos;t be kept awake from the Home-Screen app.
+                            {t("perform.keepAwake.osWarningTitle")}
                         </span>{" "}
-                        iPadOS before 18.4 ignores the screen wake lock in installed web
-                        apps. Set Settings → Display &amp; Brightness → Auto-Lock →
-                        Never for the service.{" "}
-                        <span className="opacity-60">Tap to dismiss.</span>
+                        {t("perform.keepAwake.osWarningBody")}{" "}
+                        <span className="opacity-60">{t("perform.keepAwake.tapToDismiss")}</span>
                     </span>
                 </button>
             </div>
@@ -148,7 +148,7 @@ export function KeepAwakeBanner() {
             <button
                 type="button"
                 onClick={() => void requestWakeLock()}
-                aria-label="Screen may sleep — tap to keep awake"
+                aria-label={t("perform.keepAwake.screenMaySleep")}
                 className={cn(
                     "pointer-events-auto flex items-center gap-2",
                     // h-11 keeps the iOS HIG 44px touch floor even though the
@@ -159,7 +159,7 @@ export function KeepAwakeBanner() {
                 )}
             >
                 <LockOpen className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                Screen may sleep — tap to keep awake
+                {t("perform.keepAwake.screenMaySleep")}
             </button>
         </div>
     )

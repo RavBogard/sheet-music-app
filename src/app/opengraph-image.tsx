@@ -191,6 +191,7 @@ export default async function OpenGraphImage() {
                                 fontWeight: 500,
                             }}
                         >
+                            {/* i18n-ignore: link-preview PNG rendered without a viewer language (and without Hebrew glyphs in the default og font); tenant-branded, same text as the tenant og.alt */}
                             Digital Sheet Music Library
                         </div>
                     </div>

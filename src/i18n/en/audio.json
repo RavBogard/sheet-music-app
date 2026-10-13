@@ -1,0 +1,9 @@
+{
+    "selectFile": "Select an audio file to play",
+    "skipBack": "Skip back 10 seconds",
+    "pause": "Pause",
+    "play": "Play",
+    "skipForward": "Skip forward 10 seconds",
+    "unmute": "Unmute",
+    "mute": "Mute"
+}

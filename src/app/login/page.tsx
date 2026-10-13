@@ -5,6 +5,7 @@ import { codeOrgConfig } from "@/lib/org/config-code"
 import { OrgLogo } from "@/components/nav/OrgLogo"
 import { getOrgBranding } from "@/lib/org/branding"
 import LoginClient from "./LoginClient"
+import { getT } from "@/i18n/server"
 
 /**
  * /login — Server Component skeleton + CSR form (P2-013).
@@ -30,6 +31,7 @@ export default async function LoginPage() {
     const { orgId, config: orgConfig } = await requestOrg()
     // Multi-tenant phase 1: an unconfigured org falls back to CRC's code config.
     const tenant = orgConfig ?? codeOrgConfig(orgId) ?? codeOrgConfig("crc")!
+    const t = await getT()
     if (orgId === "brotherslazaroff") {
         const { shortName, tagline, wordmarkUrl } = getOrgBranding(orgId)
         const bandLocation = tenant.branding.location
@@ -77,12 +79,12 @@ export default async function LoginPage() {
 
                         <noscript>
                             <p className="text-xs text-destructive">
-                                Sign-in requires JavaScript. Please enable it in your browser settings to continue.
+                                {t("auth.jsRequired")}
                             </p>
                         </noscript>
 
                         <p className="text-xs text-muted-foreground">
-                            Only authorized accounts can access the full library.
+                            {t("auth.authorizedOnly")}
                         </p>
                     </div>
 
@@ -91,12 +93,12 @@ export default async function LoginPage() {
                         {shortName}{bandLocation ? `· ${bandLocation}` : null}
                     </p>
 
-                    <nav aria-label="Legal" className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                        <a href="/privacy" className="underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none">Privacy</a>
-                        <a href="/terms" className="underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none">Terms</a>
-                        <a href="/sms-consent" className="underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none">SMS Consent</a>
-                        <a href="/changelog" className="underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none">Changelog</a>
-                        <a href="/accessibility" className="underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none">Accessibility</a>
+                    <nav aria-label={t("auth.legalNav")} className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                        <a href="/privacy" className="underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none">{t("auth.legalPrivacy")}</a>
+                        <a href="/terms" className="underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none">{t("auth.legalTerms")}</a>
+                        <a href="/sms-consent" className="underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none">{t("auth.legalSmsConsent")}</a>
+                        <a href="/changelog" className="underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none">{t("auth.legalChangelog")}</a>
+                        <a href="/accessibility" className="underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none">{t("auth.legalAccessibility")}</a>
                     </nav>
                 </main>
             </div>
@@ -156,7 +158,7 @@ export default async function LoginPage() {
                     <div>
                         <h1 className="text-3xl font-semibold text-foreground font-display tracking-tight">{shortName}</h1>
                         <p className="text-muted-foreground text-sm mt-1.5">
-                            Sign in to access the music library
+                            {t("auth.signInSubtitle")}
                         </p>
                     </div>
                 </div>
@@ -171,16 +173,17 @@ export default async function LoginPage() {
                         why clicking won't help and what to do. */}
                     <noscript>
                         <p className="text-xs text-destructive">
-                            Sign-in requires JavaScript. Please enable it in your browser settings to continue.
+                            {t("auth.jsRequired")}
                         </p>
                     </noscript>
 
                     <p className="text-xs text-muted-foreground">
-                        Only authorized accounts can access the full library.
+                        {t("auth.authorizedOnly")}
                     </p>
                 </div>
 
                 <p className="text-xs text-muted-foreground">
+                    {/* i18n-ignore: separator between two tenant-config values (name · location); golden snapshot pins the markup */}
                     {fullName} &middot; {location}
                 </p>
 
@@ -189,12 +192,12 @@ export default async function LoginPage() {
                     authed pages; /login is unauth and never renders the
                     global Footer. SMS-Consent is required because the app
                     sends SMS notifications on notify_band. */}
-                <nav aria-label="Legal" className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                    <a href="/privacy" className="underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none">Privacy</a>
-                    <a href="/terms" className="underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none">Terms</a>
-                    <a href="/sms-consent" className="underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none">SMS Consent</a>
-                    <a href="/changelog" className="underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none">Changelog</a>
-                    <a href="/accessibility" className="underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none">Accessibility</a>
+                <nav aria-label={t("auth.legalNav")} className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                    <a href="/privacy" className="underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none">{t("auth.legalPrivacy")}</a>
+                    <a href="/terms" className="underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none">{t("auth.legalTerms")}</a>
+                    <a href="/sms-consent" className="underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none">{t("auth.legalSmsConsent")}</a>
+                    <a href="/changelog" className="underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none">{t("auth.legalChangelog")}</a>
+                    <a href="/accessibility" className="underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none">{t("auth.legalAccessibility")}</a>
                 </nav>
             </main>
         </div>

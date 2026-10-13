@@ -61,7 +61,7 @@ export const DenseRow = React.forwardRef<HTMLLIElement, DenseRowProps>(
           "dense-row",
           interactive && "dense-row-interactive hover:bg-amber-500/[0.07] focus-visible:bg-amber-500/[0.10]",
           interactive && "focus-visible:outline-none focus-visible:ring-2 ring-v2-accent",
-          active && "bg-amber-500/[0.12] border-l-2 border-l-amber-400 pl-[10px]",
+          active && "bg-amber-500/[0.12] border-s-2 border-s-amber-400 ps-[10px]",
           className
         )}
         {...rest}

@@ -27,6 +27,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, FileMusic, Music, Plus } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { DirectionalIcon } from "@/components/i18n/DirectionalIcon"
+import { useT } from "@/i18n/client"
 import type { SetlistTrack } from "@/types/models"
 import {
     ChangeKeyAction,
@@ -60,6 +62,7 @@ export function LiveDirectorMenu({
     setlistTracks,
     setlistId,
 }: LiveDirectorMenuProps) {
+    const t = useT()
     const [view, setView] = useState<LiveDirectorView>("menu")
 
     // Reset to the action chooser whenever the sheet closes — the next
@@ -72,11 +75,11 @@ export function LiveDirectorMenu({
     const close = () => onOpenChange(false)
 
     const headerTitle = useMemo(() => {
-        if (view === "change-key") return "Change key"
-        if (view === "swap-chart") return "Swap chart"
-        if (view === "insert-song") return "Insert song"
-        return track.title || "Live edit"
-    }, [view, track.title])
+        if (view === "change-key") return t("perform.liveDirector.changeKey")
+        if (view === "swap-chart") return t("perform.liveDirector.swapChart")
+        if (view === "insert-song") return t("perform.liveDirector.insertSong")
+        return track.title || t("perform.liveDirector.liveEdit")
+    }, [view, track.title, t])
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
@@ -92,18 +95,18 @@ export function LiveDirectorMenu({
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => setView("menu")}
-                                aria-label="Back"
+                                aria-label={t("perform.liveDirector.back")}
                                 className="h-11 w-11 p-0 [touch-action:manipulation]"
                             >
-                                <ArrowLeft className="h-5 w-5" aria-hidden="true" />
+                                <DirectionalIcon icon={ArrowLeft} className="h-5 w-5" aria-hidden="true" />
                             </Button>
                         )}
-                        <SheetTitle className="text-left text-base font-semibold truncate flex-1">
+                        <SheetTitle className="text-start text-base font-semibold truncate flex-1">
                             {headerTitle}
                         </SheetTitle>
                     </div>
                     {view === "menu" && track.title && (
-                        <p className="text-xs text-muted-foreground truncate text-left">
+                        <p className="text-xs text-muted-foreground truncate text-start">
                             {track.title}
                             {track.key ? ` · ${track.key}` : ""}
                         </p>
@@ -145,24 +148,25 @@ interface ActionChooserProps {
 }
 
 function ActionChooser({ onPick }: ActionChooserProps) {
+    const t = useT()
     return (
-        <ul className="p-3 flex flex-col gap-2" aria-label="Live edit actions">
+        <ul className="p-3 flex flex-col gap-2" aria-label={t("perform.liveDirector.actionsAria")}>
             <ActionTile
                 icon={<Music className="h-5 w-5" aria-hidden="true" />}
-                title="Change key"
-                description="Update the displayed key for this row"
+                title={t("perform.liveDirector.changeKey")}
+                description={t("perform.liveDirector.changeKeyDescription")}
                 onClick={() => onPick("change-key")}
             />
             <ActionTile
                 icon={<FileMusic className="h-5 w-5" aria-hidden="true" />}
-                title="Swap chart"
-                description="Bond this row to a different chart"
+                title={t("perform.liveDirector.swapChart")}
+                description={t("perform.liveDirector.swapChartDescription")}
                 onClick={() => onPick("swap-chart")}
             />
             <ActionTile
                 icon={<Plus className="h-5 w-5" aria-hidden="true" />}
-                title="Insert new song"
-                description="Add a song before, after, or at the end"
+                title={t("perform.liveDirector.insertNewSong")}
+                description={t("perform.liveDirector.insertNewSongDescription")}
                 onClick={() => onPick("insert-song")}
             />
         </ul>
@@ -183,7 +187,7 @@ function ActionTile({ icon, title, description, onClick }: ActionTileProps) {
                 type="button"
                 onClick={onClick}
                 className={cn(
-                    "w-full min-h-14 flex items-center gap-3 px-4 py-3 rounded-xl text-left",
+                    "w-full min-h-14 flex items-center gap-3 px-4 py-3 rounded-xl text-start",
                     "bg-muted/40 hover:bg-muted active:bg-muted/80 transition-colors",
                     "border border-border/60",
                     "[touch-action:manipulation]",

@@ -19,6 +19,7 @@ import { QRCodeSVG } from "qrcode.react"
 import { Smartphone, RefreshCw, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { logger } from "@/lib/logger"
+import { useT } from "@/i18n/client"
 
 type QRState = "active" | "registering" | "approved" | "signing-in" | "error"
 
@@ -40,6 +41,7 @@ function generateClientCode(): string {
 }
 
 export function QRSignIn() {
+    const t = useT()
     const [state, setState] = useState<QRState>("registering")
     const [session, setSession] = useState<SessionData | null>(null)
     const [approvedName, setApprovedName] = useState<string | null>(null)
@@ -182,7 +184,7 @@ export function QRSignIn() {
                     <Loader2 className="h-6 w-6 animate-spin text-success" />
                 </div>
                 <p className="text-sm font-medium text-foreground">
-                    Signing in{approvedName ? ` as ${approvedName}` : ""}…
+                    {approvedName ? t("auth.qrSigningInAs", { userName: approvedName }) : t("auth.qrSigningIn")}
                 </p>
             </div>
         )
@@ -191,14 +193,14 @@ export function QRSignIn() {
     if (state === "error") {
         return (
             <div className="flex flex-col items-center justify-center gap-3 py-4 min-h-[15rem]">
-                <p className="text-xs text-muted-foreground">Couldn&apos;t generate QR code</p>
+                <p className="text-xs text-muted-foreground">{t("auth.qrGenerateFailed")}</p>
                 <Button
                     variant="link"
                     size="xs"
                     onClick={createSession}
                     className="text-xs text-violet-500 hover:text-violet-400"
                 >
-                    <RefreshCw className="h-3 w-3" /> Try again
+                    <RefreshCw className="h-3 w-3" /> {t("auth.qrTryAgain")}
                 </Button>
             </div>
         )
@@ -220,7 +222,7 @@ export function QRSignIn() {
             {/* Instructions */}
             <div className="flex items-center gap-2 text-muted-foreground">
                 <Smartphone className="h-4 w-4 shrink-0" />
-                <p className="text-xs">Scan with your phone to sign in</p>
+                <p className="text-xs">{t("auth.qrScanHint")}</p>
             </div>
 
             {/* Countdown + registration status */}
@@ -231,11 +233,11 @@ export function QRSignIn() {
                     onClick={createSession}
                     className="text-[10px] text-yellow-500 hover:text-yellow-400"
                 >
-                    <RefreshCw className="h-2.5 w-2.5" /> Connection issue — tap to retry
+                    <RefreshCw className="h-2.5 w-2.5" /> {t("auth.qrConnectionIssue")}
                 </Button>
             ) : (
                 <p className="text-[10px] text-muted-foreground/60 tabular-nums">
-                    Expires in {minutes}:{seconds.toString().padStart(2, "0")}
+                    {t("auth.qrExpiresIn", { minutes, seconds: seconds.toString().padStart(2, "0") })}
                 </p>
             )}
         </div>

@@ -11,6 +11,7 @@ import {
     unregisterPushNotifications,
 } from "@/lib/push-notifications"
 import { toast } from "sonner"
+import { useT } from "@/i18n/client"
 
 /**
  * Push notification preference toggle for Settings page.
@@ -18,6 +19,7 @@ import { toast } from "sonner"
  */
 export function PushNotificationSettings() {
     const { user } = useAuth()
+    const t = useT()
     const [supported, setSupported] = useState(false)
     const [enabled, setEnabled] = useState(false)
     const [loading, setLoading] = useState(false)
@@ -47,15 +49,15 @@ export function PushNotificationSettings() {
                 if (token) {
                     localStorage.setItem('crc_push_token', token)
                     setEnabled(true)
-                    setPermStatus('granted')
-                    toast.success("Push notifications enabled")
+                    setPermStatus('granted') // i18n-ignore: permission state value, not text
+                    toast.success(t("settings.push.enabled"))
                 } else {
                     const status = getPushPermissionStatus()
                     setPermStatus(status)
                     if (status === 'denied') {
-                        toast.error("Notifications blocked by browser. Check your browser settings.")
+                        toast.error(t("settings.push.blockedToast"))
                     } else {
-                        toast.error("Could not enable push notifications")
+                        toast.error(t("settings.push.enableFailed"))
                     }
                 }
             } else {
@@ -65,20 +67,20 @@ export function PushNotificationSettings() {
                     localStorage.removeItem('crc_push_token')
                 }
                 setEnabled(false)
-                toast.success("Push notifications disabled")
+                toast.success(t("settings.push.disabled"))
             }
         } catch {
-            toast.error("Failed to update notification settings")
+            toast.error(t("settings.push.updateFailed"))
         } finally {
             setLoading(false)
         }
-    }, [user])
+    }, [user, t])
 
     if (!supported) {
         return (
             <div className="flex items-center gap-3 text-sm text-muted-foreground">
                 <BellOff className="w-4 h-4" />
-                Push notifications are not supported in this browser.
+                {t("settings.push.unsupported")}
             </div>
         )
     }
@@ -91,9 +93,9 @@ export function PushNotificationSettings() {
                         <Bell className="w-5 h-5 text-amber-500" />
                     </div>
                     <div>
-                        <h3 className="font-semibold text-foreground">Push Notifications</h3>
+                        <h3 className="font-semibold text-foreground">{t("settings.push.title")}</h3>
                         <p className="text-sm text-muted-foreground">
-                            Get notified when setlists are published or updated
+                            {t("settings.push.description")}
                         </p>
                     </div>
                 </div>
@@ -108,8 +110,8 @@ export function PushNotificationSettings() {
             </div>
 
             {permStatus === 'denied' && (
-                <p className="text-xs text-amber-500 pl-[52px]">
-                    Notifications are blocked by your browser. Open your browser&apos;s notification settings to allow them.
+                <p className="text-xs text-amber-500 ps-[52px]">
+                    {t("settings.push.blockedHint")}
                 </p>
             )}
         </div>
