@@ -302,3 +302,75 @@ Keys I agree with are not listed. Each proposed Hebrew value is the full replace
   - e.g. → למשל:
   - relative days → ימים
   - the Google "Anyone with the link" phrase
+
+## Third pass
+
+The third pass decided each finding, applied the systemic rulings across all namespaces, and updated `GLOSSARY-he.md`. English files and code were not changed, and every `{placeholder}` set is unchanged.
+
+### Counts
+
+| Severity | Findings | Applied as proposed | Applied, reworded | Kept translator / reversed | Skipped |
+|---|---|---|---|---|---|
+| wrong | 5 | 5 | 0 | 0 | 0 |
+| should | 46 | 45 | 1 | 0 | 0 |
+| could | 57 | 50 | 6 | 1 | 0 |
+| **Total** | **108** | **100** | **7** | **1** | **0** |
+
+"Applied, reworded" means the reviewer's point was taken but the final text differs. That happens for one of two reasons: the CRC legal copy now uses the `legal.*` wording, or the proposal conflicted with a ruling. These cases are in the log below.
+
+Edits beyond the 108 rows, made under the systemic rulings:
+- **Legal alignment (about 60 strings):** `privacy`, `terms` and `smsConsent` now use the `legal.*` wording wherever the English is the same. This covers:
+  - עודכן לאחרונה; יישום; דרישות החוק; לבטל את ההצטרפות; "שליחת X בתשובה לכל הודעה".
+  - מידע הקשור לטלפון הנייד; the consent steps as verbal nouns.
+  - The intros (״אותנו״, יישום הרשת).
+  - 67 strings already matched.
+- **Retry:** perform.keepAwake.errorHidden and auth.qrConnectionIssue → "…לניסיון חוזר".
+- **Busy states:**
+  - music.suggestions.searching
+  - library.actions.savingMusicXml / archiving / renaming
+  - libraryScraper.extracting / generating
+  - These now use impersonal progressive or passive forms (שומרים…, מועברים…, מחלצים…).
+- **Bind = חיבור:**
+  - setlistModals.linkChartFor / linkToMusicFile
+  - api-setlist.needsLinkedChart
+  - manage-templates.linkedFallback / fieldLinkedChart / removeLinkedChart
+- **Glossary rows added or changed:**
+  - Friday evening → קבלת שבת (wizard: תפילת קבלת שבת)
+  - Retry → ניסיון חוזר
+  - Undo → ביטול
+  - fret → סריג
+  - Gig Mode → מצב במה
+  - e.g. → למשל:
+  - The Google "Anyone with the link" phrase
+  - Days written in full in relative times
+  - Conventions for busy states and setlist agreement
+
+### Kept-translator / disagreement log
+
+| key | reviewer proposed | kept / applied | reason |
+|---|---|---|---|
+| legal.terms.warranties.heading (and terms.disclaimerWarranties.heading) | legal → "7. שלילת אחריות" | legal keeps "7. הסרת אחריות"; the CRC copy moved to it | The ruling makes `legal.*` canonical. "הסרת אחריות" is also the more common Israeli heading for a disclaimer. One wording either way. |
+| importer.readingDocumentHeading | "קריאת המסמך…" | "קוראים את המסמך" | The proposal is a bare verbal noun, which is the busy-state form the review itself rules out. The English heading has no ellipsis. |
+| legal.sms.frequency.body, legal.sms.consent.affirm, legal.sms.optOut.after | (not findings; the alignment ruling would copy legal → CRC) | Adopted the CRC copy's gender-free wording into `legal.*` | The `legal.*` text had avoidable slash forms (הנגן/ית משובץ/ת, נותן/ת, תצטרף/י). The glossary prefers impersonal wording, so both copies now use "בהתאם לתדירות השיבוץ לתפילות", "השלמת שלבים אלה מהווה הסכמה מפורשת מצד הנגן/ית", and "אלא אם תחודש ההצטרפות שלך". |
+| hooks.alreadyOffline | "הכול כבר זמין במצב לא מקוון" | "כל התווים כבר זמינים במצב לא מקוון" | The note says the toast means every chart; naming the charts is clearer than "הכול". |
+| privacy.rights.haveRight | "יש לך הזכות:" | "עומדת לך הזכות:" | Legal alignment (legal.privacy.rights.lead); same definite, formal reading. |
+| terms.acceptanceTerms.accessingUsingCrc | Minimal fix ("אם אינך מסכים/ה…") | Full `legal.terms.acceptance.body` wording | Legal alignment. It includes the reviewer's fix. |
+| smsConsent.programDescription.operatorAndPurpose, privacy.smsMobileMessaging.optReceiveSms, terms.smsMessagingTerms.messageTypesInclude, terms.smsMessagingTerms.optOutSms | As proposed | `legal.*` wording (יישום, "שיבוצים" without "בלוח הזמנים", "התראות על שיבוץ", "יש לשלוח") | Legal alignment; each reviewer point is kept. |
+
+### Length warnings
+
+`node scripts/i18n-he-missing.mjs --list`: 0 missing, 0 problems, 8 LONG warnings.
+- The six relative-time badges are accepted per the review.
+- hooks.urgencyInHours_other "בעוד {count} שעות": the script counts 13, but it renders as 11 for the at most 4 hours it shows (max 12).
+- music.viewer.retryWithCount "ניסיון חוזר ({attempt}/{max})": the script counts 21, but it renders as 17 for single-digit attempts (max 20).
+
+### Left open
+
+- **accessibility vs legal.accessibility** (9 strings differ). These were not aligned because the ruling named privacy, terms and smsConsent. They differ on עדכון אחרון, לחצנים / כפתורים, "טקסט ממלא מקום" / "placeholder" and similar. The CRC wording is arguably the better Hebrew in places, so the lead should pick the canonical side.
+- **legal.terms.content.body:** ruling 10's optional "…ובאירועים של {operator}" was not applied. "שלה" agrees with the feminine operator ruling.
+- **Ellipsis:** not normalised; "..." and "…" still mirror the English.
+- **Smaller variants left in place:**
+  - schedule.dateTbd "טרם נקבע" (short field; the other two Date TBD keys are now "התאריך טרם נקבע").
+  - home.upcoming "בקרוב": a date badge for an undated setlist, where "soon" fits.
+  - The three "Edit setlist details" forms. setlistGrid has room for the full "רשימת השירים".
+- **Out of scope (lead):** the "CRC" calendar hints in settings, file-extension bidi markup, and the CRC-named English on the CRC legal pages.

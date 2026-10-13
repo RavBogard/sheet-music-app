@@ -70,7 +70,13 @@ admins who manage people and the library.
 | opt in / opt out (SMS) | הצטרפות / ביטול ההצטרפות | — | Legal pages. |
 | Terms & Conditions / Privacy Policy / Accessibility Statement | תנאי שימוש / מדיניות פרטיות / הצהרת נגישות | — | Standard Israeli titles; one form everywhere. |
 | Musician Profile (settings section) | פרופיל נגינה | — | Same words in the settings page and the legal "Settings → …" paths. |
-| Friday evening / Shabbat morning (service-type options) | ערב שבת / שבת בבוקר | — | UI options, not prayer text; Nava may prefer "קבלת שבת". |
+| Friday evening / Shabbat morning (service-type options) | קבלת שבת / שבת בבוקר | wizard (fills "{service} הקודמת"): תפילת קבלת שבת / תפילת שבת בבוקר | "ערב שבת" names the day, not the prayer. "שחרית שבת" is not idiomatic; "שחרית של שבת" only where 13+ characters fit. |
+| Retry / Try again (button) | ניסיון חוזר | in sentences: "יש לנסות שוב" / "אפשר לנסות שוב" | One button label everywhere. Exception: manage-library-review.retryButton "לנסות שוב (y)" (max 14). |
+| Undo (toast action) | ביטול | next to Cancel: ביטול פעולה | — |
+| fret (guitar) | סריג | סריגים | "שריג" is a vine tendril. |
+| Gig Mode (settings: stability toggle) | מצב במה | — | Kept apart from Perform mode (מצב נגינה). |
+| e.g. | למשל: | — | One form; not "לדוגמה:". |
+| Google "Anyone with the link" | ״כל מי שקיבל או קיבלה את הקישור״ (Anyone with the link) | — | Google's current Hebrew label, with the English for older or English UIs. |
 
 ## Conventions
 
@@ -90,6 +96,10 @@ admins who manage people and the library.
 - **Register**: modern Israeli Hebrew, warm and clear; legal pages formal and exact.
 - **Names stay names**: prayer and song names, people, brands (Google, Behringer X32, Firebase, Drive,
   Claude), URLs, emails, units and chord symbols stay as written.
-- **Relative times**: "לפני {minutes} דק׳", "לפני {hours} שע׳", "לפני {days} ימ׳" in tight spots; full
-  words otherwise.
+- **Relative times**: "לפני {minutes} דק׳", "לפני {hours} שע׳" in tight spots; days always in full
+  ("לפני {days} ימים"); full words otherwise. The checker's LONG warnings on these badges are accepted.
+- **Busy states** differ from their idle button: "ב" + verbal noun ("בשמירה…", "בהעלאה…"), a present
+  passive ("התבנית נשמרת…") or an impersonal plural ("בודקים…", "שומרים…"); never the bare button noun.
+- **Setlist agreement**: when a message's implied subject is the setlist, the verb is feminine
+  ("נוצרה", "נשמרה", "שוכפלה").
 - **Uppercase** in English badges means nothing in Hebrew; translate the meaning.
