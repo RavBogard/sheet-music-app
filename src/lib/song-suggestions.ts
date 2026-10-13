@@ -18,9 +18,18 @@ export interface UsageInfo {
     lastUsedSetlistName: string
 }
 
+/**
+ * Why a song is suggested. Phase 7: structured so the modal words it in the
+ * tenant's language (setlistModals.suggestion*); English is unchanged.
+ */
+export type SuggestionReason =
+    | { kind: 'staple'; uses: number; setlistName: string }
+    | { kind: 'stale'; days: number }
+    | { kind: 'never' }
+
 export interface SongSuggestion {
     file: DriveFile
-    reason: string
+    reason: SuggestionReason
     category: 'staple' | 'fresh'
 }
 
@@ -96,7 +105,7 @@ export function getSuggestions(
         .slice(0, limit)
         .map(({ file, usage }): SongSuggestion => ({
             file,
-            reason: `Used ${usage.totalUses}× — ${usage.lastUsedSetlistName}`,
+            reason: { kind: 'staple', uses: usage.totalUses, setlistName: usage.lastUsedSetlistName },
             category: 'staple',
         }))
 
@@ -112,7 +121,7 @@ export function getSuggestions(
             const daysSince = Math.round((now - new Date(usage.lastUsedDate).getTime()) / (24 * 60 * 60 * 1000))
             return {
                 file,
-                reason: `Not played in ${daysSince} days`,
+                reason: { kind: 'stale', days: daysSince },
                 category: 'fresh',
             }
         })
@@ -122,7 +131,7 @@ export function getSuggestions(
         .slice(0, Math.max(0, limit - staleUsed.length))
         .map((file): SongSuggestion => ({
             file,
-            reason: 'Never played',
+            reason: { kind: 'never' },
             category: 'fresh',
         }))
 

@@ -26,5 +26,8 @@
     "save": { "where": "Setlist editor, Edit Details dialog: save button", "who": "leaders", "maxLength": 12 },
     "nameYourSetlist": { "where": "Name Your Setlist dialog: title", "who": "leaders", "maxLength": 30 },
     "namePromptPlaceholder": { "where": "Name Your Setlist dialog: example names in the name field", "who": "leaders", "maxLength": 45, "context": "Example service names" },
-    "continue": { "where": "Name Your Setlist dialog: confirm button", "who": "leaders", "maxLength": 12 }
+    "continue": { "where": "Name Your Setlist dialog: confirm button", "who": "leaders", "maxLength": 12 },
+    "suggestionStaple": { "where": "Setlist editor, Add Songs dialog: small grey reason beside a suggested song that is used often", "who": "leaders", "maxLength": 40, "context": "{count} is how many setlists used the song (3 or more); × means 'times'. {setlistName} is the most recent setlist that used it. English uses one form for every count; Hebrew may add plural variants." },
+    "suggestionStale": { "where": "Setlist editor, Add Songs dialog: small grey reason beside a suggested song that has not been used for a while", "who": "leaders", "maxLength": 30, "context": "{count} is a number of days (always more than 90)." },
+    "suggestionNeverPlayed": { "where": "Setlist editor, Add Songs dialog: small grey reason beside a suggested song no setlist has used yet", "who": "leaders", "maxLength": 20 }
 }
