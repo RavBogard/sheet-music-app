@@ -86,6 +86,44 @@ so nothing a CRC user sees changes. The sweep now reads **0 stale hashes**, libr
 Pre-existing and left alone: 38 rows carry no `contentHash` at all. That is the standing
 `backfill_content_hash` job's work, not this phase's.
 
+## A second defect, found smoke-testing the deploy: Nava's address went dark on cold instances
+
+After the phase 8 deploy, `navatehila.vercel.app` served the "No such site" 404 while
+`centralreform.live` and `brotherslazaroff.live` were fine. It recovered by itself within seconds
+and then stayed healthy across 20 consecutive requests — the shape of a cold-cache failure, not a
+regression. Nothing in the host-routing code had changed since the address was verified
+(`git log` over `src/proxy.ts`, `host-resolution.ts`, `host-list-client.ts`, `api/org-hosts`:
+no commits), so this was present from phase 3 and had simply never been looked for on a fresh
+deployment. CRC and BL resolve from the compiled map and never read the address list, so **Nava
+is the first tenant that depends on it** and the first that could be hit.
+
+Two faults, the second the serious one:
+
+1. The proxy gave the *first* fetch of `/api/org-hosts` the same 1,500 ms budget as a refresh.
+   That budget is there so no request waits on a refresh when a good list is already in hand — but
+   a cold instance has nothing to fall back on, so giving up early bought nothing and cost the
+   tenant its site. Cold fetches now get 6 s (`COLD_FETCH_TIMEOUT_MS`); the 1.5 s cap still
+   applies once a list is cached, which keeps its original purpose.
+2. A failed lookup was answered **404 "There is no site at this address."** That asserts something
+   the server does not know: the list failing to arrive says nothing about whether the host is a
+   tenant. For a tenant that *is* listed it means a live site going dark and telling caches and
+   crawlers it never existed. An unreadable list is now its own resolution — `via:
+   "list-unavailable"` — answered **503 with `Retry-After: 2`**. An address genuinely absent from
+   a list that *was* read is still a 404, and an unknown address still never falls back to CRC.
+
+Three existing tests asserted the old behaviour and were pinning the defect in place; they now
+carry the new contract and the reason for it. `src/__tests__/mt-p3-proxy-addresses.test.ts` is
+62 tests, including that a genuinely absent address keeps its 404 and that an unreadable list
+never resolves to CRC.
+
+Verified on the deploy that carries the fix (`dpl_GswYm1VuY8yexkFSxy7qwUwcxy5j`):
+
+| Check | Result |
+|---|---|
+| 30 consecutive requests to `navatehila.vercel.app/login` | **30 × 200**, `<html lang="he" dir="rtl" data-org="navatehila">` |
+| `www.centralreform.live/login`, `brotherslazaroff.live/login` | 200, 200 |
+| A host that really is unknown | still **404** "No such site" |
+
 ## Gates
 
 | Gate | Result |
@@ -108,6 +146,15 @@ Pre-existing and left alone: 38 rows carry no `contentHash` at all. That is the 
 ## Needs Daniel
 
 Nothing blocking.
+
+- **A cron is running on the code tenants only.** The deploy logs show
+  `[cron-tenants] orgs read failed; running the code tenants only — Error: The default Firebase
+  app does not exist. Make sure you call initializeApp() before using any of the Firebase
+  services.` on `/api/cron/drive-sync`. The registry read fails on an init-order bug, so the cron
+  falls back to crc and brotherslazaroff and never sees a registry tenant. It costs nothing today
+  — Nava has `driveInbox` off — but it is a multi-tenant gap and it will bite the first tenant
+  that wants Drive sync. Left for phase 9; it is outside the phase 8 gate and wants its own fix
+  and test rather than a patch at the end of this one.
 
 - **Nava Tehila's tenant admin** is still unnamed (mission, Open). Daniel administers it as platform owner meanwhile.
 - **Anan Va'arafel** has no files in Nava's Drive; it stays out of the library until it does.
