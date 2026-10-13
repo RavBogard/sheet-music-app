@@ -13,7 +13,7 @@
     "printLoadFailed": "לא ניתן היה לטעון את התווים להדפסה.",
     "untitledSetlist": "ללא שם",
     "printChartLoadStatus": "לא ניתן היה לטעון את התווים להדפסה (תגובת השרת: {status}).",
-    "printScoreNotRendered": "הצגת התווים עדיין לא הסתיימה.",
+    "printScoreNotRendered": "הפרטיטורה עדיין בעיבוד.",
     "printUnsupportedType": "הדפסה אינה זמינה לסוג התווים הזה.",
     "printNoFile": "אין קובץ תווים להדפסה."
 }

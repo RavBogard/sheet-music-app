@@ -375,3 +375,52 @@ Edits beyond the 108 rows, made under the systemic rulings:
   - home.upcoming "בקרוב": a date badge for an undated setlist, where "soon" fits.
   - The three "Edit setlist details" forms. setlistGrid has room for the full "רשימת השירים".
 - **Out of scope (lead):** the "CRC" calendar hints in settings, file-extension bidi markup, and the CRC-named English on the CRC legal pages.
+
+## Delta review (98 keys, commit 4d01a9b3)
+
+Reviewer: independent; I did not write the batch. Scope: the 98 keys added in `4d01a9b3` (pdf 34, clientErrors 17, api-library 12, dashboard 12, api-setlists 10, api-charts 5, setlistModals 5, nav 2, perform 1). Each key was read against its English, its note, `GLOSSARY-he.md`, `TRANSLATING.md`, the rulings above and the wording already in the rest of `he/*.json`.
+
+Extra check: every character in `he/pdf.json` has a glyph in the embedded Alef regular and bold faces (geresh ׳ and maqaf included), so nothing on the printed service sheet or gig packet falls back to `?`. The U+2066/U+2069 isolate check was skipped on the lead's instruction: the marks live on the integration branch and arrive with the merge.
+
+### Counts
+
+| Severity | Findings | Applied | Logged, not applied |
+|---|---|---|---|
+| wrong | 0 | 0 | 0 |
+| should | 2 | 2 | 0 |
+| could | 4 | 0 | 4 |
+| **Total** | **6** | **2** | **4** |
+
+The batch is clean. Placeholders and prefix hyphens (ב-{count}, ל-{appName}, כ-{minutes}, מ-Gemini) are correct, glossary terms hold (תווים / קובץ תווים, חיבור, שירה ראשית, בהובלת, סולם, העברת סולם, אוסף, חוברת), there is no gendered address, Capo and MIME types / option names stay Latin, the busy states follow the convention (מכינים…, בעיבוד:, יוצרים…), and no key is over its maxLength (`i18n-he-missing` LONG list unchanged at the 8 accepted badges).
+
+### Applied
+
+| key | was | now | reason |
+|---|---|---|---|
+| clientErrors.printScoreNotRendered | הצגת התווים עדיין לא הסתיימה. | הפרטיטורה עדיין בעיבוד. | should: the error fires while the MusicXML score is still drawing, and the status on the same viewer is music.viewer.renderingScore "הפרטיטורה בעיבוד…". Echoing it tells the musician the error is the same state, not a new failure. |
+| setlistModals.suggestionStaple_one / _other | ברשימה אחת — {setlistName} / ב-{count} רשימות — {setlistName} | נוגן ברשימה אחת — {setlistName} / נוגן ב-{count} רשימות — {setlistName} | should: without a verb the grey reason reads as a bare location ("in 12 lists"). "נוגן" states the reason and parallels its siblings suggestionStale "לא נוגן כבר…" and suggestionNeverPlayed "עוד לא נוגן". 23 counted characters, max 40. |
+
+### Logged, not applied
+
+| key | current | alternative | why left |
+|---|---|---|---|
+| api-setlists.extractPdfPageLimit | קובץ ה-PDF חורג ממגבלת {maxPages} העמודים. | קובץ ה-PDF חורג מהמגבלה של {maxPages} עמודים. | could: the construct with a definite counted noun is grammatical, just slightly stiff. |
+| dashboard.greetingChagUrimSameach | חנוכה שמח | חג אורים שמח | could: the English is the poetic "Chag Urim Sameach", but "חנוכה שמח" is what Israelis say most. Nava may prefer the poetic form; tenant choice, not an error. |
+| clientErrors.notSignedIn | לא בוצעה התחברות | (align the older keys instead) | could: api-*.notAuthenticated / notSignedIn say "לא מחובר/ת". The new gender-free form is the better one under the glossary; a later pass could move the older keys to it. |
+| clientErrors.printPrepareRenderFailed | …(הצגת העמוד נכשלה). | …(עיבוד העמוד נכשל). | could: "עיבוד" is the progress word for rendering, but the catalogue's render errors all say "הצגה" (music.viewer.pdfRenderError, renderTimedOut, performSetlist error body), so the current text is consistent. |
+
+### Rulings on the translator's unsure items
+
+1. **pdf.packet.columnTransposedKey "As" → לנגינה: keep.** It sits next to the "סולם" column and reads "(key) for playing", which is what the transposed key is. "בפועל" ("actual") suggests the written key is wrong. 6 characters = max.
+2. **pdf.packet.transposed → כולל העברת סולם: keep.** In the footer it reads "12 שירים • כולל העברת סולם • …", which is right; glossary term; 15 = max.
+3. **pdf.packet.preparedFor → חוברת אישית עבור {name}: keep.** Gender-free (no מוכן/ה), and it says what is special about the packet. Fine on the bold cover line.
+4. **pdf.packet.ledBy → בהובלת {name}, no colon: keep.** "בהובלת" is a construct; a colon after it would split the phrase. Glossary term.
+5. **pdf.packet.minutes → כ-{minutes} דק׳: keep.** "כ-" is the Hebrew "about", hyphenated before the placeholder per convention; geresh abbreviation as in the relative-time badges; 9 counted characters, max 10.
+6. **pdf.serviceSheet.honors → כיבודים: keep.** The synagogue term for the people given a role in the service.
+7. **pdf.serviceSheet.sectionMusic → שירים בלבד: keep.** The section lists only the band's songs; "מוזיקה בלבד" is no clearer.
+8. **dashboard holiday greetings: keep** (שבת שלום, שנה טובה, גמר חתימה טובה, חג שמח, חנוכה שמח, פורים שמח, פסח שמח). All are the everyday Israeli forms. Optional alternative logged for Hanukkah.
+9. **nav.saveLabelNotification(s) → סימון ההתראה כנקראה / סימון ההתראות כנקראו: keep.** In appSync.saveFailed it reads "לא ניתן היה לשמור את סימון ההתראה כנקראה — אפשר לנסות שוב", which says what failed. A bare "ההתראה" would read "couldn't save the notification". Definite, so it takes "את". 19 / 20 characters, max 25.
+10. **setlistModals.suggestionStaple "ב-{count} רשימות — {setlistName}": keep the structure, add the verb** (applied above: "נוגן ב-{count} רשימות — {setlistName}"). Counting setlists rather than "times" is accurate (the note says count = setlists).
+11. **api-charts.scrapeNoChart keeping "(rawText)": keep.** The English names the field too, the Hebrew sentence already says "להדביק את הטקסט ישירות", and the parenthesis points API / MCP callers to the field.
+
+Checks: `node scripts/i18n-he-missing.mjs --list` → 0 missing, 0 problems (8 accepted LONG warnings, unchanged); `npx vitest run src/__tests__/i18n src/__tests__/mt-p7` passes.
