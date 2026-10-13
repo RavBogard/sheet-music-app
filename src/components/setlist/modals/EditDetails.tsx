@@ -13,7 +13,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { format } from "date-fns"
+import { useT, useFormat } from "@/i18n/client"
 import { cn } from "@/lib/utils"
 import { useCongregation } from "@/lib/congregation-store"
 
@@ -46,6 +46,8 @@ export function EditDetails({
     initialServiceNotes,
     onConfirm,
 }: EditDetailsProps) {
+    const t = useT()
+    const fmt = useFormat()
     const congregation = useCongregation()
     const rabbiProfiles = congregation?.scheduling?.rabbiProfiles ?? []
 
@@ -84,12 +86,12 @@ export function EditDetails({
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
             <DialogContent className="bg-card border-border text-foreground sm:max-w-lg">
                 <DialogHeader>
-                    <DialogTitle className="text-xl font-bold">Edit Setlist Details</DialogTitle>
+                    <DialogTitle className="text-xl font-bold">{t("setlistModals.editDetailsTitle")}</DialogTitle>
                 </DialogHeader>
 
                 <div className="py-3 space-y-4">
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-xs font-medium text-muted-foreground">Name</label>
+                        <label className="text-xs font-medium text-muted-foreground">{t("setlistModals.nameLabel")}</label>
                         <Input
                             value={name}
                             onChange={(e) => setName(e.target.value)}
@@ -99,8 +101,8 @@ export function EditDetails({
                                     handleSave()
                                 }
                             }}
-                            placeholder="Setlist name"
-                            aria-label="Setlist name"
+                            placeholder={t("setlistModals.setlistNamePlaceholder")}
+                            aria-label={t("setlistModals.setlistNameAria")}
                             className="text-base h-11 bg-background/50 border-border"
                             autoFocus
                         />
@@ -108,18 +110,18 @@ export function EditDetails({
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="flex flex-col gap-1.5">
-                            <label className="text-xs font-medium text-muted-foreground">Date (optional)</label>
+                            <label className="text-xs font-medium text-muted-foreground">{t("setlistModals.dateOptionalLabel")}</label>
                             <Popover>
                                 <PopoverTrigger asChild>
                                     <Button
                                         variant="outline"
                                         className={cn(
-                                            "w-full justify-start text-left font-normal bg-background/50 border-border",
+                                            "w-full justify-start text-start font-normal bg-background/50 border-border",
                                             !date && "text-muted-foreground"
                                         )}
                                     >
-                                        <CalendarIcon className="mr-2 h-4 w-4" />
-                                        {date ? format(date, "PPP") : "Pick a date"}
+                                        <CalendarIcon className="me-2 h-4 w-4" />
+                                        {date ? fmt.pattern(date, "PPP") : t("setlistModals.pickDate")}
                                     </Button>
                                 </PopoverTrigger>
                                 <PopoverContent className="w-auto p-0 bg-card border-border" align="start">
@@ -134,16 +136,16 @@ export function EditDetails({
                         </div>
 
                         <div className="flex flex-col gap-1.5">
-                            <label className="text-xs font-medium text-muted-foreground">Rabbi (optional)</label>
+                            <label className="text-xs font-medium text-muted-foreground">{t("setlistModals.rabbiOptionalLabel")}</label>
                             <Select
                                 value={rabbi || NO_RABBI}
                                 onValueChange={(v) => setRabbi(v === NO_RABBI ? "" : v)}
                             >
                                 <SelectTrigger className="bg-background/50">
-                                    <SelectValue placeholder="Select rabbi" />
+                                    <SelectValue placeholder={t("setlistModals.selectRabbi")} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value={NO_RABBI}>None</SelectItem>
+                                    <SelectItem value={NO_RABBI}>{t("setlistModals.noRabbi")}</SelectItem>
                                     {rabbiProfiles.map((rp) => (
                                         <SelectItem key={rp.name} value={rp.name}>{rp.name}</SelectItem>
                                     ))}
@@ -153,11 +155,11 @@ export function EditDetails({
                     </div>
 
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-xs font-medium text-muted-foreground">Service notes (optional)</label>
+                        <label className="text-xs font-medium text-muted-foreground">{t("setlistModals.serviceNotesLabel")}</label>
                         <Textarea
                             value={serviceNotes}
                             onChange={(e) => setServiceNotes(e.target.value)}
-                            placeholder="e.g., Bar Mitzvah for Sam, extra musicians joining…"
+                            placeholder={t("setlistModals.serviceNotesPlaceholder")}
                             className="min-h-[80px] bg-background/50 border-border resize-none"
                             maxLength={500}
                         />
@@ -165,9 +167,9 @@ export function EditDetails({
                 </div>
 
                 <DialogFooter className="flex gap-2 sm:gap-2">
-                    <Button onClick={onClose} variant="ghost" className="flex-1 sm:flex-none">Cancel</Button>
+                    <Button onClick={onClose} variant="ghost" className="flex-1 sm:flex-none">{t("setlistModals.cancel")}</Button>
                     <Button onClick={handleSave} disabled={!canSave} className="flex-1 sm:flex-none">
-                        Save
+                        {t("setlistModals.save")}
                     </Button>
                 </DialogFooter>
             </DialogContent>

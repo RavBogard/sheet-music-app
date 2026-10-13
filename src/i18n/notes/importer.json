@@ -1,0 +1,454 @@
+{
+    "title": {
+        "where": "Setlist importer dialog: title",
+        "who": "leaders",
+        "maxLength": 40,
+        "context": "AI = the automatic reader that builds a setlist from a file"
+    },
+    "descriptionInput": {
+        "where": "Setlist importer dialog: subtitle on the first (choose a file) step",
+        "who": "leaders",
+        "maxLength": 120
+    },
+    "descriptionProcessing": {
+        "where": "Setlist importer dialog: subtitle while the file is being read",
+        "who": "leaders",
+        "maxLength": 80
+    },
+    "descriptionReview": {
+        "where": "Setlist importer dialog: subtitle on the spreadsheet review table step",
+        "who": "leaders",
+        "maxLength": 140,
+        "context": "charts = sheet-music files; Drive = Google Drive"
+    },
+    "descriptionInterview": {
+        "where": "Setlist importer dialog: subtitle on the details form after reading a document",
+        "who": "leaders",
+        "maxLength": 80
+    },
+    "descriptionPreview": {
+        "where": "Setlist importer dialog: subtitle on the final preview step",
+        "who": "leaders",
+        "maxLength": 80
+    },
+    "sheetsUrlLabel": {
+        "where": "Setlist importer, first step: label over the Google Sheets link field",
+        "who": "leaders",
+        "maxLength": 30,
+        "context": "Google Sheets is a product name"
+    },
+    "sheetsSharingHint": {
+        "where": "Setlist importer, first step: hint under the Google Sheets link field",
+        "who": "leaders",
+        "maxLength": 100,
+        "context": "The quoted text is the Google sharing option's wording; use the name Google shows in the user's language"
+    },
+    "or": {
+        "where": "Setlist importer, first step: divider between the three import options (shown uppercase)",
+        "who": "leaders",
+        "maxLength": 6
+    },
+    "uploadCsvLabel": {
+        "where": "Setlist importer, first step: label over the CSV file drop box",
+        "who": "leaders",
+        "maxLength": 30,
+        "context": "CSV is a file format; keep it"
+    },
+    "selectCsvFile": {
+        "where": "Setlist importer, first step: text inside the CSV file box before a file is chosen",
+        "who": "leaders",
+        "maxLength": 40,
+        "context": ".csv is a file extension; keep it"
+    },
+    "dragDropDisabled": {
+        "where": "Setlist importer, first step: small hint inside the CSV file box",
+        "who": "leaders",
+        "maxLength": 60
+    },
+    "uploadCsvAria": {
+        "where": "Setlist importer, first step: screen-reader name of the CSV file input",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "uploadDocumentLabel": {
+        "where": "Setlist importer, first step: label over the document file box",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "selectDocumentFile": {
+        "where": "Setlist importer, first step: text inside the document file box before a file is chosen",
+        "who": "leaders",
+        "maxLength": 50,
+        "context": ".docx, .pdf, .txt are file extensions; keep them"
+    },
+    "documentHint": {
+        "where": "Setlist importer, first step: small hint inside the document file box",
+        "who": "leaders",
+        "maxLength": 70,
+        "context": "service outline = the order-of-service document"
+    },
+    "uploadDocumentAria": {
+        "where": "Setlist importer, first step: screen-reader name of the document file input",
+        "who": "leaders",
+        "maxLength": 50
+    },
+    "analyzing": {
+        "where": "Setlist importer, first step: main button while the file is being read",
+        "who": "leaders",
+        "maxLength": 25
+    },
+    "nextAnalyzeDocument": {
+        "where": "Setlist importer, first step: main button when a document is chosen",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "nextAnalyzeSpreadsheet": {
+        "where": "Setlist importer, first step: main button for a spreadsheet link or CSV",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "readingDocumentHeading": {
+        "where": "Setlist importer, processing step: heading while a document is read",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "analyzingRowsHeading": {
+        "where": "Setlist importer, processing step: heading while a spreadsheet is read",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "readingDocumentBody": {
+        "where": "Setlist importer, processing step: text under the heading for a document",
+        "who": "leaders",
+        "maxLength": 90
+    },
+    "analyzingRowsBody": {
+        "where": "Setlist importer, processing step: text under the heading for a spreadsheet",
+        "who": "leaders",
+        "maxLength": 140,
+        "context": "Gemini is the name of the AI service; Google Drive is a product name"
+    },
+    "columnType": {
+        "where": "Setlist importer, review table: column header (row kind: header or song; shown uppercase)",
+        "who": "leaders",
+        "maxLength": 12
+    },
+    "columnTitle": {
+        "where": "Setlist importer, review table: column header for the song title",
+        "who": "leaders",
+        "maxLength": 15
+    },
+    "columnKeyVocalLead": {
+        "where": "Setlist importer, review table: column header for musical key and Vocal Lead",
+        "who": "leaders",
+        "maxLength": 25,
+        "context": "Key = musical key (C, Bb…); Vocal Lead = the singer leading the song (never just 'Lead')"
+    },
+    "columnStatus": {
+        "where": "Setlist importer, review table: column header for library match and chart-link status",
+        "who": "leaders",
+        "maxLength": 25
+    },
+    "rowHeader": {
+        "where": "Setlist importer, review table: badge on a section-header row (shown uppercase)",
+        "who": "leaders",
+        "maxLength": 10,
+        "context": "A section heading inside the setlist, not a song"
+    },
+    "rowSong": {
+        "where": "Setlist importer, review table: badge on a song row",
+        "who": "leaders",
+        "maxLength": 10
+    },
+    "keyPlaceholder": {
+        "where": "Setlist importer, review table: placeholder of the small musical-key field",
+        "who": "leaders",
+        "maxLength": 5,
+        "context": "Musical key; the field is very narrow"
+    },
+    "vocalLeadPlaceholder": {
+        "where": "Setlist importer, review table: placeholder of the Vocal Lead field",
+        "who": "leaders",
+        "maxLength": 20,
+        "context": "Vocal Lead = the singer leading the song (never just 'Lead')"
+    },
+    "privateDriveLink": {
+        "where": "Setlist importer, review table: red warning when the chart's Google Drive link is private",
+        "who": "leaders",
+        "maxLength": 50
+    },
+    "invalidLink": {
+        "where": "Setlist importer, review table: red warning when the chart link is not valid",
+        "who": "leaders",
+        "maxLength": 25
+    },
+    "hasDriveLink": {
+        "where": "Setlist importer, review table: green status when the row has a Google Drive chart link",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "noChartLink": {
+        "where": "Setlist importer, review table: status when a song row has no chart link",
+        "who": "leaders",
+        "maxLength": 25
+    },
+    "matchesLibrary": {
+        "where": "Setlist importer: status/tooltip when a song matches a chart already in the library",
+        "who": "leaders",
+        "maxLength": 40,
+        "context": "{name} is the matching library chart's name (shown bold)"
+    },
+    "songsFound": {
+        "where": "Setlist importer, review footer: number of songs found in the spreadsheet",
+        "who": "leaders",
+        "maxLength": 25,
+        "context": "{count} is a number (shown bold). English keeps today's text '1 songs found' for one."
+    },
+    "newDrivePdfs": {
+        "where": "Setlist importer, review footer: how many new chart PDFs will be downloaded from Google Drive",
+        "who": "leaders",
+        "maxLength": 50,
+        "context": "{count} is a number (shown bold). English keeps the plural for one."
+    },
+    "back": {
+        "where": "Setlist importer: footer button returning to the previous step",
+        "who": "leaders",
+        "maxLength": 12
+    },
+    "executing": {
+        "where": "Setlist importer, review footer: main button while the import runs",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "finalizeImport": {
+        "where": "Setlist importer, review footer: main button that creates the setlist from the spreadsheet",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "setlistNameLabel": {
+        "where": "Setlist importer, details form: label of the setlist name field",
+        "who": "leaders",
+        "maxLength": 25
+    },
+    "serviceDateLabel": {
+        "where": "Setlist importer, details form: label of the required service date field (followed by a red *)",
+        "who": "leaders",
+        "maxLength": 25
+    },
+    "serviceDateHint": {
+        "where": "Setlist importer, details form: hint under the service date field",
+        "who": "leaders",
+        "maxLength": 80
+    },
+    "serviceTypeLabel": {
+        "where": "Setlist importer, details form: label of the service type picker",
+        "who": "leaders",
+        "maxLength": 25
+    },
+    "serviceTypeHint": {
+        "where": "Setlist importer, details form: hint under the service type picker",
+        "who": "leaders",
+        "maxLength": 70
+    },
+    "serviceType.shabbat_morning": {
+        "where": "Setlist importer: service type option and preview label",
+        "who": "leaders",
+        "maxLength": 25,
+        "context": "Name of the Saturday-morning service"
+    },
+    "serviceType.friday_night": {
+        "where": "Setlist importer: service type option and preview label",
+        "who": "leaders",
+        "maxLength": 25,
+        "context": "Name of the Friday-evening service"
+    },
+    "serviceType.rosh_hashanah": {
+        "where": "Setlist importer: service type option and preview label",
+        "who": "leaders",
+        "maxLength": 25,
+        "context": "Holiday name"
+    },
+    "serviceType.yom_kippur": {
+        "where": "Setlist importer: service type option and preview label",
+        "who": "leaders",
+        "maxLength": 25,
+        "context": "Holiday name"
+    },
+    "serviceType.festival": {
+        "where": "Setlist importer: service type option and preview label",
+        "who": "leaders",
+        "maxLength": 25,
+        "context": "Any other holiday service"
+    },
+    "serviceType.other": {
+        "where": "Setlist importer: service type option and preview label",
+        "who": "leaders",
+        "maxLength": 25
+    },
+    "rabbiLabel": {
+        "where": "Setlist importer, details form: label of the rabbi field",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "optional": {
+        "where": "Setlist importer, details form: small marker after the rabbi label",
+        "who": "leaders",
+        "maxLength": 15
+    },
+    "rabbiPlaceholder": {
+        "where": "Setlist importer, details form: placeholder of the rabbi field",
+        "who": "leaders",
+        "maxLength": 20,
+        "context": "The person leading the service ('Led by' is distinct from Vocal Lead)"
+    },
+    "startOver": {
+        "where": "Setlist importer, details form: footer button that discards the read document and returns to the start",
+        "who": "leaders",
+        "maxLength": 15
+    },
+    "nextPreview": {
+        "where": "Setlist importer, details form: footer button to the preview step",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "untitledSetlist": {
+        "where": "Setlist importer, preview header: shown when the setlist name is empty",
+        "who": "leaders",
+        "maxLength": 25
+    },
+    "defaultSetlistName": {
+        "where": "Setlist importer: default name of the new setlist (pre-filled, and saved as the setlist name for spreadsheet imports)",
+        "who": "leaders",
+        "maxLength": 40,
+        "context": "Becomes data: saved as the setlist's name; the leader can rename it"
+    },
+    "noTracks": {
+        "where": "Setlist importer, preview: empty state when the document gave no songs",
+        "who": "leaders",
+        "maxLength": 60
+    },
+    "ungrouped": {
+        "where": "Setlist importer, preview: section heading for songs not under any section (shown uppercase)",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "missingChart": {
+        "where": "Setlist importer, preview: amber status on a song with no matching chart",
+        "who": "leaders",
+        "maxLength": 18
+    },
+    "recordingCandidates": {
+        "where": "Setlist importer, preview: tooltip on the recordings count icon",
+        "who": "leaders",
+        "maxLength": 40,
+        "context": "{count} is the number of possible recordings found for the song"
+    },
+    "trackCount": {
+        "where": "Setlist importer, preview footer: number of songs in the new setlist",
+        "who": "leaders",
+        "maxLength": 20,
+        "context": "{count} is a number (shown bold). English keeps the plural for one."
+    },
+    "missingChartCount": {
+        "where": "Setlist importer, preview footer: number of songs without a chart",
+        "who": "leaders",
+        "maxLength": 30,
+        "context": "{count} is a number (shown bold)"
+    },
+    "creating": {
+        "where": "Setlist importer, preview footer: main button while the setlist is created",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "createSetlist": {
+        "where": "Setlist importer, preview footer: main button that creates the setlist",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "selectDocument": {
+        "where": "Setlist importer: error toast when no document is chosen",
+        "who": "leaders",
+        "maxLength": 60
+    },
+    "readDocumentFailed": {
+        "where": "Setlist importer: error toast when the server could not read the document",
+        "who": "leaders",
+        "maxLength": 80,
+        "context": "{status} is an HTTP status number"
+    },
+    "extractStructureFailed": {
+        "where": "Setlist importer: error toast when the AI could not find the setlist structure",
+        "who": "leaders",
+        "maxLength": 80,
+        "context": "{status} is an HTTP status number"
+    },
+    "resolveTracksFailed": {
+        "where": "Setlist importer: error toast when songs could not be matched to the library",
+        "who": "leaders",
+        "maxLength": 90,
+        "context": "{status} is an HTTP status number"
+    },
+    "processDocumentError": {
+        "where": "Setlist importer: generic error toast for a document import",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "provideUrlOrCsv": {
+        "where": "Setlist importer: error toast when neither a link nor a CSV was given",
+        "who": "leaders",
+        "maxLength": 70
+    },
+    "parseFailed": {
+        "where": "Setlist importer: error toast when the spreadsheet could not be read",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "serverErrorRequestTimeout": {
+        "where": "Setlist importer: error toast for a server failure while reading a spreadsheet",
+        "who": "leaders",
+        "maxLength": 100,
+        "context": "{status} is an HTTP status number; {statusText} is the server's English status text (e.g. 'Gateway Timeout')"
+    },
+    "parseSpreadsheetError": {
+        "where": "Setlist importer: generic error toast for a spreadsheet import",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "createSetlistFailed": {
+        "where": "Setlist importer: error toast when the setlist could not be created",
+        "who": "leaders",
+        "maxLength": 70,
+        "context": "{status} is an HTTP status number"
+    },
+    "setlistCreated": {
+        "where": "Setlist importer: success toast after creating the setlist from a document",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "createSetlistError": {
+        "where": "Setlist importer: generic error toast when creating the setlist failed",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "executeFailed": {
+        "where": "Setlist importer: error toast when the spreadsheet import failed",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "serverErrorUploadTimeout": {
+        "where": "Setlist importer: error toast for a server failure while importing a spreadsheet",
+        "who": "leaders",
+        "maxLength": 100,
+        "context": "{status} is an HTTP status number; {statusText} is the server's English status text"
+    },
+    "setlistImported": {
+        "where": "Setlist importer: success toast after a spreadsheet import",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "executeImportError": {
+        "where": "Setlist importer: generic error toast when the spreadsheet import failed",
+        "who": "leaders",
+        "maxLength": 40
+    }
+}

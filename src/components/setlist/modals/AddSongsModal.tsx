@@ -17,6 +17,7 @@ import {
 import { useLibraryStore } from "@/lib/library-store"
 import { useLibrary } from "@/hooks/use-library"
 import { fetchUsageData, getSuggestions, SongSuggestion, UsageInfo } from "@/lib/song-suggestions"
+import { useT } from "@/i18n/client"
 
 interface AddSongsModalProps {
     isOpen: boolean
@@ -31,6 +32,7 @@ export function AddSongsModal({
     onAdd,
     currentTrackFileIds = new Set(),
 }: AddSongsModalProps) {
+    const t = useT()
     const {
         displayedFiles,
         setFilter,
@@ -120,9 +122,10 @@ export function AddSongsModal({
 
     return (
         <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
+            {/* border-l stays physical: the ui/Sheet side="right" panel is physical too */}
             <SheetContent side="right" className="bg-card border-l border-border text-foreground w-full sm:max-w-md xl:max-w-lg h-full flex flex-col p-6">
                 <SheetHeader className="shrink-0 flex-row items-center justify-between space-y-0">
-                    <SheetTitle className="text-xl font-bold">Add Songs ({selectedFiles.size} selected)</SheetTitle>
+                    <SheetTitle className="text-xl font-bold">{t("setlistModals.addSongsTitle", { count: selectedFiles.size })}</SheetTitle>
                 </SheetHeader>
 
                 <div className="flex flex-col flex-1 min-h-0 mt-4">
@@ -130,7 +133,7 @@ export function AddSongsModal({
                         <Input
                             value={searchQuery}
                             onChange={handleSearchChange}
-                            placeholder="Search library..."
+                            placeholder={t("setlistModals.searchLibraryPlaceholder")}
                             className="flex-1 bg-muted border-border"
                             autoFocus
                         />
@@ -140,7 +143,7 @@ export function AddSongsModal({
                             onClick={addVisibleSongs}
                             className="h-9 text-xs bg-blue-500/10 border-blue-500/20 text-blue-400 hover:bg-blue-500 hover:text-foreground"
                         >
-                            Add All Visible
+                            {t("setlistModals.addAllVisible")}
                         </Button>
                     </div>
 
@@ -150,7 +153,7 @@ export function AddSongsModal({
                             <div className="mb-4">
                                 <div className="flex items-center gap-1.5 mb-2">
                                     <Lightbulb className="h-3.5 w-3.5 text-amber-400" />
-                                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Suggested</p>
+                                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{t("setlistModals.suggested")}</p>
                                 </div>
                                 <div className="flex flex-wrap gap-1.5">
                                     {suggestions.map((s: SongSuggestion) => {
@@ -178,7 +181,7 @@ export function AddSongsModal({
                                     })}
                                 </div>
                                 {suggestionsLoading && (
-                                    <p className="text-xs text-muted-foreground/50 mt-1">Loading suggestions...</p>
+                                    <p className="text-xs text-muted-foreground/50 mt-1">{t("setlistModals.loadingSuggestions")}</p>
                                 )}
                             </div>
                         )}
@@ -192,7 +195,7 @@ export function AddSongsModal({
                                         key={file.id}
                                         onClick={() => toggleFileSelection(file)}
                                         className={cn(
-                                            "w-full text-left p-3 rounded-lg transition-colors flex items-center gap-3",
+                                            "w-full text-start p-3 rounded-lg transition-colors flex items-center gap-3",
                                             isSelected ? "bg-blue-600 text-foreground" : "bg-muted border border-border hover:bg-muted"
                                         )}
                                     >
@@ -225,7 +228,7 @@ export function AddSongsModal({
                         disabled={selectedFiles.size === 0}
                         className="w-full h-12 text-lg font-bold shadow-lg"
                     >
-                        Add {selectedFiles.size} Song{selectedFiles.size !== 1 ? 's' : ''}
+                        {t("setlistModals.addSongsButton", { count: selectedFiles.size })}
                     </Button>
                 </SheetFooter>
             </SheetContent>

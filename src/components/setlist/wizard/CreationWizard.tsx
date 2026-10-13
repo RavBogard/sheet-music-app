@@ -8,7 +8,6 @@ import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { format } from "date-fns"
 import { cn } from "@/lib/utils"
 import { useCongregation } from "@/lib/congregation-store"
 import { useCreationWizard } from "@/hooks/use-creation-wizard"
@@ -17,7 +16,8 @@ import { serviceTypeLabel } from "@/lib/org/tenant-lists"
 import { toDate } from "@/lib/firestore-helpers"
 import type { ServiceType } from "@/lib/liturgical-calendar"
 import { useOrg } from "@/lib/org/org-context"
-import { label, hidesLiturgicalFields } from "@/lib/org/vocab"
+import { hidesLiturgicalFields } from "@/lib/org/vocab"
+import { useT, useFormat } from "@/i18n/client"
 
 interface CreationWizardProps {
     open: boolean
@@ -34,23 +34,25 @@ const BLANK = "__blank__"
 
 // Friendly labels for the Clone CTA. Driven by the user's chosen date via
 // getServiceContext(). 'regular' has no Clone match (non-Shabbat, non-holiday)
-// so it never reaches the CTA copy.
+// so it never reaches the CTA copy. Phase 7: literal catalogue keys.
 const SERVICE_TYPE_LABELS: Record<ServiceType, string> = {
-    friday_night: 'Erev Shabbat',
-    shabbat_morning: 'Shabbat morning',
-    rosh_hashanah: 'Rosh Hashanah',
-    yom_kippur: 'Yom Kippur',
-    sukkot: 'Sukkot',
-    simchat_torah: 'Simchat Torah',
-    hanukkah_shabbat: 'Hanukkah Shabbat',
-    purim: 'Purim',
-    passover: 'Passover',
-    shavuot: 'Shavuot',
-    regular: 'service',
+    friday_night: "setlistWizard.serviceType.friday_night",
+    shabbat_morning: "setlistWizard.serviceType.shabbat_morning",
+    rosh_hashanah: "setlistWizard.serviceType.rosh_hashanah",
+    yom_kippur: "setlistWizard.serviceType.yom_kippur",
+    sukkot: "setlistWizard.serviceType.sukkot",
+    simchat_torah: "setlistWizard.serviceType.simchat_torah",
+    hanukkah_shabbat: "setlistWizard.serviceType.hanukkah_shabbat",
+    purim: "setlistWizard.serviceType.purim",
+    passover: "setlistWizard.serviceType.passover",
+    shavuot: "setlistWizard.serviceType.shavuot",
+    regular: "setlistWizard.serviceType.regular",
 }
 
 export function CreationWizard({ open, onOpenChange, prefilledDate }: CreationWizardProps) {
     const wizard = useCreationWizard()
+    const t = useT()
+    const fmt = useFormat()
 
     // Reset state each time the dialog opens. If opened with a prefilledDate
     // (calendar/placeholder entry point), seed eventDate so the offer strip
@@ -78,7 +80,7 @@ export function CreationWizard({ open, onOpenChange, prefilledDate }: CreationWi
 
     // Offer-strip presentation derived state.
     const inferredType = wizard.inferredServiceType
-    const serviceLabel = inferredType ? SERVICE_TYPE_LABELS[inferredType] : null
+    const serviceLabel = inferredType ? t(SERVICE_TYPE_LABELS[inferredType]) : null
     // 'regular' weekday picks aren't a meaningful Clone target; suppress the
     // strip entirely so the user falls through to template/scratch.
     // v11-05-05: the offer strip is liturgical (SERVICE_TYPE_LABELS, e.g. "Erev
@@ -95,27 +97,27 @@ export function CreationWizard({ open, onOpenChange, prefilledDate }: CreationWi
         <Dialog open={open} onOpenChange={(v) => !wizard.creating && onOpenChange(v)}>
             <DialogContent className="bg-card border-border text-foreground sm:max-w-md p-0">
                 <div className="px-6 pt-6 pb-2">
-                    <h2 className="text-xl font-bold mb-1">{label(org, 'newSetlist')}</h2>
+                    <h2 className="text-xl font-bold mb-1">{t("org.newSetlist")}</h2>
                     <p className="text-sm text-muted-foreground">
-                        Pick a date — we&rsquo;ll offer to clone last week&rsquo;s service, use a template, or start fresh.
+                        {t("setlistWizard.intro")}
                     </p>
                 </div>
 
                 <div className="px-6 py-4 space-y-4">
                     {/* Date — moved to top so the offer strip can react to it */}
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-xs font-medium text-muted-foreground">Service date</label>
+                        <label className="text-xs font-medium text-muted-foreground">{t("setlistWizard.serviceDateLabel")}</label>
                         <Popover>
                             <PopoverTrigger asChild>
                                 <Button
                                     variant="outline"
                                     className={cn(
-                                        "w-full justify-start text-left font-normal h-11 bg-background/50",
+                                        "w-full justify-start text-start font-normal h-11 bg-background/50",
                                         !wizard.eventDate && "text-muted-foreground"
                                     )}
                                 >
-                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {wizard.eventDate ? format(wizard.eventDate, "PPP") : "Pick a date"}
+                                    <CalendarIcon className="me-2 h-4 w-4" />
+                                    {wizard.eventDate ? fmt.pattern(wizard.eventDate, "PPP") : t("setlistWizard.pickDate")}
                                 </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0 bg-card border-border" align="start">
@@ -143,7 +145,7 @@ export function CreationWizard({ open, onOpenChange, prefilledDate }: CreationWi
                                     aria-busy="true"
                                 >
                                     <Loader2 className="h-4 w-4 animate-spin" />
-                                    Looking for last {serviceLabel}…
+                                    {t("setlistWizard.lookingForLast", { service: serviceLabel })}
                                 </Button>
                             ) : wizard.cloneSource ? (
                                 <Button
@@ -158,11 +160,11 @@ export function CreationWizard({ open, onOpenChange, prefilledDate }: CreationWi
                                     )}
                                 >
                                     <Copy className="h-4 w-4 shrink-0" />
-                                    <span className="flex-1 text-left truncate">
-                                        Clone last {serviceLabel}
+                                    <span className="flex-1 text-start truncate">
+                                        {t("setlistWizard.cloneLast", { service: serviceLabel })}
                                         {cloneSourceDate && (
-                                            <span className="ml-1.5 opacity-80 font-normal">
-                                                ({format(cloneSourceDate, 'MMM d')})
+                                            <span className="ms-1.5 opacity-80 font-normal">
+                                                {t("setlistWizard.cloneSourceDate", { date: fmt.pattern(cloneSourceDate, 'MMM d') })}
                                             </span>
                                         )}
                                     </span>
@@ -172,7 +174,7 @@ export function CreationWizard({ open, onOpenChange, prefilledDate }: CreationWi
                                 // No prior match — guide the user to the alternatives without
                                 // a disabled button. AC-5 allows hide-with-explanatory-text.
                                 <p className="text-xs text-muted-foreground px-1 py-0.5">
-                                    No prior {serviceLabel} to clone yet — pick a template or start from scratch below.
+                                    {t("setlistWizard.noPriorService", { service: serviceLabel })}
                                 </p>
                             )}
 
@@ -193,7 +195,7 @@ export function CreationWizard({ open, onOpenChange, prefilledDate }: CreationWi
                                         wizard.mode === 'template' ? "text-foreground" : "text-muted-foreground hover:text-foreground"
                                     )}
                                 >
-                                    Use a template
+                                    {t("setlistWizard.useTemplate")}
                                 </button>
                                 <span aria-hidden className="text-xs text-muted-foreground/40">·</span>
                                 <button
@@ -208,7 +210,7 @@ export function CreationWizard({ open, onOpenChange, prefilledDate }: CreationWi
                                         wizard.mode === 'scratch' ? "text-foreground" : "text-muted-foreground hover:text-foreground"
                                     )}
                                 >
-                                    Start from scratch
+                                    {t("setlistWizard.startFromScratch")}
                                 </button>
                             </div>
                         </div>
@@ -217,19 +219,19 @@ export function CreationWizard({ open, onOpenChange, prefilledDate }: CreationWi
                     {/* Template select — hidden once user commits to clone */}
                     {showTemplateField && (
                         <div className="flex flex-col gap-1.5">
-                            <label className="text-xs font-medium text-muted-foreground">Template (optional)</label>
+                            <label className="text-xs font-medium text-muted-foreground">{t("setlistWizard.templateOptionalLabel")}</label>
                             <Select
                                 value={wizard.selectedTemplate ?? BLANK}
                                 onValueChange={(v) => wizard.setSelectedTemplate(v === BLANK ? null : v)}
                             >
                                 <SelectTrigger className="bg-background/50">
-                                    <SelectValue placeholder="Start from blank" />
+                                    <SelectValue placeholder={t("setlistWizard.startFromBlank")} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value={BLANK}>{label(org, 'blankSetlist')}</SelectItem>
+                                    <SelectItem value={BLANK}>{t("org.blankSetlist")}</SelectItem>
                                     {regularTemplates.length > 0 && (
                                         <SelectGroup>
-                                            <SelectLabel>Regular services</SelectLabel>
+                                            <SelectLabel>{t("setlistWizard.regularServices")}</SelectLabel>
                                             {regularTemplates.map(key => (
                                                 <SelectItem key={key} value={key}>
                                                     {serviceTypeLabel(org, key)}
@@ -239,7 +241,7 @@ export function CreationWizard({ open, onOpenChange, prefilledDate }: CreationWi
                                     )}
                                     {holidayTemplates.length > 0 && (
                                         <SelectGroup>
-                                            <SelectLabel>Holiday services</SelectLabel>
+                                            <SelectLabel>{t("setlistWizard.holidayServices")}</SelectLabel>
                                             {holidayTemplates.map(key => (
                                                 <SelectItem key={key} value={key}>
                                                     {serviceTypeLabel(org, key)}
@@ -255,7 +257,7 @@ export function CreationWizard({ open, onOpenChange, prefilledDate }: CreationWi
                     {/* Name — hidden when cloning (auto-derived from cloneSetlist) */}
                     {showNameField && (
                         <div className="flex flex-col gap-1.5">
-                            <label className="text-xs font-medium text-muted-foreground">Name</label>
+                            <label className="text-xs font-medium text-muted-foreground">{t("setlistWizard.nameLabel")}</label>
                             <Input
                                 value={wizard.name}
                                 onChange={(e) => wizard.setName(e.target.value)}
@@ -265,7 +267,7 @@ export function CreationWizard({ open, onOpenChange, prefilledDate }: CreationWi
                                         wizard.create()
                                     }
                                 }}
-                                placeholder={label(org, 'wizardNamePlaceholder')}
+                                placeholder={t("org.wizardNamePlaceholder")}
                                 className="text-base h-11 bg-background/50 border-border"
                             />
                         </div>
@@ -274,10 +276,10 @@ export function CreationWizard({ open, onOpenChange, prefilledDate }: CreationWi
                     {/* Rabbi (only when congregation has a list; hidden for non-synagogue tenants) */}
                     {rabbiProfiles.length > 0 && !hideLiturgical && (
                         <div className="flex flex-col gap-1.5">
-                            <label className="text-xs font-medium text-muted-foreground">Rabbi (optional)</label>
+                            <label className="text-xs font-medium text-muted-foreground">{t("setlistWizard.rabbiOptionalLabel")}</label>
                             <Select value={wizard.rabbi} onValueChange={wizard.setRabbi}>
                                 <SelectTrigger className="bg-background/50">
-                                    <SelectValue placeholder="Select rabbi" />
+                                    <SelectValue placeholder={t("setlistWizard.selectRabbi")} />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {rabbiProfiles.map((rp) => (
@@ -291,7 +293,7 @@ export function CreationWizard({ open, onOpenChange, prefilledDate }: CreationWi
 
                 <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border/50 bg-muted/20">
                     <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={wizard.creating}>
-                        Cancel
+                        {t("setlistWizard.cancel")}
                     </Button>
                     <Button
                         onClick={handleSubmit}
@@ -299,11 +301,11 @@ export function CreationWizard({ open, onOpenChange, prefilledDate }: CreationWi
                         className="gap-1.5 bg-brand hover:bg-brand/90"
                     >
                         {wizard.creating ? (
-                            <><Loader2 className="h-4 w-4 animate-spin" /> Creating…</>
+                            <><Loader2 className="h-4 w-4 animate-spin" /> {t("setlistWizard.creating")}</>
                         ) : wizard.mode === 'clone' && wizard.cloneSource ? (
-                            <><Copy className="h-4 w-4" /> {label(org, 'cloneSetlistAction')}</>
+                            <><Copy className="h-4 w-4" /> {t("org.cloneSetlistAction")}</>
                         ) : (
-                            <><Check className="h-4 w-4" /> {label(org, 'createSetlistAction')}</>
+                            <><Check className="h-4 w-4" /> {t("org.createSetlistAction")}</>
                         )}
                     </Button>
                 </div>

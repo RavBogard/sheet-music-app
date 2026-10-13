@@ -1,0 +1,162 @@
+{
+    "intro": {
+        "where": "New setlist wizard: text under the title",
+        "who": "leaders",
+        "maxLength": 110
+    },
+    "serviceDateLabel": {
+        "where": "New setlist wizard: label of the date picker",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "pickDate": {
+        "where": "New setlist wizard: date button text when no date is chosen",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "lookingForLast": {
+        "where": "New setlist wizard: busy button while looking for the previous matching service",
+        "who": "leaders",
+        "maxLength": 45,
+        "context": "{service} is a service name from setlistWizard.serviceType (e.g. 'Erev Shabbat')"
+    },
+    "cloneLast": {
+        "where": "New setlist wizard: button offering to copy the previous matching service",
+        "who": "leaders",
+        "maxLength": 40,
+        "context": "{service} is a service name from setlistWizard.serviceType; the date in brackets follows separately (cloneSourceDate)"
+    },
+    "cloneSourceDate": {
+        "where": "New setlist wizard: date of the service that would be copied, after 'Clone last …'",
+        "who": "leaders",
+        "maxLength": 12,
+        "context": "{date} is a short date like 'Mar 7'"
+    },
+    "noPriorService": {
+        "where": "New setlist wizard: note when there is no earlier matching service to copy",
+        "who": "leaders",
+        "maxLength": 100,
+        "context": "{service} is a service name from setlistWizard.serviceType"
+    },
+    "useTemplate": {
+        "where": "New setlist wizard: link button choosing the template option",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "startFromScratch": {
+        "where": "New setlist wizard: link button choosing an empty setlist",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "templateOptionalLabel": {
+        "where": "New setlist wizard: label of the template picker",
+        "who": "leaders",
+        "maxLength": 25
+    },
+    "startFromBlank": {
+        "where": "New setlist wizard: template picker placeholder",
+        "who": "leaders",
+        "maxLength": 25
+    },
+    "regularServices": {
+        "where": "New setlist wizard: group heading in the template picker",
+        "who": "leaders",
+        "maxLength": 25
+    },
+    "holidayServices": {
+        "where": "New setlist wizard: group heading in the template picker",
+        "who": "leaders",
+        "maxLength": 25
+    },
+    "nameLabel": {
+        "where": "New setlist wizard: label of the name field",
+        "who": "leaders",
+        "maxLength": 15
+    },
+    "rabbiOptionalLabel": {
+        "where": "New setlist wizard: label of the rabbi picker",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "selectRabbi": {
+        "where": "New setlist wizard: rabbi picker placeholder",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "cancel": {
+        "where": "New setlist wizard: cancel button",
+        "who": "leaders",
+        "maxLength": 12
+    },
+    "creating": {
+        "where": "New setlist wizard: main button while the setlist is created",
+        "who": "leaders",
+        "maxLength": 18
+    },
+    "serviceType.friday_night": {
+        "where": "New setlist wizard: service name inside the clone offer ('Clone last …', 'Looking for last …', 'No prior … to clone yet')",
+        "who": "leaders",
+        "maxLength": 25,
+        "context": "Friday-evening service"
+    },
+    "serviceType.shabbat_morning": {
+        "where": "New setlist wizard: service name inside the clone offer ('Clone last …', 'Looking for last …', 'No prior … to clone yet')",
+        "who": "leaders",
+        "maxLength": 25,
+        "context": "Saturday-morning service"
+    },
+    "serviceType.rosh_hashanah": {
+        "where": "New setlist wizard: service name inside the clone offer ('Clone last …', 'Looking for last …', 'No prior … to clone yet')",
+        "who": "leaders",
+        "maxLength": 25,
+        "context": "Holiday name"
+    },
+    "serviceType.yom_kippur": {
+        "where": "New setlist wizard: service name inside the clone offer ('Clone last …', 'Looking for last …', 'No prior … to clone yet')",
+        "who": "leaders",
+        "maxLength": 25,
+        "context": "Holiday name"
+    },
+    "serviceType.sukkot": {
+        "where": "New setlist wizard: service name inside the clone offer ('Clone last …', 'Looking for last …', 'No prior … to clone yet')",
+        "who": "leaders",
+        "maxLength": 25,
+        "context": "Holiday name"
+    },
+    "serviceType.simchat_torah": {
+        "where": "New setlist wizard: service name inside the clone offer ('Clone last …', 'Looking for last …', 'No prior … to clone yet')",
+        "who": "leaders",
+        "maxLength": 25,
+        "context": "Holiday name"
+    },
+    "serviceType.hanukkah_shabbat": {
+        "where": "New setlist wizard: service name inside the clone offer ('Clone last …', 'Looking for last …', 'No prior … to clone yet')",
+        "who": "leaders",
+        "maxLength": 25,
+        "context": "Sabbath during the holiday"
+    },
+    "serviceType.purim": {
+        "where": "New setlist wizard: service name inside the clone offer ('Clone last …', 'Looking for last …', 'No prior … to clone yet')",
+        "who": "leaders",
+        "maxLength": 25,
+        "context": "Holiday name"
+    },
+    "serviceType.passover": {
+        "where": "New setlist wizard: service name inside the clone offer ('Clone last …', 'Looking for last …', 'No prior … to clone yet')",
+        "who": "leaders",
+        "maxLength": 25,
+        "context": "Holiday name"
+    },
+    "serviceType.shavuot": {
+        "where": "New setlist wizard: service name inside the clone offer ('Clone last …', 'Looking for last …', 'No prior … to clone yet')",
+        "who": "leaders",
+        "maxLength": 25,
+        "context": "Holiday name"
+    },
+    "serviceType.regular": {
+        "where": "New setlist wizard: service name inside the clone offer ('Clone last …', 'Looking for last …', 'No prior … to clone yet')",
+        "who": "leaders",
+        "maxLength": 25,
+        "context": "Generic lowercase noun 'service' used in the same sentences; not shown in practice"
+    }
+}
