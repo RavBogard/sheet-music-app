@@ -29,7 +29,7 @@ describe("processChartUpload error i18n", () => {
         it(`${c.name}: English from the catalogue equals the lib's sentence; the pseudo-locale wraps it`, async () => {
             const r = await processChartUpload(c.input as never)
             expect(r.ok).toBe(false)
-            if (r.ok) return
+            if (r.ok || !r.i18n) throw new Error("expected a keyed error")
             expect(tForOrg("crc", "en")(r.i18n.key, r.i18n.vars)).toBe(r.error)
             expect(tForOrg("crc", "qps")(r.i18n.key, r.i18n.vars).startsWith("⟦")).toBe(true)
         })

@@ -155,8 +155,9 @@ export interface ProcessChartUploadError {
     /**
      * Phase 7: the same sentence as a catalogue key + vars, so the browser
      * route words it in the tenant's language. Its English equals `error`.
+     * (Optional only so hand-built fixtures type-check; every error here sets it.)
      */
-    i18n: { key: string; vars?: Record<string, string | number> }
+    i18n?: { key: string; vars?: Record<string, string | number> }
     /** Stable machine code for callers that want to switch on the reason. */
     code:
         | "invalid_type"
