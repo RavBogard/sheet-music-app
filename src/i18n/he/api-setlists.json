@@ -12,7 +12,7 @@
     "spreadsheetTooLarge": "הגיליון גדול מדי (עד {maxRows} שורות).",
     "geminiKeyMissing": "מפתח ה-API של Gemini לא הוגדר בשרת.",
     "broadcastLeadersOnly": "רק ראשי להקה ומנהלים יכולים לשלוח לנגנים עדכון על רשימת השירים",
-    "extractUnsupportedFormat": "נתמכים רק מסמכי .docx, .pdf ו-.txt.",
+    "extractUnsupportedFormat": "נתמכים רק מסמכי ⁦.docx⁩, ⁦.pdf⁩ ו-⁦.txt⁩.",
     "extractPdfPageLimit": "קובץ ה-PDF חורג ממגבלת {maxPages} העמודים.",
     "extractFailed": "חילוץ הטקסט ממסמך ה-{format} נכשל.",
     "extractEmpty": "לא נמצא טקסט במסמך.",
