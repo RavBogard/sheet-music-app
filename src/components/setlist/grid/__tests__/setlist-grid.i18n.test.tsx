@@ -278,6 +278,9 @@ describe('setlist grid i18n (pseudo-locale)', () => {
         fireEvent.click(await screen.findByTestId('mobile-card-context-menu-bind-chart'))
         await screen.findByTestId('chart-bind-dialog')
         await screen.findByText('Test Song A')
+        // The picker's rows (and their thumbnails) load after the dialog opens; "Test Song A"
+        // can match the grid row first, so wait for the thumbnail itself.
+        await waitFor(() => expect(document.querySelector('[data-chart-thumb="song-a"]')).not.toBeNull(), { timeout: 5000 })
         const thumb = document.querySelector('[data-chart-thumb="song-a"]') as HTMLElement
         expect(thumb.getAttribute('dir')).toBe('ltr')
 
