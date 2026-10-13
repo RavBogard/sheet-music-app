@@ -22,7 +22,9 @@ async function requestOrg() {
  * crc and Brothers Lazaroff read the same catalogue text they always showed.
  */
 export async function generateImageMetadata() {
-    const orgId = await requestOrg()
+    // Also called at build time (no request) to list the image ids; the id is
+    // always 'card', so the build only needs that and the default text.
+    const orgId = await requestOrg().catch(() => coerceOrgId(null))
     return [{ id: 'card', alt: orgString(orgId, 'og.alt'), size, contentType }]
 }
 
