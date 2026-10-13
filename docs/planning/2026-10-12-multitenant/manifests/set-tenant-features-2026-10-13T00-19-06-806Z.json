@@ -1,0 +1,55 @@
+{
+  "kind": "set-tenant-features",
+  "at": "2026-10-13T00:19:06.806Z",
+  "projectId": "crcmusiccharts",
+  "changes": [
+    {
+      "doc": "orgs/crc",
+      "field": "driveInbox",
+      "before": {
+        "__absent": true
+      },
+      "after": {
+        "folderId": ""
+      }
+    },
+    {
+      "doc": "orgs/brotherslazaroff",
+      "field": "features",
+      "before": {
+        "mixer": false,
+        "driveInbox": false,
+        "schedulingEmails": false,
+        "todayFeed": false,
+        "notifyBand": false,
+        "perform": true
+      },
+      "after": {
+        "mixer": false,
+        "driveInbox": false,
+        "schedulingEmails": false,
+        "todayFeed": true,
+        "notifyBand": true,
+        "perform": true
+      }
+    },
+    {
+      "doc": "orgs/brotherslazaroff",
+      "field": "driveInbox",
+      "before": {
+        "__absent": true
+      },
+      "after": {
+        "folderId": ""
+      }
+    },
+    {
+      "doc": "config/monitor",
+      "field": "orgId",
+      "before": {
+        "__absent": true
+      },
+      "after": "crc"
+    }
+  ]
+}
