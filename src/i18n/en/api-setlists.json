@@ -11,5 +11,14 @@
     "spreadsheetEmpty": "Spreadsheet appears to be empty.",
     "spreadsheetTooLarge": "Spreadsheet is too large (max {maxRows} rows).",
     "geminiKeyMissing": "Gemini API Key is not configured on the server.",
-    "broadcastLeadersOnly": "Only band leaders and admins can broadcast setlist updates"
+    "broadcastLeadersOnly": "Only band leaders and admins can broadcast setlist updates",
+    "extractUnsupportedFormat": "Only .docx, .pdf, and .txt documents are supported.",
+    "extractPdfPageLimit": "PDF exceeds the {maxPages}-page limit.",
+    "extractFailed": "Failed to extract text from {format} document.",
+    "extractEmpty": "No text found in document.",
+    "structureNoText": "No document text provided to extract.",
+    "structureAiFailed": "Gemini structured extraction failed.",
+    "structureAiEmpty": "Gemini returned an empty response.",
+    "structureAiNotJson": "Gemini returned output that is not valid JSON.",
+    "structureAiMismatch": "Gemini output did not match the expected setlist structure: {detail}"
 }

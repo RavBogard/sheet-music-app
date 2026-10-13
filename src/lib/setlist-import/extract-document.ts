@@ -38,6 +38,12 @@ export type ExtractResult =
           ok: false
           reason: 'unsupported_format' | 'extraction_failed' | 'empty'
           message: string
+          /**
+           * Phase 7: `message` as a catalogue key + vars for the browser route
+           * (English identical). Absent when `message` is a parser's own
+           * technical text, which is passed through as is.
+           */
+          i18n?: { key: string; vars?: Record<string, string | number> }
       }
 
 const DOCX_MIME =
@@ -46,6 +52,13 @@ const DOCX_MIME =
 // Worship-service outlines are a handful of pages; 50 is generous headroom and
 // caps the per-page parse loop so a pathological PDF cannot run unbounded.
 const MAX_PDF_PAGES = 50
+
+/** Thrown by extractPdfText past MAX_PDF_PAGES (so the result can carry its key). */
+class PdfPageLimitError extends Error {
+    constructor() {
+        super(`PDF exceeds the ${MAX_PDF_PAGES}-page limit.`)
+    }
+}
 
 /**
  * Resolve a document format from mimeType (preferred) then filename extension.
@@ -85,7 +98,7 @@ async function extractPdfText(buffer: Buffer): Promise<string> {
     // extractDocumentText's try/catch converts this throw into a typed
     // { ok: false, reason: 'extraction_failed' } result.
     if (totalPages > MAX_PDF_PAGES) {
-        throw new Error(`PDF exceeds the ${MAX_PDF_PAGES}-page limit.`)
+        throw new PdfPageLimitError()
     }
 
     // `extractText({mergePages:true})` types `text` as `string` per unpdf's
@@ -110,6 +123,7 @@ export async function extractDocumentText(
             reason: 'unsupported_format',
             message:
                 'Only .docx, .pdf, and .txt documents are supported.',
+            i18n: { key: 'api-setlists.extractUnsupportedFormat' },
         }
     }
 
@@ -131,6 +145,12 @@ export async function extractDocumentText(
                 err instanceof Error
                     ? err.message
                     : `Failed to extract text from ${format} document.`,
+            i18n:
+                err instanceof PdfPageLimitError
+                    ? { key: 'api-setlists.extractPdfPageLimit', vars: { maxPages: MAX_PDF_PAGES } }
+                    : err instanceof Error
+                      ? undefined
+                      : { key: 'api-setlists.extractFailed', vars: { format } },
         }
     }
 
@@ -139,6 +159,7 @@ export async function extractDocumentText(
             ok: false,
             reason: 'empty',
             message: 'No text found in document.',
+            i18n: { key: 'api-setlists.extractEmpty' },
         }
     }
 

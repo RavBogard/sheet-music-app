@@ -147,6 +147,7 @@ describe('extractDocumentText', () => {
             ok: false,
             reason: 'unsupported_format',
             message: expect.any(String),
+            i18n: { key: 'api-setlists.extractUnsupportedFormat' },
         })
     })
 

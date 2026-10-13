@@ -69,5 +69,14 @@
         "where": "Setlist editor: error when a non-leader triggers the 'setlist updated' notification to the band",
         "who": "musicians",
         "maxLength": 80
-    }
+    },
+    "extractUnsupportedFormat": { "where": "Setlist importer, document step: error when the file is not a Word, PDF or text document", "who": "leaders", "maxLength": 80, "context": "Keep the file extensions (.docx, .pdf, .txt) as written." },
+    "extractPdfPageLimit": { "where": "Setlist importer, document step: error when the PDF has too many pages", "who": "leaders", "maxLength": 60, "context": "{maxPages} is a number of pages." },
+    "extractFailed": { "where": "Setlist importer, document step: error when the document could not be read", "who": "leaders", "maxLength": 80, "context": "{format} is the file type: docx, pdf or txt (keep as is)." },
+    "extractEmpty": { "where": "Setlist importer, document step: error when the document has no text (e.g. a scanned image)", "who": "leaders", "maxLength": 60 },
+    "structureNoText": { "where": "Setlist importer, outline step: error when there is no document text to read", "who": "leaders", "maxLength": 60 },
+    "structureAiFailed": { "where": "Setlist importer, outline step: error when the AI service failed", "who": "leaders", "maxLength": 60, "context": "Gemini is the name of the AI service (keep as is)." },
+    "structureAiEmpty": { "where": "Setlist importer, outline step: error when the AI service returned nothing", "who": "leaders", "maxLength": 60, "context": "Gemini is the name of the AI service (keep as is)." },
+    "structureAiNotJson": { "where": "Setlist importer, outline step: error when the AI service's answer could not be read", "who": "leaders", "maxLength": 80, "context": "Gemini is the AI service; JSON is a data format (keep both as is)." },
+    "structureAiMismatch": { "where": "Setlist importer, outline step: error when the AI service's answer has the wrong shape", "who": "leaders", "maxLength": 200, "context": "Gemini is the AI service; {detail} is a technical list of problems in English (keep as is)." }
 }

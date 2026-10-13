@@ -45,14 +45,17 @@ export const POST = createApiHandler(
         const result = await extractSetlistStructure(text)
 
         if (!result.ok) {
+            // Phase 7: in the request's language when the lib gave a key (English identical).
+            const t = await getT()
+            const error = result.i18n ? t(result.i18n.key, result.i18n.vars) : result.message
             if (result.reason === 'gemini_error') {
                 // Upstream AI service failure — 502 Bad Gateway.
-                return NextResponse.json({ error: result.message }, { status: 502 })
+                return NextResponse.json({ error }, { status: 502 })
             }
             // malformed / empty — the document was extracted but the model
             // output could not be structured. 422 + raw output for human review.
             return NextResponse.json(
-                { error: result.message, raw: result.raw },
+                { error, raw: result.raw },
                 { status: 422 },
             )
         }
