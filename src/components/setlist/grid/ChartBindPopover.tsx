@@ -2,6 +2,8 @@
 
 import { useState, type ReactNode } from 'react'
 
+import { useT } from '@/i18n/client'
+
 import { TouchOrPopover } from './TouchOrPopover'
 import { ChartPickerList } from './ChartPickerList'
 
@@ -39,11 +41,12 @@ export interface ChartBindPopoverProps {
 export function ChartBindPopover({
     children,
     currentSongId,
-    inputAriaLabel = 'Bind a chart',
+    inputAriaLabel,
     onBind,
     open: controlledOpen,
     onOpenChange,
 }: ChartBindPopoverProps) {
+    const t = useT()
     const [internalOpen, setInternalOpen] = useState(false)
     const [filter, setFilter] = useState('')
 
@@ -86,8 +89,8 @@ export function ChartBindPopover({
                 onPick={handlePick}
                 onEscape={close}
                 currentSongId={currentSongId}
-                inputAriaLabel={inputAriaLabel}
-                placeholder="Search the library…"
+                inputAriaLabel={inputAriaLabel ?? t('setlistGrid.bindChartTitle')}
+                placeholder={t('setlistGrid.searchLibraryPlaceholder')}
                 inputClassName="w-full bg-transparent px-3 py-2 text-sm outline-none border-b border-white/10"
                 listClassName="max-h-72 overflow-y-auto py-1"
                 itemClassName="flex cursor-pointer items-center gap-2 px-2 py-1 text-sm aria-selected:bg-indigo-500/15 data-[current=true]:text-indigo-300"

@@ -36,6 +36,7 @@ vi.mock('sonner', () => ({
 }))
 
 import { SetlistMetaEditSheet } from '../SetlistMetaEditSheet'
+import { codeOrgConfig } from '@/lib/org/config-code'
 import { OrgProvider } from '@/lib/org/org-context'
 import type { OrgId } from '@/lib/org/types'
 
@@ -56,7 +57,9 @@ function renderSheet(
     render(
         // The sheet calls useOrg() (v11-03-03) — default crc keeps the
         // synagogue fields visible so the existing AC tests are unchanged.
-        <OrgProvider orgId={over.org ?? 'crc'}>
+        // Phase 7: pass the tenant config as the app does, so t("org.…") sees
+        // the tenant's vocabulary overrides.
+        <OrgProvider orgId={over.org ?? 'crc'} config={codeOrgConfig(over.org ?? 'crc')}>
             <SetlistMetaEditSheet
                 setlistId="setlist-1"
                 open

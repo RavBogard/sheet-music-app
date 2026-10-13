@@ -6,6 +6,7 @@ import type {
 } from '@dnd-kit/core'
 import { GripVertical } from 'lucide-react'
 
+import { useT } from '@/i18n/client'
 import { cn } from '@/lib/utils'
 
 export interface DragHandleCellProps {
@@ -28,6 +29,7 @@ export function DragHandleCell({
     isSelected = false,
     onSelectionClick,
 }: DragHandleCellProps) {
+    const t = useT()
     // @dnd-kit's keyboard sensor handler arrives via `listeners.onKeyDown`.
     // We compose it with our own Backspace/Delete handler so the row can be
     // deleted via keyboard while retaining drag-keyboard behaviour. Spread
@@ -84,7 +86,15 @@ export function DragHandleCell({
             // wins as the user-visible aria-pressed signal. Same reasoning
             // for aria-label and onClick/onKeyDown — keep our composed
             // versions, not dnd-kit's defaults.
-            aria-label={`${isSelected ? 'Selected — ' : ''}Drag to reorder${title ? ` ${title}` : ''}, or press Backspace to delete`}
+            aria-label={
+                isSelected
+                    ? title
+                        ? t('setlistGrid.dragHandleSelectedAria', { title })
+                        : t('setlistGrid.dragHandleSelectedUntitledAria')
+                    : title
+                      ? t('setlistGrid.dragHandleAria', { title })
+                      : t('setlistGrid.dragHandleUntitledAria')
+            }
             aria-pressed={isSelected ? true : undefined}
             onKeyDown={onKeyDown}
             onClick={onClick}

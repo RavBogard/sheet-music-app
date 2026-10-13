@@ -29,12 +29,15 @@
  */
 
 /** What to reserve when the setlist doc has not told us the count yet. */
+import { useT } from "@/i18n/client"
+
 const FALLBACK_ROWS = 6
 
 /** Never reserve more than a screenful — a long setlist scrolls anyway. */
 const MAX_RESERVED_ROWS = 12
 
 export function SetlistRowsSkeleton({ trackCount }: { trackCount?: number }) {
+    const t = useT()
     const count =
         typeof trackCount === "number" && Number.isFinite(trackCount) && trackCount > 0
             ? Math.min(trackCount, MAX_RESERVED_ROWS)
@@ -45,7 +48,7 @@ export function SetlistRowsSkeleton({ trackCount }: { trackCount?: number }) {
             className="flex flex-col gap-2 p-3"
             aria-busy="true"
             aria-live="polite"
-            aria-label="Loading setlist rows"
+            aria-label={t("setlistGrid.loadingRows")}
             data-testid="setlist-rows-skeleton"
         >
             {Array.from({ length: count }, (_, i) => (
@@ -54,7 +57,7 @@ export function SetlistRowsSkeleton({ trackCount }: { trackCount?: number }) {
                     aria-hidden
                     className="flex items-center gap-4 rounded-2xl border px-4 py-4 min-h-[72px] bg-white/[0.02] border-white/10"
                 >
-                    <div className="flex flex-col items-center gap-1 justify-center p-2 -ml-2">
+                    <div className="flex flex-col items-center gap-1 justify-center p-2 -ms-2">
                         <div className="h-5 w-5 rounded bg-muted/40 animate-pulse" />
                     </div>
                     <div className="min-w-0 flex-1">

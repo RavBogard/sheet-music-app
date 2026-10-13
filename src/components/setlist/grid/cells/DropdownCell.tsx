@@ -4,6 +4,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { ChevronDown } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 
+import { useT } from '@/i18n/client'
 import { recordEdit } from '@/lib/sync/edit-log'
 import { cn } from '@/lib/utils'
 
@@ -84,6 +85,7 @@ export function DropdownCell({
     mode = 'searchable',
     renderPickerContent,
 }: DropdownCellProps) {
+    const t = useT()
     const [open, setOpen] = useState(false)
     const [filter, setFilter] = useState('')
     const buttonRef = useRef<HTMLButtonElement>(null)
@@ -93,12 +95,12 @@ export function DropdownCell({
 
     useEffect(() => {
         if (isFocused && !open && buttonRef.current) {
-            const t = setTimeout(() => {
+            const timer = setTimeout(() => {
                 if (document.activeElement !== buttonRef.current && !open) {
                     buttonRef.current?.focus()
                 }
             }, 0)
-            return () => clearTimeout(t)
+            return () => clearTimeout(timer)
         }
         return
     }, [isFocused, open])
@@ -203,7 +205,7 @@ export function DropdownCell({
                         // Baseline 40px (h-10); bumped to 44px (h-11) on
                         // touch breakpoints to satisfy ARCHITECTURE §6.7
                         // 44px minimum touch target.
-                        'inline-flex h-10 w-full items-center justify-between gap-1 px-1 text-left',
+                        'inline-flex h-10 w-full items-center justify-between gap-1 px-1 text-start',
                         '[@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:px-2',
                         'truncate text-sm',
                         'cursor-pointer rounded-sm border border-transparent',
@@ -237,7 +239,7 @@ export function DropdownCell({
                         <CommandInput
                             value={filter}
                             onValueChange={setFilter}
-                            placeholder={placeholder ?? 'Type to filter…'}
+                            placeholder={placeholder ?? t('setlistGrid.typeToFilter')}
                             className="w-full bg-transparent px-3 py-2 text-sm outline-none border-b border-white/10"
                             onKeyDown={(e) => {
                                 if (e.key === 'Tab') {
@@ -258,9 +260,9 @@ export function DropdownCell({
                             }}
                         />
                     )}
-                    <CommandList className="max-h-64 overflow-y-auto py-1">
+                    <CommandList className="max-h-64 overflow-y-auto py-1" label={t('setlistGrid.pickerSuggestionsAria')}>
                         <CommandEmpty className="px-3 py-2 text-sm text-muted-foreground">
-                            No matches.
+                            {t('setlistGrid.noMatches')}
                         </CommandEmpty>
                         {grouped.map(([groupName, items]) => (
                             <CommandGroup
@@ -295,7 +297,7 @@ export function DropdownCell({
                                             {opt.label}
                                         </span>
                                         {opt.hint ? (
-                                            <span className="ml-auto truncate text-xs text-muted-foreground">
+                                            <span className="ms-auto truncate text-xs text-muted-foreground">
                                                 {opt.hint}
                                             </span>
                                         ) : null}
@@ -304,13 +306,13 @@ export function DropdownCell({
                             </CommandGroup>
                         ))}
                         {allowFreeText && mode === 'searchable' && filter.trim().length > 0 && (
-                            <CommandGroup heading="Custom">
+                            <CommandGroup heading={t('setlistGrid.pickerCustomHeading')}>
                                 <CommandItem
                                     value={`__addfree__${filter}`}
                                     onSelect={() => commit(filter.trim(), 'down')}
                                     className="flex cursor-pointer items-center gap-2 px-2 py-1 text-sm aria-selected:bg-indigo-500/15 [@media(pointer:coarse)]:min-h-[44px] [@media(pointer:coarse)]:py-2"
                                 >
-                                    <span>+ Add “{filter.trim()}”</span>
+                                    <span>{t('setlistGrid.addCustomValue', { value: filter.trim() })}</span>
                                 </CommandItem>
                             </CommandGroup>
                         )}

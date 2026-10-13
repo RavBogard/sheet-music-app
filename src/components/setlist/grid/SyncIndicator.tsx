@@ -10,6 +10,8 @@ import {
     XCircle,
 } from 'lucide-react'
 
+import { useT } from '@/i18n/client'
+import type { T } from '@/i18n/core'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/lib/auth-context'
 import { retryFailedOutboxRows } from '@/lib/sync/cleanup'
@@ -27,8 +29,8 @@ const AUTH_ERROR_PATTERN = /permission|auth|denied|unauthenticated|unauthorized/
 
 interface VisualSpec {
     icon: typeof Check
-    label: (queued: number) => string
-    announce: (queued: number) => string
+    label: (queued: number, t: T) => string
+    announce: (queued: number, t: T) => string
     iconClass: string
     dotClass: string
     spin?: boolean
@@ -37,60 +39,61 @@ interface VisualSpec {
 const VISUALS: Record<SyncState, VisualSpec> = {
     idle: {
         icon: Check,
-        label: () => 'Saved',
-        announce: () => 'Saved',
+        label: (_q, t) => t('setlistGrid.syncSaved'),
+        announce: (_q, t) => t('setlistGrid.syncSaved'),
         iconClass: 'text-emerald-500',
         dotClass: 'bg-emerald-500',
     },
     dirty: {
         icon: CircleDashed,
-        label: () => 'Editing…',
-        announce: () => 'Editing',
+        label: (_q, t) => t('setlistGrid.syncEditing'),
+        announce: (_q, t) => t('setlistGrid.syncEditingAnnounce'),
         iconClass: 'text-muted-foreground',
         dotClass: 'bg-muted-foreground',
     },
     saving: {
         icon: Loader2,
-        label: () => 'Saving…',
-        announce: () => 'Saving',
+        label: (_q, t) => t('setlistGrid.syncSaving'),
+        announce: (_q, t) => t('setlistGrid.syncSavingAnnounce'),
         iconClass: 'text-indigo-400',
         dotClass: 'bg-indigo-400',
         spin: true,
     },
     conflict: {
         icon: AlertTriangle,
-        label: () => 'Conflict — review',
-        announce: () => 'Conflict, please review',
+        label: (_q, t) => t('setlistGrid.syncConflict'),
+        announce: (_q, t) => t('setlistGrid.syncConflictAnnounce'),
         iconClass: 'text-red-500',
         dotClass: 'bg-red-500',
     },
     failed: {
         icon: XCircle,
-        label: () => 'Failed — retry',
-        announce: () => 'Save failed',
+        label: (_q, t) => t('setlistGrid.syncFailed'),
+        announce: (_q, t) => t('setlistGrid.syncFailedAnnounce'),
         iconClass: 'text-red-500',
         dotClass: 'bg-red-500',
     },
     offline: {
         icon: CloudOff,
-        label: (q) => (q > 0 ? `Offline — ${q} queued` : 'Offline'),
-        announce: (q) =>
+        label: (q, t) => (q > 0 ? t('setlistGrid.syncOfflineQueued', { count: q }) : t('setlistGrid.syncOffline')),
+        announce: (q, t) =>
             q > 0
-                ? `Offline, ${q} change${q === 1 ? '' : 's'} queued`
-                : 'Offline',
+                ? t('setlistGrid.syncOfflineQueuedAnnounce', { count: q })
+                : t('setlistGrid.syncOffline'),
         iconClass: 'text-amber-500',
         dotClass: 'bg-amber-500',
     },
 }
 
-function formatRelative(ms: number, nowMs: number): string {
+/** "Saved just now" / "Saved 12s ago" / "Saved 3m ago" / "Saved 2h ago". */
+function savedRelative(ms: number, nowMs: number, t: T): string {
     const diff = Math.max(0, Math.floor((nowMs - ms) / 1000))
-    if (diff < 5) return 'just now'
-    if (diff < 60) return `${diff}s ago`
+    if (diff < 5) return t('setlistGrid.syncSavedJustNow')
+    if (diff < 60) return t('setlistGrid.syncSavedSecondsAgo', { n: diff })
     const mins = Math.floor(diff / 60)
-    if (mins < 60) return `${mins}m ago`
+    if (mins < 60) return t('setlistGrid.syncSavedMinutesAgo', { n: mins })
     const hrs = Math.floor(mins / 60)
-    return `${hrs}h ago`
+    return t('setlistGrid.syncSavedHoursAgo', { n: hrs })
 }
 
 export interface SyncIndicatorProps {
@@ -105,6 +108,7 @@ export function SyncIndicator({
     onResolveConflict,
     nowFn,
 }: SyncIndicatorProps) {
+    const t = useT()
     const state = useSyncStatus((s) => s.state)
     const queued = useSyncStatus((s) => s.queued)
     const lastSyncAt = useSyncStatus((s) => s.lastSyncAt)
@@ -113,14 +117,14 @@ export function SyncIndicator({
     const [nowMs, setNowMs] = useState<number | null>(null)
 
     const visual = VISUALS[state]
-    const label = visual.label(queued)
+    const label = visual.label(queued, t)
 
     useEffect(() => {
         // Empty then set so the live region re-announces identical text.
         setAnnounce('')
-        const t = setTimeout(() => setAnnounce(visual.announce(queued)), 50)
-        return () => clearTimeout(t)
-    }, [state, queued, visual])
+        const timer = setTimeout(() => setAnnounce(visual.announce(queued, t)), 50)
+        return () => clearTimeout(timer)
+    }, [state, queued, visual, t])
 
     useEffect(() => {
         if (state === 'idle' && lastSyncAt) {
@@ -130,15 +134,15 @@ export function SyncIndicator({
 
     const tooltip = useMemo(() => {
         if (state === 'idle' && lastSyncAt) {
-            return `Saved ${formatRelative(lastSyncAt, nowMs ?? lastSyncAt)}`
+            return savedRelative(lastSyncAt, nowMs ?? lastSyncAt, t)
         }
-        if (state === 'failed' && lastError) return `Last error: ${lastError}`
+        if (state === 'failed' && lastError) return t('setlistGrid.syncLastError', { error: lastError })
         if (state === 'conflict')
-            return 'A remote change was rejected — review the differences before re-saving.'
+            return t('setlistGrid.syncConflictTooltip')
         if (state === 'offline')
-            return `${queued} change${queued === 1 ? '' : 's'} will sync when you’re back online.`
+            return t('setlistGrid.syncOfflineTooltip', { count: queued })
         return label
-    }, [state, lastSyncAt, lastError, queued, label, nowMs])
+    }, [state, lastSyncAt, lastError, queued, label, nowMs, t])
 
     const reconciliation = useReconciliationModalOptional()
     const resolveConflictHandler =
@@ -182,7 +186,7 @@ export function SyncIndicator({
         <div className="inline-flex flex-col items-start gap-0.5">
             <Element
                 role="status"
-                aria-label={`Sync status: ${label}`}
+                aria-label={t('setlistGrid.syncStatusAria', { status: label })}
                 title={tooltip}
                 onClick={isAction ? onClick : undefined}
                 disabled={isAction ? !onClick : undefined}
@@ -247,7 +251,7 @@ export function SyncIndicator({
                         'transition-colors duration-200 motion-reduce:transition-none',
                     )}
                 >
-                    Sign out and back in
+                    {t('setlistGrid.signOutAndBackIn')}
                 </button>
             )}
             <span

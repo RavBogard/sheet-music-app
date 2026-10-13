@@ -1,0 +1,1092 @@
+{
+    "addSong": {
+        "where": "Setlist editor: primary '+ Song' add button at the bottom of the rows",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "addSongAria": {
+        "where": "Setlist editor: screen-reader label of the song search box in the '+ Song' picker",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "addSongPlaceholder": {
+        "where": "Setlist editor: placeholder in the '+ Song' picker search box",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "addOtherTypeAria": {
+        "where": "Setlist editor: screen-reader label of the chevron next to '+ Song' that opens the row-type tiles",
+        "who": "leaders",
+        "maxLength": 50
+    },
+    "trackTypeGridAria": {
+        "where": "Setlist editor: screen-reader label of the row-type tile grid and of the Type cell",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "trackTypeSection": {
+        "where": "Setlist editor: add-row tile that inserts a section header row",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "trackTypeReading": {
+        "where": "Setlist editor: add-row tile that inserts a reading row",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "trackTypePrayer": {
+        "where": "Setlist editor: add-row tile that inserts a prayer row",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "trackTypeTransition": {
+        "where": "Setlist editor: add-row tile that inserts a transition row",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "trackTypeNote": {
+        "where": "Setlist editor: add-row tile that inserts a stage note row",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "pickerCustomHeading": {
+        "where": "Setlist editor: heading of the picker group that adds what was typed as-is",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "createTrackCalled": {
+        "where": "Setlist editor: '+ Song' picker row that creates a free-text track",
+        "who": "leaders",
+        "maxLength": 60,
+        "context": "{title} is what the user typed; keep the quotes around it"
+    },
+    "addCustomValue": {
+        "where": "Setlist editor: Vocal Lead picker row that adds what was typed as a new name",
+        "who": "leaders",
+        "maxLength": 40,
+        "context": "{value} is what the user typed (a person's name)"
+    },
+    "bindChartTitle": {
+        "where": "Chart bind dialog: title; also the default screen-reader label of its search box",
+        "who": "leaders",
+        "maxLength": 30,
+        "context": "chart = the sheet-music file; 'bind' = attach it to this row"
+    },
+    "bindChartDescription": {
+        "where": "Chart bind dialog: description under the title",
+        "who": "leaders",
+        "maxLength": 100
+    },
+    "searchLibraryPlaceholder": {
+        "where": "Chart bind dialog / popover: placeholder in the search box",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "bindChartToAria": {
+        "where": "Setlist editor: screen-reader label of the chart search box for a row",
+        "who": "leaders",
+        "maxLength": 60,
+        "context": "{title} is the row's song title"
+    },
+    "bindChartToTrackAria": {
+        "where": "Setlist editor: screen-reader label of the chart search box for a row with no title",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "pickerCollectionAria": {
+        "where": "Chart picker: screen-reader label of the collection filter chips",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "sharedChipAria": {
+        "where": "Chart picker: screen-reader label of a chip for a collection another site shares",
+        "who": "leaders",
+        "maxLength": 60,
+        "context": "{label} is the collection's name, {owner} the sharing site's name"
+    },
+    "sharedFromOwner": {
+        "where": "Chart picker: tooltip of a shared collection chip, and the small badge on a shared chart row",
+        "who": "leaders",
+        "maxLength": 30,
+        "context": "{owner} is the sharing site's name"
+    },
+    "otherSitesOff": {
+        "where": "Chart picker (admins): toggle that adds other sites' charts, when off",
+        "who": "admins",
+        "maxLength": 30
+    },
+    "otherSitesOn": {
+        "where": "Chart picker (admins): the same toggle when on",
+        "who": "admins",
+        "maxLength": 34
+    },
+    "noMatches": {
+        "where": "Chart picker and cell pickers: shown when the search finds nothing",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "pickerRecentHeading": {
+        "where": "Chart picker: group heading for recently used charts",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "pickerLibraryHeading": {
+        "where": "Chart picker: group heading for the whole library",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "pickerSharedHeading": {
+        "where": "Chart picker: group heading for charts other sites share",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "sharedLoadFailed": {
+        "where": "Chart picker: error line when shared charts fail to load",
+        "who": "leaders",
+        "maxLength": 60
+    },
+    "pickerOtherSitesHeading": {
+        "where": "Chart picker (admins): group heading for other sites' charts",
+        "who": "admins",
+        "maxLength": 20
+    },
+    "otherSitesLoadFailed": {
+        "where": "Chart picker (admins): error line when other sites' charts fail to load",
+        "who": "admins",
+        "maxLength": 60
+    },
+    "previewPage1Aria": {
+        "where": "Chart picker: screen-reader label of the small page-1 thumbnail button on each row",
+        "who": "leaders",
+        "maxLength": 60,
+        "context": "{title} is the chart's title"
+    },
+    "previewDescription": {
+        "where": "Chart page-1 preview dialog: screen-reader description",
+        "who": "leaders",
+        "maxLength": 80
+    },
+    "previewImageAlt": {
+        "where": "Chart page-1 preview dialog: alt text of the page image",
+        "who": "leaders",
+        "maxLength": 60,
+        "context": "{title} is the chart's title"
+    },
+    "previewLoadFailed": {
+        "where": "Chart page-1 preview dialog: shown when the preview fails",
+        "who": "leaders",
+        "maxLength": 60
+    },
+    "previewUnavailable": {
+        "where": "Chart page-1 preview dialog: shown for chart files that cannot be previewed",
+        "who": "leaders",
+        "maxLength": 60
+    },
+    "previewLoadingAria": {
+        "where": "Chart page-1 preview dialog: screen-reader label of the spinner",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "deleteRowsTitle": {
+        "where": "Delete confirmation dialog: title when deleting selected rows",
+        "who": "leaders",
+        "maxLength": 40,
+        "context": "{count} is the number of rows"
+    },
+    "deleteRowTitle": {
+        "where": "Delete confirmation dialog: title when deleting one row",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "deleteRowNamedDescription": {
+        "where": "Delete confirmation dialog: body when deleting one row",
+        "who": "leaders",
+        "maxLength": 100,
+        "context": "{title} is the row's song title"
+    },
+    "deleteRowUntitledDescription": {
+        "where": "Delete confirmation dialog: body when deleting a row with no title",
+        "who": "leaders",
+        "maxLength": 80,
+        "context": "'row' stands in for the missing title"
+    },
+    "cannotBeUndone": {
+        "where": "Delete confirmation dialog: body when deleting several rows",
+        "who": "leaders",
+        "maxLength": 60
+    },
+    "cancel": {
+        "where": "Setlist editor dialogs (delete confirm, conflict review, details sheet): cancel button",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "delete": {
+        "where": "Delete confirmation dialog: confirm button",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "emptyStartWithLastWeek": {
+        "where": "Setlist editor (empty setlist): label above the main button",
+        "who": "leaders",
+        "maxLength": 40,
+        "context": "shown in capitals via CSS; leads into the button 'Make next week’s' (copy last week's setlist)"
+    },
+    "emptyMakeNextWeek": {
+        "where": "Setlist editor (empty setlist): main button that copies last week's setlist into this one",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "emptyBuildFromScratch": {
+        "where": "Setlist editor (empty setlist): label above the secondary buttons",
+        "who": "leaders",
+        "maxLength": 40,
+        "context": "shown in capitals via CSS"
+    },
+    "emptyAddSong": {
+        "where": "Setlist editor (empty setlist): button",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "emptyUseTemplate": {
+        "where": "Setlist editor (empty setlist): button that opens the template picker",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "cardAria": {
+        "where": "Setlist editor: screen-reader label of a row card",
+        "who": "leaders",
+        "maxLength": 80,
+        "context": "{title} is the row's song title"
+    },
+    "cardUntitledAria": {
+        "where": "Setlist editor: screen-reader label of a row card with no title",
+        "who": "leaders",
+        "maxLength": 50
+    },
+    "cardDragAria": {
+        "where": "Setlist editor: screen-reader label of a row card's drag handle",
+        "who": "leaders",
+        "maxLength": 60,
+        "context": "{title} is the row's song title; reorder = move the row up or down"
+    },
+    "cardDragUntitledAria": {
+        "where": "Setlist editor: screen-reader label of the drag handle of a row with no title",
+        "who": "leaders",
+        "maxLength": 50
+    },
+    "untitledSection": {
+        "where": "Setlist editor: placeholder title of a section header row with no title",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "untitledTrack": {
+        "where": "Setlist editor: placeholder title of a song row with no title",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "untitledReading": {
+        "where": "Setlist editor: placeholder title of a reading row with no title",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "untitledPrayer": {
+        "where": "Setlist editor: placeholder title of a prayer row with no title",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "untitledTransition": {
+        "where": "Setlist editor: placeholder title of a transition row with no title",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "untitledNote": {
+        "where": "Setlist editor: placeholder title of a stage note row with no title",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "untitledOther": {
+        "where": "Setlist editor: placeholder title of a row of another type with no title",
+        "who": "leaders",
+        "maxLength": 30,
+        "context": "{type} is the row's stored type id (English, lower case); rare"
+    },
+    "tonightNote": {
+        "where": "Setlist editor: note under a row whose chart was swapped for tonight in Perform mode",
+        "who": "leaders",
+        "maxLength": 80,
+        "context": "{tonight} is the chart title used tonight, {planned} the row's planned title"
+    },
+    "columnKey": {
+        "where": "Setlist editor: label for the musical key (row card badge, editor field, column header)",
+        "who": "leaders",
+        "maxLength": 12,
+        "context": "musical key (C, G minor…); shown in capitals via CSS on the badge"
+    },
+    "columnVocalLead": {
+        "where": "Setlist editor: label for the singer leading the song (row card badge, editor field, column header)",
+        "who": "leaders",
+        "maxLength": 14,
+        "context": "glossary: Vocal Lead (never just 'Lead')"
+    },
+    "openChartNewTab": {
+        "where": "Setlist editor: screen-reader label of the chart link on a row",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "noChartBound": {
+        "where": "Setlist editor: screen-reader label when a row has no chart attached",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "chartBound": {
+        "where": "Setlist editor: screen-reader label of the chart cell when a chart is attached",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "menuEditRow": {
+        "where": "Setlist editor: row context menu item",
+        "who": "leaders",
+        "maxLength": 24
+    },
+    "menuBindChart": {
+        "where": "Setlist editor: row context menu item that attaches a chart to the row",
+        "who": "leaders",
+        "maxLength": 24
+    },
+    "menuDuplicateRow": {
+        "where": "Setlist editor: row context menu item",
+        "who": "leaders",
+        "maxLength": 24
+    },
+    "menuDeleteRow": {
+        "where": "Setlist editor: row context menu item",
+        "who": "leaders",
+        "maxLength": 24
+    },
+    "editHeading": {
+        "where": "Setlist editor: heading of the inline row editor",
+        "who": "leaders",
+        "maxLength": 60,
+        "context": "{title} is the row's song title"
+    },
+    "editHeadingUntitled": {
+        "where": "Setlist editor: heading of the inline row editor for a row with no title",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "columnTitle": {
+        "where": "Setlist editor: label/placeholder for the row's title field",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "columnBpm": {
+        "where": "Setlist editor: label/placeholder for the tempo field",
+        "who": "leaders",
+        "maxLength": 8,
+        "context": "beats per minute; usually left as BPM"
+    },
+    "columnNotes": {
+        "where": "Setlist editor: label/placeholder for the row's notes field",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "keyNone": {
+        "where": "Setlist editor: inline row editor, key dropdown option for 'no key'",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "notesPlaceholder": {
+        "where": "Setlist editor: placeholder in the inline row editor's notes box",
+        "who": "leaders",
+        "maxLength": 60
+    },
+    "bindChartButton": {
+        "where": "Setlist editor: inline row editor button that opens the chart picker",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "conflictTitle": {
+        "where": "Sync conflict dialog: title when someone else changed the same rows",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "saveFailedTitle": {
+        "where": "Sync conflict dialog: title when some edits could not be saved",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "conflictDescription": {
+        "where": "Sync conflict dialog: description",
+        "who": "leaders",
+        "maxLength": 200,
+        "context": "\"Take theirs\" must match setlistGrid.takeTheirs; {count} (number of rows) only picks the form, it is not shown"
+    },
+    "saveFailedDescription": {
+        "where": "Sync conflict dialog: description when edits failed",
+        "who": "leaders",
+        "maxLength": 160,
+        "context": "{count} is the number of rows"
+    },
+    "errorKindVersionMismatch": {
+        "where": "Sync conflict dialog: per-row cause badge",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "errorKindRemoteMissing": {
+        "where": "Sync conflict dialog: per-row cause badge",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "errorKindAuth": {
+        "where": "Sync conflict dialog: per-row cause badge",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "errorKindTransient": {
+        "where": "Sync conflict dialog: per-row cause badge",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "errorHintVersionMismatch": {
+        "where": "Sync conflict dialog: per-row explanation",
+        "who": "leaders",
+        "maxLength": 120
+    },
+    "errorHintRemoteMissing": {
+        "where": "Sync conflict dialog: per-row explanation",
+        "who": "leaders",
+        "maxLength": 160
+    },
+    "errorHintAuth": {
+        "where": "Sync conflict dialog: per-row explanation",
+        "who": "leaders",
+        "maxLength": 120
+    },
+    "errorHintTransient": {
+        "where": "Sync conflict dialog: per-row explanation",
+        "who": "leaders",
+        "maxLength": 160,
+        "context": "\"Keep mine\" / \"Take theirs\" must match setlistGrid.keepMine / takeTheirs"
+    },
+    "resolveAllAndSave": {
+        "where": "Sync conflict dialog: confirm button",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "rowReorderedOrDeleted": {
+        "where": "Sync conflict dialog: per-row card when no field differs",
+        "who": "leaders",
+        "maxLength": 80
+    },
+    "fieldKey": {
+        "where": "Sync conflict dialog: field name in a row's differences",
+        "who": "leaders",
+        "maxLength": 12,
+        "context": "musical key"
+    },
+    "fieldLead": {
+        "where": "Sync conflict dialog: field name in a row's differences (the Vocal Lead field)",
+        "who": "leaders",
+        "maxLength": 14,
+        "context": "the Vocal Lead field; English shows just 'Lead' here"
+    },
+    "fieldBpm": {
+        "where": "Sync conflict dialog: field name (tempo)",
+        "who": "leaders",
+        "maxLength": 8
+    },
+    "fieldTitle": {
+        "where": "Sync conflict dialog: field name",
+        "who": "leaders",
+        "maxLength": 14
+    },
+    "fieldNotes": {
+        "where": "Sync conflict dialog: field name",
+        "who": "leaders",
+        "maxLength": 14
+    },
+    "fieldType": {
+        "where": "Sync conflict dialog: field name (row type)",
+        "who": "leaders",
+        "maxLength": 14
+    },
+    "fieldChartBinding": {
+        "where": "Sync conflict dialog: field name (which chart is attached)",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "fieldName": {
+        "where": "Sync conflict dialog: field name (setlist name)",
+        "who": "leaders",
+        "maxLength": 14
+    },
+    "valueYes": {
+        "where": "Sync conflict dialog: a yes/no field's value",
+        "who": "leaders",
+        "maxLength": 6
+    },
+    "valueNo": {
+        "where": "Sync conflict dialog: a yes/no field's value",
+        "who": "leaders",
+        "maxLength": 6
+    },
+    "yourVersion": {
+        "where": "Sync conflict dialog: label before the local value",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "theirVersion": {
+        "where": "Sync conflict dialog: label before the server value",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "chooseVersionFor": {
+        "where": "Sync conflict dialog: screen-reader legend of a row's choice",
+        "who": "leaders",
+        "maxLength": 80,
+        "context": "{title} is the row's song title"
+    },
+    "keepMine": {
+        "where": "Sync conflict dialog: radio option keeping this device's edit",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "takeTheirs": {
+        "where": "Sync conflict dialog: radio option keeping the server's version",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "uploadFailed": {
+        "where": "Recordings popover: error when uploading a recording fails (no detail available)",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "recordings": {
+        "where": "Recordings popover: heading; also the screen-reader label of the recordings button",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "loadingRecordings": {
+        "where": "Recordings popover: loading line",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "noRecordingsUpload": {
+        "where": "Recordings popover: empty state for someone who can upload",
+        "who": "leaders",
+        "maxLength": 60
+    },
+    "noRecordings": {
+        "where": "Recordings popover: empty state for someone who cannot upload",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "playRecordingAria": {
+        "where": "Recordings popover: screen-reader label of an audio player",
+        "who": "leaders",
+        "maxLength": 60,
+        "context": "{title} is the recording's title"
+    },
+    "uploading": {
+        "where": "Recordings popover: upload button while uploading",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "uploadRecording": {
+        "where": "Recordings popover: upload button",
+        "who": "leaders",
+        "maxLength": 24
+    },
+    "recordingsUnavailable": {
+        "where": "Setlist editor: screen-reader label of the disabled recordings button on a row with no song",
+        "who": "leaders",
+        "maxLength": 60
+    },
+    "recordingsViewAndPlay": {
+        "where": "Setlist editor: screen-reader label of the recordings button when recordings exist",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "columnDragHandle": {
+        "where": "Setlist editor (table view): hidden header of the drag-handle column",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "columnType": {
+        "where": "Setlist editor (table view): column header (row type)",
+        "who": "leaders",
+        "maxLength": 14
+    },
+    "columnChart": {
+        "where": "Setlist editor (table view): hidden header of the chart column",
+        "who": "leaders",
+        "maxLength": 14
+    },
+    "trackTitleAria": {
+        "where": "Setlist editor: screen-reader label of the title cell",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "trackTempoAria": {
+        "where": "Setlist editor: screen-reader label of the tempo cell",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "trackNotesAria": {
+        "where": "Setlist editor: screen-reader label of the notes cell",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "rowsSelected": {
+        "where": "Setlist editor (table view): row context menu label when several rows are selected",
+        "who": "leaders",
+        "maxLength": 30,
+        "context": "{count} is the number of selected rows (2 or more in practice)"
+    },
+    "confirmDeleteTarget": {
+        "where": "Setlist editor: what is being deleted, passed to a legacy confirm prompt",
+        "who": "leaders",
+        "maxLength": 20,
+        "context": "{count} is the number of rows; English keeps 'rows' for every count here (legacy fallback, unchanged)"
+    },
+    "confirmDeleteRowNamed": {
+        "where": "Setlist editor: browser confirm prompt (fallback) when deleting a row",
+        "who": "leaders",
+        "maxLength": 60,
+        "context": "{title} is the row's song title"
+    },
+    "confirmDeleteRows": {
+        "where": "Setlist editor: browser confirm prompt (fallback) when deleting selected rows",
+        "who": "leaders",
+        "maxLength": 40,
+        "context": "{count} is the number of rows; English keeps 'rows' for every count here (legacy fallback, unchanged)"
+    },
+    "newSetlist": {
+        "where": "Setlist editor: top bar title when the setlist has no name yet",
+        "who": "leaders",
+        "maxLength": 30,
+        "context": "not tenant vocabulary today (Brothers Lazaroff also sees 'New Setlist' here)"
+    },
+    "upcomingPerformance": {
+        "where": "Setlist editor: small label above the event date",
+        "who": "leaders",
+        "maxLength": 30,
+        "context": "shown in capitals via CSS"
+    },
+    "dateTbd": {
+        "where": "Setlist editor: shown instead of the event date when none is set",
+        "who": "leaders",
+        "maxLength": 20,
+        "context": "TBD = to be decided"
+    },
+    "tracksCount": {
+        "where": "Setlist editor: small label above the number of rows",
+        "who": "leaders",
+        "maxLength": 14,
+        "context": "shown in capitals via CSS"
+    },
+    "back": {
+        "where": "Setlist editor: screen-reader label of the top bar back button",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "editSetlistDetails": {
+        "where": "Setlist editor: screen-reader label of the pencil button in the top bar",
+        "who": "leaders",
+        "maxLength": 40,
+        "context": "not tenant vocabulary today (Brothers Lazaroff also hears 'setlist' here)"
+    },
+    "metaSaved": {
+        "where": "Setlist details sheet: toast after saving",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "metaSaveFailed": {
+        "where": "Setlist details sheet: toast when saving fails",
+        "who": "leaders",
+        "maxLength": 120,
+        "context": "{error} is the technical error message (English)"
+    },
+    "metaName": {
+        "where": "Setlist details sheet: field label for the setlist name",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "metaEventDate": {
+        "where": "Setlist details sheet: field label",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "metaPickDate": {
+        "where": "Setlist details sheet: date button when no date is set",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "metaServiceType": {
+        "where": "Setlist details sheet: field label",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "metaServiceTypePlaceholder": {
+        "where": "Setlist details sheet: service type dropdown placeholder",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "metaServiceTypeNone": {
+        "where": "Setlist details sheet: service type option for 'no type'",
+        "who": "leaders",
+        "maxLength": 14
+    },
+    "serviceTypeShabbatMorning": {
+        "where": "Setlist details sheet: service type option",
+        "who": "leaders",
+        "maxLength": 24
+    },
+    "serviceTypeFridayNight": {
+        "where": "Setlist details sheet: service type option",
+        "who": "leaders",
+        "maxLength": 24
+    },
+    "serviceTypeRoshHashanah": {
+        "where": "Setlist details sheet: service type option",
+        "who": "leaders",
+        "maxLength": 24
+    },
+    "serviceTypeYomKippur": {
+        "where": "Setlist details sheet: service type option",
+        "who": "leaders",
+        "maxLength": 24
+    },
+    "serviceTypeFestival": {
+        "where": "Setlist details sheet: service type option",
+        "who": "leaders",
+        "maxLength": 24
+    },
+    "serviceTypeOther": {
+        "where": "Setlist details sheet: service type option",
+        "who": "leaders",
+        "maxLength": 24
+    },
+    "metaRabbi": {
+        "where": "Setlist details sheet: field label for the rabbi leading the service",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "metaRabbiPlaceholder": {
+        "where": "Setlist details sheet: placeholder in the rabbi field",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "saving": {
+        "where": "Setlist details sheet: save button while saving",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "save": {
+        "where": "Setlist details sheet: save button",
+        "who": "leaders",
+        "maxLength": 14
+    },
+    "syncSaved": {
+        "where": "Setlist editor: sync status in the top bar when everything is saved",
+        "who": "leaders",
+        "maxLength": 14
+    },
+    "syncEditing": {
+        "where": "Setlist editor: sync status while there are unsaved edits",
+        "who": "leaders",
+        "maxLength": 14
+    },
+    "syncEditingAnnounce": {
+        "where": "Setlist editor: screen-reader announcement of the 'Editing…' status",
+        "who": "leaders",
+        "maxLength": 14
+    },
+    "syncSaving": {
+        "where": "Setlist editor: sync status while saving",
+        "who": "leaders",
+        "maxLength": 14
+    },
+    "syncSavingAnnounce": {
+        "where": "Setlist editor: screen-reader announcement of the 'Saving…' status",
+        "who": "leaders",
+        "maxLength": 14
+    },
+    "syncConflict": {
+        "where": "Setlist editor: sync status when another device changed the same rows (a button)",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "syncConflictAnnounce": {
+        "where": "Setlist editor: screen-reader announcement of the conflict status",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "syncFailed": {
+        "where": "Setlist editor: sync status when a save failed (a retry button)",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "syncFailedAnnounce": {
+        "where": "Setlist editor: screen-reader announcement of the failed status",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "syncOffline": {
+        "where": "Setlist editor: sync status when offline with nothing queued",
+        "who": "leaders",
+        "maxLength": 14
+    },
+    "syncOfflineQueued": {
+        "where": "Setlist editor: sync status when offline with edits waiting",
+        "who": "leaders",
+        "maxLength": 24,
+        "context": "{count} is the number of edits waiting to sync"
+    },
+    "syncOfflineQueuedAnnounce": {
+        "where": "Setlist editor: screen-reader announcement of the offline status",
+        "who": "leaders",
+        "maxLength": 40,
+        "context": "{count} is the number of edits waiting"
+    },
+    "syncOfflineTooltip": {
+        "where": "Setlist editor: tooltip of the offline status",
+        "who": "leaders",
+        "maxLength": 60,
+        "context": "{count} is the number of edits waiting"
+    },
+    "syncSavedJustNow": {
+        "where": "Setlist editor: tooltip of the 'Saved' status",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "syncSavedSecondsAgo": {
+        "where": "Setlist editor: tooltip of the 'Saved' status",
+        "who": "leaders",
+        "maxLength": 30,
+        "context": "{n} is a number of seconds; 's' abbreviates seconds"
+    },
+    "syncSavedMinutesAgo": {
+        "where": "Setlist editor: tooltip of the 'Saved' status",
+        "who": "leaders",
+        "maxLength": 30,
+        "context": "{n} is a number of minutes; 'm' abbreviates minutes"
+    },
+    "syncSavedHoursAgo": {
+        "where": "Setlist editor: tooltip of the 'Saved' status",
+        "who": "leaders",
+        "maxLength": 30,
+        "context": "{n} is a number of hours; 'h' abbreviates hours"
+    },
+    "syncLastError": {
+        "where": "Setlist editor: tooltip of the failed status",
+        "who": "leaders",
+        "maxLength": 120,
+        "context": "{error} is the technical error message (English)"
+    },
+    "syncConflictTooltip": {
+        "where": "Setlist editor: tooltip of the conflict status",
+        "who": "leaders",
+        "maxLength": 100
+    },
+    "syncStatusAria": {
+        "where": "Setlist editor: screen-reader label of the sync status",
+        "who": "leaders",
+        "maxLength": 50,
+        "context": "{status} is one of the sync status texts (Saved, Saving…)"
+    },
+    "signOutAndBackIn": {
+        "where": "Setlist editor: link under a sign-in related save error",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "pickKeyPlaceholder": {
+        "where": "Setlist editor: empty key cell placeholder",
+        "who": "leaders",
+        "maxLength": 14,
+        "context": "musical key"
+    },
+    "trackKeyAria": {
+        "where": "Setlist editor: screen-reader label of the key cell",
+        "who": "leaders",
+        "maxLength": 20,
+        "context": "musical key"
+    },
+    "keyMajor": {
+        "where": "Setlist editor: key picker tab (major keys)",
+        "who": "leaders",
+        "maxLength": 10
+    },
+    "keyMinor": {
+        "where": "Setlist editor: key picker tab (minor keys)",
+        "who": "leaders",
+        "maxLength": 10
+    },
+    "typeToFilter": {
+        "where": "Setlist editor: placeholder in a cell picker's search box",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "leadGroupThisSetlist": {
+        "where": "Setlist editor: Vocal Lead picker group of names already used in this setlist",
+        "who": "leaders",
+        "maxLength": 30,
+        "context": "not tenant vocabulary today (Brothers Lazaroff also sees 'setlist' here)"
+    },
+    "leadGroupLibrary": {
+        "where": "Setlist editor: Vocal Lead picker group of names known from the library",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "pickLeadPlaceholder": {
+        "where": "Setlist editor: empty Vocal Lead cell placeholder",
+        "who": "leaders",
+        "maxLength": 20,
+        "context": "the Vocal Lead; English says just 'lead' here"
+    },
+    "trackLeadAria": {
+        "where": "Setlist editor: screen-reader label of the Vocal Lead cell",
+        "who": "leaders",
+        "maxLength": 30,
+        "context": "the Vocal Lead"
+    },
+    "pickTypePlaceholder": {
+        "where": "Setlist editor: empty Type cell placeholder",
+        "who": "leaders",
+        "maxLength": 14
+    },
+    "typeSong": {
+        "where": "Setlist editor: row type option",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "typeReading": {
+        "where": "Setlist editor: row type option",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "typePrayer": {
+        "where": "Setlist editor: row type option",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "typeTransition": {
+        "where": "Setlist editor: row type option",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "typeSection": {
+        "where": "Setlist editor: row type option",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "typeNote": {
+        "where": "Setlist editor: row type option (a stage note)",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "typeSongDisplay": {
+        "where": "Setlist editor: row type shown in the Type cell (lower case; CSS capitalises each word)",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "typeReadingDisplay": {
+        "where": "Setlist editor: row type shown in the Type cell (lower case; CSS capitalises)",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "typePrayerDisplay": {
+        "where": "Setlist editor: row type shown in the Type cell (lower case; CSS capitalises)",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "typeTransitionDisplay": {
+        "where": "Setlist editor: row type shown in the Type cell (lower case; CSS capitalises)",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "typeSectionDisplay": {
+        "where": "Setlist editor: row type shown in the Type cell (lower case; CSS capitalises)",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "typeNoteDisplay": {
+        "where": "Setlist editor: row type shown in the Type cell (lower case; CSS capitalises)",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "dragHandleAria": {
+        "where": "Setlist editor (table view): screen-reader label of a row's drag handle",
+        "who": "leaders",
+        "maxLength": 90,
+        "context": "{title} is the row's song title; Backspace is the keyboard key"
+    },
+    "dragHandleUntitledAria": {
+        "where": "Setlist editor (table view): drag handle label for a row with no title",
+        "who": "leaders",
+        "maxLength": 70
+    },
+    "dragHandleSelectedAria": {
+        "where": "Setlist editor (table view): drag handle label of a selected row",
+        "who": "leaders",
+        "maxLength": 100,
+        "context": "{title} is the row's song title"
+    },
+    "dragHandleSelectedUntitledAria": {
+        "where": "Setlist editor (table view): drag handle label of a selected row with no title",
+        "who": "leaders",
+        "maxLength": 80
+    },
+    "loadingRows": {
+        "where": "Setlist editor: screen-reader label of the loading placeholder rows",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "pickerSuggestionsAria": {
+        "where": "Chart picker and cell pickers: screen-reader label of the results list",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "dndInstructions": {
+        "where": "Setlist editor: hidden screen-reader instructions for reordering rows by keyboard",
+        "who": "leaders",
+        "maxLength": 300,
+        "context": "screen readers only; the surrounding line breaks are not read"
+    },
+    "dndPickedUp": {
+        "where": "Setlist editor: screen-reader announcement when a row is picked up to reorder",
+        "who": "leaders",
+        "maxLength": 80,
+        "context": "{id} is the row's internal id"
+    },
+    "dndMovedOver": {
+        "where": "Setlist editor: screen-reader announcement while reordering",
+        "who": "leaders",
+        "maxLength": 120,
+        "context": "{id} and {overId} are internal row ids"
+    },
+    "dndNotOver": {
+        "where": "Setlist editor: screen-reader announcement while reordering",
+        "who": "leaders",
+        "maxLength": 100,
+        "context": "{id} is the row's internal id"
+    },
+    "dndDroppedOver": {
+        "where": "Setlist editor: screen-reader announcement when a row is dropped",
+        "who": "leaders",
+        "maxLength": 120,
+        "context": "{id} and {overId} are internal row ids (no final full stop in English)"
+    },
+    "dndDropped": {
+        "where": "Setlist editor: screen-reader announcement when a row is dropped outside the list",
+        "who": "leaders",
+        "maxLength": 80,
+        "context": "{id} is the row's internal id"
+    },
+    "dndCancelled": {
+        "where": "Setlist editor: screen-reader announcement when reordering is cancelled",
+        "who": "leaders",
+        "maxLength": 100,
+        "context": "{id} is the row's internal id"
+    }
+}

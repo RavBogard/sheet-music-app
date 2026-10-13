@@ -21,6 +21,8 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { useT } from '@/i18n/client'
+import type { T } from '@/i18n/core'
 import { getDb } from '@/lib/local/schema'
 import type { LocalCollection, OutboxRow } from '@/lib/local/types'
 import { getSyncAdapter, getSyncEngine } from '@/lib/sync/init'
@@ -54,18 +56,19 @@ const DIFF_HIDDEN_FIELDS = new Set([
 ])
 
 const PRETTY_FIELD: Record<string, string> = {
-    key: 'Key',
-    leadMusician: 'Lead',
-    bpm: 'BPM',
-    title: 'Title',
-    notes: 'Notes',
-    type: 'Type',
-    songId: 'Chart binding',
-    name: 'Name',
+    key: 'setlistGrid.fieldKey',
+    leadMusician: 'setlistGrid.fieldLead',
+    bpm: 'setlistGrid.fieldBpm',
+    title: 'setlistGrid.fieldTitle',
+    notes: 'setlistGrid.fieldNotes',
+    type: 'setlistGrid.fieldType',
+    songId: 'setlistGrid.fieldChartBinding',
+    name: 'setlistGrid.fieldName',
 }
 
-function prettyFieldName(field: string): string {
-    return PRETTY_FIELD[field] ?? field
+function prettyFieldName(field: string, t: T): string {
+    const key = PRETTY_FIELD[field]
+    return key ? t(key) : field
 }
 
 function formatValue(v: unknown): string {
@@ -74,6 +77,12 @@ function formatValue(v: unknown): string {
     if (typeof v === 'number') return String(v)
     if (typeof v === 'boolean') return v ? 'yes' : 'no'
     return JSON.stringify(v)
+}
+
+/** formatValue for display: the yes/no of a boolean field goes through t(). */
+function displayValue(v: unknown, t: T): string {
+    if (typeof v === 'boolean') return v ? t('setlistGrid.valueYes') : t('setlistGrid.valueNo')
+    return formatValue(v)
 }
 
 type Choice = 'mine' | 'theirs'
@@ -172,20 +181,17 @@ export function classifyOutboxError(lastError: string | undefined): ErrorKind {
 }
 
 const ERROR_KIND_LABEL: Record<ErrorKind, string> = {
-    'version-mismatch': 'Remote change detected',
-    'remote-missing': 'Server doesn’t have this row',
-    auth: 'Authentication problem',
-    transient: 'Save failed (network / server)',
+    'version-mismatch': 'setlistGrid.errorKindVersionMismatch',
+    'remote-missing': 'setlistGrid.errorKindRemoteMissing',
+    auth: 'setlistGrid.errorKindAuth',
+    transient: 'setlistGrid.errorKindTransient',
 }
 
 const ERROR_KIND_HINT: Record<ErrorKind, string> = {
-    'version-mismatch':
-        'Someone else changed this while you were editing. Pick which version to keep.',
-    'remote-missing':
-        'The row was deleted or never landed on the server. Discard the local change to drop it, or keep yours to re-create it.',
-    auth: 'Your session may have expired. Sign out and back in, then retry.',
-    transient:
-        'A network or server error prevented this save. Pick "Keep mine" to retry, or "Take theirs" to discard.',
+    'version-mismatch': 'setlistGrid.errorHintVersionMismatch',
+    'remote-missing': 'setlistGrid.errorHintRemoteMissing',
+    auth: 'setlistGrid.errorHintAuth',
+    transient: 'setlistGrid.errorHintTransient',
 }
 
 export function ReconciliationProvider({
@@ -193,6 +199,7 @@ export function ReconciliationProvider({
     adapter: adapterOverride,
     onResolveConflict: resolveOverride,
 }: ReconciliationProviderProps) {
+    const t = useT()
     const state = useSyncStatus((s) => s.state)
 
     // Live query: every outbox row in 'failed' status. Engine state
@@ -454,11 +461,11 @@ export function ReconciliationProvider({
                             (k) => k === 'version-mismatch',
                         )
                         const title = allVersionMismatch
-                            ? 'Remote changes detected'
-                            : 'Some saves need attention'
+                            ? t('setlistGrid.conflictTitle')
+                            : t('setlistGrid.saveFailedTitle')
                         const desc = allVersionMismatch
-                            ? `Someone else (or another device) changed ${conflictRows.length === 1 ? 'this row' : 'these rows'} while you were editing. Pick which version to keep. "Take theirs" is the safe default.`
-                            : `${conflictRows.length === 1 ? 'A row' : `${conflictRows.length} rows`} couldn’t be saved. Each card below explains why and what to do.`
+                            ? t('setlistGrid.conflictDescription', { count: conflictRows.length })
+                            : t('setlistGrid.saveFailedDescription', { count: conflictRows.length })
                         return (
                             <AlertDialogHeader>
                                 <AlertDialogTitle data-testid="reconciliation-title">
@@ -494,8 +501,8 @@ export function ReconciliationProvider({
                                     onChoiceChange={(c) =>
                                         setChoice(r.localId, c)
                                     }
-                                    errorKindLabel={ERROR_KIND_LABEL[kind]}
-                                    errorKindHint={ERROR_KIND_HINT[kind]}
+                                    errorKindLabel={t(ERROR_KIND_LABEL[kind])}
+                                    errorKindHint={t(ERROR_KIND_HINT[kind])}
                                     errorKindTestId={kind}
                                 />
                             )
@@ -507,7 +514,7 @@ export function ReconciliationProvider({
                             data-testid="reconciliation-cancel"
                             onClick={() => closeModal()}
                         >
-                            Cancel
+                            {t('setlistGrid.cancel')}
                         </AlertDialogCancel>
                         <AlertDialogAction
                             data-testid="reconciliation-resolve"
@@ -519,7 +526,7 @@ export function ReconciliationProvider({
                                 remoteSnapshots.size < conflictRows.length
                             }
                         >
-                            Resolve all and save
+                            {t('setlistGrid.resolveAllAndSave')}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
@@ -555,6 +562,7 @@ function ReconciliationCard({
     errorKindHint,
     errorKindTestId,
 }: ReconciliationCardProps) {
+    const t = useT()
     const groupName = `reconcile-${localId}`
     const titleId = `reconcile-${localId}-title`
 
@@ -593,7 +601,7 @@ function ReconciliationCard({
 
             {diffKeys.length === 0 ? (
                 <p className="text-xs text-muted-foreground">
-                    Row reordered or deleted. Pick how to resolve below.
+                    {t('setlistGrid.rowReorderedOrDeleted')}
                 </p>
             ) : (
                 <dl className="space-y-1 text-sm">
@@ -607,23 +615,23 @@ function ReconciliationCard({
                                 data-testid={`reconciliation-diff-${localId}-${field}`}
                             >
                                 <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                                    {prettyFieldName(field)}
+                                    {prettyFieldName(field, t)}
                                 </dt>
                                 <dd className="space-y-0.5">
                                     <div>
                                         <span className="text-xs text-muted-foreground">
-                                            Your version:
+                                            {t('setlistGrid.yourVersion')}
                                         </span>{' '}
                                         <span className="font-mono text-xs">
-                                            {formatValue(yours)}
+                                            {displayValue(yours, t)}
                                         </span>
                                     </div>
                                     <div>
                                         <span className="text-xs text-muted-foreground">
-                                            Their version:
+                                            {t('setlistGrid.theirVersion')}
                                         </span>{' '}
                                         <span className="font-mono text-xs">
-                                            {formatValue(theirs)}
+                                            {displayValue(theirs, t)}
                                         </span>
                                     </div>
                                 </dd>
@@ -635,7 +643,7 @@ function ReconciliationCard({
 
             <fieldset className="mt-3 flex gap-4 border-t border-border pt-3">
                 <legend className="sr-only">
-                    Choose which version to keep for {title}
+                    {t('setlistGrid.chooseVersionFor', { title })}
                 </legend>
                 <label
                     className={cn(
@@ -652,7 +660,7 @@ function ReconciliationCard({
                         className="h-4 w-4 cursor-pointer"
                         data-testid={`reconciliation-radio-${localId}-mine`}
                     />
-                    <span>Keep mine</span>
+                    <span>{t('setlistGrid.keepMine')}</span>
                 </label>
                 <label
                     className={cn(
@@ -669,7 +677,7 @@ function ReconciliationCard({
                         className="h-4 w-4 cursor-pointer"
                         data-testid={`reconciliation-radio-${localId}-theirs`}
                     />
-                    <span>Take theirs</span>
+                    <span>{t('setlistGrid.takeTheirs')}</span>
                 </label>
             </fieldset>
         </section>

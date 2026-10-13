@@ -1,11 +1,11 @@
 'use client'
 
-import { format } from 'date-fns'
 import { Calendar as CalendarIcon, Check, Loader2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
 import { formatError } from '@/lib/format-error'
+import { useFormat, useI18n } from '@/i18n/client'
 
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
@@ -34,7 +34,7 @@ import { toDate } from '@/lib/firestore-helpers'
 import type { EditDescriptor } from '@/lib/local/types'
 import { applyEdit as defaultApplyEdit } from '@/lib/local/write'
 import { useOrg } from '@/lib/org/org-context'
-import { hidesLiturgicalFields, label } from '@/lib/org/vocab'
+import { hidesLiturgicalFields } from '@/lib/org/vocab'
 import { cn } from '@/lib/utils'
 import type { Setlist } from '@/types/models'
 
@@ -45,12 +45,12 @@ type ServiceType = NonNullable<Setlist['templateType']>
 const NO_SERVICE_TYPE = '__none__'
 
 const SERVICE_TYPE_LABELS: Record<ServiceType, string> = {
-    shabbat_morning: 'Shabbat Morning',
-    friday_night: 'Friday Night',
-    rosh_hashanah: 'Rosh Hashanah',
-    yom_kippur: 'Yom Kippur',
-    festival: 'Festival',
-    other: 'Other',
+    shabbat_morning: 'setlistGrid.serviceTypeShabbatMorning',
+    friday_night: 'setlistGrid.serviceTypeFridayNight',
+    rosh_hashanah: 'setlistGrid.serviceTypeRoshHashanah',
+    yom_kippur: 'setlistGrid.serviceTypeYomKippur',
+    festival: 'setlistGrid.serviceTypeFestival',
+    other: 'setlistGrid.serviceTypeOther',
 }
 
 const SERVICE_TYPE_ORDER: ServiceType[] = [
@@ -93,6 +93,8 @@ export function SetlistMetaEditSheet({
     initial,
     applyEdit = defaultApplyEdit,
 }: SetlistMetaEditSheetProps) {
+    const { t, isRtl } = useI18n()
+    const fmt = useFormat()
     const initialDate = toDate(initial.eventDate ?? null)
 
     // v11-03-03: non-synagogue tenants (Brothers Lazaroff) hide the
@@ -164,10 +166,10 @@ export function SetlistMetaEditSheet({
                 docId: setlistId,
                 patch,
             })
-            toast.success('Setlist details updated')
+            toast.success(t('setlistGrid.metaSaved'))
             onOpenChange(false)
         } catch (err) {
-            toast.error(`Couldn't save setlist details: ${formatError(err)}`)
+            toast.error(t('setlistGrid.metaSaveFailed', { error: formatError(err) }))
             // Keep the sheet open so the edits aren't lost — Daniel can retry.
         } finally {
             setSaving(false)
@@ -177,24 +179,26 @@ export function SetlistMetaEditSheet({
     return (
         <Sheet open={open} onOpenChange={(v) => !saving && onOpenChange(v)}>
             <SheetContent
-                side="right"
+                // The sheet slides in from the inline end: right in ltr (as
+                // before), left on a right-to-left page.
+                side={isRtl ? 'left' : 'right'}
                 className="flex flex-col gap-0 w-full sm:max-w-md"
             >
                 <SheetHeader>
-                    <SheetTitle>{label(org, 'editSetlistDetails')}</SheetTitle>
+                    <SheetTitle>{t('org.editSetlistDetails')}</SheetTitle>
                 </SheetHeader>
 
                 <div className="flex flex-col gap-5 py-6 flex-1">
                     {/* Name */}
                     <div className="flex flex-col gap-1.5">
                         <Label htmlFor="setlist-meta-name" variant="setlist">
-                            Name
+                            {t('setlistGrid.metaName')}
                         </Label>
                         <Input
                             id="setlist-meta-name"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
-                            placeholder={label(org, 'namePlaceholder')}
+                            placeholder={t('org.namePlaceholder')}
                             className="h-11 text-base bg-background/50 border-border"
                         />
                     </div>
@@ -202,7 +206,7 @@ export function SetlistMetaEditSheet({
                     {/* Event date */}
                     <div className="flex flex-col gap-1.5">
                         <Label htmlFor="setlist-meta-date" variant="setlist">
-                            Event date
+                            {t('setlistGrid.metaEventDate')}
                         </Label>
                         <Popover>
                             <PopoverTrigger asChild>
@@ -211,14 +215,14 @@ export function SetlistMetaEditSheet({
                                     type="button"
                                     variant="outline"
                                     className={cn(
-                                        'h-11 w-full justify-start text-left font-normal bg-background/50',
+                                        'h-11 w-full justify-start text-start font-normal bg-background/50',
                                         !eventDate && 'text-muted-foreground',
                                     )}
                                 >
-                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    <CalendarIcon className="me-2 h-4 w-4" />
                                     {eventDate
-                                        ? format(eventDate, 'PPP')
-                                        : 'Pick a date'}
+                                        ? fmt.pattern(eventDate, 'PPP')
+                                        : t('setlistGrid.metaPickDate')}
                                 </Button>
                             </PopoverTrigger>
                             <PopoverContent
@@ -242,7 +246,7 @@ export function SetlistMetaEditSheet({
                             {/* Service type */}
                             <div className="flex flex-col gap-1.5">
                                 <Label htmlFor="setlist-meta-service" variant="setlist">
-                                    Service type
+                                    {t('setlistGrid.metaServiceType')}
                                 </Label>
                                 <Select
                                     value={serviceType ?? NO_SERVICE_TYPE}
@@ -258,15 +262,15 @@ export function SetlistMetaEditSheet({
                                         id="setlist-meta-service"
                                         className="h-11 bg-background/50"
                                     >
-                                        <SelectValue placeholder="Select a service type" />
+                                        <SelectValue placeholder={t('setlistGrid.metaServiceTypePlaceholder')} />
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value={NO_SERVICE_TYPE}>
-                                            None
+                                            {t('setlistGrid.metaServiceTypeNone')}
                                         </SelectItem>
-                                        {SERVICE_TYPE_ORDER.map((t) => (
-                                            <SelectItem key={t} value={t}>
-                                                {SERVICE_TYPE_LABELS[t]}
+                                        {SERVICE_TYPE_ORDER.map((st) => (
+                                            <SelectItem key={st} value={st}>
+                                                {t(SERVICE_TYPE_LABELS[st])}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
@@ -276,13 +280,13 @@ export function SetlistMetaEditSheet({
                             {/* Rabbi */}
                             <div className="flex flex-col gap-1.5">
                                 <Label htmlFor="setlist-meta-rabbi" variant="setlist">
-                                    Rabbi
+                                    {t('setlistGrid.metaRabbi')}
                                 </Label>
                                 <Input
                                     id="setlist-meta-rabbi"
                                     value={rabbi}
                                     onChange={(e) => setRabbi(e.target.value)}
-                                    placeholder="Who's leading this service"
+                                    placeholder={t('setlistGrid.metaRabbiPlaceholder')}
                                     className="h-11 text-base bg-background/50 border-border"
                                 />
                             </div>
@@ -298,7 +302,7 @@ export function SetlistMetaEditSheet({
                         disabled={saving}
                         className="min-h-[44px]"
                     >
-                        Cancel
+                        {t('setlistGrid.cancel')}
                     </Button>
                     <Button
                         type="button"
@@ -309,12 +313,12 @@ export function SetlistMetaEditSheet({
                         {saving ? (
                             <>
                                 <Loader2 className="h-4 w-4 animate-spin" />
-                                Saving…
+                                {t('setlistGrid.saving')}
                             </>
                         ) : (
                             <>
                                 <Check className="h-4 w-4" />
-                                Save
+                                {t('setlistGrid.save')}
                             </>
                         )}
                     </Button>
