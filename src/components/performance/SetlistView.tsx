@@ -6,6 +6,7 @@ import { SetlistRow } from "./SetlistRow"
 import { LiveDirectorGesture } from "./LiveDirectorGesture"
 import { LiturgyRunDivider } from "./LiturgyRunDivider"
 import { liturgyRuns, runFolios } from "./liturgy-runs"
+import { useT } from "@/i18n/client"
 
 export interface SetlistViewProps {
     tracks: SetlistTrack[]
@@ -47,9 +48,10 @@ export function SetlistView({
     collapseLiturgy = false,
     onSwapTap,
 }: SetlistViewProps) {
+    const t = useT()
     // Memoize transposed keys computation (pure function, keyed on tracks + transposition)
     const _transpositionKey = useMemo(
-        () => `${tracks.map((t) => t.key || "").join(",")}-${defaultTransposition}`,
+        () => `${tracks.map((tr) => tr.key || "").join(",")}-${defaultTransposition}`,
         [tracks, defaultTransposition]
     )
 
@@ -180,7 +182,7 @@ export function SetlistView({
 
                 {tracks.length === 0 && (
                     <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-                        <p className="text-xl font-medium">No tracks yet</p>
+                        <p className="text-xl font-medium">{t("performSetlist.noTracksYet")}</p>
                     </div>
                 )}
             </div>

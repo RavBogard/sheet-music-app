@@ -187,7 +187,7 @@ describe("SetlistRow — liturgy outline rendering", () => {
             // Same fixed-width right-aligned column on every row type — this is
             // what makes the right edge identical without measuring layout.
             expect(badge.className).toContain("w-16")
-            expect(badge.className).toContain("text-right")
+            expect(badge.className).toContain("text-end")
         })
 
         it("header row's folio is also last on its line", () => {

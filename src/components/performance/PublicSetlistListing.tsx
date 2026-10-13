@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/auth-context"
 import { useOrg } from "@/lib/org/org-context"
 import { getOrgBranding } from "@/lib/org/branding"
 import { label } from "@/lib/org/vocab"
+import { useFormat, useT } from "@/i18n/client"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { QRSignIn } from "@/components/auth/QRSignIn"
@@ -65,6 +66,8 @@ export function PublicSetlistListing({ initialSetlists }: PublicSetlistListingPr
     // ("Brothers Lazaroff" on BL, "CRC Music" on CRC) so the public landing no
     // longer hardcodes "CRC Music". Same org seam the subscription scope uses.
     const orgName = getOrgBranding(org).shortName
+    const t = useT()
+    const fmt = useFormat()
 
     // R-0919-audit-2: the live subscription is a Firestore `list` over the
     // whole `setlists` collection, and collection-wide `list` now requires
@@ -138,7 +141,7 @@ export function PublicSetlistListing({ initialSetlists }: PublicSetlistListingPr
                         {eventDate && (
                             <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
                                 <Calendar className="h-3 w-3" />
-                                {eventDate.toLocaleDateString(undefined, {
+                                {fmt.date(eventDate, {
                                     weekday: "short",
                                     month: "short",
                                     day: "numeric",
@@ -148,7 +151,7 @@ export function PublicSetlistListing({ initialSetlists }: PublicSetlistListingPr
                         )}
                     </div>
                     <span className="text-xs text-muted-foreground shrink-0 mt-1">
-                        {songCount} song{songCount !== 1 ? "s" : ""}
+                        {t("performSetlist.songCount", { count: songCount })}
                     </span>
                 </div>
             </Link>
@@ -186,7 +189,7 @@ export function PublicSetlistListing({ initialSetlists }: PublicSetlistListingPr
                 {user && !authLoading && (
                     <Link
                         href="/settings"
-                        aria-label={`Signed in as ${user.displayName || user.email || "musician"} — open settings`}
+                        aria-label={t("performSetlist.signedInAs", { userName: user.displayName || user.email || t("performSetlist.musicianFallback") })}
                         className="shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     >
                         <Avatar className="h-9 w-9 border border-border">
@@ -222,20 +225,20 @@ export function PublicSetlistListing({ initialSetlists }: PublicSetlistListingPr
                 construction, not a magic pixel value. */}
             {!user && !authLoading ? (
                 <section
-                    aria-label={`Sign in to ${orgName}`}
+                    aria-label={t("performSetlist.signInTo", { orgName })}
                     className="bg-card rounded-2xl p-5 text-center space-y-4 border border-border"
                 >
                     <QRSignIn />
                     <div className="flex items-center gap-3">
                         <div className="h-px flex-1 bg-border" />
-                        <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">or</span>
+                        <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">{t("performSetlist.or")}</span>
                         <div className="h-px flex-1 bg-border" />
                     </div>
                     <Button
                         onClick={signIn}
                         className="w-full h-11 rounded-xl font-semibold bg-primary text-primary-foreground hover:opacity-90"
                     >
-                        Sign In with Google
+                        {t("performSetlist.signInWithGoogle")}
                     </Button>
                 </section>
             ) : authLoading && !cachedUser ? (
@@ -254,7 +257,7 @@ export function PublicSetlistListing({ initialSetlists }: PublicSetlistListingPr
                     </div>
                     <div className="flex items-center gap-3">
                         <div className="h-px flex-1 bg-border" />
-                        <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">or</span>
+                        <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">{t("performSetlist.or")}</span>
                         <div className="h-px flex-1 bg-border" />
                     </div>
                     <div className="h-11 w-full rounded-xl bg-muted animate-pulse" />
@@ -264,7 +267,7 @@ export function PublicSetlistListing({ initialSetlists }: PublicSetlistListingPr
             {isEmpty ? (
                 <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
                     <Music className="h-12 w-12 mb-3 opacity-30" />
-                    <p className="text-lg font-medium">No public setlists available</p>
+                    <p className="text-lg font-medium">{t("performSetlist.noPublicSetlists")}</p>
                 </div>
             ) : (
                 <>
@@ -283,7 +286,7 @@ export function PublicSetlistListing({ initialSetlists }: PublicSetlistListingPr
                         return (
                             <Link
                                 href={`/perform/setlist/${next.id}`}
-                                aria-label={`Go to next service: ${next.name}`}
+                                aria-label={t("performSetlist.goToNextService", { setlistName: next.name })}
                                 className="group block rounded-2xl bg-primary text-primary-foreground p-5 cursor-pointer transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                             >
                                 <div className="flex items-center gap-4">
@@ -292,13 +295,13 @@ export function PublicSetlistListing({ initialSetlists }: PublicSetlistListingPr
                                     </div>
                                     <div className="min-w-0 flex-1">
                                         <p className="text-[11px] font-semibold uppercase tracking-widest text-primary-foreground/80">
-                                            Next service
+                                            {t("performSetlist.nextService")}
                                         </p>
                                         <h2 className="truncate text-lg font-bold leading-tight">{next.name}</h2>
                                         {nextDate && (
                                             <p className="mt-0.5 flex items-center gap-1 text-xs text-primary-foreground/80">
                                                 <Calendar className="h-3 w-3" />
-                                                {nextDate.toLocaleDateString(undefined, {
+                                                {fmt.date(nextDate, {
                                                     weekday: "long",
                                                     month: "short",
                                                     day: "numeric",
@@ -307,7 +310,7 @@ export function PublicSetlistListing({ initialSetlists }: PublicSetlistListingPr
                                         )}
                                     </div>
                                     <span className="shrink-0 text-sm font-semibold opacity-90 group-hover:opacity-100">
-                                        Perform
+                                        {t("performSetlist.perform")}
                                     </span>
                                 </div>
                             </Link>
@@ -328,7 +331,7 @@ export function PublicSetlistListing({ initialSetlists }: PublicSetlistListingPr
                             data-testid="upcoming-list"
                         >
                             <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground px-1">
-                                Upcoming
+                                {t("performSetlist.upcoming")}
                             </h2>
                             <div className="flex flex-col gap-3">
                                 {upcoming.map(renderCard)}

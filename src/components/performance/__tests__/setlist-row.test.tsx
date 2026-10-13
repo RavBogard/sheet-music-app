@@ -100,7 +100,7 @@ describe("SetlistRow", () => {
         )
         const row = screen.getByText("Amazing Grace").closest("[role='button']")
         expect(row?.className).toContain("bg-brand/20")
-        expect(row?.className).toContain("border-l-4")
+        expect(row?.className).toContain("border-s-4")
     })
 
     it("interactive rows have button role and cursor-pointer", () => {

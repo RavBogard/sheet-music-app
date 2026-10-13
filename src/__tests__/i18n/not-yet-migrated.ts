@@ -65,12 +65,6 @@ export const NOT_YET_MIGRATED: readonly string[] = [
 
     "src/app/api/tenant/", // 1 strings, 1 files
 
-    "src/app/perform/[fileId]/*", // 8 strings, 1 files
-
-    "src/app/perform/*", // 4 strings, 1 files
-
-    "src/app/perform/setlist/", // 25 strings, 2 files
-
     "src/components/*", // 11 strings, 2 files
 
     "src/components/admin/*", // 136 strings, 6 files

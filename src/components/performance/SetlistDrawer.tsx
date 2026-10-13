@@ -15,6 +15,20 @@ import { useRouter } from "next/navigation"
 import { logger } from "@/lib/logger"
 import { getDb } from "@/lib/local/schema"
 import { getTracksForSetlistClient, fetchTracksForSetlistClient } from "@/lib/client-tracks"
+import { useFormat, useT } from "@/i18n/client"
+
+/**
+ * Flow-item type tag under a queue row. The stored `trackType` used to be
+ * printed verbatim (CSS uppercases it); the English values are those same
+ * lowercase words. An unknown type still shows the raw value.
+ */
+const QUEUE_TRACK_TYPE = {
+    header: "performSetlist.queueTrackType.header",
+    reading: "performSetlist.queueTrackType.reading",
+    prayer: "performSetlist.queueTrackType.prayer",
+    transition: "performSetlist.queueTrackType.transition",
+    note: "performSetlist.queueTrackType.note",
+} as const
 
 /**
  * A single queue row inside the perform-nav drawer. Extracted from the
@@ -35,15 +49,19 @@ export function QueueRow({
     isCurrent: boolean
     onOpen: () => void
 }) {
+    const t = useT()
     const isFlowItem = Boolean(track.trackType && track.trackType !== 'song')
     const openableFlowItem = isFlowItem && Boolean(track.fileId)
+    const typeKey = track.trackType
+        ? QUEUE_TRACK_TYPE[track.trackType as keyof typeof QUEUE_TRACK_TYPE]
+        : undefined
 
     return (
         <button
             onClick={onOpen}
-            aria-label={openableFlowItem ? `Open chart: ${track.name}` : undefined}
+            aria-label={openableFlowItem ? t("performSetlist.row.openChart", { songTitle: track.name }) : undefined}
             className={cn(
-                "flex items-center gap-4 h-full px-4 rounded-xl transition-all text-left w-full",
+                "flex items-center gap-4 h-full px-4 rounded-xl transition-all text-start w-full",
                 isCurrent
                     ? "bg-blue-600 text-white shadow-lg"
                     : "hover:bg-card text-muted-foreground hover:text-foreground",
@@ -90,7 +108,7 @@ export function QueueRow({
                         "text-xs uppercase tracking-wider mt-0.5",
                         isCurrent ? "opacity-90 text-blue-100" : "opacity-70"
                     )}>
-                        {track.trackType}
+                        {typeKey ? t(typeKey) : track.trackType}
                     </div>
                 )}
             </div>
@@ -100,6 +118,8 @@ export function QueueRow({
 }
 
 export function SetlistDrawer() {
+    const t = useT()
+    const fmt = useFormat()
     const router = useRouter()
     const { playbackQueue, queueIndex, setQueue, jumpToSong } = useMusicStore()
     const { user } = useAuth()
@@ -142,8 +162,8 @@ export function SetlistDrawer() {
             if (sec.label) {
                 flat.push({ type: 'header', label: sec.label })
             }
-            sec.tracks.forEach(t => {
-                flat.push({ type: 'track', track: t.item, globalIndex: t.globalIndex })
+            sec.tracks.forEach(entry => {
+                flat.push({ type: 'track', track: entry.item, globalIndex: entry.globalIndex })
             })
         })
         return flat
@@ -250,17 +270,17 @@ export function SetlistDrawer() {
         if (resolvedTracks.length === 0) return
 
         const queue = resolvedTracks
-            .filter(t => t.fileId)
-            .map(t => ({
-                name: t.title,
-                fileId: t.fileId!,
-                type: (t.fileId?.startsWith('db-') || t.fileId?.endsWith('.musicxml') || t.fileId?.endsWith('.xml') || t.fileId?.endsWith('.mxl'))
+            .filter(tr => tr.fileId)
+            .map(tr => ({
+                name: tr.title,
+                fileId: tr.fileId!,
+                type: (tr.fileId?.startsWith('db-') || tr.fileId?.endsWith('.musicxml') || tr.fileId?.endsWith('.xml') || tr.fileId?.endsWith('.mxl'))
                     ? 'musicxml'
-                    : t.fileId?.endsWith('.chordpro') ? 'chordpro' : 'pdf',
-                audioFileId: t.audioFileId,
-                bpm: t.bpm,
-                transposition: t.transposition,
-                key: t.key
+                    : tr.fileId?.endsWith('.chordpro') ? 'chordpro' : 'pdf',
+                audioFileId: tr.audioFileId,
+                bpm: tr.bpm,
+                transposition: tr.transposition,
+                key: tr.key
             } as QueueItem))
 
         if (queue.length > 0) {
@@ -272,7 +292,7 @@ export function SetlistDrawer() {
 
     // Determine Trigger Icon based on state
     const TriggerIcon = showPublicPicker ? Globe : ListMusic
-    const triggerLabel = showPublicPicker ? "Connect" : "Setlist"
+    const triggerLabel = showPublicPicker ? t("performSetlist.drawer.connect") : t("performSetlist.drawer.setlist")
 
     return (
         <Sheet open={open} onOpenChange={setOpen}>
@@ -291,19 +311,19 @@ export function SetlistDrawer() {
                 <SheetHeader className="p-4 border-b border-border bg-muted sm:rounded-t-2xl">
                     <SheetTitle className="flex items-center gap-2 text-foreground">
                         <TriggerIcon className="h-5 w-5 text-blue-500" />
-                        {showPublicPicker ? "Join a Setlist" : "Current Setlist"}
+                        {showPublicPicker ? t("performSetlist.drawer.joinSetlist") : t("performSetlist.drawer.currentSetlist")}
                     </SheetTitle>
                 </SheetHeader>
 
                 <div className="flex-1 min-h-0 flex flex-col bg-background">
                     {showPublicPicker ? (
                         <div className="p-4 grid gap-3 flex-1 overflow-auto">
-                            {loading && <div className="text-muted-foreground text-center py-10">Loading active setlists...</div>}
+                            {loading && <div className="text-muted-foreground text-center py-10">{t("performSetlist.drawer.loadingActive")}</div>}
 
                             {!loading && publicSetlists.length === 0 && (
                                 <div className="text-muted-foreground text-center py-10 flex flex-col items-center gap-2">
                                     <Globe className="h-8 w-8 opacity-50" />
-                                    <p>No public setlists active right now.</p>
+                                    <p>{t("performSetlist.drawer.noneActive")}</p>
                                 </div>
                             )}
 
@@ -311,7 +331,7 @@ export function SetlistDrawer() {
                                 <button
                                     key={setlist.id}
                                     onClick={() => handleSelectSetlist(setlist)}
-                                    className="bg-muted hover:bg-card border border-border hover:border-border rounded-xl p-4 text-left transition-all group flex items-start gap-4"
+                                    className="bg-muted hover:bg-card border border-border hover:border-border rounded-xl p-4 text-start transition-all group flex items-start gap-4"
                                 >
                                     <div className="h-10 w-10 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-400 shrink-0">
                                         <PlayCircle className="h-6 w-6" />
@@ -321,12 +341,12 @@ export function SetlistDrawer() {
                                             {setlist.name}
                                         </h3>
                                         <div className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
-                                            <span>{setlist.trackCount || 0} songs</span>
+                                            <span>{t("performSetlist.drawer.songCount", { count: setlist.trackCount || 0 })}</span>
                                             {setlist.ownerName && <span>• {setlist.ownerName}</span>}
                                         </div>
                                         {setlist.eventDate && (
                                             <div className="text-xs text-blue-400 mt-2 font-medium bg-blue-500/10 px-2 py-1 rounded w-fit">
-                                                {toDateHelper(setlist.eventDate)?.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                                                {fmt.date(toDateHelper(setlist.eventDate), { weekday: 'short', month: 'short', day: 'numeric' })}
                                             </div>
                                         )}
                                     </div>
@@ -435,7 +455,7 @@ export function SetlistDrawer() {
                         className="w-full h-12 text-lg font-bold border-border hover:bg-muted text-foreground"
                         onClick={() => setOpen(false)}
                     >
-                        Close
+                        {t("performSetlist.drawer.close")}
                     </Button>
                 </div>
             </SheetContent>

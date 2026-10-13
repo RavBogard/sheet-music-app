@@ -7,6 +7,8 @@ import { displayChartTitle } from "@/lib/format/chart-title"
 import { cn } from "@/lib/utils"
 import type { UseLongPressBag } from "@/hooks/use-long-press"
 import type { WithTonight } from "@/lib/performance/tonight"
+import { useT } from "@/i18n/client"
+import { DirectionalIcon } from "@/components/i18n/DirectionalIcon"
 
 export interface SetlistRowProps {
     track: WithTonight<SetlistTrack>
@@ -47,6 +49,7 @@ export function SetlistRow({
     gestureHandlers,
     onSwapTap,
 }: SetlistRowProps) {
+    const t = useT()
     const isSong = !track.type || track.type === "song"
     const isHeader = track.type === "header"
     // v11.5-05-02 (Q5): some write paths (MCP / legacy upload / .docx import)
@@ -96,9 +99,9 @@ export function SetlistRow({
     const folioBadge = folio !== undefined ? (
         <span
             data-testid="folio"
-            className="shrink-0 w-16 text-right font-bold text-lg tabular-nums text-foreground"
+            className="shrink-0 w-16 text-end font-bold text-lg tabular-nums text-foreground"
         >
-            p.&nbsp;{folio}
+            {t("performSetlist.row.folio", { page: folio })}
         </span>
     ) : null
 
@@ -182,7 +185,7 @@ export function SetlistRow({
                     <button
                         type="button"
                         onClick={handleClick}
-                        className="flex items-center gap-3 px-4 min-h-11 w-full text-left my-1 cursor-pointer"
+                        className="flex items-center gap-3 px-4 min-h-11 w-full text-start my-1 cursor-pointer"
                     >
                         {headerInner}
                     </button>
@@ -230,11 +233,11 @@ export function SetlistRow({
                 <span className="flex-1" />
                 {track.bpm && (
                     <span className="text-xs text-muted-foreground tabular-nums shrink-0">
-                        {track.bpm} BPM
+                        {t("performSetlist.row.bpm", { bpm: track.bpm })}
                     </span>
                 )}
                 {/* P4-5: folioBadge is LAST on the song row's first line, after
-                    BPM — the fixed w-16 text-right column only stays scannable
+                    BPM — the fixed w-16 text-end column only stays scannable
                     if every row type's folio lands at the same right edge. */}
                 {folioBadge}
             </div>
@@ -268,7 +271,7 @@ export function SetlistRow({
                     left of every other row's — the one column the eye hunts down
                     while standing, out of alignment on exactly the rows that
                     carry a page number. */}
-                <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+                <DirectionalIcon icon={ChevronRight} className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
                 {folioBadge}
             </div>
             {outlineDetail}
@@ -290,7 +293,7 @@ export function SetlistRow({
 
     const rowClasses = cn(
         "flex items-center px-4 py-3 transition-colors",
-        isCurrentPosition && "bg-brand/20 border-l-4 border-brand",
+        isCurrentPosition && "bg-brand/20 border-s-4 border-brand",
         !isCurrentPosition && isSong && (index % 2 === 0 ? "bg-amber-500/[0.10]" : "bg-brand/[0.12]")
         // Passive non-song labels are de-emphasized via the muted *title color*
         // (songContent's text-muted-foreground span), NOT row opacity. opacity-60
@@ -326,7 +329,7 @@ export function SetlistRow({
             data-testid="perform-row"
             data-row-id={track.id}
             data-file-id={track.fileId ?? ""}
-            aria-label={openableNonSong ? `Open chart: ${title}` : undefined}
+            aria-label={openableNonSong ? t("performSetlist.row.openChart", { songTitle: title }) : undefined}
             onClick={composedClick}
             onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
@@ -357,7 +360,7 @@ export function SetlistRow({
                     {songContent}
                     {/* Everyone sees that tonight differs from the plan. */}
                     <p data-testid="tonight-note" className="text-xs text-amber-800 dark:text-amber-300 truncate mt-0.5">
-                        Tonight · planned: {displayChartTitle(track.tonight.plannedTitle)}
+                        {t("performSetlist.row.tonightPlanned", { plannedTitle: displayChartTitle(track.tonight.plannedTitle) })}
                     </p>
                 </div>
             ) : (
@@ -373,15 +376,15 @@ export function SetlistRow({
             <button
                 type="button"
                 data-testid="tonight-swap-button"
-                aria-label={`Swap ${title} for tonight`}
+                aria-label={t("performSetlist.row.swapForTonight", { songTitle: title })}
                 onClick={(e) => {
                     e.stopPropagation()
                     onSwapTap()
                 }}
-                className="shrink-0 w-14 min-h-11 flex flex-col items-center justify-center gap-0.5 text-[10px] font-semibold text-muted-foreground hover:bg-muted active:bg-muted/80 border-l border-border/40 [touch-action:manipulation]"
+                className="shrink-0 w-14 min-h-11 flex flex-col items-center justify-center gap-0.5 text-[10px] font-semibold text-muted-foreground hover:bg-muted active:bg-muted/80 border-s border-border/40 [touch-action:manipulation]"
             >
                 <Replace className="h-4 w-4" aria-hidden="true" />
-                Swap
+                {t("performSetlist.row.swap")}
             </button>
         </div>
     )
