@@ -9,6 +9,10 @@ import { respondToAssignment } from "@/lib/scheduling-firebase"
 import { toast } from "sonner"
 import type { SchedulingAssignment } from "@/types/models"
 import Link from "next/link"
+import { DirectionalIcon } from "@/components/i18n/DirectionalIcon"
+import { useFormat, useT } from "@/i18n/client"
+import type { T } from "@/i18n/core"
+import type { Formatter } from "@/i18n/format"
 
 interface ScheduleCardProps {
     assignment: SchedulingAssignment
@@ -23,12 +27,14 @@ interface ScheduleCardProps {
  */
 export function ScheduleCard({ assignment, otherMusicians, className }: ScheduleCardProps) {
     const [responding, setResponding] = useState<'accept' | 'decline' | null>(null)
+    const t = useT()
+    const fmt = useFormat()
 
     const isPending = assignment.status === 'pending'
     const isConfirmed = assignment.status === 'confirmed'
     const isDeclined = assignment.status === 'declined'
 
-    const eventDateStr = formatAssignmentDate(assignment.eventDate)
+    const eventDateStr = formatAssignmentDate(assignment.eventDate, t, fmt)
 
     async function handleRespond(action: 'accept' | 'decline') {
         setResponding(action)
@@ -38,12 +44,12 @@ export function ScheduleCard({ assignment, otherMusicians, className }: Schedule
                 action,
             })
             if (result.success) {
-                toast.success(action === 'accept' ? 'Confirmed!' : 'Declined')
+                toast.success(action === 'accept' ? t("schedule.toastConfirmed") : t("schedule.toastDeclined"))
             } else {
-                toast.error('Failed to respond')
+                toast.error(t("schedule.respondFailed"))
             }
         } catch (e) {
-            toast.error('Failed to respond')
+            toast.error(t("schedule.respondFailed"))
         } finally {
             setResponding(null)
         }
@@ -58,14 +64,14 @@ export function ScheduleCard({ assignment, otherMusicians, className }: Schedule
             className,
         )}>
             {/* Status indicator */}
-            <div className="absolute top-4 right-4">
+            <div className="absolute top-4 end-4">
                 <StatusBadge status={assignment.status} autoConfirmed={assignment.autoConfirmed} />
             </div>
 
             {/* Service info */}
             <div className="space-y-3">
                 <div>
-                    <h3 className="font-semibold text-foreground pr-24 line-clamp-1">
+                    <h3 className="font-semibold text-foreground pe-24 line-clamp-1">
                         {assignment.setlistName}
                     </h3>
                     <div className="flex items-center gap-2 mt-1.5 text-sm text-muted-foreground">
@@ -94,11 +100,11 @@ export function ScheduleCard({ assignment, otherMusicians, className }: Schedule
                                         m.status === 'pending' ? "bg-amber-500/10 text-amber-700 dark:text-amber-300" :
                                             "bg-muted text-muted-foreground"
                                 )}>
-                                    {m.name}{m.instrument ? ` (${m.instrument})` : ''}
+                                    {m.instrument ? t("schedule.musicianWithInstrument", { musicianName: m.name, instrument: m.instrument }) : m.name}
                                 </span>
                             ))}
                             {otherMusicians.length > 5 && (
-                                <span className="text-xs text-muted-foreground">+{otherMusicians.length - 5} more</span>
+                                <span className="text-xs text-muted-foreground">{t("schedule.moreMusicians", { count: otherMusicians.length - 5 })}</span>
                             )}
                         </div>
                     </div>
@@ -120,7 +126,7 @@ export function ScheduleCard({ assignment, otherMusicians, className }: Schedule
                                 ) : (
                                     <Check className="h-3.5 w-3.5" />
                                 )}
-                                Accept
+                                {t("schedule.accept")}
                             </Button>
                             <Button
                                 size="sm"
@@ -134,14 +140,14 @@ export function ScheduleCard({ assignment, otherMusicians, className }: Schedule
                                 ) : (
                                     <X className="h-3.5 w-3.5" />
                                 )}
-                                Decline
+                                {t("schedule.decline")}
                             </Button>
                         </>
                     )}
 
-                    <Link href={`/setlists/${assignment.setlistId}`} className="ml-auto">
+                    <Link href={`/setlists/${assignment.setlistId}`} className="ms-auto">
                         <Button size="sm" variant="ghost" className="gap-1.5 h-11 text-muted-foreground">
-                            View Setlist <ChevronRight className="h-3.5 w-3.5" />
+                            {t("schedule.viewSetlist")} <DirectionalIcon icon={ChevronRight} className="h-3.5 w-3.5" />
                         </Button>
                     </Link>
                 </div>
@@ -151,26 +157,27 @@ export function ScheduleCard({ assignment, otherMusicians, className }: Schedule
 }
 
 function StatusBadge({ status, autoConfirmed }: { status: string; autoConfirmed?: boolean }) {
+    const t = useT()
     switch (status) {
         case 'confirmed':
             return (
                 <Badge variant="outline" className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30">
-                    <Check className="h-3 w-3 mr-1" />
-                    {autoConfirmed ? 'Auto-confirmed' : 'Confirmed'}
+                    <Check className="h-3 w-3 me-1" />
+                    {autoConfirmed ? t("schedule.badgeAutoConfirmed") : t("schedule.badgeConfirmed")}
                 </Badge>
             )
         case 'pending':
             return (
                 <Badge variant="outline" className="bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30 animate-pulse">
-                    <Clock className="h-3 w-3 mr-1" />
-                    Pending
+                    <Clock className="h-3 w-3 me-1" />
+                    {t("schedule.badgePending")}
                 </Badge>
             )
         case 'declined':
             return (
                 <Badge variant="outline" className="bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/30">
-                    <X className="h-3 w-3 mr-1" />
-                    Declined
+                    <X className="h-3 w-3 me-1" />
+                    {t("schedule.badgeDeclined")}
                 </Badge>
             )
         default:
@@ -184,8 +191,8 @@ function StatusBadge({ status, autoConfirmed }: { status: string; autoConfirmed?
  * `formatEventDate` in `@/lib/firestore-helpers` (which uses long forms) —
  * the card layout needs a tighter string under the service title.
  */
-function formatAssignmentDate(eventDate: unknown): string {
-    if (!eventDate) return 'Date TBD'
+function formatAssignmentDate(eventDate: unknown, t: T, fmt: Formatter): string {
+    if (!eventDate) return t("schedule.cardDateTbd")
 
     try {
         let date: Date
@@ -196,18 +203,18 @@ function formatAssignmentDate(eventDate: unknown): string {
         } else if (eventDate instanceof Date) {
             date = eventDate
         } else {
-            return 'Date TBD'
+            return t("schedule.cardDateTbd")
         }
 
-        if (isNaN(date.getTime())) return 'Date TBD'
+        if (isNaN(date.getTime())) return t("schedule.cardDateTbd")
 
-        return date.toLocaleDateString('en-US', {
+        return fmt.date(date, {
             weekday: 'short',
             month: 'short',
             day: 'numeric',
             year: date.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined,
         })
     } catch {
-        return 'Date TBD'
+        return t("schedule.cardDateTbd")
     }
 }

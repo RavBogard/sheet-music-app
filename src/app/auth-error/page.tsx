@@ -3,9 +3,11 @@
 import { Button } from "@/components/ui/button"
 import { AlertTriangle, LogOut } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
+import { useT } from "@/i18n/client"
 
 export default function AuthErrorPage() {
     const { signOut } = useAuth()
+    const t = useT()
 
     return (
         <div className="flex flex-col items-center justify-center min-h-[calc(100vh-4rem)] p-4 text-center">
@@ -18,25 +20,24 @@ export default function AuthErrorPage() {
 
                 <div className="space-y-2">
                     <h1 className="text-2xl font-bold tracking-tight text-foreground">
-                        Authentication Error
+                        {t("auth.authErrorTitle")}
                     </h1>
                     <p className="text-muted-foreground">
-                        We detected an issue with your login session that was causing a redirect loop. 
-                        This usually happens when your browser&apos;s cached data gets out of sync with the server.
+                        {t("auth.authErrorBody")}
                     </p>
                 </div>
 
                 <div className="pt-4 border-t border-border">
                     <p className="text-sm text-muted-foreground mb-4">
-                        Clicking the button below will securely clear your local session and let you log in fresh.
+                        {t("auth.authErrorHint")}
                     </p>
                     <Button 
                         onClick={signOut}
                         className="w-full sm:w-auto min-w-[200px]"
                         size="lg"
                     >
-                        <LogOut className="mr-2 h-5 w-5" />
-                        Refresh Session
+                        <LogOut className="me-2 h-5 w-5" />
+                        {t("auth.authErrorRefresh")}
                     </Button>
                 </div>
             </div>

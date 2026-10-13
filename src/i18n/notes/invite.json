@@ -1,0 +1,133 @@
+{
+    "checking": {
+        "where": "Invitation page (/invite/<token>): loading message",
+        "who": "people invited to a congregation or band",
+        "maxLength": 40
+    },
+    "notValid": {
+        "where": "Invitation page: message under 'Invitation not available' when the link is unknown",
+        "who": "people invited to a congregation or band",
+        "maxLength": 80
+    },
+    "expired": {
+        "where": "Invitation page: message under 'Invitation not available' when the link expired",
+        "who": "people invited to a congregation or band",
+        "maxLength": 80
+    },
+    "alreadyUsed": {
+        "where": "Invitation page: message under 'Invitation not available' when the link was already used or revoked",
+        "who": "people invited to a congregation or band",
+        "maxLength": 80
+    },
+    "signInFirst": {
+        "where": "Invitation page: error message when accepting without being signed in",
+        "who": "people invited to a congregation or band",
+        "maxLength": 40
+    },
+    "acceptFailed": {
+        "where": "Invitation page: error message when the server refused the invitation without a reason",
+        "who": "people invited to a congregation or band",
+        "maxLength": 60
+    },
+    "somethingWrong": {
+        "where": "Invitation page: generic error message",
+        "who": "people invited to a congregation or band",
+        "maxLength": 40
+    },
+    "unavailableTitle": {
+        "where": "Invitation page: heading when the invitation cannot be used",
+        "who": "people invited to a congregation or band",
+        "maxLength": 35
+    },
+    "tryAgain": {
+        "where": "Invitation page: fallback message under 'Invitation not available'",
+        "who": "people invited to a congregation or band",
+        "maxLength": 30
+    },
+    "goHome": {
+        "where": "Invitation page: button back to the home page after an error",
+        "who": "people invited to a congregation or band",
+        "maxLength": 15
+    },
+    "joinedTitle": {
+        "where": "Invitation page: heading after the invitation was accepted (informal 'you are now a member')",
+        "who": "people invited to a congregation or band",
+        "maxLength": 20
+    },
+    "joinedAdmin": {
+        "where": "Invitation page: text after accepting an admin invitation",
+        "who": "new admins",
+        "maxLength": 90,
+        "context": "{tenantName} is the congregation's or band's name"
+    },
+    "joinedBandLeader": {
+        "where": "Invitation page: text after accepting a band leader invitation",
+        "who": "new band leaders",
+        "maxLength": 90,
+        "context": "{tenantName} is the congregation's or band's name"
+    },
+    "joinedMusician": {
+        "where": "Invitation page: text after accepting a musician invitation",
+        "who": "new musicians",
+        "maxLength": 90,
+        "context": "{tenantName} is the congregation's or band's name"
+    },
+    "joinedMember": {
+        "where": "Invitation page: text after accepting a member invitation",
+        "who": "new members",
+        "maxLength": 90,
+        "context": "{tenantName} is the congregation's or band's name"
+    },
+    "continue": {
+        "where": "Invitation page: button after accepting, goes to the home page",
+        "who": "people invited to a congregation or band",
+        "maxLength": 15
+    },
+    "invitedAdmin": {
+        "where": "Invitation page: main heading of an admin invitation",
+        "who": "people invited as admin",
+        "maxLength": 100,
+        "context": "{tenantName} is the congregation's or band's name"
+    },
+    "invitedBandLeader": {
+        "where": "Invitation page: main heading of a band leader invitation",
+        "who": "people invited as band leader",
+        "maxLength": 100,
+        "context": "{tenantName} is the congregation's or band's name"
+    },
+    "invitedMusician": {
+        "where": "Invitation page: main heading of a musician invitation",
+        "who": "people invited as musician",
+        "maxLength": 100,
+        "context": "{tenantName} is the congregation's or band's name"
+    },
+    "invitedMember": {
+        "where": "Invitation page: main heading of a member invitation",
+        "who": "people invited as member",
+        "maxLength": 100,
+        "context": "{tenantName} is the congregation's or band's name"
+    },
+    "signInForEmail": {
+        "where": "Invitation page: instruction above the Google button when signed out",
+        "who": "people invited to a congregation or band",
+        "maxLength": 100,
+        "context": "{email} is the invited email address (shown bold)"
+    },
+    "signInWithGoogle": {
+        "where": "Invitation page: sign-in button when signed out",
+        "who": "people invited to a congregation or band",
+        "maxLength": 25,
+        "context": "Google is the brand name of the account provider; keep it."
+    },
+    "signedInAs": {
+        "where": "Invitation page: line above the accept button when signed in",
+        "who": "people invited to a congregation or band",
+        "maxLength": 70,
+        "context": "{email} is the signed-in email address (shown bold)"
+    },
+    "accept": {
+        "where": "Invitation page: main accept button",
+        "who": "people invited to a congregation or band",
+        "maxLength": 25
+    }
+}

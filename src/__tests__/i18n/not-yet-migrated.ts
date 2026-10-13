@@ -29,8 +29,6 @@ export const NOT_YET_MIGRATED: readonly string[] = [
 
     "src/app/(main)/privacy/*", // 66 strings, 1 files
 
-    "src/app/(main)/schedule/*", // 13 strings, 1 files
-
     "src/app/(main)/setlists/", // 4 strings, 1 files
 
     "src/app/(main)/sms-consent/*", // 79 strings, 1 files
@@ -67,19 +65,11 @@ export const NOT_YET_MIGRATED: readonly string[] = [
 
     "src/app/api/tenant/", // 1 strings, 1 files
 
-    "src/app/auth-error/*", // 4 strings, 1 files
-
-    "src/app/invite/[token]/*", // 13 strings, 1 files
-
-    "src/app/login/*", // 23 strings, 2 files
-
     "src/app/perform/[fileId]/*", // 8 strings, 1 files
 
     "src/app/perform/*", // 4 strings, 1 files
 
     "src/app/perform/setlist/", // 25 strings, 2 files
-
-    "src/app/qr/[code]/*", // 18 strings, 1 files
 
     "src/components/*", // 11 strings, 2 files
 
@@ -88,8 +78,6 @@ export const NOT_YET_MIGRATED: readonly string[] = [
     "src/components/admin/library/*", // 15 strings, 1 files
 
     "src/components/admin/people/*", // 4 strings, 1 files
-
-    "src/components/auth/*", // 7 strings, 1 files
 
     "src/components/calendar/*", // 9 strings, 3 files
 
@@ -105,11 +93,7 @@ export const NOT_YET_MIGRATED: readonly string[] = [
 
     "src/components/offline/*", // 4 strings, 1 files
 
-    "src/components/people/*", // 5 strings, 1 files
-
     "src/components/performance/*", // 138 strings, 22 files
-
-    "src/components/scheduling/*", // 12 strings, 1 files
 
     "src/components/setlist/*", // 177 strings, 11 files
 

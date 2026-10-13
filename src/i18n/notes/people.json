@@ -1,0 +1,8 @@
+{
+    "notified": { "where": "Onboarding card, toast after the 'Nudge Admin' button sent its reminder", "who": "new users waiting for approval", "maxLength": 50 },
+    "notifyFailed": { "where": "Onboarding card, error toast when the 'Nudge Admin' reminder could not be sent", "who": "new users waiting for approval", "maxLength": 50 },
+    "genericError": { "where": "Onboarding card, error toast fallback when the reminder failed for an unknown reason", "who": "new users waiting for approval", "maxLength": 20 },
+    "adminNotified": { "where": "Onboarding card, disabled button label after the admins were reminded", "who": "new users waiting for approval", "maxLength": 20 },
+    "notifying": { "where": "Onboarding card, button label while the reminder is being sent", "who": "new users waiting for approval", "maxLength": 20 },
+    "nudgeAdmin": { "where": "Onboarding card, button that reminds the admins to approve this new account", "who": "new users waiting for approval", "maxLength": 20 }
+}

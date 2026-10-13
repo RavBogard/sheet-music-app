@@ -1,0 +1,9 @@
+{
+    "$comment": "Nudge-admin button (asks admins to approve a new account).",
+    "notified": "Admins have been notified!",
+    "notifyFailed": "Failed to notify admins",
+    "genericError": "Error",
+    "adminNotified": "Admin Notified",
+    "notifying": "Notifying...",
+    "nudgeAdmin": "Nudge Admin"
+}
