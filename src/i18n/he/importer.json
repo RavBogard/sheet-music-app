@@ -50,7 +50,7 @@
     "serviceTypeHint": "זוהה אוטומטית מהמסמך — אפשר לאשר או לשנות.",
     "serviceType": {
         "shabbat_morning": "שבת בבוקר",
-        "friday_night": "ערב שבת",
+        "friday_night": "קבלת שבת",
         "rosh_hashanah": "ראש השנה",
         "yom_kippur": "יום כיפור",
         "festival": "חג",

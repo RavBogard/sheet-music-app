@@ -8,8 +8,8 @@
     "addSongsButton_one": "הוספת שיר אחד",
     "addSongsButton_two": "הוספת שני שירים",
     "addSongsButton_other": "הוספת {count} שירים",
-    "linkChartFor": "קישור תווים עבור ״{title}״",
-    "linkToMusicFile": "קישור לקובץ תווים",
+    "linkChartFor": "חיבור תווים עבור ״{title}״",
+    "linkToMusicFile": "חיבור לקובץ תווים",
     "suggestedMatches": "התאמות מוצעות",
     "searchOrBrowseFor": "חיפוש או עיון עבור ״{title}״…",
     "searchFilesPlaceholder": "חיפוש קבצים…",
@@ -28,6 +28,6 @@
     "cancel": "ביטול",
     "save": "שמירה",
     "nameYourSetlist": "מתן שם לרשימת השירים",
-    "namePromptPlaceholder": "למשל: שבת בבוקר, ערב שבת…",
+    "namePromptPlaceholder": "למשל: שבת בבוקר, קבלת שבת…",
     "continue": "המשך"
 }
