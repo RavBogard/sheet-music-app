@@ -4,7 +4,7 @@
     "syncFailedUnknown": "סיבה לא ידועה",
     "syncTitle": "סנכרון הספרייה",
     "syncSubtitle": "סנכרון מ-Google Drive לספרייה",
-    "syncing": "סנכרון...",
+    "syncing": "בסנכרון...",
     "syncNow": "סנכרון עכשיו",
     "syncDone": "הסתיים",
     "syncStats": "נסרקו: {scanned} · חדשים: {added} · עודכנו: {updated}",

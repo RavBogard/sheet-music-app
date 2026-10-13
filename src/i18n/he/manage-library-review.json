@@ -32,7 +32,7 @@
     "dormantTitle": "העשרת הנתונים ב-AI מושבתת.",
     "dormantBody": "{envVar} לא מוגדר בסביבה הזו, ולכן שורות חדשות יישארו במצב {pendingState} עד שיוגדר. יש להגדיר אותו בלוח הבקרה של Vercel כדי להפעיל את תהליך ה-Gemini.",
     "calibrationTitle": "מצב כיול.",
-    "calibrationBody": "{flagName} מוגדר ל-{flagValue} — כל העשרת נתונים מגיעה לכאן לסקירה אנושית. סף ודאות: {threshold}. כשיש אמון במודל, אפשר להפוך את הדגל ב-Firebase Console (או דרך כלי ה-MCP לניהול).",
+    "calibrationBody": "{flagName} מוגדר ל-{flagValue} — כל העשרת נתונים מגיעה לכאן לסקירה אנושית. סף ודאות: {threshold}. כשיש אמון במודל, אפשר לשנות את הדגל ב-Firebase Console (או דרך כלי ה-MCP לניהול).",
     "autoApplyTitle": "החלה אוטומטית פעילה.",
     "autoApplyBody": "רק שורות שעומדות בתנאי לסקירה מגיעות לכאן. סף: {threshold}.",
     "emptyReviewTitle": "הכול נסקר.",

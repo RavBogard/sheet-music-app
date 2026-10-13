@@ -32,8 +32,8 @@
         "noneFound": "לא נמצאו כפילויות.",
         "clean": "הספרייה נראית מסודרת!",
         "groupHeading": "קבוצה {number} — דמיון של {percent}%",
-        "groupSize_one": "קובץ אחד",
-        "groupSize_other": "{count} קבצים",
+        "groupSize_one": "קובץ תווים אחד",
+        "groupSize_other": "{count} קובצי תווים",
         "archivedToast_one": "כפילות אחת הועברה לארכיון",
         "archivedToast_other": "{count} כפילויות הועברו לארכיון"
     }
