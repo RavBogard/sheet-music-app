@@ -6,8 +6,6 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react"
 const dash = vi.hoisted(() => ({ value: {} as Record<string, unknown> }))
 vi.mock("@/hooks/use-setlist-dashboard", () => ({ useSetlistDashboard: () => dash.value }))
 vi.mock("@/lib/congregation-store", () => ({ useCongregation: () => ({ shortName: "CRC" }) }))
-// The greeting comes from src/lib/greeting.ts (not this lane's file); stub it to a fixed data string.
-vi.mock("@/lib/greeting", () => ({ getContextualGreeting: () => ({ text: "GREETING-STUB" }) }))
 vi.mock("../wizard/CreationWizard", () => ({ CreationWizard: () => null }))
 vi.mock("../importer/ImporterModal", () => ({ ImporterModal: () => null }))
 vi.mock("../SetlistMatrixView", () => ({ SetlistMatrixView: () => null }))
@@ -102,18 +100,18 @@ describe.each([false, true])("setlist toolbar + dialogs i18n (rtl=%s)", (rtl) =>
         dash.value = dashboardValue()
         const r = renderPseudo(<SetlistDashboard />, { rtl })
         if (rtl) expect(r.container.querySelector('[dir="rtl"]')).not.toBeNull()
-        expectNoUntranslatedText(document.body, { allow: ["GREETING-STUB", NAME, "Test Setlist Upcoming"] })
+        expectNoUntranslatedText(document.body, { allow: [NAME, "Test Setlist Upcoming"] })
         cleanup()
 
         dash.value = dashboardValue({ error: "boom", pastOrNoDate: [], nextCursor: null, loadingMore: true })
         renderPseudo(<SetlistDashboard />, { rtl })
         // `error` text is the hook's (data here); the title and retry label are this file's.
-        expectNoUntranslatedText(document.body, { allow: ["GREETING-STUB", "boom"] })
+        expectNoUntranslatedText(document.body, { allow: ["boom"] })
         cleanup()
 
         dash.value = dashboardValue({ pastOrNoDate: [], loadingMore: true })
         renderPseudo(<SetlistDashboard />, { rtl })
-        expectNoUntranslatedText(document.body, { allow: ["GREETING-STUB", "Test Setlist Upcoming"] })
+        expectNoUntranslatedText(document.body, { allow: ["Test Setlist Upcoming"] })
     })
 
     it("AudioFilePicker: empty state and file list", () => {

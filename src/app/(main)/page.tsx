@@ -4,6 +4,7 @@ import DashboardClient from "./DashboardClient"
 import { DEFAULT_SHORT_NAME } from "@/lib/constants"
 import { requestOrg } from "@/lib/org/request-org"
 import { getOrgBranding } from "@/lib/org/branding"
+import { getI18n } from "@/i18n/server"
 
 /**
  * Dashboard — Server Component wrapper.
@@ -26,16 +27,17 @@ export default async function DashboardPage() {
 
     // These run in parallel on the server — adds ~50ms to TTFB but
     // eliminates 1-2s of client-side blank screen.
-    const [user, config] = await Promise.all([
+    const [user, config, i18n] = await Promise.all([
         getServerUser().catch(() => null),
         getServerCongregationConfig(orgId).catch(() => null),
+        getI18n(orgId),
     ])
 
     // Brand name: prefer the authoritative host branding (matches the nav header);
     // fall back to the per-org congregation doc, then the default.
     const shortName = branding.shortName || (config?.shortName as string) || DEFAULT_SHORT_NAME
     const firstName = user?.displayName?.split(" ")[0] || null
-    const greeting = getContextualGreeting(firstName, undefined, shortName)
+    const greeting = getContextualGreeting(firstName, undefined, shortName, { t: i18n.t, lang: i18n.lang })
 
     return (
         <DashboardClient

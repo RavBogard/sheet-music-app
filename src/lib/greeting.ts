@@ -1,4 +1,7 @@
 import { DEFAULT_SHORT_NAME } from "@/lib/constants"
+import { isPseudo, type T, type UiLanguage } from "@/i18n/core"
+import { pseudoize } from "@/i18n/pseudo"
+import { plainLang, plainT } from "@/i18n/plain"
 
 /**
  * Contextual greeting generator with Hebrew calendar awareness.
@@ -70,7 +73,7 @@ function getHebrewDate(date: Date): HebrewDate {
 
 /**
  * Major Jewish holidays keyed by Hebrew month + day.
- * Returns a greeting phrase if the date is a holiday.
+ * Returns the catalogue key of the greeting phrase if the date is a holiday.
  * Covers Reform-observed holidays (single day for most).
  */
 function getHolidayGreeting(hDate: HebrewDate): string | null {
@@ -78,50 +81,50 @@ function getHolidayGreeting(hDate: HebrewDate): string | null {
 
     const holidays: Record<string, string> = {
         // High Holidays
-        'Tishrei-1': 'Shanah Tovah',
-        'Tishrei-2': 'Shanah Tovah',
-        'Tishrei-10': 'G\'mar Chatimah Tovah',
+        'Tishrei-1': 'dashboard.greetingShanahTovah',
+        'Tishrei-2': 'dashboard.greetingShanahTovah',
+        'Tishrei-10': 'dashboard.greetingGmarChatimahTovah',
 
         // Sukkot
-        'Tishrei-15': 'Chag Sameach',
-        'Tishrei-16': 'Chag Sameach',
-        'Tishrei-17': 'Chag Sameach',
-        'Tishrei-18': 'Chag Sameach',
-        'Tishrei-19': 'Chag Sameach',
-        'Tishrei-20': 'Chag Sameach',
-        'Tishrei-21': 'Chag Sameach',
+        'Tishrei-15': 'dashboard.greetingChagSameach',
+        'Tishrei-16': 'dashboard.greetingChagSameach',
+        'Tishrei-17': 'dashboard.greetingChagSameach',
+        'Tishrei-18': 'dashboard.greetingChagSameach',
+        'Tishrei-19': 'dashboard.greetingChagSameach',
+        'Tishrei-20': 'dashboard.greetingChagSameach',
+        'Tishrei-21': 'dashboard.greetingChagSameach',
 
         // Shemini Atzeret / Simchat Torah
-        'Tishrei-22': 'Chag Sameach',
+        'Tishrei-22': 'dashboard.greetingChagSameach',
 
         // Hanukkah (25 Kislev - 2 or 3 Tevet)
-        'Kislev-25': 'Chag Urim Sameach',
-        'Kislev-26': 'Chag Urim Sameach',
-        'Kislev-27': 'Chag Urim Sameach',
-        'Kislev-28': 'Chag Urim Sameach',
-        'Kislev-29': 'Chag Urim Sameach',
-        'Kislev-30': 'Chag Urim Sameach',
-        'Tevet-1': 'Chag Urim Sameach',
-        'Tevet-2': 'Chag Urim Sameach',
-        'Tevet-3': 'Chag Urim Sameach',
+        'Kislev-25': 'dashboard.greetingChagUrimSameach',
+        'Kislev-26': 'dashboard.greetingChagUrimSameach',
+        'Kislev-27': 'dashboard.greetingChagUrimSameach',
+        'Kislev-28': 'dashboard.greetingChagUrimSameach',
+        'Kislev-29': 'dashboard.greetingChagUrimSameach',
+        'Kislev-30': 'dashboard.greetingChagUrimSameach',
+        'Tevet-1': 'dashboard.greetingChagUrimSameach',
+        'Tevet-2': 'dashboard.greetingChagUrimSameach',
+        'Tevet-3': 'dashboard.greetingChagUrimSameach',
 
         // Purim (14 Adar; in leap years, Adar II)
-        'Adar-14': 'Chag Purim Sameach',
-        'Adar II-14': 'Chag Purim Sameach',
+        'Adar-14': 'dashboard.greetingChagPurimSameach',
+        'Adar II-14': 'dashboard.greetingChagPurimSameach',
 
         // Passover (15-22 Nisan)
-        'Nisan-15': 'Chag Pesach Sameach',
-        'Nisan-16': 'Chag Pesach Sameach',
-        'Nisan-17': 'Chag Pesach Sameach',
-        'Nisan-18': 'Chag Pesach Sameach',
-        'Nisan-19': 'Chag Pesach Sameach',
-        'Nisan-20': 'Chag Pesach Sameach',
-        'Nisan-21': 'Chag Pesach Sameach',
-        'Nisan-22': 'Chag Pesach Sameach',
+        'Nisan-15': 'dashboard.greetingChagPesachSameach',
+        'Nisan-16': 'dashboard.greetingChagPesachSameach',
+        'Nisan-17': 'dashboard.greetingChagPesachSameach',
+        'Nisan-18': 'dashboard.greetingChagPesachSameach',
+        'Nisan-19': 'dashboard.greetingChagPesachSameach',
+        'Nisan-20': 'dashboard.greetingChagPesachSameach',
+        'Nisan-21': 'dashboard.greetingChagPesachSameach',
+        'Nisan-22': 'dashboard.greetingChagPesachSameach',
 
         // Shavuot (6 Sivan)
-        'Sivan-6': 'Chag Sameach',
-        'Sivan-7': 'Chag Sameach',
+        'Sivan-6': 'dashboard.greetingChagSameach',
+        'Sivan-7': 'dashboard.greetingChagSameach',
     }
 
     return holidays[key] || null
@@ -146,13 +149,37 @@ export function isShabbatTime(date: Date): boolean {
 }
 
 /**
- * Get a time-of-day greeting.
+ * Get a time-of-day greeting (its catalogue key).
  */
 function getTimeGreeting(date: Date): string {
     const hour = date.getHours()
-    if (hour < 12) return 'Good morning'
-    if (hour < 17) return 'Good afternoon'
-    return 'Good evening'
+    if (hour < 12) return 'dashboard.greetingGoodMorning'
+    if (hour < 17) return 'dashboard.greetingGoodAfternoon'
+    return 'dashboard.greetingGoodEvening'
+}
+
+/**
+ * The Hebrew date line in the UI language. English (CRC, BL) keeps the
+ * transliterated month names exactly as before; Hebrew asks Intl for the
+ * Hebrew-calendar date in Hebrew (data, no catalogue text). Pseudo-locales
+ * wrap each word of the English line (the dashboard renders the words in
+ * separate spans) so the untranslated-text check sees it as handled.
+ */
+function hebrewDateDisplay(date: Date, hDate: HebrewDate, lang: UiLanguage): string {
+    if (lang === 'he') {
+        return new Intl.DateTimeFormat('he-u-ca-hebrew', { day: 'numeric', month: 'long', year: 'numeric' }).format(date)
+    }
+    return isPseudo(lang) ? hDate.display.split(' ').map(pseudoize).join(' ') : hDate.display
+}
+
+/**
+ * Words for the greeting: the translator and its language. Omitted = the
+ * plain-code translator (the browser's active language; English on the
+ * server, so server callers pass their request's `t` and `lang`).
+ */
+export interface GreetingI18n {
+    t: T
+    lang: UiLanguage
 }
 
 /**
@@ -161,16 +188,23 @@ function getTimeGreeting(date: Date): string {
  * @param name - User's display name (null for guests)
  * @param date - Override date for testing (defaults to now)
  */
-export function getContextualGreeting(name: string | null, date?: Date, appName?: string): Greeting {
+export function getContextualGreeting(name: string | null, date?: Date, appName?: string, i18n?: GreetingI18n): Greeting {
     const now = date || new Date()
     const hDate = getHebrewDate(now)
+    const t = i18n?.t ?? plainT()
+    const lang = i18n?.lang ?? plainLang()
+    const hebrewDate = hebrewDateDisplay(now, hDate, lang)
+    const withName = (key: string) => {
+        const greeting = t(key)
+        return name ? t('dashboard.greetingWithName', { greeting, firstName: name }) : greeting
+    }
 
     // 1. Check holidays first (highest priority)
     const holidayGreeting = getHolidayGreeting(hDate)
     if (holidayGreeting) {
         return {
-            text: name ? `${holidayGreeting}, ${name}` : holidayGreeting,
-            hebrewDate: hDate.display,
+            text: withName(holidayGreeting),
+            hebrewDate,
             isSpecial: true,
             atmosphere: 'holiday'
         }
@@ -179,8 +213,8 @@ export function getContextualGreeting(name: string | null, date?: Date, appName?
     // 2. Check Shabbat
     if (isShabbatTime(now)) {
         return {
-            text: name ? `Shabbat Shalom, ${name}` : 'Shabbat Shalom',
-            hebrewDate: hDate.display,
+            text: withName('dashboard.greetingShabbatShalom'),
+            hebrewDate,
             isSpecial: true,
             atmosphere: 'shabbat'
         }
@@ -191,8 +225,8 @@ export function getContextualGreeting(name: string | null, date?: Date, appName?
     const hour = now.getHours()
     const atmosphere = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening'
     return {
-        text: name ? `${timeGreeting}, ${name}` : `Welcome to ${appName || DEFAULT_SHORT_NAME}`,
-        hebrewDate: hDate.display,
+        text: name ? withName(timeGreeting) : t('dashboard.welcomeTo', { appName: appName || DEFAULT_SHORT_NAME }),
+        hebrewDate,
         isSpecial: false,
         atmosphere
     }
