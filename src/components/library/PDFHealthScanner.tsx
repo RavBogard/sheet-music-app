@@ -16,6 +16,7 @@ import { scanLibraryHealth, ScanResult, ScanProgress } from "@/lib/pdf-health-sc
 import { apiFetch } from "@/lib/api-client"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { useT } from "@/i18n/client"
 
 interface PDFHealthScannerProps {
   files: DriveFile[]
@@ -23,6 +24,7 @@ interface PDFHealthScannerProps {
 }
 
 export function PDFHealthScanner({ files, onArchiveComplete }: PDFHealthScannerProps) {
+  const t = useT()
   const [open, setOpen] = useState(false)
   const [scanning, setScanning] = useState(false)
   const [progress, setProgress] = useState<ScanProgress | null>(null)
@@ -80,13 +82,13 @@ export function PDFHealthScanner({ files, onArchiveComplete }: PDFHealthScannerP
     setArchiving(false)
 
     if (archived > 0) {
-      toast.success(`Archived ${archived} unhealthy file${archived !== 1 ? "s" : ""}`)
+      toast.success(t("libraryHealth.pdf.archivedToast", { count: archived }))
       onArchiveComplete()
       setOpen(false)
       resetState()
     }
     if (failed > 0) {
-      toast.error(`Failed to archive ${failed} file${failed !== 1 ? "s" : ""}`)
+      toast.error(t("libraryHealth.archiveFailed", { count: failed }))
     }
   }
 
@@ -120,15 +122,15 @@ export function PDFHealthScanner({ files, onArchiveComplete }: PDFHealthScannerP
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-9 w-9" title="Scan PDF health">
+        <Button variant="ghost" size="icon" className="h-9 w-9" title={t("libraryHealth.pdf.trigger")}>
           <HeartPulse className="h-4 w-4" />
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-lg max-h-[80dvh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>PDF Health Scanner</DialogTitle>
+          <DialogTitle>{t("libraryHealth.pdf.title")}</DialogTitle>
           <DialogDescription>
-            Check library PDFs for corrupt or unloadable files.
+            {t("libraryHealth.pdf.description")}
           </DialogDescription>
         </DialogHeader>
 
@@ -158,29 +160,28 @@ export function PDFHealthScanner({ files, onArchiveComplete }: PDFHealthScannerP
           <div className="flex flex-col items-center gap-4 py-8">
             <HeartPulse className="h-12 w-12 text-muted-foreground" />
             <p className="text-sm text-muted-foreground text-center">
-              Scan {pdfCount} PDF{pdfCount !== 1 ? 's' : ''} to detect corrupt or unloadable files.
+              {t("libraryHealth.pdf.scanPrompt", { count: pdfCount })}
             </p>
             <Button onClick={handleScan} className="min-h-11" disabled={pdfCount === 0}>
-              Scan PDFs
+              {t("libraryHealth.pdf.scanButton")}
             </Button>
           </div>
         ) : flaggedResults.length === 0 ? (
           <div className="flex flex-col items-center gap-3 py-8">
             <CheckCircle2 className="h-12 w-12 text-green-500" />
-            <p className="text-sm text-foreground font-medium">All PDFs healthy</p>
+            <p className="text-sm text-foreground font-medium">{t("libraryHealth.pdf.allHealthy")}</p>
             <p className="text-xs text-muted-foreground">
-              {healthyCount} file{healthyCount !== 1 ? 's' : ''} scanned — no issues found.
+              {t("libraryHealth.pdf.noIssues", { count: healthyCount })}
             </p>
           </div>
         ) : (
           <>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
-              {flaggedResults.length} issue{flaggedResults.length !== 1 ? 's' : ''} found,{' '}
-              {healthyCount} healthy
+              {t("libraryHealth.pdf.issuesSummary", { count: flaggedResults.length, healthy: healthyCount })}
             </div>
 
-            <div className="flex-1 overflow-y-auto space-y-1 pr-1">
+            <div className="flex-1 overflow-y-auto space-y-1 pe-1">
               {flaggedResults.map(result => (
                 <label
                   key={result.fileId}
@@ -199,8 +200,12 @@ export function PDFHealthScanner({ files, onArchiveComplete }: PDFHealthScannerP
                   <div className="flex-1 min-w-0">
                     <p className="text-sm truncate">{result.fileName}</p>
                     <p className="text-xs text-destructive truncate">
-                      {result.status === 'corrupt' ? 'Corrupt' : 'Fetch error'}
-                      {result.error ? `: ${result.error}` : ''}
+                      {result.error
+                        ? t("libraryHealth.pdf.issueWithError", {
+                            status: result.status === 'corrupt' ? t("libraryHealth.pdf.statusCorrupt") : t("libraryHealth.pdf.statusFetchError"),
+                            error: result.error,
+                          })
+                        : result.status === 'corrupt' ? t("libraryHealth.pdf.statusCorrupt") : t("libraryHealth.pdf.statusFetchError")}
                     </p>
                   </div>
                 </label>
@@ -209,7 +214,7 @@ export function PDFHealthScanner({ files, onArchiveComplete }: PDFHealthScannerP
 
             <div className="flex items-center justify-between pt-3 border-t border-border">
               <span className="text-xs text-muted-foreground">
-                {selected.size} selected for archival
+                {t("libraryHealth.selectedForArchival", { count: selected.size })}
               </span>
               <Button
                 variant="destructive"
@@ -222,7 +227,7 @@ export function PDFHealthScanner({ files, onArchiveComplete }: PDFHealthScannerP
                 ) : (
                   <Archive className="h-4 w-4" />
                 )}
-                Archive Selected
+                {t("libraryHealth.archiveSelected")}
               </Button>
             </div>
           </>

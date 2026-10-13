@@ -1,0 +1,37 @@
+{
+    "archiveFailed_one": "Failed to archive {count} file",
+    "archiveFailed_other": "Failed to archive {count} files",
+    "selectedForArchival_other": "{count} selected for archival",
+    "archiveSelected": "Archive Selected",
+    "pdf": {
+        "trigger": "Scan PDF health",
+        "title": "PDF Health Scanner",
+        "description": "Check library PDFs for corrupt or unloadable files.",
+        "scanPrompt_one": "Scan {count} PDF to detect corrupt or unloadable files.",
+        "scanPrompt_other": "Scan {count} PDFs to detect corrupt or unloadable files.",
+        "scanButton": "Scan PDFs",
+        "allHealthy": "All PDFs healthy",
+        "noIssues_one": "{count} file scanned — no issues found.",
+        "noIssues_other": "{count} files scanned — no issues found.",
+        "issuesSummary_one": "{count} issue found, {healthy} healthy",
+        "issuesSummary_other": "{count} issues found, {healthy} healthy",
+        "statusCorrupt": "Corrupt",
+        "statusFetchError": "Fetch error",
+        "issueWithError": "{status}: {error}",
+        "archivedToast_one": "Archived {count} unhealthy file",
+        "archivedToast_other": "Archived {count} unhealthy files"
+    },
+    "dup": {
+        "trigger": "Scan for duplicates",
+        "title": "Duplicate Scanner",
+        "description": "Find charts with similar names that may be duplicates.",
+        "scanPrompt_other": "Scan {count} charts for potential duplicates using name similarity.",
+        "scanButton": "Scan Library",
+        "noneFound": "No duplicates found.",
+        "clean": "Your library looks clean!",
+        "groupHeading": "Group {number} — {percent}% similar",
+        "groupSize_other": "{count} charts",
+        "archivedToast_one": "Archived {count} duplicate",
+        "archivedToast_other": "Archived {count} duplicates"
+    }
+}

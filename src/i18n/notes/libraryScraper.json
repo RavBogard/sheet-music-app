@@ -1,0 +1,214 @@
+{
+    "addSong": {
+        "where": "Library toolbar: button that opens the Add Song dialog",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "dialogTitle": {
+        "where": "Library > Add Song dialog (import a chord chart from the web/URL/pasted text): dialog title",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "dialogDescription": {
+        "where": "Library > Add Song dialog (import a chord chart from the web/URL/pasted text): screen-reader-only dialog description",
+        "who": "leaders",
+        "maxLength": 150
+    },
+    "importedSuccess": {
+        "where": "Library > Add Song dialog (import a chord chart from the web/URL/pasted text): success message after the chart is saved",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "modeSearch": {
+        "where": "Library > Add Song dialog (import a chord chart from the web/URL/pasted text): tab button, search the web with the AI assistant",
+        "who": "leaders",
+        "maxLength": 16
+    },
+    "modeUrl": {
+        "where": "Library > Add Song dialog (import a chord chart from the web/URL/pasted text): tab button, import a chart from a web address",
+        "who": "leaders",
+        "maxLength": 16
+    },
+    "modeText": {
+        "where": "Library > Add Song dialog (import a chord chart from the web/URL/pasted text): tab button, paste a web page's text",
+        "who": "leaders",
+        "maxLength": 16
+    },
+    "chatEmpty": {
+        "where": "Library > Add Song dialog (import a chord chart from the web/URL/pasted text): empty chat area hint in the search tab",
+        "who": "leaders",
+        "maxLength": 100,
+        "context": "The AI assistant speaks in the first person."
+    },
+    "importResult": {
+        "where": "Library > Add Song dialog (import a chord chart from the web/URL/pasted text): small button on a search result that imports that chart",
+        "who": "leaders",
+        "maxLength": 12
+    },
+    "thinking": {
+        "where": "Library > Add Song dialog (import a chord chart from the web/URL/pasted text): chat bubble while the AI assistant is working",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "chatPlaceholder": {
+        "where": "Library > Add Song dialog (import a chord chart from the web/URL/pasted text): chat input placeholder",
+        "who": "leaders",
+        "maxLength": 50
+    },
+    "chatLabel": {
+        "where": "Library > Add Song dialog (import a chord chart from the web/URL/pasted text): chat input accessible label (screen readers)",
+        "who": "leaders",
+        "maxLength": 50
+    },
+    "sendMessage": {
+        "where": "Library > Add Song dialog (import a chord chart from the web/URL/pasted text): icon button accessible label, sends the chat message",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "urlLabel": {
+        "where": "Library > Add Song dialog (import a chord chart from the web/URL/pasted text): label above the web-address field",
+        "who": "leaders",
+        "maxLength": 50,
+        "context": "Chordie is a chord-chart website; keep the name as is."
+    },
+    "urlAria": {
+        "where": "Library > Add Song dialog (import a chord chart from the web/URL/pasted text): web-address field accessible label",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "pasteLabel": {
+        "where": "Library > Add Song dialog (import a chord chart from the web/URL/pasted text): label above the paste-text area",
+        "who": "leaders",
+        "maxLength": 80,
+        "context": "Ctrl+A / Ctrl+C are keyboard shortcuts (select all, copy); keep them."
+    },
+    "pastePlaceholder": {
+        "where": "Library > Add Song dialog (import a chord chart from the web/URL/pasted text): paste-text area placeholder",
+        "who": "leaders",
+        "maxLength": 120
+    },
+    "extracting": {
+        "where": "Library > Add Song dialog (import a chord chart from the web/URL/pasted text): fetch button while working",
+        "who": "leaders",
+        "maxLength": 24
+    },
+    "fetchChart": {
+        "where": "Library > Add Song dialog (import a chord chart from the web/URL/pasted text): button that fetches and extracts the chart",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "fetchHint": {
+        "where": "Library > Add Song dialog (import a chord chart from the web/URL/pasted text): hint under the fetch button",
+        "who": "leaders",
+        "maxLength": 120
+    },
+    "titleLabel": {
+        "where": "Library > Add Song dialog (import a chord chart from the web/URL/pasted text): verify step, label of the song title field",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "artistLabel": {
+        "where": "Library > Add Song dialog (import a chord chart from the web/URL/pasted text): verify step, label of the artist field",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "contentLabel": {
+        "where": "Library > Add Song dialog (import a chord chart from the web/URL/pasted text): verify step, label above the chord chart text box",
+        "who": "leaders",
+        "maxLength": 50,
+        "context": "The user checks that chords line up over the lyrics."
+    },
+    "monospacedFont": {
+        "where": "Library > Add Song dialog (import a chord chart from the web/URL/pasted text): verify step, small uppercase hint that the chart box uses a fixed-width font",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "sectionLabel": {
+        "where": "Library > Add Song dialog (import a chord chart from the web/URL/pasted text): verify step, label of the library section (collection) picker",
+        "who": "leaders",
+        "maxLength": 24
+    },
+    "sectionUploads": {
+        "where": "Library > Add Song dialog (import a chord chart from the web/URL/pasted text): library section option for user uploads",
+        "who": "leaders",
+        "maxLength": 16
+    },
+    "addToSetlist": {
+        "where": "Library > Add Song dialog (import a chord chart from the web/URL/pasted text): verify step, label of the optional setlist picker",
+        "who": "leaders",
+        "maxLength": 30,
+        "context": "Setlist = the ordered list of songs for a service."
+    },
+    "dontAddToSetlist": {
+        "where": "Library > Add Song dialog (import a chord chart from the web/URL/pasted text): first option of the setlist picker (no setlist)",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "back": {
+        "where": "Library > Add Song dialog (import a chord chart from the web/URL/pasted text): verify step, button back to the input step",
+        "who": "leaders",
+        "maxLength": 12
+    },
+    "generating": {
+        "where": "Library > Add Song dialog (import a chord chart from the web/URL/pasted text): save button while saving",
+        "who": "leaders",
+        "maxLength": 24
+    },
+    "saveChart": {
+        "where": "Library > Add Song dialog (import a chord chart from the web/URL/pasted text): verify step, save button",
+        "who": "leaders",
+        "maxLength": 30,
+        "context": "Chart = the sheet-music / chord-chart file."
+    },
+    "searchFailed": {
+        "where": "Library > Add Song dialog (import a chord chart from the web/URL/pasted text): error toast when the web search fails",
+        "who": "leaders",
+        "maxLength": 60
+    },
+    "searchResultsIntro": {
+        "where": "Library > Add Song dialog (import a chord chart from the web/URL/pasted text): assistant chat bubble shown above search results when the server sent no message",
+        "who": "leaders",
+        "maxLength": 60
+    },
+    "assistantError": {
+        "where": "Library > Add Song dialog (import a chord chart from the web/URL/pasted text): error toast when the AI assistant cannot be reached",
+        "who": "leaders",
+        "maxLength": 60
+    },
+    "invalidUrl": {
+        "where": "Library > Add Song dialog (import a chord chart from the web/URL/pasted text): error toast for a malformed web address",
+        "who": "leaders",
+        "maxLength": 60
+    },
+    "scrapeFailed": {
+        "where": "Library > Add Song dialog (import a chord chart from the web/URL/pasted text): error toast when reading the web page fails",
+        "who": "leaders",
+        "maxLength": 60
+    },
+    "scrapeError": {
+        "where": "Library > Add Song dialog (import a chord chart from the web/URL/pasted text): error toast when extracting the chart fails",
+        "who": "leaders",
+        "maxLength": 60
+    },
+    "titleAndContentRequired": {
+        "where": "Library > Add Song dialog (import a chord chart from the web/URL/pasted text): error toast when title or chart text is empty",
+        "who": "leaders",
+        "maxLength": 60
+    },
+    "uploadFailed": {
+        "where": "Library > Add Song dialog (import a chord chart from the web/URL/pasted text): error toast when saving the chart to the library fails",
+        "who": "leaders",
+        "maxLength": 60
+    },
+    "importedToast": {
+        "where": "Library > Add Song dialog (import a chord chart from the web/URL/pasted text): success toast after saving",
+        "who": "leaders",
+        "maxLength": 60,
+        "context": "Drive = Google Drive (product name)."
+    },
+    "saveError": {
+        "where": "Library > Add Song dialog (import a chord chart from the web/URL/pasted text): error toast when saving fails for another reason",
+        "who": "leaders",
+        "maxLength": 60
+    }
+}

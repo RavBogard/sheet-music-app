@@ -12,6 +12,8 @@ import { coreSectionLabel } from "@/lib/songs/picker-scope"
 import { apiFetch } from "@/lib/api-client"
 import { useQueryClient } from "@tanstack/react-query"
 import { broadcastCacheInvalidation } from "@/lib/library-cache"
+import { useT } from "@/i18n/client"
+import { useChartContentDir } from "@/components/i18n/ChartContent"
 
 import { type Setlist } from "@/lib/setlist-firebase"
 
@@ -27,6 +29,8 @@ import { DialogDescription } from '@radix-ui/react-dialog'
 export function ScraperModal({ onUploadComplete, setlists = [], onAddToSetlist }: ScraperModalProps) {
     const queryClient = useQueryClient()
     const org = useOrg()
+    const t = useT()
+    const chartDir = useChartContentDir()
     const [open, setOpen] = useState(false)
     const [url, setUrl] = useState("")
     const [rawText, setRawText] = useState("")
@@ -95,18 +99,18 @@ export function ScraperModal({ onUploadComplete, setlists = [], onAddToSetlist }
             const data = await res.json()
             
             if (!res.ok) {
-                throw new Error(data.error || 'Search failed')
+                throw new Error(data.error || t("libraryScraper.searchFailed"))
             }
             
             const newBotMsg: ChatMessage = {
                 role: 'model',
-                content: data.message || "Here's what I found:",
+                content: data.message || t("libraryScraper.searchResultsIntro"),
                 results: data.results || []
             }
             
             setChatMessages([...newHistory, newBotMsg])
         } catch (err: any) {
-            toast.error(err.message || 'Error communicating with assistant')
+            toast.error(err.message || t("libraryScraper.assistantError"))
         } finally {
             setSearching(false)
         }
@@ -119,7 +123,7 @@ export function ScraperModal({ onUploadComplete, setlists = [], onAddToSetlist }
             try {
                 new URL(scrapeUrl)
             } catch {
-                toast.error("Please enter a valid URL")
+                toast.error(t("libraryScraper.invalidUrl"))
                 return
             }
         } else if (mode === 'text') {
@@ -138,7 +142,7 @@ export function ScraperModal({ onUploadComplete, setlists = [], onAddToSetlist }
             const data = await res.json()
             
             if (!res.ok) {
-                throw new Error(data.error || 'Failed to scrape URL')
+                throw new Error(data.error || t("libraryScraper.scrapeFailed"))
             }
             
             setTitle(data.title || "")
@@ -147,7 +151,7 @@ export function ScraperModal({ onUploadComplete, setlists = [], onAddToSetlist }
             setStep('verify')
             
         } catch (err: any) {
-            toast.error(err.message || 'Error scraping chart')
+            toast.error(err.message || t("libraryScraper.scrapeError"))
         } finally {
             setScraping(false)
         }
@@ -155,7 +159,7 @@ export function ScraperModal({ onUploadComplete, setlists = [], onAddToSetlist }
 
     const handleSave = async () => {
         if (!content.trim() || !title.trim()) {
-            toast.error("Title and content are required")
+            toast.error(t("libraryScraper.titleAndContentRequired"))
             return
         }
         
@@ -180,14 +184,14 @@ export function ScraperModal({ onUploadComplete, setlists = [], onAddToSetlist }
             })
             
             if (!res.ok) {
-                const data = await res.json().catch(() => ({ error: 'Upload failed' }))
-                throw new Error(data.error || 'Upload failed')
+                const data = await res.json().catch(() => ({ error: t("libraryScraper.uploadFailed") }))
+                throw new Error(data.error || t("libraryScraper.uploadFailed"))
             }
             
             const data = await res.json()
             
             setStep('success')
-            toast.success('Chart imported and saved to Drive')
+            toast.success(t("libraryScraper.importedToast"))
             
             queryClient.invalidateQueries({ queryKey: ['library'] })
             broadcastCacheInvalidation()
@@ -209,7 +213,7 @@ export function ScraperModal({ onUploadComplete, setlists = [], onAddToSetlist }
             }, 1500)
             
         } catch (err: any) {
-            toast.error(err.message || 'Error saving chart')
+            toast.error(err.message || t("libraryScraper.saveError"))
             setUploading(false)
         }
     }
@@ -219,7 +223,7 @@ export function ScraperModal({ onUploadComplete, setlists = [], onAddToSetlist }
             <DialogTrigger asChild>
                 <Button variant="outline" size="sm" className="gap-2">
                     <Globe className="h-4 w-4" />
-                    Add Song
+                    {t("libraryScraper.addSong")}
                 </Button>
             </DialogTrigger>
 
@@ -227,17 +231,17 @@ export function ScraperModal({ onUploadComplete, setlists = [], onAddToSetlist }
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <Globe className="h-5 w-5 text-brand" />
-                        Add Song to Library
+                        {t("libraryScraper.dialogTitle")}
                     </DialogTitle>
                     <VisuallyHidden>
-                        <DialogDescription>Search the web, import from URL, or paste text to add a new song to the library.</DialogDescription>
+                        <DialogDescription>{t("libraryScraper.dialogDescription")}</DialogDescription>
                     </VisuallyHidden>
                 </DialogHeader>
 
                 {step === 'success' ? (
                     <div className="flex flex-col items-center gap-3 py-8">
                         <CheckCircle className="h-12 w-12 text-green-400" />
-                        <p className="text-sm text-zinc-300">Imported successfully!</p>
+                        <p className="text-sm text-zinc-300">{t("libraryScraper.importedSuccess")}</p>
                     </div>
                 ) : step === 'input' ? (
                     <div className="space-y-4 py-4">
@@ -246,19 +250,19 @@ export function ScraperModal({ onUploadComplete, setlists = [], onAddToSetlist }
                                 onClick={() => setMode('search')}
                                 className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors ${mode === 'search' ? 'bg-background shadow text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
                             >
-                                Search Web
+                                {t("libraryScraper.modeSearch")}
                             </button>
                             <button
                                 onClick={() => setMode('url')}
                                 className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors ${mode === 'url' ? 'bg-background shadow text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
                             >
-                                From URL
+                                {t("libraryScraper.modeUrl")}
                             </button>
                             <button
                                 onClick={() => setMode('text')}
                                 className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors ${mode === 'text' ? 'bg-background shadow text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
                             >
-                                Paste Text
+                                {t("libraryScraper.modeText")}
                             </button>
                         </div>
 
@@ -269,7 +273,7 @@ export function ScraperModal({ onUploadComplete, setlists = [], onAddToSetlist }
                                     {chatMessages.length === 0 ? (
                                         <div className="h-full flex flex-col items-center justify-center text-muted-foreground opacity-50 space-y-2">
                                             <Bot className="h-8 w-8" />
-                                            <p className="text-xs text-center max-w-[200px]">Ask me to find a specific song, or describe it and I'll figure it out!</p>
+                                            <p className="text-xs text-center max-w-[200px]">{t("libraryScraper.chatEmpty")}</p>
                                         </div>
                                     ) : (
                                         chatMessages.map((msg, i) => (
@@ -278,7 +282,7 @@ export function ScraperModal({ onUploadComplete, setlists = [], onAddToSetlist }
                                                     {msg.role === 'user' ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
                                                 </div>
                                                 <div className={`flex flex-col gap-2 max-w-[85%] ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
-                                                    <div className={`p-3 rounded-2xl text-sm ${msg.role === 'user' ? 'bg-brand text-white rounded-tr-sm' : 'bg-zinc-800/80 text-zinc-100 rounded-tl-sm'}`}>
+                                                    <div className={`p-3 rounded-2xl text-sm ${msg.role === 'user' ? 'bg-brand text-white rounded-se-sm' : 'bg-zinc-800/80 text-zinc-100 rounded-ss-sm'}`}>
                                                         {msg.content}
                                                     </div>
                                                     
@@ -302,7 +306,7 @@ export function ScraperModal({ onUploadComplete, setlists = [], onAddToSetlist }
                                                                         {scraping && url === res.url ? (
                                                                             <Loader2 className="h-3 w-3 animate-spin" />
                                                                         ) : (
-                                                                            "Import"
+                                                                            t("libraryScraper.importResult")
                                                                         )}
                                                                     </Button>
                                                                 </div>
@@ -318,9 +322,9 @@ export function ScraperModal({ onUploadComplete, setlists = [], onAddToSetlist }
                                             <div className="shrink-0 w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-300">
                                                 <Bot className="h-4 w-4" />
                                             </div>
-                                            <div className="p-3 rounded-2xl bg-zinc-800/80 text-zinc-100 rounded-tl-sm flex items-center gap-2">
+                                            <div className="p-3 rounded-2xl bg-zinc-800/80 text-zinc-100 rounded-ss-sm flex items-center gap-2">
                                                 <Loader2 className="h-3 w-3 animate-spin" />
-                                                <span className="text-xs">Thinking...</span>
+                                                <span className="text-xs">{t("libraryScraper.thinking")}</span>
                                             </div>
                                         </div>
                                     )}
@@ -332,9 +336,9 @@ export function ScraperModal({ onUploadComplete, setlists = [], onAddToSetlist }
                                         <Input
                                             value={chatInput}
                                             onChange={(e) => setChatInput(e.target.value)}
-                                            placeholder="Describe a song or type a title..."
-                                            aria-label="Describe a song or type a title"
-                                            className="bg-muted/50 border-border pr-10"
+                                            placeholder={t("libraryScraper.chatPlaceholder")}
+                                            aria-label={t("libraryScraper.chatLabel")}
+                                            className="bg-muted/50 border-border pe-10"
                                             onKeyDown={(e) => {
                                                 if (e.key === 'Enter') handleChatSubmit()
                                             }}
@@ -343,8 +347,8 @@ export function ScraperModal({ onUploadComplete, setlists = [], onAddToSetlist }
                                         <Button
                                             size="icon"
                                             variant="ghost"
-                                            aria-label="Send chat message"
-                                            className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-brand hover:bg-brand/10 hover:text-brand"
+                                            aria-label={t("libraryScraper.sendMessage")}
+                                            className="absolute end-1 top-1/2 -translate-y-1/2 h-7 w-7 text-brand hover:bg-brand/10 hover:text-brand"
                                             onClick={handleChatSubmit}
                                             disabled={searching || !chatInput.trim()}
                                         >
@@ -355,16 +359,17 @@ export function ScraperModal({ onUploadComplete, setlists = [], onAddToSetlist }
                             </div>
                         ) : mode === 'url' ? (
                             <div>
-                                <label className="text-xs text-muted-foreground mb-1 block">Chart URL (Chordie, etc.)</label>
+                                <label className="text-xs text-muted-foreground mb-1 block">{t("libraryScraper.urlLabel")}</label>
                                 <div className="flex gap-2">
                                     <div className="relative flex-1">
-                                        <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <LinkIcon className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                         <Input
                                             value={url}
                                             onChange={(e) => setUrl(e.target.value)}
+                                            // i18n-ignore: example URL, not prose
                                             placeholder="https://tabs.ultimate-guitar.com/..."
-                                            aria-label="Chart URL"
-                                            className="pl-9"
+                                            aria-label={t("libraryScraper.urlAria")}
+                                            className="ps-9"
                                             onKeyDown={(e) => {
                                                 if (e.key === 'Enter') handleScrape()
                                             }}
@@ -374,11 +379,11 @@ export function ScraperModal({ onUploadComplete, setlists = [], onAddToSetlist }
                             </div>
                         ) : (
                             <div>
-                                <label className="text-xs text-muted-foreground mb-1 block">Paste Webpage Text (Ctrl+A, Ctrl+C on the site)</label>
+                                <label className="text-xs text-muted-foreground mb-1 block">{t("libraryScraper.pasteLabel")}</label>
                                 <Textarea
                                     value={rawText}
                                     onChange={(e) => setRawText(e.target.value)}
-                                    placeholder="Paste the messy webpage text here. The AI will extract the chords and lyrics automatically."
+                                    placeholder={t("libraryScraper.pastePlaceholder")}
                                     className="h-32 text-xs font-mono bg-muted/20"
                                 />
                             </div>
@@ -392,17 +397,17 @@ export function ScraperModal({ onUploadComplete, setlists = [], onAddToSetlist }
                             >
                                 {scraping ? (
                                     <>
-                                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                        Extracting Chart...
+                                        <Loader2 className="h-4 w-4 animate-spin me-2" />
+                                        {t("libraryScraper.extracting")}
                                     </>
                                 ) : (
-                                    "Fetch Chart"
+                                    t("libraryScraper.fetchChart")
                                 )}
                             </Button>
                         )}
                         {mode !== 'search' && (
                             <p className="text-xs text-muted-foreground text-center">
-                                The system will try to extract just the lyrics and chords and format them perfectly.
+                                {t("libraryScraper.fetchHint")}
                             </p>
                         )}
                     </div>
@@ -410,23 +415,25 @@ export function ScraperModal({ onUploadComplete, setlists = [], onAddToSetlist }
                     <div className="space-y-4 py-2">
                         <div className="flex gap-3">
                             <div className="flex-1">
-                                <label className="text-xs text-muted-foreground mb-1 block">Title</label>
+                                <label className="text-xs text-muted-foreground mb-1 block">{t("libraryScraper.titleLabel")}</label>
                                 <Input value={title} onChange={(e) => setTitle(e.target.value)} />
                             </div>
                             <div className="flex-1">
-                                <label className="text-xs text-muted-foreground mb-1 block">Artist</label>
+                                <label className="text-xs text-muted-foreground mb-1 block">{t("libraryScraper.artistLabel")}</label>
                                 <Input value={artist} onChange={(e) => setArtist(e.target.value)} />
                             </div>
                         </div>
                         
                         <div>
                             <div className="flex justify-between items-center mb-1">
-                                <label className="text-xs text-muted-foreground block">Chart Content (Verify Alignment)</label>
-                                <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Monospaced Font</span>
+                                <label className="text-xs text-muted-foreground block">{t("libraryScraper.contentLabel")}</label>
+                                <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{t("libraryScraper.monospacedFont")}</span>
                             </div>
                             <Textarea
                                 value={content}
                                 onChange={(e) => setContent(e.target.value)}
+                                data-chart-preview
+                                {...chartDir}
                                 className="font-mono text-sm min-h-[350px] resize-y bg-muted/20"
                                 spellCheck={false}
                             />
@@ -435,7 +442,7 @@ export function ScraperModal({ onUploadComplete, setlists = [], onAddToSetlist }
                         {/* Collection */}
                         <div className="flex gap-3">
                             <div className="flex-1">
-                                <label htmlFor="scraper-collection" className="text-xs text-muted-foreground mb-1 block">Library Section</label>
+                                <label htmlFor="scraper-collection" className="text-xs text-muted-foreground mb-1 block">{t("libraryScraper.sectionLabel")}</label>
                                 <select
                                     id="scraper-collection"
                                     value={collection}
@@ -443,23 +450,25 @@ export function ScraperModal({ onUploadComplete, setlists = [], onAddToSetlist }
                                     className="w-full h-9 px-3 rounded-md bg-muted/30 border border-border text-foreground text-sm focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
                                 >
                                     <option value="crc">{coreSectionLabel(org)}</option>
+                                    {/* i18n-ignore: songbook collection name (data) */}
                                     <option value="supplemental">Shireinu</option>
+                                    {/* i18n-ignore: songbook collection name (data) */}
                                     <option value="nava">Nava Tehilah</option>
-                                    <option value="uploads">Uploads</option>
+                                    <option value="uploads">{t("libraryScraper.sectionUploads")}</option>
                                 </select>
                             </div>
 
                             {/* Add to Setlist */}
                             {setlists.length > 0 && (
                                 <div className="flex-1">
-                                    <label htmlFor="scraper-setlist" className="text-xs text-brand font-medium mb-1 block">Add to Setlist (Optional)</label>
+                                    <label htmlFor="scraper-setlist" className="text-xs text-brand font-medium mb-1 block">{t("libraryScraper.addToSetlist")}</label>
                                     <select
                                         id="scraper-setlist"
                                         value={selectedSetlistId}
                                         onChange={(e) => setSelectedSetlistId(e.target.value)}
                                         className="w-full h-9 px-3 rounded-md bg-brand/10 border border-brand/30 text-foreground text-sm focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
                                     >
-                                        <option value="">— Don't add to setlist —</option>
+                                        <option value="">{t("libraryScraper.dontAddToSetlist")}</option>
                                         {setlists.map(s => (
                                             <option key={s.id} value={s.id}>{s.name}</option>
                                         ))}
@@ -470,7 +479,7 @@ export function ScraperModal({ onUploadComplete, setlists = [], onAddToSetlist }
                         
                         <div className="flex justify-end gap-2 pt-2">
                             <Button variant="ghost" onClick={() => setStep('input')} disabled={uploading}>
-                                Back
+                                {t("libraryScraper.back")}
                             </Button>
                             <Button 
                                 onClick={handleSave} 
@@ -479,11 +488,11 @@ export function ScraperModal({ onUploadComplete, setlists = [], onAddToSetlist }
                             >
                                 {uploading ? (
                                     <>
-                                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                        Generating Chart...
+                                        <Loader2 className="h-4 w-4 animate-spin me-2" />
+                                        {t("libraryScraper.generating")}
                                     </>
                                 ) : (
-                                    "Save Chart to Library"
+                                    t("libraryScraper.saveChart")
                                 )}
                             </Button>
                         </div>
