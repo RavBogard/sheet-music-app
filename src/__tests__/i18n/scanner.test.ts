@@ -53,3 +53,22 @@ describe("scanner rules", () => {
         expect(pendingCovers("src/a/*", "src/a/b/c.tsx")).toBe(false)
     })
 })
+
+describe("scanner: HTML entities in JSX (lane D)", () => {
+    it("decodes entities before judging: letterless entities are fine, encoded words are still flagged", () => {
+        expect(tsx(`export const A = () => <p title="&middot;">&#x2022; &middot; &mdash; &#8226; &nbsp;</p>`)).toEqual([])
+        expect(tsx(`export const A = () => <p title="Tom &amp; Jerry">Rock &amp; roll &#x2014; live</p>`)).toEqual([
+            ["attribute", "Tom & Jerry", "title"],
+            ["jsx-text", "Rock & roll — live", ""],
+        ])
+    })
+
+    it("decodeEntities: numeric, named, unknown left as written", async () => {
+        const { decodeEntities } = await import("./scanner")
+        expect(decodeEntities("&#x2022;&#8226;&bull;&amp;&nosuch;")).toBe("•••&&nosuch;")
+    })
+
+    it("plain JS strings are not entity-decoded (they render literally)", () => {
+        expect(tsx(`toast.error("&middot;")`, "src/components/x/a.ts")).toEqual([["message-call", "&middot;", "toast.error"]])
+    })
+})
