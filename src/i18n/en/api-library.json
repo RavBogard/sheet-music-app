@@ -1,0 +1,13 @@
+{
+    "serverNotReady": "Server not ready",
+    "fileNotFound": "File not found",
+    "crossTenantChordCacheWrite": "cross-tenant chord-cache write refused",
+    "missingFileId": "Missing fileId",
+    "chordsVerifiedNeedsMusician": "chordsVerified requires a musician account",
+    "displayNameEmpty": "displayName cannot be empty after trimming.",
+    "fileIdsRequired": "fileIds parameter required",
+    "tooManyFileIds": "Maximum {max} file IDs per request",
+    "uploadPermissionRequired": "Upload permission required. Ask an admin to enable uploads for your account.",
+    "noFileProvided": "No file provided",
+    "uploaded": "\"{title}\" uploaded to library"
+}

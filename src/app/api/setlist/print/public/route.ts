@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { getT } from "@/i18n/server"
 import { generatePrintPdf, PrintRequest } from "@/lib/print-pipeline"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { checkRateLimit } from "@/lib/rate-limit"
@@ -28,12 +29,14 @@ export async function GET(request: NextRequest) {
 
         const setlistId = request.nextUrl.searchParams.get('setlistId')
         if (!setlistId) {
-            return NextResponse.json({ error: 'setlistId parameter required' }, { status: 400 })
+            const t = await getT()
+            return NextResponse.json({ error: t("api-setlist.setlistIdRequired") }, { status: 400 })
         }
 
         if (!initAdmin()) {
+            const t = await getT()
             return NextResponse.json(
-                { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
+                { error: t("api-setlist.serverNotReady"), code: "FIREBASE_NOT_INITIALIZED" },
                 { status: 500 },
             )
         }
@@ -42,7 +45,8 @@ export async function GET(request: NextRequest) {
         // Load setlist
         const setlistDoc = await db.collection('setlists').doc(setlistId).get()
         if (!setlistDoc.exists) {
-            return NextResponse.json({ error: 'Setlist not found' }, { status: 404 })
+            const t = await getT()
+            return NextResponse.json({ error: t("api-setlist.setlistNotFound") }, { status: 404 })
         }
 
         const setlist = setlistDoc.data()!
@@ -101,6 +105,7 @@ export async function GET(request: NextRequest) {
         })
     } catch (error) {
         logger.error('[PublicPacket] Error:', error)
-        return NextResponse.json({ error: 'Failed to generate packet' }, { status: 500 })
+        const t = await getT()
+        return NextResponse.json({ error: t("api-setlist.packetFailed") }, { status: 500 })
     }
 }

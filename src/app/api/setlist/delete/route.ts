@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { getT } from "@/i18n/server"
 import { z } from "zod"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { createApiHandler, apiError } from "@/lib/api-wrapper"
@@ -51,8 +52,9 @@ async function batchDeleteByField(
 export const POST = createApiHandler(
     async (ctx) => {
         if (!initAdmin()) {
+            const t = await getT()
             return NextResponse.json(
-                { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
+                { error: t("api-setlist.serverNotReady"), code: "FIREBASE_NOT_INITIALIZED" },
                 { status: 500 },
             )
         }
@@ -63,7 +65,8 @@ export const POST = createApiHandler(
         const setlistRef = db.collection("setlists").doc(setlistId)
         const setlistSnap = await setlistRef.get()
         if (!setlistSnap.exists) {
-            return apiError("Setlist not found", 404, "setlist_not_found")
+            const t = await getT()
+            return apiError(t("api-setlist.setlistNotFound"), 404, "setlist_not_found")
         }
 
         // v4.4 SEC-006: band_leader role alone is not enough — require
@@ -72,7 +75,8 @@ export const POST = createApiHandler(
         const setlistData = setlistSnap.data()
         const isOwner = setlistData?.ownerId === ctx.auth.uid
         if (!isOwner && !ctx.auth.isAdmin) {
-            return apiError("Only the owner or an admin can delete this setlist", 403, "forbidden")
+            const t = await getT()
+            return apiError(t("api-setlist.deleteOwnerOrAdminOnly"), 403, "forbidden")
         }
 
         const errors: string[] = []

@@ -1,5 +1,6 @@
 import { rowOrg } from "@/lib/org/membership"
 import { NextResponse } from "next/server"
+import { getT } from "@/i18n/server"
 import { revalidatePath } from "next/cache"
 import { createApiHandler } from "@/lib/api-wrapper"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
@@ -41,15 +42,17 @@ export const PATCH = createApiHandler(
         // cannot fork the dedupe bucket.
         const trimmed = normalizeChartTitle(displayName)
         if (!trimmed) {
+            const t = await getT()
             return NextResponse.json(
-                { error: "displayName cannot be empty after trimming." },
+                { error: t("api-library.displayNameEmpty") },
                 { status: 400 },
             )
         }
 
         if (!initAdmin()) {
+            const t = await getT()
             return NextResponse.json(
-                { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
+                { error: t("api-library.serverNotReady"), code: "FIREBASE_NOT_INITIALIZED" },
                 { status: 500 },
             )
         }
@@ -59,7 +62,8 @@ export const PATCH = createApiHandler(
         const docSnap = await docRef.get()
 
         if (!docSnap.exists) {
-            return NextResponse.json({ error: "File not found" }, { status: 404 })
+            const t = await getT()
+            return NextResponse.json({ error: t("api-library.fileNotFound") }, { status: 404 })
         }
 
         // F-7 W-02 recompute: count non-orphaned siblings sharing the

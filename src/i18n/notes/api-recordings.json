@@ -1,0 +1,66 @@
+{
+    "serverNotReady": {
+        "where": "Recordings (upload, playback): Error toast/message when the server's database connection is not initialised (rare, transient).",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "authRequired": {
+        "where": "Recording playback: error when the listener is not signed in",
+        "who": "musicians",
+        "maxLength": 40
+    },
+    "invalidRecordingId": {
+        "where": "Recording playback: error when the recording link has no id",
+        "who": "musicians",
+        "maxLength": 40,
+        "context": "'recording' = a reference audio recording of a song"
+    },
+    "recordingNotFound": {
+        "where": "Recording playback: error when the recording was deleted",
+        "who": "musicians",
+        "maxLength": 40
+    },
+    "noStoredFile": {
+        "where": "Recording playback: error when the recording entry has no audio file",
+        "who": "musicians",
+        "maxLength": 50
+    },
+    "fileNotFound": {
+        "where": "Recording playback: error when the audio file is missing from storage",
+        "who": "musicians",
+        "maxLength": 50
+    },
+    "fileUnavailable": {
+        "where": "Recording playback: error when the audio file could not be downloaded (temporary)",
+        "who": "musicians",
+        "maxLength": 50
+    },
+    "leadersOnly": {
+        "where": "Song recordings: error toast when a musician who is not a band leader tries to upload a recording",
+        "who": "musicians",
+        "maxLength": 80
+    },
+    "noFileProvided": {
+        "where": "Song recordings upload: error when no audio file was attached",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "songIdRequired": {
+        "where": "Song recordings upload: error when the upload did not say which song it belongs to (developer error)",
+        "who": "leaders",
+        "maxLength": 40,
+        "context": "'songId' is a technical field name"
+    },
+    "audioOnly": {
+        "where": "Song recordings upload: error when the chosen file is not audio",
+        "who": "leaders",
+        "maxLength": 80,
+        "context": "Keep the file extensions in the parentheses as written"
+    },
+    "fileTooLarge": {
+        "where": "Song recordings upload: error when the audio file is too big",
+        "who": "leaders",
+        "maxLength": 60,
+        "context": "{maxMb} is a number of megabytes (25); 'MB' is the unit"
+    }
+}

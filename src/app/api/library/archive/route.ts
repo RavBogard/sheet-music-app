@@ -1,5 +1,6 @@
 import { rowOrg } from "@/lib/org/membership"
 import { NextResponse } from "next/server"
+import { getT } from "@/i18n/server"
 import { revalidatePath } from "next/cache"
 import { createApiHandler } from "@/lib/api-wrapper"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
@@ -28,8 +29,9 @@ export const PATCH = createApiHandler(
         const { fileId, archive } = ctx.body!
 
         if (!initAdmin()) {
+            const t = await getT()
             return NextResponse.json(
-                { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
+                { error: t("api-library.serverNotReady"), code: "FIREBASE_NOT_INITIALIZED" },
                 { status: 500 },
             )
         }
@@ -39,7 +41,8 @@ export const PATCH = createApiHandler(
         const docSnap = await docRef.get()
 
         if (!docSnap.exists) {
-            return NextResponse.json({ error: "File not found" }, { status: 404 })
+            const t = await getT()
+            return NextResponse.json({ error: t("api-library.fileNotFound") }, { status: 404 })
         }
 
         // v60-09-01: mirror status to songs/{fileId} so the picker can filter.

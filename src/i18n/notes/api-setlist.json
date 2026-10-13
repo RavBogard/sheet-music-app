@@ -1,0 +1,91 @@
+{
+    "serverNotReady": {
+        "where": "Setlist actions (delete, notify band, public print): Error toast/message when the server's database connection is not initialised (rare, transient).",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "setlistNotFound": {
+        "where": "Setlist actions (delete, rename, print, email, notify band, transfer): error when the setlist no longer exists",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "deleteOwnerOrAdminOnly": {
+        "where": "Setlist editor / dashboard: error when deleting someone else's setlist",
+        "who": "leaders",
+        "maxLength": 70,
+        "context": "'owner' = the person who created the setlist"
+    },
+    "ownerOrLeaderRequired": {
+        "where": "Setlist: error when emailing personal packets without permission",
+        "who": "leaders",
+        "maxLength": 40,
+        "context": "'leader' = band leader"
+    },
+    "atLeastOneMusician": {
+        "where": "Notify-band dialog: error when no musicians were selected to notify",
+        "who": "leaders",
+        "maxLength": 60
+    },
+    "ownerLeaderOrAdminRequired": {
+        "where": "Notify-band / resend-email: error when the user may not notify the band about this setlist",
+        "who": "leaders",
+        "maxLength": 70
+    },
+    "needsLinkedChart": {
+        "where": "Notify-band dialog: error when no song in the setlist has a chart attached",
+        "who": "leaders",
+        "maxLength": 80,
+        "context": "'chart' = sheet-music file"
+    },
+    "setlistIdRequired": {
+        "where": "Setlist print (packet download): error when the link names no setlist (developer error)",
+        "who": "anyone with the link",
+        "maxLength": 40,
+        "context": "'setlistId' is a technical parameter name"
+    },
+    "packetFailed": {
+        "where": "Public setlist packet download: error when the PDF packet could not be built",
+        "who": "anyone with the link",
+        "maxLength": 50,
+        "context": "'packet' = the PDF bundle of all charts in the setlist"
+    },
+    "chartsOmitted": {
+        "where": "Print / gig packet: error dialog when some charts could not be added to the PDF packet (user may print anyway)",
+        "who": "leaders",
+        "maxLength": 80,
+        "context": "'charts' = sheet-music files; 'packet' = the PDF bundle"
+    },
+    "renameNotAllowed": {
+        "where": "Setlist editor: error when renaming a setlist without permission",
+        "who": "leaders",
+        "maxLength": 50
+    },
+    "invalidRequestSetlistId": {
+        "where": "Resend email: error when the request named no setlist (developer error)",
+        "who": "leaders",
+        "maxLength": 50,
+        "context": "'setlistId' is a technical field name"
+    },
+    "noEmailRecipients": {
+        "where": "Resend email: error when none of the setlist's musicians has an email address",
+        "who": "leaders",
+        "maxLength": 60
+    },
+    "resendFailed": {
+        "where": "Resend email: error when sending the emails failed",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "transferUserNotFound": {
+        "where": "Transfer setlist (admin): error when no account has the given email",
+        "who": "admins",
+        "maxLength": 100,
+        "context": "{email} is the email address that was typed"
+    },
+    "transferred": {
+        "where": "Transfer setlist (admin): success message",
+        "who": "admins",
+        "maxLength": 100,
+        "context": "{setlistName} is the setlist's name (in quotes); {email} is the new owner's email"
+    }
+}

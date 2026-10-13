@@ -1,0 +1,22 @@
+{
+    "invalidJsonBody": {
+        "where": "Chart scraper dialog: error when the scrape request body could not be read",
+        "who": "leaders",
+        "maxLength": 60
+    },
+    "messagesRequired": {
+        "where": "Chart scraper dialog (web search chat): error when the request had no chat messages",
+        "who": "leaders",
+        "maxLength": 60
+    },
+    "searchDefaultReply": {
+        "where": "Chart scraper dialog (web search chat): assistant's reply shown above search results when the AI gave no text of its own",
+        "who": "leaders",
+        "maxLength": 80
+    },
+    "searchFailed": {
+        "where": "Chart scraper dialog (web search chat): error when the web search failed",
+        "who": "leaders",
+        "maxLength": 40
+    }
+}

@@ -5,6 +5,7 @@
 // where the heavy deps now actually live after Wave 3's refactor.
 import 'server-only'
 import { NextResponse } from "next/server"
+import { getT } from "@/i18n/server"
 import { revalidatePath } from "next/cache"
 import { createApiHandler } from "@/lib/api-wrapper"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
@@ -35,8 +36,9 @@ export const POST = createApiHandler(async (ctx) => {
     if (limited) return limited
 
     if (!initAdmin()) {
+        const t = await getT()
         return NextResponse.json(
-            { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
+            { error: t("api-library.serverNotReady"), code: "FIREBASE_NOT_INITIALIZED" },
             { status: 500 },
         )
     }
@@ -49,9 +51,10 @@ export const POST = createApiHandler(async (ctx) => {
         !isPrivilegedRole &&
         (!userDoc.exists || !userDoc.data()?.canUpload)
     ) {
+        const t = await getT()
         return NextResponse.json(
             {
-                error: "Upload permission required. Ask an admin to enable uploads for your account.",
+                error: t("api-library.uploadPermissionRequired"),
             },
             { status: 403 },
         )
@@ -60,7 +63,8 @@ export const POST = createApiHandler(async (ctx) => {
     const formData = await ctx.req.formData()
     const file = formData.get("file") as File | null
     if (!file) {
-        return NextResponse.json({ error: "No file provided" }, { status: 400 })
+        const t = await getT()
+        return NextResponse.json({ error: t("api-library.noFileProvided") }, { status: 400 })
     }
 
     const rawTitle = formData.get("title") as string | null
@@ -99,12 +103,13 @@ export const POST = createApiHandler(async (ctx) => {
     revalidatePath("/api/library/list")
     revalidatePath("/(main)/library", "page")
 
+    const t = await getT()
     return NextResponse.json(
         {
             success: true,
             fileId: result.fileId,
             title: result.title,
-            message: `"${result.title}" uploaded to library`,
+            message: t("api-library.uploaded", { title: result.title }),
         },
         { status: 201 },
     )

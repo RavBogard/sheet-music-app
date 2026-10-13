@@ -1,0 +1,14 @@
+{
+    "serverNotReady": "Server not ready",
+    "authRequired": "Authentication required",
+    "invalidRecordingId": "Invalid recording ID",
+    "recordingNotFound": "Recording not found",
+    "noStoredFile": "Recording has no stored file",
+    "fileNotFound": "Recording file not found",
+    "fileUnavailable": "Recording file unavailable",
+    "leadersOnly": "Only band leaders and admins can upload recordings.",
+    "noFileProvided": "No file provided",
+    "songIdRequired": "songId is required",
+    "audioOnly": "Only audio files are supported (mp3, m4a, wav, ogg, webm, aac)",
+    "fileTooLarge": "File too large. Maximum size is {maxMb}MB"
+}

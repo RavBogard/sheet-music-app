@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { getT } from "@/i18n/server"
 
 import { createApiHandler } from "@/lib/api-wrapper"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
@@ -27,20 +28,23 @@ export const GET = createApiHandler(async (ctx) => {
     if (limited) return limited
 
     if (!ctx.auth && !(await verifySessionCookieRequest(ctx.req))) {
+        const t = await getT()
         return NextResponse.json(
-            { error: "Authentication required" },
+            { error: t("api-recordings.authRequired") },
             { status: 401 },
         )
     }
 
     const id = ctx.params?.id
     if (!id) {
-        return NextResponse.json({ error: "Invalid recording ID" }, { status: 400 })
+        const t = await getT()
+        return NextResponse.json({ error: t("api-recordings.invalidRecordingId") }, { status: 400 })
     }
 
     if (!initAdmin()) {
+        const t = await getT()
         return NextResponse.json(
-            { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
+            { error: t("api-recordings.serverNotReady"), code: "FIREBASE_NOT_INITIALIZED" },
             { status: 500 },
         )
     }
@@ -48,29 +52,32 @@ export const GET = createApiHandler(async (ctx) => {
 
     const docSnap = await db.collection('recordings').doc(id).get()
     if (!docSnap.exists) {
-        return NextResponse.json({ error: "Recording not found" }, { status: 404 })
+        const t = await getT()
+        return NextResponse.json({ error: t("api-recordings.recordingNotFound") }, { status: 404 })
     }
 
     const data = docSnap.data()!
     const storagePath = data.storagePath as string | undefined
     if (!storagePath) {
+        const t = await getT()
         return NextResponse.json(
-            { error: "Recording has no stored file" },
+            { error: t("api-recordings.noStoredFile") },
             { status: 404 },
         )
     }
 
     const result = await downloadFromStoragePath(storagePath)
     if (!result.success) {
+        const t = await getT()
         if (result.reason === 'not_found') {
             return NextResponse.json(
-                { error: "Recording file not found" },
+                { error: t("api-recordings.fileNotFound") },
                 { status: 404 },
             )
         }
         logger.error(`[RecordingFile] download failed for ${id}: ${result.message}`)
         return NextResponse.json(
-            { error: "Recording file unavailable" },
+            { error: t("api-recordings.fileUnavailable") },
             { status: 502 },
         )
     }

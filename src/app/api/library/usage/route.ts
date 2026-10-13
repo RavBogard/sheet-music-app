@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { getT } from "@/i18n/server"
 import { createApiHandler } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { getUsageSummaries } from "@/lib/song-usage"
@@ -16,7 +17,8 @@ export const GET = createApiHandler(
 
         const fileIdsParam = ctx.req.nextUrl.searchParams.get('fileIds')
         if (!fileIdsParam) {
-            return NextResponse.json({ error: 'fileIds parameter required' }, { status: 400 })
+            const t = await getT()
+            return NextResponse.json({ error: t("api-library.fileIdsRequired") }, { status: 400 })
         }
 
         const fileIds = fileIdsParam.split(',').filter(id => id.trim().length > 0)
@@ -26,7 +28,8 @@ export const GET = createApiHandler(
 
         // Cap at 100 to prevent abuse
         if (fileIds.length > 100) {
-            return NextResponse.json({ error: 'Maximum 100 file IDs per request' }, { status: 400 })
+            const t = await getT()
+            return NextResponse.json({ error: t("api-library.tooManyFileIds", { max: 100 }) }, { status: 400 })
         }
 
         const summaries = await getUsageSummaries(fileIds)

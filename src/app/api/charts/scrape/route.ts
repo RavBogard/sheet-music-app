@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { scrapeChart } from "@/lib/chart-scrape"
+import { getT } from "@/i18n/server"
 
 /**
  * POST /api/charts/scrape
@@ -17,7 +18,8 @@ export async function POST(request: Request) {
     try {
         body = await request.json()
     } catch {
-        return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 })
+        const t = await getT()
+        return NextResponse.json({ error: t("api-charts.invalidJsonBody") }, { status: 400 })
     }
 
     const result = await scrapeChart(body)

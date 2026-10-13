@@ -1,0 +1,73 @@
+{
+    "serverNotReady": {
+        "where": "Setlist import / matrix / update broadcast: Error toast/message when the server's database connection is not initialised (rare, transient).",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "importSucceeded": {
+        "where": "Setlist importer: success message after an imported setlist was created",
+        "who": "leaders",
+        "maxLength": 50
+    },
+    "noFileProvided": {
+        "where": "Setlist importer (document upload): error when no document was attached",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "fileTooLarge": {
+        "where": "Setlist importer (document upload): error when the document is too big",
+        "who": "leaders",
+        "maxLength": 60,
+        "context": "{maxMb} is a number of megabytes; 'MB' is the unit"
+    },
+    "unsupportedDocument": {
+        "where": "Setlist importer (document upload): error when the file type is not supported",
+        "who": "leaders",
+        "maxLength": 80,
+        "context": "Keep the file extensions .docx, .pdf, .txt as written"
+    },
+    "noTextProvided": {
+        "where": "Setlist importer: error when the document produced no text to structure",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "missingUrlOrCsv": {
+        "where": "Setlist importer (spreadsheet): error when neither a sheet link nor pasted CSV was sent (developer error)",
+        "who": "leaders",
+        "maxLength": 60,
+        "context": "'url' and 'csvText' are technical field names; keep them as written"
+    },
+    "sheetFetchFailed": {
+        "where": "Setlist importer (spreadsheet): error when the Google Sheet link could not be read",
+        "who": "leaders",
+        "maxLength": 200,
+        "context": "\"Anyone with the link can view\" is Google's own sharing-setting label (use Google's Hebrew wording for it). {detail} is the technical error text, usually English"
+    },
+    "sheetFetchUnknownError": {
+        "where": "Setlist importer (spreadsheet): the detail shown inside the 'Could not retrieve spreadsheet data' error when no specific reason is known",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "spreadsheetEmpty": {
+        "where": "Setlist importer (spreadsheet): error when the sheet has no rows",
+        "who": "leaders",
+        "maxLength": 50
+    },
+    "spreadsheetTooLarge": {
+        "where": "Setlist importer (spreadsheet): error when the sheet has too many rows",
+        "who": "leaders",
+        "maxLength": 60,
+        "context": "{maxRows} is a number (200)"
+    },
+    "geminiKeyMissing": {
+        "where": "Setlist importer (spreadsheet): error when the server's AI key is missing (configuration problem)",
+        "who": "leaders",
+        "maxLength": 60,
+        "context": "'Gemini' is the AI service's brand name; keep it"
+    },
+    "broadcastLeadersOnly": {
+        "where": "Setlist editor: error when a non-leader triggers the 'setlist updated' notification to the band",
+        "who": "musicians",
+        "maxLength": 80
+    }
+}

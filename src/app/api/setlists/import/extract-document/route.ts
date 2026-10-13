@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { getT } from "@/i18n/server"
 
 import { createApiHandler } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
@@ -33,12 +34,14 @@ export const POST = createApiHandler(async (ctx) => {
     const file = formData.get('file') as File | null
 
     if (!file) {
-        return NextResponse.json({ error: "No file provided" }, { status: 400 })
+        const t = await getT()
+        return NextResponse.json({ error: t("api-setlists.noFileProvided") }, { status: 400 })
     }
     if (file.size > MAX_FILE_SIZE) {
+        const t = await getT()
         return NextResponse.json(
             {
-                error: `File too large. Maximum size is ${MAX_FILE_SIZE / 1024 / 1024}MB`,
+                error: t("api-setlists.fileTooLarge", { maxMb: MAX_FILE_SIZE / 1024 / 1024 }),
             },
             { status: 400 },
         )
@@ -46,8 +49,9 @@ export const POST = createApiHandler(async (ctx) => {
 
     // Reject unsupported types BEFORE buffering the file / invoking mammoth/pdfjs.
     if (!detectDocumentFormat(file.name, file.type)) {
+        const t = await getT()
         return NextResponse.json(
-            { error: "Only .docx, .pdf, and .txt documents are supported." },
+            { error: t("api-setlists.unsupportedDocument") },
             { status: 400 },
         )
     }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { getT } from "@/i18n/server"
 import { generatePrintPdf, PrintRequest } from "@/lib/print-pipeline"
 import { createApiHandler } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
@@ -42,9 +43,10 @@ export const POST = createApiHandler(
         logger.info(`[Print] Generated: ${result.stats.appendedTracks} tracks, ${result.stats.transposedTracks} transposed`)
 
         if (result.stats.omittedTracks.length > 0 && !body.allowOmissions) {
+            const t = await getT()
             return NextResponse.json(
                 {
-                    error: 'Some charts could not be included in the packet.',
+                    error: t("api-setlist.chartsOmitted"),
                     code: 'PRINT_CHARTS_OMITTED',
                     details: { omittedCharts: result.stats.omittedTracks },
                 },

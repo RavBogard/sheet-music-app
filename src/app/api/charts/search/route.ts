@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { geminiFlashWithSearch } from '@/lib/gemini'
+import { getT } from '@/i18n/server'
 
 export const maxDuration = 60
 
@@ -8,7 +9,8 @@ export async function POST(request: Request) {
         const { messages } = await request.json()
         
         if (!messages || !Array.isArray(messages) || messages.length === 0) {
-            return NextResponse.json({ error: 'Messages array is required' }, { status: 400 })
+            const t = await getT()
+            return NextResponse.json({ error: t('api-charts.messagesRequired') }, { status: 400 })
         }
 
         const model = geminiFlashWithSearch()
@@ -65,8 +67,9 @@ Do not wrap your response in markdown blocks like \`\`\`json, just output the ra
         const parsed = JSON.parse(jsonString)
         
         // Ensure format is { message: string, results: any[] }
+        const t = await getT()
         const responseData = {
-            message: parsed.message || "Here are some results I found.",
+            message: parsed.message || t('api-charts.searchDefaultReply'),
             results: Array.isArray(parsed.results) ? parsed.results : []
         }
         
@@ -74,6 +77,7 @@ Do not wrap your response in markdown blocks like \`\`\`json, just output the ra
         
     } catch (error: any) {
         console.error('Search error:', error)
-        return NextResponse.json({ error: error.message || 'Failed to search' }, { status: 500 })
+        const t = await getT()
+        return NextResponse.json({ error: error.message || t('api-charts.searchFailed') }, { status: 500 })
     }
 }

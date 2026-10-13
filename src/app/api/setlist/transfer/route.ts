@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { getT } from "@/i18n/server"
 import { getAuth, getFirestore } from "@/lib/firebase-admin"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { transferSetlistSchema } from "@/lib/validations"
@@ -17,7 +18,8 @@ export const POST = createApiHandler(
         const setlistSnap = await setlistRef.get()
 
         if (!setlistSnap.exists) {
-            return new NextResponse("Setlist not found", { status: 404 })
+            const t = await getT()
+            return new NextResponse(t("api-setlist.setlistNotFound"), { status: 404 })
         }
 
         // Find Target User
@@ -26,7 +28,8 @@ export const POST = createApiHandler(
             targetUser = await getAuth().getUserByEmail(newOwnerEmail)
         } catch (e: unknown) {
             if (e instanceof Error && 'code' in e && (e as { code: string }).code === 'auth/user-not-found') {
-                return new NextResponse(`User with email ${newOwnerEmail} not found. They must sign up first.`, { status: 404 })
+                const t = await getT()
+                return new NextResponse(t("api-setlist.transferUserNotFound", { email: newOwnerEmail }), { status: 404 })
             }
             throw e
         }
@@ -41,9 +44,10 @@ export const POST = createApiHandler(
             previousOwnerId: auth.uid
         })
 
+        const t = await getT()
         return NextResponse.json({
             success: true,
-            message: `Transferred "${setlistData?.name}" to ${targetUser.email}`
+            message: t("api-setlist.transferred", { setlistName: String(setlistData?.name), email: String(targetUser.email) }),
         })
     },
     { role: 'admin', schema: transferSetlistSchema }

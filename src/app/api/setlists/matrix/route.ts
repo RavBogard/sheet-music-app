@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { getT } from "@/i18n/server"
 import { createApiHandler } from "@/lib/api-wrapper"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { getFullServiceContext, getNextFriday, getNextSaturday } from "@/lib/liturgical-calendar"
@@ -19,8 +20,9 @@ export const GET = createApiHandler(
         const org = coerceOrgId(ctx.req.headers.get('x-org-id'))
 
         if (!initAdmin()) {
+            const t = await getT()
             return NextResponse.json(
-                { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
+                { error: t("api-setlists.serverNotReady"), code: "FIREBASE_NOT_INITIALIZED" },
                 { status: 500 },
             )
         }

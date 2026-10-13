@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { getT } from "@/i18n/server"
 import { createApiHandler } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { getFirestore } from "@/lib/firebase-admin"
@@ -36,7 +37,8 @@ export const POST = createApiHandler(
         // Load setlist
         const setlistDoc = await db.collection('setlists').doc(setlistId).get()
         if (!setlistDoc.exists) {
-            return NextResponse.json({ error: 'Setlist not found' }, { status: 404 })
+            const t = await getT()
+            return NextResponse.json({ error: t("api-setlist.setlistNotFound") }, { status: 404 })
         }
         const setlist = setlistDoc.data()!
         // v11.4-02 (D8 item 4): brand the packet email by the setlist's org.
@@ -46,7 +48,8 @@ export const POST = createApiHandler(
         const isOwner = setlist.ownerId === ctx.auth.uid
         const isBandLeaderOrAdmin = ctx.auth.isAdmin || ctx.auth.isBandLeader
         if (!isOwner && !isBandLeaderOrAdmin) {
-            return NextResponse.json({ error: 'Must be owner or leader' }, { status: 403 })
+            const t = await getT()
+            return NextResponse.json({ error: t("api-setlist.ownerOrLeaderRequired") }, { status: 403 })
         }
 
         // Multi-tenant phase 6: emailing the band is notifyBand.
