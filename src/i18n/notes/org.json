@@ -1,0 +1,223 @@
+{
+    "setlist": {
+        "where": "Inline noun inside sentences across the app ('Add to setlist', empty states).",
+        "who": "leaders, musicians",
+        "maxLength": 15,
+        "context": "Lower-case noun: the ordered list of songs for one service. BL's override is 'set'."
+    },
+    "editSetlistDetails": {
+        "where": "Setlist editor: title of the details sheet/dialog.",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "namePlaceholder": {
+        "where": "Setlist name input placeholder.",
+        "who": "leaders",
+        "maxLength": 30,
+        "context": "An example name; keep the 'e.g.,' form."
+    },
+    "publicListingTitle": {
+        "where": "Public setlist listing page heading (signed-out visitors).",
+        "who": "anyone with the link",
+        "maxLength": 40
+    },
+    "publicListingSubtitle": {
+        "where": "Public setlist listing page, line under the heading.",
+        "who": "anyone with the link",
+        "maxLength": 30
+    },
+    "newSetlist": {
+        "where": "Button that starts a new setlist.",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "blankSetlist": {
+        "where": "Option in the new-setlist menu: start empty.",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "cloneSetlistAction": {
+        "where": "Button that copies an existing setlist.",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "createSetlistAction": {
+        "where": "Primary button at the end of the creation wizard.",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "wizardNamePlaceholder": {
+        "where": "Creation wizard name input placeholder.",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "pastSection": {
+        "where": "Dashboard section heading for past services.",
+        "who": "leaders, musicians",
+        "maxLength": 25
+    },
+    "planPlaceholder": {
+        "where": "Dashboard call-to-action when nothing is planned.",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "upcomingSection": {
+        "where": "Dashboard section heading for upcoming services.",
+        "who": "leaders, musicians",
+        "maxLength": 25
+    },
+    "createNewSetlistHeading": {
+        "where": "Heading of the create-setlist dialog.",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "matrixTitle": {
+        "where": "Heading of the matrix view (songs x services grid).",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "email.notificationFromName": {
+        "where": "Email sender display name.",
+        "who": "musicians receiving email",
+        "translate": false,
+        "context": "Tenant brand name token only."
+    },
+    "email.notificationFooter": {
+        "where": "Email footer line.",
+        "who": "musicians receiving email",
+        "maxLength": 60,
+        "context": "Tokens only: {shortName} — {name}."
+    },
+    "email.venueName": {
+        "where": "Venue name in emails.",
+        "who": "musicians",
+        "translate": false
+    },
+    "sms.venueShort": {
+        "where": "Venue abbreviation in SMS.",
+        "who": "musicians",
+        "translate": false
+    },
+    "sms.publishPrefix": {
+        "where": "Prefix of SMS messages.",
+        "who": "musicians",
+        "translate": false
+    },
+    "feed.productName": {
+        "where": ".ics calendar feed PRODID.",
+        "who": "calendar apps",
+        "translate": false
+    },
+    "feed.calendarNamePrefix": {
+        "where": ".ics calendar name prefix.",
+        "who": "musicians' calendar apps",
+        "translate": false
+    },
+    "feed.location": {
+        "where": ".ics event location.",
+        "who": "musicians' calendar apps",
+        "translate": false
+    },
+    "feed.uidPrefix": {
+        "where": ".ics event UID (machine id).",
+        "who": "nobody (machine)",
+        "translate": false
+    },
+    "feed.uidDomain": {
+        "where": ".ics event UID domain (machine id).",
+        "who": "nobody (machine)",
+        "translate": false
+    },
+    "feed.filePrefix": {
+        "where": ".ics download file name.",
+        "who": "nobody (file name)",
+        "translate": false
+    },
+    "print.footer": {
+        "where": "Footer printed on gig packets and the printable setlist (credit line).",
+        "who": "band, on paper",
+        "maxLength": 90,
+        "context": "Translate like any other string (ruling 7). Keep {shortName}; 'a project of Rabbi Daniel Bogard' is a credit."
+    },
+    "print.packetSubject": {
+        "where": "PDF metadata subject of the gig packet.",
+        "who": "band (PDF properties)",
+        "maxLength": 60
+    },
+    "chart.footerLeft": {
+        "where": "House-style chart footer, left.",
+        "who": "band, on charts",
+        "translate": false
+    },
+    "chart.footerRight": {
+        "where": "House-style chart footer, right.",
+        "who": "band, on charts",
+        "translate": false
+    },
+    "og.alt": {
+        "where": "Social preview image alt text.",
+        "who": "link previews",
+        "maxLength": 80
+    },
+    "og.monogram": {
+        "where": "Monogram drawn on the social image.",
+        "who": "link previews",
+        "translate": false
+    },
+    "og.title": {
+        "where": "Social image title.",
+        "who": "link previews",
+        "translate": false
+    },
+    "page.unauthorizedTitle": {
+        "where": "Browser tab title of the 'not authorized' page.",
+        "who": "anyone",
+        "maxLength": 60
+    },
+    "page.v2TitleTemplate": {
+        "where": "Browser tab title template in the v2 beta; %s is the page title.",
+        "who": "beta users",
+        "maxLength": 40,
+        "context": "Keep %s."
+    },
+    "page.v2TitleDefault": {
+        "where": "Browser tab title in the v2 beta.",
+        "who": "beta users",
+        "maxLength": 30
+    },
+    "page.skeletonBrand": {
+        "where": "Brand shown while the public setlist loads.",
+        "who": "anyone",
+        "translate": false
+    },
+    "profile.scheduleName": {
+        "where": "Profile page: name of the personal schedule feed.",
+        "who": "musicians",
+        "maxLength": 40
+    },
+    "seo.baseUrl": {
+        "where": "robots.txt / sitemap origin (URL).",
+        "who": "nobody (machine)",
+        "translate": false
+    },
+    "library.ownBadge": {
+        "where": "Badge on a library row marking the tenant's own chart.",
+        "who": "leaders",
+        "translate": false
+    },
+    "library.coreSectionLabel": {
+        "where": "Name of the core chart section in search and upload pickers.",
+        "who": "leaders",
+        "maxLength": 25
+    },
+    "ai.systemInstructionLead": {
+        "where": "Gemini prompt (server).",
+        "who": "nobody (AI prompt, English)",
+        "translate": false
+    },
+    "ai.libraryConventions": {
+        "where": "Gemini prompt (server).",
+        "who": "nobody (AI prompt, English)",
+        "translate": false
+    }
+}
