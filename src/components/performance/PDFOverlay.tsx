@@ -12,6 +12,8 @@ import { SectionErrorBoundary } from "@/components/ui/SectionErrorBoundary"
 import { LiveDirectorGesture } from "./LiveDirectorGesture"
 import { resolveViewerKind } from "./resolveViewerKind"
 import { printCurrentChart, currentDisplayedPreferFlats } from "./print-current-chart"
+import { useChartContentDir } from "@/components/i18n/ChartContent"
+import { useI18n } from "@/i18n/client"
 const PrintModal = dynamic(() => import("@/components/setlist/PrintModal").then(m => m.PrintModal), { ssr: false })
 
 // Dynamically import PDFViewer to avoid SSR worker issues (per RESEARCH.md Pitfall 1)
@@ -144,6 +146,12 @@ export function PDFOverlay({
     setlistId: setlistIdProp,
     wakeLock,
 }: PDFOverlayProps) {
+    const { t, isRtl } = useI18n()
+    // Phase 7: the chart area (the scroller around the viewers) keeps
+    // left-to-right direction on a right-to-left page — chart pages, chord
+    // lines and horizontal scroll start never flip. The toolbar below is
+    // chrome and mirrors with the page. Empty object on ltr (DOM unchanged).
+    const chartDir = useChartContentDir()
     const setQueue = useMusicStore(s => s.setQueue)
     const queueIndex = useMusicStore(s => s.queueIndex)
     const prevQueueIndexRef = useRef(queueIndex)
@@ -390,7 +398,7 @@ export function PDFOverlay({
     }, [viewerKind, track, networkUrl])
 
     const chartSurface = (
-        <SectionErrorBoundary key={track.fileId} label="Chart">
+        <SectionErrorBoundary key={track.fileId} label={t("perform.overlay.chart")}>
             {viewerKind === 'musicxml' ? (
                 // WS-10 (off-site resilience): SmartScoreViewer self-resolves the
                 // source IDB-first by fileId (mirrors Text/Audio), so it reads
@@ -420,14 +428,12 @@ export function PDFOverlay({
                 <div
                     data-testid="viewer-unknown-fallback"
                     role="alert"
+                    // UI message, not chart content: back to the page direction.
+                    dir={isRtl ? "rtl" : undefined}
                     className="flex h-full w-full flex-col items-center justify-center gap-2 p-6 text-center text-sm text-muted-foreground"
                 >
-                    <p className="font-medium">Can't render this file type yet</p>
-                    <p className="text-xs">
-                        The chart bonded to <span className="font-mono">{track.title}</span> isn't
-                        a recognized format. Try re-binding it from the library, or open the
-                        original file directly.
-                    </p>
+                    <p className="font-medium">{t("perform.overlay.unknownTitle")}</p>
+                    <UnknownFormatBody text={t("perform.overlay.unknownBody", { songName: SONG_SLOT })} songName={track.title} />
                 </div>
             ) : (
                 // viewerKind === 'pdf' (or 'chordpro' — chordpro currently
@@ -458,6 +464,7 @@ export function PDFOverlay({
                     {({ handlers }) => (
                         <div
                             className="flex-1 overflow-auto pb-0 relative"
+                            {...chartDir}
                             data-live-director-surface="pdf-overlay"
                             onPointerDown={handlers.onPointerDown}
                             onPointerUp={handlers.onPointerUp}
@@ -475,7 +482,7 @@ export function PDFOverlay({
                     )}
                 </LiveDirectorGesture>
             ) : (
-                <div className="flex-1 overflow-auto pb-0 relative">
+                <div className="flex-1 overflow-auto pb-0 relative" {...chartDir}>
                     {chartSurface}
                     {showTempoFlash && track.bpm && track.bpm > 0 && (
                         <TempoFlash bpm={track.bpm} onDismiss={() => setShowTempoFlash(false)} />
@@ -495,7 +502,7 @@ export function PDFOverlay({
             {showPrintModal && (
                 <div className="absolute inset-0 z-[60]">
                     <PrintModal
-                        setlistName="Live Setlist" // Will pull default or use empty if not loaded
+                        setlistName={t("perform.overlay.liveSetlist")} // Will pull default or use empty if not loaded
                         tracks={tracks}
                         setlistId={setlistId}
                         onClose={() => setShowPrintModal(false)}
@@ -503,5 +510,24 @@ export function PDFOverlay({
                 </div>
             )}
         </div>
+    )
+}
+
+/**
+ * Placeholder handed to t() so the song title can be rendered in its own
+ * monospace span while the sentence around it stays one translatable string
+ * (word order differs per language).
+ */
+const SONG_SLOT = "\u2063{songName}\u2063"
+
+function UnknownFormatBody({ text, songName }: { text: string; songName: string | undefined }) {
+    const at = text.indexOf(SONG_SLOT)
+    if (at < 0) return <p className="text-xs">{text}</p>
+    return (
+        <p className="text-xs">
+            {text.slice(0, at)}
+            <span className="font-mono">{songName}</span>
+            {text.slice(at + SONG_SLOT.length)}
+        </p>
     )
 }

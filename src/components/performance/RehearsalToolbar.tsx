@@ -5,6 +5,7 @@ import { formatPlaybackTime } from "@/lib/format-utils"
 import { reportSaveError } from "@/lib/save-error"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { useI18n } from "@/i18n/client"
 import {
     Play, Pause, SkipBack, Volume2, VolumeX,
     Repeat, Timer, ChevronDown, ChevronUp,
@@ -30,6 +31,7 @@ const SPEED_OPTIONS = [0.5, 0.75, 0.85, 1.0, 1.15, 1.25, 1.5]
  * Features: play/pause, scrub, speed control, A-B loop, practice timer.
  */
 export function RehearsalToolbar({ audioUrl, title: _title, fileId, onPracticeTime }: RehearsalToolbarProps) {
+    const { t, isRtl } = useI18n()
     const audioRef = useRef<HTMLAudioElement | null>(null)
     const practiceStart = useRef<number | null>(null)
     const totalPracticed = useRef(0)
@@ -229,8 +231,8 @@ export function RehearsalToolbar({ audioUrl, title: _title, fileId, onPracticeTi
                 variant="brand"
                 size="icon"
                 onClick={toggleToolbar}
-                className="fixed bottom-24 right-4 md:bottom-20 z-40 p-3 rounded-full shadow-[0_0_20px_oklch(0.50_0.20_275/0.3)] hover:scale-105 border border-brand/20"
-                title="Open Rehearsal Audio"
+                className="fixed bottom-24 end-4 md:bottom-20 z-40 p-3 rounded-full shadow-[0_0_20px_oklch(0.50_0.20_275/0.3)] hover:scale-105 border border-brand/20"
+                title={t("perform.rehearsal.openAudio")}
             >
                 {playing ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 ml-0.5" />}
             </Button>
@@ -238,10 +240,10 @@ export function RehearsalToolbar({ audioUrl, title: _title, fileId, onPracticeTi
     }
 
     return (
-        <div className="fixed bottom-24 right-4 left-4 md:left-auto md:bottom-20 md:w-80 md:min-w-[320px] z-40 bg-popover/95 backdrop-blur-xl border border-border shadow-2xl rounded-2xl overflow-hidden ring-1 ring-border">
+        <div className="fixed bottom-24 end-4 start-4 md:start-auto md:bottom-20 md:w-80 md:min-w-[320px] z-40 bg-popover/95 backdrop-blur-xl border border-border shadow-2xl rounded-2xl overflow-hidden ring-1 ring-border">
             {/* Header / Collapse */}
             <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-muted/20">
-                <span className="text-[10px] font-bold tracking-wider uppercase text-muted-foreground">Rehearsal Audio</span>
+                <span className="text-[10px] font-bold tracking-wider uppercase text-muted-foreground">{t("perform.rehearsal.title")}</span>
                 <Button variant="ghost" size="icon-xs" onClick={toggleToolbar} className="text-muted-foreground hover:text-foreground hover:bg-muted">
                     <ChevronDown className="w-4 h-4" />
                 </Button>
@@ -259,8 +261,11 @@ export function RehearsalToolbar({ audioUrl, title: _title, fileId, onPracticeTi
                     <SkipBack className="w-4 h-4" />
                 </Button>
 
-                {/* Progress bar */}
-                <div className="flex-1 flex flex-col gap-1.5">
+                {/* Progress bar. A time axis runs left to right in every
+                    language: the click math, the loop markers (style.left) and
+                    the elapsed/total labels all assume it, so the block keeps
+                    ltr on a right-to-left page (no attribute on ltr). */}
+                <div className="flex-1 flex flex-col gap-1.5" dir={isRtl ? "ltr" : undefined}>
                     <div className="relative w-full h-5 flex items-center group cursor-pointer"
                         onClick={(e) => {
                             const rect = e.currentTarget.getBoundingClientRect()
@@ -337,7 +342,7 @@ export function RehearsalToolbar({ audioUrl, title: _title, fileId, onPracticeTi
                                         : "bg-muted/80 border-transparent text-muted-foreground hover:text-foreground hover:bg-muted"
                                 )}
                             >
-                                {s}x
+                                {t("perform.rehearsal.speed", { speed: s })}
                             </Button>
                         ))}
                     </div>
@@ -356,10 +361,10 @@ export function RehearsalToolbar({ audioUrl, title: _title, fileId, onPracticeTi
                                         ? "bg-amber-500/5 border-amber-500/10 text-amber-500/60"
                                         : "bg-muted/80 border-transparent text-muted-foreground hover:text-foreground hover:bg-muted"
                             )}
-                            title={loopActive ? 'Clear loop' : loopA !== null ? 'Set loop end (B)' : 'Set loop start (A)'}
+                            title={loopActive ? t("perform.rehearsal.clearLoopTitle") : loopA !== null ? t("perform.rehearsal.setLoopEndTitle") : t("perform.rehearsal.setLoopStartTitle")}
                         >
                             <Repeat className="w-3.5 h-3.5" />
-                            {loopActive ? 'Clear Loop' : loopA !== null ? 'Set Point B' : 'A/B Loop'}
+                            {loopActive ? t("perform.rehearsal.clearLoop") : loopA !== null ? t("perform.rehearsal.setPointB") : t("perform.rehearsal.abLoop")}
                         </Button>
 
                         {/* Mute toggle */}
@@ -375,7 +380,7 @@ export function RehearsalToolbar({ audioUrl, title: _title, fileId, onPracticeTi
                             )}
                         >
                             {muted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
-                            {muted ? "Muted" : "Mute"}
+                            {muted ? t("perform.rehearsal.muted") : t("perform.rehearsal.mute")}
                         </Button>
                     </div>
 
@@ -401,14 +406,14 @@ export function RehearsalToolbar({ audioUrl, title: _title, fileId, onPracticeTi
                         <div className="space-y-1.5 pt-2">
                             {loopA !== null && (
                                 <div className="text-[10px] flex items-center justify-between text-amber-500/80 bg-amber-500/5 px-2 py-1 rounded">
-                                    <span>Looping: {formatPlaybackTime(loopA)} → {loopB !== null ? formatPlaybackTime(loopB) : '...'}</span>
-                                    <Button variant="link" size="xs" onClick={() => { setLoopA(null); setLoopB(null) }} className="h-auto p-0 text-[10px] text-amber-500/80 hover:text-amber-400">Clear</Button>
+                                    <span>{t("perform.rehearsal.looping", { start: formatPlaybackTime(loopA), end: loopB !== null ? formatPlaybackTime(loopB) : "..." })}</span>
+                                    <Button variant="link" size="xs" onClick={() => { setLoopA(null); setLoopB(null) }} className="h-auto p-0 text-[10px] text-amber-500/80 hover:text-amber-400">{t("perform.rehearsal.clear")}</Button>
                                 </div>
                             )}
                             {cumulativeStats && cumulativeStats.seconds > 0 && (
                                 <div className="text-[10px] flex items-center gap-1.5 text-muted-foreground px-1">
                                     <Timer className="w-3 h-3" />
-                                    <span>{formatPlaybackTime(cumulativeStats.seconds)} total practice</span>
+                                    <span>{t("perform.rehearsal.totalPractice", { time: formatPlaybackTime(cumulativeStats.seconds) })}</span>
                                 </div>
                             )}
                         </div>

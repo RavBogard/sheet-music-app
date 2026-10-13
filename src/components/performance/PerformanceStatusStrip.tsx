@@ -1,6 +1,7 @@
 "use client"
 
 import { useMusicStore } from "@/lib/store"
+import { useT } from "@/i18n/client"
 
 /**
  * A minimal, non-interactive status pill that persists even when the
@@ -10,6 +11,7 @@ import { useMusicStore } from "@/lib/store"
  * pointer-events-none ensures it never interferes with tap/swipe gestures.
  */
 export function PerformanceStatusStrip() {
+    const t = useT()
     const { playbackQueue, queueIndex, transposition, capoFret } = useMusicStore()
     const current = playbackQueue[queueIndex]
 
@@ -18,11 +20,11 @@ export function PerformanceStatusStrip() {
 
     return (
         <div
-            className="fixed top-3 right-3 z-40 pointer-events-none
+            className="fixed top-3 end-3 z-40 pointer-events-none
                 material-thin !bg-background/40 rounded-full px-3 py-1.5
                 flex items-center gap-2 text-foreground/80 text-xs font-medium
                 select-none shadow-lg border-border/10"
-            aria-label={`Song ${queueIndex + 1} of ${playbackQueue.length}: ${current.name}`}
+            aria-label={t("perform.songPositionWithName", { position: queueIndex + 1, total: playbackQueue.length, songName: current.name })}
             role="status"
             aria-live="polite"
         >
@@ -30,7 +32,7 @@ export function PerformanceStatusStrip() {
             <span className="truncate max-w-[150px] sm:max-w-[200px] md:max-w-[300px] text-foreground/90">{current.name}</span>
 
             {(current.key || transposition !== 0 || (capoFret && capoFret > 0)) && (
-                <div className="flex items-center gap-1.5 ml-1 relative">
+                <div className="flex items-center gap-1.5 ms-1 relative">
                     {current.key && (
                         <span className={transposition !== 0 || capoFret ? "text-foreground/40 line-through" : "text-brand font-semibold"}>
                             {current.key}
@@ -45,7 +47,7 @@ export function PerformanceStatusStrip() {
 
                     {capoFret !== null && capoFret > 0 && (
                         <span className="bg-amber-500/30 text-amber-200 border border-amber-500/50 px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wide flex items-center leading-none">
-                            Capo {capoFret}
+                            {t("perform.capo", { fret: capoFret })}
                         </span>
                     )}
                 </div>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { cn } from "@/lib/utils"
+import { useI18n } from "@/i18n/client"
 
 interface TempoFlashProps {
     bpm: number
@@ -14,6 +15,7 @@ interface TempoFlashProps {
  * internalize the tempo before playing. Tap anywhere to dismiss early.
  */
 export function TempoFlash({ bpm, onDismiss }: TempoFlashProps) {
+    const { t, isRtl } = useI18n()
     const [isBeat, setIsBeat] = useState(false)
     const [fading, setFading] = useState(false)
     const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -76,13 +78,17 @@ export function TempoFlash({ bpm, onDismiss }: TempoFlashProps) {
                     onDismiss()
                 }
             }}
-            aria-label={`Tempo: ${bpm} BPM. Tap to dismiss.`}
+            aria-label={t("perform.metronome.tempoFlashAria", { bpm })}
+            // Sits inside PDFOverlay's chart box (dir="ltr" on an rtl page);
+            // this overlay is UI chrome, so it takes the page direction back.
+            dir={isRtl ? "rtl" : undefined}
         >
             <div className="bg-background/80 backdrop-blur-sm rounded-2xl p-8 flex flex-col items-center gap-4">
                 <span className="text-6xl lg:text-7xl font-bold text-foreground tabular-nums">
                     {bpm}
                 </span>
                 <span className="text-lg text-muted-foreground font-semibold uppercase tracking-widest">
+                    {/* i18n-ignore: BPM is a musical unit, shown verbatim in every language */}
                     BPM
                 </span>
                 <div

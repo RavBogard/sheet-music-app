@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Loader2, X } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useT } from "@/i18n/client"
 import { KeyPicker } from "@/components/ui/key-picker"
 import { useLibraryStore } from "@/lib/library-store"
 import {
@@ -44,6 +45,7 @@ export interface ChangeKeyActionProps {
 }
 
 export function ChangeKeyAction({ track, onDone }: ChangeKeyActionProps) {
+    const t = useT()
     const [busy, setBusy] = useState(false)
     const [error, setError] = useState<string | null>(null)
     // Local mirror of the picker value — the picker calls onChange on every
@@ -60,7 +62,7 @@ export function ChangeKeyAction({ track, onDone }: ChangeKeyActionProps) {
             await changeTrackKey(track.id, key)
             onDone()
         } catch (err) {
-            setError(err instanceof Error ? err.message : "Couldn't change the key.")
+            setError(err instanceof Error ? err.message : t("perform.liveDirector.changeKeyFailed"))
             setBusy(false)
         }
     }
@@ -68,7 +70,7 @@ export function ChangeKeyAction({ track, onDone }: ChangeKeyActionProps) {
     return (
         <div className="p-4 flex flex-col gap-3">
             <p className="text-sm text-muted-foreground">
-                Current key:{" "}
+                {t("perform.liveDirector.currentKey")}{" "}
                 <span className="font-mono font-semibold text-foreground">
                     {track.key || "—"}
                 </span>
@@ -79,7 +81,7 @@ export function ChangeKeyAction({ track, onDone }: ChangeKeyActionProps) {
                     onChange={handlePick}
                     className="h-12 px-4 text-base"
                 />
-                {busy && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" aria-label="Saving" />}
+                {busy && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" aria-label={t("perform.liveDirector.saving")} />}
             </div>
             {error && (
                 <p role="alert" className="text-sm text-destructive">
@@ -87,7 +89,7 @@ export function ChangeKeyAction({ track, onDone }: ChangeKeyActionProps) {
                 </p>
             )}
             <p className="text-xs text-muted-foreground">
-                Tap a key to commit. The displayed key updates everywhere this setlist is open.
+                {t("perform.liveDirector.tapKeyToCommit")}
             </p>
         </div>
     )
@@ -103,6 +105,7 @@ export interface SwapChartActionProps {
 }
 
 export function SwapChartAction({ track, onDone }: SwapChartActionProps) {
+    const t = useT()
     const allFiles = useLibraryStore((s) => s.allFiles)
     const [query, setQuery] = useState<string>(() => deriveStem(track.title))
     const [busy, setBusy] = useState(false)
@@ -120,7 +123,7 @@ export function SwapChartAction({ track, onDone }: SwapChartActionProps) {
             await swapTrackChart(track.id, song)
             onDone()
         } catch (err) {
-            setError(err instanceof Error ? err.message : "Couldn't swap the chart.")
+            setError(err instanceof Error ? err.message : t("perform.liveDirector.swapFailed"))
             setBusy(false)
         }
     }
@@ -130,7 +133,7 @@ export function SwapChartAction({ track, onDone }: SwapChartActionProps) {
             <SearchBox
                 query={query}
                 onQueryChange={setQuery}
-                placeholder="Search the library…"
+                placeholder={t("perform.liveDirector.searchLibrary")}
             />
             {error && (
                 <p role="alert" className="text-sm text-destructive">
@@ -141,12 +144,12 @@ export function SwapChartAction({ track, onDone }: SwapChartActionProps) {
                 results={results}
                 emptyHint={
                     allFiles.length === 0
-                        ? "Library hasn't finished loading. Try again in a moment."
-                        : "No charts match this search."
+                        ? t("perform.liveDirector.libraryLoading")
+                        : t("perform.liveDirector.noMatchingCharts")
                 }
                 onPick={handlePick}
                 busy={busy}
-                emphasisLabel="Swap to"
+                pickAriaLabel={(songName) => t("perform.liveDirector.swapToSong", { songName })}
             />
         </div>
     )
@@ -169,6 +172,7 @@ export function InsertSongAction({
     currentIndex,
     onDone,
 }: InsertSongActionProps) {
+    const t = useT()
     const allFiles = useLibraryStore((s) => s.allFiles)
     const [query, setQuery] = useState("")
     const [placement, setPlacement] = useState<InsertPlacement>("after")
@@ -196,7 +200,7 @@ export function InsertSongAction({
             })
             onDone()
         } catch (err) {
-            setError(err instanceof Error ? err.message : "Couldn't insert the song.")
+            setError(err instanceof Error ? err.message : t("perform.liveDirector.insertFailed"))
             setBusy(false)
         }
     }
@@ -207,7 +211,7 @@ export function InsertSongAction({
             <SearchBox
                 query={query}
                 onQueryChange={setQuery}
-                placeholder="Search a song to insert…"
+                placeholder={t("perform.liveDirector.searchSongToInsert")}
             />
             {error && (
                 <p role="alert" className="text-sm text-destructive">
@@ -218,14 +222,14 @@ export function InsertSongAction({
                 results={results}
                 emptyHint={
                     allFiles.length === 0
-                        ? "Library hasn't finished loading. Try again in a moment."
+                        ? t("perform.liveDirector.libraryLoading")
                         : query.trim().length === 0
-                            ? "Type to search the library."
-                            : "No charts match this search."
+                            ? t("perform.liveDirector.typeToSearch")
+                            : t("perform.liveDirector.noMatchingCharts")
                 }
                 onPick={handlePick}
                 busy={busy}
-                emphasisLabel="Insert"
+                pickAriaLabel={(songName) => t("perform.liveDirector.insertSongNamed", { songName })}
             />
         </div>
     )
@@ -237,15 +241,16 @@ interface PlacementChooserProps {
 }
 
 function PlacementChooser({ value, onChange }: PlacementChooserProps) {
+    const t = useT()
     const opts: { value: InsertPlacement; label: string }[] = [
-        { value: "before", label: "Before" },
-        { value: "after", label: "After" },
-        { value: "append", label: "At end" },
+        { value: "before", label: t("perform.liveDirector.placementBefore") },
+        { value: "after", label: t("perform.liveDirector.placementAfter") },
+        { value: "append", label: t("perform.liveDirector.placementEnd") },
     ]
     return (
         <div
             role="radiogroup"
-            aria-label="Where to insert"
+            aria-label={t("perform.liveDirector.whereToInsert")}
             className="flex gap-1 p-1 rounded-lg bg-muted/40 border border-border/60"
         >
             {opts.map((o) => (
@@ -280,6 +285,7 @@ interface SearchBoxProps {
 }
 
 function SearchBox({ query, onQueryChange, placeholder }: SearchBoxProps) {
+    const t = useT()
     return (
         <div className="relative">
             <Input
@@ -287,15 +293,15 @@ function SearchBox({ query, onQueryChange, placeholder }: SearchBoxProps) {
                 onChange={(e) => onQueryChange(e.target.value)}
                 placeholder={placeholder}
                 aria-label={placeholder}
-                className="h-11 text-base pr-10 [touch-action:manipulation]"
+                className="h-11 text-base pe-10 [touch-action:manipulation]"
                 autoFocus
             />
             {query.length > 0 && (
                 <button
                     type="button"
                     onClick={() => onQueryChange("")}
-                    aria-label="Clear search"
-                    className="absolute right-1 top-1/2 -translate-y-1/2 h-9 w-9 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted [touch-action:manipulation]"
+                    aria-label={t("perform.liveDirector.clearSearch")}
+                    className="absolute end-1 top-1/2 -translate-y-1/2 h-9 w-9 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted [touch-action:manipulation]"
                 >
                     <X className="h-4 w-4" aria-hidden="true" />
                 </button>
@@ -309,7 +315,8 @@ interface LibraryResultsListProps {
     emptyHint: string
     onPick: (song: DriveFile) => void | Promise<void>
     busy: boolean
-    emphasisLabel: string
+    /** Accessible name of a result row ("Swap to …" / "Insert …"). */
+    pickAriaLabel: (songName: string) => string
 }
 
 function LibraryResultsList({
@@ -317,7 +324,7 @@ function LibraryResultsList({
     emptyHint,
     onPick,
     busy,
-    emphasisLabel,
+    pickAriaLabel,
 }: LibraryResultsListProps) {
     if (results.length === 0) {
         return (
@@ -334,9 +341,9 @@ function LibraryResultsList({
                         type="button"
                         onClick={() => onPick(song)}
                         disabled={busy}
-                        aria-label={`${emphasisLabel} ${song.displayName ?? song.name}`}
+                        aria-label={pickAriaLabel(song.displayName ?? song.name)}
                         className={cn(
-                            "w-full min-h-12 flex items-center gap-3 px-4 py-2 text-left [touch-action:manipulation]",
+                            "w-full min-h-12 flex items-center gap-3 px-4 py-2 text-start [touch-action:manipulation]",
                             "hover:bg-muted active:bg-muted/80 disabled:opacity-50 disabled:pointer-events-none",
                             "border-b border-border/40",
                         )}

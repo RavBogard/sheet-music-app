@@ -87,8 +87,6 @@ export const NOT_YET_MIGRATED: readonly string[] = [
 
     "src/components/offline/*", // 4 strings, 1 files
 
-    "src/components/performance/*", // 138 strings, 22 files
-
     "src/components/setlist/*", // 177 strings, 11 files
 
     "src/components/setlist/grid/", // 120 strings, 23 files

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { useT } from "@/i18n/client"
 
 interface MetronomeProps {
     bpm: number
@@ -10,6 +11,7 @@ interface MetronomeProps {
 }
 
 export function Metronome({ bpm, className }: MetronomeProps) {
+    const t = useT()
     const [isActive, setIsActive] = useState(false)
     const [isBeat, setIsBeat] = useState(false) // Triggered on every beat
     const timerRef = useRef<NodeJS.Timeout | null>(null)
@@ -67,7 +69,7 @@ export function Metronome({ bpm, className }: MetronomeProps) {
                 isActive ? "bg-white/10 text-white/90 ring-1 ring-white/20" : "bg-muted/50 text-muted-foreground hover:bg-muted/80",
                 className
             )}
-            title={`Flash tempo (${bpm} BPM)`}
+            title={t("perform.metronome.flashTempoTitle", { bpm })}
             type="button"
         >
             {/* The visible pulsing element */}
@@ -83,6 +85,7 @@ export function Metronome({ bpm, className }: MetronomeProps) {
                     "w-1.5 h-1.5 rounded-full transition-colors",
                     isActive ? "bg-green-400 shadow-[0_0_4px_#4ade80cc]" : "bg-muted-foreground/30"
                 )} />
+                {/* i18n-ignore: BPM is a musical unit, shown verbatim in every language */}
                 {bpm} BPM
             </span>
         </Button>
