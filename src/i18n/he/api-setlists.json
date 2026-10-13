@@ -3,7 +3,7 @@
     "importSucceeded": "הייבוא הושלם בהצלחה.",
     "noFileProvided": "לא צורף קובץ",
     "fileTooLarge": "הקובץ גדול מדי. הגודל המרבי הוא {maxMb}MB",
-    "unsupportedDocument": "נתמכים רק מסמכי .docx, .pdf ו-.txt.",
+    "unsupportedDocument": "נתמכים רק מסמכי ⁦.docx⁩, ⁦.pdf⁩ ו-⁦.txt⁩.",
     "noTextProvided": "לא התקבל טקסט",
     "missingUrlOrCsv": "חסר 'url' או 'csvText' בגוף הבקשה.",
     "sheetFetchFailed": "לא ניתן לקבל את נתוני הגיליון. יש לוודא שהגיליון משותף עם ״כל מי שקיבל או קיבלה את הקישור״ (Anyone with the link) לצפייה. ({detail})",

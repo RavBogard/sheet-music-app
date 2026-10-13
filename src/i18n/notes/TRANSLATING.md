@@ -47,3 +47,7 @@ exact.
    and `npx vitest run src/__tests__/i18n src/__tests__/mt-p7`.
 
 For a delta pass, repeat steps 2–3 for the namespaces the script lists.
+
+## File extensions
+
+A dotted extension in Hebrew text (".csv", ".pdf") is wrapped in Unicode isolates, U+2066 before and U+2069 after, so the dot stays on the left in right-to-left text. The lead added these after the review; keep them when editing a string.

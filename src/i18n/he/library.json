@@ -47,7 +47,7 @@
         "noMatchesTitle": "לא נמצאו תוצאות",
         "noMatchesBody": "לא נמצא שום דבר שתואם ל-״{query}״",
         "noAudioTitle": "אין עדיין קובצי שמע",
-        "noAudioBody": "קובצי שמע (.mp3, .m4a וכו׳) יופיעו כאן אחרי שיתווספו ל-Drive.",
+        "noAudioBody": "קובצי שמע (⁦.mp3⁩, ⁦.m4a⁩ וכו׳) יופיעו כאן אחרי שיתווספו ל-Drive.",
         "noChartsTitle": "אין עדיין תווים בספרייה",
         "noChartsBody": "התווים יופיעו כאן אחרי שיתווספו לספרייה.",
         "chartCount_one": "קובץ תווים אחד",
