@@ -20,5 +20,6 @@
     "structureAiFailed": "Gemini structured extraction failed.",
     "structureAiEmpty": "Gemini returned an empty response.",
     "structureAiNotJson": "Gemini returned output that is not valid JSON.",
-    "structureAiMismatch": "Gemini output did not match the expected setlist structure: {detail}"
+    "structureAiMismatch": "Gemini output did not match the expected setlist structure: {detail}",
+    "resolveLibraryUnavailable": "Failed to fetch the library index."
 }

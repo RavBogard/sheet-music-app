@@ -69,7 +69,13 @@ export interface ResolvedStructure {
 
 export type ResolveResult =
     | ({ ok: true } & ResolvedStructure)
-    | { ok: false; reason: 'library_unavailable'; message: string }
+    | {
+          ok: false
+          reason: 'library_unavailable'
+          message: string
+          /** Phase 7: `message` as a catalogue key (absent = the fetch error's own text). */
+          i18n?: { key: string }
+      }
 
 // ─── Matching ────────────────────────────────────────────────────────
 // Mirrors import/parse/route.ts: normalize, levenshtein similarity,
@@ -172,6 +178,7 @@ export async function resolveSetlistStructure(
                     err instanceof Error
                         ? err.message
                         : 'Failed to fetch the library index.',
+                i18n: err instanceof Error ? undefined : { key: 'api-setlists.resolveLibraryUnavailable' },
             }
         }
     }
