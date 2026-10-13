@@ -6,11 +6,40 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Loader2, Link, FileText, AlertTriangle, CheckCircle2, ChevronRight, Music, UploadCloud, FileType2, Calendar, User, ListMusic, FileWarning, Disc3 } from "lucide-react"
 import { toast } from "sonner"
-import { format } from "date-fns"
+import { useT, useFormat } from "@/i18n/client"
+import type { T } from "@/i18n/core"
+import { DirectionalIcon } from "@/components/i18n/DirectionalIcon"
 import { apiFetch } from "@/lib/api-client"
 import type { ResolvedStructure } from "@/lib/setlist-import/resolve"
 import type { Setlist } from "@/types/models"
 import { suggestServiceDate, inferServiceType, toDateInputValue, SERVICE_TYPE_LABELS } from "@/lib/setlist-import/interview-defaults"
+
+type ServiceTemplateType = NonNullable<Setlist['templateType']>
+
+// Phase 7: the service-type labels (interview-defaults SERVICE_TYPE_LABELS) as
+// literal catalogue keys, so the picker and the preview header translate.
+const SERVICE_TYPE_KEYS: Record<ServiceTemplateType, string> = {
+    shabbat_morning: "importer.serviceType.shabbat_morning",
+    friday_night: "importer.serviceType.friday_night",
+    rosh_hashanah: "importer.serviceType.rosh_hashanah",
+    yom_kippur: "importer.serviceType.yom_kippur",
+    festival: "importer.serviceType.festival",
+    other: "importer.serviceType.other",
+}
+
+const BOLD_MARK = "\u0001"
+
+/** Render a translated sentence with one {var} value in <strong>. */
+function withBold(text: string, marker: string, bold: React.ReactNode): React.ReactNode {
+    const i = text.indexOf(marker)
+    if (i < 0) return text
+    return <>{text.slice(0, i)}<strong>{bold}</strong>{text.slice(i + marker.length)}</>
+}
+
+/** A count sentence ("{count} songs found") with the number in <strong>. */
+function countBold(t: T, key: string, count: number): React.ReactNode {
+    return withBold(t(key, { count }), String(count), count)
+}
 
 interface ParsedItem {
     type: 'header' | 'song'
@@ -34,6 +63,8 @@ interface ImporterModalProps {
 type Step = 'input' | 'processing' | 'review' | 'interview' | 'preview'
 
 export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalProps) {
+    const t = useT()
+    const fmt = useFormat()
     const [step, setStep] = useState<Step>('input')
     const [url, setUrl] = useState("")
     const [csvFile, setCsvFile] = useState<File | null>(null)
@@ -104,7 +135,7 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
     // to the input step. No persistence here — the commit is v70-07-03.
     const handleDocSubmit = async () => {
         if (!docFile) {
-            toast.error("Please select a document to upload.")
+            toast.error(t("importer.selectDocument"))
             return
         }
 
@@ -127,7 +158,7 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
             })
             if (!extractRes.ok) {
                 const data = await extractRes.json().catch(() => ({}))
-                throw new Error(data.error || `Failed to read document (server error ${extractRes.status}).`)
+                throw new Error(data.error || t("importer.readDocumentFailed", { status: extractRes.status }))
             }
             const { text } = await extractRes.json()
 
@@ -140,7 +171,7 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
             })
             if (!structureRes.ok) {
                 const data = await structureRes.json().catch(() => ({}))
-                throw new Error(data.error || `Failed to extract setlist structure (server error ${structureRes.status}).`)
+                throw new Error(data.error || t("importer.extractStructureFailed", { status: structureRes.status }))
             }
             const structure = await structureRes.json()
 
@@ -153,7 +184,7 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
             })
             if (!resolveRes.ok) {
                 const data = await resolveRes.json().catch(() => ({}))
-                throw new Error(data.error || `Failed to resolve tracks against the library (server error ${resolveRes.status}).`)
+                throw new Error(data.error || t("importer.resolveTracksFailed", { status: resolveRes.status }))
             }
             const resolvedData = await resolveRes.json()
             const resolvedStructure: ResolvedStructure = {
@@ -166,11 +197,11 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
             const inferredText = [
                 docFile.name,
                 ...resolvedStructure.sections.map((s) => s.name),
-                ...resolvedStructure.tracks.map((t) => `${t.title} ${t.notes ?? ''}`),
+                ...resolvedStructure.tracks.map((tr) => `${tr.title} ${tr.notes ?? ''}`),
             ].join(' ')
             setResolved(resolvedStructure)
             setDocFileName(docFile.name)
-            setInterviewName(docFile.name.replace(/\.[^.]+$/, '').trim() || 'Imported Setlist')
+            setInterviewName(docFile.name.replace(/\.[^.]+$/, '').trim() || t("importer.defaultSetlistName"))
             setInterviewDate(suggestedDate ? toDateInputValue(suggestedDate) : '')
             setInterviewServiceType(inferServiceType(inferredText))
             setInterviewRabbi('')
@@ -182,7 +213,7 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
                 controller.signal.aborted ||
                 (err instanceof DOMException && err.name === 'AbortError')
             if (!aborted) {
-                toast.error(err instanceof Error ? err.message : "Error processing document.")
+                toast.error(err instanceof Error ? err.message : t("importer.processDocumentError"))
             }
             setStep('input')
         } finally {
@@ -195,7 +226,7 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
 
     const handleParse = async () => {
         if (!url && !csvFile) {
-            toast.error("Please provide a Google Sheets URL or upload a CSV file.")
+            toast.error(t("importer.provideUrlOrCsv"))
             return
         }
 
@@ -213,12 +244,12 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
             })
 
             if (!res.ok) {
-                let errorMsg = "Failed to parse data."
+                let errorMsg = t("importer.parseFailed")
                 try {
                     const data = await res.json()
                     errorMsg = data.error || errorMsg
                 } catch {
-                    errorMsg = `Server error ${res.status}: ${res.statusText}. The request may have timed out.`
+                    errorMsg = t("importer.serverErrorRequestTimeout", { status: res.status, statusText: res.statusText })
                 }
                 throw new Error(errorMsg)
             }
@@ -227,7 +258,7 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
             setItems(data.items || [])
             setStep('review')
         } catch (err: unknown) {
-            toast.error(err instanceof Error ? err.message : "Error parsing spreadsheet.")
+            toast.error(err instanceof Error ? err.message : t("importer.parseSpreadsheetError"))
             setStep('input')
         } finally {
             setIsParsing(false)
@@ -254,16 +285,16 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
             })
             if (!res.ok) {
                 const data = await res.json().catch(() => ({}))
-                throw new Error(data.error || `Failed to create setlist (server error ${res.status}).`)
+                throw new Error(data.error || t("importer.createSetlistFailed", { status: res.status }))
             }
             const data = await res.json()
-            toast.success("Setlist created successfully!")
+            toast.success(t("importer.setlistCreated"))
             if (onComplete && data.setlistId) {
                 onComplete(data.setlistId)
             }
             onOpenChange(false)
         } catch (err: unknown) {
-            toast.error(err instanceof Error ? err.message : "Error creating setlist.")
+            toast.error(err instanceof Error ? err.message : t("importer.createSetlistError"))
             setIsCommitting(false)
         }
     }
@@ -319,29 +350,29 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
         try {
             const res = await apiFetch('/api/setlists/import/execute', {
                 method: 'POST',
-                body: JSON.stringify({ items, name: "Imported Setlist" })
+                body: JSON.stringify({ items, name: t("importer.defaultSetlistName") })
             })
 
             if (!res.ok) {
-                let errorMsg = "Execution failed."
+                let errorMsg = t("importer.executeFailed")
                 try {
                     const data = await res.json()
                     errorMsg = data.error || errorMsg
                 } catch {
-                    errorMsg = `Server error ${res.status}: ${res.statusText}. The upload may have timed out.`
+                    errorMsg = t("importer.serverErrorUploadTimeout", { status: res.status, statusText: res.statusText })
                 }
                 throw new Error(errorMsg)
             }
 
             const data = await res.json()
-            toast.success("Setlist imported successfully!")
+            toast.success(t("importer.setlistImported"))
 
             if (onComplete && data.setlistId) {
                 onComplete(data.setlistId)
             }
             onOpenChange(false)
         } catch (err: unknown) {
-            toast.error(err instanceof Error ? err.message : "Error executing import.")
+            toast.error(err instanceof Error ? err.message : t("importer.executeImportError"))
             setIsExecuting(false)
         }
     }
@@ -350,13 +381,13 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-[900px] gap-0 p-0 overflow-hidden flex flex-col max-h-[90vh]">
                 <DialogHeader className="px-6 py-4 border-b border-border bg-muted/30 shrink-0">
-                    <DialogTitle className="text-title">Import Setlist AI</DialogTitle>
+                    <DialogTitle className="text-title">{t("importer.title")}</DialogTitle>
                     <DialogDescription>
-                        {step === 'input' && "Provide a spreadsheet or a service-outline document to instantly build your setlist."}
-                        {step === 'processing' && "Our AI is reading your file automatically..."}
-                        {step === 'review' && "Review what the AI found. We've flagged potential duplicate charts and private Drive links."}
-                        {step === 'interview' && "Fill in the details the document didn't cover."}
-                        {step === 'preview' && "Review the setlist the AI built before creating it."}
+                        {step === 'input' && t("importer.descriptionInput")}
+                        {step === 'processing' && t("importer.descriptionProcessing")}
+                        {step === 'review' && t("importer.descriptionReview")}
+                        {step === 'interview' && t("importer.descriptionInterview")}
+                        {step === 'preview' && t("importer.descriptionPreview")}
                     </DialogDescription>
                 </DialogHeader>
 
@@ -367,22 +398,23 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
                             <div className="space-y-3">
                                 <Label className="text-sm font-semibold flex items-center gap-2">
                                     <Link className="h-4 w-4 text-blue-500" />
-                                    Google Sheets URL
+                                    {t("importer.sheetsUrlLabel")}
                                 </Label>
                                 <Input
+                                    // i18n-ignore: example URL, not prose
                                     placeholder="https://docs.google.com/spreadsheets/d/..."
                                     value={url}
                                     onChange={(e) => { setUrl(e.target.value); setCsvFile(null); setDocFile(null) }}
                                     className="bg-muted/50 border-border"
                                 />
                                 <p className="text-xs text-muted-foreground">
-                                    Make sure the sharing settings are set to &quot;Anyone with the link can view&quot;.
+                                    {t("importer.sheetsSharingHint")}
                                 </p>
                             </div>
 
                             <div className="relative flex items-center py-2">
                                 <div className="flex-grow border-t border-border"></div>
-                                <span className="flex-shrink-0 mx-4 text-muted-foreground text-xs uppercase tracking-wider font-semibold">Or</span>
+                                <span className="flex-shrink-0 mx-4 text-muted-foreground text-xs uppercase tracking-wider font-semibold">{t("importer.or")}</span>
                                 <div className="flex-grow border-t border-border"></div>
                             </div>
 
@@ -390,7 +422,7 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
                             <div className="space-y-3">
                                 <Label className="text-sm font-semibold flex items-center gap-2">
                                     <FileText className="h-4 w-4 text-violet-500" />
-                                    Upload CSV File
+                                    {t("importer.uploadCsvLabel")}
                                 </Label>
                                 <label
                                     htmlFor="csv-file-input"
@@ -398,16 +430,17 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
                                 >
                                     <UploadCloud className={`h-8 w-8 mb-3 ${csvFile ? 'text-violet-500' : 'text-muted-foreground'}`} />
                                     <p className="text-sm font-medium" aria-live="polite">
-                                        {csvFile ? csvFile.name : "Click to select a .csv file"}
+                                        {csvFile ? csvFile.name : t("importer.selectCsvFile")}
                                     </p>
                                     <p className="text-xs text-muted-foreground mt-1">
-                                        {csvFile ? `${(csvFile.size / 1024).toFixed(1)} KB` : "Drag and drop intentionally disabled for now."}
+                                        {/* i18n-ignore: file size unit */}
+                                        {csvFile ? `${(csvFile.size / 1024).toFixed(1)} KB` : t("importer.dragDropDisabled")}
                                     </p>
                                     <input
                                         id="csv-file-input"
                                         type="file"
                                         accept=".csv"
-                                        aria-label="Upload a CSV file"
+                                        aria-label={t("importer.uploadCsvAria")}
                                         className="sr-only"
                                         onChange={handleFileSelect}
                                     />
@@ -416,7 +449,7 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
 
                             <div className="relative flex items-center py-2">
                                 <div className="flex-grow border-t border-border"></div>
-                                <span className="flex-shrink-0 mx-4 text-muted-foreground text-xs uppercase tracking-wider font-semibold">Or</span>
+                                <span className="flex-shrink-0 mx-4 text-muted-foreground text-xs uppercase tracking-wider font-semibold">{t("importer.or")}</span>
                                 <div className="flex-grow border-t border-border"></div>
                             </div>
 
@@ -424,7 +457,7 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
                             <div className="space-y-3">
                                 <Label className="text-sm font-semibold flex items-center gap-2">
                                     <FileType2 className="h-4 w-4 text-emerald-500" />
-                                    Upload Document
+                                    {t("importer.uploadDocumentLabel")}
                                 </Label>
                                 <label
                                     htmlFor="doc-file-input"
@@ -432,16 +465,17 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
                                 >
                                     <UploadCloud className={`h-8 w-8 mb-3 ${docFile ? 'text-emerald-500' : 'text-muted-foreground'}`} />
                                     <p className="text-sm font-medium" aria-live="polite">
-                                        {docFile ? docFile.name : "Click to select a .docx, .pdf, or .txt file"}
+                                        {docFile ? docFile.name : t("importer.selectDocumentFile")}
                                     </p>
                                     <p className="text-xs text-muted-foreground mt-1">
-                                        {docFile ? `${(docFile.size / 1024).toFixed(1)} KB` : "AI reads the service outline and builds the setlist."}
+                                        {/* i18n-ignore: file size unit */}
+                                        {docFile ? `${(docFile.size / 1024).toFixed(1)} KB` : t("importer.documentHint")}
                                     </p>
                                     <input
                                         id="doc-file-input"
                                         type="file"
                                         accept=".docx,.pdf,.txt"
-                                        aria-label="Upload a service-outline document"
+                                        aria-label={t("importer.uploadDocumentAria")}
                                         className="sr-only"
                                         onChange={handleDocSelect}
                                     />
@@ -454,12 +488,12 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
                                     disabled={(!url && !csvFile && !docFile) || isParsing || isProcessingDoc}
                                     className="gap-2 shrink-0 bg-brand hover:bg-brand/90"
                                 >
-                                    {(isParsing || isProcessingDoc) ? <Loader2 className="h-4 w-4 animate-spin" /> : <ChevronRight className="h-4 w-4" />}
+                                    {(isParsing || isProcessingDoc) ? <Loader2 className="h-4 w-4 animate-spin" /> : <DirectionalIcon icon={ChevronRight} className="h-4 w-4" />}
                                     {isParsing || isProcessingDoc
-                                        ? "Analyzing..."
+                                        ? t("importer.analyzing")
                                         : docFile
-                                            ? "Next: Analyze Document"
-                                            : "Next: Analyze Spreadsheet"}
+                                            ? t("importer.nextAnalyzeDocument")
+                                            : t("importer.nextAnalyzeSpreadsheet")}
                                 </Button>
                             </div>
                         </div>
@@ -469,12 +503,12 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
                         <div className="flex-1 flex flex-col items-center justify-center p-12 min-h-[400px]">
                             <Loader2 className="h-10 w-10 animate-spin text-blue-500 mb-6" />
                             <h3 className="text-title text-foreground mt-4">
-                                {isProcessingDoc ? "Reading your document" : "Analyzing Rows"}
+                                {isProcessingDoc ? t("importer.readingDocumentHeading") : t("importer.analyzingRowsHeading")}
                             </h3>
                             <p className="text-sm text-muted-foreground w-64">
                                 {isProcessingDoc
-                                    ? "Reading your file and building the setlist — this can take a minute…"
-                                    : "Passing data to Gemini to map dynamic columns, extract performer names, and verify Google Drive linkage permissions..."}
+                                    ? t("importer.readingDocumentBody")
+                                    : t("importer.analyzingRowsBody")}
                             </p>
                         </div>
                     )}
@@ -483,13 +517,13 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
                         <>
                             <div className="flex-1 overflow-y-auto bg-muted/10">
                                 <div className="p-0">
-                                    <table className="w-full text-sm text-left">
+                                    <table className="w-full text-sm text-start">
                                         <thead className="bg-muted/50 sticky top-0 z-10 text-xs uppercase text-muted-foreground shadow-sm">
                                             <tr>
-                                                <th className="px-4 py-3 font-semibold">Type</th>
-                                                <th className="px-4 py-3 font-semibold w-1/3">Title</th>
-                                                <th className="px-4 py-3 font-semibold">Key/Vocal Lead</th>
-                                                <th className="px-4 py-3 font-semibold">Library & File Status</th>
+                                                <th className="px-4 py-3 font-semibold">{t("importer.columnType")}</th>
+                                                <th className="px-4 py-3 font-semibold w-1/3">{t("importer.columnTitle")}</th>
+                                                <th className="px-4 py-3 font-semibold">{t("importer.columnKeyVocalLead")}</th>
+                                                <th className="px-4 py-3 font-semibold">{t("importer.columnStatus")}</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-border/50">
@@ -499,11 +533,11 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
                                                     <td className="px-4 py-3">
                                                         {item.type === 'header' ? (
                                                             <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-zinc-800 text-zinc-300 text-xs font-bold uppercase">
-                                                                Header
+                                                                {t("importer.rowHeader")}
                                                             </span>
                                                         ) : (
                                                             <span className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-400">
-                                                                <Music className="h-3.5 w-3.5" /> Song
+                                                                <Music className="h-3.5 w-3.5" /> {t("importer.rowSong")}
                                                             </span>
                                                         )}
                                                     </td>
@@ -523,13 +557,13 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
                                                             <>
                                                                 <div className="flex items-center gap-2">
                                                                     <Input
-                                                                        placeholder="Key"
+                                                                        placeholder={t("importer.keyPlaceholder")}
                                                                         value={item.key || ""}
                                                                         onChange={(e) => handleItemChange(idx, 'key', e.target.value)}
                                                                         className="h-7 w-16 text-xs bg-background"
                                                                     />
                                                                     <Input
-                                                                        placeholder="Vocal Lead"
+                                                                        placeholder={t("importer.vocalLeadPlaceholder")}
                                                                         value={item.performer || ""}
                                                                         onChange={(e) => handleItemChange(idx, 'performer', e.target.value)}
                                                                         className="h-7 w-full text-xs bg-background"
@@ -548,16 +582,16 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
                                                                     <div className="flex items-start gap-1.5 text-xs text-red-500 bg-red-500/10 rounded px-2 py-1 border border-red-500/20">
                                                                         <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
                                                                         <span className="leading-tight">
-                                                                            {item.chartError === "Private Link" ? "Drive link is private. Cannot download." : "Invalid link."}
+                                                                            {item.chartError === "Private Link" ? t("importer.privateDriveLink") : t("importer.invalidLink")}
                                                                         </span>
                                                                     </div>
                                                                 ) : item.chartUrl ? (
                                                                     <div className="flex items-center gap-1.5 text-xs text-green-500 dark:text-green-400">
                                                                         <CheckCircle2 className="h-3.5 w-3.5" />
-                                                                        <span className="truncate max-w-[150px]" title={item.chartUrl}>Has Drive Link</span>
+                                                                        <span className="truncate max-w-[150px]" title={item.chartUrl}>{t("importer.hasDriveLink")}</span>
                                                                     </div>
                                                                 ) : (
-                                                                    <div className="text-xs text-muted-foreground italic">No chart link found</div>
+                                                                    <div className="text-xs text-muted-foreground italic">{t("importer.noChartLink")}</div>
                                                                 )}
 
                                                                 {/* Library Match */}
@@ -565,7 +599,7 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
                                                                     <div className="flex items-start gap-1.5 text-xs text-violet-500 dark:text-violet-400 bg-violet-500/10 rounded px-2 py-1">
                                                                         <Link className="h-3.5 w-3.5 shrink-0 mt-0.5" />
                                                                         <span className="leading-tight">
-                                                                            Matches library: <strong>{item.libraryMatchName}</strong>
+                                                                            {withBold(t("importer.matchesLibrary", { name: BOLD_MARK }), BOLD_MARK, item.libraryMatchName)}
                                                                         </span>
                                                                     </div>
                                                                 )}
@@ -582,16 +616,16 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
                             {/* Review Action Footer */}
                             <div className="p-4 border-t border-border bg-background flex items-center justify-between shrink-0 shadow-[0_-10px_30px_#00000033]">
                                 <div className="text-xs text-muted-foreground flex flex-col">
-                                    <span><strong>{items.filter(i => i.type === 'song').length}</strong> songs found</span>
-                                    <span><strong>{items.filter(i => i.chartUrl && !i.chartError && !i.libraryMatchId).length}</strong> new Drive PDFs will be downloaded</span>
+                                    <span>{countBold(t, "importer.songsFound", items.filter(i => i.type === 'song').length)}</span>
+                                    <span>{countBold(t, "importer.newDrivePdfs", items.filter(i => i.chartUrl && !i.chartError && !i.libraryMatchId).length)}</span>
                                 </div>
                                 <div className="flex items-center gap-3">
                                     <Button variant="ghost" onClick={() => setStep('input')} disabled={isExecuting}>
-                                        Back
+                                        {t("importer.back")}
                                     </Button>
                                     <Button onClick={handleExecute} disabled={isExecuting} className="bg-brand hover:bg-brand/90 gap-2">
                                         {isExecuting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                                        {isExecuting ? "Executing..." : "Finalize Import"}
+                                        {isExecuting ? t("importer.executing") : t("importer.finalizeImport")}
                                     </Button>
                                 </div>
                             </div>
@@ -603,7 +637,7 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
                             <div className="flex-1 overflow-y-auto p-8 space-y-6">
                                 <div className="space-y-2">
                                     <Label htmlFor="interview-name" className="text-sm font-semibold">
-                                        Setlist Name
+                                        {t("importer.setlistNameLabel")}
                                     </Label>
                                     <Input
                                         id="interview-name"
@@ -616,7 +650,7 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
                                 <div className="space-y-2">
                                     <Label htmlFor="interview-date" className="text-sm font-semibold flex items-center gap-2">
                                         <Calendar className="h-4 w-4 text-blue-500" />
-                                        Service Date <span className="text-red-500">*</span>
+                                        {t("importer.serviceDateLabel")} <span className="text-red-500">*</span>
                                     </Label>
                                     <Input
                                         id="interview-date"
@@ -626,40 +660,40 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
                                         className="bg-muted/50 border-border"
                                     />
                                     <p className="text-xs text-muted-foreground">
-                                        Required. Suggested from the document filename — adjust if needed.
+                                        {t("importer.serviceDateHint")}
                                     </p>
                                 </div>
 
                                 <div className="space-y-2">
                                     <Label htmlFor="interview-service-type" className="text-sm font-semibold flex items-center gap-2">
                                         <ListMusic className="h-4 w-4 text-violet-500" />
-                                        Service Type
+                                        {t("importer.serviceTypeLabel")}
                                     </Label>
                                     <select
                                         id="interview-service-type"
                                         value={interviewServiceType}
-                                        onChange={(e) => setInterviewServiceType(e.target.value as NonNullable<Setlist['templateType']>)}
+                                        onChange={(e) => setInterviewServiceType(e.target.value as ServiceTemplateType)}
                                         className="w-full h-10 rounded-md bg-muted/50 border border-border px-3 text-sm cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                                     >
-                                        {Object.entries(SERVICE_TYPE_LABELS).map(([value, label]) => (
-                                            <option key={value} value={value}>{label}</option>
+                                        {(Object.keys(SERVICE_TYPE_LABELS) as ServiceTemplateType[]).map((value) => (
+                                            <option key={value} value={value}>{t(SERVICE_TYPE_KEYS[value])}</option>
                                         ))}
                                     </select>
                                     <p className="text-xs text-muted-foreground">
-                                        Auto-detected from the document — confirm or change.
+                                        {t("importer.serviceTypeHint")}
                                     </p>
                                 </div>
 
                                 <div className="space-y-2">
                                     <Label htmlFor="interview-rabbi" className="text-sm font-semibold flex items-center gap-2">
                                         <User className="h-4 w-4 text-muted-foreground" />
-                                        Rabbi <span className="text-xs font-normal text-muted-foreground">(optional)</span>
+                                        {t("importer.rabbiLabel")} <span className="text-xs font-normal text-muted-foreground">{t("importer.optional")}</span>
                                     </Label>
                                     <Input
                                         id="interview-rabbi"
                                         value={interviewRabbi}
                                         onChange={(e) => setInterviewRabbi(e.target.value)}
-                                        placeholder="Led by..."
+                                        placeholder={t("importer.rabbiPlaceholder")}
                                         className="bg-muted/50 border-border"
                                     />
                                 </div>
@@ -667,15 +701,15 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
 
                             <div className="p-4 border-t border-border bg-background flex items-center justify-between shrink-0 shadow-[0_-10px_30px_#00000033]">
                                 <Button variant="ghost" onClick={handleStartOver}>
-                                    Start over
+                                    {t("importer.startOver")}
                                 </Button>
                                 <Button
                                     onClick={() => setStep('preview')}
                                     disabled={!interviewDate}
                                     className="bg-brand hover:bg-brand/90 gap-2"
                                 >
-                                    <ChevronRight className="h-4 w-4" />
-                                    Next: Preview
+                                    <DirectionalIcon icon={ChevronRight} className="h-4 w-4" />
+                                    {t("importer.nextPreview")}
                                 </Button>
                             </div>
                         </>
@@ -686,17 +720,17 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
                             {/* Interview-value header band */}
                             <div className="px-6 py-3 border-b border-border bg-muted/30 shrink-0 flex flex-wrap items-center gap-x-4 gap-y-1">
                                 <span className="font-semibold text-foreground text-sm">
-                                    {interviewName || 'Untitled Setlist'}
+                                    {interviewName || t("importer.untitledSetlist")}
                                 </span>
                                 {interviewDate && (
                                     <span className="flex items-center gap-1 text-xs text-muted-foreground">
                                         <Calendar className="h-3.5 w-3.5" />
-                                        {format(new Date(interviewDate + 'T00:00:00'), 'PPP')}
+                                        {fmt.pattern(new Date(interviewDate + 'T00:00:00'), 'PPP')}
                                     </span>
                                 )}
                                 <span className="flex items-center gap-1 text-xs text-muted-foreground">
                                     <ListMusic className="h-3.5 w-3.5" />
-                                    {SERVICE_TYPE_LABELS[interviewServiceType]}
+                                    {t(SERVICE_TYPE_KEYS[interviewServiceType])}
                                 </span>
                                 {interviewRabbi && (
                                     <span className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -710,13 +744,13 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
                             <div className="flex-1 overflow-y-auto bg-muted/10">
                                 {previewGroups.length === 0 ? (
                                     <div className="p-12 text-center text-sm text-muted-foreground">
-                                        The document produced no tracks.
+                                        {t("importer.noTracks")}
                                     </div>
                                 ) : (
                                     previewGroups.map((group, gIdx) => (
                                         <div key={group.name ?? `ungrouped-${gIdx}`}>
                                             <div className="px-4 py-2 bg-muted/50 sticky top-0 z-10 text-xs uppercase tracking-wider font-bold text-muted-foreground border-b border-border">
-                                                {group.name ?? 'Ungrouped'}
+                                                {group.name ?? t("importer.ungrouped")}
                                             </div>
                                             {group.tracks.map((track, tIdx) => (
                                                 <div
@@ -742,7 +776,7 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
                                                     {track.libraryMatch ? (
                                                         <span
                                                             className="flex items-center gap-1.5 text-xs text-violet-500 dark:text-violet-400 shrink-0 max-w-[200px]"
-                                                            title={`Matches library: ${track.libraryMatch.name}`}
+                                                            title={t("importer.matchesLibrary", { name: track.libraryMatch.name })}
                                                         >
                                                             <Link className="h-3.5 w-3.5 shrink-0" />
                                                             <span className="truncate">{track.libraryMatch.name}</span>
@@ -753,13 +787,13 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
                                                     ) : (
                                                         <span className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 shrink-0">
                                                             <FileWarning className="h-3.5 w-3.5" />
-                                                            Missing chart
+                                                            {t("importer.missingChart")}
                                                         </span>
                                                     )}
                                                     {track.recordingCandidates.length > 0 && (
                                                         <span
                                                             className="flex items-center gap-1 text-xs text-muted-foreground shrink-0"
-                                                            title={`${track.recordingCandidates.length} recording candidate(s)`}
+                                                            title={t("importer.recordingCandidates", { count: track.recordingCandidates.length })}
                                                         >
                                                             <Disc3 className="h-3.5 w-3.5" />
                                                             {track.recordingCandidates.length}
@@ -774,12 +808,12 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
 
                             <div className="p-4 border-t border-border bg-background flex items-center justify-between shrink-0 shadow-[0_-10px_30px_#00000033]">
                                 <div className="text-xs text-muted-foreground flex flex-col">
-                                    <span><strong>{resolved.tracks.length}</strong> tracks</span>
-                                    <span><strong>{resolved.tracks.filter((t) => t.missingChart).length}</strong> missing a chart</span>
+                                    <span>{countBold(t, "importer.trackCount", resolved.tracks.length)}</span>
+                                    <span>{countBold(t, "importer.missingChartCount", resolved.tracks.filter((tr) => tr.missingChart).length)}</span>
                                 </div>
                                 <div className="flex items-center gap-3">
                                     <Button variant="ghost" onClick={() => setStep('interview')} disabled={isCommitting}>
-                                        Back
+                                        {t("importer.back")}
                                     </Button>
                                     <Button
                                         onClick={handleCommitDocument}
@@ -787,7 +821,7 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
                                         className="bg-brand hover:bg-brand/90 gap-2"
                                     >
                                         {isCommitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                                        {isCommitting ? "Creating..." : "Create Setlist"}
+                                        {isCommitting ? t("importer.creating") : t("importer.createSetlist")}
                                     </Button>
                                 </div>
                             </div>

@@ -19,11 +19,20 @@ import {
     ContextMenuSeparator,
     ContextMenuTrigger,
 } from '@/components/ui/context-menu'
+import { useT } from '@/i18n/client'
 import type { LocalTrack } from '@/lib/local/types'
 import { cn, parseFileId } from '@/lib/utils'
 import { KEY_OPTIONS_DATA } from './cells/KeyCell'
 import { RecordingCell } from './cells/RecordingCell'
 import { RecordingBindPopover } from './RecordingBindPopover'
+
+/** "Untitled …" placeholder per non-song row type (the type is a stored value). */
+const UNTITLED_BY_TYPE: Record<string, string> = {
+    reading: 'setlistGrid.untitledReading',
+    prayer: 'setlistGrid.untitledPrayer',
+    transition: 'setlistGrid.untitledTransition',
+    note: 'setlistGrid.untitledNote',
+}
 
 export interface MobileRowCardProps {
     track: LocalTrack
@@ -67,6 +76,7 @@ export function MobileRowCard({
     onDeleteRow,
     tonightTitle,
 }: MobileRowCardProps) {
+    const t = useT()
     const [title, setTitle] = useState(String(track.title ?? ''))
     const [key, setKey] = useState(String(track.key ?? ''))
     const [bpm, setBpm] = useState(track.bpm === undefined ? '' : String(track.bpm))
@@ -244,7 +254,11 @@ export function MobileRowCard({
                         onPointerCancel={handlePointerEnd}
                         style={{ touchAction: 'pan-y' }}
                         tabIndex={0}
-                        aria-label={`${track.title || 'Untitled track'}. Tap to edit.`}
+                        aria-label={
+                            track.title
+                                ? t('setlistGrid.cardAria', { title: track.title })
+                                : t('setlistGrid.cardUntitledAria')
+                        }
                         className={cn(
                             'group flex items-center gap-4 rounded-2xl border px-4 py-4',
                             'min-h-[72px] cursor-pointer relative overflow-hidden',
@@ -257,14 +271,18 @@ export function MobileRowCard({
                     >
                         <button
                             type="button"
-                            aria-label={`Drag to reorder ${track.title || 'untitled track'}`}
+                            aria-label={
+                                track.title
+                                    ? t('setlistGrid.cardDragAria', { title: track.title })
+                                    : t('setlistGrid.cardDragUntitledAria')
+                            }
                             data-testid={`mobile-card-handle-${track.id}`}
                             data-drag-handle=""
                             {...attributes}
                             {...listeners}
                             className={cn(
                                 'flex flex-col items-center gap-1 justify-center rounded-md',
-                                'cursor-grab active:cursor-grabbing p-2 -ml-2 touch-none',
+                                'cursor-grab active:cursor-grabbing p-2 -ms-2 touch-none',
                                 'text-muted-foreground/50 hover:text-muted-foreground',
                                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
                                 'transition-colors duration-150 motion-reduce:transition-none',
@@ -286,13 +304,19 @@ export function MobileRowCard({
                             )}>
                                 {track.title || (
                                     <span className="text-muted-foreground/60 font-medium">
-                                        Untitled {isSection ? 'Section' : isSong ? 'Track' : String(track.type)}
+                                        {isSection
+                                            ? t('setlistGrid.untitledSection')
+                                            : isSong
+                                              ? t('setlistGrid.untitledTrack')
+                                              : UNTITLED_BY_TYPE[String(track.type)]
+                                                ? t(UNTITLED_BY_TYPE[String(track.type)])
+                                                : t('setlistGrid.untitledOther', { type: String(track.type) })}
                                     </span>
                                 )}
                             </span>
                             {tonightTitle && (
                                 <span data-testid="tonight-edit-note" className="truncate text-xs font-medium text-amber-800 dark:text-amber-300">
-                                    Tonight: {tonightTitle} (planned: {track.title})
+                                    {t('setlistGrid.tonightNote', { tonight: tonightTitle, planned: track.title })}
                                 </span>
                             )}
                         </div>
@@ -300,14 +324,14 @@ export function MobileRowCard({
                         <div className="flex items-center gap-3 shrink-0">
                             {isSong && track.key ? (
                                 <div className="bg-brand/10 border border-brand/20 rounded-lg px-2.5 py-1 text-center min-w-[3rem]">
-                                    <p className="text-[9px] text-brand/70 uppercase font-bold tracking-tighter leading-none mb-0.5">Key</p>
+                                    <p className="text-[9px] text-brand/70 uppercase font-bold tracking-tighter leading-none mb-0.5">{t('setlistGrid.columnKey')}</p>
                                     <p className="text-brand font-bold text-xs leading-none">{track.key}</p>
                                 </div>
                             ) : null}
 
                             {isSong && track.leadMusician ? (
                                 <div className="bg-white/5 border border-white/10 rounded-lg px-2.5 py-1 text-center max-w-[5rem]">
-                                    <p className="text-[9px] text-muted-foreground/70 uppercase font-bold tracking-tighter leading-none mb-0.5">Vocal Lead</p>
+                                    <p className="text-[9px] text-muted-foreground/70 uppercase font-bold tracking-tighter leading-none mb-0.5">{t('setlistGrid.columnVocalLead')}</p>
                                     <p className="text-foreground font-bold text-xs leading-none truncate">{track.leadMusician}</p>
                                 </div>
                             ) : null}
@@ -330,10 +354,10 @@ export function MobileRowCard({
                                 }
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                aria-label="Open chart in new tab"
+                                aria-label={t('setlistGrid.openChartNewTab')}
                                 onClick={(e) => e.stopPropagation()}
                                 className={cn(
-                                    'flex-none ml-2 inline-flex items-center justify-center rounded-md',
+                                    'flex-none ms-2 inline-flex items-center justify-center rounded-md',
                                     // 40px baseline hit area, 44px on touch.
                                     'h-10 w-10',
                                     '[@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11',
@@ -347,8 +371,8 @@ export function MobileRowCard({
                         ) : (
                             <span
                                 role="img"
-                                aria-label="No chart bound"
-                                className="flex-none ml-2"
+                                aria-label={t('setlistGrid.noChartBound')}
+                                className="flex-none ms-2"
                             >
                                 <FileText
                                     aria-hidden
@@ -368,14 +392,14 @@ export function MobileRowCard({
                             >
                                 <RecordingCell
                                     disabled={false}
-                                    className="ml-1"
+                                    className="ms-1"
                                     onClick={(e) => e.stopPropagation()}
                                 />
                             </RecordingBindPopover>
                         ) : (
                             // No song bound → recordings attach to a song, so
                             // the affordance renders disabled (no popover).
-                            <RecordingCell disabled className="ml-1" />
+                            <RecordingCell disabled className="ms-1" />
                         )}
                     </div>
                 </ContextMenuTrigger>
@@ -387,24 +411,24 @@ export function MobileRowCard({
                         data-testid="mobile-card-context-menu-edit"
                         className="cursor-pointer"
                     >
-                        <Edit3 aria-hidden className="mr-2 h-4 w-4" />
-                        Edit row
+                        <Edit3 aria-hidden className="me-2 h-4 w-4" />
+                        {t('setlistGrid.menuEditRow')}
                     </ContextMenuItem>
                     <ContextMenuItem
                         onSelect={onContextBindChart}
                         data-testid="mobile-card-context-menu-bind-chart"
                         className="cursor-pointer"
                     >
-                        <Music aria-hidden className="mr-2 h-4 w-4" />
-                        Bind chart
+                        <Music aria-hidden className="me-2 h-4 w-4" />
+                        {t('setlistGrid.menuBindChart')}
                     </ContextMenuItem>
                     <ContextMenuItem
                         onSelect={onContextDuplicate}
                         data-testid="mobile-card-context-menu-duplicate"
                         className="cursor-pointer"
                     >
-                        <Copy aria-hidden className="mr-2 h-4 w-4" />
-                        Duplicate row
+                        <Copy aria-hidden className="me-2 h-4 w-4" />
+                        {t('setlistGrid.menuDuplicateRow')}
                     </ContextMenuItem>
                     <ContextMenuSeparator />
                     <ContextMenuItem
@@ -412,41 +436,45 @@ export function MobileRowCard({
                         data-testid="mobile-card-context-menu-delete"
                         className="cursor-pointer text-red-300 focus:text-red-200 focus:bg-red-500/15"
                     >
-                        <Trash2 aria-hidden className="mr-2 h-4 w-4" />
-                        Delete row
+                        <Trash2 aria-hidden className="me-2 h-4 w-4" />
+                        {t('setlistGrid.menuDeleteRow')}
                     </ContextMenuItem>
                 </ContextMenuContent>
             </ContextMenu>
 
             {/* Inline Editor Panel */}
             {isEditing && (
-                <aside className="bg-white/[0.03] backdrop-blur-xl rounded-2xl p-4 sm:p-6 shadow-[0_0_20px_rgba(67,56,202,0.15)] border border-brand/30 animate-in fade-in slide-in-from-top-2 duration-200 ml-8">
+                <aside className="bg-white/[0.03] backdrop-blur-xl rounded-2xl p-4 sm:p-6 shadow-[0_0_20px_rgba(67,56,202,0.15)] border border-brand/30 animate-in fade-in slide-in-from-top-2 duration-200 ms-8">
                     <div className="flex justify-between items-start mb-4">
                         <div>
-                            <h2 className="text-lg font-bold text-brand mb-1">Edit: {track.title || 'Untitled'}</h2>
+                            <h2 className="text-lg font-bold text-brand mb-1">
+                                {track.title
+                                    ? t('setlistGrid.editHeading', { title: track.title })
+                                    : t('setlistGrid.editHeadingUntitled')}
+                            </h2>
                         </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                         <label className="block sm:col-span-2">
-                            <span className="text-xs text-muted-foreground uppercase tracking-widest font-bold mb-1 block">Title</span>
+                            <span className="text-xs text-muted-foreground uppercase tracking-widest font-bold mb-1 block">{t('setlistGrid.columnTitle')}</span>
                             <input type="text" value={title} onChange={e => setTitle(e.target.value)} onBlur={commitTitle} className={inputBase} />
                         </label>
                         {isSong && (
                             <>
                                 <label className="block">
-                                    <span className="text-xs text-muted-foreground uppercase tracking-widest font-bold mb-1 block">Vocal Lead</span>
+                                    <span className="text-xs text-muted-foreground uppercase tracking-widest font-bold mb-1 block">{t('setlistGrid.columnVocalLead')}</span>
                                     <input type="text" value={lead} onChange={e => setLead(e.target.value)} onBlur={commitLead} className={inputBase} />
                                 </label>
                                 <label className="block">
-                                    <span className="text-xs text-muted-foreground uppercase tracking-widest font-bold mb-1 block">Key</span>
+                                    <span className="text-xs text-muted-foreground uppercase tracking-widest font-bold mb-1 block">{t('setlistGrid.columnKey')}</span>
                                     <select value={key} onChange={e => { setKey(e.target.value); commitKey(e.target.value); }} className={inputBase}>
-                                        <option value="">— None —</option>
+                                        <option value="">{t('setlistGrid.keyNone')}</option>
                                         {KEY_OPTIONS_DATA.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                                     </select>
                                 </label>
                                 <label className="block">
-                                    <span className="text-xs text-muted-foreground uppercase tracking-widest font-bold mb-1 block">BPM</span>
+                                    <span className="text-xs text-muted-foreground uppercase tracking-widest font-bold mb-1 block">{t('setlistGrid.columnBpm')}</span>
                                     <input type="number" inputMode="numeric" value={bpm} onChange={e => setBpm(e.target.value)} onBlur={commitBpm} className={inputBase} />
                                 </label>
                             </>
@@ -454,14 +482,14 @@ export function MobileRowCard({
                     </div>
 
                     <label className="block mb-6">
-                        <span className="text-xs text-muted-foreground uppercase tracking-widest font-bold mb-1 block">Notes</span>
+                        <span className="text-xs text-muted-foreground uppercase tracking-widest font-bold mb-1 block">{t('setlistGrid.columnNotes')}</span>
                         <textarea
                             value={notes}
                             onChange={(e) => setNotes(e.target.value)}
                             onBlur={commitNotes}
                             rows={2}
                             className={cn(inputBase, 'h-auto py-2 font-mono text-xs text-muted-foreground leading-relaxed')}
-                            placeholder="Add lyrics, chords, or performance notes..."
+                            placeholder={t('setlistGrid.notesPlaceholder')}
                         />
                     </label>
 
@@ -472,7 +500,7 @@ export function MobileRowCard({
                             className="h-9 px-3 rounded-lg flex items-center justify-center gap-2 text-sm border border-brand/30 bg-brand/10 text-brand hover:bg-brand/20 transition-colors"
                         >
                             <Music className="h-4 w-4" />
-                            Bind Chart
+                            {t('setlistGrid.bindChartButton')}
                         </button>
                         <button
                             type="button"

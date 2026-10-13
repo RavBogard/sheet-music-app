@@ -30,6 +30,7 @@
  */
 
 import { NextResponse } from 'next/server'
+import { getFormat, getT } from '@/i18n/server'
 import { createApiHandler } from '@/lib/api-wrapper'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { initAdmin, getFirestore } from '@/lib/firebase-admin'
@@ -85,12 +86,14 @@ export const POST = createApiHandler(
         // publish can never fan out to an empty/implicit audience.
         const musicians: MusicianPayload[] = Array.isArray(rawMusicians) ? rawMusicians : []
         if (musicians.length === 0) {
-            return NextResponse.json({ error: 'At least one musician must be assigned' }, { status: 400 })
+            const t = await getT()
+            return NextResponse.json({ error: t("api-setlist.atLeastOneMusician") }, { status: 400 })
         }
 
         if (!initAdmin()) {
+            const t = await getT()
             return NextResponse.json(
-                { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
+                { error: t("api-setlist.serverNotReady"), code: "FIREBASE_NOT_INITIALIZED" },
                 { status: 500 },
             )
         }
@@ -101,7 +104,8 @@ export const POST = createApiHandler(
         const setlistDoc = await setlistRef.get()
 
         if (!setlistDoc.exists) {
-            return NextResponse.json({ error: 'Setlist not found' }, { status: 404 })
+            const t = await getT()
+            return NextResponse.json({ error: t("api-setlist.setlistNotFound") }, { status: 404 })
         }
 
         const setlist = setlistDoc.data()!
@@ -109,7 +113,8 @@ export const POST = createApiHandler(
         // Auth check: owner, band leader, or admin
         const isOwner = setlist.ownerId === ctx.auth.uid
         if (!isOwner && !ctx.auth.isBandLeader) {
-            return NextResponse.json({ error: 'Unauthorized — must be owner, band leader, or admin' }, { status: 403 })
+            const t = await getT()
+            return NextResponse.json({ error: t("api-setlist.ownerLeaderOrAdminRequired") }, { status: 403 })
         }
 
         // Multi-tenant phase 6: the setlist's tenant must have notifyBand on.
@@ -127,7 +132,8 @@ export const POST = createApiHandler(
         }>
         const hasSongs = tracks.some(t => t.fileId && (!t.type || t.type === 'song'))
         if (!hasSongs) {
-            return NextResponse.json({ error: 'Setlist must have at least one song with a linked chart' }, { status: 400 })
+            const t = await getT()
+            return NextResponse.json({ error: t("api-setlist.needsLinkedChart") }, { status: 400 })
         }
 
         // Step 1: record that the band was told, and when.
@@ -147,7 +153,7 @@ export const POST = createApiHandler(
 
         // Get event date
         const eventDate = setlist.eventDate?.toDate?.() || setlist.date?.toDate?.() || new Date()
-        const eventDateStr = eventDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+        const eventDateStr = (await getFormat(rowOrg(setlist.orgId))).date(eventDate, { month: 'long', day: 'numeric', year: 'numeric' })
         const setlistName = setlist.name || 'Untitled Setlist'
 
         // Step 2: Record song usage (fire-and-forget)

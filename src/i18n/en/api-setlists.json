@@ -1,0 +1,15 @@
+{
+    "serverNotReady": "Server not ready",
+    "importSucceeded": "Import executed successfully.",
+    "noFileProvided": "No file provided",
+    "fileTooLarge": "File too large. Maximum size is {maxMb}MB",
+    "unsupportedDocument": "Only .docx, .pdf, and .txt documents are supported.",
+    "noTextProvided": "No text provided",
+    "missingUrlOrCsv": "Missing 'url' or 'csvText' in request body.",
+    "sheetFetchFailed": "Could not retrieve spreadsheet data. Make sure the Google Sheet is set to \"Anyone with the link can view\". ({detail})",
+    "sheetFetchUnknownError": "Unknown error fetching sheet.",
+    "spreadsheetEmpty": "Spreadsheet appears to be empty.",
+    "spreadsheetTooLarge": "Spreadsheet is too large (max {maxRows} rows).",
+    "geminiKeyMissing": "Gemini API Key is not configured on the server.",
+    "broadcastLeadersOnly": "Only band leaders and admins can broadcast setlist updates"
+}

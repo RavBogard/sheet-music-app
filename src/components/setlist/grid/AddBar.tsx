@@ -10,8 +10,10 @@ import {
 } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 
+import { DirectionalIcon } from '@/components/i18n/DirectionalIcon'
 import { useMediaQuery } from '@/hooks/use-media-query'
 import { useVirtualKeyboardOpen } from '@/hooks/use-virtual-keyboard-open'
+import { useT } from '@/i18n/client'
 import { cn } from '@/lib/utils'
 
 import { AddRowPlaceholder } from './AddRowPlaceholder'
@@ -32,7 +34,7 @@ export type NonSongTrackType =
 
 interface TrackTypeTileSpec {
     type: NonSongTrackType
-    label: string
+    labelKey: string
     icon: ReactNode
 }
 
@@ -50,27 +52,27 @@ interface TrackTypeTileSpec {
 const TILE_SPECS: TrackTypeTileSpec[] = [
     {
         type: 'section',
-        label: 'Section header',
+        labelKey: 'setlistGrid.trackTypeSection',
         icon: <Heading className="h-5 w-5 text-muted-foreground" aria-hidden />,
     },
     {
         type: 'reading',
-        label: 'Reading',
+        labelKey: 'setlistGrid.trackTypeReading',
         icon: <BookOpen className="h-5 w-5 text-amber-300" aria-hidden />,
     },
     {
         type: 'prayer',
-        label: 'Prayer',
+        labelKey: 'setlistGrid.trackTypePrayer',
         icon: <Heart className="h-5 w-5 text-blue-300" aria-hidden />,
     },
     {
         type: 'transition',
-        label: 'Transition',
-        icon: <ArrowRight className="h-5 w-5 text-emerald-300" aria-hidden />,
+        labelKey: 'setlistGrid.trackTypeTransition',
+        icon: <DirectionalIcon icon={ArrowRight} className="h-5 w-5 text-emerald-300" aria-hidden />,
     },
     {
         type: 'note',
-        label: 'Stage note',
+        labelKey: 'setlistGrid.trackTypeNote',
         icon: <StickyNote className="h-5 w-5 text-muted-foreground" aria-hidden />,
     },
 ]
@@ -119,6 +121,7 @@ export function AddBar({
     onAddTrackOfType,
     autoOpen = false,
 }: AddBarProps) {
+    const t = useT()
     const [tilesOpen, setTilesOpen] = useState(false)
 
     // v60-10-01: coarse-pointer-only hide-on-keyboard gate. visualViewport
@@ -183,10 +186,10 @@ export function AddBar({
                     <button
                         type="button"
                         data-testid="add-bar-chevron-trigger"
-                        aria-label="Add track of another type"
+                        aria-label={t('setlistGrid.addOtherTypeAria')}
                         onContextMenu={(e) => e.preventDefault()}
                         className={cn(
-                            'flex h-11 items-center justify-center px-3 border-l border-white/10',
+                            'flex h-11 items-center justify-center px-3 border-s border-white/10',
                             '[@media(pointer:coarse)]:h-12 [@media(pointer:coarse)]:px-4',
                             'text-muted-foreground hover:text-foreground hover:bg-white/[0.03]',
                             'cursor-pointer',
@@ -199,7 +202,7 @@ export function AddBar({
             >
                 <div
                     role="grid"
-                    aria-label="Track type"
+                    aria-label={t('setlistGrid.trackTypeGridAria')}
                     className="grid grid-cols-2 gap-2 p-2"
                 >
                     {TILE_SPECS.map((tile) => (
@@ -208,7 +211,7 @@ export function AddBar({
                             type="button"
                             role="gridcell"
                             data-testid={`add-bar-tile-${tile.type}`}
-                            aria-label={tile.label}
+                            aria-label={t(tile.labelKey)}
                             onContextMenu={(e) => e.preventDefault()}
                             onClick={() => {
                                 onAddTrackOfType(tile.type)
@@ -224,7 +227,7 @@ export function AddBar({
                         >
                             {tile.icon}
                             <span className="font-medium text-foreground">
-                                {tile.label}
+                                {t(tile.labelKey)}
                             </span>
                         </button>
                     ))}

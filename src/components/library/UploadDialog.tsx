@@ -12,6 +12,7 @@ import { broadcastCacheInvalidation } from "@/lib/library-cache"
 import { toast } from "sonner"
 import { useOrg } from "@/lib/org/org-context"
 import { coreSectionLabel } from "@/lib/songs/picker-scope"
+import { useT, useFormat } from "@/i18n/client"
 
 const ACCEPTED_TYPES = ".pdf,.xml,.musicxml,.mxl,.mscz,.mscx,.txt"
 const MAX_SIZE_MB = 25
@@ -37,6 +38,8 @@ import { DialogDescription } from '@radix-ui/react-dialog'
 export function UploadDialog({ onUploadComplete, setlists = [], onAddToSetlist }: UploadDialogProps) {
     const { user } = useAuth()
     const org = useOrg()
+    const t = useT()
+    const fmt = useFormat()
     const queryClient = useQueryClient()
     const [open, setOpen] = useState(false)
     const [file, setFile] = useState<File | null>(null)
@@ -75,13 +78,13 @@ export function UploadDialog({ onUploadComplete, setlists = [], onAddToSetlist }
 
     const handleFileSelect = useCallback((selectedFile: File) => {
         if (selectedFile.size > MAX_SIZE_MB * 1024 * 1024) {
-            toast.error(`File too large. Maximum size is ${MAX_SIZE_MB}MB.`)
+            toast.error(t("libraryUpload.fileTooLarge", { max: MAX_SIZE_MB }))
             return
         }
 
         const validExt = /\.(pdf|xml|musicxml|mxl|mscz|mscx|txt)$/i.test(selectedFile.name)
         if (!validExt) {
-            toast.error("Only PDF, MusicXML, MuseScore, and Text files are supported.")
+            toast.error(t("libraryUpload.unsupportedType"))
             return
         }
 
@@ -90,7 +93,7 @@ export function UploadDialog({ onUploadComplete, setlists = [], onAddToSetlist }
         if (!title) {
             setTitle(selectedFile.name.replace(/\.[^/.]+$/, ''))
         }
-    }, [title])
+    }, [title, t])
 
     const handleDrop = useCallback((e: React.DragEvent) => {
         e.preventDefault()
@@ -136,14 +139,14 @@ export function UploadDialog({ onUploadComplete, setlists = [], onAddToSetlist }
             if (controller.signal.aborted) return
 
             if (!res.ok) {
-                const data = await res.json().catch(() => ({ error: 'Upload failed' }))
-                throw new Error(data.error || `Upload failed (${res.status})`)
+                const data = await res.json().catch(() => ({ error: t("libraryUpload.uploadFailed") }))
+                throw new Error(data.error || t("libraryUpload.uploadFailedStatus", { status: res.status }))
             }
 
             const data = await res.json()
             if (controller.signal.aborted) return
             setSuccess(true)
-            toast.success(data.message || 'File uploaded successfully')
+            toast.success(data.message || t("libraryUpload.uploadedToast"))
 
             // v45-07: invalidate the react-query library cache locally so the new
             // file appears in search / setlist picker without cold reload,
@@ -181,7 +184,7 @@ export function UploadDialog({ onUploadComplete, setlists = [], onAddToSetlist }
 
         } catch (err) {
             if ((err as Error).name === 'AbortError') return
-            toast.error(err instanceof Error ? err.message : 'Upload failed')
+            toast.error(err instanceof Error ? err.message : t("libraryUpload.uploadFailed"))
             setUploading(false)
         }
     }
@@ -191,7 +194,7 @@ export function UploadDialog({ onUploadComplete, setlists = [], onAddToSetlist }
             <DialogTrigger asChild>
                 <Button variant="outline" size="sm" className="gap-2">
                     <Upload className="h-4 w-4" />
-                    Upload
+                    {t("libraryUpload.trigger")}
                 </Button>
             </DialogTrigger>
 
@@ -199,17 +202,17 @@ export function UploadDialog({ onUploadComplete, setlists = [], onAddToSetlist }
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <Music className="h-5 w-5 text-brand" />
-                        Upload to Library
+                        {t("libraryUpload.dialogTitle")}
                     </DialogTitle>
                     <VisuallyHidden>
-                        <DialogDescription>Upload a new PDF, MusicXML, or MuseScore file to the song library.</DialogDescription>
+                        <DialogDescription>{t("libraryUpload.dialogDescription")}</DialogDescription>
                     </VisuallyHidden>
                 </DialogHeader>
 
                 {success ? (
                     <div className="flex flex-col items-center gap-3 py-8">
                         <CheckCircle className="h-12 w-12 text-green-400" />
-                        <p className="text-sm text-zinc-300">Uploaded successfully!</p>
+                        <p className="text-sm text-zinc-300">{t("libraryUpload.uploadedSuccess")}</p>
                     </div>
                 ) : (
                     <div className="space-y-4">
@@ -225,9 +228,9 @@ export function UploadDialog({ onUploadComplete, setlists = [], onAddToSetlist }
                             >
                                 <FileUp className="h-8 w-8 text-zinc-500 mx-auto mb-3" />
                                 <p className="text-sm text-zinc-400 mb-1">
-                                    Drop a file here or <span className="text-brand">browse</span>
+                                    {t("libraryUpload.dropPrompt")}
                                 </p>
-                                <p className="text-xs text-zinc-600">PDF, MusicXML, or MuseScore, up to {MAX_SIZE_MB}MB</p>
+                                <p className="text-xs text-zinc-600">{t("libraryUpload.acceptedHint", { max: MAX_SIZE_MB })}</p>
                                 <input
                                     ref={fileInputRef}
                                     type="file"
@@ -246,9 +249,9 @@ export function UploadDialog({ onUploadComplete, setlists = [], onAddToSetlist }
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <p className="text-sm font-medium truncate">{file.name}</p>
-                                    <p className="text-xs text-zinc-500">{(file.size / 1024).toFixed(0)} KB</p>
+                                    <p className="text-xs text-zinc-500">{t("libraryUpload.fileSizeKb", { size: (file.size / 1024).toFixed(0) })}</p>
                                 </div>
-                                <button onClick={() => setFile(null)} className="text-zinc-500 hover:text-white" aria-label="Remove file">
+                                <button onClick={() => setFile(null)} className="text-zinc-500 hover:text-white" aria-label={t("libraryUpload.removeFile")}>
                                     <X className="h-4 w-4" />
                                 </button>
                             </div>
@@ -259,19 +262,19 @@ export function UploadDialog({ onUploadComplete, setlists = [], onAddToSetlist }
                             <>
                                 {/* Title */}
                                 <div>
-                                    <label htmlFor="upload-title" className="text-xs text-muted-foreground mb-1 block">Title</label>
+                                    <label htmlFor="upload-title" className="text-xs text-muted-foreground mb-1 block">{t("libraryUpload.titleLabel")}</label>
                                     <Input
                                         id="upload-title"
                                         value={title}
                                         onChange={(e) => setTitle(e.target.value)}
-                                        placeholder="Song title"
+                                        placeholder={t("libraryUpload.titlePlaceholder")}
                                     />
                                 </div>
 
                                 {/* Key + BPM row */}
                                 <div className="flex gap-3">
                                     <div className="flex-1">
-                                        <label htmlFor="upload-key" className="text-xs text-muted-foreground mb-1 block">Key</label>
+                                        <label htmlFor="upload-key" className="text-xs text-muted-foreground mb-1 block">{t("libraryUpload.keyLabel")}</label>
                                         <select
                                             id="upload-key"
                                             value={key}
@@ -285,13 +288,13 @@ export function UploadDialog({ onUploadComplete, setlists = [], onAddToSetlist }
                                         </select>
                                     </div>
                                     <div className="flex-1">
-                                        <label htmlFor="upload-bpm" className="text-xs text-muted-foreground mb-1 block">BPM</label>
+                                        <label htmlFor="upload-bpm" className="text-xs text-muted-foreground mb-1 block">{t("libraryUpload.bpmLabel")}</label>
                                         <Input
                                             id="upload-bpm"
                                             type="number"
                                             value={bpm}
                                             onChange={(e) => setBpm(e.target.value)}
-                                            placeholder="120"
+                                            placeholder={t("libraryUpload.bpmPlaceholder")}
                                             min={30}
                                             max={300}
                                         />
@@ -300,18 +303,18 @@ export function UploadDialog({ onUploadComplete, setlists = [], onAddToSetlist }
 
                                 {/* Tags */}
                                 <div>
-                                    <label htmlFor="upload-tags" className="text-xs text-muted-foreground mb-1 block">Tags (comma-separated)</label>
+                                    <label htmlFor="upload-tags" className="text-xs text-muted-foreground mb-1 block">{t("libraryUpload.tagsLabel")}</label>
                                     <Input
                                         id="upload-tags"
                                         value={tags}
                                         onChange={(e) => setTags(e.target.value)}
-                                        placeholder="shabbat, morning, healing"
+                                        placeholder={t("libraryUpload.tagsPlaceholder")}
                                     />
                                 </div>
 
                                 {/* Collection */}
                                 <div>
-                                    <label htmlFor="upload-collection" className="text-xs text-muted-foreground mb-1 block">Library Section</label>
+                                    <label htmlFor="upload-collection" className="text-xs text-muted-foreground mb-1 block">{t("libraryUpload.sectionLabel")}</label>
                                     <select
                                         id="upload-collection"
                                         value={collection}
@@ -319,23 +322,25 @@ export function UploadDialog({ onUploadComplete, setlists = [], onAddToSetlist }
                                         className="w-full h-9 px-3 rounded-md bg-muted/30 border border-border text-foreground text-sm focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
                                     >
                                         <option value="crc">{coreSectionLabel(org)}</option>
+                                        {/* i18n-ignore: songbook collection name (data) */}
                                         <option value="supplemental">Shireinu</option>
+                                        {/* i18n-ignore: songbook collection name (data) */}
                                         <option value="nava">Nava Tehilah</option>
-                                        <option value="uploads">Uploads</option>
+                                        <option value="uploads">{t("libraryUpload.sectionUploads")}</option>
                                     </select>
                                 </div>
 
                                 {/* Add to Setlist */}
                                 {setlists.length > 0 && (
                                     <div>
-                                        <label htmlFor="upload-setlist" className="text-xs text-brand font-medium mb-1 block">Add to Setlist (Optional)</label>
+                                        <label htmlFor="upload-setlist" className="text-xs text-brand font-medium mb-1 block">{t("libraryUpload.addToSetlist")}</label>
                                         <select
                                             id="upload-setlist"
                                             value={selectedSetlistId}
                                             onChange={(e) => setSelectedSetlistId(e.target.value)}
                                             className="w-full h-9 px-3 rounded-md bg-brand/10 border border-brand/30 text-foreground text-sm focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
                                         >
-                                            <option value="">— Don't add to setlist —</option>
+                                            <option value="">{t("libraryUpload.dontAddToSetlist")}</option>
                                             {setlists.map(s => (
                                                 <option key={s.id} value={s.id}>{s.name}</option>
                                             ))}
@@ -351,13 +356,13 @@ export function UploadDialog({ onUploadComplete, setlists = [], onAddToSetlist }
                                 >
                                     {uploading ? (
                                         <>
-                                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                            Uploading...
+                                            <Loader2 className="h-4 w-4 animate-spin me-2" />
+                                            {t("libraryUpload.uploading")}
                                         </>
                                     ) : (
                                         <>
-                                            <Upload className="h-4 w-4 mr-2" />
-                                            Upload to Library
+                                            <Upload className="h-4 w-4 me-2" />
+                                            {t("libraryUpload.submit")}
                                         </>
                                     )}
                                 </Button>

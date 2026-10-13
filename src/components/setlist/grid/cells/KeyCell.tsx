@@ -4,6 +4,7 @@ import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from 'c
 import { useEffect, useState } from 'react'
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useT } from '@/i18n/client'
 import { cn } from '@/lib/utils'
 
 import { DropdownCell, type DropdownCellProps } from './DropdownCell'
@@ -72,6 +73,7 @@ export type KeyCellProps = Omit<
 
 export function KeyCell(props: KeyCellProps) {
     const { value } = props
+    const t = useT()
 
     return (
         <DropdownCell
@@ -80,9 +82,9 @@ export function KeyCell(props: KeyCellProps) {
             // overridden via renderPickerContent below. Keeps the
             // DropdownCell shell (trigger, focus, commit plumbing).
             options={[]}
-            placeholder="Pick key"
+            placeholder={t('setlistGrid.pickKeyPlaceholder')}
             mode="discrete"
-            ariaLabel={props.ariaLabel ?? 'Track key'}
+            ariaLabel={props.ariaLabel ?? t('setlistGrid.trackKeyAria')}
             renderPickerContent={({ commit }) => (
                 <KeyPickerTabs currentValue={value} onPick={commit} />
             )}
@@ -96,6 +98,7 @@ interface KeyPickerTabsProps {
 }
 
 function KeyPickerTabs({ currentValue, onPick }: KeyPickerTabsProps) {
+    const t = useT()
     const [tab, setTab] = useState<'major' | 'minor'>(() =>
         inferDefaultTab(currentValue),
     )
@@ -119,14 +122,14 @@ function KeyPickerTabs({ currentValue, onPick }: KeyPickerTabsProps) {
                     data-testid="key-picker-tab-major"
                     className="[@media(pointer:coarse)]:min-h-[44px]"
                 >
-                    Major
+                    {t('setlistGrid.keyMajor')}
                 </TabsTrigger>
                 <TabsTrigger
                     value="minor"
                     data-testid="key-picker-tab-minor"
                     className="[@media(pointer:coarse)]:min-h-[44px]"
                 >
-                    Minor
+                    {t('setlistGrid.keyMinor')}
                 </TabsTrigger>
             </TabsList>
             <TabsContent value="major" className="mt-0">
@@ -157,11 +160,12 @@ interface KeyListProps {
 }
 
 function KeyList({ options, currentValue, onPick, testIdSuffix }: KeyListProps) {
+    const t = useT()
     return (
         <Command loop data-testid={`key-picker-list-${testIdSuffix}`}>
-            <CommandList className="max-h-72 overflow-y-auto py-1">
+            <CommandList className="max-h-72 overflow-y-auto py-1" label={t('setlistGrid.pickerSuggestionsAria')}>
                 <CommandEmpty className="px-3 py-2 text-sm text-muted-foreground">
-                    No matches.
+                    {t('setlistGrid.noMatches')}
                 </CommandEmpty>
                 <CommandGroup>
                     {options.map((opt) => (

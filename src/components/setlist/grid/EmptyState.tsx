@@ -2,6 +2,7 @@
 
 import { Plus, RefreshCcw, FileText } from 'lucide-react'
 
+import { useT } from '@/i18n/client'
 import { cn } from '@/lib/utils'
 
 export interface EmptyStateProps {
@@ -21,6 +22,7 @@ export function EmptyState({
     onUseTemplate,
     busy = false,
 }: EmptyStateProps) {
+    const t = useT()
     return (
         <div
             data-testid="setlist-grid-empty-state"
@@ -28,7 +30,7 @@ export function EmptyState({
         >
             <div className="space-y-3">
                 <p className="text-sm uppercase tracking-wider text-muted-foreground">
-                    Start with last week’s
+                    {t('setlistGrid.emptyStartWithLastWeek')}
                 </p>
                 <button
                     type="button"
@@ -46,13 +48,13 @@ export function EmptyState({
                     )}
                 >
                     <RefreshCcw aria-hidden className="h-4 w-4" />
-                    <span>Make next week’s</span>
+                    <span>{t('setlistGrid.emptyMakeNextWeek')}</span>
                 </button>
             </div>
 
             <div className="flex flex-col items-center gap-3">
                 <p className="text-sm uppercase tracking-wider text-muted-foreground">
-                    Or build from scratch
+                    {t('setlistGrid.emptyBuildFromScratch')}
                 </p>
                 <div className="flex flex-wrap items-center justify-center gap-3">
                     <button
@@ -69,7 +71,7 @@ export function EmptyState({
                         )}
                     >
                         <Plus aria-hidden className="h-4 w-4" />
-                        <span>Add a song</span>
+                        <span>{t('setlistGrid.emptyAddSong')}</span>
                     </button>
                     <button
                         type="button"
@@ -85,7 +87,7 @@ export function EmptyState({
                         )}
                     >
                         <FileText aria-hidden className="h-4 w-4" />
-                        <span>Use a template</span>
+                        <span>{t('setlistGrid.emptyUseTemplate')}</span>
                     </button>
                 </div>
             </div>

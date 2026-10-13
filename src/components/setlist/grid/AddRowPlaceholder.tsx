@@ -4,6 +4,7 @@ import { CommandGroup, CommandItem } from 'cmdk'
 import { Plus } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
+import { useT } from '@/i18n/client'
 import { cn } from '@/lib/utils'
 
 import { ChartPickerList } from './ChartPickerList'
@@ -28,6 +29,7 @@ export function AddRowPlaceholder({
     onCreateFreeText,
     autoOpen = false,
 }: AddRowPlaceholderProps) {
+    const t = useT()
     const [open, setOpen] = useState(false)
     const [filter, setFilter] = useState('')
     const triggerRef = useRef<HTMLButtonElement>(null)
@@ -47,12 +49,12 @@ export function AddRowPlaceholder({
     }
 
     const handleFreeText = () => {
-        const t = filter.trim()
-        if (!t) {
+        const title = filter.trim()
+        if (!title) {
             close()
             return
         }
-        onCreateFreeText(t)
+        onCreateFreeText(title)
         close()
     }
 
@@ -93,7 +95,7 @@ export function AddRowPlaceholder({
                             // Baseline 44px (h-11) — already satisfies touch
                             // target requirement; bumped to h-12 on coarse
                             // for extra breathing room.
-                            'flex h-11 w-full items-center gap-2 px-3 text-left text-sm',
+                            'flex h-11 w-full items-center gap-2 px-3 text-start text-sm',
                             '[@media(pointer:coarse)]:h-12',
                             'font-medium text-foreground hover:text-foreground',
                             'cursor-pointer',
@@ -104,7 +106,7 @@ export function AddRowPlaceholder({
                             aria-hidden
                             className="h-4 w-4 text-indigo-300"
                         />
-                        <span>Song</span>
+                        <span>{t('setlistGrid.addSong')}</span>
                     </button>
                 }
             >
@@ -113,14 +115,14 @@ export function AddRowPlaceholder({
                     onFilterChange={setFilter}
                     onPick={handlePick}
                     onEscape={close}
-                    inputAriaLabel="Add a song"
-                    placeholder="Type a song title…"
+                    inputAriaLabel={t('setlistGrid.addSongAria')}
+                    placeholder={t('setlistGrid.addSongPlaceholder')}
                     inputClassName="w-full bg-transparent px-3 py-2 text-sm outline-none border-b border-white/10"
                     listClassName="max-h-72 overflow-y-auto py-1"
                     itemClassName="flex cursor-pointer items-center gap-2 px-2 py-1 text-sm aria-selected:bg-indigo-500/15"
                 >
                     {filter.trim().length > 0 && (
-                        <CommandGroup heading="Custom">
+                        <CommandGroup heading={t('setlistGrid.pickerCustomHeading')}>
                             <CommandItem
                                 value={`__create__${filter}`}
                                 onSelect={handleFreeText}
@@ -131,8 +133,7 @@ export function AddRowPlaceholder({
                                     className="h-3.5 w-3.5 text-muted-foreground/70"
                                 />
                                 <span>
-                                    Create new track called “
-                                    {filter.trim()}”
+                                    {t('setlistGrid.createTrackCalled', { title: filter.trim() })}
                                 </span>
                             </CommandItem>
                         </CommandGroup>

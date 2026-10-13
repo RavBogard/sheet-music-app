@@ -1,0 +1,610 @@
+{
+    "page.restrictedTitle": {
+        "where": "Library page: heading shown to visitors who are not signed in",
+        "who": "anyone with the link",
+        "maxLength": 40
+    },
+    "page.restrictedBody": {
+        "where": "Library page: explanation under the 'Restricted Access' heading",
+        "who": "anyone with the link",
+        "maxLength": 120
+    },
+    "page.pendingTitle": {
+        "where": "Library page: heading shown to a signed-in user whose account is not yet approved",
+        "who": "musicians",
+        "maxLength": 40
+    },
+    "page.pendingBody": {
+        "where": "Library page: explanation under the 'Account Pending' heading",
+        "who": "musicians",
+        "maxLength": 140
+    },
+    "page.uid": {
+        "where": "Library page (account pending): small monospace box with the start of the user's id",
+        "who": "musicians",
+        "maxLength": 30,
+        "context": "{uid} is the first 8 characters of the user's account id (machine text). 'UID' is an abbreviation for user id."
+    },
+    "header.back": {
+        "where": "Library page header: back-arrow button (screen-reader label)",
+        "who": "musicians",
+        "maxLength": 40
+    },
+    "header.title": {
+        "where": "Library page header: page title",
+        "who": "musicians",
+        "maxLength": 25,
+        "context": "'Charts' = sheet-music files."
+    },
+    "header.exitSelectMode": {
+        "where": "Library page header: tooltip of the checkbox button while multi-select mode is on",
+        "who": "musicians",
+        "maxLength": 40
+    },
+    "header.selectFiles": {
+        "where": "Library page header: tooltip of the checkbox button that turns on multi-select mode",
+        "who": "musicians",
+        "maxLength": 40
+    },
+    "header.uploadDone": {
+        "where": "Library page: toast after a chart upload finishes",
+        "who": "leaders",
+        "maxLength": 60
+    },
+    "search.audioPlaceholder": {
+        "where": "Library page: search box placeholder on the Audio tab",
+        "who": "musicians",
+        "maxLength": 40
+    },
+    "search.audioLabel": {
+        "where": "Library page: search box screen-reader label on the Audio tab",
+        "who": "musicians",
+        "maxLength": 60
+    },
+    "search.chartsPlaceholder": {
+        "where": "Library page: search box placeholder on chart tabs",
+        "who": "musicians",
+        "maxLength": 40,
+        "context": "'key' = musical key (C, G, Bb...)."
+    },
+    "search.chartsLabel": {
+        "where": "Library page: search box screen-reader label on chart tabs",
+        "who": "musicians",
+        "maxLength": 80,
+        "context": "'key' = musical key."
+    },
+    "usage.partial": {
+        "where": "Library page: warning line when 'last used' data failed to load for some charts",
+        "who": "musicians",
+        "maxLength": 110,
+        "context": "'recency filter' = the filter chip that shows charts by when they were last played."
+    },
+    "usage.retry": {
+        "where": "Library page: button next to the 'last used' warning that reloads the data",
+        "who": "musicians",
+        "maxLength": 15
+    },
+    "sections.groupLabel": {
+        "where": "Library page: screen-reader label of the row of section tabs (collections)",
+        "who": "musicians",
+        "maxLength": 40
+    },
+    "sections.tabWithCount": {
+        "where": "Library page: one section tab (a chart collection) with its chart count",
+        "who": "musicians",
+        "maxLength": 30,
+        "context": "{label} is the collection's name from the congregation's settings (not translated); {n} is the number of charts in it."
+    },
+    "sections.audioWithCount": {
+        "where": "Library page: the Audio section tab with the number of audio files",
+        "who": "musicians",
+        "maxLength": 20,
+        "context": "{n} is a number."
+    },
+    "shared.chipGroupLabel": {
+        "where": "Library page: screen-reader label of the row of chips for collections other congregations share",
+        "who": "musicians",
+        "maxLength": 40
+    },
+    "shared.chipGroupHeading": {
+        "where": "Library page: visible label (with colon) before the shared-collection chips",
+        "who": "musicians",
+        "maxLength": 40
+    },
+    "shared.chipAria": {
+        "where": "Library page: screen-reader label of one shared-collection chip",
+        "who": "musicians",
+        "maxLength": 80,
+        "context": "{label} is the collection's name; {owner} is the name of the congregation that shares it."
+    },
+    "shared.fromOwner": {
+        "where": "Library page: small badge on a shared chip or chart row naming who shares it",
+        "who": "musicians",
+        "maxLength": 40,
+        "context": "{owner} is the name of the congregation that shares the chart."
+    },
+    "shared.readOnly": {
+        "where": "Library page: tooltip and disabled menu line on a chart shared by another congregation",
+        "who": "musicians",
+        "maxLength": 100,
+        "context": "{owner} is the sharing congregation's name. 'it' = the chart (sheet-music file)."
+    },
+    "shared.loadFailed": {
+        "where": "Library page: status text when shared collections could not be loaded",
+        "who": "musicians",
+        "maxLength": 50
+    },
+    "allSites.label": {
+        "where": "Library page (admins only): screen-reader label of the 'All sites' switch",
+        "who": "admins",
+        "maxLength": 50,
+        "context": "'sites' = the other congregations hosted on the platform."
+    },
+    "allSites.off": {
+        "where": "Library page (admins only): switch text when off",
+        "who": "admins",
+        "maxLength": 20
+    },
+    "allSites.on": {
+        "where": "Library page (admins only): switch text when on",
+        "who": "admins",
+        "maxLength": 25
+    },
+    "list.errorTitle": {
+        "where": "Library page: error box title when the library failed to load",
+        "who": "musicians",
+        "maxLength": 30
+    },
+    "list.errorFallback": {
+        "where": "Library page: error box text when no detail is available",
+        "who": "musicians",
+        "maxLength": 60
+    },
+    "list.noMatchesTitle": {
+        "where": "Library page: empty list title when the search finds nothing",
+        "who": "musicians",
+        "maxLength": 40
+    },
+    "list.noMatchesBody": {
+        "where": "Library page: empty list text when the search finds nothing",
+        "who": "musicians",
+        "maxLength": 100,
+        "context": "{query} is what the user typed."
+    },
+    "list.noAudioTitle": {
+        "where": "Library page: empty Audio tab title",
+        "who": "musicians",
+        "maxLength": 40
+    },
+    "list.noAudioBody": {
+        "where": "Library page: empty Audio tab text",
+        "who": "musicians",
+        "maxLength": 120,
+        "context": "'.mp3, .m4a' are file extensions — keep as is. 'Drive' = Google Drive."
+    },
+    "list.noChartsTitle": {
+        "where": "Library page: empty list title when the library has no charts",
+        "who": "musicians",
+        "maxLength": 40
+    },
+    "list.noChartsBody": {
+        "where": "Library page: empty list text when the library has no charts",
+        "who": "musicians",
+        "maxLength": 100
+    },
+    "list.chartCount": {
+        "where": "Library page: screen-reader announcement of how many charts the list shows",
+        "who": "musicians",
+        "maxLength": 30,
+        "context": "{count} is the number of charts."
+    },
+    "filters.key": {
+        "where": "Library page: filter chip for musical key",
+        "who": "musicians",
+        "maxLength": 12,
+        "context": "Musical key (C, G, Bb...), not a keyboard key."
+    },
+    "filters.keyWithCount": {
+        "where": "Library page: musical-key filter chip with the number of keys selected",
+        "who": "musicians",
+        "maxLength": 16,
+        "context": "{n} = number of selected keys."
+    },
+    "filters.topic": {
+        "where": "Library page: filter chip for song topic/theme",
+        "who": "musicians",
+        "maxLength": 12
+    },
+    "filters.topicWithCount": {
+        "where": "Library page: topic filter chip with the number of topics selected",
+        "who": "musicians",
+        "maxLength": 16,
+        "context": "{n} = number of selected topics."
+    },
+    "filters.recency": {
+        "where": "Library page: filter chip for when a chart was last played (no filter set)",
+        "who": "musicians",
+        "maxLength": 14
+    },
+    "filters.recent": {
+        "where": "Library page: recency chip when filtered to recently played",
+        "who": "musicians",
+        "maxLength": 14
+    },
+    "filters.stale": {
+        "where": "Library page: recency chip when filtered to charts not played for 60+ days",
+        "who": "musicians",
+        "maxLength": 14
+    },
+    "filters.never": {
+        "where": "Library page: recency chip when filtered to charts never played",
+        "who": "musicians",
+        "maxLength": 16
+    },
+    "filters.clear": {
+        "where": "Library page: chip that clears all filters",
+        "who": "musicians",
+        "maxLength": 12
+    },
+    "filters.optionAll": {
+        "where": "Library page: recency option 'no filter'",
+        "who": "musicians",
+        "maxLength": 12
+    },
+    "filters.optionRecent": {
+        "where": "Library page: recency option, played in the last 30 days",
+        "who": "musicians",
+        "maxLength": 16
+    },
+    "filters.optionStale": {
+        "where": "Library page: recency option, last played more than 60 days ago",
+        "who": "musicians",
+        "maxLength": 16
+    },
+    "filters.optionNever": {
+        "where": "Library page: recency option, never played in a setlist",
+        "who": "musicians",
+        "maxLength": 16
+    },
+    "row.openFolderLabel": {
+        "where": "Library row: screen-reader label of a folder row",
+        "who": "musicians",
+        "maxLength": 80,
+        "context": "{name} is the folder's name."
+    },
+    "row.playLabel": {
+        "where": "Library row: screen-reader label of an audio row (not playing)",
+        "who": "musicians",
+        "maxLength": 80,
+        "context": "{name} is the audio file's name."
+    },
+    "row.pauseLabel": {
+        "where": "Library row: screen-reader label of an audio row that is playing",
+        "who": "musicians",
+        "maxLength": 80,
+        "context": "{name} is the audio file's name."
+    },
+    "row.viewLabel": {
+        "where": "Library row: screen-reader label of a chart row (opens it)",
+        "who": "musicians",
+        "maxLength": 80,
+        "context": "{name} is the chart's title."
+    },
+    "row.audio": {
+        "where": "Library row: small badge on audio files",
+        "who": "musicians",
+        "maxLength": 10
+    },
+    "row.bpm": {
+        "where": "Library row: tempo badge",
+        "who": "musicians",
+        "maxLength": 10,
+        "context": "{bpm} is a number; 'bpm' = beats per minute."
+    },
+    "row.cachedTitle": {
+        "where": "Library row: tooltip of the 'Cached' badge",
+        "who": "musicians",
+        "maxLength": 60
+    },
+    "row.cached": {
+        "where": "Library row: badge on charts saved on this device for offline use",
+        "who": "musicians",
+        "maxLength": 10
+    },
+    "row.lastUsedTitle": {
+        "where": "Library row: tooltip of the 'last used' badge",
+        "who": "musicians",
+        "maxLength": 50,
+        "context": "{date} is the raw date the chart was last in a setlist."
+    },
+    "row.usageBadge": {
+        "where": "Library row: compact badge with the last date a chart was played and how many times",
+        "who": "musicians",
+        "maxLength": 22,
+        "context": "{date} is a short date like 'Jan 31'; {uses} is the number of times played; '×' means 'times'."
+    },
+    "row.usageBadgeNoDate": {
+        "where": "Library row: compact usage badge when the date is unknown",
+        "who": "musicians",
+        "maxLength": 8,
+        "context": "{uses} is the number of times played; '×' means 'times'."
+    },
+    "row.digitizing": {
+        "where": "Library row and its menu: shown while AI converts a PDF chart to MusicXML",
+        "who": "admins",
+        "maxLength": 16
+    },
+    "row.addToSetlist": {
+        "where": "Library row: right-click/long-press menu item",
+        "who": "leaders",
+        "maxLength": 25
+    },
+    "row.openFolder": {
+        "where": "Library row: menu item on a folder",
+        "who": "musicians",
+        "maxLength": 20
+    },
+    "row.play": {
+        "where": "Library row: menu item on an audio file",
+        "who": "musicians",
+        "maxLength": 15
+    },
+    "row.selectView": {
+        "where": "Library row: menu item that opens a chart",
+        "who": "musicians",
+        "maxLength": 20
+    },
+    "row.digitize": {
+        "where": "Library row (admins): menu item that converts a PDF chart to MusicXML with AI",
+        "who": "admins",
+        "maxLength": 20
+    },
+    "row.rename": {
+        "where": "Library row (admins): menu item to rename a chart",
+        "who": "admins",
+        "maxLength": 15
+    },
+    "row.archive": {
+        "where": "Library row (admins): menu item that hides a chart from the library",
+        "who": "admins",
+        "maxLength": 20
+    },
+    "selection.selectedCount": {
+        "where": "Library page: selection bar count",
+        "who": "musicians",
+        "maxLength": 25,
+        "context": "{count} = number of selected files."
+    },
+    "selection.selectAll": {
+        "where": "Library page: selection bar button",
+        "who": "musicians",
+        "maxLength": 15
+    },
+    "selection.clear": {
+        "where": "Library page: selection bar button that unselects everything",
+        "who": "musicians",
+        "maxLength": 12
+    },
+    "selection.copyNames": {
+        "where": "Library page: selection bar button that copies the selected charts' names to the clipboard",
+        "who": "musicians",
+        "maxLength": 18
+    },
+    "selection.copiedNames": {
+        "where": "Library page: toast after copying the selected names",
+        "who": "musicians",
+        "maxLength": 40,
+        "context": "{count} = number of names copied. English intentionally keeps 'file names' for 1 too."
+    },
+    "selection.addToSetlist": {
+        "where": "Library page: selection bar button that adds the selected charts to a setlist",
+        "who": "leaders",
+        "maxLength": 25,
+        "context": "{count} = number of selected charts."
+    },
+    "actions.digitizingToast": {
+        "where": "Library: toast when AI conversion of a PDF chart starts",
+        "who": "admins",
+        "maxLength": 100,
+        "context": "{name} is the file name. ~20s = about 20 seconds."
+    },
+    "actions.digitizeTimeout": {
+        "where": "Library: error toast when AI conversion timed out",
+        "who": "admins",
+        "maxLength": 100
+    },
+    "actions.digitizationFailed": {
+        "where": "Library: error toast when AI conversion failed",
+        "who": "admins",
+        "maxLength": 40
+    },
+    "actions.serverError": {
+        "where": "Library: error toast with the server's raw response",
+        "who": "admins",
+        "maxLength": 90,
+        "context": "{status} is an HTTP status number; {detail} is the first 50 characters of the server's reply (machine text)."
+    },
+    "actions.savingMusicXml": {
+        "where": "Library: toast while the converted MusicXML file is saved",
+        "who": "admins",
+        "maxLength": 30,
+        "context": "MusicXML is a file format name — keep as is."
+    },
+    "actions.saveXmlFailed": {
+        "where": "Library: error toast when saving the MusicXML file failed",
+        "who": "admins",
+        "maxLength": 40
+    },
+    "actions.savedMusicXml": {
+        "where": "Library: success toast after AI conversion",
+        "who": "admins",
+        "maxLength": 70
+    },
+    "actions.digitizeFailed": {
+        "where": "Library: generic error toast for AI conversion",
+        "who": "admins",
+        "maxLength": 30
+    },
+    "actions.archiveConfirm": {
+        "where": "Library: browser confirm dialog before archiving a chart",
+        "who": "admins",
+        "maxLength": 140,
+        "context": "{name} is the chart's title."
+    },
+    "actions.archiving": {
+        "where": "Library: toast while archiving a chart",
+        "who": "admins",
+        "maxLength": 30
+    },
+    "actions.archived": {
+        "where": "Library: toast after a chart was archived",
+        "who": "admins",
+        "maxLength": 40
+    },
+    "actions.archiveFailed": {
+        "where": "Library: error toast when archiving failed",
+        "who": "admins",
+        "maxLength": 40
+    },
+    "actions.renamePrompt": {
+        "where": "Library: browser prompt asking for a chart's new name",
+        "who": "admins",
+        "maxLength": 30
+    },
+    "actions.renaming": {
+        "where": "Library: toast while renaming a chart",
+        "who": "admins",
+        "maxLength": 20
+    },
+    "actions.renamed": {
+        "where": "Library: toast after a chart was renamed",
+        "who": "admins",
+        "maxLength": 30
+    },
+    "actions.renameFailed": {
+        "where": "Library: error toast when renaming failed",
+        "who": "admins",
+        "maxLength": 40
+    },
+    "addSheet.title": {
+        "where": "Add-to-setlist sheet (bottom panel): title when adding one song",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "addSheet.titleMany": {
+        "where": "Add-to-setlist sheet: title when adding several songs",
+        "who": "leaders",
+        "maxLength": 40,
+        "context": "{count} = number of songs (always 2 or more)."
+    },
+    "addSheet.description": {
+        "where": "Add-to-setlist sheet: screen-reader description",
+        "who": "leaders",
+        "maxLength": 80
+    },
+    "addSheet.searchPlaceholder": {
+        "where": "Add-to-setlist sheet: search box placeholder",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "addSheet.searchLabel": {
+        "where": "Add-to-setlist sheet: search box screen-reader label",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "addSheet.createLabel": {
+        "where": "Add-to-setlist sheet: '+' button screen-reader label",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "addSheet.newNamePlaceholder": {
+        "where": "Add-to-setlist sheet: placeholder of the new setlist name box",
+        "who": "leaders",
+        "maxLength": 45,
+        "context": "'Friday Night' is an example setlist name; translate as a natural example for a Friday-evening service."
+    },
+    "addSheet.newNameLabel": {
+        "where": "Add-to-setlist sheet: new setlist name box screen-reader label",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "addSheet.create": {
+        "where": "Add-to-setlist sheet: button that creates the new setlist",
+        "who": "leaders",
+        "maxLength": 12
+    },
+    "addSheet.noMatch": {
+        "where": "Add-to-setlist sheet: empty state when the search finds no setlist",
+        "who": "leaders",
+        "maxLength": 60,
+        "context": "{query} is what the user typed."
+    },
+    "addSheet.noEditable": {
+        "where": "Add-to-setlist sheet: empty state when there are no setlists the user may edit",
+        "who": "leaders",
+        "maxLength": 50
+    },
+    "addSheet.songCount": {
+        "where": "Add-to-setlist sheet: number of songs in a setlist row",
+        "who": "leaders",
+        "maxLength": 15,
+        "context": "{count} = number of songs. English intentionally says 'songs' for 1 too."
+    },
+    "overlay.close": {
+        "where": "Song search overlay: close button screen-reader label",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "overlay.replacePlaceholder": {
+        "where": "Song search overlay: search placeholder when replacing a song in a setlist",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "overlay.replaceLabel": {
+        "where": "Song search overlay: search screen-reader label when replacing a song",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "overlay.addPlaceholder": {
+        "where": "Song search overlay: search placeholder when adding songs",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "overlay.addLabel": {
+        "where": "Song search overlay: search screen-reader label when adding songs",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "overlay.collectionGroup": {
+        "where": "Song search overlay: screen-reader label of the collection toggle",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "overlay.noResults": {
+        "where": "Song search overlay: empty state when the search finds nothing",
+        "who": "leaders",
+        "maxLength": 60,
+        "context": "{query} is what the user typed."
+    },
+    "overlay.empty": {
+        "where": "Song search overlay: empty state when the library has no songs",
+        "who": "leaders",
+        "maxLength": 50
+    },
+    "overlay.keyLabel": {
+        "where": "Song search overlay: musical key under a result",
+        "who": "leaders",
+        "maxLength": 15,
+        "context": "{key} is a musical key name like C or Bb (not translated)."
+    },
+    "overlay.added": {
+        "where": "Song search overlay: marker on a song already in the setlist",
+        "who": "leaders",
+        "maxLength": 10
+    },
+    "overlay.addToSetlist": {
+        "where": "Song search overlay: button on a result that opens the add-to-setlist picker",
+        "who": "leaders",
+        "maxLength": 25
+    }
+}

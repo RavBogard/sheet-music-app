@@ -53,6 +53,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json(
             {
                 error: "server_misconfigured",
+                // i18n-ignore: server-to-server route (MCP commit path, resume cron, self); operator diagnostic
                 message:
                     "Intake run route needs INTAKE_RUN_SECRET (or CRON_SECRET) configured.",
             },
@@ -65,6 +66,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json(
             {
                 error: "unauthenticated",
+                // i18n-ignore: server-to-server route (internal bearer only); never shown to a person
                 message: "Intake run route requires internal bearer auth.",
             },
             { status: 401 },
@@ -79,6 +81,7 @@ export async function POST(req: NextRequest) {
     }
     if (typeof batchId !== "string" || !batchId) {
         return NextResponse.json(
+            // i18n-ignore: server-to-server route; describes the internal request contract
             { error: "invalid_request", message: "Body must be {batchId: string}." },
             { status: 400 },
         )

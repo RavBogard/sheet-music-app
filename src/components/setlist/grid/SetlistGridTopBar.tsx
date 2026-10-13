@@ -2,6 +2,8 @@
 
 import { ChevronLeft, Pencil } from 'lucide-react'
 
+import { DirectionalIcon } from '@/components/i18n/DirectionalIcon'
+import { useT } from '@/i18n/client'
 import { cn } from '@/lib/utils'
 
 import { SyncIndicator, type SyncIndicatorProps } from './SyncIndicator'
@@ -24,6 +26,7 @@ export function SetlistGridTopBar({
     syncProps,
     onEditMeta,
 }: SetlistGridTopBarProps) {
+    const t = useT()
     return (
         <header
             data-testid="setlist-grid-top-bar"
@@ -38,7 +41,7 @@ export function SetlistGridTopBar({
                 <button
                     type="button"
                     onClick={onBack}
-                    aria-label="Back"
+                    aria-label={t('setlistGrid.back')}
                     className={cn(
                         'inline-flex p-2 items-center justify-center rounded-full',
                         'text-foreground hover:bg-white/5 active:bg-white/10',
@@ -46,19 +49,19 @@ export function SetlistGridTopBar({
                         'transition-colors',
                     )}
                 >
-                    <ChevronLeft aria-hidden className="h-6 w-6" />
+                    <DirectionalIcon icon={ChevronLeft} aria-hidden className="h-6 w-6" />
                 </button>
 
                 <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 min-w-0">
                         <h1 className="truncate text-lg sm:text-xl font-bold tracking-tight text-foreground">
-                            {name || 'New Setlist'}
+                            {name || t('setlistGrid.newSetlist')}
                         </h1>
                         {onEditMeta ? (
                             <button
                                 type="button"
                                 onClick={onEditMeta}
-                                aria-label="Edit setlist details"
+                                aria-label={t('setlistGrid.editSetlistDetails')}
                                 className={cn(
                                     'inline-flex min-h-[44px] min-w-[44px] p-2 items-center justify-center rounded-full flex-shrink-0',
                                     'text-muted-foreground hover:text-foreground hover:bg-white/5 active:bg-white/10',
@@ -78,7 +81,7 @@ export function SetlistGridTopBar({
                 </div>
             </div>
 
-            <div className="flex items-center gap-3 sm:gap-4 flex-shrink-0 pl-4">
+            <div className="flex items-center gap-3 sm:gap-4 flex-shrink-0 ps-4">
                 <SyncIndicator {...syncProps} />
             </div>
         </header>

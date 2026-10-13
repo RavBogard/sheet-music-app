@@ -1,0 +1,506 @@
+{
+    "editorErrorTitle": {
+        "where": "Setlist editor crash page: heading",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "editorErrorBody": {
+        "where": "Setlist editor crash page: explanation under the heading",
+        "who": "leaders",
+        "maxLength": 120
+    },
+    "backToDashboard": {
+        "where": "Setlist editor crash page: button back to the setlists dashboard",
+        "who": "leaders",
+        "maxLength": 25
+    },
+    "tryAgain": {
+        "where": "Setlist editor crash page and setlists dashboard load-error panel: retry button",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "audioChangeBackingTrack": {
+        "where": "Setlist row: icon button (screen-reader label) when a backing track is already linked",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "audioLinkBackingTrack": {
+        "where": "Setlist row: icon button (screen-reader label) when no backing track is linked",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "audioPickerTitle": {
+        "where": "Backing-track picker dialog: title",
+        "who": "leaders",
+        "maxLength": 30,
+        "context": "A backing track is a recorded audio file (MP3/WAV) played along with a song."
+    },
+    "audioSearchPlaceholder": {
+        "where": "Backing-track picker dialog: search box placeholder",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "audioLoadingLibrary": {
+        "where": "Backing-track picker dialog: loading state",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "audioEmpty": {
+        "where": "Backing-track picker dialog: empty state heading",
+        "who": "leaders",
+        "maxLength": 50
+    },
+    "audioEmptyHint": {
+        "where": "Backing-track picker dialog: empty state hint",
+        "who": "leaders",
+        "maxLength": 110,
+        "context": "MP3, WAV and Google Drive are product/format names; keep them."
+    },
+    "audioOpenLibrary": {
+        "where": "Backing-track picker dialog: link to the library page",
+        "who": "leaders",
+        "maxLength": 25,
+        "context": "The arrow points to where the link goes; in a right-to-left language use ←."
+    },
+    "audioBackingTrackLabel": {
+        "where": "Backing-track picker dialog: small label under each audio file name",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "deleteDialogTitle": {
+        "where": "Setlists dashboard: delete confirmation dialog title",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "deleteDialogQuestion": {
+        "where": "Setlists dashboard: delete confirmation dialog question",
+        "who": "leaders",
+        "maxLength": 90,
+        "context": "{name} is the setlist's name"
+    },
+    "cannotBeUndone": {
+        "where": "Setlists dashboard: delete confirmation dialog, sentence after the question",
+        "who": "leaders",
+        "maxLength": 50
+    },
+    "cancel": {
+        "where": "Setlists dashboard / version history: Cancel button in confirmation dialogs",
+        "who": "leaders",
+        "maxLength": 15
+    },
+    "delete": {
+        "where": "Setlists dashboard: confirm button in the delete dialog",
+        "who": "leaders",
+        "maxLength": 15
+    },
+    "duplicateDialogTitle": {
+        "where": "Setlists dashboard: duplicate confirmation dialog title",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "duplicateDialogQuestion": {
+        "where": "Setlists dashboard: duplicate confirmation dialog question",
+        "who": "leaders",
+        "maxLength": 80,
+        "context": "{name} is the setlist's name"
+    },
+    "duplicate": {
+        "where": "Setlists dashboard: confirm button in the duplicate dialog",
+        "who": "leaders",
+        "maxLength": 15
+    },
+    "transferDialogTitle": {
+        "where": "Setlists dashboard: transfer-ownership dialog title",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "transferDialogBody": {
+        "where": "Setlists dashboard: transfer-ownership dialog, first sentence",
+        "who": "leaders",
+        "maxLength": 80,
+        "context": "{name} is the setlist's name"
+    },
+    "transferDialogLoseAccess": {
+        "where": "Setlists dashboard: transfer-ownership dialog, warning sentence",
+        "who": "leaders",
+        "maxLength": 80
+    },
+    "transferEmailPlaceholder": {
+        "where": "Setlists dashboard: transfer-ownership dialog, email field placeholder",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "transferring": {
+        "where": "Setlists dashboard: transfer button while the transfer runs",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "transfer": {
+        "where": "Setlists dashboard: confirm button in the transfer dialog",
+        "who": "leaders",
+        "maxLength": 15
+    },
+    "allSetlists": {
+        "where": "Setlists dashboard: section heading above the toolbar (shown uppercase by CSS)",
+        "who": "leaders, musicians",
+        "maxLength": 25
+    },
+    "closeSearch": {
+        "where": "Setlists dashboard toolbar: search toggle button when the search box is open",
+        "who": "leaders, musicians",
+        "maxLength": 25
+    },
+    "searchSetlists": {
+        "where": "Setlists dashboard toolbar: search toggle (screen-reader label) and search box label",
+        "who": "leaders, musicians",
+        "maxLength": 25
+    },
+    "search": {
+        "where": "Setlists dashboard toolbar: tooltip on the search toggle",
+        "who": "leaders, musicians",
+        "maxLength": 15
+    },
+    "viewGroupLabel": {
+        "where": "Setlists dashboard toolbar: screen-reader label for the list/calendar/matrix view switch",
+        "who": "leaders, musicians",
+        "maxLength": 25
+    },
+    "listViewLabel": {
+        "where": "Setlists dashboard toolbar: list view button (screen-reader label)",
+        "who": "leaders, musicians",
+        "maxLength": 20
+    },
+    "listViewTitle": {
+        "where": "Setlists dashboard toolbar: list view button tooltip",
+        "who": "leaders, musicians",
+        "maxLength": 20
+    },
+    "calendarViewLabel": {
+        "where": "Setlists dashboard toolbar: calendar view button (screen-reader label)",
+        "who": "leaders, musicians",
+        "maxLength": 20
+    },
+    "calendarViewTitle": {
+        "where": "Setlists dashboard toolbar: calendar view button tooltip",
+        "who": "leaders, musicians",
+        "maxLength": 20
+    },
+    "matrixViewLabel": {
+        "where": "Setlists dashboard toolbar: matrix view button (screen-reader label)",
+        "who": "leaders, musicians",
+        "maxLength": 20
+    },
+    "matrixViewTitle": {
+        "where": "Setlists dashboard toolbar: matrix view button tooltip",
+        "who": "leaders, musicians",
+        "maxLength": 20
+    },
+    "searchPlaceholder": {
+        "where": "Setlists dashboard toolbar: search box placeholder",
+        "who": "leaders, musicians",
+        "maxLength": 30
+    },
+    "rabbiFilterAll": {
+        "where": "Setlists dashboard toolbar: filter chip that clears the rabbi filter",
+        "who": "leaders, musicians",
+        "maxLength": 10
+    },
+    "rabbiFilterChip": {
+        "where": "Setlists dashboard toolbar: filter chip for one rabbi",
+        "who": "leaders, musicians",
+        "maxLength": 30,
+        "context": "{name} is the rabbi's name as entered on setlists"
+    },
+    "stageReady": {
+        "where": "Setlists dashboard: line under the greeting, first sentence",
+        "who": "leaders, musicians",
+        "maxLength": 40
+    },
+    "upcomingScheduled": {
+        "where": "Setlists dashboard: line under the greeting, count of upcoming setlists",
+        "who": "leaders, musicians",
+        "maxLength": 50,
+        "context": "{count} is the number of upcoming setlists. English intentionally says 'setlists' for every count (unchanged from before translation); translate with a correct plural."
+    },
+    "loadErrorTitle": {
+        "where": "Setlists dashboard: error panel title when the list fails to load",
+        "who": "leaders, musicians",
+        "maxLength": 40
+    },
+    "createCardHint": {
+        "where": "Setlists dashboard: line under the 'Create New Setlist' card heading",
+        "who": "leaders",
+        "maxLength": 50
+    },
+    "pastEventsSection": {
+        "where": "Setlists dashboard: heading of the past/undated setlists section (shown uppercase by CSS)",
+        "who": "leaders, musicians",
+        "maxLength": 30
+    },
+    "noOtherSetlists": {
+        "where": "Setlists dashboard: empty state of the past setlists section",
+        "who": "leaders, musicians",
+        "maxLength": 40
+    },
+    "loadOlder": {
+        "where": "Setlists dashboard: button that loads the next page of older setlists",
+        "who": "leaders, musicians",
+        "maxLength": 30
+    },
+    "loadingEllipsis": {
+        "where": "Setlists dashboard: 'load older' button while loading",
+        "who": "leaders, musicians",
+        "maxLength": 15
+    },
+    "serviceTypeShabbatMorning": {
+        "where": "Service type name: setlist card menu ('Save as Default for …') and matrix view type picker",
+        "who": "leaders",
+        "maxLength": 25,
+        "context": "Name of a service; keep consistent with the glossary."
+    },
+    "serviceTypeFridayNight": {
+        "where": "Service type name: setlist card menu ('Save as Default for …') and matrix view type picker",
+        "who": "leaders",
+        "maxLength": 25,
+        "context": "Name of the Friday evening (Erev Shabbat) service."
+    },
+    "openSetlistAria": {
+        "where": "Setlist card: screen-reader label of the whole-card button",
+        "who": "leaders, musicians",
+        "maxLength": 80,
+        "context": "{name} is the setlist's name"
+    },
+    "openSetlistSr": {
+        "where": "Setlist card: hidden screen-reader text inside the whole-card button",
+        "who": "leaders, musicians",
+        "maxLength": 80,
+        "context": "{name} is the setlist's name"
+    },
+    "noDate": {
+        "where": "Setlist card: shown instead of the date when the setlist has none",
+        "who": "leaders, musicians",
+        "maxLength": 15
+    },
+    "songCount": {
+        "where": "Setlist card: number of songs",
+        "who": "leaders, musicians",
+        "maxLength": 15,
+        "context": "{count} is the number of songs. English intentionally says 'Songs' for every count; translate with a correct plural."
+    },
+    "offlineReady": {
+        "where": "Setlist card badge: every chart is downloaded for offline use",
+        "who": "leaders, musicians",
+        "maxLength": 15
+    },
+    "editSetlistAria": {
+        "where": "Setlist card: Edit button (screen-reader label)",
+        "who": "leaders",
+        "maxLength": 80,
+        "context": "{name} is the setlist's name"
+    },
+    "edit": {
+        "where": "Setlist card: Edit button",
+        "who": "leaders",
+        "maxLength": 10
+    },
+    "downloadOfflineAria": {
+        "where": "Setlist card: download-for-offline icon button (screen-reader label)",
+        "who": "leaders",
+        "maxLength": 80,
+        "context": "{name} is the setlist's name"
+    },
+    "downloadOffline": {
+        "where": "Setlist card: download button tooltip and menu item",
+        "who": "leaders",
+        "maxLength": 25
+    },
+    "menuAria": {
+        "where": "Setlist card: overflow (⋮) menu button (screen-reader label)",
+        "who": "leaders",
+        "maxLength": 80,
+        "context": "{name} is the setlist's name"
+    },
+    "cloneNextWeek": {
+        "where": "Setlist card menu item: copy this setlist to next week's date",
+        "who": "leaders",
+        "maxLength": 25
+    },
+    "editSetlist": {
+        "where": "Setlist card menu item",
+        "who": "leaders",
+        "maxLength": 25
+    },
+    "duplicateSetlist": {
+        "where": "Setlist card menu item",
+        "who": "leaders",
+        "maxLength": 25
+    },
+    "saveAsTemplate": {
+        "where": "Setlist card menu item",
+        "who": "leaders",
+        "maxLength": 25
+    },
+    "saveAsDefaultFor": {
+        "where": "Setlist card menu item (admins): make this setlist the default for its service type",
+        "who": "admins",
+        "maxLength": 40,
+        "context": "{type} is a service type name, e.g. 'Shabbat Morning'"
+    },
+    "deleteSetlist": {
+        "where": "Setlist card menu item",
+        "who": "leaders",
+        "maxLength": 25
+    },
+    "historyTitle": {
+        "where": "Setlist editor: version history panel title",
+        "who": "leaders",
+        "maxLength": 25
+    },
+    "historyLoading": {
+        "where": "Setlist editor: version history panel loading state",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "historyEmpty": {
+        "where": "Setlist editor: version history panel empty state",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "historyBy": {
+        "where": "Setlist editor: version history entry, who made the change",
+        "who": "leaders",
+        "maxLength": 40,
+        "context": "{name} is the person's display name"
+    },
+    "historyRestore": {
+        "where": "Setlist editor: version history entry button and restore confirmation button",
+        "who": "leaders",
+        "maxLength": 12
+    },
+    "historyTracksReordered": {
+        "where": "Setlist editor: version history entry detail line",
+        "who": "leaders",
+        "maxLength": 30,
+        "context": "Tracks = the rows (songs) of the setlist"
+    },
+    "historyRenamedTo": {
+        "where": "Setlist editor: version history entry detail for a rename",
+        "who": "leaders",
+        "maxLength": 60,
+        "context": "{name} is the new setlist name; the arrow means 'renamed to' (use ← in a right-to-left language)"
+    },
+    "historyRestoreConfirmTitle": {
+        "where": "Setlist editor: restore confirmation dialog title",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "historyRestoreConfirmBody": {
+        "where": "Setlist editor: restore confirmation dialog body",
+        "who": "leaders",
+        "maxLength": 140,
+        "context": "{version} is either historyRestoreLabel (e.g. 'Renamed (Oct 4, 3:15 PM)') or historyThisVersion"
+    },
+    "historyThisVersion": {
+        "where": "Setlist editor: restore confirmation, fallback for {version} when the entry has no label",
+        "who": "leaders",
+        "maxLength": 20,
+        "context": "Lower case; inserted mid-sentence into historyRestoreConfirmBody"
+    },
+    "historyRestoreLabel": {
+        "where": "Setlist editor: restore confirmation, the version being restored",
+        "who": "leaders",
+        "maxLength": 60,
+        "context": "{action} is a history action label (e.g. 'Renamed'), {when} is a date and time"
+    },
+    "historyActionCreated": {
+        "where": "Setlist editor: version history action label",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "historyActionTracksUpdated": {
+        "where": "Setlist editor: version history action label",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "historyActionUpdated": {
+        "where": "Setlist editor: version history action label",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "historyActionRenamed": {
+        "where": "Setlist editor: version history action label",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "historyActionMadePublic": {
+        "where": "Setlist editor: version history action label (older entries)",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "historyActionMadePrivate": {
+        "where": "Setlist editor: version history action label (older entries)",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "historyActionPublished": {
+        "where": "Setlist editor: version history action label for old entries (publishing is retired; label only shows past history)",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "historyActionDeleted": {
+        "where": "Setlist editor: version history action label",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "historyActionReordered": {
+        "where": "Setlist editor: version history action label",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "historyActionTrackAdded": {
+        "where": "Setlist editor: version history action label",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "historyActionTrackRemoved": {
+        "where": "Setlist editor: version history action label",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "historyActionCloned": {
+        "where": "Setlist editor: version history action label",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "historyActionSavedAsTemplate": {
+        "where": "Setlist editor: version history action label",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "historyActionSetAsDefault": {
+        "where": "Setlist editor: version history action label",
+        "who": "leaders",
+        "maxLength": 35
+    },
+    "matrixLoadFailed": {
+        "where": "Setlists dashboard, matrix view: error when the matrix fails to load",
+        "who": "leaders",
+        "maxLength": 50
+    },
+    "matrixSlotHeader": {
+        "where": "Setlists dashboard, matrix view: first column header (shown uppercase by CSS)",
+        "who": "leaders",
+        "maxLength": 20,
+        "context": "A slot is a place in the service order (e.g. the opening song)"
+    },
+    "matrixStandard": {
+        "where": "Setlists dashboard, matrix view: column subtitle for a date with no holiday or Torah portion",
+        "who": "leaders",
+        "maxLength": 15
+    },
+    "matrixPlan": {
+        "where": "Setlists dashboard, matrix view: hover hint on an empty future cell (shown uppercase by CSS)",
+        "who": "leaders",
+        "maxLength": 10
+    }
+}

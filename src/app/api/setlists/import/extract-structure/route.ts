@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { getT } from "@/i18n/server"
 import { z } from "zod"
 
 import { createApiHandler } from "@/lib/api-wrapper"
@@ -35,7 +36,8 @@ export const POST = createApiHandler(
 
         // Defensive — the schema permits an empty string.
         if (!text || !text.trim()) {
-            return NextResponse.json({ error: "No text provided" }, { status: 400 })
+            const t = await getT()
+            return NextResponse.json({ error: t("api-setlists.noTextProvided") }, { status: 400 })
         }
 
         // extractSetlistStructure never throws — every failure mode is a typed

@@ -44,7 +44,8 @@ import { useAddToSetlist } from "@/hooks/use-add-to-setlist"
 import { AddToSetlistSheet } from "./AddToSetlistSheet"
 import { fetchUsageBatches, type UsageMap } from "@/lib/library/usage-batch"
 import { useSharedCollections } from "@/hooks/use-shared-collections"
-import { SHARED_COPY } from "@/lib/library/shared-collections"
+import { useT } from "@/i18n/client"
+import { DirectionalIcon } from "@/components/i18n/DirectionalIcon"
 import { isOwnedBy, visibleTo } from "@/lib/library/visibility"
 
 /** `shared:<collectionId>` is a collection another tenant shares, switched on by its chip. */
@@ -140,6 +141,7 @@ interface SongChartsLibraryProps {
 
 export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], org = "crc" }: SongChartsLibraryProps) {
     const router = useRouter()
+    const t = useT()
     const { setFile } = useMusicStore()
 
     const {
@@ -328,12 +330,12 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
         if (!user) return // Wait for Firebase client auth token to initialize
         if (usageFileIds.length === 0) {
             setUsageMap({})
-            setUsageStatus('complete')
+            setUsageStatus('complete') // i18n-ignore: status enum, not UI text
             return
         }
 
         let cancelled = false
-        setUsageStatus('loading')
+        setUsageStatus('loading') // i18n-ignore: status enum, not UI text
         setUsageMap({})
 
         // /api/library/usage 400s above 100 ids, so chunk and cover ALL of
@@ -356,7 +358,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
             // NOT silent: a partial map disables the Recency filter and shows a
             // retry affordance, because "we don't know" must not render as
             // "never played".
-            setUsageStatus(failedIds.length > 0 ? 'partial' : 'complete')
+            setUsageStatus(failedIds.length > 0 ? 'partial' : 'complete') // i18n-ignore: status enum, not UI text
             if (failedIds.length > 0) {
                 logger.warn(`[Library] usage unavailable for ${failedIds.length} charts`)
             }
@@ -394,12 +396,12 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
         <div className="h-screen flex flex-col bg-background text-foreground">
             {/* Header */}
             <div className="h-20 border-b border-border flex items-center px-4 gap-4">
-                <Button size="icon" variant="ghost" aria-label="Back to library" className="h-12 w-12" onClick={handleBack}>
-                    <ChevronLeft className="h-8 w-8" />
+                <Button size="icon" variant="ghost" aria-label={t("library.header.back")} className="h-12 w-12" onClick={handleBack}>
+                    <DirectionalIcon icon={ChevronLeft} className="h-8 w-8" />
                 </Button>
                 <div className="flex items-center gap-3 flex-1">
                     <img src="/logo.jpg" alt={congregation.shortName} className="h-8 w-8 rounded-full border border-brand/20 object-cover" />
-                    <h1 className="text-2xl font-bold font-display">Song Charts</h1>
+                    <h1 className="text-2xl font-bold font-display">{t("library.header.title")}</h1>
                 </div>
                 {canUpload && (
                     <div className="flex gap-2">
@@ -407,7 +409,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
                             setlists={addToSetlist.editableSetlists}
                             onAddToSetlist={addToSetlist.addDirectlyToSetlist}
                             onUploadComplete={async (fileId, title) => {
-                                toast.success("Library updated with your upload")
+                                toast.success(t("library.header.uploadDone"))
                                 try {
                                     // Add to local Dexie immediately so the Setlist picker sees it
                                     if (fileId && title) {
@@ -463,7 +465,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
                         setSelectMode(!selectMode)
                         if (selectMode) setSelectedIds(new Set())
                     }}
-                    title={selectMode ? "Exit select mode" : "Select files"}
+                    title={selectMode ? t("library.header.exitSelectMode") : t("library.header.selectFiles")}
                 >
                     <CheckSquare className="h-4 w-4" />
                 </Button>
@@ -472,13 +474,13 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
             {/* Search & section toggles */}
             <div className="p-4 border-b border-border space-y-4">
                 <div className="relative max-w-xl mx-auto">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-6 w-6 text-muted-foreground" />
+                    <Search className="absolute start-4 top-1/2 -translate-y-1/2 h-6 w-6 text-muted-foreground" />
                     <Input
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder={tab === "audio" ? "Search audio files..." : "Search by name, key, topic..."}
-                        aria-label={tab === "audio" ? "Search audio files" : "Search song charts by name, key, or topic"}
-                        className="pl-12 h-14 text-xl rounded-full bg-brand/5 border-brand/10 focus:border-brand focus:ring-brand/20"
+                        placeholder={tab === "audio" ? t("library.search.audioPlaceholder") : t("library.search.chartsPlaceholder")}
+                        aria-label={tab === "audio" ? t("library.search.audioLabel") : t("library.search.chartsLabel")}
+                        className="ps-12 h-14 text-xl rounded-full bg-brand/5 border-brand/10 focus:border-brand focus:ring-brand/20"
                     />
                 </div>
 
@@ -502,13 +504,13 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
                         aria-live="polite"
                         className="max-w-xl mx-auto flex flex-wrap items-center justify-center gap-3 text-base text-amber-700 dark:text-amber-300"
                     >
-                        <span>Last-used data didn&apos;t fully load, so the recency filter is unavailable.</span>
+                        <span>{t("library.usage.partial")}</span>
                         <Button
                             variant="outline"
                             className="min-h-11 px-4 text-base border-amber-500/40 text-amber-700 dark:text-amber-300 hover:bg-amber-500/10"
-                            onClick={() => setUsageRetryToken(t => t + 1)}
+                            onClick={() => setUsageRetryToken(n => n + 1)}
                         >
-                            Retry
+                            {t("library.usage.retry")}
                         </Button>
                     </div>
                 )}
@@ -516,7 +518,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
                 {/* Section toggles — plain segmented control; see C4-004 note on imports above. */}
                 <div
                     role="group"
-                    aria-label="Library section"
+                    aria-label={t("library.sections.groupLabel")}
                     className="max-w-xl mx-auto inline-flex w-fit items-center justify-center gap-2 flex-wrap"
                 >
                     {(
@@ -524,14 +526,14 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
                             // Multi-tenant phase 1: the tenant's sections, in its order, with its
                             // labels (config `library.collections`). CRC: CRC Charts / Shireinu /
                             // Nava Tehilah / Uploads; BL: Charts / Uploads — as before.
-                            ...sections.map(({ id, label }) => ({ value: id, label: `${label} (${filteredByCollection[id].length})`, icon: null as ReactNode })),
+                            ...sections.map(({ id, label }) => ({ value: id, label: t("library.sections.tabWithCount", { label, n: filteredByCollection[id].length }), icon: null as ReactNode })),
                             ...(hasAudio
-                                ? [{ value: 'audio' as const, label: `Audio (${audioFiles.length})`, icon: <Music className="w-3.5 h-3.5" /> }]
+                                ? [{ value: 'audio' as const, label: t("library.sections.audioWithCount", { n: audioFiles.length }), icon: <Music className="w-3.5 h-3.5" /> }]
                                 : []),
                             // Phase 5: each switched-on shared collection, after the tenant's own.
                             ...onSharedChips.map(c => ({
                                 value: `${SHARED_TAB_PREFIX}${c.id}` as LibraryTab,
-                                label: `${c.label} (${filteredShared.get(c.id)?.length ?? 0})`,
+                                label: t("library.sections.tabWithCount", { label: c.label, n: filteredShared.get(c.id)?.length ?? 0 }),
                                 icon: null as ReactNode,
                             })),
                         ]
@@ -558,16 +560,16 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
                 {shared.chips.length > 0 && (
                     <div
                         role="group"
-                        aria-label={SHARED_COPY.chipGroupLabel}
+                        aria-label={t("library.shared.chipGroupLabel")}
                         className="max-w-xl mx-auto flex flex-wrap items-center justify-center gap-2"
                     >
-                        <span className="text-xs text-muted-foreground">{SHARED_COPY.chipGroupLabel}:</span>
+                        <span className="text-xs text-muted-foreground">{t("library.shared.chipGroupHeading")}</span>
                         {shared.chips.map(c => (
                             <button
                                 key={c.id}
                                 type="button"
                                 aria-pressed={c.on}
-                                aria-label={SHARED_COPY.chipAria(c.label, c.owner)}
+                                aria-label={t("library.shared.chipAria", { label: c.label, owner: c.owner })}
                                 data-testid="library-shared-chip"
                                 data-shared-collection={c.id}
                                 onClick={() => {
@@ -578,10 +580,10 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
                                 className="inline-flex items-center gap-1.5 min-h-11 rounded-full px-4 py-2 text-xs font-medium border border-dashed cursor-pointer transition-colors bg-muted/50 text-muted-foreground border-border hover:text-foreground aria-pressed:border-solid aria-pressed:bg-brand/15 aria-pressed:text-foreground aria-pressed:border-brand/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                             >
                                 {c.label}
-                                <span className="text-muted-foreground">{SHARED_COPY.fromOwner(c.owner)}</span>
+                                <span className="text-muted-foreground">{t("library.shared.fromOwner", { owner: c.owner })}</span>
                             </button>
                         ))}
-                        {shared.failed && <span role="status" className="text-xs text-muted-foreground">{SHARED_COPY.loadFailed}</span>}
+                        {shared.failed && <span role="status" className="text-xs text-muted-foreground">{t("library.shared.loadFailed")}</span>}
                     </div>
                 )}
 
@@ -594,13 +596,13 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
                             type="button"
                             role="switch"
                             aria-checked={allSites}
-                            aria-label="Show charts from all sites"
+                            aria-label={t("library.allSites.label")}
                             onClick={() => setAllSites(v => !v)}
                             className="inline-flex items-center gap-2 min-h-11 rounded-full px-4 py-2 text-xs font-medium border cursor-pointer transition-colors data-[state=on]:bg-brand/15 data-[state=on]:text-foreground data-[state=on]:border-brand/30 data-[state=on]:ring-1 data-[state=on]:ring-brand/30 data-[state=off]:bg-muted/50 data-[state=off]:text-muted-foreground data-[state=off]:border-border data-[state=off]:hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                             data-state={allSites ? 'on' : 'off'}
                         >
                             <span className={cn("inline-block w-2 h-2 rounded-full", allSites ? "bg-brand" : "bg-muted-foreground/40")} />
-                            All sites{allSites ? " · on" : ""}
+                            {allSites ? t("library.allSites.on") : t("library.allSites.off")}
                         </button>
                     </div>
                 )}
@@ -626,7 +628,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
                     <LibrarySkeleton />
                 ) : !initialized && error ? (
                     <div className="max-w-md mx-auto mt-20">
-                        <ErrorState title="Library Error" description={error || "Failed to load files"} onRetry={() => loadLibrary()} />
+                        <ErrorState title={t("library.list.errorTitle")} description={error || t("library.list.errorFallback")} onRetry={() => loadLibrary()} />
                     </div>
                 ) : (
                     <div className="max-w-3xl mx-auto pb-10">
@@ -640,8 +642,8 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
                                             ? <EmptyAudioIllustration className="w-20 h-20 text-muted-foreground" />
                                             : undefined
                                 }
-                                title={searchQuery ? "No matches found" : tab === "audio" ? "No audio files yet" : "No charts in the library yet"}
-                                description={searchQuery ? `We couldn't find anything matching "${searchQuery}"` : tab === "audio" ? "Audio files (.mp3, .m4a, etc.) will appear here when added to Drive." : "Charts will appear here once added to the library."}
+                                title={searchQuery ? t("library.list.noMatchesTitle") : tab === "audio" ? t("library.list.noAudioTitle") : t("library.list.noChartsTitle")}
+                                description={searchQuery ? t("library.list.noMatchesBody", { query: searchQuery }) : tab === "audio" ? t("library.list.noAudioBody") : t("library.list.noChartsBody")}
                                 className="py-12"
                             />
                         )}
@@ -668,7 +670,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
                                         style={{
                                             position: 'absolute',
                                             top: 0,
-                                            left: 0,
+                                            insetInlineStart: 0,
                                             width: '100%',
                                             transform: `translateY(${virtualRow.start}px)`,
                                             paddingBottom: `${ROW_GAP_PX}px`,
@@ -714,7 +716,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
                             AND only paints a window of rows, so give assistive
                             tech a stable, announced total. */}
                         <div role="status" aria-live="polite" className="sr-only">
-                            {combinedItems.length} {combinedItems.length === 1 ? 'chart' : 'charts'}
+                            {t("library.list.chartCount", { count: combinedItems.length })}
                         </div>
 
                         <div className="h-20" />

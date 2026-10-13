@@ -1,0 +1,143 @@
+{
+    "trigger": {
+        "where": "Library toolbar: button that opens the Upload dialog",
+        "who": "leaders",
+        "maxLength": 16
+    },
+    "dialogTitle": {
+        "where": "Library > Upload dialog: dialog title",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "dialogDescription": {
+        "where": "Library > Upload dialog: screen-reader-only dialog description",
+        "who": "leaders",
+        "maxLength": 150,
+        "context": "PDF, MusicXML, MuseScore are file formats; keep the names."
+    },
+    "uploadedSuccess": {
+        "where": "Library > Upload dialog: success message after upload",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "dropPrompt": {
+        "where": "Library > Upload dialog: drop zone text; the zone can also be clicked to browse for a file",
+        "who": "leaders",
+        "maxLength": 60
+    },
+    "acceptedHint": {
+        "where": "Library > Upload dialog: small hint under the drop zone",
+        "who": "leaders",
+        "maxLength": 70,
+        "context": "{max} is the size limit in megabytes (a number); MB is the unit."
+    },
+    "fileSizeKb": {
+        "where": "Library > Upload dialog: selected file's size",
+        "who": "leaders",
+        "maxLength": 16,
+        "context": "{size} is a whole number of kilobytes; KB is the unit."
+    },
+    "removeFile": {
+        "where": "Library > Upload dialog: icon button accessible label that clears the selected file",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "titleLabel": {
+        "where": "Library > Upload dialog: label of the song title field",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "titlePlaceholder": {
+        "where": "Library > Upload dialog: song title field placeholder",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "keyLabel": {
+        "where": "Library > Upload dialog: label of the musical key picker",
+        "who": "leaders",
+        "maxLength": 12,
+        "context": "Key = musical key (C, F#m…)."
+    },
+    "bpmLabel": {
+        "where": "Library > Upload dialog: label of the tempo field",
+        "who": "leaders",
+        "maxLength": 8,
+        "context": "BPM = beats per minute; keep the abbreviation if it is the usual one."
+    },
+    "bpmPlaceholder": {
+        "where": "Library > Upload dialog: tempo field placeholder (an example number)",
+        "who": "leaders",
+        "maxLength": 6,
+        "context": "An example tempo; normally left as 120."
+    },
+    "tagsLabel": {
+        "where": "Library > Upload dialog: label of the tags field",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "tagsPlaceholder": {
+        "where": "Library > Upload dialog: tags field placeholder with example tags",
+        "who": "leaders",
+        "maxLength": 50,
+        "context": "Example search tags, comma-separated; translate the words, keep the commas."
+    },
+    "sectionLabel": {
+        "where": "Library > Upload dialog: label of the library section (collection) picker",
+        "who": "leaders",
+        "maxLength": 24
+    },
+    "sectionUploads": {
+        "where": "Library > Upload dialog: library section option for user uploads",
+        "who": "leaders",
+        "maxLength": 16
+    },
+    "addToSetlist": {
+        "where": "Library > Upload dialog: label of the optional setlist picker",
+        "who": "leaders",
+        "maxLength": 30,
+        "context": "Setlist = the ordered list of songs for a service."
+    },
+    "dontAddToSetlist": {
+        "where": "Library > Upload dialog: first option of the setlist picker (no setlist)",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "uploading": {
+        "where": "Library > Upload dialog: upload button while uploading",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "submit": {
+        "where": "Library > Upload dialog: upload button",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "fileTooLarge": {
+        "where": "Library > Upload dialog: error toast when the file is over the size limit",
+        "who": "leaders",
+        "maxLength": 70,
+        "context": "{max} is the size limit in megabytes; MB is the unit."
+    },
+    "unsupportedType": {
+        "where": "Library > Upload dialog: error toast for an unsupported file type",
+        "who": "leaders",
+        "maxLength": 80,
+        "context": "PDF, MusicXML, MuseScore are file formats; keep the names."
+    },
+    "uploadFailed": {
+        "where": "Library > Upload dialog: error toast when the upload fails",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "uploadFailedStatus": {
+        "where": "Library > Upload dialog: error toast when the upload fails with an HTTP status",
+        "who": "leaders",
+        "maxLength": 40,
+        "context": "{status} is an HTTP status number, e.g. 500."
+    },
+    "uploadedToast": {
+        "where": "Library > Upload dialog: success toast after upload",
+        "who": "leaders",
+        "maxLength": 50
+    }
+}

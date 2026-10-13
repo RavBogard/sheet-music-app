@@ -8,7 +8,7 @@ import { useLibraryStore } from "@/lib/library-store"
 import { useLibrary } from "@/hooks/use-library"
 import { DriveFile } from "@/types/models"
 import { useOrg } from "@/lib/org/org-context"
-import { orgString } from "@/lib/org/strings"
+import { useT } from "@/i18n/client"
 import { coreSectionLabel } from "@/lib/songs/picker-scope"
 // C5D-014: Radix Tabs removed from SearchOverlay — same structural failure
 // as C4-004 on /library: `<Tabs><TabsList><TabsTrigger/>` auto-emits
@@ -49,6 +49,7 @@ export function SearchOverlay({
     onAddToSetlist,
 }: SearchOverlayProps) {
     const org = useOrg()
+    const t = useT()
     const [query, setQuery] = useState("")
     const [collection, setCollection] = useState<"core" | "supplemental" | "nava">("core")
     const inputRef = useRef<HTMLInputElement>(null)
@@ -99,18 +100,18 @@ export function SearchOverlay({
             {/* Header */}
             <div className="flex flex-col gap-3 px-4 py-3 border-b border-border">
                 <div className="flex items-center gap-3">
-                    <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close search overlay" className="shrink-0">
+                    <Button variant="ghost" size="icon" onClick={onClose} aria-label={t("library.overlay.close")} className="shrink-0">
                         <X className="h-5 w-5" />
                     </Button>
                     <div className="flex-1 relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                        <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
                         <Input
                             ref={inputRef}
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
-                            placeholder={replacingTrackId ? "Search for replacement song..." : "Search songs to add..."}
-                            aria-label={replacingTrackId ? "Search for replacement song" : "Search songs to add"}
-                            className="pl-9 h-10"
+                            placeholder={replacingTrackId ? t("library.overlay.replacePlaceholder") : t("library.overlay.addPlaceholder")}
+                            aria-label={replacingTrackId ? t("library.overlay.replaceLabel") : t("library.overlay.addLabel")}
+                            className="ps-9 h-10"
                             autoComplete="off"
                             autoCorrect="off"
                         />
@@ -120,12 +121,14 @@ export function SearchOverlay({
                 {/* Collection Toggle — plain segmented control; see C5D-014 note on imports. */}
                 <div
                     role="group"
-                    aria-label="Library collection"
+                    aria-label={t("library.overlay.collectionGroup")}
                     className="w-full max-w-sm mx-auto grid grid-cols-3 gap-1 p-1 rounded-md bg-muted/50"
                 >
                     {([
                         { value: "core" as const, label: coreSectionLabel(org) },
+                        // i18n-ignore: collection (book) name, data — not translated
                         { value: "supplemental" as const, label: "Shireinu" },
+                        // i18n-ignore: collection (book) name, data — not translated
                         { value: "nava" as const, label: "Nava Tehilah" },
                     ]).map(({ value, label }) => {
                         const active = collection === value
@@ -150,13 +153,13 @@ export function SearchOverlay({
                 <div className="max-w-3xl mx-auto px-4 py-2">
                     {results.length === 0 && query.trim() && (
                         <div className="text-center py-12 text-muted-foreground">
-                            <p className="text-sm">No songs found for &quot;{query}&quot;</p>
+                            <p className="text-sm">{t("library.overlay.noResults", { query })}</p>
                         </div>
                     )}
 
                     {results.length === 0 && !query.trim() && (
                         <div className="text-center py-12 text-muted-foreground">
-                            <p className="text-sm">No songs in your library yet</p>
+                            <p className="text-sm">{t("library.overlay.empty")}</p>
                         </div>
                     )}
 
@@ -171,7 +174,7 @@ export function SearchOverlay({
                         return (
                             <button
                                 key={file.id}
-                                className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-left transition-colors
+                                className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-start transition-colors
                                     ${isAlreadyAdded
                                         ? "opacity-50 cursor-default"
                                         : "hover:bg-accent/50 active:bg-accent cursor-pointer"
@@ -191,26 +194,28 @@ export function SearchOverlay({
                                         </span>
                                         {file.collection === 'supplemental' ? (
                                             <span className="text-[10px] font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded-md border border-amber-500/20 shrink-0 mt-0.5">
+                                                {/* i18n-ignore: collection (book) name, data — not translated */}
                                                 Shireinu
                                             </span>
                                         ) : file.collection === 'nava' ? (
                                             <span className="text-[10px] font-medium bg-violet-500/10 text-violet-600 dark:text-violet-400 px-1.5 py-0.5 rounded-md border border-violet-500/20 shrink-0 mt-0.5">
+                                                {/* i18n-ignore: collection (book) name, data — not translated */}
                                                 Nava Tehilah
                                             </span>
                                         ) : (
                                             <span className="text-[10px] font-medium bg-blue-500/10 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded-md border border-blue-500/20 shrink-0 mt-0.5">
-                                                {orgString(org, "library.ownBadge")}
+                                                {t("org.library.ownBadge")}
                                             </span>
                                         )}
                                     </div>
                                     {file.metadata?.key && (
                                         <span className="text-xs text-muted-foreground mt-0.5 block">
-                                            Key: {file.metadata.key}
+                                            {t("library.overlay.keyLabel", { key: file.metadata.key })}
                                         </span>
                                     )}
                                 </div>
                                 {isAlreadyAdded && (
-                                    <span className="text-xs text-muted-foreground shrink-0">Added</span>
+                                    <span className="text-xs text-muted-foreground shrink-0">{t("library.overlay.added")}</span>
                                 )}
                                 {canAddToSetlist && onAddToSetlist && (
                                     <Button
@@ -222,8 +227,8 @@ export function SearchOverlay({
                                             onAddToSetlist(file)
                                         }}
                                     >
-                                        <ListPlus className="h-3.5 w-3.5 mr-1" />
-                                        Add to Setlist...
+                                        <ListPlus className="h-3.5 w-3.5 me-1" />
+                                        {t("library.overlay.addToSetlist")}
                                     </Button>
                                 )}
                             </button>

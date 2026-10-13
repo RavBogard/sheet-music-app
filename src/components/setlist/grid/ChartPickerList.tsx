@@ -13,13 +13,13 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 
 import { useLibrary } from '@/hooks/use-library'
+import { useT } from '@/i18n/client'
 import { useSharedCollections } from '@/hooks/use-shared-collections'
 import { useAuth } from '@/lib/auth-context'
 import { auth } from '@/lib/firebase'
 import { useLibraryStore } from '@/lib/library-store'
 import { isJunkLibraryRow } from '@/lib/library/junk-filter'
 import {
-    SHARED_COPY,
     isSharedPickable,
     isVisibilitySectionRow,
     sharedTitle,
@@ -200,6 +200,7 @@ export function ChartPickerList({
     autoFocus,
     children,
 }: ChartPickerListProps) {
+    const t = useT()
     const hasQueryClient = useContext(QueryClientContext) != null
     const hostOrg = useOrg()
     const { isAdmin } = useAuth()
@@ -240,8 +241,8 @@ export function ChartPickerList({
     const isEmpty = (songs ?? []).length === 0
     useEffect(() => {
         if (!isEmpty) return
-        const t = setTimeout(() => setEmptyRetry((n) => n + 1), EMPTY_RETRY_MS)
-        return () => clearTimeout(t)
+        const timer = setTimeout(() => setEmptyRetry((n) => n + 1), EMPTY_RETRY_MS)
+        return () => clearTimeout(timer)
     }, [isEmpty, emptyRetry])
 
     const libraryFiles = useLibraryStore((s) => s.allFiles)
@@ -309,7 +310,7 @@ export function ChartPickerList({
             {(chips.length > 0 || isAdmin || shared.chips.length > 0) && (
                 <div
                     role="group"
-                    aria-label="Library collection"
+                    aria-label={t('setlistGrid.pickerCollectionAria')}
                     data-testid="picker-scope-bar"
                     className="flex flex-wrap items-center gap-1 border-b border-white/10 px-2 py-1.5"
                 >
@@ -334,8 +335,8 @@ export function ChartPickerList({
                             key={c.id}
                             type="button"
                             aria-pressed={c.on}
-                            aria-label={SHARED_COPY.chipAria(c.label, c.owner)}
-                            title={SHARED_COPY.fromOwner(c.owner)}
+                            aria-label={t('setlistGrid.sharedChipAria', { label: c.label, owner: c.owner })}
+                            title={t('setlistGrid.sharedFromOwner', { owner: c.owner })}
                             data-testid="picker-shared-chip"
                             data-shared-collection={c.id}
                             onClick={() => shared.toggle(c.id)}
@@ -351,26 +352,26 @@ export function ChartPickerList({
                             aria-checked={otherSitesOn}
                             data-testid="picker-other-sites"
                             onClick={() => setOtherSitesOn((v) => !v)}
-                            className="ml-auto rounded-full border border-white/10 px-2.5 py-0.5 text-xs text-muted-foreground hover:text-foreground aria-checked:border-indigo-400/50 aria-checked:text-foreground [@media(pointer:coarse)]:py-1.5"
+                            className="ms-auto rounded-full border border-white/10 px-2.5 py-0.5 text-xs text-muted-foreground hover:text-foreground aria-checked:border-indigo-400/50 aria-checked:text-foreground [@media(pointer:coarse)]:py-1.5"
                         >
-                            {otherSitesOn ? 'Include other sites · on' : 'Include other sites'}
+                            {otherSitesOn ? t('setlistGrid.otherSitesOn') : t('setlistGrid.otherSitesOff')}
                         </button>
                     )}
                 </div>
             )}
-            <CommandList className={cn(listClassName)}>
-                <CommandEmpty className="px-4 py-3 text-sm text-muted-foreground">No matches.</CommandEmpty>
+            <CommandList className={cn(listClassName)} label={t('setlistGrid.pickerSuggestionsAria')}>
+                <CommandEmpty className="px-4 py-3 text-sm text-muted-foreground">{t('setlistGrid.noMatches')}</CommandEmpty>
                 {recentSongs.length > 0 && (
-                    <CommandGroup heading="Recent">{recentSongs.map((s) => renderItem(s, 'recent-'))}</CommandGroup>
+                    <CommandGroup heading={t('setlistGrid.pickerRecentHeading')}>{recentSongs.map((s) => renderItem(s, 'recent-'))}</CommandGroup>
                 )}
                 {librarySongs.length > 0 && (
-                    <CommandGroup heading="Library">{librarySongs.map((s) => renderItem(s, ''))}</CommandGroup>
+                    <CommandGroup heading={t('setlistGrid.pickerLibraryHeading')}>{librarySongs.map((s) => renderItem(s, ''))}</CommandGroup>
                 )}
                 {shared.chipRows.length > 0 && (
-                    <CommandGroup heading={SHARED_COPY.sharedHeading}>
+                    <CommandGroup heading={t('setlistGrid.pickerSharedHeading')}>
                         {shared.chipRows.map((row) => {
                             const title = sharedTitle(row)
-                            const owner = SHARED_COPY.fromOwner(shared.owner(row.orgId))
+                            const owner = t('setlistGrid.sharedFromOwner', { owner: shared.owner(row.orgId) })
                             return (
                                 <CommandItem
                                     key={`shared-${row.id}`}
@@ -384,7 +385,7 @@ export function ChartPickerList({
                                         song={{ id: row.id, title, normalizedTitle: title.toLowerCase() }}
                                         mimeType={row.mimeType}
                                     />
-                                    <span className="ml-auto shrink-0 rounded border border-white/10 px-1.5 text-[10px] text-muted-foreground">
+                                    <span className="ms-auto shrink-0 rounded border border-white/10 px-1.5 text-[10px] text-muted-foreground">
                                         {owner}
                                     </span>
                                 </CommandItem>
@@ -393,10 +394,10 @@ export function ChartPickerList({
                     </CommandGroup>
                 )}
                 {shared.failed && (
-                    <p className="px-4 py-2 text-xs text-muted-foreground">{SHARED_COPY.loadFailed}</p>
+                    <p className="px-4 py-2 text-xs text-muted-foreground">{t('setlistGrid.sharedLoadFailed')}</p>
                 )}
                 {otherSitesOn && otherSites.rows.length > 0 && (
-                    <CommandGroup heading="Other sites">
+                    <CommandGroup heading={t('setlistGrid.pickerOtherSitesHeading')}>
                         {otherSites.rows.map((row) => (
                             <CommandItem
                                 key={`other-${row.id}`}
@@ -418,7 +419,7 @@ export function ChartPickerList({
                     </CommandGroup>
                 )}
                 {otherSitesOn && otherSites.failed && (
-                    <p className="px-4 py-2 text-xs text-muted-foreground">Could not load other sites' charts.</p>
+                    <p className="px-4 py-2 text-xs text-muted-foreground">{t('setlistGrid.otherSitesLoadFailed')}</p>
                 )}
                 {children}
             </CommandList>

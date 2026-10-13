@@ -41,7 +41,9 @@ import {
     ContextMenuSeparator,
     ContextMenuTrigger,
 } from '@/components/ui/context-menu'
-import { formatEventDate } from '@/lib/firestore-helpers'
+import { useFormat, useT } from '@/i18n/client'
+import type { T } from '@/i18n/core'
+import { toDate } from '@/lib/firestore-helpers'
 import { getDb } from '@/lib/local/schema'
 import type { EditDescriptor, LocalSetlist, LocalTrack } from '@/lib/local/types'
 import {
@@ -129,6 +131,8 @@ interface GridMeta {
     chartBindOpenRowId: string | null
     /** v50-05-04: open / close ChartBindPopover for a specific row. */
     onChartBindOpenChange: (rowId: string, next: boolean) => void
+    /** Phase 7: the grid's translator, for the module-level column defs. */
+    t: T
 }
 
 declare module '@tanstack/react-table' {
@@ -175,14 +179,14 @@ function isSectionRow(t: unknown): boolean {
 const COLUMNS: ColumnDef<LocalTrack>[] = [
     {
         id: 'drag',
-        header: () => <span className="sr-only">Drag handle</span>,
+        header: (ctx) => <span className="sr-only">{getMeta(ctx.table).t('setlistGrid.columnDragHandle')}</span>,
         size: 44,
         cell: () => null, // Rendered by SortableRow with sortable attrs
     },
     {
         id: 'type',
         accessorKey: 'type',
-        header: 'Type',
+header: (ctx) => getMeta(ctx.table).t('setlistGrid.columnType'),
         size: 104,
         cell: (ctx: CellContext<LocalTrack, unknown>) => {
             const meta = getMeta(ctx.table)
@@ -213,7 +217,7 @@ const COLUMNS: ColumnDef<LocalTrack>[] = [
     {
         id: 'title',
         accessorKey: 'title',
-        header: 'Title',
+header: (ctx) => getMeta(ctx.table).t('setlistGrid.columnTitle'),
         cell: (ctx: CellContext<LocalTrack, unknown>) => {
             const meta = getMeta(ctx.table)
             const row = ctx.row.original
@@ -236,8 +240,8 @@ const COLUMNS: ColumnDef<LocalTrack>[] = [
                     onCellKeyDown={(e) =>
                         meta.handleCellKeyDown(e, ctx.row.index, colId)
                     }
-                    placeholder="Title"
-                    ariaLabel="Track title"
+                    placeholder={meta.t('setlistGrid.columnTitle')}
+                    ariaLabel={meta.t('setlistGrid.trackTitleAria')}
                     onCommit={(next) => {
                         void meta.onCommitTrackPatch(
                             row.id,
@@ -252,7 +256,7 @@ const COLUMNS: ColumnDef<LocalTrack>[] = [
     {
         id: 'key',
         accessorKey: 'key',
-        header: 'Key',
+header: (ctx) => getMeta(ctx.table).t('setlistGrid.columnKey'),
         size: 72,
         cell: (ctx: CellContext<LocalTrack, unknown>) => {
             const meta = getMeta(ctx.table)
@@ -289,7 +293,7 @@ const COLUMNS: ColumnDef<LocalTrack>[] = [
     {
         id: 'bpm',
         accessorKey: 'bpm',
-        header: 'BPM',
+header: (ctx) => getMeta(ctx.table).t('setlistGrid.columnBpm'),
         size: 64,
         cell: (ctx: CellContext<LocalTrack, unknown>) => {
             const meta = getMeta(ctx.table)
@@ -312,8 +316,8 @@ const COLUMNS: ColumnDef<LocalTrack>[] = [
                     onCellKeyDown={(e) =>
                         meta.handleCellKeyDown(e, ctx.row.index, colId)
                     }
-                    placeholder="BPM"
-                    ariaLabel="Track tempo (BPM)"
+                    placeholder={meta.t('setlistGrid.columnBpm')}
+                    ariaLabel={meta.t('setlistGrid.trackTempoAria')}
                     onCommit={(raw) => {
                         const trimmed = raw.trim()
                         if (trimmed === '') {
@@ -344,7 +348,7 @@ const COLUMNS: ColumnDef<LocalTrack>[] = [
     {
         id: 'leadMusician',
         accessorKey: 'leadMusician',
-        header: 'Vocal Lead',
+header: (ctx) => getMeta(ctx.table).t('setlistGrid.columnVocalLead'),
         size: 156,
         cell: (ctx: CellContext<LocalTrack, unknown>) => {
             const meta = getMeta(ctx.table)
@@ -382,7 +386,7 @@ const COLUMNS: ColumnDef<LocalTrack>[] = [
     {
         id: 'notes',
         accessorKey: 'notes',
-        header: 'Notes',
+header: (ctx) => getMeta(ctx.table).t('setlistGrid.columnNotes'),
         size: 220,
         cell: (ctx: CellContext<LocalTrack, unknown>) => {
             const meta = getMeta(ctx.table)
@@ -398,8 +402,8 @@ const COLUMNS: ColumnDef<LocalTrack>[] = [
                     onCellKeyDown={(e) =>
                         meta.handleCellKeyDown(e, ctx.row.index, colId)
                     }
-                    placeholder="Notes"
-                    ariaLabel="Track notes"
+                    placeholder={meta.t('setlistGrid.columnNotes')}
+                    ariaLabel={meta.t('setlistGrid.trackNotesAria')}
                     onCommit={(next) => {
                         void meta.onCommitTrackPatch(
                             row.id,
@@ -413,7 +417,7 @@ const COLUMNS: ColumnDef<LocalTrack>[] = [
     },
     {
         id: 'chart',
-        header: () => <span className="sr-only">Chart</span>,
+        header: (ctx) => <span className="sr-only">{getMeta(ctx.table).t('setlistGrid.columnChart')}</span>,
         size: 44,
         cell: (ctx: CellContext<LocalTrack, unknown>) => {
             const meta = getMeta(ctx.table)
@@ -421,7 +425,11 @@ const COLUMNS: ColumnDef<LocalTrack>[] = [
             return (
                 <ChartBindPopover
                     currentSongId={row.songId}
-                    inputAriaLabel={`Bind a chart to ${row.title || 'track'}`}
+                    inputAriaLabel={
+                        row.title
+                            ? meta.t('setlistGrid.bindChartToAria', { title: row.title })
+                            : meta.t('setlistGrid.bindChartToTrackAria')
+                    }
                     onBind={(sel) => meta.onBindChart(row, sel)}
                     open={meta.chartBindOpenRowId === row.id}
                     onOpenChange={(next) =>
@@ -463,6 +471,7 @@ function SortableRow({
     onContextDuplicate,
     onContextDelete,
 }: SortableRowProps) {
+    const t = useT()
     const {
         attributes,
         listeners,
@@ -578,7 +587,7 @@ function SortableRow({
                     className={cn(
                         'border-b border-white/10 last:border-b-0 hover:bg-white/[0.02]',
                         isHeaderRow &&
-                            'bg-indigo-500/[0.08] border-l-2 border-l-indigo-400/50 border-t border-t-indigo-500/25',
+                            'bg-indigo-500/[0.08] border-s-2 border-s-indigo-400/50 border-t border-t-indigo-500/25',
                         isSelected && 'bg-indigo-500/[0.08]',
                         isSelected &&
                             'hover:bg-indigo-500/[0.10]',
@@ -641,7 +650,7 @@ function SortableRow({
                                 className={cn(
                                     'px-2.5 py-0.5 [@media(pointer:coarse)]:py-0.5 align-middle',
                                     isChartCell &&
-                                        'sticky right-0 z-[5] bg-card border-l border-white/10',
+                                        'sticky end-0 z-[5] bg-card border-s border-white/10',
                                 )}
                             >
                                 {flexRender(
@@ -662,7 +671,7 @@ function SortableRow({
                             data-testid="row-context-menu-bulk-label"
                             className="text-indigo-300"
                         >
-                            {bulkSelectionCount} rows selected
+                            {t('setlistGrid.rowsSelected', { count: bulkSelectionCount })}
                         </ContextMenuLabel>
                         <ContextMenuSeparator />
                     </>
@@ -673,8 +682,8 @@ function SortableRow({
                     data-testid="row-context-menu-edit"
                     className="cursor-pointer"
                 >
-                    <Edit3 aria-hidden className="mr-2 h-4 w-4" />
-                    Edit row
+                    <Edit3 aria-hidden className="me-2 h-4 w-4" />
+                    {t('setlistGrid.menuEditRow')}
                 </ContextMenuItem>
                 <ContextMenuItem
                     onSelect={() => onContextBindChart(row.original.id)}
@@ -682,8 +691,8 @@ function SortableRow({
                     data-testid="row-context-menu-bind-chart"
                     className="cursor-pointer"
                 >
-                    <Music aria-hidden className="mr-2 h-4 w-4" />
-                    Bind chart
+                    <Music aria-hidden className="me-2 h-4 w-4" />
+                    {t('setlistGrid.menuBindChart')}
                 </ContextMenuItem>
                 <ContextMenuItem
                     onSelect={() => onContextDuplicate(row.original.id)}
@@ -691,8 +700,8 @@ function SortableRow({
                     data-testid="row-context-menu-duplicate"
                     className="cursor-pointer"
                 >
-                    <Copy aria-hidden className="mr-2 h-4 w-4" />
-                    Duplicate row
+                    <Copy aria-hidden className="me-2 h-4 w-4" />
+                    {t('setlistGrid.menuDuplicateRow')}
                 </ContextMenuItem>
                 <ContextMenuSeparator />
                 <ContextMenuItem
@@ -700,8 +709,8 @@ function SortableRow({
                     data-testid="row-context-menu-delete"
                     className="cursor-pointer text-red-300 focus:text-red-200 focus:bg-red-500/15"
                 >
-                    <Trash2 aria-hidden className="mr-2 h-4 w-4" />
-                    Delete row
+                    <Trash2 aria-hidden className="me-2 h-4 w-4" />
+                    {t('setlistGrid.menuDeleteRow')}
                 </ContextMenuItem>
             </ContextMenuContent>
         </ContextMenu>
@@ -952,6 +961,8 @@ export function SetlistGrid({
     confirmDeleteWithTitle,
     confirmDelete,
 }: SetlistGridProps) {
+    const t = useT()
+    const fmt = useFormat()
     const router = useRouter()
     const dialogCtx = useDeleteConfirmOptional()
 
@@ -967,20 +978,20 @@ export function SetlistGrid({
                 const title =
                     info.kind === 'row'
                         ? info.title
-                        : `${info.count} rows`
+                        : t('setlistGrid.confirmDeleteTarget', { count: info.count })
                 return confirmDeleteWithTitle(title)
             }
             if (dialogCtx) return dialogCtx.confirm(info)
             if (typeof window !== 'undefined') {
                 const msg =
                     info.kind === 'row'
-                        ? `Delete row "${info.title}"?`
-                        : `Delete ${info.count} rows?`
+                        ? t('setlistGrid.confirmDeleteRowNamed', { title: info.title })
+                        : t('setlistGrid.confirmDeleteRows', { count: info.count })
                 return window.confirm(msg)
             }
             return false
         },
-        [confirmDelete, confirmDeleteWithTitle, dialogCtx],
+        [confirmDelete, confirmDeleteWithTitle, dialogCtx, t],
     )
 
     const tracks = useLiveQuery(
@@ -1016,9 +1027,13 @@ export function SetlistGrid({
     const displayName =
         typeof liveSetlist?.name === 'string' && liveSetlist.name
             ? (liveSetlist.name as string)
-            : (name ?? 'New Setlist')
+            : (name ?? t('setlistGrid.newSetlist'))
     const displayEventDateLabel =
-        formatEventDate(liveSetlist?.eventDate ?? null) ?? eventDateLabel
+        fmt.date(toDate(liveSetlist?.eventDate ?? null), {
+            weekday: 'long',
+            month: 'long',
+            day: 'numeric',
+        }) || eventDateLabel
 
     const selection = useGridSelection()
     const allRowIds = useMemo(() => rows.map((r) => r.id), [rows])
@@ -1375,6 +1390,7 @@ export function SetlistGrid({
             onDragHandleClick: handleDragHandleClick,
             chartBindOpenRowId,
             onChartBindOpenChange: handleChartBindOpenChange,
+            t,
         }),
         [
             setlistId,
@@ -1389,6 +1405,7 @@ export function SetlistGrid({
             handleDragHandleClick,
             chartBindOpenRowId,
             handleChartBindOpenChange,
+            t,
         ],
     )
 
@@ -1642,7 +1659,7 @@ export function SetlistGrid({
                 <div className="flex justify-between items-end px-2">
                     <div>
                         <p className="text-muted-foreground text-xs font-semibold uppercase tracking-widest mb-1">
-                            Upcoming Performance
+                            {t('setlistGrid.upcomingPerformance')}
                         </p>
                         <p className="text-2xl sm:text-3xl font-bold text-foreground">
                             {displayEventDateLabel
@@ -1658,13 +1675,13 @@ export function SetlistGrid({
                                         aria-hidden
                                         className="inline-block h-7 w-40 rounded-md bg-muted/60 animate-pulse align-middle"
                                     />
-                                  : 'Date TBD'}
+                                  : t('setlistGrid.dateTbd')}
                         </p>
                     </div>
                     <div className="flex gap-4 sm:gap-6">
-                        <div className="text-right">
+                        <div className="text-end">
                             <p className="text-muted-foreground text-xs font-medium uppercase tracking-widest">
-                                Tracks
+                                {t('setlistGrid.tracksCount')}
                             </p>
                             <p className="text-brand text-xl sm:text-2xl font-bold">
                                 {isLoading ? (
@@ -1761,9 +1778,11 @@ export function SetlistGrid({
                             if (!next) setChartBindDialogTrackId(null)
                         }}
                         currentSongId={targetRow?.songId}
-                        inputAriaLabel={`Bind a chart to ${
-                            targetRow?.title || 'track'
-                        }`}
+                        inputAriaLabel={
+                            targetRow?.title
+                                ? t('setlistGrid.bindChartToAria', { title: targetRow.title })
+                                : t('setlistGrid.bindChartToTrackAria')
+                        }
                         onBind={(sel) => {
                             if (targetRow) void handleBindChart(targetRow, sel)
                             setChartBindDialogTrackId(null)

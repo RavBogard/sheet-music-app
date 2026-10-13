@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { SetlistTrack } from "@/types/models"
 import { toDate } from "@/lib/firestore-helpers"
+import { useT, useFormat } from "@/i18n/client"
 
 interface TrackSnapshot {
     title: string
@@ -45,20 +46,20 @@ function diffSnapshots(prev: TrackSnapshot[], curr: TrackSnapshot[]): DiffResult
 }
 
 const actionLabels: Record<AuditAction, string> = {
-    created: 'Created',
-    tracks_updated: 'Tracks updated',
-    updated: 'Updated',
-    renamed: 'Renamed',
-    made_public: 'Made public',
-    made_private: 'Made private',
-    published: 'Published & notified',
-    deleted: 'Deleted',
-    tracks_reordered: 'Reordered',
-    track_added: 'Track added',
-    track_removed: 'Track removed',
-    cloned: 'Cloned for next week',
-    saved_as_template: 'Saved as template',
-    set_as_default: 'Set as default for service',
+    created: "setlist.historyActionCreated",
+    tracks_updated: "setlist.historyActionTracksUpdated",
+    updated: "setlist.historyActionUpdated",
+    renamed: "setlist.historyActionRenamed",
+    made_public: "setlist.historyActionMadePublic",
+    made_private: "setlist.historyActionMadePrivate",
+    published: "setlist.historyActionPublished",
+    deleted: "setlist.historyActionDeleted",
+    tracks_reordered: "setlist.historyActionReordered",
+    track_added: "setlist.historyActionTrackAdded",
+    track_removed: "setlist.historyActionTrackRemoved",
+    cloned: "setlist.historyActionCloned",
+    saved_as_template: "setlist.historyActionSavedAsTemplate",
+    set_as_default: "setlist.historyActionSetAsDefault",
 }
 
 interface Props {
@@ -68,6 +69,8 @@ interface Props {
 }
 
 export function SetlistHistoryPanel({ setlistId, onRestore, onClose }: Props) {
+    const t = useT()
+    const fmt = useFormat()
     const [entries, setEntries] = useState<AuditEntry[]>([])
     const [loading, setLoading] = useState(true)
     const [restoring, setRestoring] = useState<number | null>(null)
@@ -79,10 +82,10 @@ export function SetlistHistoryPanel({ setlistId, onRestore, onClose }: Props) {
 
     const openRestoreConfirm = (index: number, snapshot: TrackSnapshot[]) => {
         const entry = entries[index]
-        const actionLabel = entry ? (actionLabels[entry.action] || entry.action) : 'this version'
+        const actionLabel = entry ? (actionLabels[entry.action] ? t(actionLabels[entry.action]) : entry.action) : t("setlist.historyThisVersion")
         const ts = entry ? toDate(entry.timestamp as unknown as Parameters<typeof toDate>[0]) : null
-        const when = ts ? ts.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''
-        const label = when ? `${actionLabel} (${when})` : actionLabel
+        const when = ts ? fmt.dateTime(ts, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''
+        const label = when ? t("setlist.historyRestoreLabel", { action: actionLabel, when }) : actionLabel
         setPendingRestore({ idx: index, snapshot, label })
     }
 
@@ -91,12 +94,12 @@ export function SetlistHistoryPanel({ setlistId, onRestore, onClose }: Props) {
         const { idx, snapshot } = pendingRestore
         setRestoring(idx)
         // Convert snapshot back to SetlistTrack format
-        const tracks: SetlistTrack[] = snapshot.map((t, i) => ({
+        const tracks: SetlistTrack[] = snapshot.map((s, i) => ({
             id: `restored-${i}-${Date.now()}`,
-            title: t.title,
-            fileId: t.fileId,
-            type: (t.type as 'header' | 'song') || 'song',
-            key: t.key,
+            title: s.title,
+            fileId: s.fileId,
+            type: (s.type as 'header' | 'song') || 'song',
+            key: s.key,
         }))
         onRestore(tracks)
         setRestoring(null)
@@ -108,7 +111,7 @@ export function SetlistHistoryPanel({ setlistId, onRestore, onClose }: Props) {
             <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/50">
                 <div className="flex items-center gap-2 text-sm font-medium">
                     <History className="w-4 h-4 text-violet-500" />
-                    Version History
+                    {t("setlist.historyTitle")}
                 </div>
                 <button onClick={onClose} className="p-1 hover:bg-accent rounded">
                     <X className="w-4 h-4" />
@@ -118,12 +121,12 @@ export function SetlistHistoryPanel({ setlistId, onRestore, onClose }: Props) {
             <div className="max-h-96 overflow-y-auto">
                 {loading ? (
                     <div className="flex items-center justify-center py-8 text-muted-foreground">
-                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                        Loading history...
+                        <Loader2 className="w-4 h-4 animate-spin me-2" />
+                        {t("setlist.historyLoading")}
                     </div>
                 ) : entries.length === 0 ? (
                     <p className="text-sm text-muted-foreground italic py-6 text-center">
-                        No history entries yet.
+                        {t("setlist.historyEmpty")}
                     </p>
                 ) : (
                     <div className="divide-y divide-border">
@@ -139,15 +142,15 @@ export function SetlistHistoryPanel({ setlistId, onRestore, onClose }: Props) {
                                     <div className="flex items-center justify-between">
                                         <div>
                                             <span className="font-medium">
-                                                {actionLabels[entry.action] || entry.action}
+                                                {actionLabels[entry.action] ? t(actionLabels[entry.action]) : entry.action}
                                             </span>
-                                            <span className="text-muted-foreground ml-2">
-                                                by {entry.userName}
+                                            <span className="text-muted-foreground ms-2">
+                                                {t("setlist.historyBy", { name: entry.userName })}
                                             </span>
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <span className="text-xs text-muted-foreground">
-                                                {ts ? ts.toLocaleString('en-US', {
+                                                {ts ? fmt.dateTime(ts, {
                                                     month: 'short', day: 'numeric',
                                                     hour: 'numeric', minute: '2-digit',
                                                 }) : ''}
@@ -163,9 +166,9 @@ export function SetlistHistoryPanel({ setlistId, onRestore, onClose }: Props) {
                                                     {restoring === idx ? (
                                                         <Loader2 className="w-3 h-3 animate-spin" />
                                                     ) : (
-                                                        <RotateCcw className="w-3 h-3 mr-1" />
+                                                        <RotateCcw className="w-3 h-3 me-1" />
                                                     )}
-                                                    Restore
+                                                    {t("setlist.historyRestore")}
                                                 </Button>
                                             )}
                                         </div>
@@ -174,22 +177,22 @@ export function SetlistHistoryPanel({ setlistId, onRestore, onClose }: Props) {
                                     {/* Diff details */}
                                     {diff && (diff.added.length > 0 || diff.removed.length > 0 || diff.reordered) && (
                                         <div className="mt-1.5 space-y-0.5 text-xs">
-                                            {diff.added.map((t, i) => (
+                                            {diff.added.map((s, i) => (
                                                 <div key={`a-${i}`} className="flex items-center gap-1 text-green-500">
                                                     <Plus className="w-3 h-3" />
-                                                    {t.title}
+                                                    {s.title}
                                                 </div>
                                             ))}
-                                            {diff.removed.map((t, i) => (
+                                            {diff.removed.map((s, i) => (
                                                 <div key={`r-${i}`} className="flex items-center gap-1 text-red-500">
                                                     <Minus className="w-3 h-3" />
-                                                    {t.title}
+                                                    {s.title}
                                                 </div>
                                             ))}
                                             {diff.reordered && (
                                                 <div className="flex items-center gap-1 text-amber-500">
                                                     <ArrowUpDown className="w-3 h-3" />
-                                                    Tracks reordered
+                                                    {t("setlist.historyTracksReordered")}
                                                 </div>
                                             )}
                                         </div>
@@ -198,7 +201,7 @@ export function SetlistHistoryPanel({ setlistId, onRestore, onClose }: Props) {
                                     {/* Rename details */}
                                     {typeof entry.details?.newName === 'string' && (
                                         <div className="mt-1 text-xs text-muted-foreground">
-                                            → &quot;{entry.details.newName}&quot;
+                                            {t("setlist.historyRenamedTo", { name: entry.details.newName })}
                                         </div>
                                     )}
                                 </div>
@@ -214,14 +217,14 @@ export function SetlistHistoryPanel({ setlistId, onRestore, onClose }: Props) {
             >
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Restore this version?</AlertDialogTitle>
+                        <AlertDialogTitle>{t("setlist.historyRestoreConfirmTitle")}</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This will replace the current track list with the snapshot from {pendingRestore?.label ?? 'this version'}.
+                            {t("setlist.historyRestoreConfirmBody", { version: pendingRestore?.label ?? t("setlist.historyThisVersion") })}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={runRestore}>Restore</AlertDialogAction>
+                        <AlertDialogCancel>{t("setlist.cancel")}</AlertDialogCancel>
+                        <AlertDialogAction onClick={runRestore}>{t("setlist.historyRestore")}</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>

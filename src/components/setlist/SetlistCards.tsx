@@ -8,7 +8,8 @@ import { Setlist } from "@/lib/setlist-firebase"
 import { isFileCached } from "@/lib/cache-utils"
 import { getServiceContext, type ServiceType } from "@/lib/liturgical-calendar"
 import { useOrg } from "@/lib/org/org-context"
-import { label as orgLabel, hidesLiturgicalFields } from "@/lib/org/vocab"
+import { hidesLiturgicalFields } from "@/lib/org/vocab"
+import { useT, useFormat } from "@/i18n/client"
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -25,6 +26,12 @@ const PHASE_1_DEFAULT_TYPES: ReadonlyArray<ServiceType> = ['shabbat_morning', 'f
 export const SERVICE_TYPE_LABELS: Partial<Record<ServiceType, string>> = {
     shabbat_morning: 'Shabbat Morning',
     friday_night: 'Friday Night',
+}
+
+/** Catalogue keys for SERVICE_TYPE_LABELS (the English map above stays for non-React callers). */
+export const SERVICE_TYPE_LABEL_KEYS: Partial<Record<ServiceType, string>> = {
+    shabbat_morning: "setlist.serviceTypeShabbatMorning",
+    friday_night: "setlist.serviceTypeFridayNight",
 }
 
 function inferServiceType(setlist: Setlist): ServiceType | null {
@@ -65,14 +72,19 @@ export interface UpcomingCardProps {
 export function UpcomingSetlistCard({ setlist, onPerform, onEdit, navigatingTo, onDownload, isDownloading, onDuplicate, onCloneNextWeek, onSaveAsTemplate, onSaveAsDefault, onDelete, canDelete, canDuplicate, canEdit, isAdmin }: UpcomingCardProps) {
     const isLoading = navigatingTo === setlist.id
     const org = useOrg() // v11-05-05: gate the liturgical "Save as Default" affordance for band tenants
+    const t = useT()
+    const fmt = useFormat()
     const [offlineStatus, setOfflineStatus] = useState<'checking' | 'full' | 'partial' | 'none'>('checking')
 
     useEffect(() => {
         const fileIds = setlist.fileIds ?? []
+        // i18n-ignore: offline-status enum, not UI text
         if (fileIds.length === 0) { setOfflineStatus('none'); return }
         Promise.all(fileIds.map(id => isFileCached(id))).then(results => {
             const cached = results.filter(Boolean).length
+            // i18n-ignore: offline-status enum, not UI text
             setOfflineStatus(cached === fileIds.length ? 'full' : cached > 0 ? 'partial' : 'none')
+        // i18n-ignore: offline-status enum, not UI text
         }).catch(() => setOfflineStatus('none'))
     }, [setlist.fileIds])
 
@@ -89,10 +101,10 @@ export function UpcomingSetlistCard({ setlist, onPerform, onEdit, navigatingTo, 
             <button
                 type="button"
                 onClick={onPerform}
-                aria-label={`Open setlist — ${setlist.name}`}
+                aria-label={t("setlist.openSetlistAria", { name: setlist.name })}
                 className="absolute inset-0 z-0 rounded-xl bg-transparent border-0 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1"
             >
-                <span className="sr-only">Open setlist {setlist.name}</span>
+                <span className="sr-only">{t("setlist.openSetlistSr", { name: setlist.name })}</span>
             </button>
 
             {isLoading && (
@@ -114,15 +126,15 @@ export function UpcomingSetlistCard({ setlist, onPerform, onEdit, navigatingTo, 
                 <div className="flex items-center gap-3 mt-1 flex-wrap">
                     <span className="text-xs text-muted-foreground flex items-center gap-1 font-medium">
                         <Calendar className="h-3.5 w-3.5" />
-                        {toDateHelper(setlist.eventDate)?.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) || 'No Date'}
+                        {fmt.date(toDateHelper(setlist.eventDate), { month: 'short', day: 'numeric', year: 'numeric' }) || t("setlist.noDate")}
                     </span>
                     <span className="text-xs text-muted-foreground flex items-center gap-1 font-medium">
                         <PlayCircle className="h-3.5 w-3.5" />
-                        {setlist.trackCount || 0} Songs
+                        {t("setlist.songCount", { count: setlist.trackCount || 0 })}
                     </span>
                     {offlineStatus === 'full' && (
                         <span className="text-xs text-green-400 flex items-center gap-1 font-medium">
-                            <CheckCircle2 className="h-3.5 w-3.5" /> Offline ready
+                            <CheckCircle2 className="h-3.5 w-3.5" /> {t("setlist.offlineReady")}
                         </span>
                     )}
                 </div>
@@ -138,10 +150,10 @@ export function UpcomingSetlistCard({ setlist, onPerform, onEdit, navigatingTo, 
                         variant="outline"
                         onClick={(e) => { e.stopPropagation(); onEdit(e); }}
                         className="hidden lg:flex border-brand/20 text-foreground hover:bg-brand hover:text-brand-foreground hover:border-brand rounded-full px-4 h-11"
-                        aria-label={`Edit setlist — ${setlist.name}`}
+                        aria-label={t("setlist.editSetlistAria", { name: setlist.name })}
                     >
-                        <Pencil className="h-4 w-4 mr-2" />
-                        Edit
+                        <Pencil className="h-4 w-4 me-2" />
+                        {t("setlist.edit")}
                     </Button>
                 )}
 
@@ -153,8 +165,8 @@ export function UpcomingSetlistCard({ setlist, onPerform, onEdit, navigatingTo, 
                             onDownload(setlist)
                         }}
                         className="hidden lg:flex w-11 h-11 hover:bg-white/10 rounded-full items-center justify-center transition-colors cursor-pointer bg-transparent border-0"
-                        aria-label={`Download setlist for offline — ${setlist.name}`}
-                        title="Download for Offline"
+                        aria-label={t("setlist.downloadOfflineAria", { name: setlist.name })}
+                        title={t("setlist.downloadOffline")}
                     >
                         <Download className={`h-5 w-5 text-muted-foreground hover:text-foreground ${isDownloading ? 'animate-pulse text-brand' : ''}`} />
                     </button>
@@ -166,7 +178,7 @@ export function UpcomingSetlistCard({ setlist, onPerform, onEdit, navigatingTo, 
                         <DropdownMenuTrigger asChild>
                             <button
                                 type="button"
-                                aria-label={`Setlist menu — ${setlist.name}`}
+                                aria-label={t("setlist.menuAria", { name: setlist.name })}
                                 className="w-11 h-11 hover:bg-white/10 rounded-full flex items-center justify-center transition-colors cursor-pointer text-muted-foreground hover:text-foreground bg-transparent border-0"
                             >
                                 <MoreVertical className="h-5 w-5" />
@@ -175,32 +187,32 @@ export function UpcomingSetlistCard({ setlist, onPerform, onEdit, navigatingTo, 
                         <DropdownMenuContent align="end" className="w-56 glass-card border-brand/20">
                             {canDuplicate && (
                                 <DropdownMenuItem onClick={(e) => onCloneNextWeek(setlist, e)}>
-                                    <PlusSquare className="h-4 w-4 mr-2" />
-                                    Clone for Next Week
+                                    <PlusSquare className="h-4 w-4 me-2" />
+                                    {t("setlist.cloneNextWeek")}
                                 </DropdownMenuItem>
                             )}
                             {canEdit && (
                                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(e); }} className="lg:hidden">
-                                    <Pencil className="h-4 w-4 mr-2" />
-                                    Edit Setlist
+                                    <Pencil className="h-4 w-4 me-2" />
+                                    {t("setlist.editSetlist")}
                                 </DropdownMenuItem>
                             )}
                             {canEdit && (
                                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDownload(setlist); }} className="lg:hidden">
-                                    <Download className={`h-4 w-4 mr-2 ${isDownloading ? 'animate-pulse text-brand' : ''}`} />
-                                    Download for Offline
+                                    <Download className={`h-4 w-4 me-2 ${isDownloading ? 'animate-pulse text-brand' : ''}`} />
+                                    {t("setlist.downloadOffline")}
                                 </DropdownMenuItem>
                             )}
                             {canDuplicate && (
                                 <DropdownMenuItem onClick={(e) => onDuplicate(setlist, e)}>
-                                    <Copy className="h-4 w-4 mr-2" />
-                                    Duplicate Setlist
+                                    <Copy className="h-4 w-4 me-2" />
+                                    {t("setlist.duplicateSetlist")}
                                 </DropdownMenuItem>
                             )}
                             {canDuplicate && (
                                 <DropdownMenuItem onClick={(e) => onSaveAsTemplate(setlist, e)}>
-                                    <BookmarkPlus className="h-4 w-4 mr-2" />
-                                    Save as Template
+                                    <BookmarkPlus className="h-4 w-4 me-2" />
+                                    {t("setlist.saveAsTemplate")}
                                 </DropdownMenuItem>
                             )}
                             {(() => {
@@ -212,22 +224,22 @@ export function UpcomingSetlistCard({ setlist, onPerform, onEdit, navigatingTo, 
                                     PHASE_1_DEFAULT_TYPES.includes(inferred) &&
                                     // v11-05-05: liturgical service-type affordance is CRC-only.
                                     !hidesLiturgicalFields(org)
-                                const label = inferred ? SERVICE_TYPE_LABELS[inferred] : null
-                                if (!canSaveAsDefault || !label || !inferred) return null
+                                const labelKey = inferred ? SERVICE_TYPE_LABEL_KEYS[inferred] : null
+                                if (!canSaveAsDefault || !labelKey || !inferred) return null
                                 return (
                                     <DropdownMenuItem
                                         onClick={(e) => onSaveAsDefault(setlist, inferred, e)}
                                         data-testid="setlist-card-save-as-default"
                                     >
-                                        <Star className="h-4 w-4 mr-2" />
-                                        Save as Default for {label}
+                                        <Star className="h-4 w-4 me-2" />
+                                        {t("setlist.saveAsDefaultFor", { type: t(labelKey) })}
                                     </DropdownMenuItem>
                                 )
                             })()}
                             {canDelete && (
                                 <DropdownMenuItem onClick={(e) => onDelete(setlist, e)} className="text-destructive focus:text-destructive">
-                                    <Trash2 className="h-4 w-4 mr-2" />
-                                    Delete Setlist
+                                    <Trash2 className="h-4 w-4 me-2" />
+                                    {t("setlist.deleteSetlist")}
                                 </DropdownMenuItem>
                             )}
                         </DropdownMenuContent>
@@ -261,6 +273,8 @@ export interface PastCardProps {
 export function SetlistCard({ setlist, onPerform, onEdit, navigatingTo, onDuplicate, onCloneNextWeek, onSaveAsTemplate, onSaveAsDefault, onDelete, canDelete, canDuplicate, canEdit, isAdmin }: PastCardProps) {
     const isLoading = navigatingTo === setlist.id
     const org = useOrg() // v11-05-05: gate the liturgical "Save as Default" affordance for band tenants
+    const t = useT()
+    const fmt = useFormat()
 
     return (
         // C4-003: see UpcomingSetlistCard above for the rationale; mirror the
@@ -271,10 +285,10 @@ export function SetlistCard({ setlist, onPerform, onEdit, navigatingTo, onDuplic
             <button
                 type="button"
                 onClick={onPerform}
-                aria-label={`Open setlist — ${setlist.name}`}
+                aria-label={t("setlist.openSetlistAria", { name: setlist.name })}
                 className="absolute inset-0 z-0 rounded-xl bg-transparent border-0 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1"
             >
-                <span className="sr-only">Open setlist {setlist.name}</span>
+                <span className="sr-only">{t("setlist.openSetlistSr", { name: setlist.name })}</span>
             </button>
 
             {isLoading && (
@@ -296,11 +310,11 @@ export function SetlistCard({ setlist, onPerform, onEdit, navigatingTo, onDuplic
                 <div className="flex items-center gap-3 mt-1 flex-wrap">
                     <span className="text-xs text-muted-foreground flex items-center gap-1">
                         <Calendar className="h-3 w-3" />
-                        {toDateHelper(setlist.eventDate)?.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) || 'No Date'}
+                        {fmt.date(toDateHelper(setlist.eventDate), { month: 'short', day: 'numeric', year: 'numeric' }) || t("setlist.noDate")}
                     </span>
                     <span className="text-xs text-muted-foreground flex items-center gap-1">
                         <PlayCircle className="h-3 w-3" />
-                        {setlist.trackCount || 0} Songs
+                        {t("setlist.songCount", { count: setlist.trackCount || 0 })}
                     </span>
                 </div>
             </div>
@@ -312,7 +326,7 @@ export function SetlistCard({ setlist, onPerform, onEdit, navigatingTo, onDuplic
                         variant="ghost"
                         size="icon"
                         onClick={(e) => { e.stopPropagation(); onEdit(e); }}
-                        aria-label={`Edit setlist — ${setlist.name}`}
+                        aria-label={t("setlist.editSetlistAria", { name: setlist.name })}
                         className="h-11 w-11 hover:bg-white/10 rounded-full text-muted-foreground hover:text-foreground"
                     >
                         <Pencil className="h-4 w-4" />
@@ -324,7 +338,7 @@ export function SetlistCard({ setlist, onPerform, onEdit, navigatingTo, onDuplic
                         <DropdownMenuTrigger asChild>
                             <button
                                 type="button"
-                                aria-label={`Setlist menu — ${setlist.name}`}
+                                aria-label={t("setlist.menuAria", { name: setlist.name })}
                                 className="h-11 w-11 hover:bg-white/10 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground cursor-pointer bg-transparent border-0"
                             >
                                 <MoreVertical className="h-5 w-5" />
@@ -334,16 +348,16 @@ export function SetlistCard({ setlist, onPerform, onEdit, navigatingTo, onDuplic
                             {canDuplicate && (
                                 <>
                                     <DropdownMenuItem onClick={(e) => onDuplicate?.(setlist, e)}>
-                                        <Copy className="h-4 w-4 mr-2" />
-                                        Duplicate Setlist
+                                        <Copy className="h-4 w-4 me-2" />
+                                        {t("setlist.duplicateSetlist")}
                                     </DropdownMenuItem>
                                     <DropdownMenuItem onClick={(e) => onCloneNextWeek?.(setlist, e)}>
-                                        <PlusSquare className="h-4 w-4 mr-2" />
-                                        Clone for Next Week
+                                        <PlusSquare className="h-4 w-4 me-2" />
+                                        {t("setlist.cloneNextWeek")}
                                     </DropdownMenuItem>
                                     <DropdownMenuItem onClick={(e) => onSaveAsTemplate?.(setlist, e)}>
-                                        <BookmarkPlus className="h-4 w-4 mr-2" />
-                                        Save as Template
+                                        <BookmarkPlus className="h-4 w-4 me-2" />
+                                        {t("setlist.saveAsTemplate")}
                                     </DropdownMenuItem>
                                 </>
                             )}
@@ -356,22 +370,22 @@ export function SetlistCard({ setlist, onPerform, onEdit, navigatingTo, onDuplic
                                     PHASE_1_DEFAULT_TYPES.includes(inferred) &&
                                     // v11-05-05: liturgical service-type affordance is CRC-only.
                                     !hidesLiturgicalFields(org)
-                                const label = inferred ? SERVICE_TYPE_LABELS[inferred] : null
-                                if (!canSaveAsDefault || !label || !inferred) return null
+                                const labelKey = inferred ? SERVICE_TYPE_LABEL_KEYS[inferred] : null
+                                if (!canSaveAsDefault || !labelKey || !inferred) return null
                                 return (
                                     <DropdownMenuItem
                                         onClick={(e) => onSaveAsDefault(setlist, inferred, e)}
                                         data-testid="setlist-card-save-as-default"
                                     >
-                                        <Star className="h-4 w-4 mr-2" />
-                                        Save as Default for {label}
+                                        <Star className="h-4 w-4 me-2" />
+                                        {t("setlist.saveAsDefaultFor", { type: t(labelKey) })}
                                     </DropdownMenuItem>
                                 )
                             })()}
                             {canDelete && (
                                 <DropdownMenuItem onClick={(e) => onDelete?.(setlist, e)} className="text-destructive focus:text-destructive">
-                                    <Trash2 className="h-4 w-4 mr-2" />
-                                    Delete Setlist
+                                    <Trash2 className="h-4 w-4 me-2" />
+                                    {t("setlist.deleteSetlist")}
                                 </DropdownMenuItem>
                             )}
                         </DropdownMenuContent>
@@ -390,7 +404,8 @@ interface PlaceholderCardProps {
 }
 
 export function PlaceholderCard({ date, onCreate }: PlaceholderCardProps) {
-    const org = useOrg()
+    const t = useT()
+    const fmt = useFormat()
     return (
         <div
             role="button"
@@ -404,12 +419,12 @@ export function PlaceholderCard({ date, onCreate }: PlaceholderCardProps) {
             
             <div className="flex-1 min-w-0">
                 <h5 className="text-lg font-semibold text-muted-foreground group-hover:text-foreground transition-colors truncate tracking-tight">
-                    {orgLabel(org, 'planPlaceholder')}
+                    {t("org.planPlaceholder")}
                 </h5>
                 <div className="flex items-center gap-3 mt-1 flex-wrap">
                     <span className="text-xs text-muted-foreground flex items-center gap-1">
                         <Calendar className="h-3 w-3" />
-                        {date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+                        {fmt.date(date, { weekday: 'long', month: 'short', day: 'numeric' })}
                     </span>
                 </div>
             </div>

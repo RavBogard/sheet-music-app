@@ -1,0 +1,33 @@
+{
+    "intro": "Pick a date — we’ll offer to clone last week’s service, use a template, or start fresh.",
+    "serviceDateLabel": "Service date",
+    "pickDate": "Pick a date",
+    "lookingForLast": "Looking for last {service}…",
+    "cloneLast": "Clone last {service}",
+    "cloneSourceDate": "({date})",
+    "noPriorService": "No prior {service} to clone yet — pick a template or start from scratch below.",
+    "useTemplate": "Use a template",
+    "startFromScratch": "Start from scratch",
+    "templateOptionalLabel": "Template (optional)",
+    "startFromBlank": "Start from blank",
+    "regularServices": "Regular services",
+    "holidayServices": "Holiday services",
+    "nameLabel": "Name",
+    "rabbiOptionalLabel": "Rabbi (optional)",
+    "selectRabbi": "Select rabbi",
+    "cancel": "Cancel",
+    "creating": "Creating…",
+    "serviceType": {
+        "friday_night": "Erev Shabbat",
+        "shabbat_morning": "Shabbat morning",
+        "rosh_hashanah": "Rosh Hashanah",
+        "yom_kippur": "Yom Kippur",
+        "sukkot": "Sukkot",
+        "simchat_torah": "Simchat Torah",
+        "hanukkah_shabbat": "Hanukkah Shabbat",
+        "purim": "Purim",
+        "passover": "Passover",
+        "shavuot": "Shavuot",
+        "regular": "service"
+    }
+}

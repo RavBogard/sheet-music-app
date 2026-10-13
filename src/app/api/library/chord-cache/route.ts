@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { getT } from "@/i18n/server"
 import { getFirestore } from "firebase-admin/firestore"
 import { createApiHandler } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
@@ -24,8 +25,9 @@ async function assertChordCacheTenant(
     const hostOrg = coerceOrgId(req.headers.get("x-org-id"))
     const row = await db.collection("library_index").doc(fileId).get()
     if (row.exists && rowOrg(row.data()?.orgId) !== hostOrg) {
+        const t = await getT()
         return NextResponse.json(
-            { error: "cross-tenant chord-cache write refused" },
+            { error: t("api-library.crossTenantChordCacheWrite") },
             { status: 403 },
         )
     }
@@ -92,7 +94,8 @@ export const GET = createApiHandler(
         const meta = ctx.req.nextUrl.searchParams.get("meta")
 
         if (!fileId) {
-            return NextResponse.json({ error: "Missing fileId" }, { status: 400 })
+            const t = await getT()
+            return NextResponse.json({ error: t("api-library.missingFileId") }, { status: 400 })
         }
 
         const db = getFirestore()
@@ -232,8 +235,9 @@ export const PATCH = createApiHandler(
 
         // The verification trust flag stays authed-musician (leader-gated contract).
         if ((chordsVerified !== undefined || chordsVerifiedBy !== undefined) && !trusted) {
+            const t = await getT()
             return NextResponse.json(
-                { error: "chordsVerified requires a musician account" },
+                { error: t("api-library.chordsVerifiedNeedsMusician") },
                 { status: 401 }
             )
         }
@@ -276,7 +280,8 @@ export const DELETE = createApiHandler(
     async (ctx) => {
         const fileId = ctx.req.nextUrl.searchParams.get("fileId")
         if (!fileId) {
-            return NextResponse.json({ error: "Missing fileId" }, { status: 400 })
+            const t = await getT()
+            return NextResponse.json({ error: t("api-library.missingFileId") }, { status: 400 })
         }
 
         const db = getFirestore()

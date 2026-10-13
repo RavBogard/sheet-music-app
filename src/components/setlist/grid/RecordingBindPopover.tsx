@@ -9,6 +9,7 @@ import {
     type ReactNode,
 } from 'react'
 
+import { useT } from '@/i18n/client'
 import { useAuth } from '@/lib/auth-context'
 import { useOrg } from '@/lib/org/org-context'
 import {
@@ -43,6 +44,7 @@ export function RecordingBindPopover({
     songId,
     songTitle,
 }: RecordingBindPopoverProps) {
+    const t = useT()
     const { isBandLeader, isAdmin } = useAuth()
     const canUpload = isBandLeader || isAdmin
     // v11.7-06-01: scope the recordings subscription to the current tenant.
@@ -87,7 +89,7 @@ export function RecordingBindPopover({
             // manual refetch needed.
         } catch (err) {
             setUploadError(
-                err instanceof Error ? err.message : 'Upload failed',
+                err instanceof Error ? err.message : t('setlistGrid.uploadFailed'),
             )
         } finally {
             setUploading(false)
@@ -110,7 +112,7 @@ export function RecordingBindPopover({
             <div className="flex flex-col">
                 <div className="border-b border-white/10 px-3 py-2">
                     <p className="text-sm font-semibold text-foreground">
-                        Recordings
+                        {t('setlistGrid.recordings')}
                     </p>
                     {songTitle && (
                         <p className="truncate text-xs text-muted-foreground">
@@ -123,12 +125,13 @@ export function RecordingBindPopover({
                     {!loaded ? (
                         <p className="flex items-center gap-2 px-2 py-3 text-sm text-muted-foreground">
                             <Loader2 aria-hidden className="h-4 w-4 animate-spin" />
-                            Loading recordings…
+                            {t('setlistGrid.loadingRecordings')}
                         </p>
                     ) : recordings.length === 0 ? (
                         <p className="px-2 py-3 text-sm text-muted-foreground">
-                            No recordings yet
-                            {canUpload ? ' — upload one below.' : '.'}
+                            {canUpload
+                                ? t('setlistGrid.noRecordingsUpload')
+                                : t('setlistGrid.noRecordings')}
                         </p>
                     ) : (
                         <ul className="flex flex-col gap-2">
@@ -148,7 +151,7 @@ export function RecordingBindPopover({
                                     <audio
                                         controls
                                         preload="none"
-                                        aria-label={`Play recording: ${rec.title}`}
+                                        aria-label={t('setlistGrid.playRecordingAria', { title: rec.title })}
                                         src={getRecordingPlaybackUrl(rec)}
                                         className="w-full"
                                     />
@@ -188,7 +191,7 @@ export function RecordingBindPopover({
                             ) : (
                                 <Upload aria-hidden className="h-4 w-4" />
                             )}
-                            {uploading ? 'Uploading…' : 'Upload recording'}
+                            {uploading ? t('setlistGrid.uploading') : t('setlistGrid.uploadRecording')}
                         </label>
                         {uploadError && (
                             <p

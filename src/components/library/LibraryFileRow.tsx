@@ -7,9 +7,10 @@ import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } 
 import { DriveFile } from "@/types/models"
 import { isFileCached } from "@/lib/cache-utils"
 import { splitChartComposer } from "@/lib/library/chart-composer"
-import { useOrg } from "@/lib/org/org-context"
-import { orgString } from "@/lib/org/strings"
-import { SHARED_COPY } from "@/lib/library/shared-collections"
+import { useFormat, useT } from "@/i18n/client"
+import type { T } from "@/i18n/core"
+import type { Formatter } from "@/i18n/format"
+import { DirectionalIcon } from "@/components/i18n/DirectionalIcon"
 
 interface LibraryFileRowProps {
     item: DriveFile
@@ -50,7 +51,8 @@ function getAudioCleanName(name: string) {
 }
 
 export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitize, onArchive, onRename, getCleanName, isPlaying, selectMode, isSelected, onToggleSelect, onLongPress, usageInfo, canAddToSetlist, onAddToSetlist, sharedFrom }: LibraryFileRowProps) {
-    const org = useOrg()
+    const t = useT()
+    const fmt = useFormat()
     const isFolder = item.mimeType?.includes('folder')
     const isAudio = isAudioMime(item)
     const [isCached, setIsCached] = useState(false)
@@ -119,14 +121,18 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
                     onTouchMove={handleTouchEndOrMove}
                     onTouchCancel={handleTouchEndOrMove}
                     type="button"
-                    aria-label={isFolder ? `Open folder ${displayName}` : isAudio ? `${isPlaying ? 'Pause' : 'Play'} ${displayName}` : `View ${displayName}`}
+                    aria-label={isFolder
+                        ? t("library.row.openFolderLabel", { name: displayName })
+                        : isAudio
+                            ? (isPlaying ? t("library.row.pauseLabel", { name: displayName }) : t("library.row.playLabel", { name: displayName }))
+                            : t("library.row.viewLabel", { name: displayName })}
                     aria-pressed={selectMode ? isSelected : undefined}
                     // C7I2-003: `justify-start` overrides the Button base
                     // `justify-center`. Without it, when a long row name
                     // exceeds the row width the flex content overflows
                     // EQUALLY on both sides, clipping the leading character
                     // ("Adonai Oz …" → "donai Oz …") at iPad-Mini viewport.
-                    className={`w-full h-auto text-left justify-start rounded-none whitespace-normal group relative active:scale-100 ${isSelected
+                    className={`w-full h-auto text-start justify-start rounded-none whitespace-normal group relative active:scale-100 ${isSelected
                         ? 'bg-brand/10'
                         : isFolder
                             ? ''
@@ -155,6 +161,8 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
                                 {isPlaying ? (
                                     <Pause className="h-5 w-5 text-brand" />
                                 ) : (
+                                    // Optical centring of the play triangle, a physical icon that
+                                    // never mirrors, so the nudge stays physical too.
                                     <Play className="h-5 w-5 text-brand ml-0.5" />
                                 )}
                             </div>
@@ -185,7 +193,7 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
                                 {isAudio && (
                                     <span className="text-xs bg-brand/10 text-foreground px-2 py-0.5 rounded-md flex items-center gap-1">
                                         <Headphones className="w-3 h-3" />
-                                        Audio
+                                        {t("library.row.audio")}
                                     </span>
                                 )}
 
@@ -196,42 +204,44 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
                                 )}
                                 {!isFolder && !isAudio && item.metadata?.bpm && (
                                     <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-md border border-border font-mono">
-                                        {item.metadata.bpm} bpm
+                                        {t("library.row.bpm", { bpm: item.metadata.bpm })}
                                     </span>
                                 )}
 
                                 {!isFolder && !isAudio && item.collection === 'supplemental' && (
                                     <span className="text-xs font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded-md border border-amber-500/20">
+                                        {/* i18n-ignore: collection (book) name, data — not translated */}
                                         Shireinu
                                     </span>
                                 )}
 
                                 {!isFolder && !isAudio && item.collection === 'nava' && (
                                     <span className="text-xs font-medium bg-violet-500/10 text-violet-600 dark:text-violet-400 px-2 py-0.5 rounded-md border border-violet-500/20">
+                                        {/* i18n-ignore: collection (book) name, data — not translated */}
                                         Nava Tehilah
                                     </span>
                                 )}
 
                                 {!isFolder && !isAudio && item.collection !== 'supplemental' && item.collection !== 'nava' && (
                                     <span className="text-xs font-medium bg-blue-500/10 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-md border border-blue-500/20">
-                                        {orgString(org, "library.ownBadge")}
+                                        {t("org.library.ownBadge")}
                                     </span>
                                 )}
 
                                 {sharedFrom?.badge && (
                                     <span
                                         data-testid="shared-owner-badge"
-                                        title={SHARED_COPY.readOnly(sharedFrom.owner)}
+                                        title={t("library.shared.readOnly", { owner: sharedFrom.owner })}
                                         className="text-xs font-medium bg-muted text-muted-foreground px-2 py-0.5 rounded-md border border-border shrink-0"
                                     >
-                                        {SHARED_COPY.fromOwner(sharedFrom.owner)}
+                                        {t("library.shared.fromOwner", { owner: sharedFrom.owner })}
                                     </span>
                                 )}
 
                                 {isCached && !isFolder && (
-                                    <span className="text-[10px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full flex items-center gap-1 border border-emerald-500/20" title="This file is downloaded and available offline">
+                                    <span className="text-[10px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full flex items-center gap-1 border border-emerald-500/20" title={t("library.row.cachedTitle")}>
                                         <CheckCircle2 className="w-3 h-3" />
-                                        Cached
+                                        {t("library.row.cached")}
                                     </span>
                                 )}
 
@@ -249,19 +259,19 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
                                     widths (was hidden sm:inline) so recency
                                     reads on iPad portrait too. */}
                                 {!isFolder && !isAudio && usageInfo && (
-                                    <span className="ml-auto shrink-0 text-xs text-muted-foreground tabular-nums" title={`Last used in: ${usageInfo.lastUsedDate}`}>
-                                        {formatUsageBadge(usageInfo.lastUsedDate, usageInfo.totalUses)}
+                                    <span className="ms-auto shrink-0 text-xs text-muted-foreground tabular-nums" title={t("library.row.lastUsedTitle", { date: usageInfo.lastUsedDate })}>
+                                        {formatUsageBadge(usageInfo.lastUsedDate, usageInfo.totalUses, t, fmt)}
                                     </span>
                                 )}
 
                                 {isDigitizing && (
                                     <span className="text-xs bg-brand/20 text-brand px-2 py-1 rounded-full animate-pulse">
-                                        Digitizing...
+                                        {t("library.row.digitizing")}
                                     </span>
                                 )}
                             </div>
                         </div>
-                        {!isAudio && <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground/60 group-hover:text-foreground" />}
+                        {!isAudio && <DirectionalIcon icon={ChevronRight} className="h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground/60 group-hover:text-foreground" />}
                     </div>
                 </Button>
             </ContextMenuTrigger>
@@ -269,17 +279,17 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
                 {canAddToSetlist && !isFolder && !isAudio && onAddToSetlist && (
                     <ContextMenuItem onClick={() => onAddToSetlist(item)}>
                         <span className="flex items-center gap-2">
-                            <ListPlus className="h-4 w-4" /> Add to Setlist...
+                            <ListPlus className="h-4 w-4" /> {t("library.row.addToSetlist")}
                         </span>
                     </ContextMenuItem>
                 )}
                 <ContextMenuItem onClick={onClick}>
-                    {isFolder ? "Open Folder" : isAudio ? "Play" : "Select / View"}
+                    {isFolder ? t("library.row.openFolder") : isAudio ? t("library.row.play") : t("library.row.selectView")}
                 </ContextMenuItem>
 
                 {!isFolder && !isAudio && sharedFrom && (
-                    <ContextMenuItem disabled title={SHARED_COPY.readOnly(sharedFrom.owner)}>
-                        <span className="text-xs text-muted-foreground">{SHARED_COPY.readOnly(sharedFrom.owner)}</span>
+                    <ContextMenuItem disabled title={t("library.shared.readOnly", { owner: sharedFrom.owner })}>
+                        <span className="text-xs text-muted-foreground">{t("library.shared.readOnly", { owner: sharedFrom.owner })}</span>
                     </ContextMenuItem>
                 )}
 
@@ -293,11 +303,11 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
                             >
                                 {isDigitizing ? (
                                     <span className="flex items-center gap-2">
-                                        <Loader2 className="h-4 w-4 animate-spin" /> Digitizing...
+                                        <Loader2 className="h-4 w-4 animate-spin" /> {t("library.row.digitizing")}
                                     </span>
                                 ) : (
                                     <span className="flex items-center gap-2">
-                                        <Wand2 className="h-4 w-4" /> Digitize (AI)
+                                        <Wand2 className="h-4 w-4" /> {t("library.row.digitize")}
                                     </span>
                                 )}
                             </ContextMenuItem>
@@ -308,7 +318,7 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
                                 onClick={() => onRename(item)}
                             >
                                 <span className="flex items-center gap-2">
-                                    <Pencil className="h-4 w-4" /> Rename
+                                    <Pencil className="h-4 w-4" /> {t("library.row.rename")}
                                 </span>
                             </ContextMenuItem>
                         )}
@@ -319,7 +329,7 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
                                 className="text-red-400 focus:text-red-300 focus:bg-red-900/50"
                             >
                                 <span className="flex items-center gap-2">
-                                    <CloudOff className="h-4 w-4" /> Archive Chart
+                                    <CloudOff className="h-4 w-4" /> {t("library.row.archive")}
                                 </span>
                             </ContextMenuItem>
                         )}
@@ -331,13 +341,9 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
 }
 
 /** Format a compact usage badge like "Last: Jan 31 · 4×" */
-function formatUsageBadge(lastUsedDate: string, totalUses: number): string {
-    try {
-        const date = new Date(lastUsedDate)
-        const month = date.toLocaleDateString('en-US', { month: 'short' })
-        const day = date.getDate()
-        return `Last: ${month} ${day} · ${totalUses}×`
-    } catch {
-        return `${totalUses}×`
-    }
+function formatUsageBadge(lastUsedDate: string, totalUses: number, t: T, fmt: Formatter): string {
+    const date = fmt.date(lastUsedDate, { month: 'short', day: 'numeric' })
+    return date
+        ? t("library.row.usageBadge", { date, uses: totalUses })
+        : t("library.row.usageBadgeNoDate", { uses: totalUses })
 }

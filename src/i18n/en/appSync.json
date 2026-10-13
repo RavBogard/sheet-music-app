@@ -1,0 +1,8 @@
+{
+    "saveFailed": "Couldn't save {action} — try again",
+    "syncErrorTitle": "Sync error",
+    "syncErrorBody": "Local cache is corrupted. Reload to clear it and reconnect.",
+    "syncPausedTitle": "Sync paused",
+    "syncPausedBody": "Firestore disconnected. Reload to resume.",
+    "reload": "Reload"
+}

@@ -1,0 +1,18 @@
+{
+    "serverNotReady": "Server not ready",
+    "setlistNotFound": "Setlist not found",
+    "deleteOwnerOrAdminOnly": "Only the owner or an admin can delete this setlist",
+    "ownerOrLeaderRequired": "Must be owner or leader",
+    "atLeastOneMusician": "At least one musician must be assigned",
+    "ownerLeaderOrAdminRequired": "Unauthorized — must be owner, band leader, or admin",
+    "needsLinkedChart": "Setlist must have at least one song with a linked chart",
+    "setlistIdRequired": "setlistId parameter required",
+    "packetFailed": "Failed to generate packet",
+    "chartsOmitted": "Some charts could not be included in the packet.",
+    "renameNotAllowed": "Not allowed to rename this setlist",
+    "invalidRequestSetlistId": "Invalid request: setlistId is required",
+    "noEmailRecipients": "No email recipients found for this setlist",
+    "resendFailed": "Failed to resend emails",
+    "transferUserNotFound": "User with email {email} not found. They must sign up first.",
+    "transferred": "Transferred \"{setlistName}\" to {email}"
+}

@@ -1,0 +1,6 @@
+{
+    "invalidJsonBody": "Invalid JSON body",
+    "messagesRequired": "Messages array is required",
+    "searchDefaultReply": "Here are some results I found.",
+    "searchFailed": "Failed to search"
+}

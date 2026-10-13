@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { getT } from "@/i18n/server"
 import { generatePrintPdf, PrintRequest } from "@/lib/print-pipeline"
 import { createApiHandler } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
@@ -28,7 +29,8 @@ export const GET = createApiHandler(
 
         const setlistId = ctx.req.nextUrl.searchParams.get('setlistId')
         if (!setlistId) {
-            return NextResponse.json({ error: 'setlistId parameter required' }, { status: 400 })
+            const t = await getT()
+            return NextResponse.json({ error: t("api-setlist.setlistIdRequired") }, { status: 400 })
         }
 
         // Auth: Firebase ID token (browser/in-app) OR MCP `crl_live_` bearer
@@ -58,7 +60,8 @@ export const GET = createApiHandler(
         // Load setlist
         const setlistDoc = await db.collection('setlists').doc(setlistId).get()
         if (!setlistDoc.exists) {
-            return NextResponse.json({ error: 'Setlist not found' }, { status: 404 })
+            const t = await getT()
+            return NextResponse.json({ error: t("api-setlist.setlistNotFound") }, { status: 404 })
         }
         const setlist = setlistDoc.data()!
 

@@ -17,6 +17,8 @@ import {
 } from '@dnd-kit/sortable'
 import { useMemo, useState } from 'react'
 
+import { useT } from '@/i18n/client'
+
 import type { LocalTrack } from '@/lib/local/types'
 import { applyEdit } from '@/lib/local/write'
 import { useUndoStore, type UndoableDoc } from '@/lib/local/undo-store'
@@ -84,6 +86,7 @@ export function MobileCardList({
     onDeleteRow,
     tonightByRowId,
 }: MobileCardListProps) {
+    const t = useT()
     const [editingTrackId, setEditingTrackId] = useState<string | null>(null)
 
     const sensors = useSensors(
@@ -98,7 +101,30 @@ export function MobileCardList({
         }),
     )
 
-    const sortableIds = useMemo(() => tracks.map((t) => t.id), [tracks])
+    const sortableIds = useMemo(() => tracks.map((track) => track.id), [tracks])
+
+    // dnd-kit's screen-reader instructions and live announcements (its
+    // defaults are English); ids are the rows' machine ids, as before.
+    const dndAccessibility = useMemo(
+        () => ({
+            screenReaderInstructions: { draggable: t('setlistGrid.dndInstructions') },
+            announcements: {
+                onDragStart: ({ active }: { active: { id: string | number } }) =>
+                    t('setlistGrid.dndPickedUp', { id: String(active.id) }),
+                onDragOver: ({ active, over }: { active: { id: string | number }; over: { id: string | number } | null }) =>
+                    over
+                        ? t('setlistGrid.dndMovedOver', { id: String(active.id), overId: String(over.id) })
+                        : t('setlistGrid.dndNotOver', { id: String(active.id) }),
+                onDragEnd: ({ active, over }: { active: { id: string | number }; over: { id: string | number } | null }) =>
+                    over
+                        ? t('setlistGrid.dndDroppedOver', { id: String(active.id), overId: String(over.id) })
+                        : t('setlistGrid.dndDropped', { id: String(active.id) }),
+                onDragCancel: ({ active }: { active: { id: string | number } }) =>
+                    t('setlistGrid.dndCancelled', { id: String(active.id) }),
+            },
+        }),
+        [t],
+    )
 
     const handleDragEnd = async (e: DragEndEvent) => {
         const { active, over } = e
@@ -159,6 +185,7 @@ export function MobileCardList({
         <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
+            accessibility={dndAccessibility}
             onDragEnd={(e) => void handleDragEnd(e)}
         >
             <SortableContext

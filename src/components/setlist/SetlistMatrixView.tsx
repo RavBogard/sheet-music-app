@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useAuth } from "@/lib/auth-context"
-import { useOrg } from "@/lib/org/org-context"
-import { label as orgLabel } from "@/lib/org/vocab"
+import { useT, useFormat } from "@/i18n/client"
 import { Loader2 } from "lucide-react"
 
 interface MatrixColumn {
@@ -31,7 +30,8 @@ interface MatrixData {
 
 export function SetlistMatrixView() {
     const { user } = useAuth()
-    const org = useOrg()
+    const t = useT()
+    const fmt = useFormat()
     const [matrixData, setMatrixData] = useState<MatrixData | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -45,7 +45,7 @@ export function SetlistMatrixView() {
             setError(null)
             try {
                 const res = await fetch(`/api/setlists/matrix?type=${type}`)
-                if (!res.ok) throw new Error("Failed to load matrix data")
+                if (!res.ok) throw new Error(t("setlist.matrixLoadFailed"))
                 const data = await res.json()
                 if (isMounted) {
                     setMatrixData(data)
@@ -60,19 +60,19 @@ export function SetlistMatrixView() {
         fetchMatrix()
 
         return () => { isMounted = false }
-    }, [type])
+    }, [type, t])
 
     return (
         <div className="flex flex-col space-y-4">
             <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-bold tracking-tight">{orgLabel(org, 'matrixTitle')}</h2>
+                <h2 className="text-2xl font-bold tracking-tight">{t("org.matrixTitle")}</h2>
                 <select 
                     value={type} 
                     onChange={(e) => setType(e.target.value as any)}
                     className="bg-black/20 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand"
                 >
-                    <option value="friday_night">Friday Night</option>
-                    <option value="shabbat_morning">Shabbat Morning</option>
+                    <option value="friday_night">{t("setlist.serviceTypeFridayNight")}</option>
+                    <option value="shabbat_morning">{t("setlist.serviceTypeShabbatMorning")}</option>
                 </select>
             </div>
 
@@ -89,11 +89,11 @@ export function SetlistMatrixView() {
             ) : matrixData && (
                 <div className="relative border border-white/5 rounded-2xl overflow-hidden bg-black/20">
                     <div className="overflow-x-auto w-full pb-4">
-                        <table className="w-full text-left border-collapse min-w-max">
+                        <table className="w-full text-start border-collapse min-w-max">
                             <thead>
                                 <tr>
-                                    <th className="sticky left-0 z-20 bg-black/80 backdrop-blur-md p-4 border-b border-white/10 min-w-[150px]">
-                                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Liturgical Slot</span>
+                                    <th className="sticky start-0 z-20 bg-black/80 backdrop-blur-md p-4 border-b border-white/10 min-w-[150px]">
+                                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("setlist.matrixSlotHeader")}</span>
                                     </th>
                                     {matrixData.columns.map(col => {
                                         const d = new Date(col.date)
@@ -102,7 +102,7 @@ export function SetlistMatrixView() {
                                             <th key={col.id} className="p-4 border-b border-white/10 min-w-[180px] align-top bg-white/[0.01]">
                                                 <div className="flex flex-col gap-1">
                                                     <span className={`text-sm font-bold ${isPast ? 'text-muted-foreground' : 'text-foreground'}`}>
-                                                        {d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                                        {fmt.date(d, { month: 'short', day: 'numeric' })}
                                                     </span>
                                                     {col.context?.holidays?.length ? (
                                                         <span className="text-xs text-brand truncate" title={col.context.holidays.join(', ')}>
@@ -113,7 +113,7 @@ export function SetlistMatrixView() {
                                                             {col.context.parasha}
                                                         </span>
                                                     ) : (
-                                                        <span className="text-xs text-muted-foreground">Standard</span>
+                                                        <span className="text-xs text-muted-foreground">{t("setlist.matrixStandard")}</span>
                                                     )}
                                                 </div>
                                             </th>
@@ -124,7 +124,7 @@ export function SetlistMatrixView() {
                             <tbody>
                                 {matrixData.rows.map((row, rowIndex) => (
                                     <tr key={row.id} className="group hover:bg-white/[0.02] transition-colors border-b border-white/5 last:border-0">
-                                        <td className="sticky left-0 z-10 bg-black/60 backdrop-blur-md group-hover:bg-black p-4 text-sm font-medium border-r border-white/5">
+                                        <td className="sticky start-0 z-10 bg-black/60 backdrop-blur-md group-hover:bg-black p-4 text-sm font-medium border-e border-white/5">
                                             {row.label}
                                         </td>
                                         {matrixData.columns.map(col => {
@@ -141,7 +141,7 @@ export function SetlistMatrixView() {
                                                         </div>
                                                     ) : isFuture ? (
                                                         <div className="h-full min-h-[48px] rounded-lg border border-dashed border-white/10 hover:border-brand/40 bg-transparent flex items-center justify-center cursor-pointer transition-colors opacity-0 group-hover:opacity-100 group-hover:bg-brand/5">
-                                                            <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">+ Plan</span>
+                                                            <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">{t("setlist.matrixPlan")}</span>
                                                         </div>
                                                     ) : (
                                                         <div className="h-full min-h-[48px] rounded-lg border border-white/5 bg-transparent"></div>

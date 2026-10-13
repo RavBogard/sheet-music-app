@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { getT } from "@/i18n/server"
 import { z } from "zod"
 import { createApiHandler } from "@/lib/api-wrapper"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
@@ -32,8 +33,9 @@ export const POST = createApiHandler(
         const setName = ctx.body!.name || "Imported Setlist"
 
         if (!initAdmin()) {
+            const t = await getT()
             return NextResponse.json(
-                { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
+                { error: t("api-setlists.serverNotReady"), code: "FIREBASE_NOT_INITIALIZED" },
                 { status: 500 },
             )
         }
@@ -69,11 +71,12 @@ export const POST = createApiHandler(
                 `process-failed=${importOutcomes.filter((o) => o.status === 'process-failed').length})`,
         )
 
+        const t = await getT()
         return NextResponse.json(
             {
                 success: true,
                 setlistId,
-                message: "Import executed successfully.",
+                message: t("api-setlists.importSucceeded"),
                 importOutcomes,
             },
             { status: 201 },

@@ -12,6 +12,7 @@
  */
 
 import { NextResponse } from "next/server"
+import { getT } from "@/i18n/server"
 import { createApiHandler } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
@@ -37,8 +38,9 @@ export const POST = createApiHandler(
         // Fan-out broadcast: restrict to privileged roles (v2.5 P14 decision —
         // "Notification create restricted to admin/band_leader").
         if (!ctx.auth.isBandLeader) {
+            const t = await getT()
             return NextResponse.json(
-                { error: 'Only band leaders and admins can broadcast setlist updates' },
+                { error: t("api-setlists.broadcastLeadersOnly") },
                 { status: 403 }
             )
         }
@@ -46,8 +48,9 @@ export const POST = createApiHandler(
         const { setlistId, setlistName, trackCount } = ctx.body!
 
         if (!initAdmin()) {
+            const t = await getT()
             return NextResponse.json(
-                { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
+                { error: t("api-setlists.serverNotReady"), code: "FIREBASE_NOT_INITIALIZED" },
                 { status: 500 },
             )
         }

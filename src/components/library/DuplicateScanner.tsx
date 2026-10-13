@@ -16,6 +16,7 @@ import { findDuplicateGroups, DuplicateGroup } from "@/lib/duplicate-scanner"
 import { apiFetch } from "@/lib/api-client"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { useT } from "@/i18n/client"
 
 interface DuplicateScannerProps {
   files: DriveFile[]
@@ -23,6 +24,7 @@ interface DuplicateScannerProps {
 }
 
 export function DuplicateScanner({ files, onArchiveComplete }: DuplicateScannerProps) {
+  const t = useT()
   const [open, setOpen] = useState(false)
   const [groups, setGroups] = useState<DuplicateGroup[]>([])
   const [scanned, setScanned] = useState(false)
@@ -68,7 +70,7 @@ export function DuplicateScanner({ files, onArchiveComplete }: DuplicateScannerP
     setArchiving(false)
 
     if (archived > 0) {
-      toast.success(`Archived ${archived} duplicate${archived !== 1 ? "s" : ""}`)
+      toast.success(t("libraryHealth.dup.archivedToast", { count: archived }))
       onArchiveComplete()
       setOpen(false)
       setScanned(false)
@@ -76,7 +78,7 @@ export function DuplicateScanner({ files, onArchiveComplete }: DuplicateScannerP
       setSelected(new Set())
     }
     if (failed > 0) {
-      toast.error(`Failed to archive ${failed} file${failed !== 1 ? "s" : ""}`)
+      toast.error(t("libraryHealth.archiveFailed", { count: failed }))
     }
   }
 
@@ -101,15 +103,15 @@ export function DuplicateScanner({ files, onArchiveComplete }: DuplicateScannerP
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-9 w-9" title="Scan for duplicates">
+        <Button variant="ghost" size="icon" className="h-9 w-9" title={t("libraryHealth.dup.trigger")}>
           <ScanSearch className="h-4 w-4" />
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-lg max-h-[80dvh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Duplicate Scanner</DialogTitle>
+          <DialogTitle>{t("libraryHealth.dup.title")}</DialogTitle>
           <DialogDescription>
-            Find charts with similar names that may be duplicates.
+            {t("libraryHealth.dup.description")}
           </DialogDescription>
         </DialogHeader>
 
@@ -117,28 +119,28 @@ export function DuplicateScanner({ files, onArchiveComplete }: DuplicateScannerP
           <div className="flex flex-col items-center gap-4 py-8">
             <ScanSearch className="h-12 w-12 text-muted-foreground" />
             <p className="text-sm text-muted-foreground text-center">
-              Scan {files.length} charts for potential duplicates using name similarity.
+              {t("libraryHealth.dup.scanPrompt", { count: files.length })}
             </p>
             <Button onClick={handleScan} className="min-h-11">
-              Scan Library
+              {t("libraryHealth.dup.scanButton")}
             </Button>
           </div>
         ) : groups.length === 0 ? (
           <div className="flex flex-col items-center gap-3 py-8">
-            <p className="text-sm text-muted-foreground">No duplicates found.</p>
-            <p className="text-xs text-muted-foreground">Your library looks clean!</p>
+            <p className="text-sm text-muted-foreground">{t("libraryHealth.dup.noneFound")}</p>
+            <p className="text-xs text-muted-foreground">{t("libraryHealth.dup.clean")}</p>
           </div>
         ) : (
           <>
-            <div className="flex-1 overflow-y-auto space-y-4 pr-1">
+            <div className="flex-1 overflow-y-auto space-y-4 pe-1">
               {groups.map((group, gi) => (
                 <div key={gi} className="border border-border rounded-xl p-3 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-medium text-muted-foreground">
-                      Group {gi + 1} — {Math.round(group.similarity * 100)}% similar
+                      {t("libraryHealth.dup.groupHeading", { number: gi + 1, percent: Math.round(group.similarity * 100) })}
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      {group.items.length} charts
+                      {t("libraryHealth.dup.groupSize", { count: group.items.length })}
                     </span>
                   </div>
                   {group.items.map((item, ii) => (
@@ -175,7 +177,7 @@ export function DuplicateScanner({ files, onArchiveComplete }: DuplicateScannerP
 
             <div className="flex items-center justify-between pt-3 border-t border-border">
               <span className="text-xs text-muted-foreground">
-                {selected.size} selected for archival
+                {t("libraryHealth.selectedForArchival", { count: selected.size })}
               </span>
               <Button
                 variant="destructive"
@@ -188,7 +190,7 @@ export function DuplicateScanner({ files, onArchiveComplete }: DuplicateScannerP
                 ) : (
                   <Archive className="h-4 w-4" />
                 )}
-                Archive Selected
+                {t("libraryHealth.archiveSelected")}
               </Button>
             </div>
           </>

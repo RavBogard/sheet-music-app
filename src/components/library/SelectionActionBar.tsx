@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { DriveFile } from "@/types/models"
 import { toast } from "sonner"
+import { useT } from "@/i18n/client"
 
 interface SelectionActionBarProps {
     selectMode: boolean
@@ -25,13 +26,14 @@ export function SelectionActionBar({
     onDismiss,
     onAddToSetlist,
 }: SelectionActionBarProps) {
+    const t = useT()
     if (!selectMode || selectedIds.size === 0) return null
 
     return (
         <div className="border-t border-border bg-brand/10 backdrop-blur-sm px-4 py-3">
             <div className="max-w-2xl mx-auto flex items-center justify-between">
                 <span className="text-sm font-medium">
-                    {selectedIds.size} file{selectedIds.size !== 1 ? 's' : ''} selected
+                    {t("library.selection.selectedCount", { count: selectedIds.size })}
                 </span>
                 <div className="flex items-center gap-2">
                     <Button
@@ -39,14 +41,14 @@ export function SelectionActionBar({
                         variant="ghost"
                         onClick={onSelectAll}
                     >
-                        Select All
+                        {t("library.selection.selectAll")}
                     </Button>
                     <Button
                         size="sm"
                         variant="ghost"
                         onClick={onClear}
                     >
-                        Clear
+                        {t("library.selection.clear")}
                     </Button>
                     <Button
                         size="sm"
@@ -55,11 +57,11 @@ export function SelectionActionBar({
                                 .filter(i => selectedIds.has(i.id))
                                 .map(i => getCleanName(i.name))
                             navigator.clipboard.writeText(names.join('\n')).then(() => {
-                                toast.success(`Copied ${names.length} file names`)
+                                toast.success(t("library.selection.copiedNames", { count: names.length }))
                             })
                         }}
                     >
-                        Copy Names
+                        {t("library.selection.copyNames")}
                     </Button>
                     {onAddToSetlist && (
                         <Button
@@ -71,7 +73,7 @@ export function SelectionActionBar({
                                 onAddToSetlist(selectedItems)
                             }}
                         >
-                            Add {selectedIds.size} to Setlist
+                            {t("library.selection.addToSetlist", { count: selectedIds.size })}
                         </Button>
                     )}
                 </div>

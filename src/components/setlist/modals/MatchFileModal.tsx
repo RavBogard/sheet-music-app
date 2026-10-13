@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog"
 import { useLibraryStore } from "@/lib/library-store"
 import { useLibrary } from "@/hooks/use-library"
+import { useT } from "@/i18n/client"
 
 interface MatchFileModalProps {
     isOpen: boolean
@@ -30,6 +31,7 @@ export function MatchFileModal({
     onMatch,
     trackTitle
 }: MatchFileModalProps) {
+    const t = useT()
     const {
         allFiles,
         displayedFiles,
@@ -63,7 +65,7 @@ export function MatchFileModal({
         if (!trackTitle || !initialized || allFiles.length === 0) return []
 
         const query = trackTitle.toLowerCase().replace(/[^a-z0-9]/g, ' ')
-        const terms = query.split(/\s+/).filter(t => t.length > 2)
+        const terms = query.split(/\s+/).filter(term => term.length > 2)
         if (terms.length === 0) return []
 
         return allFiles
@@ -105,7 +107,7 @@ export function MatchFileModal({
             <DialogContent className="bg-card border-border text-foreground max-w-2xl h-[80vh] flex flex-col p-6">
                 <DialogHeader className="shrink-0">
                     <DialogTitle className="text-xl font-bold">
-                        {trackTitle ? `Link chart for "${trackTitle}"` : 'Link to Music File'}
+                        {trackTitle ? t("setlistModals.linkChartFor", { title: trackTitle }) : t("setlistModals.linkToMusicFile")}
                     </DialogTitle>
                 </DialogHeader>
 
@@ -115,7 +117,7 @@ export function MatchFileModal({
                         <div className="mb-4 shrink-0">
                             <div className="flex items-center gap-1.5 mb-2">
                                 <Sparkles className="h-3.5 w-3.5 text-primary" />
-                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Suggested matches</p>
+                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("setlistModals.suggestedMatches")}</p>
                             </div>
                             <div className="space-y-1.5">
                                 {suggestions.map(file => {
@@ -126,7 +128,7 @@ export function MatchFileModal({
                                             key={file.id}
                                             variant="ghost"
                                             onClick={() => handleSelect(file.id)}
-                                            className="w-full h-auto flex items-center gap-3 p-3 rounded-xl border border-primary/20 bg-primary/5 hover:bg-primary/10 text-left group active:scale-100 whitespace-normal"
+                                            className="w-full h-auto flex items-center gap-3 p-3 rounded-xl border border-primary/20 bg-primary/5 hover:bg-primary/10 text-start group active:scale-100 whitespace-normal"
                                         >
                                             <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
                                                 <Icon className="h-4 w-4 text-primary" />
@@ -150,7 +152,7 @@ export function MatchFileModal({
                     <Input
                         value={searchQuery}
                         onChange={handleSearchChange}
-                        placeholder={trackTitle ? `Search or browse for "${trackTitle}"...` : "Search files..."}
+                        placeholder={trackTitle ? t("setlistModals.searchOrBrowseFor", { title: trackTitle }) : t("setlistModals.searchFilesPlaceholder")}
                         className="mb-4 shrink-0 bg-muted border-border"
                         autoFocus
                     />
@@ -163,7 +165,7 @@ export function MatchFileModal({
                                     variant="ghost"
                                     onClick={() => handleSelect(file.id)}
                                     className={cn(
-                                        "w-full h-auto text-left p-3 rounded-lg flex items-center gap-3 active:scale-100 whitespace-normal",
+                                        "w-full h-auto text-start p-3 rounded-lg flex items-center gap-3 active:scale-100 whitespace-normal",
                                         "bg-muted border border-border hover:bg-muted text-foreground"
                                     )}
                                 >

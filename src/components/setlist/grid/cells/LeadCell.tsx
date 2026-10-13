@@ -2,6 +2,8 @@
 
 import { useMemo } from 'react'
 
+import { useT } from '@/i18n/client'
+
 import {
     DropdownCell,
     type DropdownCellProps,
@@ -24,29 +26,30 @@ export function LeadCell({
     libraryLeads = [],
     ...rest
 }: LeadCellProps) {
+    const t = useT()
     const options = useMemo<DropdownOption[]>(() => {
         const seen = new Set<string>()
         const out: DropdownOption[] = []
         for (const m of setlistLeads) {
             if (!m || seen.has(m)) continue
             seen.add(m)
-            out.push({ value: m, label: m, group: 'In this setlist' })
+            out.push({ value: m, label: m, group: t('setlistGrid.leadGroupThisSetlist') })
         }
         for (const m of libraryLeads) {
             if (!m || seen.has(m)) continue
             seen.add(m)
-            out.push({ value: m, label: m, group: 'Library' })
+            out.push({ value: m, label: m, group: t('setlistGrid.leadGroupLibrary') })
         }
         return out
-    }, [setlistLeads, libraryLeads])
+    }, [setlistLeads, libraryLeads, t])
 
     return (
         <DropdownCell
             {...rest}
             options={options}
-            placeholder="Pick lead"
+            placeholder={t('setlistGrid.pickLeadPlaceholder')}
             allowFreeText
-            ariaLabel={rest.ariaLabel ?? 'Track lead musician'}
+            ariaLabel={rest.ariaLabel ?? t('setlistGrid.trackLeadAria')}
         />
     )
 }

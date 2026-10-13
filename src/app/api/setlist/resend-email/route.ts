@@ -9,6 +9,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { getFormat, getT } from '@/i18n/server'
 import { withAuth } from '@/lib/api-auth'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { initAdmin, getFirestore } from '@/lib/firebase-admin'
@@ -36,8 +37,9 @@ export async function POST(request: NextRequest) {
         // Validate request body
         const parseResult = bodySchema.safeParse(await request.json())
         if (!parseResult.success) {
+            const t = await getT()
             return NextResponse.json(
-                { error: 'Invalid request: setlistId is required' },
+                { error: t("api-setlist.invalidRequestSetlistId") },
                 { status: 400 }
             )
         }
@@ -52,7 +54,8 @@ export async function POST(request: NextRequest) {
         const setlistDoc = await setlistRef.get()
 
         if (!setlistDoc.exists) {
-            return NextResponse.json({ error: 'Setlist not found' }, { status: 404 })
+            const t = await getT()
+            return NextResponse.json({ error: t("api-setlist.setlistNotFound") }, { status: 404 })
         }
 
         const setlist = setlistDoc.data()!
@@ -60,8 +63,9 @@ export async function POST(request: NextRequest) {
         // Authorization: owner, band leader, or admin
         const isOwner = setlist.ownerId === auth.uid
         if (!isOwner && !auth.isBandLeader) {
+            const t = await getT()
             return NextResponse.json(
-                { error: 'Unauthorized — must be owner, band leader, or admin' },
+                { error: t("api-setlist.ownerLeaderOrAdminRequired") },
                 { status: 403 }
             )
         }
@@ -111,8 +115,9 @@ export async function POST(request: NextRequest) {
         }
 
         if (emailRecipients.length === 0) {
+            const t = await getT()
             return NextResponse.json(
-                { error: 'No email recipients found for this setlist' },
+                { error: t("api-setlist.noEmailRecipients") },
                 { status: 400 }
             )
         }
@@ -120,7 +125,7 @@ export async function POST(request: NextRequest) {
         // Get setlist metadata for the email
         const setlistName = setlist.name || 'Untitled Setlist'
         const eventDate = setlist.eventDate?.toDate?.() || setlist.date?.toDate?.() || new Date()
-        const eventDateStr = eventDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+        const eventDateStr = (await getFormat(rowOrg(setlist.orgId))).date(eventDate, { month: 'long', day: 'numeric', year: 'numeric' })
         // v60-04-03: hydration-aware read via shared helper. Cast preserves
         // narrow shape for the songNames builder one line below. Embedded
         // setlist.tracks[] is stale post-hydration.
@@ -162,8 +167,9 @@ export async function POST(request: NextRequest) {
         })
     } catch (err) {
         logger.error('[ResendEmail] Error:', err)
+        const t = await getT()
         return NextResponse.json(
-            { error: 'Failed to resend emails' },
+            { error: t("api-setlist.resendFailed") },
             { status: 500 }
         )
     }

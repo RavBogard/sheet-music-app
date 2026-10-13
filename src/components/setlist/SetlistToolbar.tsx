@@ -4,6 +4,7 @@ import { List, Calendar, Search, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useState } from "react"
+import { useT } from "@/i18n/client"
 
 interface SetlistToolbarProps {
     /** @deprecated No longer used — kept for backward compat */
@@ -26,13 +27,14 @@ export function SetlistToolbar({
     searchQuery, onSearchChange,
     rabbiFilter, onRabbiFilterChange, availableRabbis,
 }: SetlistToolbarProps) {
+    const t = useT()
     const [searchOpen, setSearchOpen] = useState(!!searchQuery)
 
     return (
         <div className="px-3 pt-4 md:px-6 md:pt-6 shrink-0 space-y-3">
             <div className="flex items-center justify-between flex-wrap gap-2">
                 <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                    All Setlists
+                    {t("setlist.allSetlists")}
                 </h2>
 
                 <div className="flex items-center gap-2">
@@ -41,21 +43,21 @@ export function SetlistToolbar({
                         size="icon"
                         onClick={() => { setSearchOpen(!searchOpen); if (searchOpen) onSearchChange("") }}
                         className={`h-11 w-11 ${searchOpen ? "text-brand" : "text-muted-foreground"}`}
-                        aria-label={searchOpen ? "Close search" : "Search setlists"}
-                        title={searchOpen ? "Close search" : "Search"}
+                        aria-label={searchOpen ? t("setlist.closeSearch") : t("setlist.searchSetlists")}
+                        title={searchOpen ? t("setlist.closeSearch") : t("setlist.search")}
                     >
                         {searchOpen ? <X className="h-4 w-4" /> : <Search className="h-4 w-4" />}
                     </Button>
 
-                    <div role="group" aria-label="Setlist view" className="flex bg-card p-1 rounded-xl w-fit">
+                    <div role="group" aria-label={t("setlist.viewGroupLabel")} className="flex bg-card p-1 rounded-xl w-fit">
                         <Button
                             variant={view === 'list' ? 'secondary' : 'ghost'}
                             size="icon"
                             onClick={() => onViewChange('list')}
                             className={`h-11 w-11 transition-all ${view === 'list' ? 'bg-brand/15 text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-brand/5'}`}
-                            aria-label="List view"
+                            aria-label={t("setlist.listViewLabel")}
                             aria-pressed={view === 'list'}
-                            title="List View"
+                            title={t("setlist.listViewTitle")}
                         >
                             <List className="h-4 w-4" />
                         </Button>
@@ -64,9 +66,9 @@ export function SetlistToolbar({
                             size="icon"
                             onClick={() => onViewChange('calendar')}
                             className={`h-11 w-11 transition-all ${view === 'calendar' ? 'bg-brand/15 text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-brand/5'}`}
-                            aria-label="Calendar view"
+                            aria-label={t("setlist.calendarViewLabel")}
                             aria-pressed={view === 'calendar'}
-                            title="Calendar View"
+                            title={t("setlist.calendarViewTitle")}
                         >
                             <Calendar className="h-4 w-4" />
                         </Button>
@@ -75,9 +77,9 @@ export function SetlistToolbar({
                             size="icon"
                             onClick={() => onViewChange('matrix')}
                             className={`h-11 w-11 transition-all ${view === 'matrix' ? 'bg-brand/15 text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-brand/5'}`}
-                            aria-label="Matrix view"
+                            aria-label={t("setlist.matrixViewLabel")}
                             aria-pressed={view === 'matrix'}
-                            title="Matrix View"
+                            title={t("setlist.matrixViewTitle")}
                         >
                             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
@@ -93,8 +95,8 @@ export function SetlistToolbar({
                     <Input
                         value={searchQuery}
                         onChange={(e) => onSearchChange(e.target.value)}
-                        placeholder="Search setlists..."
-                        aria-label="Search setlists"
+                        placeholder={t("setlist.searchPlaceholder")}
+                        aria-label={t("setlist.searchSetlists")}
                         className="h-9 text-sm"
                         autoFocus
                     />
@@ -108,7 +110,7 @@ export function SetlistToolbar({
                         className={`px-2.5 py-1 rounded-full text-xs transition-colors ${!rabbiFilter ? "bg-brand text-white" : "bg-muted text-muted-foreground hover:text-foreground"
                             }`}
                     >
-                        All
+                        {t("setlist.rabbiFilterAll")}
                     </button>
                     {availableRabbis.map((r) => (
                         <button
@@ -117,7 +119,7 @@ export function SetlistToolbar({
                             className={`px-2.5 py-1 rounded-full text-xs transition-colors ${rabbiFilter === r ? "bg-brand text-white" : "bg-muted text-muted-foreground hover:text-foreground"
                                 }`}
                         >
-                            Rabbi {r}
+                            {t("setlist.rabbiFilterChip", { name: r })}
                         </button>
                     ))}
                 </div>

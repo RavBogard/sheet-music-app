@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { getT } from "@/i18n/server"
 import { createApiHandler } from "@/lib/api-wrapper"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { checkRateLimit } from "@/lib/rate-limit"
@@ -36,7 +37,8 @@ export const POST = createApiHandler(
         const { url, csvText } = ctx.body!
 
         if (!url && !csvText) {
-            return NextResponse.json({ error: "Missing 'url' or 'csvText' in request body." }, { status: 400 })
+            const t = await getT()
+            return NextResponse.json({ error: t("api-setlists.missingUrlOrCsv") }, { status: 400 })
         }
 
         let rawCsv = csvText
@@ -65,8 +67,9 @@ export const POST = createApiHandler(
                 }
                 rawCsv = await res.text()
             } catch (err: unknown) {
-                const msg = err instanceof Error ? err.message : "Unknown error fetching sheet."
-                return NextResponse.json({ error: `Could not retrieve spreadsheet data. Make sure the Google Sheet is set to "Anyone with the link can view". (${msg})` }, { status: 400 })
+                const t = await getT()
+                const msg = err instanceof Error ? err.message : t("api-setlists.sheetFetchUnknownError")
+                return NextResponse.json({ error: t("api-setlists.sheetFetchFailed", { detail: msg }) }, { status: 400 })
             }
         }
 
@@ -74,10 +77,12 @@ export const POST = createApiHandler(
         logger.info("[Setlist Importer] Papa Parsing CSV...")
         const parsed = Papa.parse(rawCsv!, { header: true, skipEmptyLines: true })
         if (parsed.data.length === 0) {
-            return NextResponse.json({ error: "Spreadsheet appears to be empty." }, { status: 400 })
+            const t = await getT()
+            return NextResponse.json({ error: t("api-setlists.spreadsheetEmpty") }, { status: 400 })
         }
         if (parsed.data.length > 200) {
-            return NextResponse.json({ error: "Spreadsheet is too large (max 200 rows)." }, { status: 400 })
+            const t = await getT()
+            return NextResponse.json({ error: t("api-setlists.spreadsheetTooLarge", { maxRows: 200 }) }, { status: 400 })
         }
 
         // Convert the parsed data back to a clean JSON string context for OpenAI
@@ -85,7 +90,8 @@ export const POST = createApiHandler(
 
         const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY
         if (!apiKey) {
-            return NextResponse.json({ error: "Gemini API Key is not configured on the server." }, { status: 500 })
+            const t = await getT()
+            return NextResponse.json({ error: t("api-setlists.geminiKeyMissing") }, { status: 500 })
         }
 
         const genAI = new GoogleGenerativeAI(apiKey)
@@ -140,8 +146,9 @@ ${contextStr}`
 
         // 4. Run extracted items against the library using Levenshtein distance
         if (!initAdmin()) {
+            const t = await getT()
             return NextResponse.json(
-                { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
+                { error: t("api-setlists.serverNotReady"), code: "FIREBASE_NOT_INITIALIZED" },
                 { status: 500 },
             )
         }

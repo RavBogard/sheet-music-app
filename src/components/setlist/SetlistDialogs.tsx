@@ -11,6 +11,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { useT } from "@/i18n/client"
 
 /* ─── Delete Confirmation ─── */
 
@@ -22,18 +23,19 @@ interface DeleteDialogProps {
 }
 
 export function DeleteSetlistDialog({ open, onOpenChange, setlistName, onConfirm }: DeleteDialogProps) {
+    const t = useT()
     return (
         <AlertDialog open={open} onOpenChange={onOpenChange}>
             <AlertDialogContent>
                 <AlertDialogHeader>
-                    <AlertDialogTitle>Delete Setlist?</AlertDialogTitle>
+                    <AlertDialogTitle>{t("setlist.deleteDialogTitle")}</AlertDialogTitle>
                     <AlertDialogDescription>
-                        Are you sure you want to delete &quot;{setlistName}&quot;? This action cannot be undone.
+                        {t("setlist.deleteDialogQuestion", { name: setlistName })}{" "}{t("setlist.cannotBeUndone")}
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={onConfirm} className="bg-red-600 hover:bg-red-700">Delete</AlertDialogAction>
+                    <AlertDialogCancel>{t("setlist.cancel")}</AlertDialogCancel>
+                    <AlertDialogAction onClick={onConfirm} className="bg-red-600 hover:bg-red-700">{t("setlist.delete")}</AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
@@ -50,18 +52,19 @@ interface DuplicateDialogProps {
 }
 
 export function DuplicateSetlistDialog({ open, onOpenChange, setlistName, onConfirm }: DuplicateDialogProps) {
+    const t = useT()
     return (
         <AlertDialog open={open} onOpenChange={onOpenChange}>
             <AlertDialogContent>
                 <AlertDialogHeader>
-                    <AlertDialogTitle>Duplicate Setlist</AlertDialogTitle>
+                    <AlertDialogTitle>{t("setlist.duplicateDialogTitle")}</AlertDialogTitle>
                     <AlertDialogDescription>
-                        Create a personal copy of &quot;{setlistName}&quot;?
+                        {t("setlist.duplicateDialogQuestion", { name: setlistName })}
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={onConfirm}>Duplicate</AlertDialogAction>
+                    <AlertDialogCancel>{t("setlist.cancel")}</AlertDialogCancel>
+                    <AlertDialogAction onClick={onConfirm}>{t("setlist.duplicate")}</AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
@@ -81,6 +84,7 @@ interface TransferDialogProps {
 }
 
 export function TransferSetlistDialog({ open, onClose, setlistName, email, onEmailChange, onConfirm, transferring }: TransferDialogProps) {
+    const t = useT()
     return (
         <AlertDialog
             open={open}
@@ -90,22 +94,21 @@ export function TransferSetlistDialog({ open, onClose, setlistName, email, onEma
         >
             <AlertDialogContent>
                 <AlertDialogHeader>
-                    <AlertDialogTitle>Transfer Ownership</AlertDialogTitle>
+                    <AlertDialogTitle>{t("setlist.transferDialogTitle")}</AlertDialogTitle>
                     <AlertDialogDescription>
-                        Transferring <strong>{setlistName}</strong> to another user.
-                        You will lose access unless they share it back with you.
+                        {t("setlist.transferDialogBody", { name: setlistName })}{" "}{t("setlist.transferDialogLoseAccess")}
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <input
                     type="email"
-                    placeholder="New Owner's Email"
+                    placeholder={t("setlist.transferEmailPlaceholder")}
                     className="w-full bg-background border border-border p-3 rounded-lg text-foreground"
                     value={email}
                     onChange={(e) => onEmailChange(e.target.value)}
                     disabled={transferring}
                 />
                 <AlertDialogFooter>
-                    <AlertDialogCancel disabled={transferring}>Cancel</AlertDialogCancel>
+                    <AlertDialogCancel disabled={transferring}>{t("setlist.cancel")}</AlertDialogCancel>
                     <AlertDialogAction
                         onClick={(e) => {
                             // Prevent the primitive's auto-close so we can stay open
@@ -115,8 +118,8 @@ export function TransferSetlistDialog({ open, onClose, setlistName, email, onEma
                         }}
                         disabled={!email || transferring}
                     >
-                        {transferring && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                        {transferring ? "Transferring..." : "Transfer"}
+                        {transferring && <Loader2 className="h-4 w-4 animate-spin me-2" />}
+                        {transferring ? t("setlist.transferring") : t("setlist.transfer")}
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>

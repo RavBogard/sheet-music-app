@@ -1,0 +1,150 @@
+{
+    "page": {
+        "restrictedTitle": "Restricted Access",
+        "restrictedBody": "The full song library is available only to signed-in users.",
+        "pendingTitle": "Account Pending",
+        "pendingBody": "Your account is being verified. You can view public setlists while you wait.",
+        "uid": "UID: {uid}..."
+    },
+    "header": {
+        "back": "Back to library",
+        "title": "Song Charts",
+        "exitSelectMode": "Exit select mode",
+        "selectFiles": "Select files",
+        "uploadDone": "Library updated with your upload"
+    },
+    "search": {
+        "audioPlaceholder": "Search audio files...",
+        "audioLabel": "Search audio files",
+        "chartsPlaceholder": "Search by name, key, topic...",
+        "chartsLabel": "Search song charts by name, key, or topic"
+    },
+    "usage": {
+        "partial": "Last-used data didn't fully load, so the recency filter is unavailable.",
+        "retry": "Retry"
+    },
+    "sections": {
+        "groupLabel": "Library section",
+        "tabWithCount": "{label} ({n})",
+        "audioWithCount": "Audio ({n})"
+    },
+    "shared": {
+        "chipGroupLabel": "Shared collections",
+        "chipGroupHeading": "Shared collections:",
+        "chipAria": "Show {label} from {owner}",
+        "fromOwner": "From {owner}",
+        "readOnly": "Shared from {owner}. You can use it but not change it.",
+        "loadFailed": "Could not load shared charts."
+    },
+    "allSites": {
+        "label": "Show charts from all sites",
+        "off": "All sites",
+        "on": "All sites · on"
+    },
+    "list": {
+        "errorTitle": "Library Error",
+        "errorFallback": "Failed to load files",
+        "noMatchesTitle": "No matches found",
+        "noMatchesBody": "We couldn't find anything matching \"{query}\"",
+        "noAudioTitle": "No audio files yet",
+        "noAudioBody": "Audio files (.mp3, .m4a, etc.) will appear here when added to Drive.",
+        "noChartsTitle": "No charts in the library yet",
+        "noChartsBody": "Charts will appear here once added to the library.",
+        "chartCount_one": "{count} chart",
+        "chartCount_other": "{count} charts"
+    },
+    "filters": {
+        "key": "Key",
+        "keyWithCount": "Key ({n})",
+        "topic": "Topic",
+        "topicWithCount": "Topic ({n})",
+        "recency": "Recency",
+        "recent": "Recent",
+        "stale": "60+ days",
+        "never": "Never played",
+        "clear": "Clear",
+        "optionAll": "All",
+        "optionRecent": "Last 30 days",
+        "optionStale": "60+ days ago",
+        "optionNever": "Never played"
+    },
+    "row": {
+        "openFolderLabel": "Open folder {name}",
+        "playLabel": "Play {name}",
+        "pauseLabel": "Pause {name}",
+        "viewLabel": "View {name}",
+        "audio": "Audio",
+        "bpm": "{bpm} bpm",
+        "cachedTitle": "This file is downloaded and available offline",
+        "cached": "Cached",
+        "lastUsedTitle": "Last used in: {date}",
+        "usageBadge": "Last: {date} · {uses}×",
+        "usageBadgeNoDate": "{uses}×",
+        "digitizing": "Digitizing...",
+        "addToSetlist": "Add to Setlist...",
+        "openFolder": "Open Folder",
+        "play": "Play",
+        "selectView": "Select / View",
+        "digitize": "Digitize (AI)",
+        "rename": "Rename",
+        "archive": "Archive Chart"
+    },
+    "selection": {
+        "selectedCount_one": "{count} file selected",
+        "selectedCount_other": "{count} files selected",
+        "selectAll": "Select All",
+        "clear": "Clear",
+        "copyNames": "Copy Names",
+        "copiedNames_one": "Copied {count} file names",
+        "copiedNames_other": "Copied {count} file names",
+        "addToSetlist_one": "Add {count} to Setlist",
+        "addToSetlist_other": "Add {count} to Setlist"
+    },
+    "actions": {
+        "digitizingToast": "Digitizing \"{name}\"... This may take ~20s",
+        "digitizeTimeout": "The AI took too long. The file might be too complex or large.",
+        "digitizationFailed": "Digitization failed",
+        "serverError": "Server Error ({status}): {detail}...",
+        "savingMusicXml": "Saving MusicXML...",
+        "saveXmlFailed": "Failed to save XML",
+        "savedMusicXml": "Saved! The MusicXML file is now in the library.",
+        "digitizeFailed": "Digitize failed",
+        "archiveConfirm": "Are you sure you want to archive \"{name}\"? It will be hidden from the main library.",
+        "archiving": "Archiving chart...",
+        "archived": "Chart archived successfully",
+        "archiveFailed": "Failed to archive chart",
+        "renamePrompt": "Rename chart:",
+        "renaming": "Renaming...",
+        "renamed": "Chart renamed",
+        "renameFailed": "Failed to rename chart"
+    },
+    "addSheet": {
+        "title": "Add to Setlist",
+        "titleMany_one": "Add {count} songs to Setlist",
+        "titleMany_other": "Add {count} songs to Setlist",
+        "description": "Select a setlist to add the selected songs to",
+        "searchPlaceholder": "Search setlists...",
+        "searchLabel": "Search setlists",
+        "createLabel": "Create new setlist",
+        "newNamePlaceholder": "New Setlist Name (e.g. Friday Night)",
+        "newNameLabel": "New setlist name",
+        "create": "Create",
+        "noMatch": "No setlists match “{query}”",
+        "noEditable": "No editable setlists found",
+        "songCount_one": "{count} songs",
+        "songCount_other": "{count} songs"
+    },
+    "overlay": {
+        "close": "Close search overlay",
+        "replacePlaceholder": "Search for replacement song...",
+        "replaceLabel": "Search for replacement song",
+        "addPlaceholder": "Search songs to add...",
+        "addLabel": "Search songs to add",
+        "collectionGroup": "Library collection",
+        "noResults": "No songs found for \"{query}\"",
+        "empty": "No songs in your library yet",
+        "keyLabel": "Key: {key}",
+        "added": "Added",
+        "addToSetlist": "Add to Setlist..."
+    }
+}

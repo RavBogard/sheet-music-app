@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { getT } from "@/i18n/server"
 import crypto from "crypto"
 
 import { createApiHandler } from "@/lib/api-wrapper"
@@ -50,15 +51,17 @@ export const POST = createApiHandler(async (ctx) => {
     // Recordings are band-internal — only band-leaders and admins may write
     // (mirrors the recordings/{id} Firestore rule shipped in v70-02).
     if (!ctx.auth.isBandLeader && !ctx.auth.isAdmin) {
+        const t = await getT()
         return NextResponse.json(
-            { error: "Only band leaders and admins can upload recordings." },
+            { error: t("api-recordings.leadersOnly") },
             { status: 403 },
         )
     }
 
     if (!initAdmin()) {
+        const t = await getT()
         return NextResponse.json(
-            { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
+            { error: t("api-recordings.serverNotReady"), code: "FIREBASE_NOT_INITIALIZED" },
             { status: 500 },
         )
     }
@@ -74,23 +77,27 @@ export const POST = createApiHandler(async (ctx) => {
     const songId = (formData.get('songId') as string | null)?.trim()
 
     if (!file) {
-        return NextResponse.json({ error: "No file provided" }, { status: 400 })
+        const t = await getT()
+        return NextResponse.json({ error: t("api-recordings.noFileProvided") }, { status: 400 })
     }
     if (!songId) {
-        return NextResponse.json({ error: "songId is required" }, { status: 400 })
+        const t = await getT()
+        return NextResponse.json({ error: t("api-recordings.songIdRequired") }, { status: 400 })
     }
 
     const mimeType = file.type || 'application/octet-stream'
     const ext = extForAudio(mimeType, file.name)
     if (!ext) {
+        const t = await getT()
         return NextResponse.json(
-            { error: "Only audio files are supported (mp3, m4a, wav, ogg, webm, aac)" },
+            { error: t("api-recordings.audioOnly") },
             { status: 400 },
         )
     }
     if (file.size > MAX_FILE_SIZE) {
+        const t = await getT()
         return NextResponse.json(
-            { error: `File too large. Maximum size is ${MAX_FILE_SIZE / 1024 / 1024}MB` },
+            { error: t("api-recordings.fileTooLarge", { maxMb: MAX_FILE_SIZE / 1024 / 1024 }) },
             { status: 400 },
         )
     }

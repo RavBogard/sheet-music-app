@@ -38,7 +38,7 @@ export function ChartPickerItemContent({
                 </span>
             )}
             {key && (
-                <span className="ml-auto shrink-0 font-mono text-[10px] text-muted-foreground">
+                <span className="ms-auto shrink-0 font-mono text-[10px] text-muted-foreground">
                     {key}
                 </span>
             )}

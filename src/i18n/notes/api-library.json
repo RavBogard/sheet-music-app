@@ -1,0 +1,65 @@
+{
+    "serverNotReady": {
+        "where": "Library (archive, rename, upload): Error toast/message when the server's database connection is not initialised (rare, transient).",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "fileNotFound": {
+        "where": "Library: error when archiving/restoring or renaming a chart that no longer exists",
+        "who": "leaders",
+        "maxLength": 40,
+        "context": "'File' = the chart (sheet-music file) in the library"
+    },
+    "crossTenantChordCacheWrite": {
+        "where": "Chart viewer: error when saving detected chords/key for a chart that belongs to another congregation's library (normally never seen)",
+        "who": "musicians",
+        "maxLength": 60,
+        "context": "Lower-case is intentional (technical message). 'chord-cache' = saved chord positions/key detected on a chart."
+    },
+    "missingFileId": {
+        "where": "Chart viewer: error when a chord-cache request named no chart",
+        "who": "musicians",
+        "maxLength": 40,
+        "context": "'fileId' is a technical field name; may stay as-is"
+    },
+    "chordsVerifiedNeedsMusician": {
+        "where": "Chart viewer: error when someone who is not signed in as a musician tries to mark a chart's chords as verified",
+        "who": "musicians",
+        "maxLength": 60,
+        "context": "'chordsVerified' is a technical field name ('chords verified' flag); may stay as-is"
+    },
+    "displayNameEmpty": {
+        "where": "Library: error when renaming a chart to a blank title",
+        "who": "leaders",
+        "maxLength": 60,
+        "context": "'displayName' is the chart title field; translators may say 'The title cannot be empty.'"
+    },
+    "fileIdsRequired": {
+        "where": "Library page: error when the song-usage badge request named no charts (developer error, rarely shown)",
+        "who": "leaders",
+        "maxLength": 40,
+        "context": "'fileIds' is a technical parameter name"
+    },
+    "tooManyFileIds": {
+        "where": "Library page: error when the song-usage badge request asked about too many charts at once (developer error, rarely shown)",
+        "who": "leaders",
+        "maxLength": 50,
+        "context": "{max} is a number (100)"
+    },
+    "uploadPermissionRequired": {
+        "where": "Library upload dialog: error when the user is not allowed to upload charts",
+        "who": "musicians",
+        "maxLength": 100
+    },
+    "noFileProvided": {
+        "where": "Library upload dialog: error when the upload contained no file",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "uploaded": {
+        "where": "Library upload dialog: success message after a chart was uploaded",
+        "who": "leaders",
+        "maxLength": 80,
+        "context": "{title} is the chart's title, shown in quotes"
+    }
+}

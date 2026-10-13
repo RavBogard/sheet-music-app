@@ -20,6 +20,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { useT } from '@/i18n/client'
 import { cn } from '@/lib/utils'
 
 /**
@@ -71,6 +72,7 @@ interface DialogState {
 }
 
 export function DeleteConfirmProvider({ children }: { children: ReactNode }) {
+    const t = useT()
     const [state, setState] = useState<DialogState>({
         open: false,
         payload: null,
@@ -109,12 +111,14 @@ export function DeleteConfirmProvider({ children }: { children: ReactNode }) {
     const payload = state.payload
     const titleText =
         payload?.kind === 'bulk'
-            ? `Delete ${payload.count} ${payload.count === 1 ? 'row' : 'rows'}?`
-            : 'Delete row?'
+            ? t('setlistGrid.deleteRowsTitle', { count: payload.count })
+            : t('setlistGrid.deleteRowTitle')
     const descriptionText =
         payload?.kind === 'row'
-            ? `Delete “${payload.title || 'row'}”? This cannot be undone.`
-            : 'This cannot be undone.'
+            ? payload.title
+                ? t('setlistGrid.deleteRowNamedDescription', { title: payload.title })
+                : t('setlistGrid.deleteRowUntitledDescription')
+            : t('setlistGrid.cannotBeUndone')
 
     return (
         <DeleteConfirmContext.Provider value={value}>
@@ -139,7 +143,7 @@ export function DeleteConfirmProvider({ children }: { children: ReactNode }) {
                             data-testid="delete-confirm-cancel"
                             onClick={() => settle(false)}
                         >
-                            Cancel
+                            {t('setlistGrid.cancel')}
                         </AlertDialogCancel>
                         <AlertDialogAction
                             data-testid="delete-confirm-action"
@@ -148,7 +152,7 @@ export function DeleteConfirmProvider({ children }: { children: ReactNode }) {
                                 'bg-red-600 hover:bg-red-700 text-white',
                             )}
                         >
-                            Delete
+                            {t('setlistGrid.delete')}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

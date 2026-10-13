@@ -9,6 +9,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog'
+import { useT } from '@/i18n/client'
 import { ChartPickerList } from './ChartPickerList'
 
 /**
@@ -51,9 +52,10 @@ export function ChartBindDialog({
     open,
     onOpenChange,
     currentSongId,
-    inputAriaLabel = 'Bind a chart',
+    inputAriaLabel,
     onBind,
 }: ChartBindDialogProps) {
+    const t = useT()
     const [filter, setFilter] = useState('')
 
     const close = () => {
@@ -79,9 +81,9 @@ export function ChartBindDialog({
                 data-testid="chart-bind-dialog"
             >
                 <DialogHeader className="px-4 pt-4 pb-2">
-                    <DialogTitle>Bind a chart</DialogTitle>
+                    <DialogTitle>{t('setlistGrid.bindChartTitle')}</DialogTitle>
                     <DialogDescription>
-                        Pick a song from your library to attach to this track.
+                        {t('setlistGrid.bindChartDescription')}
                     </DialogDescription>
                 </DialogHeader>
                 <ChartPickerList
@@ -90,8 +92,8 @@ export function ChartBindDialog({
                     onPick={handlePick}
                     onEscape={close}
                     currentSongId={currentSongId}
-                    inputAriaLabel={inputAriaLabel}
-                    placeholder="Search the library…"
+                    inputAriaLabel={inputAriaLabel ?? t('setlistGrid.bindChartTitle')}
+                    placeholder={t('setlistGrid.searchLibraryPlaceholder')}
                     inputClassName="w-full bg-transparent px-4 py-2 text-sm outline-none border-t border-b border-white/10"
                     listClassName="max-h-80 overflow-y-auto py-1"
                     itemClassName="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm aria-selected:bg-indigo-500/15 data-[current=true]:text-indigo-300"

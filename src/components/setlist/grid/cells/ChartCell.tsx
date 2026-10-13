@@ -3,6 +3,7 @@
 import { FileText } from 'lucide-react'
 import { forwardRef, type ButtonHTMLAttributes } from 'react'
 
+import { useT } from '@/i18n/client'
 import { cn } from '@/lib/utils'
 
 export interface ChartCellProps
@@ -19,12 +20,13 @@ export interface ChartCellProps
  */
 export const ChartCell = forwardRef<HTMLButtonElement, ChartCellProps>(
     function ChartCell({ hasChart, className, ...rest }, ref) {
+        const t = useT()
         return (
             <button
                 ref={ref}
                 type="button"
                 tabIndex={-1}
-                aria-label={hasChart ? 'Chart bound' : 'No chart bound'}
+                aria-label={hasChart ? t('setlistGrid.chartBound') : t('setlistGrid.noChartBound')}
                 data-testid="chart-cell"
                 {...rest}
                 className={cn(

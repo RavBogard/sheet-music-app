@@ -206,7 +206,7 @@ export function TextCell({
             aria-label={ariaLabel}
             data-testid="text-cell-button"
             className={cn(
-                'inline-flex h-10 w-full min-w-0 items-center px-1 text-left',
+                'inline-flex h-10 w-full min-w-0 items-center px-1 text-start',
                 'truncate text-sm',
                 'cursor-text rounded-sm border border-transparent',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400',

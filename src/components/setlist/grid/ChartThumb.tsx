@@ -3,12 +3,14 @@
 import { FileText, Loader2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
+import { useChartContentDir } from '@/components/i18n/ChartContent'
 import {
     Dialog,
     DialogContent,
     DialogDescription,
     DialogTitle,
 } from '@/components/ui/dialog'
+import { useT } from '@/i18n/client'
 import {
     chartPage1Loader,
     isPreviewableMime,
@@ -94,6 +96,9 @@ export interface ChartThumbProps {
 }
 
 export function ChartThumb({ fileId, title, mimeType }: ChartThumbProps) {
+    const t = useT()
+    // The thumbnail is page 1 of the chart: chart content keeps its own (ltr) direction.
+    const chartDir = useChartContentDir()
     const ref = useRef<HTMLButtonElement>(null)
     const onScreen = useOnScreen(ref)
     const state = usePage1(fileId, THUMB_WIDTH, mimeType, onScreen)
@@ -108,8 +113,9 @@ export function ChartThumb({ fileId, title, mimeType }: ChartThumbProps) {
                 type="button"
                 tabIndex={-1}
                 data-chart-thumb={fileId}
+                {...chartDir}
                 data-state={result ? result.kind : state.status}
-                aria-label={`Preview page 1 of ${title}`}
+                aria-label={t('setlistGrid.previewPage1Aria', { title })}
                 onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => {
                     e.preventDefault()
@@ -169,6 +175,8 @@ function ChartPage1Dialog({
         typeof window !== 'undefined'
             ? Math.min(900, Math.max(280, Math.min(window.innerWidth - 48, (window.innerHeight - 120) / 1.3)))
             : 600
+    const t = useT()
+    const chartDir = useChartContentDir()
     const state = usePage1(fileId, width, mimeType, true, true)
     const result = state.status === 'done' ? state.result : null
 
@@ -191,24 +199,31 @@ function ChartPage1Dialog({
                     ;(input ?? returnFocusTo.current)?.focus()
                 }}
             >
-                <div className="flex items-center gap-2 pr-8">
+                <div className="flex items-center gap-2 pe-8">
                     <DialogTitle className="truncate text-sm font-medium">{title}</DialogTitle>
-                    <DialogDescription className="sr-only">Page 1 of this chart. Close to go back to the list.</DialogDescription>
+                    <DialogDescription className="sr-only">{t('setlistGrid.previewDescription')}</DialogDescription>
                 </div>
                 <div
                     className="flex items-center justify-center overflow-auto rounded bg-white/5"
                     style={{ width, minHeight: Math.round(width * 1.29) }}
                 >
                     {result?.kind === 'image' ? (
-                        <img src={result.url} alt={`Page 1 of ${title}`} style={{ width }} className="bg-white" />
+                        <img
+                            src={result.url}
+                            alt={t('setlistGrid.previewImageAlt', { title })}
+                            style={{ width }}
+                            className="bg-white"
+                            data-chart-page1-image
+                            {...chartDir}
+                        />
                     ) : result ? (
                         <p className="p-6 text-sm text-muted-foreground" data-testid="chart-page1-none">
                             {result.reason === 'error'
-                                ? 'Couldn’t load a preview of this chart.'
-                                : 'No preview for this kind of chart.'}
+                                ? t('setlistGrid.previewLoadFailed')
+                                : t('setlistGrid.previewUnavailable')}
                         </p>
                     ) : (
-                        <Loader2 aria-label="Loading preview" className="h-5 w-5 animate-spin text-muted-foreground" />
+                        <Loader2 aria-label={t('setlistGrid.previewLoadingAria')} className="h-5 w-5 animate-spin text-muted-foreground" />
                     )}
                 </div>
             </DialogContent>

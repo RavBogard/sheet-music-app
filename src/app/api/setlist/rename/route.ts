@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { getT } from "@/i18n/server"
 import { getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
 import { createApiHandler } from "@/lib/api-wrapper"
@@ -25,13 +26,15 @@ export const POST = createApiHandler(
         const setlistRef = db.collection('setlists').doc(setlistId)
         const setlistSnap = await setlistRef.get()
         if (!setlistSnap.exists) {
-            return NextResponse.json({ error: "Setlist not found" }, { status: 404 })
+            const t = await getT()
+            return NextResponse.json({ error: t("api-setlist.setlistNotFound") }, { status: 404 })
         }
 
         const setlist = setlistSnap.data()!
         const isOwner = setlist.ownerId === ctx.auth.uid
         if (!isOwner && !ctx.auth.isBandLeader && !ctx.auth.isAdmin) {
-            return NextResponse.json({ error: "Not allowed to rename this setlist" }, { status: 403 })
+            const t = await getT()
+            return NextResponse.json({ error: t("api-setlist.renameNotAllowed") }, { status: 403 })
         }
 
         // No-op short-circuit.

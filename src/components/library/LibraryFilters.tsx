@@ -5,6 +5,7 @@ import { X, Music, Tag, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { DriveFile } from "@/types/models"
+import { useT } from "@/i18n/client"
 
 // Circle of fifths order (musically intuitive)
 const KEY_ORDER = ['C', 'G', 'D', 'A', 'E', 'B', 'F♯', 'F', 'B♭', 'E♭', 'A♭', 'D♭']
@@ -36,6 +37,7 @@ interface LibraryFiltersProps {
 }
 
 export function LibraryFilters({ allFiles, filters, onFiltersChange, usageMap }: LibraryFiltersProps) {
+    const t = useT()
     const [expandedFilter, setExpandedFilter] = useState<'key' | 'topic' | 'recency' | null>(null)
 
     // Extract available keys from all files
@@ -51,8 +53,8 @@ export function LibraryFilters({ allFiles, filters, onFiltersChange, usageMap }:
     const availableTopics = useMemo(() => {
         const topicCounts = new Map<string, number>()
         allFiles.forEach(f => {
-            f.metadata?.topics?.forEach(t => {
-                topicCounts.set(t, (topicCounts.get(t) || 0) + 1)
+            f.metadata?.topics?.forEach(topic => {
+                topicCounts.set(topic, (topicCounts.get(topic) || 0) + 1)
             })
         })
         return Array.from(topicCounts.entries())
@@ -102,7 +104,7 @@ export function LibraryFilters({ allFiles, filters, onFiltersChange, usageMap }:
                         )}
                     >
                         <Music className="w-3 h-3" />
-                        Key{filters.keys.size > 0 ? ` (${filters.keys.size})` : ''}
+                        {filters.keys.size > 0 ? t("library.filters.keyWithCount", { n: filters.keys.size }) : t("library.filters.key")}
                     </Button>
                 )}
 
@@ -120,7 +122,7 @@ export function LibraryFilters({ allFiles, filters, onFiltersChange, usageMap }:
                         )}
                     >
                         <Tag className="w-3 h-3" />
-                        Topic{filters.topics.size > 0 ? ` (${filters.topics.size})` : ''}
+                        {filters.topics.size > 0 ? t("library.filters.topicWithCount", { n: filters.topics.size }) : t("library.filters.topic")}
                     </Button>
                 )}
 
@@ -138,9 +140,9 @@ export function LibraryFilters({ allFiles, filters, onFiltersChange, usageMap }:
                         )}
                     >
                         <Clock className="w-3 h-3" />
-                        {filters.recency === 'all' ? 'Recency' :
-                         filters.recency === 'recent' ? 'Recent' :
-                         filters.recency === 'stale' ? '60+ days' : 'Never played'}
+                        {filters.recency === 'all' ? t("library.filters.recency") :
+                         filters.recency === 'recent' ? t("library.filters.recent") :
+                         filters.recency === 'stale' ? t("library.filters.stale") : t("library.filters.never")}
                     </Button>
                 )}
 
@@ -153,7 +155,7 @@ export function LibraryFilters({ allFiles, filters, onFiltersChange, usageMap }:
                         className="shrink-0 rounded-full text-xs font-medium text-red-500 hover:bg-red-500/10"
                     >
                         <X className="w-3 h-3" />
-                        Clear
+                        {t("library.filters.clear")}
                     </Button>
                 )}
             </div>
@@ -203,10 +205,10 @@ export function LibraryFilters({ allFiles, filters, onFiltersChange, usageMap }:
             {expandedFilter === 'recency' && usageMap && (
                 <div className="flex gap-2 px-1 py-2 bg-muted/30 rounded-lg border border-border/50">
                     {([
-                        { value: 'all', label: 'All' },
-                        { value: 'recent', label: 'Last 30 days' },
-                        { value: 'stale', label: '60+ days ago' },
-                        { value: 'never', label: 'Never played' },
+                        { value: 'all', label: t("library.filters.optionAll") },
+                        { value: 'recent', label: t("library.filters.optionRecent") },
+                        { value: 'stale', label: t("library.filters.optionStale") },
+                        { value: 'never', label: t("library.filters.optionNever") },
                     ] as const).map(option => (
                         <Button
                             key={option.value}

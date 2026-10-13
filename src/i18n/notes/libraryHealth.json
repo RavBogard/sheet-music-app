@@ -1,0 +1,140 @@
+{
+    "archiveFailed": {
+        "where": "Library > PDF Health Scanner and Duplicate Scanner dialogs: error toast when some files could not be archived",
+        "who": "leaders",
+        "maxLength": 50,
+        "context": "{count} is the number of files."
+    },
+    "selectedForArchival": {
+        "where": "Library > PDF Health Scanner and Duplicate Scanner dialogs: footer count of checked files",
+        "who": "leaders",
+        "maxLength": 40,
+        "context": "{count} is the number of selected files."
+    },
+    "archiveSelected": {
+        "where": "Library > PDF Health Scanner and Duplicate Scanner dialogs: destructive button that archives the checked files",
+        "who": "leaders",
+        "maxLength": 24,
+        "context": "Archive = hide from the library (reversible), not delete."
+    },
+    "pdf.trigger": {
+        "where": "Library toolbar: tooltip of the heart-pulse icon button that opens the PDF Health Scanner",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "pdf.title": {
+        "where": "Library > PDF Health Scanner dialog: dialog title",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "pdf.description": {
+        "where": "Library > PDF Health Scanner dialog: dialog description",
+        "who": "leaders",
+        "maxLength": 80
+    },
+    "pdf.scanPrompt": {
+        "where": "Library > PDF Health Scanner dialog: text before scanning",
+        "who": "leaders",
+        "maxLength": 80,
+        "context": "{count} is the number of PDF files in the library."
+    },
+    "pdf.scanButton": {
+        "where": "Library > PDF Health Scanner dialog: button that starts the scan",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "pdf.allHealthy": {
+        "where": "Library > PDF Health Scanner dialog: heading when no problems were found",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "pdf.noIssues": {
+        "where": "Library > PDF Health Scanner dialog: line under the heading when no problems were found",
+        "who": "leaders",
+        "maxLength": 60,
+        "context": "{count} is the number of files scanned."
+    },
+    "pdf.issuesSummary": {
+        "where": "Library > PDF Health Scanner dialog: summary above the list of problem files",
+        "who": "leaders",
+        "maxLength": 50,
+        "context": "{count} = problem files, {healthy} = number of healthy files."
+    },
+    "pdf.statusCorrupt": {
+        "where": "Library > PDF Health Scanner dialog: problem type for a file whose PDF is damaged",
+        "who": "leaders",
+        "maxLength": 16
+    },
+    "pdf.statusFetchError": {
+        "where": "Library > PDF Health Scanner dialog: problem type for a file that could not be downloaded",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "pdf.issueWithError": {
+        "where": "Library > PDF Health Scanner dialog: problem line under a file name",
+        "who": "leaders",
+        "maxLength": 80,
+        "context": "{status} is the translated problem type (Corrupt / Fetch error); {error} is a technical error message, usually English."
+    },
+    "pdf.archivedToast": {
+        "where": "Library > PDF Health Scanner dialog: success toast after archiving",
+        "who": "leaders",
+        "maxLength": 50,
+        "context": "{count} is the number of files archived."
+    },
+    "dup.trigger": {
+        "where": "Library toolbar: tooltip of the icon button that opens the Duplicate Scanner",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "dup.title": {
+        "where": "Library > Duplicate Scanner dialog: dialog title",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "dup.description": {
+        "where": "Library > Duplicate Scanner dialog: dialog description",
+        "who": "leaders",
+        "maxLength": 80,
+        "context": "Charts = sheet-music files."
+    },
+    "dup.scanPrompt": {
+        "where": "Library > Duplicate Scanner dialog: text before scanning",
+        "who": "leaders",
+        "maxLength": 90,
+        "context": "{count} is the number of charts in the library."
+    },
+    "dup.scanButton": {
+        "where": "Library > Duplicate Scanner dialog: button that starts the scan",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "dup.noneFound": {
+        "where": "Library > Duplicate Scanner dialog: result when nothing looks duplicated",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "dup.clean": {
+        "where": "Library > Duplicate Scanner dialog: friendly line under the no-duplicates result",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "dup.groupHeading": {
+        "where": "Library > Duplicate Scanner dialog: heading of one group of similar charts",
+        "who": "leaders",
+        "maxLength": 40,
+        "context": "{number} is the group's position (1, 2, …); {percent} is a whole-number similarity percentage."
+    },
+    "dup.groupSize": {
+        "where": "Library > Duplicate Scanner dialog: number of charts in one group",
+        "who": "leaders",
+        "maxLength": 16,
+        "context": "{count} is the number of charts in the group."
+    },
+    "dup.archivedToast": {
+        "where": "Library > Duplicate Scanner dialog: success toast after archiving",
+        "who": "leaders",
+        "maxLength": 50,
+        "context": "{count} is the number of duplicate charts archived."
+    }
+}

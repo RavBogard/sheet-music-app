@@ -3,6 +3,7 @@
 import { AudioLines } from 'lucide-react'
 import { forwardRef, type ButtonHTMLAttributes } from 'react'
 
+import { useT } from '@/i18n/client'
 import { cn } from '@/lib/utils'
 
 export interface RecordingCellProps
@@ -21,6 +22,7 @@ export interface RecordingCellProps
  */
 export const RecordingCell = forwardRef<HTMLButtonElement, RecordingCellProps>(
     function RecordingCell({ hasRecordings, disabled, className, ...rest }, ref) {
+        const t = useT()
         return (
             <button
                 ref={ref}
@@ -28,10 +30,10 @@ export const RecordingCell = forwardRef<HTMLButtonElement, RecordingCellProps>(
                 disabled={disabled}
                 aria-label={
                     disabled
-                        ? 'No song bound — recordings unavailable'
+                        ? t('setlistGrid.recordingsUnavailable')
                         : hasRecordings
-                          ? 'Recordings — view and play'
-                          : 'Recordings'
+                          ? t('setlistGrid.recordingsViewAndPlay')
+                          : t('setlistGrid.recordings')
                 }
                 data-testid="recording-cell"
                 {...rest}
