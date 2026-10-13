@@ -1,0 +1,401 @@
+{
+    "adminInitFailed": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): error box when the server's database connection could not start.",
+        "who": "admins",
+        "maxLength": 90
+    },
+    "initialLoadFailed": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): error box when the first load of the queue fails.",
+        "who": "admins",
+        "maxLength": 120,
+        "context": "{error} is a technical error message (English)."
+    },
+    "refreshFailedHttp": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): error box when refreshing the queue fails.",
+        "who": "admins",
+        "maxLength": 60,
+        "context": "{status} is an HTTP status number."
+    },
+    "refreshFailed": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): error box when refreshing the queue fails.",
+        "who": "admins",
+        "maxLength": 120,
+        "context": "{error} is a technical error message (English)."
+    },
+    "actionFailedHttp": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): error toast when Accept/Reject/Edit/Retry/Dismiss fails.",
+        "who": "admins",
+        "maxLength": 60,
+        "context": "{status} is an HTTP status number."
+    },
+    "actionFailed": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): error toast when an action fails.",
+        "who": "admins",
+        "maxLength": 120,
+        "context": "{error} is a technical error message (English)."
+    },
+    "acceptedToast": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): toast after accepting the AI suggestion for a chart.",
+        "who": "admins",
+        "maxLength": 80,
+        "context": "{title} is the chart's title."
+    },
+    "rejectedToast": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): toast after rejecting the AI suggestion.",
+        "who": "admins",
+        "maxLength": 80,
+        "context": "{title} is the chart's title."
+    },
+    "editedToast": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): toast after saving hand edits.",
+        "who": "admins",
+        "maxLength": 80,
+        "context": "{title} is the chart's title."
+    },
+    "retryQueuedToast": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): toast after queueing a retry.",
+        "who": "admins",
+        "maxLength": 80,
+        "context": "{title} is the chart's title or file name."
+    },
+    "dismissedToast": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): toast after dismissing a failed row.",
+        "who": "admins",
+        "maxLength": 80,
+        "context": "{title} is the chart's title or file name."
+    },
+    "title": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): page heading (h1).",
+        "who": "admins",
+        "maxLength": 30
+    },
+    "subtitle": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): grey line under the heading listing keyboard shortcuts.",
+        "who": "admins",
+        "maxLength": 160,
+        "context": "{navKeys}, {reviewKeys}, {retryKeys} are the shortcut keys shown as key caps (j/k, a/r/e, y/n); keep all three. 'Drive' = Google Drive."
+    },
+    "filterPlaceholder": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): placeholder of the filter box; '/' is the shortcut that focuses it.",
+        "who": "admins",
+        "maxLength": 20,
+        "context": "Keep '( / )'."
+    },
+    "filterLabel": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): accessible name of the filter box.",
+        "who": "admins",
+        "maxLength": 40
+    },
+    "refreshLabel": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): accessible name of the refresh icon button.",
+        "who": "admins",
+        "maxLength": 30
+    },
+    "tabAiReview": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): tab: rows waiting for a human to review the AI's suggestion.",
+        "who": "admins",
+        "maxLength": 16
+    },
+    "tabAiFailed": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): tab: rows where the AI failed after retries.",
+        "who": "admins",
+        "maxLength": 16
+    },
+    "tabImportFailures": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): tab: Google Drive files that failed to import.",
+        "who": "admins",
+        "maxLength": 20
+    },
+    "fieldTitle": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): small field name in the comparison table and edit form.",
+        "who": "admins",
+        "maxLength": 10,
+        "context": "Shown in CSS upper case; lower case in English on purpose."
+    },
+    "fieldCollection": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): field name: the library collection a chart belongs to.",
+        "who": "admins",
+        "maxLength": 10
+    },
+    "fieldKey": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): field name: the musical key of the chart.",
+        "who": "admins",
+        "maxLength": 10,
+        "context": "Musical key (e.g. G minor), not a keyboard key."
+    },
+    "fieldBpm": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): field name: tempo in beats per minute.",
+        "who": "admins",
+        "maxLength": 10
+    },
+    "fieldLead": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): field name: the Vocal Lead / lead musician for the song.",
+        "who": "admins",
+        "maxLength": 10
+    },
+    "fieldTags": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): field name: tags.",
+        "who": "admins",
+        "maxLength": 10
+    },
+    "triggerNotChart": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): tiny chip on a row: the AI thinks the file is not a chart.",
+        "who": "admins",
+        "maxLength": 10,
+        "context": "Very short chip; abbreviate freely."
+    },
+    "triggerLowConfidence": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): tiny chip: the AI's confidence is low.",
+        "who": "admins",
+        "maxLength": 10,
+        "context": "Very short chip; abbreviate freely."
+    },
+    "triggerCollectionMismatch": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): tiny chip: the suggested collection differs from the folder.",
+        "who": "admins",
+        "maxLength": 10,
+        "context": "Very short chip; abbreviate freely."
+    },
+    "triggerDuplicate": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): tiny chip: may be a duplicate of another chart.",
+        "who": "admins",
+        "maxLength": 10,
+        "context": "Very short chip; abbreviate freely."
+    },
+    "triggerAiFlag": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): tiny chip: the AI itself asked for review.",
+        "who": "admins",
+        "maxLength": 10,
+        "context": "Very short chip; abbreviate freely."
+    },
+    "dormantTitle": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): bold start of the banner when no AI key is configured.",
+        "who": "admins",
+        "maxLength": 40
+    },
+    "dormantBody": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): rest of that banner.",
+        "who": "admins",
+        "maxLength": 220,
+        "context": "{envVar} is the environment variable name GEMINI_API_KEY and {pendingState} is the code word 'pending'; both stay in English. 'Vercel' and 'Gemini' are product names."
+    },
+    "calibrationTitle": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): bold start of the banner when auto-apply is off.",
+        "who": "admins",
+        "maxLength": 30
+    },
+    "calibrationBody": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): rest of the calibration banner.",
+        "who": "admins",
+        "maxLength": 260,
+        "context": "{flagName} is a database setting path, {flagValue} is the word 'false' (code), {threshold} is a number like 0.70. 'Firebase Console' and 'MCP' are product names."
+    },
+    "autoApplyTitle": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): bold start of the banner when auto-apply is on.",
+        "who": "admins",
+        "maxLength": 30
+    },
+    "autoApplyBody": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): rest of the auto-apply banner.",
+        "who": "admins",
+        "maxLength": 120,
+        "context": "{threshold} is a number like 0.70."
+    },
+    "emptyReviewTitle": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): empty AI Review tab: heading.",
+        "who": "admins",
+        "maxLength": 30
+    },
+    "emptyReviewHint": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): empty AI Review tab: line under it.",
+        "who": "admins",
+        "maxLength": 70
+    },
+    "selectRowHint": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): right-hand panel before a row is selected.",
+        "who": "admins",
+        "maxLength": 90,
+        "context": "{enterKey} is the Enter key shown as a key cap."
+    },
+    "subfolderMeta": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): technical metadata line of the selected row.",
+        "who": "admins",
+        "maxLength": 30,
+        "context": "{subfolder} is a Drive folder id (shortened). Keep it terse."
+    },
+    "acceptButton": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): button that applies the AI suggestion; (a) is its keyboard shortcut.",
+        "who": "admins",
+        "maxLength": 16,
+        "context": "Keep '(a)'."
+    },
+    "editButton": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): button that opens the edit form; (e) is its shortcut.",
+        "who": "admins",
+        "maxLength": 16,
+        "context": "Keep '(e)'."
+    },
+    "rejectButton": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): button that rejects the suggestion; (r) is its shortcut.",
+        "who": "admins",
+        "maxLength": 16,
+        "context": "Keep '(r)'."
+    },
+    "columnCurrent": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): heading of the column with the chart's current values.",
+        "who": "admins",
+        "maxLength": 16,
+        "context": "Shown in CSS upper case."
+    },
+    "columnSuggestion": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): heading of the column with the AI's suggested values.",
+        "who": "admins",
+        "maxLength": 20,
+        "context": "Shown in CSS upper case."
+    },
+    "noChange": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): suggested value when the AI proposes no new title.",
+        "who": "admins",
+        "maxLength": 20
+    },
+    "advisoryOnly": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): suggested collection when the AI only advises.",
+        "who": "admins",
+        "maxLength": 20
+    },
+    "noSuggestion": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): shown when a row has no AI suggestion.",
+        "who": "admins",
+        "maxLength": 60
+    },
+    "concernsLabel": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): label before the AI's list of concerns.",
+        "who": "admins",
+        "maxLength": 20
+    },
+    "duplicatesLabel": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): label before the list of possible duplicate charts.",
+        "who": "admins",
+        "maxLength": 30
+    },
+    "noChanges": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): toast when the edit form is saved without changes.",
+        "who": "admins",
+        "maxLength": 40
+    },
+    "editHeading": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): heading of the edit form.",
+        "who": "admins",
+        "maxLength": 60,
+        "context": "{title} is the chart's title."
+    },
+    "save": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): edit form: save button.",
+        "who": "admins",
+        "maxLength": 12
+    },
+    "cancelButton": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): edit form: cancel button; (esc) is its shortcut.",
+        "who": "admins",
+        "maxLength": 16,
+        "context": "Keep '(esc)'."
+    },
+    "tagsPlaceholder": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): edit form: placeholder of the tags box.",
+        "who": "admins",
+        "maxLength": 20
+    },
+    "tagsLabel": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): edit form: accessible name of the tags box.",
+        "who": "admins",
+        "maxLength": 30
+    },
+    "emptyFailedTitle": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): empty AI Failed tab: heading.",
+        "who": "admins",
+        "maxLength": 30
+    },
+    "emptyFailedHint": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): empty AI Failed tab: line under it.",
+        "who": "admins",
+        "maxLength": 60
+    },
+    "attemptsTried": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): AI Failed row: how many times the AI tried.",
+        "who": "admins",
+        "maxLength": 12,
+        "context": "{count} is a number. The English one-form is kept exactly as the page showed before translation."
+    },
+    "retryButton": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): row button that retries; (y) is its shortcut.",
+        "who": "admins",
+        "maxLength": 14,
+        "context": "Keep '(y)'."
+    },
+    "dismissButton": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): row button that dismisses; (n) is its shortcut.",
+        "who": "admins",
+        "maxLength": 14,
+        "context": "Keep '(n)'."
+    },
+    "emptyImportTitle": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): empty Import Failures tab: heading.",
+        "who": "admins",
+        "maxLength": 30
+    },
+    "emptyImportHint": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): empty Import Failures tab: line under it.",
+        "who": "admins",
+        "maxLength": 60
+    },
+    "hintNavigate": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): bottom shortcut bar: what j/k does.",
+        "who": "admins",
+        "maxLength": 12
+    },
+    "hintExpand": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): bottom shortcut bar: what Enter does.",
+        "who": "admins",
+        "maxLength": 12
+    },
+    "hintFilter": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): bottom shortcut bar: what / does.",
+        "who": "admins",
+        "maxLength": 12
+    },
+    "hintAccept": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): bottom shortcut bar: what a does.",
+        "who": "admins",
+        "maxLength": 12
+    },
+    "hintReject": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): bottom shortcut bar: what r does.",
+        "who": "admins",
+        "maxLength": 12
+    },
+    "hintEdit": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): bottom shortcut bar: what e does.",
+        "who": "admins",
+        "maxLength": 12
+    },
+    "hintRetry": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): bottom shortcut bar: what y does.",
+        "who": "admins",
+        "maxLength": 12
+    },
+    "hintDismiss": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): bottom shortcut bar: what n does.",
+        "who": "admins",
+        "maxLength": 12
+    },
+    "hintCancel": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): bottom shortcut bar: what Esc does.",
+        "who": "admins",
+        "maxLength": 12
+    },
+    "working": {
+        "where": "Admin-only page /manage/library-review (AI review queue for chart metadata): bottom bar: shown while an action runs.",
+        "who": "admins",
+        "maxLength": 14
+    }
+}

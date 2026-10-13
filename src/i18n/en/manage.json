@@ -1,0 +1,15 @@
+{
+    "back": "Back",
+    "title": "Manage",
+    "subtitle": "Band management, library, and sound system",
+    "tabPeople": "People",
+    "tabLibrary": "Library",
+    "tabSound": "Sound",
+    "tabAudit": "Audit",
+    "sectionPeople": "People",
+    "sectionLibrary": "Library",
+    "sectionSound": "Sound System",
+    "sectionAudit": "Access Audit",
+    "libraryToolsTitle": "Library Tools",
+    "libraryToolsHint": "Scan for duplicate charts or check PDF files for corruption."
+}

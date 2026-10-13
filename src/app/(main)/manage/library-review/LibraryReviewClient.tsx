@@ -22,7 +22,8 @@
  * irrelevant; correctness matters.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import { interpolateNodes } from "@/components/admin/interpolate-nodes"
 import { Check, ChevronDown, ChevronRight, Loader2, RefreshCw, Sparkles, X } from "lucide-react"
 import { toast } from "sonner"
 
@@ -32,6 +33,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { DirectionalIcon } from "@/components/i18n/DirectionalIcon"
+import { useT } from "@/i18n/client"
 import type {
     AiFailedRow,
     AiReviewRow,
@@ -58,6 +61,7 @@ export default function LibraryReviewClient({ initial, initialError }: Props) {
     const [busy, setBusy] = useState(false)
     const [filter, setFilter] = useState("")
     const filterInputRef = useRef<HTMLInputElement>(null)
+    const t = useT()
 
     const refetch = useCallback(async () => {
         setLoading(true)
@@ -66,18 +70,18 @@ export default function LibraryReviewClient({ initial, initialError }: Props) {
             const res = await apiFetch("/api/admin/library-review/queue")
             if (!res.ok) {
                 const body = await res.json().catch(() => null)
-                setError(body?.message ?? `Queue refresh failed (HTTP ${res.status}).`)
+                setError(body?.message ?? t("manage-library-review.refreshFailedHttp", { status: res.status }))
                 return
             }
             const body = await res.json()
             const { ok: _ok, ...payload } = body
             setData(payload as ReviewQueueResult)
         } catch (err) {
-            setError(`Queue refresh failed: ${formatError(err)}`)
+            setError(t("manage-library-review.refreshFailed", { error: formatError(err) }))
         } finally {
             setLoading(false)
         }
-    }, [])
+    }, [t])
 
     // Filtered + currently-active row list
     const activeRows = useMemo(() => {
@@ -154,7 +158,7 @@ export default function LibraryReviewClient({ initial, initialError }: Props) {
                 const data = await res.json().catch(() => null)
                 if (!res.ok || data?.ok === false) {
                     toast.error(
-                        data?.message ?? `Action failed (HTTP ${res.status}).`,
+                        data?.message ?? t("manage-library-review.actionFailedHttp", { status: res.status }),
                     )
                     return false
                 }
@@ -162,13 +166,13 @@ export default function LibraryReviewClient({ initial, initialError }: Props) {
                 await refetch()
                 return true
             } catch (err) {
-                toast.error(`Action failed: ${formatError(err)}`)
+                toast.error(t("manage-library-review.actionFailed", { error: formatError(err) }))
                 return false
             } finally {
                 setBusy(false)
             }
         },
-        [refetch],
+        [refetch, t],
     )
 
     // ─── Keyboard handler ──────────────────────────────────────────────────
@@ -240,14 +244,14 @@ export default function LibraryReviewClient({ initial, initialError }: Props) {
                     void doAction(
                         "accept",
                         { rowId: row.rowId },
-                        `Accepted: ${row.title}`,
+                        t("manage-library-review.acceptedToast", { title: row.title }),
                     )
                 } else if (e.key === "r") {
                     e.preventDefault()
                     void doAction(
                         "reject",
                         { rowId: row.rowId },
-                        `Rejected: ${row.title}`,
+                        t("manage-library-review.rejectedToast", { title: row.title }),
                     )
                 } else if (e.key === "e") {
                     e.preventDefault()
@@ -261,14 +265,14 @@ export default function LibraryReviewClient({ initial, initialError }: Props) {
                     void doAction(
                         "retry",
                         { rowId: row.rowId, kind: "enrichment" },
-                        `Retry queued: ${row.title}`,
+                        t("manage-library-review.retryQueuedToast", { title: row.title }),
                     )
                 } else if (e.key === "n") {
                     e.preventDefault()
                     void doAction(
                         "dismiss",
                         { rowId: row.rowId, kind: "enrichment" },
-                        `Dismissed: ${row.title}`,
+                        t("manage-library-review.dismissedToast", { title: row.title }),
                     )
                 }
             } else if (tab === "import") {
@@ -278,14 +282,14 @@ export default function LibraryReviewClient({ initial, initialError }: Props) {
                     void doAction(
                         "retry",
                         { rowId: row.driveFileId, kind: "import" },
-                        `Retry queued: ${row.driveName ?? row.driveFileId}`,
+                        t("manage-library-review.retryQueuedToast", { title: row.driveName ?? row.driveFileId }),
                     )
                 } else if (e.key === "n") {
                     e.preventDefault()
                     void doAction(
                         "dismiss",
                         { rowId: row.driveFileId, kind: "import" },
-                        `Dismissed: ${row.driveName ?? row.driveFileId}`,
+                        t("manage-library-review.dismissedToast", { title: row.driveName ?? row.driveFileId }),
                     )
                 }
             }
@@ -293,7 +297,7 @@ export default function LibraryReviewClient({ initial, initialError }: Props) {
 
         window.addEventListener("keydown", handler)
         return () => window.removeEventListener("keydown", handler)
-    }, [busy, editing, tab, selected, navigate, doAction])
+    }, [busy, editing, tab, selected, navigate, doAction, t])
 
     const counts = data
         ? {
@@ -311,30 +315,21 @@ export default function LibraryReviewClient({ initial, initialError }: Props) {
                     <div>
                         <h1 className="text-xl font-semibold flex items-center gap-2">
                             <Sparkles className="w-5 h-5 text-brand" />
-                            Library Review
+                            {t("manage-library-review.title")}
                         </h1>
                         <p className="text-muted-foreground text-xs mt-0.5">
-                            AI enrichment review queue + Drive import failures.
-                            Keyboard:{" "}
-                            <kbd className="px-1 py-0.5 rounded border text-[10px] font-mono">
-                                j/k
-                            </kbd>{" "}
-                            navigate,{" "}
-                            <kbd className="px-1 py-0.5 rounded border text-[10px] font-mono">
-                                a/r/e
-                            </kbd>{" "}
-                            review,{" "}
-                            <kbd className="px-1 py-0.5 rounded border text-[10px] font-mono">
-                                y/n
-                            </kbd>{" "}
-                            retry/dismiss.
+                            {interpolateNodes(t("manage-library-review.subtitle"), {
+                                navKeys: <kbd className="px-1 py-0.5 rounded border text-[10px] font-mono">j/k</kbd>,
+                                reviewKeys: <kbd className="px-1 py-0.5 rounded border text-[10px] font-mono">a/r/e</kbd>,
+                                retryKeys: <kbd className="px-1 py-0.5 rounded border text-[10px] font-mono">y/n</kbd>,
+                            })}
                         </p>
                     </div>
                     <div className="flex items-center gap-2">
                         <Input
                             ref={filterInputRef}
-                            placeholder="Filter…  ( / )"
-                            aria-label="Filter review queue"
+                            placeholder={t("manage-library-review.filterPlaceholder")}
+                            aria-label={t("manage-library-review.filterLabel")}
                             value={filter}
                             onChange={(e) => setFilter(e.target.value)}
                             className="h-8 w-44 text-xs"
@@ -344,7 +339,7 @@ export default function LibraryReviewClient({ initial, initialError }: Props) {
                             size="sm"
                             onClick={() => void refetch()}
                             disabled={loading}
-                            aria-label="Refresh queue"
+                            aria-label={t("manage-library-review.refreshLabel")}
                             className="h-8"
                         >
                             {loading ? (
@@ -375,21 +370,21 @@ export default function LibraryReviewClient({ initial, initialError }: Props) {
                     <TabsList className="w-full">
                         <TabsTrigger value="review" className="flex-1 min-h-9 gap-2 text-xs">
                             <span className="text-[10px] font-mono opacity-60">1</span>
-                            AI Review
+                            {t("manage-library-review.tabAiReview")}
                             <Badge variant="secondary" className="h-4 px-1.5 text-[10px] font-mono">
                                 {counts.review}
                             </Badge>
                         </TabsTrigger>
                         <TabsTrigger value="failed" className="flex-1 min-h-9 gap-2 text-xs">
                             <span className="text-[10px] font-mono opacity-60">2</span>
-                            AI Failed
+                            {t("manage-library-review.tabAiFailed")}
                             <Badge variant="secondary" className="h-4 px-1.5 text-[10px] font-mono">
                                 {counts.failed}
                             </Badge>
                         </TabsTrigger>
                         <TabsTrigger value="import" className="flex-1 min-h-9 gap-2 text-xs">
                             <span className="text-[10px] font-mono opacity-60">3</span>
-                            Import Failures
+                            {t("manage-library-review.tabImportFailures")}
                             <Badge variant="secondary" className="h-4 px-1.5 text-[10px] font-mono">
                                 {counts.import}
                             </Badge>
@@ -441,6 +436,26 @@ export default function LibraryReviewClient({ initial, initialError }: Props) {
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
+/** Review-queue field names → their label keys (the row keys stay English machine names). */
+const FIELD_LABEL = {
+    title: "manage-library-review.fieldTitle",
+    collection: "manage-library-review.fieldCollection",
+    key: "manage-library-review.fieldKey",
+    bpm: "manage-library-review.fieldBpm",
+    lead: "manage-library-review.fieldLead",
+    tags: "manage-library-review.fieldTags",
+} as const
+type FieldName = keyof typeof FIELD_LABEL
+
+/** Review-trigger codes → their short chip label keys. */
+const TRIGGER_LABEL: Record<string, string> = {
+    is_chart_false: "manage-library-review.triggerNotChart",
+    low_confidence: "manage-library-review.triggerLowConfidence",
+    collection_disagrees_with_folder: "manage-library-review.triggerCollectionMismatch",
+    duplicate_candidates: "manage-library-review.triggerDuplicate",
+    review_required: "manage-library-review.triggerAiFlag",
+}
+
 function rowKey(row: AiReviewRow | AiFailedRow | ImportFailureRow): string {
     return "driveFileId" in row ? row.driveFileId : row.rowId
 }
@@ -467,34 +482,35 @@ function CalibrationBanner({
 }: {
     config: ReviewQueueResult["config"]
 }) {
+    const t = useT()
+    const thresholdNode = <code className="font-mono">{config.threshold.toFixed(2)}</code>
     if (!config.aiProviderConfigured) {
         return (
             <div className="rounded-md border border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300 px-3 py-2 text-xs">
-                <strong>AI enrichment is dormant.</strong>{" "}
-                GEMINI_API_KEY is not set in this environment, so new rows
-                will sit at <code>pending</code> until configured. Set it in
-                the Vercel dashboard to activate the Gemini subscriber.
+                <strong>{t("manage-library-review.dormantTitle")}</strong>{" "}
+                {interpolateNodes(t("manage-library-review.dormantBody"), {
+                    envVar: "GEMINI_API_KEY", // i18n-ignore: environment variable name
+                    pendingState: <code>pending</code>,
+                })}
             </div>
         )
     }
     if (!config.autoApplyEnabled) {
         return (
             <div className="rounded-md border border-indigo-500/30 bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 px-3 py-2 text-xs">
-                <strong>Calibration mode.</strong>{" "}
-                <code>aiConfig/autoApplyEnabled</code> is <code>false</code> —
-                every enrichment lands here for human review. Confidence
-                threshold:{" "}
-                <code className="font-mono">{config.threshold.toFixed(2)}</code>.
-                Flip the flag in Firebase Console (or via the admin MCP tool)
-                once you trust the model.
+                <strong>{t("manage-library-review.calibrationTitle")}</strong>{" "}
+                {interpolateNodes(t("manage-library-review.calibrationBody"), {
+                    flagName: <code>aiConfig/autoApplyEnabled</code>,
+                    flagValue: <code>false</code>,
+                    threshold: thresholdNode,
+                })}
             </div>
         )
     }
     return (
         <div className="rounded-md border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 px-3 py-2 text-xs">
-            <strong>Auto-apply on.</strong>{" "}
-            Only rows tripping a review trigger land here. Threshold:{" "}
-            <code className="font-mono">{config.threshold.toFixed(2)}</code>.
+            <strong>{t("manage-library-review.autoApplyTitle")}</strong>{" "}
+            {interpolateNodes(t("manage-library-review.autoApplyBody"), { threshold: thresholdNode })}
         </div>
     )
 }
@@ -528,14 +544,15 @@ function ReviewSplit({
     ) => Promise<boolean>
     threshold: number
 }) {
+    const t = useT()
     const selected = rows.find((r) => r.rowId === selectedRowId) ?? null
 
     if (rows.length === 0) {
         return (
             <EmptyState
                 icon={<Check className="w-6 h-6 text-emerald-500" />}
-                title="Inbox zero."
-                hint="No rows currently waiting for review."
+                title={t("manage-library-review.emptyReviewTitle")}
+                hint={t("manage-library-review.emptyReviewHint")}
             />
         )
     }
@@ -568,7 +585,7 @@ function ReviewSplit({
                                 const ok = await doAction(
                                     "edit",
                                     { rowId: selected.rowId, edits },
-                                    `Edited: ${selected.title}`,
+                                    t("manage-library-review.editedToast", { title: selected.title }),
                                 )
                                 if (ok) setEditing(false)
                             }}
@@ -582,14 +599,14 @@ function ReviewSplit({
                                 doAction(
                                     "accept",
                                     { rowId: selected.rowId },
-                                    `Accepted: ${selected.title}`,
+                                    t("manage-library-review.acceptedToast", { title: selected.title }),
                                 )
                             }
                             onReject={() =>
                                 doAction(
                                     "reject",
                                     { rowId: selected.rowId },
-                                    `Rejected: ${selected.title}`,
+                                    t("manage-library-review.rejectedToast", { title: selected.title }),
                                 )
                             }
                             onEdit={() => setEditing(true)}
@@ -597,11 +614,9 @@ function ReviewSplit({
                     )
                 ) : (
                     <div className="border rounded-md p-4 text-xs text-muted-foreground">
-                        Select a row (or press{" "}
-                        <kbd className="px-1 py-0.5 rounded border text-[10px] font-mono">
-                            Enter
-                        </kbd>
-                        ) to inspect the AI suggestion.
+                        {interpolateNodes(t("manage-library-review.selectRowHint"), {
+                            enterKey: <kbd className="px-1 py-0.5 rounded border text-[10px] font-mono">Enter</kbd>,
+                        })}
                     </div>
                 )}
             </div>
@@ -628,25 +643,25 @@ function ReviewRow({
                 onClick={onClick}
                 aria-current={active ? "true" : undefined}
                 className={
-                    "w-full text-left h-8 px-2 grid grid-cols-[16px_minmax(0,1fr)_60px_44px_44px] items-center gap-2 border-b last:border-b-0 cursor-pointer transition-colors " +
+                    "w-full text-start h-8 px-2 grid grid-cols-[16px_minmax(0,1fr)_60px_44px_44px] items-center gap-2 border-b last:border-b-0 cursor-pointer transition-colors " +
                     (active
-                        ? "bg-brand/10 border-l-2 border-l-brand"
-                        : "hover:bg-accent/40 border-l-2 border-l-transparent")
+                        ? "bg-brand/10 border-s-2 border-s-brand"
+                        : "hover:bg-accent/40 border-s-2 border-s-transparent")
                 }
             >
                 <span aria-hidden="true">
                     {active ? (
                         <ChevronDown className="w-3 h-3" />
                     ) : (
-                        <ChevronRight className="w-3 h-3 opacity-50" />
+                        <DirectionalIcon icon={ChevronRight} className="w-3 h-3 opacity-50" />
                     )}
                 </span>
                 <span className="truncate text-xs">
                     {row.title}
                     {row.triggers.length > 0 && (
-                        <span className="ml-2 inline-flex gap-1 align-middle">
-                            {row.triggers.map((t) => (
-                                <TriggerChip key={t} trigger={t} />
+                        <span className="ms-2 inline-flex gap-1 align-middle">
+                            {row.triggers.map((trigger) => (
+                                <TriggerChip key={trigger} trigger={trigger} />
                             ))}
                         </span>
                     )}
@@ -687,18 +702,9 @@ function ConfidenceCell({
 }
 
 function TriggerChip({ trigger }: { trigger: string }) {
-    const label =
-        trigger === "is_chart_false"
-            ? "not-chart"
-            : trigger === "low_confidence"
-              ? "low-conf"
-              : trigger === "collection_disagrees_with_folder"
-                ? "coll-?"
-                : trigger === "duplicate_candidates"
-                  ? "dupe?"
-                  : trigger === "review_required"
-                    ? "ai-flag"
-                    : trigger
+    const t = useT()
+    const labelKey = TRIGGER_LABEL[trigger]
+    const label = labelKey ? t(labelKey) : trigger
     return (
         <Badge
             variant="outline"
@@ -724,6 +730,7 @@ function ReviewDetail({
     onReject: () => void
     onEdit: () => void
 }) {
+    const t = useT()
     const sug = row.suggestion
     return (
         <div className="border rounded-md overflow-hidden">
@@ -733,7 +740,7 @@ function ReviewDetail({
                     <div className="text-[10px] font-mono text-muted-foreground truncate">
                         {row.rowId} · {shortMime(row.mimeType)} ·{" "}
                         {formatBytes(row.sizeBytes)} · {row.source}
-                        {row.subfolder && ` · subfolder=${row.subfolder.slice(0, 12)}…`}
+                        {row.subfolder && ` · ${t("manage-library-review.subfolderMeta", { subfolder: row.subfolder.slice(0, 12) })}`}
                     </div>
                 </div>
                 <div className="flex items-center gap-1">
@@ -744,7 +751,7 @@ function ReviewDetail({
                         disabled={busy || !sug}
                         className="h-7 text-xs gap-1"
                     >
-                        <Check className="w-3 h-3" /> Accept (a)
+                        <Check className="w-3 h-3" /> {t("manage-library-review.acceptButton")}
                     </Button>
                     <Button
                         size="sm"
@@ -753,7 +760,7 @@ function ReviewDetail({
                         disabled={busy}
                         className="h-7 text-xs"
                     >
-                        Edit (e)
+                        {t("manage-library-review.editButton")}
                     </Button>
                     <Button
                         size="sm"
@@ -762,14 +769,14 @@ function ReviewDetail({
                         disabled={busy}
                         className="h-7 text-xs gap-1"
                     >
-                        <X className="w-3 h-3" /> Reject (r)
+                        <X className="w-3 h-3" /> {t("manage-library-review.rejectButton")}
                     </Button>
                 </div>
             </div>
             {sug ? (
                 <div className="grid grid-cols-[1fr_1fr] divide-x text-xs">
                     <FieldColumn
-                        title="Current"
+                        title={t("manage-library-review.columnCurrent")}
                         rows={[
                             ["title", row.current.title],
                             ["collection", row.current.collection],
@@ -783,7 +790,7 @@ function ReviewDetail({
                         ]}
                     />
                     <FieldColumn
-                        title="AI suggestion"
+                        title={t("manage-library-review.columnSuggestion")}
                         confidence={
                             <ConfidenceCell
                                 value={sug.confidence}
@@ -793,7 +800,7 @@ function ReviewDetail({
                         rows={[
                             [
                                 "title",
-                                sug.suggested_title ?? "(no change)",
+                                sug.suggested_title ?? t("manage-library-review.noChange"),
                                 sug.suggested_title &&
                                 sug.suggested_title !== row.current.title
                                     ? "changed"
@@ -801,7 +808,7 @@ function ReviewDetail({
                             ],
                             [
                                 "collection",
-                                sug.suggested_collection ?? "(advisory only)",
+                                sug.suggested_collection ?? t("manage-library-review.advisoryOnly"),
                                 sug.collection_disagrees_with_folder
                                     ? "warn"
                                     : "same",
@@ -842,28 +849,28 @@ function ReviewDetail({
                 </div>
             ) : (
                 <div className="p-3 text-xs text-muted-foreground">
-                    No AI suggestion attached to this row.
+                    {t("manage-library-review.noSuggestion")}
                 </div>
             )}
             {sug && (sug.concerns.length > 0 || row.duplicateCandidates.length > 0) && (
                 <div className="px-3 py-2 border-t bg-muted/20 space-y-1">
                     {sug.concerns.length > 0 && (
                         <div className="text-[11px]">
-                            <span className="font-mono text-muted-foreground mr-1">
-                                concerns:
+                            <span className="font-mono text-muted-foreground me-1">
+                                {t("manage-library-review.concernsLabel")}
                             </span>
                             {sug.concerns.join(" • ")}
                         </div>
                     )}
                     {row.duplicateCandidates.length > 0 && (
                         <div className="text-[11px]">
-                            <span className="font-mono text-muted-foreground mr-1">
-                                duplicate candidates:
+                            <span className="font-mono text-muted-foreground me-1">
+                                {t("manage-library-review.duplicatesLabel")}
                             </span>
                             {row.duplicateCandidates.map((c) => (
                                 <span
                                     key={c.rowId}
-                                    className="inline-block mr-2"
+                                    className="inline-block me-2"
                                 >
                                     {c.title}{" "}
                                     <span className="font-mono text-muted-foreground">
@@ -885,9 +892,10 @@ function FieldColumn({
     confidence,
 }: {
     title: string
-    rows: Array<[string, string] | [string, string, "same" | "changed" | "warn"]>
+    rows: Array<[FieldName, string] | [FieldName, string, "same" | "changed" | "warn"]>
     confidence?: React.ReactNode
 }) {
+    const t = useT()
     return (
         <div>
             <div className="px-3 py-1 bg-muted/40 text-[10px] font-mono uppercase tracking-wide text-muted-foreground flex items-center justify-between">
@@ -908,7 +916,7 @@ function FieldColumn({
                             className="grid grid-cols-[64px_minmax(0,1fr)] gap-2"
                         >
                             <dt className="text-[10px] font-mono uppercase text-muted-foreground self-center">
-                                {k}
+                                {t(FIELD_LABEL[k])}
                             </dt>
                             <dd className={`text-xs truncate ${tone}`}>
                                 {v || "—"}
@@ -934,6 +942,7 @@ function EditForm({
     onCancel: () => void
     onSubmit: (edits: EditPayload) => Promise<void> | void
 }) {
+    const t = useT()
     const sug = row.suggestion
     // Pre-fill from AI suggestion, falling back to current values.
     const [title, setTitle] = useState(
@@ -982,17 +991,17 @@ function EditForm({
         }
         const tagList = tags
             .split(",")
-            .map((t) => t.trim())
+            .map((tag) => tag.trim())
             .filter(Boolean)
         const currentTags = row.current.tags ?? []
         if (
             tagList.length !== currentTags.length ||
-            tagList.some((t, i) => t !== currentTags[i])
+            tagList.some((tag, i) => tag !== currentTags[i])
         ) {
             edits.tags = tagList
         }
         if (Object.keys(edits).length === 0) {
-            toast.message("No changes to save.")
+            toast.message(t("manage-library-review.noChanges"))
             return
         }
         await onSubmit(edits)
@@ -1005,7 +1014,7 @@ function EditForm({
         >
             <div className="px-3 py-2 border-b bg-muted/30 flex items-center justify-between">
                 <div className="text-sm font-medium truncate">
-                    Edit · {row.title}
+                    {t("manage-library-review.editHeading", { title: row.title })}
                 </div>
                 <div className="flex items-center gap-1">
                     <Button
@@ -1014,7 +1023,7 @@ function EditForm({
                         disabled={busy}
                         className="h-7 text-xs"
                     >
-                        Save
+                        {t("manage-library-review.save")}
                     </Button>
                     <Button
                         size="sm"
@@ -1024,38 +1033,42 @@ function EditForm({
                         disabled={busy}
                         className="h-7 text-xs"
                     >
-                        Cancel (esc)
+                        {t("manage-library-review.cancelButton")}
                     </Button>
                 </div>
             </div>
             <div className="p-3 grid grid-cols-2 gap-2 text-xs">
-                <Field label="title" full>
+                <Field label={t(FIELD_LABEL.title)} full>
                     <Input
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
                         className="h-7 text-xs"
                     />
                 </Field>
-                <Field label="collection">
+                <Field label={t(FIELD_LABEL.collection)}>
                     <select
                         value={collection}
                         onChange={(e) => setCollection(e.target.value)}
                         className="h-7 text-xs border rounded-md px-2 bg-background"
                     >
+                        {/* i18n-ignore: collection ids (stored machine values), shown as-is in this admin-only tool */}
                         <option value="core">core</option>
+                        {/* i18n-ignore: collection id */}
                         <option value="supplemental">supplemental</option>
+                        {/* i18n-ignore: collection id */}
                         <option value="nava">nava</option>
+                        {/* i18n-ignore: collection id */}
                         <option value="uploads">uploads</option>
                     </select>
                 </Field>
-                <Field label="key">
+                <Field label={t(FIELD_LABEL.key)}>
                     <Input
                         value={key}
                         onChange={(e) => setKey(e.target.value)}
                         className="h-7 text-xs"
                     />
                 </Field>
-                <Field label="bpm">
+                <Field label={t(FIELD_LABEL.bpm)}>
                     <Input
                         value={bpm}
                         onChange={(e) => setBpm(e.target.value)}
@@ -1063,20 +1076,20 @@ function EditForm({
                         inputMode="numeric"
                     />
                 </Field>
-                <Field label="lead">
+                <Field label={t(FIELD_LABEL.lead)}>
                     <Input
                         value={leadMusician}
                         onChange={(e) => setLeadMusician(e.target.value)}
                         className="h-7 text-xs"
                     />
                 </Field>
-                <Field label="tags" full>
+                <Field label={t(FIELD_LABEL.tags)} full>
                     <Input
                         value={tags}
                         onChange={(e) => setTags(e.target.value)}
                         className="h-7 text-xs"
-                        placeholder="comma-separated"
-                        aria-label="Tags (comma-separated)"
+                        placeholder={t("manage-library-review.tagsPlaceholder")}
+                        aria-label={t("manage-library-review.tagsLabel")}
                     />
                 </Field>
             </div>
@@ -1124,12 +1137,13 @@ function FailedList({
         successMessage: string,
     ) => Promise<boolean>
 }) {
+    const t = useT()
     if (rows.length === 0) {
         return (
             <EmptyState
                 icon={<Check className="w-6 h-6 text-emerald-500" />}
-                title="No AI failures."
-                hint="Rows that exhaust retries land here."
+                title={t("manage-library-review.emptyFailedTitle")}
+                hint={t("manage-library-review.emptyFailedHint")}
             />
         )
     }
@@ -1153,8 +1167,8 @@ function FailedList({
                             className={
                                 "px-2 py-1.5 grid grid-cols-[minmax(0,1fr)_60px_44px_auto] items-start gap-2 border-b last:border-b-0 cursor-pointer transition-colors " +
                                 (active
-                                    ? "bg-brand/10 border-l-2 border-l-brand"
-                                    : "hover:bg-accent/40 border-l-2 border-l-transparent")
+                                    ? "bg-brand/10 border-s-2 border-s-brand"
+                                    : "hover:bg-accent/40 border-s-2 border-s-transparent")
                             }
                         >
                             <div className="min-w-0">
@@ -1167,7 +1181,7 @@ function FailedList({
                                 {row.collection}
                             </div>
                             <div className="text-[10px] font-mono text-muted-foreground">
-                                {row.attempts}× tried
+                                {t("manage-library-review.attemptsTried", { count: row.attempts })}
                             </div>
                             <div className="flex items-center gap-1">
                                 <Button
@@ -1178,13 +1192,13 @@ function FailedList({
                                         void doAction(
                                             "retry",
                                             { rowId: row.rowId, kind: "enrichment" },
-                                            `Retry queued: ${row.title}`,
+                                            t("manage-library-review.retryQueuedToast", { title: row.title }),
                                         )
                                     }}
                                     disabled={busy}
                                     className="h-6 text-[10px] px-2"
                                 >
-                                    Retry (y)
+                                    {t("manage-library-review.retryButton")}
                                 </Button>
                                 <Button
                                     size="sm"
@@ -1194,13 +1208,13 @@ function FailedList({
                                         void doAction(
                                             "dismiss",
                                             { rowId: row.rowId, kind: "enrichment" },
-                                            `Dismissed: ${row.title}`,
+                                            t("manage-library-review.dismissedToast", { title: row.title }),
                                         )
                                     }}
                                     disabled={busy}
                                     className="h-6 text-[10px] px-2"
                                 >
-                                    Dismiss (n)
+                                    {t("manage-library-review.dismissButton")}
                                 </Button>
                             </div>
                         </div>
@@ -1230,12 +1244,13 @@ function ImportList({
         successMessage: string,
     ) => Promise<boolean>
 }) {
+    const t = useT()
     if (rows.length === 0) {
         return (
             <EmptyState
                 icon={<Check className="w-6 h-6 text-emerald-500" />}
-                title="No import failures."
-                hint="Drive-sync errors land here."
+                title={t("manage-library-review.emptyImportTitle")}
+                hint={t("manage-library-review.emptyImportHint")}
             />
         )
     }
@@ -1259,8 +1274,8 @@ function ImportList({
                             className={
                                 "px-2 py-1.5 grid grid-cols-[minmax(0,1fr)_80px_44px_auto] items-start gap-2 border-b last:border-b-0 cursor-pointer transition-colors " +
                                 (active
-                                    ? "bg-brand/10 border-l-2 border-l-brand"
-                                    : "hover:bg-accent/40 border-l-2 border-l-transparent")
+                                    ? "bg-brand/10 border-s-2 border-s-brand"
+                                    : "hover:bg-accent/40 border-s-2 border-s-transparent")
                             }
                         >
                             <div className="min-w-0">
@@ -1289,13 +1304,13 @@ function ImportList({
                                         void doAction(
                                             "retry",
                                             { rowId: row.driveFileId, kind: "import" },
-                                            `Retry queued: ${row.driveName ?? row.driveFileId}`,
+                                            t("manage-library-review.retryQueuedToast", { title: row.driveName ?? row.driveFileId }),
                                         )
                                     }}
                                     disabled={busy}
                                     className="h-6 text-[10px] px-2"
                                 >
-                                    Retry (y)
+                                    {t("manage-library-review.retryButton")}
                                 </Button>
                                 <Button
                                     size="sm"
@@ -1305,13 +1320,13 @@ function ImportList({
                                         void doAction(
                                             "dismiss",
                                             { rowId: row.driveFileId, kind: "import" },
-                                            `Dismissed: ${row.driveName ?? row.driveFileId}`,
+                                            t("manage-library-review.dismissedToast", { title: row.driveName ?? row.driveFileId }),
                                         )
                                     }}
                                     disabled={busy}
                                     className="h-6 text-[10px] px-2"
                                 >
-                                    Dismiss (n)
+                                    {t("manage-library-review.dismissButton")}
                                 </Button>
                             </div>
                         </div>
@@ -1335,6 +1350,7 @@ function ActionBar({
     editing: boolean
     busy: boolean
 }) {
+    const t = useT()
     const dim = "opacity-50"
     const lit = "opacity-100"
     const enabled = (cond: boolean) => (cond ? lit : dim)
@@ -1342,47 +1358,47 @@ function ActionBar({
         <footer className="fixed bottom-0 inset-x-0 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/70 z-40">
             <div className="max-w-7xl mx-auto px-4 h-10 flex items-center justify-between gap-4 text-[11px] text-muted-foreground">
                 <div className="flex items-center gap-3">
-                    <Hint k="j/k">navigate</Hint>
-                    <Hint k="↵">expand</Hint>
-                    <Hint k="/">filter</Hint>
+                    <Hint k="j/k">{t("manage-library-review.hintNavigate")}</Hint>
+                    <Hint k="↵">{t("manage-library-review.hintExpand")}</Hint>
+                    <Hint k="/">{t("manage-library-review.hintFilter")}</Hint>
                     {tab === "review" && (
                         <>
                             <Hint
                                 k="a"
                                 className={enabled(hasSelection && !editing && !busy)}
                             >
-                                accept
+                                {t("manage-library-review.hintAccept")}
                             </Hint>
                             <Hint
                                 k="r"
                                 className={enabled(hasSelection && !editing && !busy)}
                             >
-                                reject
+                                {t("manage-library-review.hintReject")}
                             </Hint>
                             <Hint
                                 k="e"
                                 className={enabled(hasSelection && !editing && !busy)}
                             >
-                                edit
+                                {t("manage-library-review.hintEdit")}
                             </Hint>
                         </>
                     )}
                     {(tab === "failed" || tab === "import") && (
                         <>
                             <Hint k="y" className={enabled(hasSelection && !busy)}>
-                                retry
+                                {t("manage-library-review.hintRetry")}
                             </Hint>
                             <Hint k="n" className={enabled(hasSelection && !busy)}>
-                                dismiss
+                                {t("manage-library-review.hintDismiss")}
                             </Hint>
                         </>
                     )}
-                    {editing && <Hint k="esc">cancel</Hint>}
+                    {editing && <Hint k="esc">{t("manage-library-review.hintCancel")}</Hint>}
                 </div>
                 <div className="flex items-center gap-2">
                     {busy && (
                         <span className="inline-flex items-center gap-1">
-                            <Loader2 className="w-3 h-3 animate-spin" /> working…
+                            <Loader2 className="w-3 h-3 animate-spin" /> {t("manage-library-review.working")}
                         </span>
                     )}
                 </div>

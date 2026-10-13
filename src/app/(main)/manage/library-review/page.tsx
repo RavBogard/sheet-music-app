@@ -14,6 +14,7 @@ import { getServerUser } from "@/lib/server-auth"
 
 import LibraryReviewClient from "./LibraryReviewClient"
 import { formatError } from "@/lib/format-error"
+import { getT } from "@/i18n/server"
 
 export const dynamic = "force-dynamic"
 
@@ -27,12 +28,14 @@ export default async function LibraryReviewPage() {
         redirect("/manage")
     }
 
+    const t = await getT()
+
     if (!initAdmin()) {
         // Surface the failure but don't crash the route — client shows error state.
         return (
             <LibraryReviewClient
                 initial={null}
-                initialError="Firebase Admin SDK failed to initialize on the server."
+                initialError={t("manage-library-review.adminInitFailed")}
             />
         )
     }
@@ -42,7 +45,7 @@ export default async function LibraryReviewPage() {
     try {
         initial = await readReviewQueue(getFirestore())
     } catch (err) {
-        initialError = `Initial queue load failed: ${formatError(err)}`
+        initialError = t("manage-library-review.initialLoadFailed", { error: formatError(err) })
     }
 
     return <LibraryReviewClient initial={initial} initialError={initialError} />
