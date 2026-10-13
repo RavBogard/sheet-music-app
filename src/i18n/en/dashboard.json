@@ -64,5 +64,17 @@
     "diagSubscriptionPending": "diag: subscription has not fired yet (still subscribing or auth-blocked)",
     "recentSetlists": "Recent Setlists",
     "signInOr": "or",
-    "signInWithGoogle": "Sign In with Google"
+    "signInWithGoogle": "Sign In with Google",
+    "greetingGoodMorning": "Good morning",
+    "greetingGoodAfternoon": "Good afternoon",
+    "greetingGoodEvening": "Good evening",
+    "greetingShabbatShalom": "Shabbat Shalom",
+    "greetingShanahTovah": "Shanah Tovah",
+    "greetingGmarChatimahTovah": "G'mar Chatimah Tovah",
+    "greetingChagSameach": "Chag Sameach",
+    "greetingChagUrimSameach": "Chag Urim Sameach",
+    "greetingChagPurimSameach": "Chag Purim Sameach",
+    "greetingChagPesachSameach": "Chag Pesach Sameach",
+    "greetingWithName": "{greeting}, {firstName}",
+    "welcomeTo": "Welcome to {appName}"
 }

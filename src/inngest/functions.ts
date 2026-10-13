@@ -1,5 +1,7 @@
 import { inngest } from "./client"
 import { generatePrintPdf, PrintRequest } from "@/lib/print-pipeline"
+import { pdfI18nForOrg } from "@/lib/pdf/pdf-i18n-server"
+import { coerceOrgId } from "@/lib/org/registry"
 import { getFirestore, getStorage } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
 
@@ -30,13 +32,15 @@ export const generatePdfJob = inngest.createFunction(
         // Generate the PDF and save it immediately. This avoids returning a huge Uint8Array 
         // through the Inngest step serializer which enforces a 4MB payload limit.
         const { stats, downloadUrl } = await step.run("generate-and-save-pdf", async () => {
+            // Multi-tenant phase 7: no request here; the job's tenant decides the language.
+            const pdfI18n = await pdfI18nForOrg(coerceOrgId(printReq.org))
             const pdfResult = await generatePrintPdf(printReq, async (progress) => {
                 await jobRef.update({
                     status: progress.phase,
                     progress: Math.round((progress.currentTrack / Math.max(1, progress.totalTracks)) * 100),
                     message: progress.message
                 }).catch(err => logger.warn("[PDF Job] Progress update failed:", err))
-            })
+            }, pdfI18n)
 
             const bucket = getStorage().bucket()
             const file = bucket.file(`print-jobs/${jobId}.pdf`)

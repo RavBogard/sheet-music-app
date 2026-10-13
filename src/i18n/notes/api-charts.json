@@ -18,5 +18,10 @@
         "where": "Chart scraper dialog (web search chat): error when the web search failed",
         "who": "leaders",
         "maxLength": 40
-    }
+    },
+    "scrapeFetchStatus": { "where": "Library, chord-chart scraper: error when the web page answered with an error", "who": "leaders", "maxLength": 80, "context": "{detail} is the web server's status text in English (e.g. 'Not Found'); leave it as is." },
+    "scrapeFetchFailed": { "where": "Library, chord-chart scraper: error when the web page could not be reached", "who": "leaders", "maxLength": 80, "context": "{detail} is a technical error message in English; leave it as is." },
+    "scrapeInputRequired": { "where": "Library, chord-chart scraper: error when neither a web address nor pasted text was sent", "who": "leaders", "maxLength": 60, "context": "'url' and 'rawText' are the request's field names; translate the sentence as 'a web address or pasted text is required'." },
+    "scrapeNoChart": { "where": "Library, chord-chart scraper: error when the page has no chord chart", "who": "leaders", "maxLength": 160, "context": "'rawText' is the paste-text field; in the app the person can paste the chart's text instead." },
+    "scrapeFailed": { "where": "Library, chord-chart scraper: error when reading the chart from the page failed", "who": "leaders", "maxLength": 80, "context": "{detail} is a technical error message in English; leave it as is. 'chart' = chord chart (sheet music)." }
 }

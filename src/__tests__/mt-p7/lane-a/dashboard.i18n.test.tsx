@@ -8,9 +8,8 @@ import { expectNoUntranslatedText, I18nTestProviders, renderPseudo, renderWithI1
  * Phase 7 (lane A5): the dashboard, the home next-service card, the dashboard
  * widgets, the calendar and the (main) error screen render every string
  * through t() and every date through fmt (which the pseudo-locale also wraps).
- * Fixture setlist names / song titles / greeting text are data and are
- * allowed. Greeting text comes from src/lib/greeting (not this lane) and is
- * mocked as data here.
+ * Fixture setlist names / song titles are data and are allowed. The greeting
+ * (src/lib/greeting) is real: it comes through t() too (lane D).
  */
 
 const state = vi.hoisted(() => ({
@@ -35,9 +34,6 @@ vi.mock("@/lib/setlist-firebase", () => ({
             return () => {}
         },
     }),
-}))
-vi.mock("@/lib/greeting", () => ({
-    getContextualGreeting: () => ({ text: "Test Greeting", hebrewDate: "Testdate", isSpecial: false, atmosphere: "morning" }),
 }))
 vi.mock("@/lib/congregation-store", () => ({ useCongregation: () => ({ shortName: "CRC", logoUrl: "" }) }))
 vi.mock("@/components/auth/QRSignIn", () => ({ QRSignIn: () => <div data-testid="qr" /> }))
@@ -94,7 +90,7 @@ import { useGridKeyboard } from "@/hooks/use-grid-keyboard"
 
 const DAY = 86_400_000
 const inDays = (n: number) => new Date(Date.now() + n * DAY).toISOString()
-const DATA = ["Test Setlist A", "Test Setlist B", "Test Song A", "Test Song B", "Test Greeting", "Testdate", "CRC", "Test Player", "Test Task", "Test Calendar Setlist"]
+const DATA = ["Test Setlist A", "Test Setlist B", "Test Song A", "Test Song B", "CRC", "Test Player", "Test Task", "Test Calendar Setlist"]
 
 const setlistA = { id: "s1", name: "Test Setlist A", eventDate: inDays(3), trackCount: 2, songCount: 2, fileIds: ["f1", "f2"], musicians: [{ name: "Test Player" }] }
 const setlistB = { id: "s2", name: "Test Setlist B", eventDate: inDays(-7), trackCount: 1, songCount: 1 }

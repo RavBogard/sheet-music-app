@@ -45,4 +45,22 @@ export function peekCompleteMessages(lang: UiLanguage): Messages | undefined {
 export function clearPrimedMessages(): void {
     primed.clear()
     complete.clear()
+    activeUiLanguage = null
+}
+
+/**
+ * Phase 7 (lane D): the UI language the browser's <I18nProvider> is showing,
+ * so plain functions that know only the tenant (orgString, label) can tell a
+ * pseudo-locale is active and wrap their output like t() does. Set by the
+ * provider in the browser only (never on the server, where one module serves
+ * many requests); null = no provider mounted.
+ */
+let activeUiLanguage: UiLanguage | null = null
+
+export function setActiveUiLanguage(lang: UiLanguage | null): void {
+    activeUiLanguage = lang
+}
+
+export function peekActiveUiLanguage(): UiLanguage | null {
+    return activeUiLanguage
 }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { getT } from "@/i18n/server"
 
 import { createApiHandler } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
@@ -43,7 +44,9 @@ export const POST = createApiHandler(
 
         if (!result.ok) {
             // library_unavailable — the library index could not be fetched.
-            return NextResponse.json({ error: result.message }, { status: 502 })
+            // Phase 7: in the request's language when the lib gave a key (English identical).
+            const error = result.i18n ? (await getT())(result.i18n.key) : result.message
+            return NextResponse.json({ error }, { status: 502 })
         }
 
         return NextResponse.json({

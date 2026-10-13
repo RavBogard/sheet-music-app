@@ -91,6 +91,29 @@ export function isSentence(s: string): boolean {
     return hasLetters(s) && /\s/.test(s.trim())
 }
 
+const NAMED_ENTITIES: Record<string, string> = {
+    amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ", ensp: " ", emsp: " ", thinsp: " ",
+    ndash: "–", mdash: "—", bull: "•", middot: "·", hellip: "…", times: "×", divide: "÷",
+    larr: "←", rarr: "→", uarr: "↑", darr: "↓", harr: "↔", laquo: "«", raquo: "»",
+    lsquo: "‘", rsquo: "’", ldquo: "“", rdquo: "”", copy: "©", reg: "®", trade: "™",
+    deg: "°", plusmn: "±", sharp: "♯", flat: "♭", natur: "♮", check: "✓", star: "☆",
+}
+
+/**
+ * JSX text and JSX attribute strings are HTML-entity encoded in the source
+ * (`&#x2022;`, `&middot;`); judge the text the browser shows, not the escape.
+ * Unknown named entities are left as written (they would render literally).
+ */
+export function decodeEntities(s: string): string {
+    return s.replace(/&(#x[0-9a-f]+|#[0-9]+|[a-z][a-z0-9]*);/gi, (whole, body: string) => {
+        if (body[0] === "#") {
+            const cp = body[1] === "x" || body[1] === "X" ? parseInt(body.slice(2), 16) : parseInt(body.slice(1), 10)
+            return Number.isFinite(cp) && cp >= 0 && cp <= 0x10ffff ? String.fromCodePoint(cp) : whole
+        }
+        return NAMED_ENTITIES[body] ?? whole
+    })
+}
+
 function lineOf(sf: ts.SourceFile, node: ts.Node): number {
     return sf.getLineAndCharacterOfPosition(node.getStart(sf)).line + 1
 }
@@ -179,14 +202,14 @@ export function scanSource(file: string, text: string): Finding[] {
 
     const visit = (node: ts.Node) => {
         if (ts.isJsxText(node)) {
-            if (!insideNonTextElement(node)) push(node, "jsx-text", node.text)
+            if (!insideNonTextElement(node)) push(node, "jsx-text", decodeEntities(node.text))
         } else if (ts.isJsxExpression(node) && node.expression && (ts.isJsxElement(node.parent) || ts.isJsxFragment(node.parent))) {
             if (!insideNonTextElement(node)) for (const s of staticTexts(node.expression)) push(node, "jsx-expression", s)
         } else if (ts.isJsxAttribute(node)) {
             const name = node.name.getText(sf)
             if (USER_ATTRS.has(name) && node.initializer) {
                 const init = node.initializer
-                if (ts.isStringLiteral(init)) push(node, "attribute", init.text, name)
+                if (ts.isStringLiteral(init)) push(node, "attribute", decodeEntities(init.text), name)
                 else if (ts.isJsxExpression(init) && init.expression) for (const s of staticTexts(init.expression)) push(node, "attribute", s, name)
             }
         } else if (ts.isCallExpression(node)) {

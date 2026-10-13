@@ -25,7 +25,7 @@ export const ALLOWLIST: readonly AllowEntry[] = [
     ...exempt("src/app/(main)/monitor/MonitorClient.tsx", MIXER_CRC_ONLY, [
         "Couldn't save starred channels — try again",
         "Sign in to access monitor controls.",
-        "You don&apos;t have monitor access. Ask a sound engineer or admin to assign you a bus.",
+        "You don't have monitor access. Ask a sound engineer or admin to assign you a bus.",
         "Connecting to mixer...",
         "Make sure the bridge server is running on the production PC.",
         "Sound Engineer",
@@ -52,14 +52,14 @@ export const ALLOWLIST: readonly AllowEntry[] = [
         "All users assigned",
     ]),
     ...exempt("src/components/monitor/ConnectionIndicator.tsx", MIXER_CRC_ONLY, [
-        "Mixer offline &mdash; last known levels",
+        "Mixer offline — last known levels",
     ]),
     ...exempt("src/components/monitor/DefaultChannelPicker.tsx", MIXER_CRC_ONLY, [
         "Failed to save default channels",
         "Default Visible Channels",
         "of",
         "selected",
-        "These channels appear in every musician&apos;s live monitor popup by default.",
+        "These channels appear in every musician's live monitor popup by default.",
         "Ch",
     ]),
     ...exempt("src/components/monitor/FaderStrip.tsx", MIXER_CRC_ONLY, [

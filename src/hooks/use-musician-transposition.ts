@@ -2,7 +2,9 @@
 
 import { useEffect, useState, useRef, useCallback } from "react"
 import { useAuth } from "@/lib/auth-context"
-import { subscribeToMusicianProfile, INSTRUMENT_PRESETS } from "@/lib/musician-profile"
+import { subscribeToMusicianProfile } from "@/lib/musician-profile"
+import { instrumentLabel } from "@/lib/instrument-labels"
+import { useT } from "@/i18n/client"
 import { loadSongPreference, saveSongPreference } from "@/lib/song-preferences"
 import { useMusicStore } from "@/lib/store"
 import { MusicianProfile } from "@/types/models"
@@ -157,9 +159,10 @@ export function useMusicianTransposition() {
         }
     }, [transposition, user?.uid, fileId, appliedForFile, trackTransposition])
 
+    const t = useT()
     const getInstrumentLabel = useCallback((instrument: string): string => {
-        return INSTRUMENT_PRESETS[instrument]?.label || instrument
-    }, [])
+        return instrumentLabel(instrument, t)
+    }, [t])
 
     return {
         profile,

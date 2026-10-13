@@ -150,7 +150,14 @@ export interface ProcessChartUploadError {
     ok: false
     /** HTTP status to surface (400/409/422/500). */
     status: number
+    /** English sentence (the MCP tools return it as is). */
     error: string
+    /**
+     * Phase 7: the same sentence as a catalogue key + vars, so the browser
+     * route words it in the tenant's language. Its English equals `error`.
+     * (Optional only so hand-built fixtures type-check; every error here sets it.)
+     */
+    i18n?: { key: string; vars?: Record<string, string | number> }
     /** Stable machine code for callers that want to switch on the reason. */
     code:
         | "invalid_type"
@@ -265,6 +272,7 @@ export async function processChartUpload(
             status: 400,
             code: "empty_file",
             error: "No file content provided",
+            i18n: { key: "api-library.uploadEmptyFile" },
         }
     }
 
@@ -274,6 +282,7 @@ export async function processChartUpload(
             status: 400,
             code: "too_large",
             error: `File too large. Maximum size is ${MAX_CHART_UPLOAD_BYTES / 1024 / 1024}MB`,
+            i18n: { key: "api-library.uploadTooLarge", vars: { maxMb: MAX_CHART_UPLOAD_BYTES / 1024 / 1024 } },
         }
     }
 
@@ -305,6 +314,7 @@ export async function processChartUpload(
             code: "invalid_type",
             error:
                 "mimeType must be specific (e.g. application/pdf, image/png, application/vnd.recordare.musicxml+xml). 'application/octet-stream' provides no type information and is rejected.",
+            i18n: { key: "api-library.uploadMimeUnspecific" },
         }
     }
     if (!ALLOWED_TYPES[mimeType]) {
@@ -313,6 +323,7 @@ export async function processChartUpload(
             status: 400,
             code: "invalid_type",
             error: `Unsupported mimeType '${mimeType}'. Allowed: ${Object.keys(ALLOWED_TYPES).join(", ")}`,
+            i18n: { key: "api-library.uploadMimeUnsupported", vars: { mimeType, allowed: Object.keys(ALLOWED_TYPES).join(", ") } },
         }
     }
 
@@ -323,6 +334,7 @@ export async function processChartUpload(
             status: 400,
             code: "invalid_type",
             error: `Unknown collection "${collection}". Allowed: ${ALLOWED_LIBRARY_COLLECTIONS.join(", ")}`,
+            i18n: { key: "api-library.uploadUnknownCollection", vars: { collection, allowed: ALLOWED_LIBRARY_COLLECTIONS.join(", ") } },
         }
     }
 
@@ -368,6 +380,7 @@ export async function processChartUpload(
                 status: 422,
                 code: "convert_failed",
                 error: `Failed to convert MuseScore file: ${message}`,
+                i18n: { key: "api-library.uploadMuseScoreFailed", vars: { detail: message } },
             }
         }
     } else if (isHeic) {
@@ -402,6 +415,7 @@ export async function processChartUpload(
                 status: 422,
                 code: "convert_failed",
                 error: `Failed to convert HEIC image: ${message}`,
+                i18n: { key: "api-library.uploadHeicFailed", vars: { detail: message } },
             }
         }
     }
@@ -483,6 +497,7 @@ export async function processChartUpload(
                 status: 409,
                 code: "duplicate_exact",
                 error: `A chart with the same name ("${existingName}") already exists. Pass force: true to override if this is a legitimate variant.`,
+                i18n: { key: "api-library.uploadDuplicateExact", vars: { existingName } },
                 matchedFileId: activeExactMatch.id,
                 matchedTitle: existingName,
                 score: 1,
@@ -528,6 +543,7 @@ export async function processChartUpload(
                     status: 409,
                     code: "duplicate_similar",
                     error: `A chart with a similar name ("${existingName}") already exists in the library. Pass force: true to override if this is a legitimate variant.`,
+                    i18n: { key: "api-library.uploadDuplicateSimilar", vars: { existingName } },
                     matchedFileId: doc.id,
                     matchedTitle: existingName,
                     score: similarity,
@@ -579,6 +595,7 @@ export async function processChartUpload(
             status: 500,
             code: "server_error",
             error: `Storage write reported success but the blob is missing at ${realStoragePath} — refusing to write index entry (would create an orphan).`,
+            i18n: { key: "api-library.uploadStorageMissing", vars: { path: realStoragePath } },
         }
     }
     if (verifiedSize !== buffer.byteLength) {
@@ -591,6 +608,7 @@ export async function processChartUpload(
             status: 500,
             code: "server_error",
             error: `Storage size mismatch (wrote ${buffer.byteLength}, read back ${verifiedSize}) — refusing to write index entry.`,
+            i18n: { key: "api-library.uploadStorageSizeMismatch", vars: { wrote: buffer.byteLength, readBack: verifiedSize } },
         }
     }
     stage("storage-verify:ok", { size: verifiedSize })
@@ -756,6 +774,7 @@ export async function processChartUpload(
             status: 500,
             code: "server_error",
             error: `Firestore index write failed (${message}); Storage rolled back.`,
+            i18n: { key: "api-library.uploadIndexWriteFailed", vars: { detail: message } },
         }
     }
 

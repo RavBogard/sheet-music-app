@@ -66,7 +66,9 @@ export const POST = createApiHandler(async (ctx) => {
         // unsupported_format / empty → 400 (client error); extraction_failed →
         // 422 (the file was a supported type but could not be read).
         const status = result.reason === 'extraction_failed' ? 422 : 400
-        return NextResponse.json({ error: result.message }, { status })
+        // Phase 7: in the request's language when the lib gave a key (English identical).
+        const t = await getT()
+        return NextResponse.json({ error: result.i18n ? t(result.i18n.key, result.i18n.vars) : result.message }, { status })
     }
 
     return NextResponse.json({

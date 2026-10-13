@@ -102,7 +102,7 @@
         "context": "{n} is a number."
     },
     "shared.chipGroupLabel": {
-        "where": "Library page: screen-reader label of the row of chips for collections other congregations share",
+        "where": "Library page and Perform swap-for-tonight sheet: screen-reader label of the row of chips for collections other congregations share",
         "who": "musicians",
         "maxLength": 40
     },
@@ -112,13 +112,13 @@
         "maxLength": 40
     },
     "shared.chipAria": {
-        "where": "Library page: screen-reader label of one shared-collection chip",
+        "where": "Library page and Perform swap-for-tonight sheet: screen-reader label of one shared-collection chip",
         "who": "musicians",
         "maxLength": 80,
         "context": "{label} is the collection's name; {owner} is the name of the congregation that shares it."
     },
     "shared.fromOwner": {
-        "where": "Library page: small badge on a shared chip or chart row naming who shares it",
+        "where": "Library page and Perform swap-for-tonight sheet: small badge on a shared chip or chart row naming who shares it",
         "who": "musicians",
         "maxLength": 40,
         "context": "{owner} is the name of the congregation that shares the chart."

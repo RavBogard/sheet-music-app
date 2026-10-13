@@ -61,5 +61,17 @@
         "who": "leaders",
         "maxLength": 80,
         "context": "{title} is the chart's title, shown in quotes"
-    }
+    },
+    "uploadEmptyFile": { "where": "Library upload: error when the chosen file is empty", "who": "leaders and musicians who upload", "maxLength": 50 },
+    "uploadTooLarge": { "where": "Library upload: error when the file is over the size limit", "who": "leaders and musicians who upload", "maxLength": 60, "context": "{maxMb} is a number of megabytes." },
+    "uploadMimeUnspecific": { "where": "Library upload: error when the browser sent no file type", "who": "leaders and musicians who upload", "maxLength": 200, "context": "Technical: keep the MIME types (application/pdf etc.) exactly as written." },
+    "uploadMimeUnsupported": { "where": "Library upload: error when the file type is not accepted", "who": "leaders and musicians who upload", "maxLength": 300, "context": "{mimeType} is the file's type; {allowed} is the list of accepted types (technical, keep as is)." },
+    "uploadUnknownCollection": { "where": "Library upload: error when the chosen library section does not exist", "who": "leaders and musicians who upload", "maxLength": 120, "context": "{collection} is the requested section id; {allowed} the list of valid ids (keep as is)." },
+    "uploadMuseScoreFailed": { "where": "Library upload: error when a MuseScore file could not be converted", "who": "leaders and musicians who upload", "maxLength": 120, "context": "{detail} is a technical error message in English; leave it as is." },
+    "uploadHeicFailed": { "where": "Library upload: error when an iPhone (HEIC) photo could not be converted", "who": "leaders and musicians who upload", "maxLength": 120, "context": "{detail} is a technical error message in English; leave it as is." },
+    "uploadDuplicateExact": { "where": "Library upload: error when a chart with exactly this name is already in the library", "who": "leaders and musicians who upload", "maxLength": 200, "context": "{existingName} is the existing chart's name. 'force: true' is a technical option name; keep it as written. 'chart' = sheet music file." },
+    "uploadDuplicateSimilar": { "where": "Library upload: error when a chart with a very similar name is already in the library", "who": "leaders and musicians who upload", "maxLength": 200, "context": "{existingName} is the existing chart's name. 'force: true' is a technical option name; keep it as written." },
+    "uploadStorageMissing": { "where": "Library upload: rare server error after storing the file failed silently", "who": "leaders and musicians who upload", "maxLength": 250, "context": "{path} is a storage path (technical)." },
+    "uploadStorageSizeMismatch": { "where": "Library upload: rare server error when the stored file's size does not match", "who": "leaders and musicians who upload", "maxLength": 200, "context": "{wrote} and {readBack} are byte counts." },
+    "uploadIndexWriteFailed": { "where": "Library upload: rare server error when saving the library entry failed", "who": "leaders and musicians who upload", "maxLength": 200, "context": "{detail} is a technical error message in English; leave it as is." }
 }

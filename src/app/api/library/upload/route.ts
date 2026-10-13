@@ -97,7 +97,9 @@ export const POST = createApiHandler(async (ctx) => {
     })
 
     if (!result.ok) {
-        return NextResponse.json({ error: result.error }, { status: result.status })
+        // Phase 7: the lib's sentence in the request's language (English identical to result.error).
+        const t = await getT()
+        return NextResponse.json({ error: result.i18n ? t(result.i18n.key, result.i18n.vars) : result.error }, { status: result.status })
     }
 
     revalidatePath("/api/library/list")

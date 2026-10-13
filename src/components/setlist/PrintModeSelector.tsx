@@ -4,6 +4,7 @@ import { User, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { MusicianProfile } from "@/types/models"
 import { INSTRUMENT_PRESETS } from "@/lib/musician-profile"
+import { instrumentLabel } from "@/lib/instrument-labels"
 import { useT } from "@/i18n/client"
 
 export type PrintMode = "standard" | "just-me" | "select-musicians"
@@ -123,7 +124,7 @@ export function PrintModeSelector({
                                             className="accent-violet-600 w-4 h-4 rounded"
                                         />
                                         <span className="text-sm">{m.displayName}</span>
-                                        {preset && <span className="text-xs text-muted-foreground">({preset.label})</span>}
+                                        {preset && m.profile.instrument && <span className="text-xs text-muted-foreground">({instrumentLabel(m.profile.instrument, t)})</span>}
                                     </label>
                                 )
                             })}

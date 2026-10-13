@@ -1,5 +1,7 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib"
 import { transposeChord } from "@/lib/music-math"
+import { firstStrongDirection, hasHebrew, toVisual } from "./bidi-visual"
+import { cleanForTtf, pdfDirection, pdfNeedsUnicode, unicodeFacesFor, type PdfI18n } from "./pdf-i18n"
 
 /**
  * Shared, framework-agnostic renderer that turns a scraped `text/plain` chord
@@ -98,6 +100,15 @@ export interface RenderTextChartOptions {
     transposition?: number
     /** Flat/sharp spelling preference passed to music-math. */
     preferFlats?: boolean
+    /**
+     * Multi-tenant phase 7: the tenant's language. This renderer draws no
+     * labels of its own (the title is the song's, the body is chart content),
+     * but for a non-English tenant the title is drawn with the Alef font (so a
+     * Hebrew song title prints instead of '?') and, in a right-to-left
+     * language, right-aligned. The chord/lyric body never changes: it stays
+     * Courier, left-to-right. Absent / English: byte-identical to before.
+     */
+    i18n?: PdfI18n
 }
 
 /**
@@ -112,7 +123,10 @@ export async function renderTextChartToPdf(
     opts: RenderTextChartOptions = {},
 ): Promise<void> {
     const courier = await pdf.embedFont(StandardFonts.Courier)
-    const helveticaBold = await pdf.embedFont(StandardFonts.HelveticaBold)
+    // A Hebrew title (any tenant) also takes Alef: Helvetica would print '?'.
+    const unicodeTitle = pdfNeedsUnicode(opts.i18n) || hasHebrew(rawTitle)
+    const helveticaBold = unicodeTitle ? null : await pdf.embedFont(StandardFonts.HelveticaBold)
+    const alefBold = unicodeTitle ? (await unicodeFacesFor(pdf)).bold : null
     const PAGE_W = 612
     const PAGE_H = 792
     const MARGIN_L = 50
@@ -147,13 +161,26 @@ export async function renderTextChartToPdf(
 
     let page = pdf.addPage([PAGE_W, PAGE_H])
     let y = PAGE_H - MARGIN_T
-    page.drawText(title, {
-        x: MARGIN_L,
-        y,
-        size: TITLE_SIZE,
-        font: helveticaBold,
-        color: rgb(0, 0, 0),
-    })
+    if (alefBold) {
+        const rtl = pdfDirection(opts.i18n) === "rtl"
+        const shown = cleanForTtf(alefBold, rawTitle)
+        const w = alefBold.widthOfTextAtSize(shown, TITLE_SIZE)
+        const base = rtl ? "rtl" : (firstStrongDirection(shown) ?? "ltr")
+        alefBold.drawText(page, toVisual(shown, { base }), {
+            x: rtl ? PAGE_W - MARGIN_L - w : MARGIN_L,
+            y,
+            size: TITLE_SIZE,
+            color: rgb(0, 0, 0),
+        })
+    } else {
+        page.drawText(title, {
+            x: MARGIN_L,
+            y,
+            size: TITLE_SIZE,
+            font: helveticaBold!,
+            color: rgb(0, 0, 0),
+        })
+    }
     y -= TITLE_SIZE + 12
 
     for (const line of wrapped) {

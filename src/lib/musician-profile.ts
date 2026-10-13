@@ -2,6 +2,7 @@ import { getDb, auth, subscribeWithDb } from "./firebase"
 import { doc, updateDoc, onSnapshot } from "firebase/firestore"
 import { MusicianProfile } from "@/types/models"
 import { logger } from "@/lib/logger"
+import { plainT } from "@/i18n/plain"
 
 /**
  * Save the current user's musician profile to Firestore.
@@ -9,9 +10,9 @@ import { logger } from "@/lib/logger"
  */
 export async function saveMusicianProfile(profile: MusicianProfile): Promise<void> {
     const user = auth.currentUser
-    if (!user) throw new Error("Not authenticated")
+    if (!user) throw new Error(plainT()("clientErrors.notSignedIn"))
     const db = await getDb()
-    if (!db || Object.keys(db).length === 0) throw new Error("Database not initialized")
+    if (!db || Object.keys(db).length === 0) throw new Error(plainT()("clientErrors.databaseNotReady"))
 
     const ref = doc(db, "users", user.uid)
     await updateDoc(ref, { musicianProfile: profile })

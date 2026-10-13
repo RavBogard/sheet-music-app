@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { scrapeChart } from "@/lib/chart-scrape"
+import { scrapeChart, type ScrapeChartErrorCode } from "@/lib/chart-scrape"
 import { getT } from "@/i18n/server"
 
 /**
@@ -13,6 +13,15 @@ import { getT } from "@/i18n/server"
  */
 export const maxDuration = 60
 
+// Phase 7: the lib's error codes, worded in the request's language (English identical).
+const SCRAPE_ERROR_KEY: Record<ScrapeChartErrorCode, string> = {
+    fetch_status: "api-charts.scrapeFetchStatus",
+    fetch_failed: "api-charts.scrapeFetchFailed",
+    input_required: "api-charts.scrapeInputRequired",
+    no_chart: "api-charts.scrapeNoChart",
+    scrape_failed: "api-charts.scrapeFailed",
+}
+
 export async function POST(request: Request) {
     let body: { url?: string; rawText?: string }
     try {
@@ -24,7 +33,8 @@ export async function POST(request: Request) {
 
     const result = await scrapeChart(body)
     if (!result.ok) {
-        return NextResponse.json({ error: result.error }, { status: result.status })
+        const t = await getT()
+        return NextResponse.json({ error: t(SCRAPE_ERROR_KEY[result.code], { detail: result.detail ?? "" }) }, { status: result.status })
     }
     return NextResponse.json({
         title: result.title,

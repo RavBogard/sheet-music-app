@@ -17,9 +17,8 @@ import type { Setlist } from "@/lib/setlist-firebase"
 import { ScraperModal } from "../ScraperModal"
 
 const SETLISTS = [{ id: "s1", name: "Test Setlist A" }] as unknown as Setlist[]
-// "Close" is the shared Dialog close button (src/components/ui/dialog.tsx, not this lane's file).
 // The URL field's example placeholder is i18n-ignored in the component (a URL, not prose).
-const DATA = ["Close", "https://tabs.ultimate-guitar.com/...","Test Song A", "Test Artist", "Test Song B", "Other Artist", "CRC Charts", "Shireinu", "Nava Tehilah", "Test Setlist A", "Find test song a"]
+const DATA = ["https://tabs.ultimate-guitar.com/...","Test Song A", "Test Artist", "Test Song B", "Other Artist", "CRC Charts", "Shireinu", "Nava Tehilah", "Test Setlist A", "Find test song a"]
 
 function stubFetch() {
     const fetchMock = vi.fn((url: string) => {

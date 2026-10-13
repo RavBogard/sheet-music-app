@@ -9,6 +9,7 @@ import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 import { logger } from "@/lib/logger"
 import { renderTextChartToPdf } from "@/lib/pdf/text-chart-pdf"
 import { renderServiceSheetPdf } from "@/lib/pdf/service-sheet-pdf"
+import { pdfI18nForOrg } from "@/lib/pdf/pdf-i18n-server"
 import { getRegistryEntry } from "@/lib/books/registry"
 import { isPrintRowMode, type PrintRowMode } from "@/lib/print/row-mode"
 import { rowOrg } from "@/lib/org/membership"
@@ -369,6 +370,9 @@ export async function generateGigPacket(
     // Multi-tenant phase 1: the setlist's tenant (crc and brotherslazaroff:
     // "CRC Music Books gig packet").
     mergedPdf.setSubject(orgString(rowOrg(setlistData.orgId), "print.packetSubject"))
+    // Multi-tenant phase 7: the packet's PDF labels in the setlist tenant's
+    // language (the MCP response stays English). CRC/BL: English, unchanged.
+    const pdfI18n = await pdfI18nForOrg(rowOrg(setlistData.orgId))
 
     // The order of service, ahead of the charts, when asked for. Rendered by
     // the rabbi-sheet renderer so the two documents cannot drift apart: one
@@ -382,7 +386,8 @@ export async function generateGigPacket(
                     ? getRegistryEntry(setlistData.book)?.title
                     : undefined,
                 book: typeof setlistData.book === "string" ? setlistData.book : undefined,
-                sectionLabel: "Order of service",
+                sectionLabel: pdfI18n.t("pdf.serviceSheet.sectionOrder"),
+                i18n: pdfI18n,
                 tracks: tracks.map((t) => {
                     const row = t as unknown as Record<string, unknown>
                     return {
@@ -482,7 +487,7 @@ export async function generateGigPacket(
                 })
             } else if (ct.startsWith("text/")) {
                 const text = fetched.buffer.toString("utf-8")
-                await renderTextChartToPdf(mergedPdf, rawTitle, text)
+                await renderTextChartToPdf(mergedPdf, rawTitle, text, { i18n: pdfI18n })
                 appendedCount++
             } else {
                 missingCharts.push({

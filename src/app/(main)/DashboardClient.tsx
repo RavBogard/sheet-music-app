@@ -18,7 +18,7 @@ import { isNonTestSetlist } from "@/components/performance/public-setlist-order"
 import { OrgLogo } from "@/components/nav/OrgLogo"
 import { cn } from "@/lib/utils"
 import { formatError } from "@/lib/format-error"
-import { useT, useFormat } from "@/i18n/client"
+import { useI18n } from "@/i18n/client"
 
 // Dashboard complexity components -- commented out per Phase 3 Plan 03 redesign.
 // Retained for potential use in Phase 4 (template management) or Phase 6 (notifications).
@@ -43,8 +43,7 @@ export interface DashboardServerProps {
 
 export default function DashboardClient({ serverGreeting, serverShortName, serverLogoUrl = null, serverIsMember = false, serverIsBandLeader = false, serverIsAdmin = false, serverUid = null }: DashboardServerProps) {
     const router = useRouter()
-    const t = useT()
-    const fmt = useFormat()
+    const { t, fmt, lang } = useI18n()
     const { user: authUser, profile, role, cachedUser, signIn, isMember: authIsMember, isBandLeader, loading: authLoading } = useAuth()
     const congregation = useCongregation()
 
@@ -95,15 +94,15 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
     }, [setlistsLoaded])
 
     // Greeting — use server-rendered value initially, recompute client-side for real-time updates.
-    const initialGreeting = serverGreeting || getContextualGreeting(null, undefined, serverShortName || DEFAULT_SHORT_NAME)
+    const initialGreeting = serverGreeting || getContextualGreeting(null, undefined, serverShortName || DEFAULT_SHORT_NAME, { t, lang })
     const [greeting, setGreeting] = useState<Greeting>(initialGreeting)
 
     useEffect(() => {
         const displayName = profile?.displayName || user?.displayName || cachedUser?.displayName
         const firstName = displayName?.split(' ')[0] || null
         const shortName = congregation.shortName || serverShortName || DEFAULT_SHORT_NAME
-        setGreeting(getContextualGreeting(firstName, undefined, shortName))
-    }, [profile?.displayName, user?.displayName, cachedUser?.displayName, congregation.shortName, serverShortName])
+        setGreeting(getContextualGreeting(firstName, undefined, shortName, { t, lang }))
+    }, [profile?.displayName, user?.displayName, cachedUser?.displayName, congregation.shortName, serverShortName, t, lang])
 
     const setlistService = useMemo(() => {
         return createSetlistService(user?.uid || null, user?.displayName || null)

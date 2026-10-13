@@ -28,6 +28,7 @@
  */
 
 import { desiredWorkerSrc } from "@/lib/pdf-worker-offline"
+import { plainT } from "@/i18n/plain"
 
 /** One rendered chart page, ready to drop into the print document. */
 export interface PrintPageImage {
@@ -79,7 +80,7 @@ export async function rasterizePdfToPageImages(blob: Blob): Promise<PrintPageIma
             canvas.width = Math.max(1, Math.floor(viewport.width))
             canvas.height = Math.max(1, Math.floor(viewport.height))
             const ctx = canvas.getContext("2d")
-            if (!ctx) throw new Error("Couldn't prepare the chart for print (no 2D canvas).")
+            if (!ctx) throw new Error(plainT()("clientErrors.printPrepareNoCanvas"))
             // Paper is white; a PDF with no painted background would otherwise
             // rasterize onto transparency and print as a black block.
             ctx.fillStyle = "#ffffff"
@@ -89,7 +90,7 @@ export async function rasterizePdfToPageImages(blob: Blob): Promise<PrintPageIma
             const pageBlob = await new Promise<Blob | null>(resolve =>
                 canvas.toBlob(resolve, "image/png"),
             )
-            if (!pageBlob) throw new Error("Couldn't prepare the chart for print (page render failed).")
+            if (!pageBlob) throw new Error(plainT()("clientErrors.printPrepareRenderFailed"))
             pages.push({
                 url: URL.createObjectURL(pageBlob),
                 widthPt: base.width,
@@ -104,7 +105,7 @@ export async function rasterizePdfToPageImages(blob: Blob): Promise<PrintPageIma
         void doc.destroy()
     }
 
-    if (pages.length === 0) throw new Error("This chart has no pages to print.")
+    if (pages.length === 0) throw new Error(plainT()("clientErrors.printNoPages"))
     return pages
 }
 
@@ -157,7 +158,7 @@ export function printHtmlInHiddenIframe(html: string): Promise<void> {
     return new Promise((resolve, reject) => {
         const iframe = document.createElement("iframe")
         iframe.setAttribute("aria-hidden", "true")
-        iframe.title = "Print preview"
+        iframe.title = plainT()("clientErrors.printPreviewTitle")
         // Off-screen rather than 0×0: layout must actually happen for the
         // images to decode and for the print box to be measured.
         iframe.style.position = "fixed"
@@ -188,7 +189,7 @@ export function printHtmlInHiddenIframe(html: string): Promise<void> {
         }
 
         const loadTimeout = setTimeout(
-            () => finish(new Error("Timed out preparing the chart for print.")),
+            () => finish(new Error(plainT()("clientErrors.printTimedOut"))),
             30000,
         )
 
@@ -197,7 +198,7 @@ export function printHtmlInHiddenIframe(html: string): Promise<void> {
                 try {
                     const win = iframe.contentWindow
                     const doc = iframe.contentDocument
-                    if (!win || !doc) throw new Error("Couldn't open the print preview.")
+                    if (!win || !doc) throw new Error(plainT()("clientErrors.printPreviewFailed"))
 
                     await Promise.all(
                         Array.from(doc.images).map(img =>
@@ -218,7 +219,7 @@ export function printHtmlInHiddenIframe(html: string): Promise<void> {
                 }
             })()
         }
-        iframe.onerror = () => finish(new Error("Couldn't load the chart for print."))
+        iframe.onerror = () => finish(new Error(plainT()("clientErrors.printLoadFailed")))
 
         document.body.appendChild(iframe)
         iframe.srcdoc = html

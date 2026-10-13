@@ -1,11 +1,11 @@
 "use client"
 
-import { createContext, useContext, useMemo, type ReactNode } from "react"
+import { createContext, useContext, useEffect, useMemo, type ReactNode } from "react"
 import { DirectionProvider } from "@radix-ui/react-direction"
 import { createTranslator, isPseudo, type Direction, type T, type TenantTokens, type UiLanguage } from "@/i18n/core"
 import { createFormatter, type Formatter } from "@/i18n/format"
 import { tenantTokensOf } from "@/i18n/language"
-import { peekCompleteMessages, peekMessages, primeMessages } from "@/i18n/message-cache"
+import { peekCompleteMessages, peekMessages, primeMessages, setActiveUiLanguage } from "@/i18n/message-cache"
 import { pseudoize } from "@/i18n/pseudo"
 import { peekOrgConfig } from "@/lib/org/config-cache"
 import { useOrg } from "@/lib/org/org-context"
@@ -55,6 +55,10 @@ export function I18nProvider({ lang, dir, timeZone, messages, overrides, tokens,
     // Prime during render (idempotent) so plain functions (orgString) see the
     // language too, exactly as OrgProvider primes the tenant config.
     primeMessages(lang, messages)
+    // Browser only: lets orgString()/label() wrap tenant vocabulary under the
+    // pseudo-locale (the server serves many requests from one module).
+    if (typeof window !== "undefined") setActiveUiLanguage(lang)
+    useEffect(() => () => setActiveUiLanguage(null), [])
     const value = useMemo<I18nValue>(() => {
         const t = createTranslator({
             lang,

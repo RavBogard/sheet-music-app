@@ -66,6 +66,12 @@ export type StructureResult =
           ok: false
           reason: 'malformed' | 'empty' | 'gemini_error'
           message: string
+          /**
+           * Phase 7: `message` as a catalogue key + vars for the browser route
+           * (English identical). Absent when `message` is the AI service's own
+           * error text, which is passed through as is.
+           */
+          i18n?: { key: string; vars?: Record<string, string | number> }
           raw?: string
       }
 
@@ -132,6 +138,7 @@ export async function extractSetlistStructure(
             ok: false,
             reason: 'empty',
             message: 'No document text provided to extract.',
+            i18n: { key: 'api-setlists.structureNoText' },
         }
     }
 
@@ -154,6 +161,7 @@ export async function extractSetlistStructure(
                 err instanceof Error
                     ? err.message
                     : 'Gemini structured extraction failed.',
+            i18n: err instanceof Error ? undefined : { key: 'api-setlists.structureAiFailed' },
         }
     }
 
@@ -162,6 +170,7 @@ export async function extractSetlistStructure(
             ok: false,
             reason: 'empty',
             message: 'Gemini returned an empty response.',
+            i18n: { key: 'api-setlists.structureAiEmpty' },
             raw: rawOutput ?? '',
         }
     }
@@ -181,6 +190,7 @@ export async function extractSetlistStructure(
             ok: false,
             reason: 'malformed',
             message: 'Gemini returned output that is not valid JSON.',
+            i18n: { key: 'api-setlists.structureAiNotJson' },
             raw: rawOutput,
         }
     }
@@ -194,6 +204,7 @@ export async function extractSetlistStructure(
             ok: false,
             reason: 'malformed',
             message: `Gemini output did not match the expected setlist structure: ${detail}`,
+            i18n: { key: 'api-setlists.structureAiMismatch', vars: { detail } },
             raw: rawOutput,
         }
     }

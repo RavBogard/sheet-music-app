@@ -17,8 +17,7 @@ vi.mock("@/lib/library-store", () => ({
 vi.mock("@/hooks/use-library", () => ({ useLibrary: () => undefined }))
 vi.mock("@/lib/song-suggestions", () => ({
     fetchUsageData: vi.fn(async () => new Map([["f1", { lastUsedDate: "2026-01-01", totalUses: 4, lastUsedSetlistName: "Test Setlist A" }]])),
-    // `reason` is built in English by src/lib/song-suggestions.ts (not this lane's file).
-    getSuggestions: () => [{ file: FILES[0], reason: "Used 4× — Test Setlist A", category: "staple" }],
+    getSuggestions: () => [{ file: FILES[0], reason: { kind: "staple", uses: 4, setlistName: "Test Setlist A" }, category: "staple" }],
 }))
 
 import { renderPseudo, renderWithI18n, expectNoUntranslatedText } from "@/test-utils/i18n"
@@ -28,12 +27,13 @@ import { EditDetails } from "../EditDetails"
 import { NamePrompt } from "../NamePrompt"
 
 // Data: file names (and their mime subtype shown under the name), setlist name,
-// rabbi name, typed values; the suggestion reason (lib-built, see above);
-// "Close" is the shared ui/dialog + ui/sheet close button (not this lane's file).
+// rabbi name, typed values.
 const ALLOW: Array<string | RegExp> = [
-    "Close", "Test Song A.pdf", "Test Song B.musicxml", "Test Song A", "Test Song B",
+    "Test Song A.pdf", "Test Song B.musicxml", "Test Song A", "Test Song B",
     "pdf", "vnd.recordare.musicxml+xml", "Setlist A", "Rabbi Test", "Notes A",
-    "Used 4× — Test Setlist A", "Test Song",
+    "Test Song",
+    // The suggestion reason is a translated sentence around the setlist name.
+    /Test Setlist A/,
 ]
 const check = () => expectNoUntranslatedText(document.body, { allow: ALLOW })
 

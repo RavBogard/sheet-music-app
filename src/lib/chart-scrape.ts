@@ -25,10 +25,19 @@ export interface ScrapeChartOk {
     content: string
 }
 
+/**
+ * Phase 7: `code` (+ `detail`, untranslated machine text) lets the browser
+ * route word the error in the tenant's language (api-charts.scrape*); `error`
+ * stays the English sentence the MCP tool returns.
+ */
+export type ScrapeChartErrorCode = "fetch_status" | "fetch_failed" | "input_required" | "no_chart" | "scrape_failed"
+
 export interface ScrapeChartError {
     ok: false
     status: number
     error: string
+    code: ScrapeChartErrorCode
+    detail?: string
 }
 
 export type ScrapeChartResult = ScrapeChartOk | ScrapeChartError
@@ -94,6 +103,8 @@ export async function scrapeChart(
                         ok: false,
                         status: 502,
                         error: `Failed to fetch URL: ${response.statusText}`,
+                        code: "fetch_status",
+                        detail: response.statusText,
                     }
                 }
             } else {
@@ -112,7 +123,7 @@ export async function scrapeChart(
             }
         } catch (err) {
             const message = err instanceof Error ? err.message : "Unknown error"
-            return { ok: false, status: 502, error: `Fetch failed: ${message}` }
+            return { ok: false, status: 502, error: `Fetch failed: ${message}`, code: "fetch_failed", detail: message }
         }
     }
 
@@ -121,6 +132,7 @@ export async function scrapeChart(
             ok: false,
             status: 400,
             error: "url or rawText is required",
+            code: "input_required",
         }
     }
 
@@ -196,6 +208,7 @@ ${(contentToParse ?? "").slice(0, 100000)}`
                 error:
                     "No chord chart detected on this page (or the page is gated/empty). " +
                     "Try a different URL or paste raw text via rawText.",
+                code: "no_chart",
             }
         }
         return { ok: true, title, artist, content }
@@ -206,6 +219,8 @@ ${(contentToParse ?? "").slice(0, 100000)}`
             ok: false,
             status: 500,
             error: `Failed to scrape chart: ${message}`,
+            code: "scrape_failed",
+            detail: message,
         }
     }
 }
