@@ -9,5 +9,17 @@
     "tooManyFileIds": "עד {max} מזהי קבצים בבקשה אחת",
     "uploadPermissionRequired": "נדרשת הרשאת העלאה. אפשר לבקש ממנהל/ת להפעיל העלאות בחשבון שלך.",
     "noFileProvided": "לא צורף קובץ",
-    "uploaded": "\"{title}\" הועלה לספרייה"
+    "uploaded": "\"{title}\" הועלה לספרייה",
+    "uploadEmptyFile": "לא התקבל תוכן קובץ",
+    "uploadTooLarge": "הקובץ גדול מדי. הגודל המרבי הוא {maxMb}MB",
+    "uploadMimeUnspecific": "יש לציין mimeType מדויק (למשל: application/pdf, image/png, application/vnd.recordare.musicxml+xml). 'application/octet-stream' אינו מציין סוג קובץ ולכן נדחה.",
+    "uploadMimeUnsupported": "mimeType '{mimeType}' אינו נתמך. סוגים מותרים: {allowed}",
+    "uploadUnknownCollection": "האוסף \"{collection}\" אינו קיים. אוספים מותרים: {allowed}",
+    "uploadMuseScoreFailed": "המרת קובץ MuseScore נכשלה: {detail}",
+    "uploadHeicFailed": "המרת תמונת HEIC נכשלה: {detail}",
+    "uploadDuplicateExact": "כבר קיים קובץ תווים באותו שם (\"{existingName}\"). אם זו גרסה נוספת לגיטימית, אפשר להעביר force: true כדי לעקוף את הבדיקה.",
+    "uploadDuplicateSimilar": "כבר קיים בספרייה קובץ תווים בשם דומה (\"{existingName}\"). אם זו גרסה נוספת לגיטימית, אפשר להעביר force: true כדי לעקוף את הבדיקה.",
+    "uploadStorageMissing": "האחסון דיווח שהכתיבה הצליחה, אבל הקובץ חסר ב-{path} — רשומת האינדקס לא נכתבה (כדי לא ליצור רשומה יתומה).",
+    "uploadStorageSizeMismatch": "גודל הקובץ באחסון אינו תואם (נכתבו {wrote}, נקראו {readBack}) — רשומת האינדקס לא נכתבה.",
+    "uploadIndexWriteFailed": "כתיבת רשומת האינדקס ב-Firestore נכשלה ({detail}); השמירה באחסון בוטלה."
 }

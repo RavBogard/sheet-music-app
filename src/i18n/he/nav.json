@@ -47,5 +47,7 @@
     "minutesAgo": "לפני {minutes} דק׳",
     "hoursAgo": "לפני {hours} שע׳",
     "daysAgo": "לפני {days} ימים",
-    "orgLogoAlt": "הלוגו של {orgName}"
+    "orgLogoAlt": "הלוגו של {orgName}",
+    "saveLabelNotification": "סימון ההתראה כנקראה",
+    "saveLabelNotifications": "סימון ההתראות כנקראו"
 }

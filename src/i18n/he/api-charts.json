@@ -2,5 +2,10 @@
     "invalidJsonBody": "גוף ה-JSON אינו תקין",
     "messagesRequired": "נדרש מערך הודעות",
     "searchDefaultReply": "הנה כמה תוצאות שמצאתי.",
-    "searchFailed": "החיפוש נכשל"
+    "searchFailed": "החיפוש נכשל",
+    "scrapeFetchStatus": "טעינת הכתובת נכשלה: {detail}",
+    "scrapeFetchFailed": "לא ניתן היה להגיע לדף: {detail}",
+    "scrapeInputRequired": "יש לציין כתובת אינטרנט או להדביק טקסט",
+    "scrapeNoChart": "לא זוהו תווים בדף הזה (או שהדף חסום או ריק). אפשר לנסות כתובת אחרת, או להדביק את הטקסט ישירות (rawText).",
+    "scrapeFailed": "קריאת התווים מהדף נכשלה: {detail}"
 }

@@ -1,0 +1,46 @@
+{
+    "serviceSheet": {
+        "untitledService": "תפילה",
+        "untitledRow": "(ללא שם)",
+        "honors": "כיבודים",
+        "honorsContinued": "כיבודים (המשך)",
+        "sectionOrder": "סדר התפילה",
+        "sectionMusic": "שירים בלבד"
+    },
+    "packet": {
+        "columnNumber": "#",
+        "columnSong": "שיר",
+        "columnKey": "סולם",
+        "columnVocalLead": "שירה ראשית",
+        "columnTransposedKey": "לנגינה",
+        "columnNotes": "הערות",
+        "columnPage": "עמוד",
+        "folio": "עמ׳ {page}",
+        "ledBy": "בהובלת {name}",
+        "preparedFor": "חוברת אישית עבור {name}",
+        "capo": "Capo {fret}",
+        "minutes": "כ-{minutes} דק׳",
+        "songCount_one": "שיר אחד",
+        "songCount_other": "{count} שירים",
+        "transposed": "כולל העברת סולם",
+        "omittedTitle": "תווים שלא נכללו בחוברת",
+        "omittedIntro": "לשורות האלה ברשימת השירים לא נוצר עמוד תווים להדפסה:"
+    },
+    "omission": {
+        "noChart": "לא חוברו תווים לשיר הזה.",
+        "imageFailed": "לא ניתן היה להוריד את תמונת התווים או לשלב אותה.",
+        "fileMissing": "קובץ התווים חסר או ריק.",
+        "unreadable": "קובץ התווים אינו PDF קריא ואינו בפורמט תווים נתמך.",
+        "fetchFailed": "לא ניתן היה להוריד את התווים."
+    },
+    "progress": {
+        "preparing": "מכינים את ההדפסה...",
+        "processing": "בעיבוד: {title}",
+        "merging": "יוצרים את קובץ ה-PDF הסופי..."
+    },
+    "client": {
+        "generateFailed": "יצירת קובץ ה-PDF נכשלה",
+        "serverError": "שגיאת שרת ({status})",
+        "chartsOmitted": "חלק מקובצי התווים לא נכללו בחוברת."
+    }
+}
