@@ -2,7 +2,7 @@ import { peekOrgConfig } from "@/lib/org/config-cache"
 import { codeOrgConfig } from "@/lib/org/config-code"
 import { STRING_BASE, interpolate, tokensFor, type StringKey } from "@/lib/org/strings-base"
 import type { OrgId } from "@/lib/org/types"
-import { peekMessages } from "@/i18n/message-cache"
+import { peekCompleteMessages, peekMessages } from "@/i18n/message-cache"
 
 export { STRING_BASE, interpolate, tokensFor, type StringKey, type StringTokens } from "@/lib/org/strings-base"
 
@@ -23,7 +23,10 @@ export function orgString(orgId: OrgId, key: StringKey): string {
     const override = cfg.vocabulary.overrides[key]
     let template: string | undefined = override
     if (template === undefined && cfg.locale.language !== "en") {
-        template = peekMessages(cfg.locale.language)?.[`org.${key}`]
+        // Server: the complete catalogue (SSR of <I18nProvider> primes the
+        // client subset into the plain cache). Browser: what the provider primed.
+        const lang = cfg.locale.language
+        template = (peekCompleteMessages(lang) ?? peekMessages(lang))?.[`org.${key}`]
     }
     return interpolate(template ?? STRING_BASE[key], tokensFor(cfg))
 }

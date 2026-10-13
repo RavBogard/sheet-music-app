@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { MusicianProfileSettings } from "@/components/settings/MusicianProfileSettings"
 import { PushNotificationSettings } from "@/components/settings/PushNotificationSettings"
 import { McpAccessSettings } from "@/components/settings/McpAccessSettings"
+import { LanguageSettings } from "@/components/settings/LanguageSettings"
 import { useTheme } from "next-themes"
 import { useMusicStore } from "@/lib/store"
 import { Switch } from "@/components/ui/switch"
@@ -196,6 +197,9 @@ export default function SettingsPage() {
                             Performance mode always uses dark theme for stage visibility.
                         </p>
                     </div>
+
+                    {/* Language (phase 7: only on a non-English tenant) */}
+                    <LanguageSettings />
 
                     {/* Performance Modes */}
                     <div className="bg-card border border-border p-5 rounded-2xl">

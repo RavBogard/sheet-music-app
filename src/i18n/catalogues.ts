@@ -2,7 +2,7 @@ import "server-only"
 
 import { catalogueFiles } from "@/i18n/catalogue-source"
 import { flattenNamespace, NAMESPACE_RE, type Messages, type TenantLanguage, type UiLanguage } from "@/i18n/core"
-import { primeMessages } from "@/i18n/message-cache"
+import { primeCompleteMessages } from "@/i18n/message-cache"
 import { pseudoMessages } from "@/i18n/pseudo"
 import { STRING_BASE } from "@/lib/org/strings-base"
 
@@ -74,7 +74,7 @@ export function clientMessagesFor(lang: UiLanguage): Record<string, string> {
 
 /** Prime the isomorphic message cache for every language (idempotent). */
 export function primeAllMessages(): void {
-    for (const lang of ["en", "he", "qps", "qps-rtl"] as const) primeMessages(lang, messagesFor(lang))
+    for (const lang of ["en", "he", "qps", "qps-rtl"] as const) primeCompleteMessages(lang, messagesFor(lang))
 }
 
 /** Language a tenant language falls back to — always English. */

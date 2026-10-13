@@ -1,0 +1,4 @@
+{
+    "title": { "where": "Settings page, card heading above the language buttons (also the radio group's accessible name).", "who": "every signed-in user of a non-English tenant", "maxLength": 20 },
+    "hint": { "where": "Settings page, small grey line under the language buttons.", "who": "every signed-in user of a non-English tenant", "maxLength": 80, "context": "'Charts' = the musical chord charts / sheet music, which are not translated." }
+}

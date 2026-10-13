@@ -6,6 +6,7 @@ import { transposeChord, keyUsesFlats } from "@/lib/music-math"
 import { maxRenderedLineLength, fitFontSize } from "./text-score-layout"
 import { Loader2, WrapText, Maximize2, ZoomIn, ZoomOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useChartContentDir } from "@/components/i18n/ChartContent"
 
 /**
  * Text-bonded chart viewer (chord-over-lyrics monospace .txt charts).
@@ -33,6 +34,8 @@ interface TextScoreViewerProps {
 }
 
 export function TextScoreViewer({ fileId }: TextScoreViewerProps) {
+    // Phase 7: chord lines never flip — the chart keeps its own (ltr) direction on an rtl page.
+    const chartDir = useChartContentDir()
     const transposition = useMusicStore((s) => s.transposition)
     /**
      * WAVE1 Bug 4 (2026-08-31) — the toolbar's zoom buttons used to do NOTHING
@@ -316,6 +319,7 @@ export function TextScoreViewer({ fileId }: TextScoreViewerProps) {
                 <div className="@container w-full">
                     <div
                         className="font-mono leading-relaxed overflow-x-auto"
+                        {...chartDir}
                         style={{ fontSize: fontSizeStyle }}
                     >
                         {parsedGroups.map((group) => {

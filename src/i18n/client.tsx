@@ -4,7 +4,7 @@ import { createContext, useContext, useMemo, type ReactNode } from "react"
 import { createTranslator, isPseudo, type Direction, type T, type TenantTokens, type UiLanguage } from "@/i18n/core"
 import { createFormatter, type Formatter } from "@/i18n/format"
 import { tenantTokensOf } from "@/i18n/language"
-import { peekMessages, primeMessages } from "@/i18n/message-cache"
+import { peekCompleteMessages, peekMessages, primeMessages } from "@/i18n/message-cache"
 import { pseudoize } from "@/i18n/pseudo"
 import { peekOrgConfig } from "@/lib/org/config-cache"
 import { useOrg } from "@/lib/org/org-context"
@@ -75,7 +75,7 @@ function useFallback(): I18nValue {
     return useMemo<I18nValue>(() => {
         const t = createTranslator({
             lang: "en",
-            messages: peekMessages("en") ?? {},
+            messages: peekCompleteMessages("en") ?? peekMessages("en") ?? {},
             overrides: cfg?.vocabulary.overrides,
             tokens: tenantTokensOf(cfg),
         })
