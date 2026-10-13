@@ -1,0 +1,117 @@
+{
+  "at": "2026-10-13T00:23:09.054Z",
+  "projectId": "crcmusiccharts",
+  "op": "provision",
+  "orgId": "mtprobe3",
+  "plan": {
+    "candidates": [
+      "crl-mtprobe3.vercel.app",
+      "crl-mtprobe3-music.vercel.app",
+      "crl-mtprobe3-app.vercel.app",
+      "crl-mtprobe3-2.vercel.app",
+      "crl-mtprobe3-3.vercel.app",
+      "crl-mtprobe3-4.vercel.app",
+      "crl-mtprobe3-5.vercel.app",
+      "crl-mtprobe3-6.vercel.app"
+    ]
+  },
+  "org": {
+    "existed": true,
+    "data": {
+      "id": "mtprobe3",
+      "name": "Probe Tenant mtprobe3",
+      "status": "active",
+      "domains": {
+        "primary": "mtprobe3.vercel.app",
+        "aliases": []
+      },
+      "branding": {
+        "shortName": "Probe mtprobe3",
+        "abbreviation": "PT",
+        "tagline": "",
+        "forceDark": false,
+        "appName": "Probe Tenant mtprobe3",
+        "metaTitleDefault": "Probe Tenant mtprobe3",
+        "metaTitleTemplate": "%s | Probe Tenant mtprobe3",
+        "metaDescription": "Throwaway tenant for multi-tenant gate checks.",
+        "ogTitle": "Probe Tenant mtprobe3",
+        "themeColor": "#4f46e5",
+        "logoUrl": "",
+        "wordmarkUrl": "",
+        "heroImageUrl": "",
+        "location": "",
+        "manifestPath": "/manifest.json",
+        "baseUrl": "https://mtprobe3.vercel.app",
+        "fontDisplay": "righteous",
+        "fontBody": "poppins",
+        "colors": {
+          "light": {},
+          "dark": {}
+        },
+        "legacyCssTheme": null
+      },
+      "vocabulary": {
+        "mode": "band",
+        "overrides": {}
+      },
+      "locale": {
+        "language": "en",
+        "direction": "ltr",
+        "timeZone": "America/Chicago",
+        "calendar": "diaspora",
+        "reminderLocalHour": 5,
+        "reminderUtcHour": null
+      },
+      "email": {
+        "fromName": "Probe Tenant mtprobe3",
+        "fromAddress": "",
+        "replyTo": "",
+        "headerBg": "#4f46e5",
+        "footerText": "",
+        "headerImagePath": "",
+        "headerImageHeightPx": 0
+      },
+      "legal": {
+        "operatorName": "Rabbi Daniel Bogard",
+        "contactEmail": "",
+        "useCrcText": false
+      },
+      "features": {
+        "mixer": false,
+        "driveInbox": false,
+        "schedulingEmails": false,
+        "todayFeed": false,
+        "notifyBand": false,
+        "perform": true
+      },
+      "driveInbox": {
+        "folderId": ""
+      },
+      "library": {
+        "collections": [],
+        "defaultCollection": "",
+        "openByLink": true
+      },
+      "liturgy": {
+        "books": [],
+        "defaultBookByService": {},
+        "serviceTypes": [],
+        "rabbiSlots": []
+      },
+      "congregationDefaults": {
+        "name": "Probe Tenant mtprobe3",
+        "shortName": "Probe mtprobe3",
+        "location": "",
+        "logoUrl": "",
+        "description": "",
+        "themeColor": "#4f46e5"
+      },
+      "agentGuide": "",
+      "configVersion": 1,
+      "throwaway": true,
+      "createdAt": {
+        "__ts": "2026-10-13T00:23:05.878Z"
+      }
+    }
+  }
+}

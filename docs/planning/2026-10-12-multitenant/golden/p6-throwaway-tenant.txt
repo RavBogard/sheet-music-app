@@ -1,0 +1,36 @@
+## flags all on
+login 200
+GET /perform                       200
+GET /monitor                       307
+GET /api/today                     404 {"error":"not_found"}
+POST /api/setlist/notify-band      401 {"ok":false,"error":{"code":401,"machine_code":"missing_bearer","message":"Authentication 
+POST /api/setlist/email-packets    401 {"ok":false,"error":{"code":401,"machine_code":"missing_bearer","message":"Authentication 
+POST /api/scheduling/remind        401 {"ok":false,"error":{"code":401,"machine_code":"missing_bearer","message":"Authentication 
+POST /api/library/sync             401 {"ok":false,"error":{"code":401,"machine_code":"missing_bearer","message":"Authentication 
+GET /api/bridge/setup-code         400 {"error":"Invalid code format"}
+tools 87 notify_band:Y preview_notify_band:Y get_chart_inbox:Y sync_chart_inbox:Y set_bus_fader:- get_mix:- assign_musician:Y
+call preview_notify_band: {"result":{"content":[{"type":"text","text":"{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 404,\n    \"machine_code\": \"setlist_not_found\",\n    \"message\": \"Setlist 'none' was not found.\"\n  },\n  \"setlistId\": \"none\",\n  \"hint\": \"Verify the i
+
+## flags all off
+login 200
+GET /perform                       404
+GET /monitor                       307
+GET /api/today                     404 {"error":"not_found"}
+POST /api/setlist/notify-band      401 {"ok":false,"error":{"code":401,"machine_code":"missing_bearer","message":"Authentication 
+POST /api/setlist/email-packets    401 {"ok":false,"error":{"code":401,"machine_code":"missing_bearer","message":"Authentication 
+POST /api/scheduling/remind        401 {"ok":false,"error":{"code":401,"machine_code":"missing_bearer","message":"Authentication 
+POST /api/library/sync             401 {"ok":false,"error":{"code":401,"machine_code":"missing_bearer","message":"Authentication 
+GET /api/bridge/setup-code         400 {"error":"Invalid code format"}
+tools 83 notify_band:- preview_notify_band:- get_chart_inbox:- sync_chart_inbox:- set_bus_fader:- get_mix:- assign_musician:Y
+call preview_notify_band: {"result":{"content":[{"type":"text","text":"MCP error -32602: Tool preview_notify_band not found"}],"isError":true},"jsonrpc":"2.0","id":1}
+
+
+## signed-in API, flags off
+/api/setlist/notify-band     {"error":"Validation failed","code":"VALIDATION_ERROR","details":{"_errors":[],"musicians":{"_errors":["Invalid input: expected ar
+/api/setlist/email-packets   {"error":"Setlist not found"} 404
+/api/scheduling/remind       {"error":"feature_off","feature":"schedulingEmails"} 404
+/api/library/sync            {"error":"feature_off","feature":"driveInbox"} 404
+/api/bridge/setup-code       {"error":"feature_off","feature":"mixer"} 404
+/api/setlist/notify-band     {"error":"At least one musician must be assigned"} 400
+/api/setlist/email-packets   {"error":"feature_off","feature":"notifyBand"} 404
+

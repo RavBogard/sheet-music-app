@@ -1,0 +1,117 @@
+{
+  "at": "2026-10-13T00:33:26.121Z",
+  "projectId": "crcmusiccharts",
+  "op": "throwaway-remove",
+  "orgId": "mtprobe3",
+  "plan": {
+    "detach": [
+      "crl-mtprobe3.vercel.app"
+    ],
+    "deleteDoc": "orgs/mtprobe3"
+  },
+  "org": {
+    "existed": true,
+    "data": {
+      "id": "mtprobe3",
+      "name": "Probe Tenant mtprobe3",
+      "status": "active",
+      "branding": {
+        "shortName": "Probe mtprobe3",
+        "abbreviation": "PT",
+        "tagline": "",
+        "forceDark": false,
+        "appName": "Probe Tenant mtprobe3",
+        "metaTitleDefault": "Probe Tenant mtprobe3",
+        "metaTitleTemplate": "%s | Probe Tenant mtprobe3",
+        "metaDescription": "Throwaway tenant for multi-tenant gate checks.",
+        "ogTitle": "Probe Tenant mtprobe3",
+        "themeColor": "#4f46e5",
+        "logoUrl": "",
+        "wordmarkUrl": "",
+        "heroImageUrl": "",
+        "location": "",
+        "manifestPath": "/manifest.json",
+        "baseUrl": "https://mtprobe3.vercel.app",
+        "fontDisplay": "righteous",
+        "fontBody": "poppins",
+        "colors": {
+          "light": {},
+          "dark": {}
+        },
+        "legacyCssTheme": null
+      },
+      "vocabulary": {
+        "mode": "band",
+        "overrides": {}
+      },
+      "locale": {
+        "language": "en",
+        "direction": "ltr",
+        "timeZone": "America/Chicago",
+        "calendar": "diaspora",
+        "reminderLocalHour": 5,
+        "reminderUtcHour": null
+      },
+      "email": {
+        "fromName": "Probe Tenant mtprobe3",
+        "fromAddress": "",
+        "replyTo": "",
+        "headerBg": "#4f46e5",
+        "footerText": "",
+        "headerImagePath": "",
+        "headerImageHeightPx": 0
+      },
+      "legal": {
+        "operatorName": "Rabbi Daniel Bogard",
+        "contactEmail": "",
+        "useCrcText": false
+      },
+      "driveInbox": {
+        "folderId": ""
+      },
+      "library": {
+        "collections": [],
+        "defaultCollection": "",
+        "openByLink": true
+      },
+      "liturgy": {
+        "books": [],
+        "defaultBookByService": {},
+        "serviceTypes": [],
+        "rabbiSlots": []
+      },
+      "congregationDefaults": {
+        "name": "Probe Tenant mtprobe3",
+        "shortName": "Probe mtprobe3",
+        "location": "",
+        "logoUrl": "",
+        "description": "",
+        "themeColor": "#4f46e5"
+      },
+      "agentGuide": "",
+      "configVersion": 1,
+      "throwaway": true,
+      "createdAt": {
+        "__ts": "2026-10-13T00:23:05.878Z"
+      },
+      "domains": {
+        "primary": "crl-mtprobe3.vercel.app",
+        "aliases": []
+      },
+      "defaultAddress": {
+        "host": "crl-mtprobe3.vercel.app",
+        "requestedSlug": "crl-mtprobe3",
+        "tried": [],
+        "at": 1791850995068
+      },
+      "features": {
+        "mixer": false,
+        "driveInbox": false,
+        "schedulingEmails": false,
+        "todayFeed": false,
+        "notifyBand": false,
+        "perform": false
+      }
+    }
+  }
+}

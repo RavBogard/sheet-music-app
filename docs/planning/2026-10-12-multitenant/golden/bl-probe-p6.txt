@@ -1,0 +1,23 @@
+# BL tenant-isolation e2e — https://www.centralreform.live/api/mcp
+
+  PASS  AC-3 BL list_setlists returns BL-only (empty is valid for a fresh tenant) — count=4
+  PASS  AC-3 BL create_setlist succeeds — id=62d1fcf2-ad54-42af-bad7-24dcc902c226
+  PASS  AC-3 BL owner can get its own new setlist
+  PASS  AC-3 new setlist appears in BL list
+  PASS  AC-3 CRC caller CANNOT see the BL-created setlist (→ stamped BL, not crc)
+  PASS  AC-1 BL get_setlist(CRC id) denied (not-found wall) — target=583b583e-0da3-4882-8e34-087ea0433d8a
+  PASS  AC-1 BL update_setlist(CRC id) → setlist_not_found — "setlist_not_found"
+  PASS  AC-1 BL delete_setlist(CRC id) → setlist_not_found — "setlist_not_found"
+  PASS  AC-1 CRC setlist unchanged after BL attack (present + name intact) — name="Eliana Levine Bat Mitzvah — October 10"
+  PASS  cleanup: BL probe setlist deleted
+  PASS  cleanup: BL probe setlist no longer retrievable
+  PASS  AC-4 CRC caller still lists its setlists (no lock-out from deploy) — count=4
+  PASS  v11-06-03 CRC list_templates intact (non-empty) — crc=4
+  PASS  v11-06-03 BL list_templates shares NO id with CRC's (no cross-tenant template leak) — bl=0 leakedIds=0
+  PASS  v11-06-03 CRC congregation identity intact (Central Reform Congregation) — name="Central Reform Congregation"
+  PASS  v11-06-03 BL congregation identity is Brothers Lazaroff, NOT CRC — name="Brothers Lazaroff"
+  PASS  v11-06-03 BL leadHistory contains NO CRC setlist (v11-06-01 scope live) — blHistory=7 leaked=0
+  PASS  v11-06-03 CRC list_musicians intact (non-empty) — crc=10
+  PASS  v11-06-03 BL list_musicians is org-scoped (returns an array, not an error) — bl=7
+
+# RESULT: 19 passed, 0 failed
