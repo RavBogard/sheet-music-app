@@ -2,7 +2,9 @@ import { peekOrgConfig } from "@/lib/org/config-cache"
 import { codeOrgConfig } from "@/lib/org/config-code"
 import { STRING_BASE, interpolate, tokensFor, type StringKey } from "@/lib/org/strings-base"
 import type { OrgId } from "@/lib/org/types"
-import { peekCompleteMessages, peekMessages } from "@/i18n/message-cache"
+import { peekActiveUiLanguage, peekCompleteMessages, peekMessages } from "@/i18n/message-cache"
+import { isPseudo } from "@/i18n/core"
+import { pseudoize } from "@/i18n/pseudo"
 
 export { STRING_BASE, interpolate, tokensFor, type StringKey, type StringTokens } from "@/lib/org/strings-base"
 
@@ -28,5 +30,14 @@ export function orgString(orgId: OrgId, key: StringKey): string {
         const lang = cfg.locale.language
         template = (peekCompleteMessages(lang) ?? peekMessages(lang))?.[`org.${key}`]
     }
-    return interpolate(template ?? STRING_BASE[key], tokensFor(cfg))
+    const text = interpolate(template ?? STRING_BASE[key], tokensFor(cfg))
+    // Phase 7 (lane D): under the pseudo-locale (browser only, see
+    // setActiveUiLanguage) tenant vocabulary is wrapped like t() output, so the
+    // untranslated-text check sees it as handled. Machine values (feed, SEO,
+    // e-mail, SMS, AI) are never wrapped. Real languages are untouched.
+    const active = peekActiveUiLanguage()
+    if (active && isPseudo(active) && !MACHINE_KEY_RE.test(key)) return pseudoize(text)
+    return text
 }
+
+const MACHINE_KEY_RE = /^(ai|feed|email|sms|seo|og)[.]/
