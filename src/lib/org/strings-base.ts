@@ -99,4 +99,4 @@ If you're not sure of a field, return null / [] — do NOT guess.`,
 
 export type StringKey = keyof typeof STRING_BASE
 
-export { interpolate, tokensFor, type StringTokens } from "@/lib/org/string-tokens"
+export { interpolate, tokensFor, type StringTokens } from "./string-tokens"

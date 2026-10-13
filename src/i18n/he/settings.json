@@ -138,11 +138,11 @@
         "calendarTitle": "מינוי ללוח שנה",
         "copy": "העתקה",
         "calendarCopied": "כתובת לוח השנה הועתקה!",
-        "calendarAddHint": "אפשר להוסיף את הכתובת הזו ל-Google Calendar, ל-Apple Calendar או ל-Outlook כדי לראות את לוח הזמנים שלך ב-CRC.",
+        "calendarAddHint": "אפשר להוסיף את הכתובת הזו ל-Google Calendar, ל-Apple Calendar או ל-Outlook כדי לראות את לוח הזמנים שלך ב-{community}.",
         "calendarGenerated": "נוצרה כתובת ללוח השנה!",
         "calendarGenerateFailed": "יצירת כתובת לוח השנה נכשלה",
         "calendarGenerating": "ביצירה...",
         "calendarGenerate": "יצירת כתובת ללוח שנה",
-        "calendarGenerateHint": "אפשר ליצור כתובת כדי להירשם ללוח הזמנים שלך ב-CRC באפליקציית לוח השנה האישית."
+        "calendarGenerateHint": "אפשר ליצור כתובת כדי להירשם ללוח הזמנים שלך ב-{community} באפליקציית לוח השנה האישית."
     }
 }
