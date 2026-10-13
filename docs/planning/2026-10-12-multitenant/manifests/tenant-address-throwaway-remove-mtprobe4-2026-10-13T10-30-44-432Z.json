@@ -1,0 +1,112 @@
+{
+  "action": "throwaway-remove",
+  "id": "mtprobe4",
+  "deauthorize": [
+    "crl-mtprobe4.vercel.app"
+  ],
+  "deleteDoc": "orgs/mtprobe4",
+  "vercelDetach": "not done: no Vercel token; alias left attached, serves No such site",
+  "before": {
+    "id": "mtprobe4",
+    "status": "active",
+    "vocabulary": {
+      "mode": "band",
+      "overrides": {}
+    },
+    "email": {
+      "fromName": "Probe Tenant mtprobe4",
+      "fromAddress": "",
+      "replyTo": "",
+      "headerBg": "#4f46e5",
+      "footerText": "",
+      "headerImagePath": "",
+      "headerImageHeightPx": 0
+    },
+    "legal": {
+      "operatorName": "Rabbi Daniel Bogard",
+      "contactEmail": "",
+      "useCrcText": false
+    },
+    "driveInbox": {
+      "folderId": ""
+    },
+    "library": {
+      "collections": [],
+      "defaultCollection": "",
+      "openByLink": true
+    },
+    "liturgy": {
+      "books": [],
+      "defaultBookByService": {},
+      "serviceTypes": [],
+      "rabbiSlots": []
+    },
+    "congregationDefaults": {
+      "name": "Probe Tenant mtprobe4",
+      "shortName": "Probe mtprobe4",
+      "location": "",
+      "logoUrl": "",
+      "description": "",
+      "themeColor": "#4f46e5"
+    },
+    "agentGuide": "",
+    "configVersion": 1,
+    "throwaway": true,
+    "createdAt": {
+      "_seconds": 1791860280,
+      "_nanoseconds": 938000000
+    },
+    "domains": {
+      "primary": "crl-mtprobe4.vercel.app",
+      "aliases": []
+    },
+    "defaultAddress": {
+      "host": "crl-mtprobe4.vercel.app",
+      "requestedSlug": "crl-mtprobe4",
+      "tried": [],
+      "at": 1791860314042
+    },
+    "features": {
+      "mixer": false,
+      "driveInbox": false,
+      "schedulingEmails": false,
+      "perform": true,
+      "notifyBand": true,
+      "todayFeed": true
+    },
+    "name": "קהילת בדיקה",
+    "locale": {
+      "reminderLocalHour": 5,
+      "reminderUtcHour": null,
+      "calendar": "israel",
+      "timeZone": "Asia/Jerusalem",
+      "language": "he",
+      "direction": "rtl"
+    },
+    "branding": {
+      "abbreviation": "PT",
+      "tagline": "",
+      "forceDark": false,
+      "appName": "Probe Tenant mtprobe4",
+      "metaTitleDefault": "Probe Tenant mtprobe4",
+      "metaTitleTemplate": "%s | Probe Tenant mtprobe4",
+      "metaDescription": "Throwaway tenant for multi-tenant gate checks.",
+      "ogTitle": "Probe Tenant mtprobe4",
+      "themeColor": "#4f46e5",
+      "logoUrl": "",
+      "wordmarkUrl": "",
+      "heroImageUrl": "",
+      "location": "",
+      "manifestPath": "/manifest.json",
+      "baseUrl": "https://mtprobe4.vercel.app",
+      "colors": {
+        "light": {},
+        "dark": {}
+      },
+      "legacyCssTheme": null,
+      "shortName": "בדיקה",
+      "fontBody": "heebo",
+      "fontDisplay": "rubik"
+    }
+  }
+}
