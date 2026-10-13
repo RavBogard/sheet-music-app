@@ -1,0 +1,344 @@
+{
+    "eyebrow": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), page header / introduction, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "title": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), page header / introduction, page title",
+        "who": "anyone (public page)",
+        "maxLength": 48,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "subtitle": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), page header / introduction, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 63,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "highlight.heading": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), page header / introduction, section heading",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "highlight.intro": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), page header / introduction, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 309,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "highlight.voluntary": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), page header / introduction, bold lead-in label",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "highlight.notRequired": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), page header / introduction, bold lead-in label",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "highlight.optInVoluntary": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), page header / introduction, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 194,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {term1} = a bold lead-in phrase (translated as its own key); {term2} = a bold lead-in phrase (translated as its own key)."
+    },
+    "programDescription.heading": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), section “Program Description”, section heading",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "programDescription.operatorAndPurpose": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), section “Program Description”, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 316,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "programDescription.schedulingAssignmentsLabel": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), section “Program Description”, bold lead-in label",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "programDescription.schedulingAssignments": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), section “Program Description”, list item text",
+        "who": "anyone (public page)",
+        "maxLength": 98,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {term} = a bold lead-in phrase (translated as its own key)."
+    },
+    "programDescription.remindersLabel": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), section “Program Description”, bold lead-in label",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "programDescription.reminders": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), section “Program Description”, list item text",
+        "who": "anyone (public page)",
+        "maxLength": 108,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {term} = a bold lead-in phrase (translated as its own key)."
+    },
+    "programDescription.confirmationsLabel": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), section “Program Description”, bold lead-in label",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "programDescription.confirmations": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), section “Program Description”, list item text",
+        "who": "anyone (public page)",
+        "maxLength": 96,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {term} = a bold lead-in phrase (translated as its own key)."
+    },
+    "programDescription.cancellationsLabel": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), section “Program Description”, bold lead-in label",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "programDescription.cancellations": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), section “Program Description”, list item text",
+        "who": "anyone (public page)",
+        "maxLength": 103,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {term} = a bold lead-in phrase (translated as its own key)."
+    },
+    "programDescription.scheduleChangesLabel": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), section “Program Description”, bold lead-in label",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "programDescription.scheduleChanges": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), section “Program Description”, list item text",
+        "who": "anyone (public page)",
+        "maxLength": 72,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {term} = a bold lead-in phrase (translated as its own key)."
+    },
+    "consentProcess.heading": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), section “Consent Process”, section heading",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "consentProcess.musiciansProvideConsent": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), section “Consent Process”, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 128,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "consentProcess.signCrcMusic": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), section “Consent Process”, list item text",
+        "who": "anyone (public page)",
+        "maxLength": 74,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {link} = the contact email or web address, as a link (not translated)."
+    },
+    "consentProcess.settingsMusicianProfile": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), section “Consent Process”, bold lead-in label",
+        "who": "anyone (public page)",
+        "maxLength": 64,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "consentProcess.navigate": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), section “Consent Process”, list item text",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {term} = a bold lead-in phrase (translated as its own key)."
+    },
+    "consentProcess.enterPhoneNumber": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), section “Consent Process”, list item text",
+        "who": "anyone (public page)",
+        "maxLength": 79,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "consentProcess.toggleNotificationSwitch": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), section “Consent Process”, list item text",
+        "who": "anyone (public page)",
+        "maxLength": 69,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {term} = the SMS keyword in bold (kept in English)."
+    },
+    "consentProcess.saveProfileSettings": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), section “Consent Process”, list item text",
+        "who": "anyone (public page)",
+        "maxLength": 42,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "consentProcess.completingTheseSteps": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), section “Consent Process”, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 210,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "messageFrequency.heading": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), section “Message Frequency”, section heading",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "messageFrequency.messageFrequencyVaries": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), section “Message Frequency”, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 330,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "messageDataRates.heading": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), section “Message and Data Rates”, section heading",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "messageDataRates.standardMessageData": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), section “Message and Data Rates”, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 236,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "optOut.heading": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), section “Opt-Out”, section heading",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "optOut.optOutSms": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), section “Opt-Out”, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 76,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "optOut.replyingMessageReceived": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), section “Opt-Out”, list item",
+        "who": "anyone (public page)",
+        "maxLength": 87,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {term} = the SMS keyword in bold (kept in English)."
+    },
+    "optOut.disablingSmsToggle": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), section “Opt-Out”, list item",
+        "who": "anyone (public page)",
+        "maxLength": 95,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "optOut.removingPhoneNumber": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), section “Opt-Out”, list item",
+        "who": "anyone (public page)",
+        "maxLength": 85,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "optOut.contacting": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), section “Opt-Out”, list item",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {link} = the contact email or web address, as a link (not translated)."
+    },
+    "optOut.afterOptingOut": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), section “Opt-Out”, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 234,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "help.heading": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), section “Help”, section heading",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "help.helpSmsNotifications": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), section “Help”, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 136,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {term} = the SMS keyword in bold (kept in English); {link} = the contact email or web address, as a link (not translated)."
+    },
+    "dataPrivacy.heading": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), section “Data Privacy”, section heading",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "dataPrivacy.mobileInformationIncluding": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), section “Data Privacy”, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 194,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "dataPrivacy.privacyPolicy": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), section “Data Privacy”, link text",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "dataPrivacy.phoneNumbersStored": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), section “Data Privacy”, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 316,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {link} = a link whose text is translated as its own key."
+    },
+    "contactInformation.heading": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), section “Contact Information”, section heading",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "contactInformation.organization": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), section “Contact Information”, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 44,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "contactInformation.crcMusicApplication": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), section “Contact Information”, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "contactInformation.email": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), section “Contact Information”, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {link} = the contact email or web address, as a link (not translated)."
+    },
+    "contactInformation.web": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), section “Contact Information”, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {link} = the contact email or web address, as a link (not translated)."
+    },
+    "relatedPolicies.heading": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), section “Related Policies”, section heading",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "relatedPolicies.privacyPolicy": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), section “Related Policies”, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "relatedPolicies.howHandleData": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), section “Related Policies”, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "relatedPolicies.termsConditions": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), section “Related Policies”, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "relatedPolicies.serviceUsageTerms": {
+        "where": "SMS Messaging Consent page (the CRC text, shown on CRC and Brothers Lazaroff), section “Related Policies”, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "consentProcess.smsSwitchLabel": {
+        "where": "SMS Messaging Consent page (the CRC text), section “Consent Process”, step 4: the name of the switch in the musician profile, in bold",
+        "who": "anyone (public page)",
+        "maxLength": 12,
+        "context": "Legal text — translate precisely, formal register. Use the label the settings screen shows for the SMS switch."
+    }
+}

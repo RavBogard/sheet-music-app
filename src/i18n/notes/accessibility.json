@@ -1,0 +1,104 @@
+{
+    "eyebrow": {
+        "where": "Accessibility Statement page (the CRC text, shown on CRC and Brothers Lazaroff), page header / introduction, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "title": {
+        "where": "Accessibility Statement page (the CRC text, shown on CRC and Brothers Lazaroff), page header / introduction, page title",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "lastUpdated": {
+        "where": "Accessibility Statement page (the CRC text, shown on CRC and Brothers Lazaroff), page header / introduction, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 42,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "intro": {
+        "where": "Accessibility Statement page (the CRC text, shown on CRC and Brothers Lazaroff), page header / introduction, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 399,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "whatWeAreDoing.heading": {
+        "where": "Accessibility Statement page (the CRC text, shown on CRC and Brothers Lazaroff), section “What we're doing”, section heading",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "whatWeAreDoing.semanticHtmlLandmarks": {
+        "where": "Accessibility Statement page (the CRC text, shown on CRC and Brothers Lazaroff), section “What we're doing”, list item text",
+        "who": "anyone (public page)",
+        "maxLength": 109,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {code1} = a code sample (not translated); {code2} = a code sample (not translated)."
+    },
+    "whatWeAreDoing.accessibleNamesIcon": {
+        "where": "Accessibility Statement page (the CRC text, shown on CRC and Brothers Lazaroff), section “What we're doing”, list item text",
+        "who": "anyone (public page)",
+        "maxLength": 188,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {code1} = a code sample (not translated); {code2} = a code sample (not translated); {code3} = a code sample (not translated)."
+    },
+    "whatWeAreDoing.wcagContrast": {
+        "where": "Accessibility Statement page (the CRC text, shown on CRC and Brothers Lazaroff), section “What we're doing”, list item text",
+        "who": "anyone (public page)",
+        "maxLength": 95,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "whatWeAreDoing.pinchZoomUser": {
+        "where": "Accessibility Statement page (the CRC text, shown on CRC and Brothers Lazaroff), section “What we're doing”, list item text",
+        "who": "anyone (public page)",
+        "maxLength": 119,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {code} = a code sample (not translated)."
+    },
+    "whatWeAreDoing.skipLinkMain": {
+        "where": "Accessibility Statement page (the CRC text, shown on CRC and Brothers Lazaroff), section “What we're doing”, list item text",
+        "who": "anyone (public page)",
+        "maxLength": 74,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "whatWeAreDoing.keyboardSupportPerform": {
+        "where": "Accessibility Statement page (the CRC text, shown on CRC and Brothers Lazaroff), section “What we're doing”, list item text",
+        "who": "anyone (public page)",
+        "maxLength": 181,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "whatWeAreDoing.automatedAxeCore": {
+        "where": "Accessibility Statement page (the CRC text, shown on CRC and Brothers Lazaroff), section “What we're doing”, list item text",
+        "who": "anyone (public page)",
+        "maxLength": 106,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "knownLimitations.heading": {
+        "where": "Accessibility Statement page (the CRC text, shown on CRC and Brothers Lazaroff), section “Known limitations”, section heading",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "knownLimitations.trackOpenAccessibility": {
+        "where": "Accessibility Statement page (the CRC text, shown on CRC and Brothers Lazaroff), section “Known limitations”, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 447,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "reportBarrier.heading": {
+        "where": "Accessibility Statement page (the CRC text, shown on CRC and Brothers Lazaroff), section “Report a barrier”, section heading",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "reportBarrier.encounterPartApp": {
+        "where": "Accessibility Statement page (the CRC text, shown on CRC and Brothers Lazaroff), section “Report a barrier”, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 282,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {link} = the contact email or web address, as a link (not translated)."
+    },
+    "metaTitleCrc": {
+        "where": "Accessibility Statement page (the CRC text, shown on CRC and Brothers Lazaroff): the browser tab / search result title",
+        "who": "anyone (public page)",
+        "maxLength": 60,
+        "context": "Page title. 'CRC Music' is the app's name for CRC."
+    }
+}

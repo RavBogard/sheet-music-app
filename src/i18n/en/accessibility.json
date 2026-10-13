@@ -1,0 +1,19 @@
+{
+    "eyebrow": "Legal",
+    "title": "Accessibility Statement",
+    "lastUpdated": "Last updated: May 19, 2026",
+    "intro": "Central Reform Congregation is committed to making the CRC Music web application accessible to musicians, congregants, and clergy of all abilities. We aim to meet or exceed the Web Content Accessibility Guidelines (WCAG) 2.1 Level AA across the app.",
+    "whatWeAreDoing.heading": "What we're doing",
+    "whatWeAreDoing.semanticHtmlLandmarks": "Semantic HTML landmarks ({code1}, {code2}, headings) on every route.",
+    "whatWeAreDoing.accessibleNamesIcon": "Accessible names on all icon-only buttons ({code1}) and form fields ({code2} or {code3}, never placeholder-as-label).",
+    "whatWeAreDoing.wcagContrast": "WCAG 2.1 AA contrast on body text and interactive surfaces.",
+    "whatWeAreDoing.pinchZoomUser": "Pinch-zoom and user-scaling preserved on mobile (no {code} viewport lock).",
+    "whatWeAreDoing.skipLinkMain": "Skip-link to main content on app-shell routes.",
+    "whatWeAreDoing.keyboardSupportPerform": "Keyboard support in Perform mode (chart navigation, transpose, metronome) and live regions for setlist mutations.",
+    "whatWeAreDoing.automatedAxeCore": "Automated axe-core sweeps run as part of our cowork audit cadence.",
+    "knownLimitations.heading": "Known limitations",
+    "knownLimitations.trackOpenAccessibility": "We track open accessibility findings on every release cycle. The PDF-render surface inside Perform mode is the area where assistive-technology support is most limited today; we're working to surface chart structure (sections, key, capo) outside the rendered image where possible.",
+    "reportBarrier.heading": "Report a barrier",
+    "reportBarrier.encounterPartApp": "If you encounter a part of the app you can't use with your assistive technology, please email {link}. Include the page URL and a short description; we'll respond within a week.",
+    "metaTitleCrc": "Accessibility Statement | CRC Music"
+}
