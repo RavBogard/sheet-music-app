@@ -110,3 +110,13 @@ GATE: phase 7 infrastructure deployed ahead of the string extraction — proceed
 GATE: Hebrew register without gendered address — proceeded because it is standard Israeli UI practice and suits an egalitarian community; the independent reviewer checked it.
 GATE: CRC/BL gig packets containing Hebrew print Hebrew instead of "?" — proceeded because the handoff names the "?" defect as phase 7 work; all-Latin packets are byte-identical.
 GATE: throwaway alias left attached on Vercel — proceeded because no Vercel credential is available here; the tenant and its sign-in domain are removed, so the address serves nothing.
+
+## After the return (2026-10-13)
+
+- **`/setlists` first-paint name fixed** (`b08f9b9b`, `dpl_DmZCbyNyu139cnDXrLpE7EfyQ1Tr`), approved by Daniel. The page passes the host tenant's branding short name to the dashboard, as the home page does.
+  - Gates: tsc 0; vitest 6,385 passed, 1 failed (`ReconciliationProvider.test.tsx`, untouched; 3/3 solo); emulator 2,204; clean build 0; login 3/3.
+  - Production golden before and after: all surfaces identical (signed out, and CRC MCP with the CRC bearer).
+  - Live on BL with a throwaway member (`test-flash-bl-member@probe.invalid`, removed): server HTML and the hydrated page both read "Welcome to Brothers Lazaroff"; no page errors. CRC's name is unchanged ("CRC Music").
+- **Vercel token in place.** Daniel supplied it; it is in `.env.local` and on the project as `VERCEL_API_TOKEN` (Production, Sensitive). `crl-mtprobe4.vercel.app` is detached; the project lists only the CRC and BL addresses and `sheet-music-app.vercel.app`.
+
+GATE: BL's signed-in welcome line now names Brothers Lazaroff from the first paint — proceeded because Daniel approved the fix.
