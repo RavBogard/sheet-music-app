@@ -105,6 +105,10 @@ export const env = createEnv({
         READER_MUSIC_ORG_ID: z.string().optional(),
         /** Where tenant config is read: "code" (the tables in src/lib/org/config-code.ts) or "firestore" (orgs/{id}, code fallback for crc/BL). Unset: code. */
         ORG_CONFIG_SOURCE: z.enum(["code", "firestore"]).optional(),
+        /** Phase 7: "1" honours the pseudo-locale cookie (ui-lang=qps|qps-rtl) in production too (src/i18n/language.ts). Unset: dev/test only. */
+        I18N_PSEUDO: z.string().optional(),
+        /** Phase 7: force a pseudo-locale ("qps" | "qps-rtl") outside production, to spot untranslated text. Unset: off. */
+        I18N_PSEUDO_LOCALE: z.string().optional(),
         /** "1": drop switched-off features' MCP tools for every tenant, crc and BL included (src/lib/mcp/tenant-tools.ts). Unset: only tenants created through config. */
         MCP_FEATURE_FILTER: z.string().optional(),
         /** Master switch for the public reader chart endpoint. Unset: off. */
@@ -190,6 +194,8 @@ export const env = createEnv({
         OVERLAYS_HISTORY_TOKEN: process.env.OVERLAYS_HISTORY_TOKEN,
         READER_MUSIC_ORG_ID: process.env.READER_MUSIC_ORG_ID,
         ORG_CONFIG_SOURCE: process.env.ORG_CONFIG_SOURCE,
+        I18N_PSEUDO: process.env.I18N_PSEUDO,
+        I18N_PSEUDO_LOCALE: process.env.I18N_PSEUDO_LOCALE,
         MCP_FEATURE_FILTER: process.env.MCP_FEATURE_FILTER,
         READER_PUBLIC_CHARTS_ENABLED: process.env.READER_PUBLIC_CHARTS_ENABLED,
         READER_MUSIC_ALLOWED_ORIGINS: process.env.READER_MUSIC_ALLOWED_ORIGINS,
