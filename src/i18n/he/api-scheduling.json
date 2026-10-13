@@ -1,0 +1,13 @@
+{
+    "assignmentNotFound": "השיבוץ לא נמצא",
+    "notYourAssignment": "השיבוץ הזה אינו שלך",
+    "assignmentAlready": "השיבוץ כבר {status}",
+    "cannotCancelAssignment": "לא ניתן לבטל שיבוץ במצב '{status}'",
+    "statusPending": "בהמתנה",
+    "statusConfirmed": "אושר",
+    "statusDeclined": "נדחה",
+    "statusCancelled": "בוטל",
+    "setlistIdRequired": "נדרש setlistId",
+    "setlistIdParamRequired": "נדרש הפרמטר setlistId",
+    "suggestionsFailed": "לא ניתן להפיק הצעות"
+}

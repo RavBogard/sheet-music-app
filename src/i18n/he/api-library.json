@@ -1,0 +1,13 @@
+{
+    "serverNotReady": "השרת עדיין לא מוכן",
+    "fileNotFound": "הקובץ לא נמצא",
+    "crossTenantChordCacheWrite": "נדחתה כתיבה למטמון האקורדים של קהילה אחרת",
+    "missingFileId": "חסר fileId",
+    "chordsVerifiedNeedsMusician": "סימון chordsVerified דורש חשבון נגן/ית",
+    "displayNameEmpty": "השם אינו יכול להיות ריק.",
+    "fileIdsRequired": "נדרש הפרמטר fileIds",
+    "tooManyFileIds": "עד {max} מזהי קבצים בבקשה אחת",
+    "uploadPermissionRequired": "נדרשת הרשאת העלאה. אפשר לבקש ממנהל/ת להפעיל העלאות בחשבון שלך.",
+    "noFileProvided": "לא צורף קובץ",
+    "uploaded": "\"{title}\" הועלה לספרייה"
+}

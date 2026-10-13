@@ -159,7 +159,7 @@ Exceptions, in order of preference:
 
 `src/__tests__/i18n/not-yet-migrated.ts`. Files under an entry are skipped. `dir/` = recursive, `dir/*` = files directly in it. When your directory is clean, **delete its line and only its line** (entries are separated by blank lines so parallel deletions merge cleanly). The test fails on a stale entry, so you cannot forget. Final state: empty list.
 
-Also: `src/__tests__/i18n/catalogue.test.ts` — every literal `t("ns.key")` must exist in English, every English key needs a note, Hebrew keys must exist in English with the same `{placeholders}`. Hebrew completeness runs with `I18N_REQUIRE_HE=1` (flip `REQUIRE_HE` to `true` when translation lands).
+Also: `src/__tests__/i18n/catalogue.test.ts` — every literal `t("ns.key")` must exist in English, every English key needs a note, Hebrew keys must exist in English with the same `{placeholders}`. Hebrew completeness is always on (every English key needs Hebrew unless its note says `"translate": false`); `node scripts/i18n-he-missing.mjs --list` lists what is missing, see `src/i18n/notes/TRANSLATING.md`.
 
 ## 6. The pseudo-locale check
 

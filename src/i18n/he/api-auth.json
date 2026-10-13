@@ -1,0 +1,13 @@
+{
+    "createSessionFailed": "לא ניתן ליצור בקשת התחברות",
+    "missingCode": "חסר קוד",
+    "invalidCodeFormat": "פורמט הקוד שגוי",
+    "sessionNotFound": "בקשת ההתחברות לא נמצאה",
+    "sessionExpired": "תוקף בקשת ההתחברות פג",
+    "checkSessionFailed": "לא ניתן לבדוק את מצב ההתחברות",
+    "authRequired": "נדרשת התחברות",
+    "invalidToken": "ההתחברות אינה בתוקף",
+    "approvalNeedsMember": "לאישור נדרש חשבון חבר/ה מאושר",
+    "sessionAlreadyUsed": "בקשת ההתחברות כבר אושרה",
+    "approveSessionFailed": "לא ניתן לאשר את ההתחברות"
+}

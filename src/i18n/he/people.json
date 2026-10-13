@@ -1,0 +1,8 @@
+{
+    "notified": "המנהלים קיבלו התראה!",
+    "notifyFailed": "שליחת ההתראה למנהלים נכשלה",
+    "genericError": "שגיאה",
+    "adminNotified": "המנהלים עודכנו",
+    "notifying": "בשליחה...",
+    "nudgeAdmin": "תזכורת למנהלים"
+}

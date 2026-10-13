@@ -1,0 +1,19 @@
+{
+    "close": "סגירה",
+    "sectionFailed": "טעינת {label} נכשלה",
+    "retry": "ניסיון חוזר",
+    "somethingWentWrong": "משהו השתבש",
+    "unexpectedRenderError": "אירעה שגיאה לא צפויה בהצגה.",
+    "tryAgain": "ניסיון חוזר",
+    "couldNotLoad": "לא הצלחנו לטעון את התוכן הזה. אפשר לנסות שוב.",
+    "keyPlaceholder": "סולם",
+    "major": "מז׳ור",
+    "minor": "מינור",
+    "clear": "ניקוי",
+    "tapTempoTitle": "יש להקיש שוב ושוב כדי לקבוע את הקצב",
+    "tap": "הקשה",
+    "tapAgain": "עוד…",
+    "accessRestricted": "הגישה מוגבלת",
+    "noPermission": "אין לך הרשאה לצפות בדף הזה.",
+    "returnToDashboard": "חזרה ללוח הבקרה"
+}

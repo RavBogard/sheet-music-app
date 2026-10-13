@@ -1,0 +1,40 @@
+{
+    "archiveFailed_one": "העברת קובץ אחד לארכיון נכשלה",
+    "archiveFailed_other": "העברת {count} קבצים לארכיון נכשלה",
+    "selectedForArchival_one": "קובץ אחד נבחר להעברה לארכיון",
+    "selectedForArchival_other": "{count} נבחרו להעברה לארכיון",
+    "archiveSelected": "העברת הנבחרים לארכיון",
+    "pdf": {
+        "trigger": "בדיקת תקינות קובצי PDF",
+        "title": "בדיקת תקינות PDF",
+        "description": "בדיקה אם יש בספרייה קובצי PDF פגומים או כאלה שלא נטענים.",
+        "scanPrompt_one": "אפשר לסרוק קובץ PDF אחד כדי לאתר פגמים או בעיות טעינה.",
+        "scanPrompt_other": "אפשר לסרוק {count} קובצי PDF כדי לאתר קבצים פגומים או שלא נטענים.",
+        "scanButton": "סריקת קובצי PDF",
+        "allHealthy": "כל קובצי ה-PDF תקינים",
+        "noIssues_one": "נסרק קובץ אחד — לא נמצאו בעיות.",
+        "noIssues_other": "נסרקו {count} קבצים — לא נמצאו בעיות.",
+        "issuesSummary_one": "נמצאה בעיה אחת, {healthy} תקינים",
+        "issuesSummary_other": "נמצאו {count} בעיות, {healthy} תקינים",
+        "statusCorrupt": "פגום",
+        "statusFetchError": "שגיאת הורדה",
+        "issueWithError": "{status}: {error}",
+        "archivedToast_one": "קובץ בעייתי אחד הועבר לארכיון",
+        "archivedToast_other": "{count} קבצים בעייתיים הועברו לארכיון"
+    },
+    "dup": {
+        "trigger": "חיפוש כפילויות",
+        "title": "חיפוש כפילויות",
+        "description": "איתור תווים עם שמות דומים שעשויים להיות כפולים.",
+        "scanPrompt_one": "אפשר לסרוק קובץ תווים אחד ולאתר כפילויות אפשריות לפי דמיון בשמות.",
+        "scanPrompt_other": "אפשר לסרוק {count} קובצי תווים ולאתר כפילויות אפשריות לפי דמיון בשמות.",
+        "scanButton": "סריקת הספרייה",
+        "noneFound": "לא נמצאו כפילויות.",
+        "clean": "הספרייה נראית מסודרת!",
+        "groupHeading": "קבוצה {number} — דמיון של {percent}%",
+        "groupSize_one": "קובץ תווים אחד",
+        "groupSize_other": "{count} קובצי תווים",
+        "archivedToast_one": "כפילות אחת הועברה לארכיון",
+        "archivedToast_other": "{count} כפילויות הועברו לארכיון"
+    }
+}

@@ -1,0 +1,113 @@
+{
+    "songCount_one": "שיר אחד",
+    "songCount_other": "{count} שירים",
+    "signedInAs": "מחובר/ת בתור {userName} — פתיחת ההגדרות",
+    "musicianFallback": "נגן/ית",
+    "signInTo": "התחברות ל-{orgName}",
+    "or": "או",
+    "signInWithGoogle": "התחברות עם Google",
+    "noPublicSetlists": "אין רשימות שירים ציבוריות זמינות",
+    "goToNextService": "מעבר לתפילה הבאה: {setlistName}",
+    "nextService": "התפילה הבאה",
+    "perform": "נגינה",
+    "upcoming": "התפילות הקרובות",
+    "publicSetlists": "רשימות שירים ציבוריות",
+    "upNext": "הבא בתור",
+    "estimatedMinutes": "~{minutes} דק׳",
+    "trackType": {
+        "reading": "קריאה",
+        "prayer": "תפילה",
+        "transition": "מעבר",
+        "note": "הערה",
+        "section": "חלק"
+    },
+    "queueTrackType": {
+        "header": "כותרת",
+        "reading": "קריאה",
+        "prayer": "תפילה",
+        "transition": "מעבר",
+        "note": "הערה"
+    },
+    "liturgyRun": {
+        "page": "עמ׳ {page}",
+        "pageRange": "עמ׳ {firstPage}–{lastPage}",
+        "rows_one": "שורת נוסח אחת",
+        "rows_other": "{count} שורות נוסח",
+        "hideRow": "הסתרת {rowTitle}",
+        "hideRows_one": "הסתרת שורת נוסח אחת",
+        "hideRows_other": "הסתרת {count} שורות נוסח"
+    },
+    "row": {
+        "folio": "עמ׳ {page}",
+        "bpm": "{bpm} BPM",
+        "openChart": "פתיחת התווים: {songTitle}",
+        "tonightPlanned": "הערב · מתוכנן: {plannedTitle}",
+        "swapForTonight": "החלפת {songTitle} להערב",
+        "swap": "החלפה"
+    },
+    "noTracksYet": "אין עדיין שורות",
+    "drawer": {
+        "connect": "חיבור לרשימה",
+        "setlist": "רשימת שירים",
+        "joinSetlist": "הצטרפות לרשימת שירים",
+        "currentSetlist": "רשימת השירים הנוכחית",
+        "loadingActive": "רשימות השירים הפעילות בטעינה...",
+        "noneActive": "אין כרגע רשימות שירים ציבוריות פעילות.",
+        "songCount_one": "שיר אחד",
+        "songCount_other": "{count} שירים",
+        "close": "סגירה"
+    },
+    "error": {
+        "noAccess": "רשימת השירים הזו עדיין לא פורסמה, או שאין לך גישה אליה.",
+        "notFound": "רשימת השירים לא נמצאה — ייתכן שהיא נמחקה.",
+        "loadFailed": "לא ניתן היה לטעון את רשימת השירים — יש לבדוק את החיבור ולנסות שוב."
+    },
+    "loadingSetlist": "רשימת השירים בטעינה...",
+    "loadingSetlistEllipsis": "רשימת השירים בטעינה…",
+    "backToHome": "חזרה לדף הבית",
+    "backToSetlists": "חזרה לרשימות השירים",
+    "backToHomeLabel": "חזרה לדף הבית",
+    "backToSetlistsLabel": "חזרה לרשימות השירים",
+    "header": {
+        "songsAndItems_one": "שיר אחד · {totalCount} פריטים",
+        "songsAndItems_other": "{count} שירים · {totalCount} פריטים"
+    },
+    "toolbar": {
+        "showLiturgyRows_one": "הצגת שורת נוסח אחת",
+        "showLiturgyRows_other": "הצגת {count} שורות נוסח",
+        "hideLiturgyRows_one": "הסתרת שורת נוסח אחת",
+        "hideLiturgyRows_other": "הסתרת {count} שורות נוסח",
+        "liturgy": "נוסח התפילה",
+        "songsOnly": "שירים בלבד",
+        "printSetlist": "הדפסת רשימת השירים",
+        "print": "הדפסה",
+        "editSetlist": "עריכת רשימת השירים",
+        "edit": "עריכה"
+    },
+    "unknownMusician": "לא ידוע",
+    "tonight": {
+        "rowsSwapped_one": "שורה אחת הוחלפה להערב",
+        "rowsSwapped_other": "{count} שורות הוחלפו להערב",
+        "resetToPlan": "חזרה לתוכנית"
+    },
+    "addTracks": "הוספת שורות",
+    "chartError": {
+        "title": "טעינת התווים נכשלה",
+        "body": "אירעה בעיה בהצגת התווים. אפשר לטעון מחדש, או לדלג לשיר הבא.",
+        "goBack": "חזרה"
+    },
+    "retry": "ניסיון חוזר",
+    "retrying": "בניסיון חוזר…",
+    "chartLoad": {
+        "title": "לא ניתן היה לטעון את התווים",
+        "libraryFailed": "טעינת הספרייה נכשלה",
+        "signInRequired": "יש להתחבר כדי לצפות בתווים האלה",
+        "timedOut": "תם הזמן לטעינת התווים",
+        "notFound": "התווים לא נמצאו",
+        "fileId": "מזהה קובץ: {fileId}",
+        "signIn": "התחברות",
+        "back": "חזרה",
+        "library": "ספרייה",
+        "loading": "התווים בטעינה..."
+    }
+}
