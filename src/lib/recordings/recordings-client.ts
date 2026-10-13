@@ -11,6 +11,7 @@ import {
 } from "firebase/firestore"
 
 import { apiFetch } from "@/lib/api-client"
+import { plainT } from "@/i18n/plain"
 import { subscribeWithDb, recoverFromFirestoreShutdown } from "@/lib/firebase"
 import type { OrgId } from "@/lib/org/types"
 import type { Recording } from "@/types/models"
@@ -78,7 +79,7 @@ export async function uploadRecording(input: {
         body: formData,
     })
     if (!res.ok) {
-        let message = "Failed to upload recording"
+        let message = plainT()("clientErrors.recordingUploadFailed")
         try {
             const body = await res.json()
             if (body?.error) message = String(body.error)
