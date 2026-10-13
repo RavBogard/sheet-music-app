@@ -17,6 +17,7 @@ import {
     Save, Settings2, Download, Copy, KeyRound,
 } from "lucide-react"
 import { SectionErrorBoundary } from "@/components/ui/SectionErrorBoundary"
+import { useT } from "@/i18n/client"
 
 const DEFAULT_MONITOR_CONFIG: MonitorConfig = {
     bridgeUrl: "firestore://192.168.1.50",
@@ -39,6 +40,7 @@ export function SoundSystemSection() {
     const [setupCode, setSetupCode] = useState<string | null>(null)
     const [setupCodeExpiry, setSetupCodeExpiry] = useState<number | null>(null)
     const [generatingCode, setGeneratingCode] = useState(false)
+    const t = useT()
 
     // Firestore SDK is lazy-loaded; resolve the doc-ref in an effect so the
     // module-top stays free of `firebase/firestore`. useSafeFirestoreSync
@@ -116,7 +118,7 @@ export function SoundSystemSection() {
             const { auth: firebaseAuth } = await import("@/lib/firebase")
             if (controller.signal.aborted) return
             const user = firebaseAuth.currentUser
-            if (!user) throw new Error("Not signed in")
+            if (!user) throw new Error(t("admin-sound.notSignedIn"))
             const token = await user.getIdToken()
             if (controller.signal.aborted) return
             const res = await fetch("/api/bridge/setup-code", {
@@ -127,20 +129,20 @@ export function SoundSystemSection() {
             if (controller.signal.aborted) return
             if (!res.ok) {
                 const data = await res.json()
-                throw new Error(data.error || "Failed to generate code")
+                throw new Error(data.error || t("admin-sound.setupCodeFailed"))
             }
             const { code, expiresAt } = await res.json()
             if (controller.signal.aborted) return
             setSetupCode(code)
             setSetupCodeExpiry(expiresAt)
-            toast.success("Setup code generated")
+            toast.success(t("admin-sound.setupCodeGenerated"))
         } catch (err) {
             if ((err as Error).name === 'AbortError') return
-            toast.error(err instanceof Error ? err.message : "Failed to generate setup code")
+            toast.error(err instanceof Error ? err.message : t("admin-sound.setupCodeFailed"))
         } finally {
             if (!controller.signal.aborted) setGeneratingCode(false)
         }
-    }, [])
+    }, [t])
 
     const handleMonitorSave = useCallback(async () => {
         setMonitorSaving(true); setMonitorSaved(false)
@@ -157,28 +159,28 @@ export function SoundSystemSection() {
             if (existing.exists()) { await updateDoc(ref, { ...parsed } as Record<string, unknown>) }
             else { await setDoc(ref, { ...parsed, busAssignments: {} }) }
             setMonitorSaved(true)
-            toast.success("Monitor config saved")
+            toast.success(t("admin-sound.configSaved"))
             if (savedTimerRef.current) clearTimeout(savedTimerRef.current)
             savedTimerRef.current = setTimeout(() => setMonitorSaved(false), 2000)
         } catch (err) {
             logger.error("Failed to save:", err)
-            toast.error("Failed to save monitor config")
+            toast.error(t("admin-sound.configSaveFailed"))
         } finally { setMonitorSaving(false) }
-    }, [bridgeUrl, x32Address, x32Port, monitorBusesStr])
+    }, [bridgeUrl, x32Address, x32Port, monitorBusesStr, t])
 
     return (
-        <SectionErrorBoundary label="Sound System">
+        <SectionErrorBoundary label={t("admin-sound.title")}>
         <section className="space-y-4">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                     <Radio className="w-5 h-5 text-brand" />
                     <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                        Sound System
+                        {t("admin-sound.title")}
                     </h2>
                 </div>
                 <Button onClick={handleMonitorSave} disabled={monitorSaving} size="sm" className="gap-2">
                     {monitorSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : monitorSaved ? <CheckCircle className="w-4 h-4" /> : <Save className="w-4 h-4" />}
-                    {monitorSaved ? "Saved!" : "Save Settings"}
+                    {monitorSaved ? t("admin-sound.saved") : t("admin-sound.saveSettings")}
                 </Button>
             </div>
 
@@ -201,30 +203,30 @@ export function SoundSystemSection() {
                         <div className="bg-card border border-border rounded-xl p-5 space-y-4">
                             <h3 className="font-semibold text-foreground flex items-center gap-2 text-sm">
                                 <Download className="w-4 h-4 text-muted-foreground" />
-                                Bridge Installation
+                                {t("admin-sound.bridgeInstallTitle")}
                             </h3>
                             <p className="text-xs text-muted-foreground">
-                                The bridge runs on the production PC and connects iPads to the X32 mixer. Generate a setup code, then enter it in the bridge installer — no Firebase Console needed.
+                                {t("admin-sound.bridgeInstallHint")}
                             </p>
                             <div className="flex items-center gap-3">
                                 <Button onClick={handleGenerateSetupCode} disabled={generatingCode} variant="outline" size="sm" className="gap-2">
                                     {generatingCode ? <Loader2 className="w-3 h-3 animate-spin" /> : <KeyRound className="w-3 h-3" />}
-                                    Generate Setup Code
+                                    {t("admin-sound.generateSetupCode")}
                                 </Button>
                                 {setupCode && (
                                     <div className="flex items-center gap-2">
                                         <code className="bg-muted px-4 py-2 rounded-lg text-lg font-mono font-bold tracking-[0.3em] select-all">
                                             {setupCode}
                                         </code>
-                                        <Button variant="ghost" size="icon" aria-label="Copy setup code" className="min-h-11 min-w-11" onClick={() => {
+                                        <Button variant="ghost" size="icon" aria-label={t("admin-sound.copySetupCode")} className="min-h-11 min-w-11" onClick={() => {
                                             navigator.clipboard.writeText(setupCode)
-                                            toast.success("Copied!")
+                                            toast.success(t("admin-sound.copied"))
                                         }}>
                                             <Copy className="w-3 h-3" />
                                         </Button>
                                         {setupCodeExpiry && (
                                             <span className="text-xs text-muted-foreground">
-                                                Expires in {Math.max(0, Math.round((setupCodeExpiry - Date.now()) / 60000))} min
+                                                {t("admin-sound.setupCodeExpires", { minutes: Math.max(0, Math.round((setupCodeExpiry - Date.now()) / 60000)) })}
                                             </span>
                                         )}
                                     </div>
@@ -235,12 +237,13 @@ export function SoundSystemSection() {
                         <div className="bg-card border border-border rounded-xl p-5 space-y-4">
                             <h3 className="font-semibold text-foreground flex items-center gap-2 text-sm">
                                 <Settings2 className="w-4 h-4 text-muted-foreground" />
-                                Bridge Server & X32
+                                {t("admin-sound.bridgeServerTitle")}
                             </h3>
                             <div>
-                                <label className="text-sm text-muted-foreground mb-1 block">Bridge Address</label>
+                                <label className="text-sm text-muted-foreground mb-1 block">{t("admin-sound.bridgeAddress")}</label>
+                                {/* i18n-ignore: example address, machine text */}
                                 <Input value={bridgeUrl} onChange={e => setBridgeUrl(e.target.value)} placeholder="firestore://192.168.1.50" />
-                                <p className="text-xs text-muted-foreground mt-1">Auto-detected by the bridge on startup</p>
+                                <p className="text-xs text-muted-foreground mt-1">{t("admin-sound.bridgeAddressHint")}</p>
                             </div>
 
                             {bridgeStatus && (
@@ -256,15 +259,15 @@ export function SoundSystemSection() {
                                     <div className="flex-1 min-w-0">
                                         <span className="font-medium">
                                             {bridgeStatus.status === "online" && bridgeStatus.lastSeen && (Date.now() - bridgeStatus.lastSeen.getTime()) < 120000
-                                                ? "Bridge Online" : "Bridge Offline"}
+                                                ? t("admin-sound.bridgeOnline") : t("admin-sound.bridgeOffline")}
                                         </span>
                                         {bridgeStatus.status === "online" && bridgeStatus.lastSeen && (Date.now() - bridgeStatus.lastSeen.getTime()) < 120000 && (
-                                            <span className="text-muted-foreground ml-2">
-                                                X32: {bridgeStatus.x32Connected ? "✓" : "✗"}
+                                            <span className="text-muted-foreground ms-2">
+                                                {t("admin-sound.bridgeX32", { mark: bridgeStatus.x32Connected ? "✓" : "✗" })}
                                                 {" · "}
-                                                {bridgeStatus.clients} client{bridgeStatus.clients !== 1 ? "s" : ""}
+                                                {t("admin-sound.bridgeClients", { count: bridgeStatus.clients })}
                                                 {" · "}
-                                                v{bridgeStatus.version}
+                                                {t("admin-sound.bridgeVersion", { version: bridgeStatus.version })}
                                             </span>
                                         )}
                                     </div>
@@ -273,25 +276,25 @@ export function SoundSystemSection() {
 
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="text-sm text-muted-foreground mb-1 block">X32 IP Address</label>
-                                    <Input value={x32Address} onChange={e => setX32Address(e.target.value)} placeholder="Auto-detected by the bridge" />
-                                    <p className="text-xs text-muted-foreground mt-1">The bridge auto-discovers the X32 on startup; override here only if needed.</p>
+                                    <label className="text-sm text-muted-foreground mb-1 block">{t("admin-sound.x32Address")}</label>
+                                    <Input value={x32Address} onChange={e => setX32Address(e.target.value)} placeholder={t("admin-sound.autoDetectedPlaceholder")} />
+                                    <p className="text-xs text-muted-foreground mt-1">{t("admin-sound.x32AddressHint")}</p>
                                 </div>
                                 <div>
-                                    <label className="text-sm text-muted-foreground mb-1 block">OSC Port</label>
+                                    <label className="text-sm text-muted-foreground mb-1 block">{t("admin-sound.oscPort")}</label>
                                     <Input value={x32Port} onChange={e => setX32Port(e.target.value)} placeholder="10023" />
                                 </div>
                             </div>
 
                             <div>
                                 <div className="flex items-center gap-2 mb-1">
-                                    <label className="text-sm text-muted-foreground">Monitor Buses</label>
+                                    <label className="text-sm text-muted-foreground">{t("admin-sound.monitorBuses")}</label>
                                     <span className="text-xs bg-brand/15 text-brand px-1.5 py-0.5 rounded font-mono">
-                                        {monitorBusesStr.split(",").map(s => s.trim()).filter(Boolean).length} buses
+                                        {t("admin-sound.busCount", { count: monitorBusesStr.split(",").map(s => s.trim()).filter(Boolean).length })}
                                     </span>
                                 </div>
                                 <Input value={monitorBusesStr} onChange={e => setMonitorBusesStr(e.target.value)} placeholder="1, 2, 3, 4, 5" />
-                                <p className="text-xs text-muted-foreground mt-1">X32 mix buses used as monitor sends (1–16, comma-separated)</p>
+                                <p className="text-xs text-muted-foreground mt-1">{t("admin-sound.monitorBusesHint")}</p>
                             </div>
                         </div>
                         {/* Default Channel Picker -- sound engineer picks global defaults */}

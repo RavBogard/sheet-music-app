@@ -1,0 +1,417 @@
+{
+    "auditLogLabel": {
+        "where": "Manage > People: name of the audit-log section, shown in its error fallback if it fails to load",
+        "who": "admins",
+        "maxLength": 40
+    },
+    "auditEmpty": {
+        "where": "Manage > People > Access Audit Log: empty state",
+        "who": "admins",
+        "maxLength": 60
+    },
+    "auditChangedRole": {
+        "where": "Manage > People > Access Audit Log: one line per role change",
+        "who": "admins",
+        "maxLength": 80,
+        "context": "{actor} is the admin's email name (bold); {target} is the last 6 characters of the user's id (monospace). Keep both placeholders."
+    },
+    "auditJustNow": {
+        "where": "Manage > People > Access Audit Log: time of an entry whose server timestamp has not arrived yet",
+        "who": "admins",
+        "maxLength": 20,
+        "context": "Shown in small caps (CSS uppercase)"
+    },
+    "roleAdmin": {
+        "where": "Manage > People: role name in role menus, toasts and the role-change dialog",
+        "who": "admins, band leaders",
+        "maxLength": 15
+    },
+    "roleBandLeader": {
+        "where": "Manage > People: role name in role menus, toasts and the role-change dialog",
+        "who": "admins, band leaders",
+        "maxLength": 15
+    },
+    "roleMusician": {
+        "where": "Manage > People: role name in role menus, toasts and the role-change dialog",
+        "who": "admins, band leaders",
+        "maxLength": 15
+    },
+    "roleMember": {
+        "where": "Manage > People: role name in role menus, toasts and the role-change dialog",
+        "who": "admins, band leaders",
+        "maxLength": 15
+    },
+    "rolePending": {
+        "where": "Manage > People: role name for someone waiting for approval",
+        "who": "admins, band leaders",
+        "maxLength": 15
+    },
+    "roleDenied": {
+        "where": "Manage > People: role name for someone whose access was refused (badge, filter tab, menus)",
+        "who": "admins, band leaders",
+        "maxLength": 15
+    },
+    "userFallbackName": {
+        "where": "Manage > People: stands in for a person's name in button labels when they have neither name nor email",
+        "who": "admins, band leaders (screen readers mostly)",
+        "maxLength": 15
+    },
+    "roleUpdateFailed": {
+        "where": "Manage > People: error toast",
+        "who": "admins, band leaders",
+        "maxLength": 120,
+        "context": "{reason} is the technical error text (may be English)"
+    },
+    "cannotChangeOwnRole": {
+        "where": "Manage > People: error toast when changing your own role",
+        "who": "admins, band leaders",
+        "maxLength": 60
+    },
+    "roleLimit": {
+        "where": "Manage > People: error toast when assigning a role above your own",
+        "who": "admins, band leaders",
+        "maxLength": 70,
+        "context": "{role} is the viewer's own role name (e.g. Band Leader)"
+    },
+    "roleUpdated": {
+        "where": "Manage > People: toast after changing, approving or declining a person",
+        "who": "admins, band leaders",
+        "maxLength": 70,
+        "context": "{personName} is the person's display name, {role} the new role name"
+    },
+    "removedFromTenant": {
+        "where": "Manage > People: toast after removing someone from this congregation/band",
+        "who": "admins",
+        "maxLength": 80,
+        "context": "{personName} is the person, {tenantName} is the congregation or band's name"
+    },
+    "requestFailed": {
+        "where": "Manage > People: error detail inside a toast when the server refused",
+        "who": "admins, band leaders",
+        "maxLength": 40,
+        "context": "{status} is an HTTP status number"
+    },
+    "soundEngineerEnabled": {
+        "where": "Manage > People: toast after granting sound-engineer access (mixer)",
+        "who": "admins, band leaders",
+        "maxLength": 70,
+        "context": "{personName} is the person's display name"
+    },
+    "soundEngineerRemoved": {
+        "where": "Manage > People: toast after removing sound-engineer access",
+        "who": "admins, band leaders",
+        "maxLength": 70,
+        "context": "{personName} is the person's display name"
+    },
+    "soundEngineerFailed": {
+        "where": "Manage > People: error toast",
+        "who": "admins, band leaders",
+        "maxLength": 120,
+        "context": "{reason} is the technical error text"
+    },
+    "notAuthenticated": {
+        "where": "Manage > People: error detail in the remove-user toast when signed out",
+        "who": "admins",
+        "maxLength": 40
+    },
+    "failed": {
+        "where": "Manage > People: error detail in the remove-user toast when the server gives no reason",
+        "who": "admins",
+        "maxLength": 20
+    },
+    "removedUser": {
+        "where": "Manage > People: toast after deleting a user account",
+        "who": "admins",
+        "maxLength": 60,
+        "context": "{personName} is the person's display name"
+    },
+    "removeUserFailed": {
+        "where": "Manage > People: error toast",
+        "who": "admins",
+        "maxLength": 120,
+        "context": "{reason} is the technical error text"
+    },
+    "badgeAdmin": {
+        "where": "Manage > People: small role badge on a person's row",
+        "who": "admins, band leaders",
+        "maxLength": 10
+    },
+    "badgeLeader": {
+        "where": "Manage > People: small role badge on a band leader's row",
+        "who": "admins, band leaders",
+        "maxLength": 10,
+        "context": "Short for Band Leader"
+    },
+    "badgeMusician": {
+        "where": "Manage > People: small role badge",
+        "who": "admins, band leaders",
+        "maxLength": 10
+    },
+    "badgeMember": {
+        "where": "Manage > People: small role badge",
+        "who": "admins, band leaders",
+        "maxLength": 10
+    },
+    "badgeSound": {
+        "where": "Manage > People: badge for a sound engineer (may run the mixer)",
+        "who": "admins, band leaders",
+        "maxLength": 10,
+        "context": "Keep the headphones emoji"
+    },
+    "badgePending": {
+        "where": "Manage > People: badge on someone waiting for approval",
+        "who": "admins, band leaders",
+        "maxLength": 10
+    },
+    "removeSoundEngineer": {
+        "where": "Manage > People: tooltip of the headphones button",
+        "who": "admins, band leaders",
+        "maxLength": 40
+    },
+    "removeSoundEngineerRole": {
+        "where": "Manage > People: accessible name of the headphones button",
+        "who": "admins, band leaders (screen readers)",
+        "maxLength": 40
+    },
+    "makeSoundEngineer": {
+        "where": "Manage > People: tooltip and accessible name of the headphones button",
+        "who": "admins, band leaders",
+        "maxLength": 40
+    },
+    "removeFromTenant": {
+        "where": "Manage > People: tooltip of the remove button and the confirm button in its dialog",
+        "who": "admins",
+        "maxLength": 50,
+        "context": "{tenantName} is the congregation or band's name"
+    },
+    "removePersonFromTenant": {
+        "where": "Manage > People: accessible name of the remove button",
+        "who": "admins (screen readers)",
+        "maxLength": 80,
+        "context": "{personName} is the person, {tenantName} the congregation or band"
+    },
+    "tapAgainToConfirm": {
+        "where": "Manage > People: tooltip of the delete button after the first tap",
+        "who": "admins",
+        "maxLength": 30
+    },
+    "removeUser": {
+        "where": "Manage > People: tooltip of the delete (trash) button",
+        "who": "admins",
+        "maxLength": 30
+    },
+    "confirmRemoval": {
+        "where": "Manage > People: accessible name of the delete button after the first tap",
+        "who": "admins (screen readers)",
+        "maxLength": 60,
+        "context": "{personName} is the person's name or email"
+    },
+    "removePerson": {
+        "where": "Manage > People: accessible name of the delete (trash) button",
+        "who": "admins (screen readers)",
+        "maxLength": 60,
+        "context": "{personName} is the person's name or email"
+    },
+    "approveAsLabel": {
+        "where": "Manage > People: accessible name of the role menu next to Approve on a request",
+        "who": "admins (screen readers)",
+        "maxLength": 60,
+        "context": "{personName} is the person's name or email; the chosen role follows"
+    },
+    "rolePlaceholder": {
+        "where": "Manage > People: placeholder of the role menus",
+        "who": "admins, band leaders",
+        "maxLength": 12
+    },
+    "approveAsRole": {
+        "where": "Manage > People: accessible name of the Approve button",
+        "who": "admins (screen readers)",
+        "maxLength": 70,
+        "context": "{personName} is the person, {role} the chosen role name"
+    },
+    "approve": {
+        "where": "Manage > People: button on a pending request",
+        "who": "admins",
+        "maxLength": 12
+    },
+    "declinePerson": {
+        "where": "Manage > People: accessible name of the Decline button",
+        "who": "admins (screen readers)",
+        "maxLength": 60,
+        "context": "{personName} is the person's name or email"
+    },
+    "decline": {
+        "where": "Manage > People: button on a pending request",
+        "who": "admins",
+        "maxLength": 12
+    },
+    "roleFor": {
+        "where": "Manage > People: accessible name of a person's role menu",
+        "who": "admins, band leaders (screen readers)",
+        "maxLength": 60,
+        "context": "{personName} is the person's name or email"
+    },
+    "youBadge": {
+        "where": "Manage > People: tiny badge on the viewer's own row",
+        "who": "admins, band leaders",
+        "maxLength": 6
+    },
+    "changeRoleTitle": {
+        "where": "Manage > People: confirm dialog title",
+        "who": "admins, band leaders",
+        "maxLength": 30
+    },
+    "changeRoleBody": {
+        "where": "Manage > People: confirm dialog text",
+        "who": "admins, band leaders",
+        "maxLength": 120,
+        "context": "{personName} is the person, {fromRole} and {toRole} are role names"
+    },
+    "cancel": {
+        "where": "Manage > People: dialog and bulk-action cancel buttons",
+        "who": "admins, band leaders",
+        "maxLength": 12
+    },
+    "changeRoleConfirm": {
+        "where": "Manage > People: confirm button of the role-change dialog",
+        "who": "admins, band leaders",
+        "maxLength": 20
+    },
+    "removeFromTenantTitle": {
+        "where": "Manage > People: remove-membership dialog title",
+        "who": "admins",
+        "maxLength": 50,
+        "context": "{tenantName} is the congregation or band's name"
+    },
+    "removeFromTenantBody": {
+        "where": "Manage > People: remove-membership dialog text",
+        "who": "admins",
+        "maxLength": 90,
+        "context": "{personName} is the person, {tenantName} the congregation or band. Only this membership ends; their account stays."
+    },
+    "bulkUpdated": {
+        "where": "Manage > People: toast after a bulk role change",
+        "who": "admins, band leaders",
+        "maxLength": 60,
+        "context": "{count} is a number of people, {role} the role name"
+    },
+    "bulkPartial": {
+        "where": "Manage > People: warning toast after a bulk role change where some failed",
+        "who": "admins, band leaders",
+        "maxLength": 60,
+        "context": "{count} people updated, {failed} people failed (a number)"
+    },
+    "bulkFailed": {
+        "where": "Manage > People: error toast after a bulk role change that failed entirely",
+        "who": "admins, band leaders",
+        "maxLength": 50,
+        "context": "{count} is a number of people"
+    },
+    "pendingRequests": {
+        "where": "Manage > People: amber badge above the list",
+        "who": "admins, band leaders",
+        "maxLength": 25,
+        "context": "{count} is a number of people waiting for approval. English uses one form for every count; Hebrew may add plural variants."
+    },
+    "selectedCount": {
+        "where": "Manage > People: bulk-action bar",
+        "who": "admins, band leaders",
+        "maxLength": 15,
+        "context": "{count} is a number of selected people. English uses one form; Hebrew may add plural variants."
+    },
+    "makeMember": {
+        "where": "Manage > People: bulk-action button",
+        "who": "admins, band leaders",
+        "maxLength": 20
+    },
+    "makeMusician": {
+        "where": "Manage > People: bulk-action button",
+        "who": "admins, band leaders",
+        "maxLength": 20
+    },
+    "makeBandLeader": {
+        "where": "Manage > People: bulk-action button (admins only)",
+        "who": "admins",
+        "maxLength": 20
+    },
+    "denyAccessTitle": {
+        "where": "Manage > People: tooltip of the Deny Access bulk button",
+        "who": "admins, band leaders",
+        "maxLength": 50
+    },
+    "denyAccessLabel": {
+        "where": "Manage > People: accessible name of the Deny Access bulk button",
+        "who": "admins, band leaders (screen readers)",
+        "maxLength": 50
+    },
+    "denyAccess": {
+        "where": "Manage > People: bulk-action button",
+        "who": "admins, band leaders",
+        "maxLength": 20
+    },
+    "searchPlaceholder": {
+        "where": "Manage > People: search field placeholder",
+        "who": "admins, band leaders",
+        "maxLength": 25
+    },
+    "filterAll": {
+        "where": "Manage > People: role filter tab",
+        "who": "admins, band leaders",
+        "maxLength": 10
+    },
+    "filterRequests": {
+        "where": "Manage > People: role filter tab showing people waiting for approval",
+        "who": "admins, band leaders",
+        "maxLength": 10
+    },
+    "filterMember": {
+        "where": "Manage > People: role filter tab",
+        "who": "admins, band leaders",
+        "maxLength": 10
+    },
+    "filterMusician": {
+        "where": "Manage > People: role filter tab",
+        "who": "admins, band leaders",
+        "maxLength": 10
+    },
+    "filterLeader": {
+        "where": "Manage > People: role filter tab for band leaders",
+        "who": "admins, band leaders",
+        "maxLength": 10
+    },
+    "filterAdmin": {
+        "where": "Manage > People: role filter tab",
+        "who": "admins, band leaders",
+        "maxLength": 10
+    },
+    "clearFilters": {
+        "where": "Manage > People: tooltip and accessible name of the clear-filters icon button",
+        "who": "admins, band leaders",
+        "maxLength": 25
+    },
+    "columnUser": {
+        "where": "Manage > People: list column header (CSS uppercase)",
+        "who": "admins, band leaders",
+        "maxLength": 15
+    },
+    "columnAttributes": {
+        "where": "Manage > People: list column header for role badges (CSS uppercase)",
+        "who": "admins, band leaders",
+        "maxLength": 15
+    },
+    "columnRoleManagement": {
+        "where": "Manage > People: list column header (CSS uppercase)",
+        "who": "admins, band leaders",
+        "maxLength": 20
+    },
+    "emptyNoUsers": {
+        "where": "Manage > People: empty list",
+        "who": "admins, band leaders",
+        "maxLength": 50
+    },
+    "emptyNoMatches": {
+        "where": "Manage > People: empty list after filtering",
+        "who": "admins, band leaders",
+        "maxLength": 60
+    }
+}

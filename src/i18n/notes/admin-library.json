@@ -1,0 +1,154 @@
+{
+    "syncComplete": {
+        "where": "Manage > Library: toast after the Drive sync finishes",
+        "who": "admins",
+        "maxLength": 50
+    },
+    "syncFailed": {
+        "where": "Manage > Library: error toast when the Drive sync fails",
+        "who": "admins",
+        "maxLength": 120,
+        "context": "{reason} is the server's error text (English) or the 'unknown' word"
+    },
+    "syncFailedUnknown": {
+        "where": "Manage > Library: fills {reason} in the sync-failed toast when no error text is available",
+        "who": "admins",
+        "maxLength": 20
+    },
+    "syncTitle": {
+        "where": "Manage > Library: card heading",
+        "who": "admins",
+        "maxLength": 30
+    },
+    "syncSubtitle": {
+        "where": "Manage > Library: line under the Library Sync heading",
+        "who": "admins",
+        "maxLength": 50,
+        "context": "Google Drive is a product name; the arrow means 'into'. In RTL the arrow can be written ← if it reads better."
+    },
+    "syncing": {
+        "where": "Manage > Library: sync button while running",
+        "who": "admins",
+        "maxLength": 20
+    },
+    "syncNow": {
+        "where": "Manage > Library: sync button",
+        "who": "admins",
+        "maxLength": 20
+    },
+    "syncDone": {
+        "where": "Manage > Library: green status label after a sync",
+        "who": "admins",
+        "maxLength": 15
+    },
+    "syncStats": {
+        "where": "Manage > Library: result line after a sync",
+        "who": "admins",
+        "maxLength": 80,
+        "context": "{scanned} files scanned in Drive, {added} new charts, {updated} updated charts"
+    },
+    "syncStatsCopied": {
+        "where": "Manage > Library: appended to the sync result line when files were copied",
+        "who": "admins",
+        "maxLength": 40,
+        "context": "Starts with a space and a middle dot separator; {copied} is a number of files copied to cloud storage"
+    },
+    "syncCopyErrors": {
+        "where": "Manage > Library: red warning after a sync with copy failures",
+        "who": "admins",
+        "maxLength": 70,
+        "context": "{count} is a number of files"
+    },
+    "syncWhatChanged": {
+        "where": "Manage > Library: expandable summary listing newly added files after a sync",
+        "who": "admins",
+        "maxLength": 25
+    },
+    "songRestored": {
+        "where": "Manage > Library > Archived Songs: toast after Restore",
+        "who": "admins",
+        "maxLength": 50
+    },
+    "songRestoreFailed": {
+        "where": "Manage > Library > Archived Songs: error toast when Restore fails",
+        "who": "admins",
+        "maxLength": 50
+    },
+    "statusHealthy": {
+        "where": "Manage > Library > Sync Status card: status when the last Drive sync completed",
+        "who": "admins",
+        "maxLength": 25
+    },
+    "statusFailed": {
+        "where": "Manage > Library > Sync Status card: status when the last Drive sync failed",
+        "who": "admins",
+        "maxLength": 25
+    },
+    "statusNoData": {
+        "where": "Manage > Library > Sync Status card: status when no sync has run",
+        "who": "admins",
+        "maxLength": 25
+    },
+    "syncStatusTitle": {
+        "where": "Manage > Library: card heading for the Drive sync health",
+        "who": "admins",
+        "maxLength": 30
+    },
+    "lastSync": {
+        "where": "Manage > Library > Sync Status card",
+        "who": "admins",
+        "maxLength": 50,
+        "context": "{when} is a relative time already in the user's language, e.g. '3 days ago'"
+    },
+    "statScanned": {
+        "where": "Manage > Library > Sync Status card: files scanned in the last sync",
+        "who": "admins",
+        "maxLength": 30,
+        "context": "{count} is a number of files"
+    },
+    "statAdded": {
+        "where": "Manage > Library > Sync Status card: charts added in the last sync",
+        "who": "admins",
+        "maxLength": 30,
+        "context": "{count} is a number of files"
+    },
+    "statUpdated": {
+        "where": "Manage > Library > Sync Status card: charts updated in the last sync",
+        "who": "admins",
+        "maxLength": 30,
+        "context": "{count} is a number of files"
+    },
+    "statCopyErrors": {
+        "where": "Manage > Library > Sync Status card: files that failed to copy (red)",
+        "who": "admins",
+        "maxLength": 30,
+        "context": "{count} is a number of files"
+    },
+    "filesInLibrary": {
+        "where": "Manage > Library > Sync Status card: follows a bold number (the number is a separate element before this text)",
+        "who": "admins",
+        "maxLength": 30,
+        "context": "Always plural in English; the number appears just before it"
+    },
+    "archivedTitle": {
+        "where": "Manage > Library: heading of the collapsible list of archived charts",
+        "who": "admins",
+        "maxLength": 30
+    },
+    "archivedEmpty": {
+        "where": "Manage > Library > Archived Songs: empty state",
+        "who": "admins",
+        "maxLength": 50
+    },
+    "archivedAgo": {
+        "where": "Manage > Library > Archived Songs: line under each archived chart's title",
+        "who": "admins",
+        "maxLength": 40,
+        "context": "{when} is a relative time already in the user's language, e.g. '2 weeks ago'"
+    },
+    "restore": {
+        "where": "Manage > Library > Archived Songs: button that un-archives a chart",
+        "who": "admins",
+        "maxLength": 15
+    }
+}

@@ -1,0 +1,18 @@
+{
+    "selectFirst": "Select a template first",
+    "untitledSetlist": "Untitled",
+    "fetchSetlistsFailed": "Failed to fetch setlists",
+    "loadTracksFailed": "Failed to load setlist tracks",
+    "imported": "Imported {count} slots from \"{setlistName}\" — review and save",
+    "loading": "Loading...",
+    "importFromSetlist": "Import from Setlist",
+    "regularServices": "Regular Services",
+    "holidayServices": "Holiday Services",
+    "selectToEdit": "Select a template to edit",
+    "importPickerHint": "Pick a setlist to import its tracks as template slots into “{templateLabel}”.",
+    "noSetlists": "No setlists found",
+    "trackCount": "{count} tracks",
+    "cancel": "Cancel",
+    "customBadge": "Custom",
+    "slotCount": "{count} slots"
+}
