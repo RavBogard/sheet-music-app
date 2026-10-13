@@ -12,5 +12,9 @@
     "printTimedOut": "Timed out preparing the chart for print.",
     "printPreviewFailed": "Couldn't open the print preview.",
     "printLoadFailed": "Couldn't load the chart for print.",
-    "untitledSetlist": "Untitled"
+    "untitledSetlist": "Untitled",
+    "printChartLoadStatus": "Couldn't load the chart to print (server said {status}).",
+    "printScoreNotRendered": "The score hasn't finished rendering yet.",
+    "printUnsupportedType": "Printing isn't available for this chart type.",
+    "printNoFile": "This chart has no file to print."
 }

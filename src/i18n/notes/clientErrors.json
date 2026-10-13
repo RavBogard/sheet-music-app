@@ -11,5 +11,9 @@
     "printTimedOut": { "where": "Perform mode, Print this chart: error when preparing the print took too long", "who": "musicians", "maxLength": 60 },
     "printPreviewFailed": { "where": "Perform mode, Print this chart: error when the print preview could not open", "who": "musicians", "maxLength": 60 },
     "printLoadFailed": { "where": "Perform mode, Print this chart: error when the chart could not be loaded for printing", "who": "musicians", "maxLength": 60 },
-    "untitledSetlist": { "where": "Perform mode: setlist title shown when the setlist has no name", "who": "musicians", "maxLength": 25, "context": "A setlist with no name." }
+    "untitledSetlist": { "where": "Perform mode: setlist title shown when the setlist has no name", "who": "musicians", "maxLength": 25, "context": "A setlist with no name." },
+    "printChartLoadStatus": { "where": "Perform mode, Print this chart: error when the chart file could not be downloaded", "who": "musicians", "maxLength": 80, "context": "{status} is an HTTP status number." },
+    "printScoreNotRendered": { "where": "Perform mode, Print this chart: error when a MusicXML score is still being drawn", "who": "musicians", "maxLength": 60 },
+    "printUnsupportedType": { "where": "Perform mode, Print this chart: error for a chart kind that cannot be printed", "who": "musicians", "maxLength": 60 },
+    "printNoFile": { "where": "Perform mode, Print this chart: error when the row has no chart file", "who": "musicians", "maxLength": 60 }
 }
