@@ -1,0 +1,15 @@
+{
+    "footerCredit": "פרויקט של {author}",
+    "commitTitle": "מזהה גרסה: {commit}",
+    "changelog": "יומן שינויים",
+    "privacy": "פרטיות",
+    "terms": "תנאי שימוש",
+    "accessibility": "נגישות",
+    "somethingWentWrong": "משהו השתבש",
+    "criticalError": "אירעה באפליקציה שגיאה חמורה. יש לטעון את הדף מחדש.",
+    "reloadApplication": "טעינת האפליקציה מחדש",
+    "tryAgain": "ניסיון חוזר",
+    "notFoundTitle": "הדף לא נמצא",
+    "notFoundBody": "הדף הזה לא קיים, או שאין הרשאה לצפות בו.",
+    "backToHome": "חזרה לדף הבית"
+}

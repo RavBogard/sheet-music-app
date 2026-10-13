@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from "react"
 import { formatError } from "@/lib/format-error"
 import { useRouter } from "next/navigation"
 import { createSetlistService, Setlist } from "@/lib/setlist-firebase"
-import { SERVICE_TYPE_LABELS } from "@/components/setlist/SetlistCards"
+import { SERVICE_TYPE_LABEL_KEYS } from "@/components/setlist/SetlistCards"
 import { useAuth } from "@/lib/auth-context"
 import { useOrg } from "@/lib/org/org-context"
 import { apiFetch } from "@/lib/api-client"
@@ -17,7 +17,8 @@ import { useLibrary } from "@/hooks/use-library"
 import { logger } from "@/lib/logger"
 import { toDate as toDateHelper } from "@/lib/firestore-helpers"
 import { isNonTestSetlist } from "@/components/performance/public-setlist-order"
-import { useT, useFormat } from "@/i18n/client"
+import { useT } from "@/i18n/client"
+import { useFormat } from "@/i18n/format-client"
 
 /** v11.5-05-03 (Q4): a real, non-empty setlist has at least one track. Empty
  *  drafts ("New Setlist"/"testing") are hidden from ANON browsers (owners keep
@@ -254,7 +255,8 @@ export function useSetlistDashboard({
     ) => {
         e.stopPropagation()
         if (!setlistService || !user) return
-        const friendly = SERVICE_TYPE_LABELS[serviceType] ?? serviceType
+        const labelKey = SERVICE_TYPE_LABEL_KEYS[serviceType]
+        const friendly = labelKey ? t(labelKey) : serviceType
         const toastId = toast.loading(t("hooks.savingDefault"))
         try {
             await setlistService.setDefaultForServiceType(serviceType, setlist.id, org)

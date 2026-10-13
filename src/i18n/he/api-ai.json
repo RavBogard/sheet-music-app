@@ -1,0 +1,6 @@
+{
+    "noImage": "לא נשלחה תמונה",
+    "missingFileId": "חסר fileId",
+    "noStrips": "לא נשלחו רצועות תמונה",
+    "missingImage": "חסר base64Image בגוף הבקשה"
+}

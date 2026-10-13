@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useAuth } from "@/lib/auth-context"
 import { useOrg } from "@/lib/org/org-context"
-import { rabbiSlotsFor } from "@/lib/org/tenant-lists"
+import { rabbiSlotsFor, serviceTypeLabel } from "@/lib/org/tenant-lists"
 import { saveCustomTemplate, deleteCustomTemplate } from "@/lib/template-firebase"
 import { TEMPLATE_LABELS, type TemplateSlot } from "@/lib/liturgical-templates"
 import type { TrackType, DriveFile } from "@/types/models"
@@ -129,7 +129,7 @@ export function TemplateEditor({ templateKey, defaultSlots, customSlots, importe
         try {
             await saveCustomTemplate(templateKey, slots, user.uid, org)
             setDirty(false)
-            toast.success(t("manage-templates.savedToast", { template: TEMPLATE_LABELS[templateKey]?.label ?? templateKey }))
+            toast.success(t("manage-templates.savedToast", { template: serviceTypeLabel(org, templateKey) }))
         } catch (err) {
             toast.error(t("manage-templates.saveFailed"))
         } finally {
@@ -158,7 +158,7 @@ export function TemplateEditor({ templateKey, defaultSlots, customSlots, importe
             <div className="flex items-center justify-between">
                 <div>
                     <h2 className="text-lg font-semibold">
-                        {TEMPLATE_LABELS[templateKey]?.label ?? templateKey}
+                        {serviceTypeLabel(org, templateKey)}
                     </h2>
                     <p className="text-xs text-muted-foreground">
                         {t("manage-templates.slotCount", { count: slots.length })}

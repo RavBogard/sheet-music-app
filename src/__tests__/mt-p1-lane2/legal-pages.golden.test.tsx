@@ -84,10 +84,11 @@ describe("multi-tenant P1: a tenant without CRC text gets the platform-run versi
         })
     }
 
+    // testshul is a Hebrew tenant (phase 7): its titles are the Hebrew catalogue text.
     it("testshul titles drop the CRC brand", async () => {
-        expect((await load("accessibility", "testshul")).metadata.title).toBe("Accessibility Statement")
-        expect((await load("changelog", "testshul")).metadata.title).toBe("Changelog")
-        expect((await load("privacy", "testshul")).metadata.title).toBe("Privacy Policy")
+        expect((await load("accessibility", "testshul")).metadata.title).toBe("הצהרת נגישות")
+        expect((await load("changelog", "testshul")).metadata.title).toBe("יומן שינויים")
+        expect((await load("privacy", "testshul")).metadata.title).toBe("מדיניות פרטיות")
     })
 
     it("testshul /changelog keeps the shared version list", async () => {

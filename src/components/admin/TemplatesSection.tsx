@@ -8,13 +8,14 @@ import { collection, query, where, orderBy, limit, getDocs } from "firebase/fire
 import { getDb } from "@/lib/firebase"
 import { getDefaultTemplate, TEMPLATE_LABELS, convertSetlistToTemplate, type TemplateSlot } from "@/lib/liturgical-templates"
 import { useOrg } from "@/lib/org/org-context"
-import { serviceTypeKeysFor } from "@/lib/org/tenant-lists"
+import { serviceTypeKeysFor, serviceTypeLabel } from "@/lib/org/tenant-lists"
 import { useCustomTemplates } from "@/lib/template-firebase"
 import { TemplateEditor } from "@/app/(main)/manage/templates/TemplateEditor"
 import { fetchTracksForSetlistClient } from "@/lib/client-tracks"
 import type { SetlistTrack } from "@/types/models"
 import { toast } from "sonner"
-import { useFormat, useT } from "@/i18n/client"
+import { useT } from "@/i18n/client"
+import { useFormat } from "@/i18n/format-client"
 
 interface SetlistSummary {
     id: string
@@ -163,7 +164,7 @@ export function TemplatesSection() {
                     <div className="bg-background border border-border rounded-xl p-6 w-full max-w-md max-h-[70vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
                         <h3 className="text-lg font-semibold mb-4">{t("admin-templates.importFromSetlist")}</h3>
                         <p className="text-sm text-muted-foreground mb-4">
-                            {t("admin-templates.importPickerHint", { templateLabel: TEMPLATE_LABELS[selectedKey!]?.label ?? selectedKey })}
+                            {t("admin-templates.importPickerHint", { templateLabel: serviceTypeLabel(org, selectedKey!) })}
                         </p>
                         {loadingSetlists ? (
                             <div className="flex justify-center py-8">
@@ -211,6 +212,7 @@ function TemplateGroup({
     onSelect: (key: string) => void
 }) {
     const t = useT()
+    const org = useOrg()
     return (
         <div>
             <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">{title}</h3>
@@ -231,7 +233,7 @@ function TemplateGroup({
                             )}
                         >
                             <div className="flex items-center justify-between">
-                                <span>{meta?.label ?? key}</span>
+                                <span>{serviceTypeLabel(org, key)}</span>
                                 {isCustomized && (
                                     <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-medium">
                                         {t("admin-templates.customBadge")}

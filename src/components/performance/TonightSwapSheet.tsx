@@ -22,7 +22,6 @@ import { Input } from "@/components/ui/input"
 import { ChartThumb } from "@/components/setlist/grid/ChartThumb"
 import { useAuth } from "@/lib/auth-context"
 import { useSharedCollections } from "@/hooks/use-shared-collections"
-import { SHARED_COPY } from "@/lib/library/shared-collections"
 import { useLibraryStore } from "@/lib/library-store"
 import { useOrg } from "@/lib/org/org-context"
 import { getMoment, momentIdForUnit } from "@/lib/books/moments"
@@ -198,7 +197,7 @@ export function TonightSwapSheet({ open, onOpenChange, setlistId, track, planned
             key={`${section}-shared-${f.id}`}
             fileId={f.id}
             title={candidateTitle(f)}
-            detail={[SHARED_COPY.fromOwner(shared.owner(f.orgId ?? "")), f.metadata?.key].filter(Boolean).join(" · ")}
+            detail={[t("library.shared.fromOwner", { owner: shared.owner(f.orgId ?? "") }), f.metadata?.key].filter(Boolean).join(" · ")}
             sharedFrom={f.orgId}
             mimeType={f.mimeType}
             showing={f.id === showingFileId}
@@ -279,7 +278,7 @@ export function TonightSwapSheet({ open, onOpenChange, setlistId, track, planned
                         {shared.chips.length > 0 && (
                             <div
                                 role="group"
-                                aria-label={SHARED_COPY.chipGroupLabel}
+                                aria-label={t("library.shared.chipGroupLabel")}
                                 className="flex flex-wrap items-center gap-2 px-4 pb-2"
                             >
                                 {shared.chips.map((c) => (
@@ -287,14 +286,14 @@ export function TonightSwapSheet({ open, onOpenChange, setlistId, track, planned
                                         key={c.id}
                                         type="button"
                                         aria-pressed={c.on}
-                                        aria-label={SHARED_COPY.chipAria(c.label, c.owner)}
+                                        aria-label={t("library.shared.chipAria", { label: c.label, owner: c.owner })}
                                         data-testid="swap-shared-chip"
                                         data-shared-collection={c.id}
                                         onClick={() => shared.toggle(c.id)}
                                         className="min-h-11 rounded-full border border-dashed border-border px-4 text-sm text-muted-foreground [touch-action:manipulation] aria-pressed:border-solid aria-pressed:border-brand/30 aria-pressed:bg-brand/15 aria-pressed:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                                     >
                                         {c.label}
-                                        <span className="ms-1.5 text-xs text-muted-foreground">{SHARED_COPY.fromOwner(c.owner)}</span>
+                                        <span className="ms-1.5 text-xs text-muted-foreground">{t("library.shared.fromOwner", { owner: c.owner })}</span>
                                     </button>
                                 ))}
                             </div>

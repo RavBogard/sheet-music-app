@@ -1,5 +1,6 @@
 import { auth } from "@/lib/firebase"
 import { logger } from "@/lib/logger"
+import { plainT } from "@/i18n/plain"
 
 export interface ApiFetchOptions extends RequestInit {
     /**
@@ -33,7 +34,7 @@ export async function apiFetch(path: string, options?: ApiFetchOptions): Promise
             try {
                 token = await user.getIdToken(true)
             } catch {
-                throw new Error("Authentication expired. Please sign in again.")
+                throw new Error(plainT()("clientErrors.authExpired"))
             }
         }
     }

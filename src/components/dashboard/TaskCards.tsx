@@ -7,7 +7,8 @@ import { collection, query, where, orderBy, limit, onSnapshot } from "firebase/f
 import { toDate } from "@/lib/firestore-helpers"
 import { CheckSquare, Square, Clock } from "lucide-react"
 import { logger } from "@/lib/logger"
-import { useT, useFormat } from "@/i18n/client"
+import { useT } from "@/i18n/client"
+import { useFormat } from "@/i18n/format-client"
 
 interface TaskItem {
     id: string

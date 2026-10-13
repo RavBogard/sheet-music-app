@@ -64,11 +64,12 @@ describe("multi-tenant P1 golden: CRC Music page titles and skeleton brand", () 
 describe("multi-tenant P1: titles and skeleton brand follow the tenant", () => {
     beforeEach(() => clearPrimedOrgConfigs())
 
+    // testshul is a Hebrew tenant (phase 7): titles come from he/org.json.
     it("testshul: (v2) layout title", async () => {
-        expect(await v2Title("testshul")).toEqual({ template: "%s | Test Shul Music · v2 Beta", default: "Test Shul Music · v2 Beta" })
+        expect(await v2Title("testshul")).toEqual({ template: "%s | Test Shul Music · v2 בטא", default: "Test Shul Music · v2 בטא" })
     })
     it("testshul: unauthorized title", async () => {
-        expect(await unauthorizedTitle("testshul")).toBe("Unauthorized | Test Shul Tehila")
+        expect(await unauthorizedTitle("testshul")).toBe("אין הרשאה | Test Shul Tehila")
     })
     it("testshul: skeleton brand", async () => {
         expect((await skeletonHeading("testshul", makeTestOrgConfig())).heading).toBe("Test Shul Music")

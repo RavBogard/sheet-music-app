@@ -4,6 +4,7 @@ import type { ViewerKind } from "./resolveViewerKind"
 import { estimateKey, transposeChord, keyUsesFlats } from "@/lib/music-math"
 import { generatePdfBlob, type GeneratePrintPayload } from "@/lib/print-generation"
 import { printPdfBlob, printImageBlob } from "./print-document"
+import { plainT } from "@/i18n/plain"
 
 /**
  * "Print this chart" — desktop-only PDFOverlay toolbar action. Prints ONLY
@@ -82,7 +83,7 @@ async function fetchOriginalChartBlob(fileId: string, networkUrl: string): Promi
     if (cached) return cached
     const res = await fetch(networkUrl)
     if (!res.ok) {
-        throw new Error(`Couldn't load the chart to print (server said ${res.status}).`)
+        throw new Error(plainT()("clientErrors.printChartLoadStatus", { status: res.status }))
     }
     return await res.blob()
 }
@@ -137,7 +138,7 @@ export const MUSICXML_PRINT_TARGET_SELECTOR = '[data-print-target="musicxml-scor
 export function printMusicXmlChart(): Promise<void> {
     return new Promise((resolve, reject) => {
         if (!document.querySelector(MUSICXML_PRINT_TARGET_SELECTOR)) {
-            reject(new Error("The score hasn't finished rendering yet."))
+            reject(new Error(plainT()("clientErrors.printScoreNotRendered")))
             return
         }
         document.body.classList.add("printing-chart")
@@ -182,11 +183,11 @@ export async function printCurrentChart(params: PrintCurrentChartParams): Promis
     }
 
     if (viewerKind === "audio" || viewerKind === "unknown") {
-        throw new Error("Printing isn't available for this chart type.")
+        throw new Error(plainT()("clientErrors.printUnsupportedType"))
     }
 
     if (!track.fileId) {
-        throw new Error("This chart has no file to print.")
+        throw new Error(plainT()("clientErrors.printNoFile"))
     }
 
     const title = track.title || "Chart"

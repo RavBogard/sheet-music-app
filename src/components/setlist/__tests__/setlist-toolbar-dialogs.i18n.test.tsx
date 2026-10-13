@@ -6,8 +6,6 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react"
 const dash = vi.hoisted(() => ({ value: {} as Record<string, unknown> }))
 vi.mock("@/hooks/use-setlist-dashboard", () => ({ useSetlistDashboard: () => dash.value }))
 vi.mock("@/lib/congregation-store", () => ({ useCongregation: () => ({ shortName: "CRC" }) }))
-// The greeting comes from src/lib/greeting.ts (not this lane's file); stub it to a fixed data string.
-vi.mock("@/lib/greeting", () => ({ getContextualGreeting: () => ({ text: "GREETING-STUB" }) }))
 vi.mock("../wizard/CreationWizard", () => ({ CreationWizard: () => null }))
 vi.mock("../importer/ImporterModal", () => ({ ImporterModal: () => null }))
 vi.mock("../SetlistMatrixView", () => ({ SetlistMatrixView: () => null }))
@@ -102,18 +100,18 @@ describe.each([false, true])("setlist toolbar + dialogs i18n (rtl=%s)", (rtl) =>
         dash.value = dashboardValue()
         const r = renderPseudo(<SetlistDashboard />, { rtl })
         if (rtl) expect(r.container.querySelector('[dir="rtl"]')).not.toBeNull()
-        expectNoUntranslatedText(document.body, { allow: ["GREETING-STUB", NAME, "Test Setlist Upcoming"] })
+        expectNoUntranslatedText(document.body, { allow: [NAME, "Test Setlist Upcoming"] })
         cleanup()
 
         dash.value = dashboardValue({ error: "boom", pastOrNoDate: [], nextCursor: null, loadingMore: true })
         renderPseudo(<SetlistDashboard />, { rtl })
         // `error` text is the hook's (data here); the title and retry label are this file's.
-        expectNoUntranslatedText(document.body, { allow: ["GREETING-STUB", "boom"] })
+        expectNoUntranslatedText(document.body, { allow: ["boom"] })
         cleanup()
 
         dash.value = dashboardValue({ pastOrNoDate: [], loadingMore: true })
         renderPseudo(<SetlistDashboard />, { rtl })
-        expectNoUntranslatedText(document.body, { allow: ["GREETING-STUB", "Test Setlist Upcoming"] })
+        expectNoUntranslatedText(document.body, { allow: ["Test Setlist Upcoming"] })
     })
 
     it("AudioFilePicker: empty state and file list", () => {
@@ -121,18 +119,18 @@ describe.each([false, true])("setlist toolbar + dialogs i18n (rtl=%s)", (rtl) =>
         expectNoUntranslatedText(document.body)
         fireEvent.click(screen.getByRole("button"))
         // "Close" is the shared Dialog close button (src/components/ui/dialog.tsx, not this lane's file).
-        expectNoUntranslatedText(document.body, { allow: ["Close"] })
+        expectNoUntranslatedText(document.body, {})
         cleanup()
 
         lib.value = { allFiles: [{ id: "a1", name: "Test Track A.mp3", mimeType: "audio/mpeg" }], loading: false }
         renderPseudo(<AudioFilePicker onSelect={noop} currentFileId="a1" />, { rtl })
         fireEvent.click(screen.getByRole("button"))
-        expectNoUntranslatedText(document.body, { allow: ["Close", "Test Track A.mp3"] })
+        expectNoUntranslatedText(document.body, { allow: ["Test Track A.mp3"] })
         lib.value = { allFiles: [], loading: true }
         cleanup()
         renderPseudo(<AudioFilePicker onSelect={noop} />, { rtl })
         fireEvent.click(screen.getByRole("button"))
-        expectNoUntranslatedText(document.body, { allow: ["Close"] })
+        expectNoUntranslatedText(document.body, {})
         lib.value = { allFiles: [], loading: false }
     })
 

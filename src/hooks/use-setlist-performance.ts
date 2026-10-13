@@ -23,6 +23,7 @@ import { toISOString } from "@/lib/firestore-helpers"
 import { applyTonight, eventDayOf, overridesApply, type OverridesDoc, type WithTonight } from "@/lib/performance/tonight"
 import { subscribeTonight as defaultSubscribeTonight } from "@/lib/performance/tonight-client"
 import { useOrg } from "@/lib/org/org-context"
+import { useT } from "@/i18n/client"
 
 interface UseSetlistPerformanceReturn {
     /** The rows to show: the plan with tonight's swaps laid over it. */
@@ -115,6 +116,7 @@ export function useSetlistPerformance(
     opts: UseSetlistPerformanceOpts = {},
 ): UseSetlistPerformanceReturn {
     const { user, isAdmin, isBandLeader } = useAuth()
+    const tr = useT()
     const isPublicView = !user
     const isLeader = isAdmin || isBandLeader
 
@@ -268,7 +270,7 @@ export function useSetlistPerformance(
     )
 
     const name: string =
-        setlistData?.name || initial?.setlist?.name || "Untitled"
+        setlistData?.name || initial?.setlist?.name || tr("clientErrors.untitledSetlist")
     const serviceNotes: string | null =
         setlistData?.serviceNotes ?? initial?.setlist?.serviceNotes ?? null
     const musicians: SetlistMusician[] =

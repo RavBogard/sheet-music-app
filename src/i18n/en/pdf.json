@@ -1,0 +1,47 @@
+{
+    "$comment": "Labels drawn inside generated PDFs (the rabbi's service sheet, the band's gig packet, text chord charts) and the print client's fallback errors. Rendered on the server in the tenant's language; chart content and song titles are data and never translated.",
+    "serviceSheet": {
+        "untitledService": "Service",
+        "untitledRow": "(untitled)",
+        "honors": "HONORS",
+        "honorsContinued": "HONORS (CONT.)",
+        "sectionOrder": "Order of service",
+        "sectionMusic": "Music only"
+    },
+    "packet": {
+        "columnNumber": "#",
+        "columnSong": "Song",
+        "columnKey": "Key",
+        "columnVocalLead": "Vocal Lead",
+        "columnTransposedKey": "As",
+        "columnNotes": "Notes",
+        "columnPage": "Page",
+        "folio": "p. {page}",
+        "ledBy": "Led by: {name}",
+        "preparedFor": "Prepared for: {name}",
+        "capo": "Capo {fret}",
+        "minutes": "~{minutes} min",
+        "songCount_one": "{count} song",
+        "songCount_other": "{count} songs",
+        "transposed": "transposed",
+        "omittedTitle": "Charts omitted from this packet",
+        "omittedIntro": "These setlist rows did not produce a printable chart page:"
+    },
+    "omission": {
+        "noChart": "No chart is attached to this song.",
+        "imageFailed": "The image chart could not be fetched or embedded.",
+        "fileMissing": "The chart file is missing or empty.",
+        "unreadable": "The chart file is not a readable PDF or supported chart format.",
+        "fetchFailed": "The chart could not be fetched."
+    },
+    "progress": {
+        "preparing": "Preparing print job...",
+        "processing": "Processing: {title}",
+        "merging": "Generating final PDF..."
+    },
+    "client": {
+        "generateFailed": "Failed to generate PDF",
+        "serverError": "Server error ({status})",
+        "chartsOmitted": "Some charts could not be included in the packet."
+    }
+}

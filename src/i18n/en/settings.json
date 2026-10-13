@@ -138,11 +138,11 @@
         "calendarTitle": "Calendar Subscription",
         "copy": "Copy",
         "calendarCopied": "Calendar URL copied!",
-        "calendarAddHint": "Add this URL to Google Calendar, Apple Calendar, or Outlook to see your CRC schedule.",
+        "calendarAddHint": "Add this URL to Google Calendar, Apple Calendar, or Outlook to see your {community} schedule.",
         "calendarGenerated": "Calendar feed URL generated!",
         "calendarGenerateFailed": "Failed to generate calendar URL",
         "calendarGenerating": "Generating...",
         "calendarGenerate": "Generate Calendar URL",
-        "calendarGenerateHint": "Generate a URL to subscribe to your CRC schedule in your personal calendar app."
+        "calendarGenerateHint": "Generate a URL to subscribe to your {community} schedule in your personal calendar app."
     }
 }

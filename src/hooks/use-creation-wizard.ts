@@ -8,7 +8,7 @@ import type { SetlistTrack, SetlistMusician, DriveFile } from "@/types/models"
 import { toast } from "sonner"
 import { getTemplate, buildSetlistFromTemplate, generateSetlistName, TEMPLATE_LABELS } from "@/lib/liturgical-templates"
 import { useOrg } from "@/lib/org/org-context"
-import { serviceTypeKeysFor } from "@/lib/org/tenant-lists"
+import { serviceTypeKeysFor, serviceTypeLabel } from "@/lib/org/tenant-lists"
 import { getFullServiceContext, getServiceContext, ServiceType } from "@/lib/liturgical-calendar"
 import { useLibraryStore } from "@/lib/library-store"
 import { useCustomTemplates } from "@/lib/template-firebase"
@@ -119,7 +119,7 @@ export function useCreationWizard(): UseCreationWizardReturn {
             setName(generateSetlistName(context))
             if (!eventDate) setEventDate(targetDate)
         } catch {
-            const label = TEMPLATE_LABELS[key]?.label || t("hooks.defaultServiceName")
+            const label = (TEMPLATE_LABELS[key] ? serviceTypeLabel(org, key) : "") || t("hooks.defaultServiceName")
             setName(label)
         }
     }, [eventDate, org, t])
@@ -262,7 +262,7 @@ export function useCreationWizard(): UseCreationWizardReturn {
             if (selectedTemplate) {
                 const matched = finalTracks.filter(tr => tr.fileId).length
                 const total = finalTracks.filter(tr => tr.type === 'song').length
-                toast.success(t("hooks.createdFromNamedTemplate", { setlistName: name, templateName: TEMPLATE_LABELS[selectedTemplate]?.label || selectedTemplate, matched, total }), successOpts)
+                toast.success(t("hooks.createdFromNamedTemplate", { setlistName: name, templateName: TEMPLATE_LABELS[selectedTemplate] ? serviceTypeLabel(org, selectedTemplate) : selectedTemplate, matched, total }), successOpts)
             } else {
                 toast.success(t("hooks.setlistCreated", { setlistName: name }), successOpts)
             }

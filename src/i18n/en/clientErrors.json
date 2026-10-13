@@ -1,0 +1,20 @@
+{
+    "$comment": "Error and fallback text built in plain client code (src/lib, hooks) and shown in toasts or messages; translated through plainT()/useT().",
+    "authExpired": "Authentication expired. Please sign in again.",
+    "unknownError": "Unknown error",
+    "notSignedIn": "Not authenticated",
+    "databaseNotReady": "Database not initialized",
+    "recordingUploadFailed": "Failed to upload recording",
+    "printPrepareNoCanvas": "Couldn't prepare the chart for print (no 2D canvas).",
+    "printPrepareRenderFailed": "Couldn't prepare the chart for print (page render failed).",
+    "printNoPages": "This chart has no pages to print.",
+    "printPreviewTitle": "Print preview",
+    "printTimedOut": "Timed out preparing the chart for print.",
+    "printPreviewFailed": "Couldn't open the print preview.",
+    "printLoadFailed": "Couldn't load the chart for print.",
+    "untitledSetlist": "Untitled",
+    "printChartLoadStatus": "Couldn't load the chart to print (server said {status}).",
+    "printScoreNotRendered": "The score hasn't finished rendering yet.",
+    "printUnsupportedType": "Printing isn't available for this chart type.",
+    "printNoFile": "This chart has no file to print."
+}

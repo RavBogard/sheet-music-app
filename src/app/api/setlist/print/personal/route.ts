@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { getT } from "@/i18n/server"
+import { getI18n, getT } from "@/i18n/server"
 import { generatePrintPdf, PrintRequest } from "@/lib/print-pipeline"
 import { createApiHandler } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
@@ -113,7 +113,9 @@ export const GET = createApiHandler(
             })),
         }
 
-        const result = await generatePrintPdf(printReq)
+        // Multi-tenant phase 7: the packet's labels in the setlist tenant's language.
+        const { t: pdfT, lang } = await getI18n(printReq.org)
+        const result = await generatePrintPdf(printReq, undefined, { t: pdfT, lang })
         const filename = `${(setlist.name || 'Setlist').replace(/[^a-z0-9]/gi, '_')}_${userName.replace(/[^a-z0-9]/gi, '_')}.pdf`
 
         logger.info(`[PersonalPacket] Generated for ${userName}: ${result.stats.appendedTracks} tracks, ${result.stats.transposedTracks} transposed`)

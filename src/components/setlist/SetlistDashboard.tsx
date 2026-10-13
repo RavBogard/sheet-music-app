@@ -16,7 +16,7 @@ import { ImporterModal } from "./importer/ImporterModal"
 import { SetlistToolbar } from "./SetlistToolbar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
 import { useCongregation } from "@/lib/congregation-store"
-import { useT } from "@/i18n/client"
+import { useI18n } from "@/i18n/client"
 import { useSetlistDashboard, type UseSetlistDashboardProps } from "@/hooks/use-setlist-dashboard"
 import { canEditSetlist } from "@/lib/setlist-permissions"
 import { CreationWizard } from "./wizard/CreationWizard"
@@ -30,7 +30,7 @@ const UnifiedCalendar = dynamic(
 
 export function SetlistDashboard(props: UseSetlistDashboardProps) {
     const congregation = useCongregation()
-    const t = useT()
+    const { t, lang } = useI18n()
     const [showWizard, setShowWizard] = useState(false)
     const [wizardPrefilledDate, setWizardPrefilledDate] = useState<Date | null>(null)
     const openWizardForDate = useCallback((date: Date) => {
@@ -67,8 +67,9 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
             firstName,
             undefined,
             congregation.shortName || DEFAULT_SHORT_NAME,
+            { t, lang },
         ).text
-    }, [user?.displayName, congregation.shortName])
+    }, [user?.displayName, congregation.shortName, t, lang])
 
     return (
         <div className="flex min-h-[100dvh] bg-background text-foreground relative overflow-hidden">

@@ -28,5 +28,10 @@
     "save": "Save",
     "nameYourSetlist": "Name Your Setlist",
     "namePromptPlaceholder": "e.g., Shabbat Morning, Friday Night...",
-    "continue": "Continue"
+    "continue": "Continue",
+    "suggestionStaple_one": "Used {count}× — {setlistName}",
+    "suggestionStaple_other": "Used {count}× — {setlistName}",
+    "suggestionStale_one": "Not played in {count} day",
+    "suggestionStale_other": "Not played in {count} days",
+    "suggestionNeverPlayed": "Never played"
 }

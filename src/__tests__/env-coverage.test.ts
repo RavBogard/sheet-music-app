@@ -50,7 +50,6 @@ const EXEMPT: Record<string, string> = {
     INTAKE_RUN_SECRET: "intake harness, test-only",
     INNGEST_EVENT_KEY: "test fixture only; no runtime Inngest client",
     P6_WRITE_GOLDEN: "multi-tenant phase 6 golden capture switch, test-only",
-    I18N_REQUIRE_HE: "phase 7 catalogue test switch (Hebrew completeness), test-only",
 }
 
 /** Anything starting with one of these is platform-supplied. */

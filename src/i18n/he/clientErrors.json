@@ -1,0 +1,19 @@
+{
+    "authExpired": "תוקף ההתחברות פג. יש להתחבר שוב.",
+    "unknownError": "שגיאה לא ידועה",
+    "notSignedIn": "לא בוצעה התחברות",
+    "databaseNotReady": "מסד הנתונים עדיין לא מוכן",
+    "recordingUploadFailed": "העלאת ההקלטה נכשלה",
+    "printPrepareNoCanvas": "לא ניתן היה להכין את התווים להדפסה (אין 2D canvas).",
+    "printPrepareRenderFailed": "לא ניתן היה להכין את התווים להדפסה (הצגת העמוד נכשלה).",
+    "printNoPages": "אין בקובץ התווים הזה עמודים להדפסה.",
+    "printPreviewTitle": "תצוגה מקדימה להדפסה",
+    "printTimedOut": "תם הזמן להכנת התווים להדפסה.",
+    "printPreviewFailed": "לא ניתן היה לפתוח את התצוגה המקדימה.",
+    "printLoadFailed": "לא ניתן היה לטעון את התווים להדפסה.",
+    "untitledSetlist": "ללא שם",
+    "printChartLoadStatus": "לא ניתן היה לטעון את התווים להדפסה (תגובת השרת: {status}).",
+    "printScoreNotRendered": "הפרטיטורה עדיין בעיבוד.",
+    "printUnsupportedType": "הדפסה אינה זמינה לסוג התווים הזה.",
+    "printNoFile": "אין קובץ תווים להדפסה."
+}

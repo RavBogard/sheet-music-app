@@ -38,3 +38,35 @@ describe("api-charts messages", () => {
         expect(body.error.startsWith("⟦")).toBe(true)
     })
 })
+
+describe("scrape errors from src/lib/chart-scrape (lane D)", () => {
+    beforeEach(() => {
+        h.lang = null
+    })
+    const post = () => POST(new Request("http://x/api/charts/scrape", { method: "POST", body: JSON.stringify({ url: "https://example.test/x" }) }))
+
+    it("English is unchanged (the lib's English sentence and the route's text match)", async () => {
+        const { scrapeChart } = await import("@/lib/chart-scrape")
+        vi.mocked(scrapeChart).mockResolvedValueOnce({ ok: false, status: 502, error: "Failed to fetch URL: Not Found", code: "fetch_status", detail: "Not Found" })
+        const res = await post()
+        expect(res.status).toBe(502)
+        expect(await res.json()).toEqual({ error: "Failed to fetch URL: Not Found" })
+        vi.mocked(scrapeChart).mockResolvedValueOnce({
+            ok: false, status: 404, code: "no_chart",
+            error: "No chord chart detected on this page (or the page is gated/empty). Try a different URL or paste raw text via rawText.",
+        })
+        const res2 = await post()
+        expect(((await res2.json()) as { error: string }).error).toBe(
+            "No chord chart detected on this page (or the page is gated/empty). Try a different URL or paste raw text via rawText.",
+        )
+    })
+
+    it("comes from the catalogue (pseudo-locale)", async () => {
+        h.lang = "qps"
+        const { scrapeChart } = await import("@/lib/chart-scrape")
+        vi.mocked(scrapeChart).mockResolvedValueOnce({ ok: false, status: 500, error: "Failed to scrape chart: boom", code: "scrape_failed", detail: "boom" })
+        const body = (await (await post()).json()) as { error: string }
+        expect(body.error.startsWith("⟦")).toBe(true)
+        expect(body.error).toContain("boom")
+    })
+})

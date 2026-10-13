@@ -28,16 +28,6 @@ import type { DriveFile } from '@/types/models'
  */
 export const VISIBILITY_SECTION_COLLECTIONS: readonly KnownCollection[] = ['nava']
 
-/** New copy, in one place so phase 7 can route it through t(). English only. */
-export const SHARED_COPY = {
-    chipGroupLabel: 'Shared collections',
-    sharedHeading: 'Shared',
-    fromOwner: (owner: string) => `From ${owner}`,
-    readOnly: (owner: string) => `Shared from ${owner}. You can use it but not change it.`,
-    chipAria: (label: string, owner: string) => `Show ${label} from ${owner}`,
-    loadFailed: 'Could not load shared charts.',
-} as const
-
 /** A `collections/{id}` record as the browser reads it. */
 export interface SharedCollection {
     id: string

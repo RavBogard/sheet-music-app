@@ -9,6 +9,7 @@ import { SetlistTrack } from "@/types/models"
 import { useAuth } from "@/lib/auth-context"
 import { apiFetch } from "@/lib/api-client"
 import { fetchTenantMusicianProfiles, INSTRUMENT_PRESETS } from "@/lib/musician-profile"
+import { instrumentLabel } from "@/lib/instrument-labels"
 import { MusicianProfile } from "@/types/models"
 import { TrackPrintOptionsList, TrackTranspose } from "./TrackPrintOptionsList"
 import { PrintModeSelector, PrintMode } from "./PrintModeSelector"
@@ -16,7 +17,8 @@ import { PrintStats } from "./PrintStats"
 import { logger } from "@/lib/logger"
 import { useFeature } from "@/lib/org/use-feature"
 import { toast } from "sonner"
-import { useT, useFormat } from "@/i18n/client"
+import { useT } from "@/i18n/client"
+import { useFormat } from "@/i18n/format-client"
 import {
     generatePdfBlob,
     generateZipBlob,
@@ -247,7 +249,7 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
         if (!myProfile?.instrument) return null
         const preset = INSTRUMENT_PRESETS[myProfile.instrument]
         const parts = [user?.displayName?.split(' ')[0] || t("setlistPrint.me")]
-        if (preset?.label) parts.push(preset.label)
+        if (preset?.label) parts.push(instrumentLabel(myProfile.instrument, t))
         if (myProfile.preferredCapoFret) parts.push(t("setlistPrint.capoFret", { fret: myProfile.preferredCapoFret }))
         return parts.join(" — ")
 
@@ -346,7 +348,7 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
                     const m = musicians.find(x => x.uid === uid)
                     if (!m) return null
                     const preset = m.profile.instrument ? INSTRUMENT_PRESETS[m.profile.instrument] : null
-                    const label = preset?.label || ''
+                    const label = preset?.label && m.profile.instrument ? instrumentLabel(m.profile.instrument, t) : ''
                     const name = `${m.displayName}${label ? ` - ${label}` : ''}`
 
                     const blob = await generateForMusician(
@@ -380,7 +382,7 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
 
             if (printMode === "just-me" && myProfile) {
                 const preset = myProfile.instrument ? INSTRUMENT_PRESETS[myProfile.instrument] : null
-                name = `${user?.displayName || ""}${preset?.label ? ` - ${preset.label}` : ''}`
+                name = `${user?.displayName || ""}${preset?.label && myProfile.instrument ? ` - ${instrumentLabel(myProfile.instrument, t)}` : ''}`
                 transposition = myProfile.defaultTransposition || 0
                 preferFlats = myProfile.preferFlats || false
                 capoFret = myProfile.preferredCapoFret || 0
@@ -388,7 +390,7 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
                 const m = musicians.find(x => x.uid === selectedUids[0])
                 if (m) {
                     const preset = m.profile.instrument ? INSTRUMENT_PRESETS[m.profile.instrument] : null
-                    name = `${m.displayName}${preset?.label ? ` - ${preset.label}` : ''}`
+                    name = `${m.displayName}${preset?.label && m.profile.instrument ? ` - ${instrumentLabel(m.profile.instrument, t)}` : ''}`
                     transposition = m.profile.defaultTransposition || 0
                     preferFlats = m.profile.preferFlats || false
                     capoFret = m.profile.preferredCapoFret || 0
@@ -517,7 +519,7 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
                                             <div className="flex-1 min-w-0">
                                                 <p className="text-sm font-medium text-foreground truncate">{m.displayName}</p>
                                                 {m.profile.instrument && (
-                                                    <p className="text-xs text-muted-foreground truncate">{preset?.label || m.profile.instrument}</p>
+                                                    <p className="text-xs text-muted-foreground truncate">{preset?.label && m.profile.instrument ? instrumentLabel(m.profile.instrument, t) : m.profile.instrument}</p>
                                                 )}
                                             </div>
                                         </label>

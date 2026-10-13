@@ -4,7 +4,8 @@ import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Users, CheckCircle
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import type { CalendarMode } from "@/hooks/use-calendar-data"
-import { useT, useFormat } from "@/i18n/client"
+import { useT } from "@/i18n/client"
+import { useFormat } from "@/i18n/format-client"
 import { DirectionalIcon } from "@/components/i18n/DirectionalIcon"
 
 /** A Sunday-to-Saturday week at UTC noon (Sun 4 Oct 2026); formatted in UTC so the weekday never shifts with the zone. */

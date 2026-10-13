@@ -14,11 +14,11 @@ import { REPO_ROOT, toRepoPath } from "./scope"
  * same placeholders in both languages, a translator note for every English
  * key, and every literal `t("ns.key")` in the code exists in English.
  *
- * Hebrew completeness (every English key has a Hebrew entry) runs when
- * I18N_REQUIRE_HE=1 until translation lands. To make it always-on, set
- * REQUIRE_HE to `true` below.
+ * Hebrew completeness (every English key has a Hebrew entry, except keys whose
+ * note says "translate": false) is always on since the Hebrew catalogue landed:
+ * a new English key needs its Hebrew. `node scripts/i18n-he-missing.mjs --list`
+ * lists what is missing (src/i18n/notes/TRANSLATING.md).
  */
-const REQUIRE_HE = process.env.I18N_REQUIRE_HE === "1"
 
 const I18N_DIR = join(REPO_ROOT, "src", "i18n")
 const PLURAL_SUFFIX = /_(zero|one|two|few|many|other)$/
@@ -122,7 +122,7 @@ describe("phase 7: catalogue keys", () => {
         expect(missing).toEqual([])
     })
 
-    it.runIf(REQUIRE_HE)("every English key has a Hebrew entry (I18N_REQUIRE_HE=1)", () => {
+    it("every English key has a Hebrew entry", () => {
         const missing = Object.keys(en).filter((k) => {
             if (noteOf(k)?.translate === false) return false
             if (k in he) return false

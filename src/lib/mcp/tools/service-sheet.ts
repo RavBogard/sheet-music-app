@@ -5,6 +5,7 @@ import { checkUserRateLimit } from "@/lib/rate-limit"
 import { getTracksForSetlist } from "@/lib/server-tracks"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/errors"
 import { renderServiceSheetPdf, type ServiceSheetTrack } from "@/lib/pdf/service-sheet-pdf"
+import { pdfI18nForOrg } from "@/lib/pdf/pdf-i18n-server"
 import { getRegistryEntry } from "@/lib/books/registry"
 import { logger } from "@/lib/logger"
 import {
@@ -202,9 +203,12 @@ export async function generateServiceSheet(
 
     const mode: PrintRowMode = isPrintRowMode(args.rows) ? args.rows : "full"
     const sections = sectionsFor(mode)
+    // Multi-tenant phase 7: the sheet is printed in the setlist tenant's
+    // language (the MCP response text stays English). CRC/BL: English.
+    const pdfI18n = await pdfI18nForOrg(rowOrg(setlistData.orgId))
     const LABELS: Record<"music" | "full", string> = {
-        full: "Order of service",
-        music: "Music only",
+        full: pdfI18n.t("pdf.serviceSheet.sectionOrder"),
+        music: pdfI18n.t("pdf.serviceSheet.sectionMusic"),
     }
 
     const toSheetTrack = (t: (typeof tracks)[number]): ServiceSheetTrack => {
@@ -249,6 +253,7 @@ export async function generateServiceSheet(
                 bookTitle,
                 sectionLabel: sections.length > 1 ? LABELS[section] : undefined,
                 tracks: rows.map((r) => toSheetTrack(r.track)),
+                i18n: pdfI18n,
             }),
         ),
     )

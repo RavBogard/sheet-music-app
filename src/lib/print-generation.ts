@@ -1,4 +1,5 @@
 import { apiFetch } from "@/lib/api-client"
+import { plainT } from "@/i18n/plain"
 import { SetlistTrack } from "@/types/models"
 
 export interface PrintTrackPayload {
@@ -54,6 +55,9 @@ export interface GeneratePrintPayload {
 export interface OmittedPrintChart {
     title: string
     fileId?: string
+    /** Machine code (print-pipeline PrintOmissionCode); absent from older servers. */
+    code?: string
+    /** Already in the packet's language: the server renders it with the tenant's translator. */
     reason: string
 }
 
@@ -61,7 +65,7 @@ export class PrintChartsOmittedError extends Error {
     readonly omittedCharts: OmittedPrintChart[]
 
     constructor(omittedCharts: OmittedPrintChart[]) {
-        super('Some charts could not be included in the packet.')
+        super(plainT()("pdf.client.chartsOmitted"))
         this.name = 'PrintChartsOmittedError'
         this.omittedCharts = omittedCharts
     }
@@ -74,7 +78,8 @@ export async function generatePdfBlob(payload: GeneratePrintPayload): Promise<Bl
     })
 
     if (!response.ok) {
-        let errorMsg = 'Failed to generate PDF'
+        const t = plainT()
+        let errorMsg = t("pdf.client.generateFailed")
         try {
             const err = await response.json()
             if (err.code === 'PRINT_CHARTS_OMITTED' && Array.isArray(err.details?.omittedCharts)) {
@@ -83,7 +88,7 @@ export async function generatePdfBlob(payload: GeneratePrintPayload): Promise<Bl
             errorMsg = err.error || errorMsg
         } catch (error) {
             if (error instanceof PrintChartsOmittedError) throw error
-            errorMsg = `Server error (${response.status})`
+            errorMsg = t("pdf.client.serverError", { status: response.status })
         }
         throw new Error(errorMsg)
     }

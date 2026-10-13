@@ -8,7 +8,8 @@ import { type UpcomingSetlistWithPrep } from "@/hooks/use-upcoming-prep"
 import { Clock, ChevronRight, CheckCircle2, Circle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { useT, useFormat, useI18n } from "@/i18n/client"
+import { useT, useI18n } from "@/i18n/client"
+import { useFormat } from "@/i18n/format-client"
 
 /**
  * Upcoming timeline with day groupings and inline progress bars.

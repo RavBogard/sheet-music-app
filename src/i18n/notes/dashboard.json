@@ -318,5 +318,17 @@
         "who": "signed-out visitors",
         "maxLength": 28,
         "context": "\"Google\" is a brand name, do not translate it"
-    }
+    },
+    "greetingGoodMorning": { "where": "Dashboard: big greeting at the top before noon", "who": "leaders and musicians", "maxLength": 25 },
+    "greetingGoodAfternoon": { "where": "Dashboard: big greeting at the top from noon to 5 pm", "who": "leaders and musicians", "maxLength": 25 },
+    "greetingGoodEvening": { "where": "Dashboard: big greeting at the top after 5 pm", "who": "leaders and musicians", "maxLength": 25 },
+    "greetingShabbatShalom": { "where": "Dashboard: big greeting from Friday 4 pm to Saturday 9 pm", "who": "leaders and musicians", "maxLength": 25, "context": "The everyday Shabbat greeting (a greeting, not prayer text)." },
+    "greetingShanahTovah": { "where": "Dashboard: big greeting on Rosh Hashanah", "who": "leaders and musicians", "maxLength": 25, "context": "New Year greeting (a greeting, not prayer text)." },
+    "greetingGmarChatimahTovah": { "where": "Dashboard: big greeting on Yom Kippur", "who": "leaders and musicians", "maxLength": 25, "context": "The usual Yom Kippur greeting (a greeting, not prayer text)." },
+    "greetingChagSameach": { "where": "Dashboard: big greeting on Sukkot, Shemini Atzeret/Simchat Torah and Shavuot", "who": "leaders and musicians", "maxLength": 25, "context": "Festival greeting (a greeting, not prayer text)." },
+    "greetingChagUrimSameach": { "where": "Dashboard: big greeting during Hanukkah", "who": "leaders and musicians", "maxLength": 25, "context": "Hanukkah greeting (a greeting, not prayer text)." },
+    "greetingChagPurimSameach": { "where": "Dashboard: big greeting on Purim", "who": "leaders and musicians", "maxLength": 25, "context": "Purim greeting (a greeting, not prayer text)." },
+    "greetingChagPesachSameach": { "where": "Dashboard: big greeting during Passover", "who": "leaders and musicians", "maxLength": 25, "context": "Passover greeting (a greeting, not prayer text)." },
+    "greetingWithName": { "where": "Dashboard: the big greeting when the signed-in person's first name is known, e.g. 'Good morning, Dana'", "who": "leaders and musicians", "maxLength": 40, "context": "{greeting} is one of the dashboard.greeting* phrases; {firstName} is the person's first name." },
+    "welcomeTo": { "where": "Dashboard: big greeting on a weekday when nobody is signed in", "who": "anyone", "maxLength": 40, "context": "{appName} is the congregation's short name (e.g. the music app's brand)." }
 }

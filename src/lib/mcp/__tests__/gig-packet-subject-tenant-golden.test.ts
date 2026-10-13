@@ -88,6 +88,6 @@ describe("golden: gig packet metadata", () => {
 describe("testshul: gig packet subject reads tenant config", () => {
     it("a testshul setlist's packet carries the tenant subject", async () => {
         primeTestOrg()
-        expect(await packetMeta("testshul")).toEqual({ subject: "Test Shul Music Books gig packet", title: GOLDEN.title })
+        expect(await packetMeta("testshul")).toEqual({ subject: "חוברת להדפסה – Test Shul Music Books", title: GOLDEN.title }) // Hebrew tenant (phase 7)
     })
 })

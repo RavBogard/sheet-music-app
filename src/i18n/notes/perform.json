@@ -135,5 +135,6 @@
     "saveOffline.savingAria": {"where": "Perform setlist header: screen-reader label of the save-offline button while saving", "who": "musicians", "maxLength": 70},
     "saveOffline.allSavedAria": {"where": "Perform setlist header: screen-reader label when every chart is saved", "who": "musicians", "maxLength": 50},
     "saveOffline.partialAria": {"where": "Perform setlist header: screen-reader label when some charts are saved", "who": "musicians", "maxLength": 80},
-    "saveOffline.idleAria": {"where": "Perform setlist header: screen-reader label of the save-offline button", "who": "musicians", "maxLength": 50}
+    "saveOffline.idleAria": {"where": "Perform setlist header: screen-reader label of the save-offline button", "who": "musicians", "maxLength": 50},
+    "saveLabelPlaybackSpeed": { "where": "Rehearsal audio player: error toast when saving the chosen playback speed fails; fills {action} in appSync.saveFailed (\"Couldn't save {action} — try again\")", "who": "musicians", "maxLength": 25, "context": "A lowercase noun phrase dropped into another sentence. The English says 'metronome speed' but it is the rehearsal recording's playback speed; translate as playback speed." }
 }

@@ -31,7 +31,8 @@ import { cn } from "@/lib/utils"
 import { useOrg, useOrgConfig } from "@/lib/org/org-context"
 import { getOrgBranding } from "@/lib/org/branding"
 import type { TenantRole } from "@/lib/org/membership-types"
-import { useFormat, useT } from "@/i18n/client"
+import { useT } from "@/i18n/client"
+import { useFormat } from "@/i18n/format-client"
 import { useRoleLabel } from "@/components/admin/people/role-labels"
 
 const ROLE_HIERARCHY: Record<string, number> = {

@@ -151,17 +151,14 @@ describe("Perform setlist view — pseudo-locale (qps)", () => {
         ] as never
         const r = renderPseudo(<PublicSetlistListing initialSetlists={seed} />)
         expectNoUntranslatedText(r.container, {
-            // Tenant brand (org config), fixture setlist names, the QR stub.
-            // "Public setlists" here is the tenant vocabulary label
-            // (label(org, "publicListingSubtitle"), org namespace), which
-            // orgString() does not pseudo-wrap; the skeleton's own copy of
-            // that word goes through t() and is checked below.
-            allow: ["Test Setlist One", "Test Setlist Two", /CRC/, "Public setlists"],
+            // Tenant brand name (branding data), fixture setlist names and the QR stub. Tenant vocabulary
+            // (label(), orgString()) is pseudo-wrapped too (lane D).
+            allow: ["Test Setlist One", "Test Setlist Two", "CRC Music"],
             ignoreSelector: "[data-testid=qr-signin]",
         })
         r.unmount()
         const s = renderPseudo(<PublicSetlistSkeleton cards={1} />)
-        expectNoUntranslatedText(s.container, { allow: [/CRC/] })
+        expectNoUntranslatedText(s.container)
     })
 })
 

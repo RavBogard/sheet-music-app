@@ -5,7 +5,8 @@ import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
 import { formatError } from '@/lib/format-error'
-import { useFormat, useI18n } from '@/i18n/client'
+import { useI18n } from '@/i18n/client'
+import { useFormat } from '@/i18n/format-client'
 
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'

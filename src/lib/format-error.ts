@@ -1,3 +1,5 @@
+import { plainT } from "@/i18n/plain"
+
 /**
  * `formatError` — uniform user-visible string for an `unknown` value
  * caught at a UI error-handling boundary.
@@ -52,5 +54,5 @@ export function formatError(err: unknown): string {
             return obj.message
         }
     }
-    return "Unknown error"
+    return plainT()("clientErrors.unknownError")
 }

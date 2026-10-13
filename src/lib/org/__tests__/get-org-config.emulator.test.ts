@@ -70,7 +70,8 @@ describe("getOrgConfig (firestore source, emulator)", () => {
         expect(await getOrgConfig(cfg.id)).toEqual(cfg)
         expect(peekOrgConfig(cfg.id)).toEqual(cfg)
         expect(getOrgBranding(cfg.id).shortName).toBe("Test Shul Music")
-        expect(label(cfg.id, "newSetlist")).toBe("New Setlist")
+        // Phase 7: the test tenant is Hebrew, so its labels come from he/org.json.
+        expect(label(cfg.id, "newSetlist")).toBe("רשימת שירים חדשה")
     })
 
     it("an edited value shows up after the memory TTL is cleared", async () => {

@@ -13,7 +13,8 @@ import { ListPlus, Search, Music, Plus, Loader2 } from "lucide-react"
 import type { Setlist, FirestoreDate } from "@/types/models"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { useFormat, useT } from "@/i18n/client"
+import { useT } from "@/i18n/client"
+import { useFormat } from "@/i18n/format-client"
 import type { Formatter } from "@/i18n/format"
 
 interface AddToSetlistSheetProps {

@@ -7,7 +7,8 @@ import { Music2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { PendingAccountIllustration } from "@/components/ui/illustrations"
 import { NudgeAdminButton } from "@/components/people/NudgeAdminButton"
-import { INSTRUMENT_PRESETS, ONBOARDING_INSTRUMENT_KEYS } from "@/lib/musician-profile"
+import { ONBOARDING_INSTRUMENT_KEYS } from "@/lib/musician-profile"
+import { instrumentLabel } from "@/lib/instrument-labels"
 import { cn } from "@/lib/utils"
 import { useT } from "@/i18n/client"
 
@@ -87,7 +88,7 @@ export function OnboardingCard({ role, isMember, profile, congregationShortName,
             >
                 <option value="">{t("dashboard.onboardingSelectInstrument")}</option>
                 {ONBOARDING_INSTRUMENT_KEYS.map(key => (
-                    <option key={key} value={key}>{INSTRUMENT_PRESETS[key].label}</option>
+                    <option key={key} value={key}>{instrumentLabel(key, t)}</option>
                 ))}
             </select>
             <div className="flex gap-2">

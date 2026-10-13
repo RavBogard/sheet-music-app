@@ -9,5 +9,17 @@
     "tooManyFileIds": "Maximum {max} file IDs per request",
     "uploadPermissionRequired": "Upload permission required. Ask an admin to enable uploads for your account.",
     "noFileProvided": "No file provided",
-    "uploaded": "\"{title}\" uploaded to library"
+    "uploaded": "\"{title}\" uploaded to library",
+    "uploadEmptyFile": "No file content provided",
+    "uploadTooLarge": "File too large. Maximum size is {maxMb}MB",
+    "uploadMimeUnspecific": "mimeType must be specific (e.g. application/pdf, image/png, application/vnd.recordare.musicxml+xml). 'application/octet-stream' provides no type information and is rejected.",
+    "uploadMimeUnsupported": "Unsupported mimeType '{mimeType}'. Allowed: {allowed}",
+    "uploadUnknownCollection": "Unknown collection \"{collection}\". Allowed: {allowed}",
+    "uploadMuseScoreFailed": "Failed to convert MuseScore file: {detail}",
+    "uploadHeicFailed": "Failed to convert HEIC image: {detail}",
+    "uploadDuplicateExact": "A chart with the same name (\"{existingName}\") already exists. Pass force: true to override if this is a legitimate variant.",
+    "uploadDuplicateSimilar": "A chart with a similar name (\"{existingName}\") already exists in the library. Pass force: true to override if this is a legitimate variant.",
+    "uploadStorageMissing": "Storage write reported success but the blob is missing at {path} — refusing to write index entry (would create an orphan).",
+    "uploadStorageSizeMismatch": "Storage size mismatch (wrote {wrote}, read back {readBack}) — refusing to write index entry.",
+    "uploadIndexWriteFailed": "Firestore index write failed ({detail}); Storage rolled back."
 }

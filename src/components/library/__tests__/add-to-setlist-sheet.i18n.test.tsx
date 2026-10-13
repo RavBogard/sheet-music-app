@@ -20,9 +20,8 @@ const setlists: Setlist[] = [
   { id: 'sl-2', name: 'Test Set Two', date: new Date('2026-03-16'), updatedAt: new Date('2026-03-16T12:00:00'), trackCount: 1, ownerId: 'u' } as Setlist,
 ]
 
-// Data: setlist names. "Close" is the shared Sheet primitive's sr-only close
-// label (src/components/ui/sheet.tsx — not this lane's file).
-const ALLOW = ['Test Set One', 'Test Set Two', 'Close']
+// Data: setlist names.
+const ALLOW = ['Test Set One', 'Test Set Two']
 
 function sheet(overrides: Partial<React.ComponentProps<typeof AddToSetlistSheet>> = {}) {
   return (

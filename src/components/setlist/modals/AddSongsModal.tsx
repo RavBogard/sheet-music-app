@@ -175,7 +175,13 @@ export function AddSongsModal({
                                                     <Sparkles className="h-3 w-3 text-emerald-400" />
                                                 )}
                                                 <span className="truncate max-w-[150px]">{s.file.name}</span>
-                                                <span className="text-[10px] text-muted-foreground/60 hidden sm:inline">{s.reason}</span>
+                                                <span className="text-[10px] text-muted-foreground/60 hidden sm:inline">{
+                                                    s.reason.kind === 'staple'
+                                                        ? t("setlistModals.suggestionStaple", { count: s.reason.uses, setlistName: s.reason.setlistName })
+                                                        : s.reason.kind === 'stale'
+                                                            ? t("setlistModals.suggestionStale", { count: s.reason.days })
+                                                            : t("setlistModals.suggestionNeverPlayed")
+                                                }</span>
                                             </button>
                                         )
                                     })}

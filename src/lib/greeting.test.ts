@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { getContextualGreeting } from './greeting'
+import { createTranslator } from '@/i18n/core'
+import { peekCompleteMessages } from '@/i18n/message-cache'
 
 describe('getContextualGreeting', () => {
     describe('time-of-day greetings', () => {
@@ -118,5 +120,28 @@ describe('getContextualGreeting', () => {
             const result = getContextualGreeting('', date)
             expect(result.text).toBe('Welcome to CRC Music')
         })
+    })
+})
+
+describe('getContextualGreeting (phase 7 i18n)', () => {
+    const tFor = (lang: 'he' | 'qps') =>
+        createTranslator({ lang, messages: peekCompleteMessages(lang) ?? {}, fallback: peekCompleteMessages('en') })
+
+    it('English without a translator is unchanged (welcome line)', () => {
+        const r = getContextualGreeting(null, new Date('2026-03-10T09:00:00'), 'CRC')
+        expect(r.text).toBe('Welcome to CRC')
+        expect(r.hebrewDate).toMatch(/^\d+ [A-Z][a-z]+( I+)? \d{4}$/)
+    })
+
+    it('a Hebrew tenant gets the Hebrew-calendar date in Hebrew (from Intl, not the catalogue)', () => {
+        const r = getContextualGreeting('Dana', new Date('2026-03-10T09:00:00'), 'App', { t: tFor('he'), lang: 'he' })
+        expect(r.hebrewDate).toMatch(/[֐-׿]/)
+        expect(r.text).toContain('Dana')
+    })
+
+    it('the pseudo-locale wraps the greeting and every word of the date', () => {
+        const r = getContextualGreeting('Dana', new Date('2026-03-20T18:00:00'), 'App', { t: tFor('qps'), lang: 'qps' })
+        expect(r.text.startsWith('⟦')).toBe(true)
+        for (const w of r.hebrewDate.split(' ')) expect(w).toMatch(/^⟦.*⟧$/)
     })
 })

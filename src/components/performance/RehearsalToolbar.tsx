@@ -190,10 +190,10 @@ export function RehearsalToolbar({ audioUrl, title: _title, fileId, onPracticeTi
                     getClientDb(),
                 ])
                 const ref = doc(clientDb, 'users', uid, 'songPreferences', fileId)
-                setDoc(ref, { preferredSpeed: newSpeed }, { merge: true }).catch(err => reportSaveError(err, "metronome speed"))
+                setDoc(ref, { preferredSpeed: newSpeed }, { merge: true }).catch(err => reportSaveError(err, "metronome speed", { label: t("perform.saveLabelPlaybackSpeed") }))
             })()
         }
-    }, [fileId])
+    }, [fileId, t])
 
     const toggleMute = useCallback(() => {
         if (audioRef.current) {
