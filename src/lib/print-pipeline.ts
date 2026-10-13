@@ -10,9 +10,19 @@
  * 4. Incremental resilience — individual track failures don't kill the job.
  */
 
-import { PDFDocument, rgb, StandardFonts, type PDFPage } from "pdf-lib"
+import { PDFDocument, rgb, StandardFonts, type Color, type PDFFont, type PDFPage } from "pdf-lib"
 import { fetchFileById } from "@/lib/file-fetcher"
 import { renderTextChartToPdf, toWinAnsi } from "@/lib/pdf/text-chart-pdf"
+import { firstStrongDirection, hasHebrew, toVisual } from "@/lib/pdf/bidi-visual"
+import type { EmbeddedTtf } from "@/lib/pdf/embed-ttf"
+import {
+    cleanForTtf,
+    pdfDirection,
+    pdfNeedsUnicode,
+    pdfT,
+    unicodeFacesFor,
+    type PdfI18n,
+} from "@/lib/pdf/pdf-i18n"
 import { getTransposedKeyName } from "@/lib/music-math"
 import { initAdmin, getFirestore, getStorage } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
@@ -123,9 +133,14 @@ export interface PrintResult {
     }
 }
 
+/** Machine code for why a row produced no chart page (multi-tenant phase 7). */
+export type PrintOmissionCode = 'no_chart' | 'image_failed' | 'file_missing' | 'unreadable' | 'fetch_failed'
+
 export interface PrintOmission {
     title: string
     fileId?: string
+    code: PrintOmissionCode
+    /** Human text in the packet's language (the tenant's); printed and returned to the client. */
     reason: string
 }
 
@@ -135,7 +150,7 @@ export interface PrintOmission {
  * Generate a deterministic hash of the print request for result caching.
  * Any change to tracks, transpositions, or metadata produces a different hash.
  */
-function computeContentHash(req: PrintRequest): string {
+function computeContentHash(req: PrintRequest, i18n?: PdfI18n): string {
     const significant = {
         cacheVersion: 8, // v8 never caches an incomplete packet and adds an explicit omission appendix. This invalidates old cached PDFs whose skipped charts were unknowable from cache metadata.
         title: req.title,
@@ -168,6 +183,13 @@ function computeContentHash(req: PrintRequest): string {
     // cache-version bump, existing cached prints preserved).
     const hashOrg = coerceOrgId(req.org)
     if (hashOrg !== DEFAULT_ORG_ID) significant.org = hashOrg
+    // Multi-tenant phase 7: the labels' language changes the bytes. Added only
+    // for a non-English packet, so English keys stay byte-identical.
+    if (i18n && i18n.lang !== 'en') significant.lang = i18n.lang
+    // Hebrew in the content now prints with Alef instead of '?'. Keyed only
+    // when present, so all-Latin keys (CRC/BL's usual packets) are unchanged
+    // while a cached '?' packet with Hebrew in it is not served again.
+    if (requestHasHebrew(req)) significant.hebrewGlyphs = 1
     return createHash('sha256').update(JSON.stringify(significant)).digest('hex').slice(0, 16)
 }
 
@@ -345,11 +367,60 @@ const COVER_ROW_BOTTOM = 50
 /** First row-band baseline on a continuation page (no header block above it). */
 const COVER_CONTINUATION_TOP = COVER_PAGE_H - 60
 
+/** A StandardFont (English) or the embedded Alef TTF (any other language). */
+type Face = PDFFont | EmbeddedTtf
+
+interface TextOpts {
+    x: number
+    y: number
+    size: number
+    font: Face
+    color?: Color
+}
+
+/**
+ * Multi-tenant phase 7: one text-drawing call for both font paths. English
+ * (`unicode: false`) is exactly `page.drawText(text, opts)` — the same pdf-lib
+ * call with the same options, so English bytes cannot change. Otherwise the
+ * line is drawn with the embedded TTF in visual (bidi) order; in a
+ * right-to-left language the layout mirrors: a text whose left edge was x is
+ * drawn with its right edge at pageW - x (left-aligned columns become
+ * right-aligned columns, the folio moves to the left margin).
+ */
+/** Any Hebrew in the strings the cover page draws (the footer is checked by the caller). */
+function requestHasHebrew(req: PrintRequest): boolean {
+    const strings: unknown[] = [req.title, req.date, req.musicianName, req.eventName, req.rabbi, req.bookTitle]
+    for (const t of req.tracks) strings.push(t.title, t.key, t.notes, t.leadMusician, t.performer)
+    return strings.some((s) => typeof s === "string" && hasHebrew(s))
+}
+
+function textDrawer(unicode: boolean, rtl: boolean, pageW: number) {
+    return (pg: PDFPage, text: string, o: TextOpts): void => {
+        if (!unicode) {
+            pg.drawText(text, o as TextOpts & { font: PDFFont })
+            return
+        }
+        const font = o.font as EmbeddedTtf
+        const w = font.widthOfTextAtSize(text, o.size)
+        // RTL layout: every line is an RTL paragraph. LTR layout (an English
+        // packet that contains Hebrew data): each cell by its own first strong
+        // character, so a Hebrew title reads right-to-left inside its column.
+        const base = rtl ? "rtl" : (firstStrongDirection(text) ?? "ltr")
+        font.drawText(pg, toVisual(text, { base }), {
+            x: rtl ? pageW - o.x - w : o.x,
+            y: o.y,
+            size: o.size,
+            color: o.color ?? rgb(0, 0, 0),
+        })
+    }
+}
+
 async function buildCoverPage(
     mergedPdf: PDFDocument,
     req: PrintRequest,
     hasTranspositions: boolean,
-    printFooter: string
+    printFooter: string,
+    i18n?: PdfI18n,
 ): Promise<void> {
     // Phase-4 fix wave: the cover table PAGINATES. It used to be one page that
     // dropped every row past `yOffset < 60` with no marker — 26 rows for a
@@ -365,9 +436,35 @@ async function buildCoverPage(
     /** Every page of the cover table, in order. The footer is drawn on each. */
     const tablePages: PDFPage[] = [page]
 
-    const helveticaBold = await mergedPdf.embedFont(StandardFonts.HelveticaBold)
-    const helvetica = await mergedPdf.embedFont(StandardFonts.Helvetica)
-    const helveticaOblique = await mergedPdf.embedFont(StandardFonts.HelveticaOblique)
+    // Multi-tenant phase 7: labels in the tenant's language. English keeps the
+    // three StandardFonts (embedded in this order, as always); any other
+    // language draws everything on this page with Alef (no oblique face: the
+    // regular stands in for it), in visual order, mirrored when rtl.
+    const t = pdfT(i18n)
+    // Hebrew anywhere on the page (labels, track data, the tenant footer) also
+    // takes the Alef path — StandardFonts would print it as '?'. All-Latin
+    // English content keeps the StandardFonts, byte-identical.
+    const unicode = pdfNeedsUnicode(i18n) || requestHasHebrew(req) || hasHebrew(printFooter)
+    let helveticaBold: Face
+    let helvetica: Face
+    let helveticaOblique: Face
+    if (unicode) {
+        const faces = await unicodeFacesFor(mergedPdf)
+        helveticaBold = faces.bold
+        helvetica = faces.regular
+        helveticaOblique = faces.regular
+    } else {
+        helveticaBold = await mergedPdf.embedFont(StandardFonts.HelveticaBold)
+        helvetica = await mergedPdf.embedFont(StandardFonts.Helvetica)
+        helveticaOblique = await mergedPdf.embedFont(StandardFonts.HelveticaOblique)
+    }
+    const draw = textDrawer(unicode, unicode && pdfDirection(i18n) === "rtl", COVER_PAGE_W)
+    /** clean() for this page's font: WinAnsi for English, the TTF's coverage otherwise. */
+    const cl = unicode
+        ? (s: unknown) => cleanForTtf(helvetica as EmbeddedTtf, typeof s === "string" ? s.replace(/•/g, "·") : s)
+        : clean
+    /** A translated label: drawn verbatim in English (as before), sanitised for the TTF otherwise. */
+    const L = unicode ? (s: string) => cl(s) : (s: string) => s
 
     const { width, height } = page.getSize()
 
@@ -385,7 +482,7 @@ async function buildCoverPage(
     // width, never by character count — if it still doesn't fit at the floor.
     const titleContentWidth = (width - 50) - 50
     let titleSize = 16
-    let titleText = clean(req.title)
+    let titleText = cl(req.title)
     while (titleSize > 11 && helveticaBold.widthOfTextAtSize(titleText, titleSize) > titleContentWidth) {
         titleSize -= 0.5
     }
@@ -396,15 +493,15 @@ async function buildCoverPage(
         }
         titleText = titleText.substring(0, n) + "..."
     }
-    page.drawText(titleText, {
+    draw(page, titleText, {
         x: 50, y: height - 52, size: titleSize,
         font: helveticaBold, color: rgb(0, 0, 0),
     })
 
     // Date
-    const dateText = clean(req.date)
+    const dateText = cl(req.date)
     const dateY = height - 70
-    page.drawText(dateText, {
+    draw(page, dateText, {
         x: 50, y: dateY, size: 10,
         font: helvetica, color: rgb(0.4, 0.4, 0.4),
     })
@@ -421,23 +518,23 @@ async function buildCoverPage(
     // when the combined date + separator + book would overrun the content
     // width — the shrunk-header-block trade-off buys back vertical space, and
     // this is the one place that could give it back if a book title runs long.
-    const coverBookTitle = clean(req.bookTitle)
+    const coverBookTitle = cl(req.bookTitle)
     if (coverBookTitle) {
         const dateWidth = helvetica.widthOfTextAtSize(dateText, 10)
         const sep = " · "
         const sepWidth = helvetica.widthOfTextAtSize(sep, 10)
         const bookWidth = helvetica.widthOfTextAtSize(coverBookTitle, 10)
         if (50 + dateWidth + sepWidth + bookWidth <= width - 50) {
-            page.drawText(sep, {
+            draw(page, sep, {
                 x: 50 + dateWidth, y: dateY, size: 10,
                 font: helvetica, color: rgb(0.4, 0.4, 0.4),
             })
-            page.drawText(coverBookTitle, {
+            draw(page, coverBookTitle, {
                 x: 50 + dateWidth + sepWidth, y: dateY, size: 10,
                 font: helvetica, color: rgb(0.2, 0.4, 0.8),
             })
         } else {
-            page.drawText(coverBookTitle, {
+            draw(page, coverBookTitle, {
                 x: 50, y: yOffset, size: 10,
                 font: helvetica, color: rgb(0.2, 0.4, 0.8),
             })
@@ -446,7 +543,7 @@ async function buildCoverPage(
     }
 
     if (req.eventName) {
-        page.drawText(clean(req.eventName), {
+        draw(page, cl(req.eventName), {
             x: 50, y: yOffset, size: 10,
             font: helvetica, color: rgb(0.4, 0.4, 0.4),
         })
@@ -454,7 +551,7 @@ async function buildCoverPage(
     }
 
     if (req.rabbi) {
-        page.drawText(`Led by: ${clean(req.rabbi)}`, {
+        draw(page, L(t("pdf.packet.ledBy", { name: cl(req.rabbi) })), {
             x: 50, y: yOffset, size: 10,
             font: helvetica, color: rgb(0.4, 0.4, 0.4),
         })
@@ -462,7 +559,7 @@ async function buildCoverPage(
     }
 
     if (req.musicianName) {
-        page.drawText(`Prepared for: ${clean(req.musicianName)}`, {
+        draw(page, L(t("pdf.packet.preparedFor", { name: cl(req.musicianName) })), {
             x: 50, y: yOffset, size: 10,
             font: helveticaBold, color: rgb(0, 0, 0),
         })
@@ -500,15 +597,15 @@ async function buildCoverPage(
     // by width, so 18 wide glyphs at x=475 already ran off the right edge of
     // the page. `rowRight` is now the single width budget every cell on the row
     // is measured against, so nothing can reach the folio or the paper's edge.
-    const FOLIO_LABEL = "Page"
+    const FOLIO_LABEL = L(t("pdf.packet.columnPage"))
     const FOLIO_GUTTER = 8
     const FOLIO_SIZE = 9
     const contentRight = width - 50
     /** `p. <n>` for a row that has a folio, `""` for one that doesn't. A row
      *  with no liturgyRef prints no number and never blocks generation. */
-    const folioTextFor = (t: PrintTrack): string => {
-        const f = t.liturgyRef?.folio
-        return typeof f === "number" && Number.isFinite(f) ? clean(`p. ${f}`) : ""
+    const folioTextFor = (track: PrintTrack): string => {
+        const f = track.liturgyRef?.folio
+        return typeof f === "number" && Number.isFinite(f) ? cl(t("pdf.packet.folio", { page: f })) : ""
     }
     const folioTexts = req.tracks.map(folioTextFor)
     const anyFolio = folioTexts.some(Boolean)
@@ -521,7 +618,7 @@ async function buildCoverPage(
     /** Right-hand limit for every non-folio cell on a row. */
     const rowRight = anyFolio ? contentRight - folioColW - FOLIO_GUTTER : contentRight
     const drawFolio = (text: string, y: number) => {
-        page.drawText(text, {
+        draw(page, text, {
             x: contentRight - helveticaBold.widthOfTextAtSize(text, FOLIO_SIZE),
             y, size: FOLIO_SIZE, font: helveticaBold, color: rgb(0.2, 0.4, 0.8),
         })
@@ -534,16 +631,16 @@ async function buildCoverPage(
      * headers is a table whose right-hand "Page" column is unlabelled.
      */
     const drawColumnHeaders = () => {
-        page.drawText("#", { x: colNum, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
-        page.drawText("Song", { x: colTitle, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
-        page.drawText("Key", { x: colKey, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
-        page.drawText("Vocal Lead", { x: colLead, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
+        draw(page, L(t("pdf.packet.columnNumber")), { x: colNum, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
+        draw(page, L(t("pdf.packet.columnSong")), { x: colTitle, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
+        draw(page, L(t("pdf.packet.columnKey")), { x: colKey, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
+        draw(page, L(t("pdf.packet.columnVocalLead")), { x: colLead, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
         if (hasTranspositions) {
-            page.drawText("As", { x: colTransKey, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
+            draw(page, L(t("pdf.packet.columnTransposedKey")), { x: colTransKey, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
         }
-        page.drawText("Notes", { x: colNotes, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
+        draw(page, L(t("pdf.packet.columnNotes")), { x: colNotes, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
         if (anyFolio) {
-            page.drawText(FOLIO_LABEL, {
+            draw(page, FOLIO_LABEL, {
                 x: contentRight - helveticaBold.widthOfTextAtSize(FOLIO_LABEL, 10),
                 y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4),
             })
@@ -589,7 +686,7 @@ async function buildCoverPage(
         const titleFont = isServiceFlow ? helveticaOblique : helvetica
         const titleColor = isServiceFlow ? rgb(0.4, 0.4, 0.4) : rgb(0, 0, 0)
         let finalTitleSize = 10
-        let songTitle = clean(track.title)
+        let songTitle = cl(track.title)
 
         if (trackType === 'header') {
             // Capped against the reserved folio column, not just the nominal 300.
@@ -597,7 +694,7 @@ async function buildCoverPage(
             // Re-cleaned AFTER the case fold: case folding can leave WinAnsi.
             // "µ" (U+00B5) upper-cases to U+039C GREEK CAPITAL MU, and the
             // very next line measures it.
-            let headerTitle = clean(songTitle.toUpperCase())
+            let headerTitle = cl(songTitle.toUpperCase())
             while (finalTitleSize > 7 && helveticaBold.widthOfTextAtSize(headerTitle, finalTitleSize) > headerMax) finalTitleSize -= 0.5
             if (helveticaBold.widthOfTextAtSize(headerTitle, finalTitleSize) > headerMax) {
                 let truncateLen = headerTitle.length
@@ -617,10 +714,10 @@ async function buildCoverPage(
             }
         }
 
-        const cleanKey = clean(track.key)
+        const cleanKey = cl(track.key)
         const key = isServiceFlow ? "" : (cleanKey || "-")
         const maxLeadLen = hasTranspositions ? 12 : 15
-        const lead = isServiceFlow ? clean(track.performer) : clean(track.leadMusician)
+        const lead = isServiceFlow ? cl(track.performer) : cl(track.leadMusician)
         const leadDisplay = lead.length > maxLeadLen
             ? lead.substring(0, maxLeadLen - 3) + "..." : lead
 
@@ -629,13 +726,13 @@ async function buildCoverPage(
         // whatever the client sent. Interpolating it unsanitised would put an
         // arbitrary string into a measured cell.
         let notesStr = isServiceFlow
-            ? (track.estimatedMinutes ? clean(`~${track.estimatedMinutes} min`) : "")
-            : clean(track.notes)
+            ? (track.estimatedMinutes ? cl(t("pdf.packet.minutes", { minutes: track.estimatedMinutes })) : "")
+            : cl(track.notes)
         if (!isServiceFlow && track.capoFret && track.capoFret > 0) {
-            const capoNote = `Capo ${track.capoFret}`
+            const capoNote = t("pdf.packet.capo", { fret: track.capoFret })
             // Composed AFTER clean(track.notes), so the literal separator has to
             // be re-cleaned or it reaches drawText as a raw U+2022.
-            notesStr = clean(notesStr ? `${capoNote} • ${notesStr}` : capoNote)
+            notesStr = cl(notesStr ? `${capoNote} • ${notesStr}` : capoNote)
         }
         const maxNotesLen = hasTranspositions ? 14 : 18
         let notesDisplay = notesStr.length > maxNotesLen
@@ -660,7 +757,7 @@ async function buildCoverPage(
         // match ^[A-G], so an unsanitised key would pass straight through to
         // drawText even though the adjacent key cell is clean.
         const transKey = (!isServiceFlow && track.transposition && track.transposition !== 0 && cleanKey)
-            ? clean(getTransposedKeyName(cleanKey, track.transposition)) : null
+            ? cl(getTransposedKeyName(cleanKey, track.transposition)) : null
 
         rowNum++
 
@@ -678,7 +775,7 @@ async function buildCoverPage(
         // Headers render as bold centered labels (no number)
         if (trackType === 'header') {
             yOffset -= 4 // Extra space before header
-            page.drawText(songTitle, { x: colTitle, y: yOffset, size: finalTitleSize, font: helveticaBold, color: rgb(0.3, 0.3, 0.3) })
+            draw(page, songTitle, { x: colTitle, y: yOffset, size: finalTitleSize, font: helveticaBold, color: rgb(0.3, 0.3, 0.3) })
             if (rowFolio) drawFolio(rowFolio, yOffset)
             yOffset -= 16
             return
@@ -686,14 +783,14 @@ async function buildCoverPage(
 
         songNum++
 
-        page.drawText(`${songNum}.`, { x: colNum, y: yOffset, size: 10, font: helvetica, color: rgb(0.3, 0.3, 0.3) })
-        page.drawText(songTitle, { x: colTitle, y: yOffset, size: finalTitleSize, font: titleFont, color: titleColor })
-        if (leadDisplay) page.drawText(leadDisplay, { x: colLead, y: yOffset, size: 10, font: helvetica, color: rgb(0.3, 0.3, 0.3) })
-        if (key) page.drawText(key, { x: colKey, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.2, 0.4, 0.8) })
+        draw(page, `${songNum}.`, { x: colNum, y: yOffset, size: 10, font: helvetica, color: rgb(0.3, 0.3, 0.3) })
+        draw(page, songTitle, { x: colTitle, y: yOffset, size: finalTitleSize, font: titleFont, color: titleColor })
+        if (leadDisplay) draw(page, leadDisplay, { x: colLead, y: yOffset, size: 10, font: helvetica, color: rgb(0.3, 0.3, 0.3) })
+        if (key) draw(page, key, { x: colKey, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.2, 0.4, 0.8) })
         if (hasTranspositions && transKey) {
-            page.drawText(transKey, { x: colTransKey, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.42, 0.16, 0.84) })
+            draw(page, transKey, { x: colTransKey, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.42, 0.16, 0.84) })
         }
-        if (notesDisplay) page.drawText(notesDisplay, { x: colNotes, y: yOffset, size: 9, font: helveticaOblique, color: rgb(0.5, 0.5, 0.5) })
+        if (notesDisplay) draw(page, notesDisplay, { x: colNotes, y: yOffset, size: 9, font: helveticaOblique, color: rgb(0.5, 0.5, 0.5) })
         if (rowFolio) drawFolio(rowFolio, yOffset)
 
         yOffset -= 16
@@ -702,12 +799,12 @@ async function buildCoverPage(
     // Footer — on EVERY table page. A continuation page with no footer reads as
     // a stray sheet; the band prints these double-sided and shuffles them.
     const songCount = printableTracks.filter(t => !t.type || t.type === 'song').length
-    const footerParts = [`${songCount} song${songCount !== 1 ? 's' : ''}`]
-    if (hasTranspositions) footerParts.push("transposed")
-    footerParts.push(clean(printFooter))
-    const footerText = clean(footerParts.join(" • "))
+    const footerParts = [t("pdf.packet.songCount", { count: songCount })]
+    if (hasTranspositions) footerParts.push(t("pdf.packet.transposed"))
+    footerParts.push(cl(printFooter))
+    const footerText = cl(footerParts.join(" • "))
     for (const tablePage of tablePages) {
-        tablePage.drawText(footerText, {
+        draw(tablePage, footerText, {
             x: 50, y: 30, size: 9, font: helvetica, color: rgb(0.6, 0.6, 0.6),
         })
     }
@@ -927,12 +1024,26 @@ async function embedImageTrack(mergedPdf: PDFDocument, track: PrintTrack): Promi
 async function appendOmittedChartsPage(
     pdf: PDFDocument,
     omissions: PrintOmission[],
+    i18n?: PdfI18n,
 ): Promise<void> {
     if (omissions.length === 0) return
 
-    const regular = await pdf.embedFont(StandardFonts.Helvetica)
-    const bold = await pdf.embedFont(StandardFonts.HelveticaBold)
+    // Multi-tenant phase 7: same two font paths as the cover (see textDrawer).
+    const t = pdfT(i18n)
+    const unicode = pdfNeedsUnicode(i18n) || omissions.some((o) => hasHebrew(o.title) || hasHebrew(o.reason))
+    let regular: Face
+    let bold: Face
+    if (unicode) {
+        const faces = await unicodeFacesFor(pdf)
+        regular = faces.regular
+        bold = faces.bold
+    } else {
+        regular = await pdf.embedFont(StandardFonts.Helvetica)
+        bold = await pdf.embedFont(StandardFonts.HelveticaBold)
+    }
     const pageWidth = 612
+    const draw = textDrawer(unicode, unicode && pdfDirection(i18n) === "rtl", pageWidth)
+    const text = unicode ? (s: string) => cleanForTtf(regular as EmbeddedTtf, s) : toWinAnsi
     const pageHeight = 792
     const margin = 48
     const lineHeight = 17
@@ -942,7 +1053,7 @@ async function appendOmittedChartsPage(
     const beginPage = () => {
         page = pdf.addPage([pageWidth, pageHeight])
         y = pageHeight - margin
-        page.drawText('Charts omitted from this packet', {
+        draw(page, unicode ? text(t("pdf.packet.omittedTitle")) : t("pdf.packet.omittedTitle"), {
             x: margin,
             y,
             size: 18,
@@ -950,8 +1061,9 @@ async function appendOmittedChartsPage(
             color: rgb(0.55, 0.2, 0.05),
         })
         y -= 28
-        page.drawText(
-            'These setlist rows did not produce a printable chart page:',
+        draw(
+            page,
+            unicode ? text(t("pdf.packet.omittedIntro")) : t("pdf.packet.omittedIntro"),
             { x: margin, y, size: 10, font: regular },
         )
         y -= 24
@@ -960,18 +1072,18 @@ async function appendOmittedChartsPage(
     beginPage()
     for (const omission of omissions) {
         if (y < margin + lineHeight * 2) beginPage()
-        page!.drawText(`• ${toWinAnsi(omission.title)}`, {
+        draw(page!, `• ${text(omission.title)}`, {
             x: margin,
             y: y!,
             size: 11,
             font: bold,
         })
         y! -= lineHeight
-        const reason = toWinAnsi(omission.reason)
+        const reason = text(omission.reason)
         const chunks = reason.match(/.{1,78}(?:\s|$)/g) ?? [reason]
         for (const chunk of chunks) {
             if (y! < margin + lineHeight) beginPage()
-            page!.drawText(chunk.trim(), {
+            draw(page!, chunk.trim(), {
                 x: margin + 14,
                 y: y!,
                 size: 9,
@@ -988,9 +1100,16 @@ async function appendOmittedChartsPage(
 
 export async function generatePrintPdf(
     req: PrintRequest,
-    onProgress?: (progress: PrintProgress) => void
+    onProgress?: (progress: PrintProgress) => void,
+    /**
+     * Multi-tenant phase 7: the language of the packet's own labels, the
+     * omission reasons and the progress messages — the tenant's, resolved by
+     * the caller (`getI18n(org)`). Absent: English, byte-identical to before.
+     */
+    i18n?: PdfI18n,
 ): Promise<PrintResult> {
     initAdmin()
+    const t = pdfT(i18n)
 
     const stats = {
         totalTracks: req.tracks.filter(t => t.fileId).length,
@@ -1003,7 +1122,7 @@ export async function generatePrintPdf(
     }
 
     // ── Step 0: Check result cache ──
-    const contentHash = computeContentHash(req)
+    const contentHash = computeContentHash(req, i18n)
     const cachedPdf = await getCachedResult(contentHash)
     if (cachedPdf) {
         stats.fromResultCache = true
@@ -1012,7 +1131,7 @@ export async function generatePrintPdf(
 
     onProgress?.({
         phase: 'preparing', currentTrack: 0, totalTracks: stats.totalTracks,
-        currentTitle: '', message: 'Preparing print job...',
+        currentTitle: '', message: t("pdf.progress.preparing"),
     })
 
     const hasTranspositions = req.tracks.some(t => t.transposition && t.transposition !== 0)
@@ -1036,7 +1155,7 @@ export async function generatePrintPdf(
     // track. Every other caller leaves this unset and gets the cover exactly
     // as before.
     if (!req.omitCover) {
-        await buildCoverPage(mergedPdf, req, hasTranspositions, printFooter)
+        await buildCoverPage(mergedPdf, req, hasTranspositions, printFooter, i18n)
     }
 
     // ── Step 1b: Cover-only mode — skip all track processing ──
@@ -1101,7 +1220,8 @@ export async function generatePrintPdf(
         if (!track.fileId) {
             stats.omittedTracks.push({
                 title: track.title,
-                reason: 'No chart is attached to this song.',
+                code: 'no_chart',
+                reason: t("pdf.omission.noChart"),
             })
             continue
         }
@@ -1121,7 +1241,7 @@ export async function generatePrintPdf(
             trackIndex++
             onProgress?.({
                 phase: 'processing', currentTrack: trackIndex, totalTracks: stats.totalTracks,
-                currentTitle: track.title, message: `Processing: ${track.title}`,
+                currentTitle: track.title, message: t("pdf.progress.processing", { title: track.title }),
             })
             const embedded = await embedImageTrack(mergedPdf, track)
             if (embedded) stats.appendedTracks++
@@ -1129,7 +1249,8 @@ export async function generatePrintPdf(
                 stats.omittedTracks.push({
                     title: track.title,
                     fileId: track.fileId,
-                    reason: 'The image chart could not be fetched or embedded.',
+                    code: 'image_failed',
+                    reason: t("pdf.omission.imageFailed"),
                 })
             }
             continue
@@ -1138,7 +1259,7 @@ export async function generatePrintPdf(
 
         onProgress?.({
             phase: 'processing', currentTrack: trackIndex, totalTracks: stats.totalTracks,
-            currentTitle: track.title, message: `Processing: ${track.title}`,
+            currentTitle: track.title, message: t("pdf.progress.processing", { title: track.title }),
         })
 
         try {
@@ -1149,7 +1270,8 @@ export async function generatePrintPdf(
                 stats.omittedTracks.push({
                     title: track.title,
                     fileId: track.fileId,
-                    reason: 'The chart file is missing or empty.',
+                    code: 'file_missing',
+                    reason: t("pdf.omission.fileMissing"),
                 })
                 continue
             }
@@ -1181,7 +1303,7 @@ export async function generatePrintPdf(
                     mergedPdf,
                     track.title,
                     Buffer.from(fetched.buffer).toString("utf-8"),
-                    { transposition: track.transposition, preferFlats: track.preferFlats },
+                    { transposition: track.transposition, preferFlats: track.preferFlats, i18n },
                 )
                 stats.appendedTracks++
                 continue
@@ -1244,7 +1366,8 @@ export async function generatePrintPdf(
                 stats.omittedTracks.push({
                     title: track.title,
                     fileId: track.fileId,
-                    reason: 'The chart file is not a readable PDF or supported chart format.',
+                    code: 'unreadable',
+                    reason: t("pdf.omission.unreadable"),
                 })
             }
         } catch (err) {
@@ -1254,7 +1377,8 @@ export async function generatePrintPdf(
                 fileId: track.fileId,
                 // Keep internal provider/path details in server logs. This
                 // reason is returned to clients and printed in the packet.
-                reason: 'The chart could not be fetched.',
+                code: 'fetch_failed',
+                reason: t("pdf.omission.fetchFailed"),
             })
         }
     }
@@ -1262,10 +1386,10 @@ export async function generatePrintPdf(
     // ── Step 4: Generate final PDF ──
     onProgress?.({
         phase: 'merging', currentTrack: stats.totalTracks, totalTracks: stats.totalTracks,
-        currentTitle: '', message: 'Generating final PDF...',
+        currentTitle: '', message: t("pdf.progress.merging"),
     })
 
-    await appendOmittedChartsPage(mergedPdf, stats.omittedTracks)
+    await appendOmittedChartsPage(mergedPdf, stats.omittedTracks, i18n)
     const finalPdfBytes = await mergedPdf.save()
     const pdf = new Uint8Array(finalPdfBytes)
 

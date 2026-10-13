@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { getT } from "@/i18n/server"
+import { getI18n, getT } from "@/i18n/server"
 import { generatePrintPdf, PrintRequest } from "@/lib/print-pipeline"
 import { createApiHandler } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
@@ -37,7 +37,10 @@ export const POST = createApiHandler(
         // org with the proxy's resolved x-org-id (crc default → bare doc).
         body.org = coerceOrgId(ctx.req.headers.get("x-org-id"))
 
-        const result = await generatePrintPdf(body)
+        // Multi-tenant phase 7: the packet's labels in the tenant's language
+        // (and the caller's ui-lang choice on this host). English: unchanged.
+        const { t: pdfT, lang } = await getI18n(body.org)
+        const result = await generatePrintPdf(body, undefined, { t: pdfT, lang })
         const filename = `${(body.title || 'Print').replace(/[^a-z0-9]/gi, '_')}.pdf`
 
         logger.info(`[Print] Generated: ${result.stats.appendedTracks} tracks, ${result.stats.transposedTracks} transposed`)

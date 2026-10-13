@@ -2,6 +2,7 @@ import { PDFDocument, StandardFonts, rgb, type Color, type PDFFont, type PDFPage
 import { toWinAnsi } from "./text-chart-pdf"
 import { firstStrongDirection, hasHebrew, toVisual, type Direction } from "./bidi-visual"
 import { embedTtf, type EmbeddedTtf } from "./embed-ttf"
+import { pdfDirection, pdfNeedsUnicode, pdfT, type PdfI18n } from "./pdf-i18n"
 
 /**
  * The rabbi's service sheet: the printed order of a service, with the printed
@@ -24,6 +25,12 @@ import { embedTtf, type EmbeddedTtf } from "./embed-ttf"
  *
  * `direction: "rtl"` (or, when absent, a Hebrew-first setlist name) mirrors the
  * layout: text right-aligned, the folio on the left of the title line.
+ *
+ * Multi-tenant phase 7: the sheet's own labels ("HONORS", the untitled
+ * fallbacks) come from the `pdf` catalogue in `input.i18n`'s language. Absent
+ * or English: the English labels on the paths above, byte-identical. Any other
+ * language takes the Alef path (its labels are not WinAnsi) and, when
+ * `direction` is absent, that language's direction.
  */
 
 export interface ServiceSheetTrack {
@@ -63,6 +70,8 @@ export interface ServiceSheetInput {
      */
     direction?: Direction
     tracks: ServiceSheetTrack[]
+    /** Language of the sheet's own labels (the tenant's). Absent: English. */
+    i18n?: PdfI18n
 }
 
 const PAGE_W = 612
@@ -207,9 +216,17 @@ export async function renderServiceSheetPdf(
     input: ServiceSheetInput,
 ): Promise<Uint8Array> {
     const pdf = await PDFDocument.create()
-    const hebrew = inputStrings(input).some((s) => typeof s === "string" && hasHebrew(s))
+    const t = pdfT(input.i18n)
+    const translated = pdfNeedsUnicode(input.i18n)
+    const hebrew =
+        translated || inputStrings(input).some((s) => typeof s === "string" && hasHebrew(s))
     const dir: Direction =
-        input.direction ?? (hebrew ? (firstStrongDirection(input.setlistName) ?? "ltr") : "ltr")
+        input.direction ??
+        (translated && pdfDirection(input.i18n) === "rtl"
+            ? "rtl"
+            : hebrew
+              ? (firstStrongDirection(input.setlistName) ?? "ltr")
+              : "ltr")
     const rtl = dir === "rtl"
 
     let ty: Typography
@@ -243,7 +260,7 @@ export async function renderServiceSheetPdf(
     }
 
     // ---- Header -----------------------------------------------------------
-    const title = clean(input.setlistName) || "Service"
+    const title = clean(input.setlistName) || t("pdf.serviceSheet.untitledService")
     for (const line of wrap(title, bold, 18, CONTENT_W)) {
         const x = alignX(MARGIN, bold.widthOfTextAtSize(line, 18), RIGHT)
         ty.text(page, line, { x, y: y - 18, size: 18, font: bold, color: INK, base: own(title) })
@@ -312,7 +329,7 @@ export async function renderServiceSheetPdf(
                 borderColor: RULE,
                 borderWidth: 1,
             })
-            const label = first ? "HONORS" : "HONORS (CONT.)"
+            const label = first ? t("pdf.serviceSheet.honors") : t("pdf.serviceSheet.honorsContinued")
             ty.text(page, label, {
                 x: alignX(MARGIN + 8, bold.widthOfTextAtSize(label, 8), RIGHT - 8),
                 y: y - 14,
@@ -334,6 +351,7 @@ export async function renderServiceSheetPdf(
     }
 
     // ---- Rows -------------------------------------------------------------
+    const untitledRow = clean(t("pdf.serviceSheet.untitledRow"))
     for (const t of input.tracks) {
         const rowTitle = clean(t.title)
         if (t.type === "header") {
@@ -383,7 +401,7 @@ export async function renderServiceSheetPdf(
         const folio = t.liturgyRef ? String(t.liturgyRef.folio) : ""
         const folioW = folio ? bold.widthOfTextAtSize(folio, 14) : 0
         const titleLines = wrap(
-            rowTitle || "(untitled)",
+            rowTitle || untitledRow,
             bold,
             11,
             CONTENT_W - (folioW ? folioW + 12 : 0),
@@ -394,7 +412,7 @@ export async function renderServiceSheetPdf(
         need(rowH)
 
         const rowTop = y
-        const titleBase = own(rowTitle || "(untitled)")
+        const titleBase = own(rowTitle || untitledRow)
         for (const line of titleLines) {
             const x = alignX(MARGIN, bold.widthOfTextAtSize(line, 11), RIGHT)
             ty.text(page, line, { x, y: y - 12, size: 11, font: bold, color: INK, base: titleBase })

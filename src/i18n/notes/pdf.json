@@ -1,0 +1,187 @@
+{
+    "$comment": "Notes for the pdf namespace. Every string here is drawn into a printed PDF (Letter paper) unless 'where' says otherwise. Hebrew prints with the Alef font; keep table labels short, the columns are narrow.",
+    "serviceSheet.untitledService": {
+        "where": "Service sheet PDF (the rabbi's printed order of service): page title when the setlist has no name",
+        "who": "leaders",
+        "maxLength": 30,
+        "context": "service = the worship service / event"
+    },
+    "serviceSheet.untitledRow": {
+        "where": "Service sheet PDF: row title when a setlist row has no title",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "serviceSheet.honors": {
+        "where": "Service sheet PDF: small label at the top of the boxed list of people being honored",
+        "who": "leaders",
+        "maxLength": 20,
+        "context": "Upper case in English by design (a small label). Honors = people given a role in the service. Languages without letter case just write the word."
+    },
+    "serviceSheet.honorsContinued": {
+        "where": "Service sheet PDF: the same label when the honors box continues on the next page",
+        "who": "leaders",
+        "maxLength": 28,
+        "context": "serviceSheet.honors plus 'continued'"
+    },
+    "serviceSheet.sectionOrder": {
+        "where": "Service sheet PDF and gig packet PDF: section name under the title for the full order of service",
+        "who": "leaders, musicians",
+        "maxLength": 30
+    },
+    "serviceSheet.sectionMusic": {
+        "where": "Service sheet PDF: section name under the title for the part listing only the band's songs",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "packet.columnNumber": {
+        "where": "Gig packet PDF cover table: header of the song-number column",
+        "who": "musicians",
+        "maxLength": 3,
+        "context": "Very narrow column (about 20pt)"
+    },
+    "packet.columnSong": {
+        "where": "Gig packet PDF cover table: header of the song title column",
+        "who": "musicians",
+        "maxLength": 20
+    },
+    "packet.columnKey": {
+        "where": "Gig packet PDF cover table: header of the musical key column",
+        "who": "musicians",
+        "maxLength": 8,
+        "context": "Key = musical key (C, G, Am), not a lock key"
+    },
+    "packet.columnVocalLead": {
+        "where": "Gig packet PDF cover table: header of the column naming who sings the lead",
+        "who": "musicians",
+        "maxLength": 12,
+        "context": "Vocal Lead = the singer leading the song (not 'leader')"
+    },
+    "packet.columnTransposedKey": {
+        "where": "Gig packet PDF cover table: header of the column with the key the chart was transposed to",
+        "who": "musicians",
+        "maxLength": 6,
+        "context": "Short for 'played as' (the transposed key); narrow column"
+    },
+    "packet.columnNotes": {
+        "where": "Gig packet PDF cover table: header of the notes column",
+        "who": "musicians",
+        "maxLength": 10
+    },
+    "packet.columnPage": {
+        "where": "Gig packet PDF cover table: header of the prayer-book page-number column",
+        "who": "musicians",
+        "maxLength": 8,
+        "context": "Page in the printed prayer book"
+    },
+    "packet.folio": {
+        "where": "Gig packet PDF cover table: page-number cell",
+        "who": "musicians",
+        "maxLength": 10,
+        "context": "{page} is a prayer-book page number; 'p.' abbreviates 'page'"
+    },
+    "packet.ledBy": {
+        "where": "Gig packet PDF cover: line under the date naming the rabbi or service leader",
+        "who": "musicians",
+        "maxLength": 60,
+        "context": "{name} is a person's name"
+    },
+    "packet.preparedFor": {
+        "where": "Gig packet PDF cover: line naming the musician this personal packet was made for",
+        "who": "musicians",
+        "maxLength": 60,
+        "context": "{name} is the musician's name"
+    },
+    "packet.capo": {
+        "where": "Gig packet PDF cover table: notes cell when a guitar capo is used",
+        "who": "musicians",
+        "maxLength": 10,
+        "context": "{fret} is a fret number (guitar capo position)"
+    },
+    "packet.minutes": {
+        "where": "Gig packet PDF cover table: notes cell for a reading or prayer row, its estimated length",
+        "who": "musicians",
+        "maxLength": 10,
+        "context": "{minutes} is a number; ~ means 'about'"
+    },
+    "packet.songCount": {
+        "where": "Gig packet PDF cover: footer, number of songs in the packet",
+        "who": "musicians",
+        "maxLength": 15,
+        "context": "{count} is a number"
+    },
+    "packet.transposed": {
+        "where": "Gig packet PDF cover: footer word shown when any chart is transposed",
+        "who": "musicians",
+        "maxLength": 15,
+        "context": "Lower case in English: it follows '12 songs •' in the footer"
+    },
+    "packet.omittedTitle": {
+        "where": "Gig packet PDF: title of the last page, listing charts that could not be included",
+        "who": "musicians",
+        "maxLength": 40,
+        "context": "chart = the sheet-music file"
+    },
+    "packet.omittedIntro": {
+        "where": "Gig packet PDF: sentence under the omitted-charts title",
+        "who": "musicians",
+        "maxLength": 80
+    },
+    "omission.noChart": {
+        "where": "Gig packet PDF omitted-charts page, and the print dialog's missing-charts list: reason under a song title",
+        "who": "leaders, musicians",
+        "maxLength": 80,
+        "context": "chart = the sheet-music file"
+    },
+    "omission.imageFailed": {
+        "where": "Gig packet PDF omitted-charts page and print dialog: reason when an image chart failed",
+        "who": "leaders, musicians",
+        "maxLength": 80
+    },
+    "omission.fileMissing": {
+        "where": "Gig packet PDF omitted-charts page and print dialog: reason when the chart file is gone",
+        "who": "leaders, musicians",
+        "maxLength": 80
+    },
+    "omission.unreadable": {
+        "where": "Gig packet PDF omitted-charts page and print dialog: reason when the file is not a usable chart",
+        "who": "leaders, musicians",
+        "maxLength": 90
+    },
+    "omission.fetchFailed": {
+        "where": "Gig packet PDF omitted-charts page and print dialog: reason when downloading the chart failed",
+        "who": "leaders, musicians",
+        "maxLength": 80
+    },
+    "progress.preparing": {
+        "where": "Background print job: progress message",
+        "who": "leaders, musicians",
+        "maxLength": 40
+    },
+    "progress.processing": {
+        "where": "Background print job: progress message while one song is processed",
+        "who": "leaders, musicians",
+        "maxLength": 60,
+        "context": "{title} is a song title"
+    },
+    "progress.merging": {
+        "where": "Background print job: progress message at the end",
+        "who": "leaders, musicians",
+        "maxLength": 40
+    },
+    "client.generateFailed": {
+        "where": "Print dialog: error shown when the PDF could not be generated",
+        "who": "leaders, musicians",
+        "maxLength": 60
+    },
+    "client.serverError": {
+        "where": "Print dialog: error shown when the server failed without a message",
+        "who": "leaders, musicians",
+        "maxLength": 40,
+        "context": "{status} is an HTTP status number"
+    },
+    "client.chartsOmitted": {
+        "where": "Print dialog: error when some charts could not go into the packet",
+        "who": "leaders, musicians",
+        "maxLength": 80
+    }
+}

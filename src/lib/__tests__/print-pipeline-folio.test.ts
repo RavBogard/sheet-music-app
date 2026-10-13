@@ -47,6 +47,31 @@ vi.mock("@/lib/firebase-admin", () => {
 })
 
 import { generatePrintPdf, type PrintRequest, type PrintTrack } from "../print-pipeline"
+import { getDocumentProxy } from "unpdf"
+
+/**
+ * Multi-tenant phase 7: Hebrew content now prints with the embedded Alef font
+ * (Identity-H, two-byte glyph ids) instead of degrading to '?', so the
+ * single-byte content-stream reader above cannot read those pages. These read
+ * the text the way a PDF viewer does (ToUnicode) and list the base fonts.
+ */
+async function viewerText(bytes: Uint8Array): Promise<string[]> {
+    const doc = await getDocumentProxy(new Uint8Array(bytes))
+    const page = await doc.getPage(1)
+    const content = await page.getTextContent()
+    return (content.items as Array<{ str?: string }>).map((i) => i.str ?? "").filter((s) => s.trim())
+}
+
+async function baseFonts(bytes: Uint8Array): Promise<string[]> {
+    const doc = await PDFDocument.load(bytes)
+    const out = new Set<string>()
+    for (const [, obj] of doc.context.enumerateIndirectObjects()) {
+        if (obj instanceof PDFDict && obj.get(PDFName.of("Type")) === PDFName.of("Font")) {
+            out.add(String(obj.get(PDFName.of("BaseFont"))))
+        }
+    }
+    return [...out].sort()
+}
 
 // ── Content-stream reader ────────────────────────────────────────────────────
 
@@ -390,29 +415,31 @@ describe("gig packet cover page — liturgyRef folio column", () => {
         ])
     })
 
-    it("AC-5: Hebrew and smart punctuation degrade to WinAnsi instead of throwing", async () => {
+    it("AC-5: Hebrew and smart punctuation print (Alef) instead of throwing", async () => {
         // pdf-lib StandardFonts are WinAnsi-only and THROW on an unencodable
         // codepoint — from drawText and from widthOfTextAtSize alike. Before the
         // sanitisation pass a single Hebrew character in a title took down gig
-        // packet generation for the entire setlist.
+        // packet generation for the entire setlist; it then degraded to '?'.
+        // Multi-tenant phase 7: Hebrew content switches the page to the embedded
+        // Alef font, so it prints as Hebrew.
         const res = await generatePrintPdf(
             req([
                 {
-                    title: "בָּרְכוּ — Bar'chu",
+                    title: "שִׁיר בדיקה — “Test”",
                     key: "",
-                    notes: "שְׁמַע",
+                    notes: "הערה",
                     type: "prayer",
-                    performer: "רַב דָּנִיֵּאל",
+                    performer: "דָּנָה",
                     liturgyRef: { book: "mishkan-tfilah", folio: 12 },
                 },
             ]),
         )
         expect(res.pdf.byteLength).toBeGreaterThan(0)
-        const { items } = await readCover(res.pdf)
-        const texts = items.map(i => i.text)
+        const texts = await viewerText(res.pdf)
         expect(texts).toContain("p. 12")
-        // No raw multi-byte codepoint survived into the stream.
-        for (const t of texts) expect(/[^\x00-\xff]/.test(t)).toBe(false)
+        expect(texts.join("\n")).toContain("בדיקה")
+        expect(texts.join("\n")).not.toContain("?")
+        expect(await baseFonts(res.pdf)).toEqual(["/Alef-Bold", "/Alef-Regular"])
     })
 
     // ── Sanitisation regressions (fix round 1) ───────────────────────────────
@@ -451,15 +478,16 @@ describe("gig packet cover page — liturgyRef folio column", () => {
         // getTransposedKeyName returns its input UNCHANGED when the key doesn't
         // match ^[A-G], so a raw key reached drawText even though the adjacent
         // key cell was cleaned.
+        // Multi-tenant phase 7: the Hebrew key now prints with Alef.
         const res = await generatePrintPdf(
             req([{ title: "Hashkivenu", key: "ש", notes: "", type: "song", transposition: 2 }]),
         )
-        const { items } = await readCover(res.pdf)
-        const texts = items.map(i => i.text)
+        const texts = await viewerText(res.pdf)
         expect(texts).toContain("Hashkivenu")
         // hasTranspositions → the "As" (transposed key) column is present.
         expect(texts).toContain("As")
-        expectWinAnsiSafe(texts)
+        expect(texts).toContain("ש")
+        expect(await baseFonts(res.pdf)).toContain("/Alef-Bold")
     })
 
     it("REGRESSION 3: a header title that case-folds outside WinAnsi does not throw", async () => {
@@ -802,18 +830,19 @@ describe("gig packet cover page — prayer book attribution", () => {
         expect(b).toContain("Bar'chu")
     })
 
-    it("AC-B3: an unencodable book title degrades instead of rejecting the packet", async () => {
+    it("AC-B3: a Hebrew book title prints instead of rejecting the packet", async () => {
         // pdf-lib StandardFonts throw from widthOfTextAtSize as well as
         // drawText, so an unsanitised Hebrew book name would take down the
-        // whole packet rather than one line of it.
+        // whole packet rather than one line of it. Multi-tenant phase 7: it now
+        // prints with the embedded Alef font.
         const res = await generatePrintPdf({
             ...req(oneRow),
-            bookTitle: "שירי שבת",
+            bookTitle: "ספר בדיקה",
         })
-        const { items } = await readCover(res.pdf)
-        const texts = items.map(i => i.text)
+        const texts = await viewerText(res.pdf)
         expect(texts).toContain("p. 12")
-        for (const t of texts) expect(/[^\x00-\xff]/.test(t)).toBe(false)
+        expect(texts.join("\n")).toContain("ספר בדיקה")
+        expect(await baseFonts(res.pdf)).toContain("/Alef-Regular")
     })
 
     it("AC-B4: two setlists identical but for their book render different covers", async () => {
