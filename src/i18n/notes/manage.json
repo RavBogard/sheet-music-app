@@ -1,0 +1,15 @@
+{
+    "back": { "where": "/manage page header: accessible name of the back-arrow icon button (phones only).", "who": "leaders and admins", "maxLength": 20 },
+    "title": { "where": "/manage page heading (h1).", "who": "leaders and admins", "maxLength": 20 },
+    "subtitle": { "where": "/manage page, grey line under the heading.", "who": "leaders and admins", "maxLength": 70 },
+    "tabPeople": { "where": "/manage tab bar: tab for the band members list.", "who": "leaders and admins", "maxLength": 12 },
+    "tabLibrary": { "where": "/manage tab bar: tab for the chart library tools.", "who": "leaders and admins", "maxLength": 12 },
+    "tabSound": { "where": "/manage tab bar: tab for the sound system (mixer) settings.", "who": "leaders and admins", "maxLength": 12 },
+    "tabAudit": { "where": "/manage tab bar: tab for the access audit log (admins only).", "who": "admins", "maxLength": 12 },
+    "sectionPeople": { "where": "/manage People tab: section name shown in the error message if the section fails to load (\"<name> failed to load\").", "who": "leaders and admins", "maxLength": 30 },
+    "sectionLibrary": { "where": "/manage Library tab: section name shown in the error message if the section fails to load.", "who": "leaders and admins", "maxLength": 30 },
+    "sectionSound": { "where": "/manage Sound tab: section name shown in the error message if the section fails to load.", "who": "leaders and admins", "maxLength": 30, "context": "The sound system = the mixer / monitor (wedge) setup." },
+    "sectionAudit": { "where": "/manage Audit tab: section name shown in the error message if the section fails to load.", "who": "admins", "maxLength": 30 },
+    "libraryToolsTitle": { "where": "/manage Library tab: heading of the box with the duplicate and PDF-health scanner buttons.", "who": "leaders and admins", "maxLength": 30 },
+    "libraryToolsHint": { "where": "/manage Library tab: small grey line under the scanner buttons.", "who": "leaders and admins", "maxLength": 90, "context": "'charts' = sheet music files." }
+}

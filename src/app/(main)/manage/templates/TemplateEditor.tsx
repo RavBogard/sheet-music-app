@@ -14,8 +14,23 @@ import type { TrackType, DriveFile } from "@/types/models"
 import { SearchOverlay } from "@/components/library/SearchOverlay"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { useT } from "@/i18n/client"
 
 const SLOT_TYPES: TrackType[] = ["song", "prayer", "reading", "transition", "note", "header"]
+
+/** Slot type → its display label key (the type itself is a stored enum). */
+const SLOT_TYPE_LABEL = {
+    song: "manage-templates.slotTypeSong",
+    prayer: "manage-templates.slotTypePrayer",
+    reading: "manage-templates.slotTypeReading",
+    transition: "manage-templates.slotTypeTransition",
+    note: "manage-templates.slotTypeNote",
+    header: "manage-templates.slotTypeHeader",
+} as const satisfies Record<string, string>
+
+function slotTypeKey(type: string | undefined): string {
+    return SLOT_TYPE_LABEL[(type ?? "song") as keyof typeof SLOT_TYPE_LABEL] ?? SLOT_TYPE_LABEL.song
+}
 
 const TYPE_COLORS: Record<string, string> = {
     song: "bg-brand/20 text-brand",
@@ -37,6 +52,7 @@ interface TemplateEditorProps {
 export function TemplateEditor({ templateKey, defaultSlots, customSlots, importedSlots, onImportConsumed }: TemplateEditorProps) {
     const { user } = useAuth()
     const org = useOrg()
+    const t = useT()
     const [slots, setSlots] = useState<TemplateSlot[]>([])
     const [expandedIndex, setExpandedIndex] = useState<number | null>(null)
     const [saving, setSaving] = useState(false)
@@ -92,14 +108,14 @@ export function TemplateEditor({ templateKey, defaultSlots, customSlots, importe
 
     const addSlot = useCallback(() => {
         const newSlot: TemplateSlot = {
-            label: "New Slot",
+            label: t("manage-templates.newSlotLabel"),
             type: "song",
             queries: [],
         }
         setSlots(prev => [...prev, newSlot])
         setExpandedIndex(slots.length)
         setDirty(true)
-    }, [slots.length])
+    }, [slots.length, t])
 
     const removeSlot = useCallback((index: number) => {
         setSlots(prev => prev.filter((_, i) => i !== index))
@@ -113,24 +129,24 @@ export function TemplateEditor({ templateKey, defaultSlots, customSlots, importe
         try {
             await saveCustomTemplate(templateKey, slots, user.uid, org)
             setDirty(false)
-            toast.success(`Template "${TEMPLATE_LABELS[templateKey]?.label ?? templateKey}" saved`)
+            toast.success(t("manage-templates.savedToast", { template: TEMPLATE_LABELS[templateKey]?.label ?? templateKey }))
         } catch (err) {
-            toast.error("Failed to save template")
+            toast.error(t("manage-templates.saveFailed"))
         } finally {
             setSaving(false)
         }
     }
 
     const handleReset = async () => {
-        if (!confirm("Reset to default? This will delete your customizations.")) return
+        if (!confirm(t("manage-templates.resetConfirm"))) return
         setSaving(true)
         try {
             await deleteCustomTemplate(templateKey, org)
             setSlots(defaultSlots)
             setDirty(false)
-            toast.success("Reset to default template")
+            toast.success(t("manage-templates.resetDone"))
         } catch (err) {
-            toast.error("Failed to reset template")
+            toast.error(t("manage-templates.resetFailed"))
         } finally {
             setSaving(false)
         }
@@ -145,15 +161,15 @@ export function TemplateEditor({ templateKey, defaultSlots, customSlots, importe
                         {TEMPLATE_LABELS[templateKey]?.label ?? templateKey}
                     </h2>
                     <p className="text-xs text-muted-foreground">
-                        {slots.length} slots
+                        {t("manage-templates.slotCount", { count: slots.length })}
                         {isCustomized && (
-                            <span className="ml-2 px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-medium">
-                                Customized
+                            <span className="ms-2 px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-medium">
+                                {t("manage-templates.customizedBadge")}
                             </span>
                         )}
                         {!isCustomized && (
-                            <span className="ml-2 px-1.5 py-0.5 rounded bg-muted-foreground/20 text-muted-foreground font-medium">
-                                Default
+                            <span className="ms-2 px-1.5 py-0.5 rounded bg-muted-foreground/20 text-muted-foreground font-medium">
+                                {t("manage-templates.defaultBadge")}
                             </span>
                         )}
                     </p>
@@ -161,17 +177,17 @@ export function TemplateEditor({ templateKey, defaultSlots, customSlots, importe
                 <div className="flex items-center gap-2">
                     {isCustomized && (
                         <Button variant="outline" size="sm" onClick={handleReset} disabled={saving}>
-                            <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
-                            Reset to Default
+                            <RotateCcw className="h-3.5 w-3.5 me-1.5" />
+                            {t("manage-templates.resetToDefault")}
                         </Button>
                     )}
                     <Button size="sm" onClick={handleSave} disabled={saving || !dirty}>
                         {saving ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+                            <Loader2 className="h-3.5 w-3.5 animate-spin me-1.5" />
                         ) : (
-                            <Save className="h-3.5 w-3.5 mr-1.5" />
+                            <Save className="h-3.5 w-3.5 me-1.5" />
                         )}
-                        Save Changes
+                        {t("manage-templates.saveChanges")}
                     </Button>
                 </div>
             </div>
@@ -197,7 +213,7 @@ export function TemplateEditor({ templateKey, defaultSlots, customSlots, importe
 
             {/* Add slot */}
             <Button variant="outline" size="sm" onClick={addSlot} className="w-full">
-                <Plus className="h-3.5 w-3.5 mr-1.5" /> Add Slot
+                <Plus className="h-3.5 w-3.5 me-1.5" /> {t("manage-templates.addSlot")}
             </Button>
 
             {/* Song picker overlay */}
@@ -242,6 +258,7 @@ function SlotRow({
     /** A rabbi slot key of this tenant (liturgy.rabbiSlots), for the "Only For" hint. */
     onlyForHint: string
 }) {
+    const t = useT()
     const typeColor = TYPE_COLORS[slot.type ?? "song"] ?? TYPE_COLORS.song
 
     return (
@@ -270,11 +287,11 @@ function SlotRow({
                 </div>
 
                 {/* Index */}
-                <span className="text-xs text-muted-foreground w-6 text-right">{index + 1}</span>
+                <span className="text-xs text-muted-foreground w-6 text-end">{index + 1}</span>
 
                 {/* Type badge */}
                 <span className={cn("text-[10px] px-1.5 py-0.5 rounded font-medium", typeColor)}>
-                    {slot.type ?? "song"}
+                    {t(slotTypeKey(slot.type))}
                 </span>
 
                 {/* Label */}
@@ -284,8 +301,8 @@ function SlotRow({
                 {slot.fileId && (
                     <span className="flex items-center gap-1 text-xs text-brand">
                         <Link2 className="h-3 w-3" />
-                        <span className="truncate max-w-[120px]">{slot.fileName || "Linked"}</span>
-                        {slot.pageNumber && <span className="text-muted-foreground">p.{slot.pageNumber}</span>}
+                        <span className="truncate max-w-[120px]">{slot.fileName || t("manage-templates.linkedFallback")}</span>
+                        {slot.pageNumber && <span className="text-muted-foreground">{t("manage-templates.pageShort", { page: slot.pageNumber })}</span>}
                     </span>
                 )}
 
@@ -305,7 +322,7 @@ function SlotRow({
                 <button
                     onClick={(e) => {
                         e.stopPropagation()
-                        if (confirm(`Remove "${slot.label}"?`)) onRemove()
+                        if (confirm(t("manage-templates.removeSlotConfirm", { label: slot.label }))) onRemove()
                     }}
                     className="min-h-11 min-w-11 flex items-center justify-center rounded hover:bg-destructive/20 hover:text-destructive text-muted-foreground"
                 >
@@ -318,7 +335,7 @@ function SlotRow({
                 <div className="px-3 pb-3 pt-1 space-y-3 border-t border-border/30">
                     <div className="grid grid-cols-2 gap-3">
                         <div>
-                            <label className="text-xs text-muted-foreground mb-1 block">Label</label>
+                            <label className="text-xs text-muted-foreground mb-1 block">{t("manage-templates.fieldLabel")}</label>
                             <Input
                                 value={slot.label}
                                 onChange={e => onUpdate({ label: e.target.value })}
@@ -326,7 +343,7 @@ function SlotRow({
                             />
                         </div>
                         <div>
-                            <label className="text-xs text-muted-foreground mb-1 block">Type</label>
+                            <label className="text-xs text-muted-foreground mb-1 block">{t("manage-templates.fieldType")}</label>
                             <Select
                                 value={slot.type ?? "song"}
                                 onValueChange={v => onUpdate({ type: v as TrackType })}
@@ -335,8 +352,8 @@ function SlotRow({
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {SLOT_TYPES.map(t => (
-                                        <SelectItem key={t} value={t}>{t}</SelectItem>
+                                    {SLOT_TYPES.map(type => (
+                                        <SelectItem key={type} value={type}>{t(slotTypeKey(type))}</SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
@@ -345,7 +362,7 @@ function SlotRow({
 
                     {/* Direct chart association */}
                     <div>
-                        <label className="text-xs text-muted-foreground mb-1 block">Linked Chart</label>
+                        <label className="text-xs text-muted-foreground mb-1 block">{t("manage-templates.fieldLinkedChart")}</label>
                         {slot.fileId ? (
                             <div className="flex items-center gap-2">
                                 <div className="flex-1 flex items-center gap-2 px-3 py-1.5 rounded-md bg-brand/10 border border-brand/20 text-sm">
@@ -355,7 +372,7 @@ function SlotRow({
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    aria-label="Remove linked chart"
+                                    aria-label={t("manage-templates.removeLinkedChart")}
                                     className="min-h-11 min-w-11 shrink-0 text-muted-foreground hover:text-destructive"
                                     onClick={() => onUpdate({ fileId: undefined, fileName: undefined, pageNumber: undefined })}
                                 >
@@ -369,7 +386,7 @@ function SlotRow({
                                         onChange={e => onUpdate({
                                             pageNumber: e.target.value ? Number(e.target.value) : undefined,
                                         })}
-                                        placeholder="Page #"
+                                        placeholder={t("manage-templates.pagePlaceholder")}
                                         className="h-8 text-sm"
                                     />
                                 </div>
@@ -381,38 +398,38 @@ function SlotRow({
                                 className="w-full"
                                 onClick={onPickSong}
                             >
-                                <Music className="h-3.5 w-3.5 mr-1.5" />
-                                Pick Song from Library
+                                <Music className="h-3.5 w-3.5 me-1.5" />
+                                {t("manage-templates.pickSong")}
                             </Button>
                         )}
                     </div>
 
                     <div>
                         <label className="text-xs text-muted-foreground mb-1 block">
-                            Search Queries (comma-separated){slot.fileId ? " — fallback if file removed" : ""}
+                            {slot.fileId ? t("manage-templates.fieldQueriesWithFallback") : t("manage-templates.fieldQueries")}
                         </label>
                         <Input
                             value={slot.queries.join(", ")}
                             onChange={e => onUpdate({
                                 queries: e.target.value.split(",").map(q => q.trim()).filter(Boolean)
                             })}
-                            placeholder="e.g., shema, sh'ma"
+                            placeholder={t("manage-templates.queriesPlaceholder")}
                             className="h-8 text-sm"
                         />
                     </div>
 
                     <div className="grid grid-cols-3 gap-3">
                         <div>
-                            <label className="text-xs text-muted-foreground mb-1 block">Performer</label>
+                            <label className="text-xs text-muted-foreground mb-1 block">{t("manage-templates.fieldPerformer")}</label>
                             <Input
                                 value={slot.defaultPerformer ?? ""}
                                 onChange={e => onUpdate({ defaultPerformer: e.target.value || undefined })}
-                                placeholder="e.g., Rabbi"
+                                placeholder={t("manage-templates.performerPlaceholder")}
                                 className="h-8 text-sm"
                             />
                         </div>
                         <div>
-                            <label className="text-xs text-muted-foreground mb-1 block">Duration (min)</label>
+                            <label className="text-xs text-muted-foreground mb-1 block">{t("manage-templates.fieldDuration")}</label>
                             <Input
                                 type="number"
                                 value={slot.estimatedMinutes ?? ""}
@@ -423,7 +440,7 @@ function SlotRow({
                             />
                         </div>
                         <div>
-                            <label className="text-xs text-muted-foreground mb-1 block">Only For (comma-sep)</label>
+                            <label className="text-xs text-muted-foreground mb-1 block">{t("manage-templates.fieldOnlyFor")}</label>
                             <Input
                                 value={slot.onlyFor?.join(", ") ?? ""}
                                 onChange={e => onUpdate({
@@ -431,18 +448,18 @@ function SlotRow({
                                         ? e.target.value.split(",").map(q => q.trim()).filter(Boolean)
                                         : undefined,
                                 })}
-                                placeholder={`e.g., ${onlyForHint}`}
+                                placeholder={t("manage-templates.onlyForPlaceholder", { example: onlyForHint })}
                                 className="h-8 text-sm"
                             />
                         </div>
                     </div>
 
                     <div>
-                        <label className="text-xs text-muted-foreground mb-1 block">Description</label>
+                        <label className="text-xs text-muted-foreground mb-1 block">{t("manage-templates.fieldDescription")}</label>
                         <Input
                             value={slot.description ?? ""}
                             onChange={e => onUpdate({ description: e.target.value || undefined })}
-                            placeholder="Optional description"
+                            placeholder={t("manage-templates.descriptionPlaceholder")}
                             className="h-8 text-sm"
                         />
                     </div>

@@ -1,3 +1,4 @@
+import { getT } from "@/i18n/server"
 import { NextResponse } from "next/server"
 import { getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
@@ -20,8 +21,9 @@ export const GET = createApiHandler(
         const instrument = url.searchParams.get('instrument')
 
         if (!setlistId) {
+            const t = await getT()
             return NextResponse.json(
-                { error: 'setlistId parameter is required' },
+                { error: t("api-scheduling.setlistIdParamRequired") },
                 { status: 400 }
             )
         }

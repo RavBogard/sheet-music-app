@@ -1,3 +1,4 @@
+import { getT } from "@/i18n/server"
 import { NextResponse } from "next/server";
 import { geminiFlash } from "@/lib/gemini";
 import { createApiHandler } from "@/lib/api-wrapper";
@@ -77,7 +78,8 @@ export const POST = createApiHandler(
 
         const { strips } = await ctx.req.json() as { strips: TransposeRequestChunk[] };
         if (!strips || !Array.isArray(strips) || strips.length === 0) {
-            return NextResponse.json({ error: "No strips provided" }, { status: 400 });
+            const t = await getT()
+            return NextResponse.json({ error: t("api-ai.noStrips") }, { status: 400 });
         }
 
         const parts: (string | { inlineData: { mimeType: string; data: string } })[] = [systemPrompt];

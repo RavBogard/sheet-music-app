@@ -19,6 +19,7 @@ export const POST = createApiHandler(
         const result = await runPendingMigrations()
         return NextResponse.json({
             success: true,
+            // i18n-ignore: ops endpoint with no UI caller (run by hand); the counts are diagnostics
             message: result.errors.length > 0
                 ? `Processed with ${result.errors.length} errors.`
                 : `Successfully applied ${result.applied.length} migrations.`,

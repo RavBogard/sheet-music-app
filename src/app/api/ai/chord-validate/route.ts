@@ -1,3 +1,4 @@
+import { getT } from "@/i18n/server"
 import { NextResponse } from "next/server"
 import { geminiFlash } from "@/lib/gemini"
 import { createApiHandler } from "@/lib/api-wrapper"
@@ -39,7 +40,8 @@ export const POST = createApiHandler(
         }
 
         if (!image) {
-            return NextResponse.json({ error: "No image provided" }, { status: 400 })
+            const t = await getT()
+            return NextResponse.json({ error: t("api-ai.noImage") }, { status: 400 })
         }
 
         // Build context about what we already found

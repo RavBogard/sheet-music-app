@@ -34,11 +34,13 @@ export async function POST(req: NextRequest) {
         const idToken = body.idToken
 
         if (!idToken || typeof idToken !== "string") {
+            // i18n-ignore: background auth call (auth-context / drift repair); the response is logged, never shown
             return NextResponse.json({ error: "Missing idToken" }, { status: 400 })
         }
 
         if (!initAdmin()) {
             return NextResponse.json(
+                // i18n-ignore: background auth call (auth-context / drift repair); the response is logged, never shown
                 { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
                 { status: 500 },
             )
@@ -50,6 +52,7 @@ export async function POST(req: NextRequest) {
         // Only allow tokens issued in the last 5 minutes to prevent replay
         const issuedAt = decoded.iat * 1000
         if (Date.now() - issuedAt > 5 * 60 * 1000) {
+            // i18n-ignore: background auth call (auth-context / drift repair); the response is logged, never shown
             return NextResponse.json({ error: "Token too old" }, { status: 401 })
         }
 
@@ -126,11 +129,13 @@ export async function DELETE(req: NextRequest) {
     try {
         const sessionCookie = req.cookies.get(COOKIE_NAME)?.value
         if (!sessionCookie) {
+            // i18n-ignore: background auth call (auth-context / drift repair); the response is logged, never shown
             return NextResponse.json({ error: "No session" }, { status: 401 })
         }
 
         if (!initAdmin()) {
             return NextResponse.json(
+                // i18n-ignore: background auth call (auth-context / drift repair); the response is logged, never shown
                 { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
                 { status: 500 },
             )

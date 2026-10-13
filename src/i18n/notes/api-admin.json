@@ -1,0 +1,3 @@
+{
+    "serverNotReady": { "where": "People/admin APIs (POST /api/admin/set-sound-engineer, POST /api/admin/set-upload-permission, GET /api/tenant/people): error toast when the server's database connection is not up", "who": "admins and band leaders on the People page", "maxLength": 40 }
+}

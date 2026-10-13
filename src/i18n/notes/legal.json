@@ -1,0 +1,956 @@
+{
+    "eyebrow": {
+        "where": "Platform legal pages (tenants without CRC's own legal text, e.g. Hebrew tenants), small label above every legal page's title (all four pages)",
+        "who": "anyone (public page)",
+        "maxLength": 30,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "platformLine": {
+        "where": "Platform legal pages (tenants without CRC's own legal text, e.g. Hebrew tenants), a sentence inserted into the introductions of the Privacy, Terms, SMS and Accessibility pages",
+        "who": "anyone (public page)",
+        "maxLength": 168,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {platformHost} = the platform's web address, centralreform.live (not translated); {platformOperator} = the platform operator's name, Rabbi Daniel Bogard (not translated); {operator} = the congregation or band that runs this site (config legal.operatorName; a name, not translated)."
+    },
+    "privacy.title": {
+        "where": "Platform legal page “Privacy Policy” (tenants without CRC's own legal text, e.g. Hebrew tenants), page title (also the browser tab title)",
+        "who": "anyone (public page)",
+        "maxLength": 30,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "privacy.lastUpdated": {
+        "where": "Platform legal page “Privacy Policy” (tenants without CRC's own legal text, e.g. Hebrew tenants), line under the title",
+        "who": "anyone (public page)",
+        "maxLength": 49,
+        "context": "Legal text — translate precisely, formal register. Translate the date as a date in the target language."
+    },
+    "privacy.intro": {
+        "where": "Platform legal page “Privacy Policy” (tenants without CRC's own legal text, e.g. Hebrew tenants), introduction paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 369,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {operator} = the congregation or band that runs this site (config legal.operatorName; a name, not translated); {appName} = the app's short name for this tenant (a name, not translated); {platformLine} = the sentence legal.platformLine (already translated)."
+    },
+    "privacy.collect.heading": {
+        "where": "Platform legal page “Privacy Policy” (tenants without CRC's own legal text, e.g. Hebrew tenants), section heading",
+        "who": "anyone (public page)",
+        "maxLength": 35,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "privacy.collect.lead": {
+        "where": "Platform legal page “Privacy Policy” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Information We Collect”",
+        "who": "anyone (public page)",
+        "maxLength": 73,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "privacy.collect.accountLabel": {
+        "where": "Platform legal page “Privacy Policy” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Information We Collect”, bold lead-in of a bullet",
+        "who": "anyone (public page)",
+        "maxLength": 32,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "privacy.collect.account": {
+        "where": "Platform legal page “Privacy Policy” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Information We Collect”, bullet",
+        "who": "anyone (public page)",
+        "maxLength": 142,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {term} = the bold lead-in label (its own key: the same key with 'Label' at the end)."
+    },
+    "privacy.collect.phoneLabel": {
+        "where": "Platform legal page “Privacy Policy” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Information We Collect”, bold lead-in of a bullet",
+        "who": "anyone (public page)",
+        "maxLength": 30,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "privacy.collect.phone": {
+        "where": "Platform legal page “Privacy Policy” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Information We Collect”, bullet",
+        "who": "anyone (public page)",
+        "maxLength": 132,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {term} = the bold lead-in label (its own key: the same key with 'Label' at the end)."
+    },
+    "privacy.collect.musicianProfileLabel": {
+        "where": "Platform legal page “Privacy Policy” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Information We Collect”, bold lead-in of a bullet",
+        "who": "anyone (public page)",
+        "maxLength": 35,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "privacy.collect.musicianProfile": {
+        "where": "Platform legal page “Privacy Policy” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Information We Collect”, bullet",
+        "who": "anyone (public page)",
+        "maxLength": 139,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {term} = the bold lead-in label (its own key: the same key with 'Label' at the end)."
+    },
+    "privacy.collect.usageLabel": {
+        "where": "Platform legal page “Privacy Policy” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Information We Collect”, bold lead-in of a bullet",
+        "who": "anyone (public page)",
+        "maxLength": 30,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "privacy.collect.usage": {
+        "where": "Platform legal page “Privacy Policy” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Information We Collect”, bullet",
+        "who": "anyone (public page)",
+        "maxLength": 147,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {term} = the bold lead-in label (its own key: the same key with 'Label' at the end)."
+    },
+    "privacy.use.heading": {
+        "where": "Platform legal page “Privacy Policy” (tenants without CRC's own legal text, e.g. Hebrew tenants), section heading",
+        "who": "anyone (public page)",
+        "maxLength": 43,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "privacy.use.lead": {
+        "where": "Platform legal page “Privacy Policy” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “How We Use Your Information”",
+        "who": "anyone (public page)",
+        "maxLength": 51,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "privacy.use.provide": {
+        "where": "Platform legal page “Privacy Policy” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “How We Use Your Information”, bullet",
+        "who": "anyone (public page)",
+        "maxLength": 51,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "privacy.use.notifications": {
+        "where": "Platform legal page “Privacy Policy” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “How We Use Your Information”, bullet",
+        "who": "anyone (public page)",
+        "maxLength": 108,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "privacy.use.coordination": {
+        "where": "Platform legal page “Privacy Policy” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “How We Use Your Information”, bullet",
+        "who": "anyone (public page)",
+        "maxLength": 88,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "privacy.use.improve": {
+        "where": "Platform legal page “Privacy Policy” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “How We Use Your Information”, bullet",
+        "who": "anyone (public page)",
+        "maxLength": 30,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "privacy.sms.heading": {
+        "where": "Platform legal page “Privacy Policy” (tenants without CRC's own legal text, e.g. Hebrew tenants), section heading",
+        "who": "anyone (public page)",
+        "maxLength": 35,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "privacy.sms.optIn": {
+        "where": "Platform legal page “Privacy Policy” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “SMS / Mobile Messaging”",
+        "who": "anyone (public page)",
+        "maxLength": 252,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {operator} = the congregation or band that runs this site (config legal.operatorName; a name, not translated)."
+    },
+    "privacy.sms.mobileInfoNotShared": {
+        "where": "Platform legal page “Privacy Policy” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “SMS / Mobile Messaging”, highlighted box",
+        "who": "anyone (public page)",
+        "maxLength": 435,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "privacy.sms.frequencyAndOptOut": {
+        "where": "Platform legal page “Privacy Policy” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “SMS / Mobile Messaging”",
+        "who": "anyone (public page)",
+        "maxLength": 332,
+        "context": "Legal text — translate precisely, formal register. STOP is the SMS keyword the carrier recognises; keep it in English."
+    },
+    "privacy.sharing.heading": {
+        "where": "Platform legal page “Privacy Policy” (tenants without CRC's own legal text, e.g. Hebrew tenants), section heading",
+        "who": "anyone (public page)",
+        "maxLength": 30,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "privacy.sharing.lead": {
+        "where": "Platform legal page “Privacy Policy” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Data Sharing”",
+        "who": "anyone (public page)",
+        "maxLength": 211,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "privacy.sharing.providersLabel": {
+        "where": "Platform legal page “Privacy Policy” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Data Sharing”, bold lead-in of a bullet",
+        "who": "anyone (public page)",
+        "maxLength": 30,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "privacy.sharing.providers": {
+        "where": "Platform legal page “Privacy Policy” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Data Sharing”, bullet",
+        "who": "anyone (public page)",
+        "maxLength": 286,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {term} = the bold lead-in label (its own key: the same key with 'Label' at the end)."
+    },
+    "privacy.sharing.withinOperatorLabel": {
+        "where": "Platform legal page “Privacy Policy” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Data Sharing”, bold lead-in of a bullet",
+        "who": "anyone (public page)",
+        "maxLength": 30,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {operator} = the congregation or band that runs this site (config legal.operatorName; a name, not translated)."
+    },
+    "privacy.sharing.withinOperator": {
+        "where": "Platform legal page “Privacy Policy” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Data Sharing”, bullet",
+        "who": "anyone (public page)",
+        "maxLength": 196,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {term} = the bold lead-in label (its own key: the same key with 'Label' at the end)."
+    },
+    "privacy.sharing.legalLabel": {
+        "where": "Platform legal page “Privacy Policy” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Data Sharing”, bold lead-in of a bullet",
+        "who": "anyone (public page)",
+        "maxLength": 30,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "privacy.sharing.legal": {
+        "where": "Platform legal page “Privacy Policy” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Data Sharing”, bullet",
+        "who": "anyone (public page)",
+        "maxLength": 86,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {term} = the bold lead-in label (its own key: the same key with 'Label' at the end)."
+    },
+    "privacy.security.heading": {
+        "where": "Platform legal page “Privacy Policy” (tenants without CRC's own legal text, e.g. Hebrew tenants), section heading",
+        "who": "anyone (public page)",
+        "maxLength": 30,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "privacy.security.body": {
+        "where": "Platform legal page “Privacy Policy” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Data Security”",
+        "who": "anyone (public page)",
+        "maxLength": 369,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "privacy.retention.heading": {
+        "where": "Platform legal page “Privacy Policy” (tenants without CRC's own legal text, e.g. Hebrew tenants), section heading",
+        "who": "anyone (public page)",
+        "maxLength": 30,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "privacy.retention.body": {
+        "where": "Platform legal page “Privacy Policy” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Data Retention”",
+        "who": "anyone (public page)",
+        "maxLength": 270,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "privacy.rights.heading": {
+        "where": "Platform legal page “Privacy Policy” (tenants without CRC's own legal text, e.g. Hebrew tenants), section heading",
+        "who": "anyone (public page)",
+        "maxLength": 30,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "privacy.rights.lead": {
+        "where": "Platform legal page “Privacy Policy” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Your Rights”",
+        "who": "anyone (public page)",
+        "maxLength": 35,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "privacy.rights.access": {
+        "where": "Platform legal page “Privacy Policy” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Your Rights”, bullet",
+        "who": "anyone (public page)",
+        "maxLength": 78,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "privacy.rights.correction": {
+        "where": "Platform legal page “Privacy Policy” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Your Rights”, bullet",
+        "who": "anyone (public page)",
+        "maxLength": 70,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "privacy.rights.deletion": {
+        "where": "Platform legal page “Privacy Policy” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Your Rights”, bullet",
+        "who": "anyone (public page)",
+        "maxLength": 65,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "privacy.rights.optOutSms": {
+        "where": "Platform legal page “Privacy Policy” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Your Rights”, bullet",
+        "who": "anyone (public page)",
+        "maxLength": 64,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "privacy.rights.optOutEmail": {
+        "where": "Platform legal page “Privacy Policy” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Your Rights”, bullet",
+        "who": "anyone (public page)",
+        "maxLength": 67,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "privacy.children.heading": {
+        "where": "Platform legal page “Privacy Policy” (tenants without CRC's own legal text, e.g. Hebrew tenants), section heading",
+        "who": "anyone (public page)",
+        "maxLength": 30,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "privacy.children.body": {
+        "where": "Platform legal page “Privacy Policy” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Children's Privacy”",
+        "who": "anyone (public page)",
+        "maxLength": 222,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "privacy.changes.heading": {
+        "where": "Platform legal page “Privacy Policy” (tenants without CRC's own legal text, e.g. Hebrew tenants), section heading",
+        "who": "anyone (public page)",
+        "maxLength": 35,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "privacy.changes.body": {
+        "where": "Platform legal page “Privacy Policy” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Changes to This Policy”",
+        "who": "anyone (public page)",
+        "maxLength": 273,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "privacy.contact.heading": {
+        "where": "Platform legal page “Privacy Policy” (tenants without CRC's own legal text, e.g. Hebrew tenants), section heading",
+        "who": "anyone (public page)",
+        "maxLength": 30,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "privacy.contact.body": {
+        "where": "Platform legal page “Privacy Policy” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Contact Us”",
+        "who": "anyone (public page)",
+        "maxLength": 144,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {operator} = the congregation or band that runs this site (config legal.operatorName; a name, not translated); {email} = the contact email address, shown as a link (not translated)."
+    },
+    "terms.title": {
+        "where": "Platform legal page “Terms & Conditions” (tenants without CRC's own legal text, e.g. Hebrew tenants), page title (also the browser tab title)",
+        "who": "anyone (public page)",
+        "maxLength": 30,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "terms.lastUpdated": {
+        "where": "Platform legal page “Terms & Conditions” (tenants without CRC's own legal text, e.g. Hebrew tenants), line under the title",
+        "who": "anyone (public page)",
+        "maxLength": 49,
+        "context": "Legal text — translate precisely, formal register. Translate the date as a date in the target language."
+    },
+    "terms.intro": {
+        "where": "Platform legal page “Terms & Conditions” (tenants without CRC's own legal text, e.g. Hebrew tenants), introduction paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 260,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {appName} = the app's short name for this tenant (a name, not translated); {operator} = the congregation or band that runs this site (config legal.operatorName; a name, not translated); {platformLine} = the sentence legal.platformLine (already translated)."
+    },
+    "terms.acceptance.heading": {
+        "where": "Platform legal page “Terms & Conditions” (tenants without CRC's own legal text, e.g. Hebrew tenants), numbered section heading",
+        "who": "anyone (public page)",
+        "maxLength": 35,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "terms.acceptance.body": {
+        "where": "Platform legal page “Terms & Conditions” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “1. Acceptance of Terms”",
+        "who": "anyone (public page)",
+        "maxLength": 241,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {appName} = the app's short name for this tenant (a name, not translated)."
+    },
+    "terms.description.heading": {
+        "where": "Platform legal page “Terms & Conditions” (tenants without CRC's own legal text, e.g. Hebrew tenants), numbered section heading",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "terms.description.lead": {
+        "where": "Platform legal page “Terms & Conditions” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “2. Description of Service”",
+        "who": "anyone (public page)",
+        "maxLength": 113,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {appName} = the app's short name for this tenant (a name, not translated); {operator} = the congregation or band that runs this site (config legal.operatorName; a name, not translated)."
+    },
+    "terms.description.setlists": {
+        "where": "Platform legal page “Terms & Conditions” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “2. Description of Service”, bullet",
+        "who": "anyone (public page)",
+        "maxLength": 49,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "terms.description.library": {
+        "where": "Platform legal page “Terms & Conditions” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “2. Description of Service”, bullet",
+        "who": "anyone (public page)",
+        "maxLength": 59,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "terms.description.scheduling": {
+        "where": "Platform legal page “Terms & Conditions” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “2. Description of Service”, bullet",
+        "who": "anyone (public page)",
+        "maxLength": 54,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "terms.description.notifications": {
+        "where": "Platform legal page “Terms & Conditions” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “2. Description of Service”, bullet",
+        "who": "anyone (public page)",
+        "maxLength": 64,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "terms.description.calendar": {
+        "where": "Platform legal page “Terms & Conditions” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “2. Description of Service”, bullet",
+        "who": "anyone (public page)",
+        "maxLength": 38,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "terms.accounts.heading": {
+        "where": "Platform legal page “Terms & Conditions” (tenants without CRC's own legal text, e.g. Hebrew tenants), numbered section heading",
+        "who": "anyone (public page)",
+        "maxLength": 30,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "terms.accounts.body": {
+        "where": "Platform legal page “Terms & Conditions” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “3. User Accounts”",
+        "who": "anyone (public page)",
+        "maxLength": 328,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {operator} = the congregation or band that runs this site (config legal.operatorName; a name, not translated)."
+    },
+    "terms.sms.heading": {
+        "where": "Platform legal page “Terms & Conditions” (tenants without CRC's own legal text, e.g. Hebrew tenants), numbered section heading",
+        "who": "anyone (public page)",
+        "maxLength": 35,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "terms.sms.lead": {
+        "where": "Platform legal page “Terms & Conditions” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “4. SMS Messaging Terms”",
+        "who": "anyone (public page)",
+        "maxLength": 108,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "terms.sms.receive": {
+        "where": "Platform legal page “Terms & Conditions” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “4. SMS Messaging Terms”, bullet",
+        "who": "anyone (public page)",
+        "maxLength": 118,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {operator} = the congregation or band that runs this site (config legal.operatorName; a name, not translated)."
+    },
+    "terms.sms.types": {
+        "where": "Platform legal page “Terms & Conditions” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “4. SMS Messaging Terms”, bullet",
+        "who": "anyone (public page)",
+        "maxLength": 147,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "terms.sms.frequency": {
+        "where": "Platform legal page “Terms & Conditions” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “4. SMS Messaging Terms”, bullet",
+        "who": "anyone (public page)",
+        "maxLength": 92,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "terms.sms.rates": {
+        "where": "Platform legal page “Terms & Conditions” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “4. SMS Messaging Terms”, bullet",
+        "who": "anyone (public page)",
+        "maxLength": 104,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "terms.sms.optOutAndHelp": {
+        "where": "Platform legal page “Terms & Conditions” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “4. SMS Messaging Terms”",
+        "who": "anyone (public page)",
+        "maxLength": 344,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {stopKeyword} = the SMS keyword STOP in bold; it stays in English because the carrier only recognises STOP; {helpKeyword} = the SMS keyword HELP in bold; it stays in English because the carrier only recognises HELP; {email} = the contact email address, shown as a link (not translated)."
+    },
+    "terms.sms.mobileInfoNotShared": {
+        "where": "Platform legal page “Terms & Conditions” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “4. SMS Messaging Terms”, highlighted box",
+        "who": "anyone (public page)",
+        "maxLength": 152,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "terms.acceptableUse.heading": {
+        "where": "Platform legal page “Terms & Conditions” (tenants without CRC's own legal text, e.g. Hebrew tenants), numbered section heading",
+        "who": "anyone (public page)",
+        "maxLength": 30,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "terms.acceptableUse.lead": {
+        "where": "Platform legal page “Terms & Conditions” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “5. Acceptable Use”",
+        "who": "anyone (public page)",
+        "maxLength": 30,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "terms.acceptableUse.unlawful": {
+        "where": "Platform legal page “Terms & Conditions” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “5. Acceptable Use”, bullet",
+        "who": "anyone (public page)",
+        "maxLength": 64,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "terms.acceptableUse.shareCredentials": {
+        "where": "Platform legal page “Terms & Conditions” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “5. Acceptable Use”, bullet",
+        "who": "anyone (public page)",
+        "maxLength": 67,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "terms.acceptableUse.othersData": {
+        "where": "Platform legal page “Terms & Conditions” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “5. Acceptable Use”, bullet",
+        "who": "anyone (public page)",
+        "maxLength": 91,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "terms.acceptableUse.malicious": {
+        "where": "Platform legal page “Terms & Conditions” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “5. Acceptable Use”, bullet",
+        "who": "anyone (public page)",
+        "maxLength": 105,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "terms.content.heading": {
+        "where": "Platform legal page “Terms & Conditions” (tenants without CRC's own legal text, e.g. Hebrew tenants), numbered section heading",
+        "who": "anyone (public page)",
+        "maxLength": 30,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "terms.content.body": {
+        "where": "Platform legal page “Terms & Conditions” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “6. Content”",
+        "who": "anyone (public page)",
+        "maxLength": 268,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {operator} = the congregation or band that runs this site (config legal.operatorName; a name, not translated)."
+    },
+    "terms.warranties.heading": {
+        "where": "Platform legal page “Terms & Conditions” (tenants without CRC's own legal text, e.g. Hebrew tenants), numbered section heading",
+        "who": "anyone (public page)",
+        "maxLength": 43,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "terms.warranties.body": {
+        "where": "Platform legal page “Terms & Conditions” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “7. Disclaimer of Warranties”",
+        "who": "anyone (public page)",
+        "maxLength": 292,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {operator} = the congregation or band that runs this site (config legal.operatorName; a name, not translated)."
+    },
+    "terms.liability.heading": {
+        "where": "Platform legal page “Terms & Conditions” (tenants without CRC's own legal text, e.g. Hebrew tenants), numbered section heading",
+        "who": "anyone (public page)",
+        "maxLength": 41,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "terms.liability.body": {
+        "where": "Platform legal page “Terms & Conditions” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “8. Limitation of Liability”",
+        "who": "anyone (public page)",
+        "maxLength": 227,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {operator} = the congregation or band that runs this site (config legal.operatorName; a name, not translated)."
+    },
+    "terms.changes.heading": {
+        "where": "Platform legal page “Terms & Conditions” (tenants without CRC's own legal text, e.g. Hebrew tenants), numbered section heading",
+        "who": "anyone (public page)",
+        "maxLength": 30,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "terms.changes.body": {
+        "where": "Platform legal page “Terms & Conditions” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “9. Changes to Terms”",
+        "who": "anyone (public page)",
+        "maxLength": 222,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "terms.contact.heading": {
+        "where": "Platform legal page “Terms & Conditions” (tenants without CRC's own legal text, e.g. Hebrew tenants), numbered section heading",
+        "who": "anyone (public page)",
+        "maxLength": 30,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "terms.contact.body": {
+        "where": "Platform legal page “Terms & Conditions” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “10. Contact”",
+        "who": "anyone (public page)",
+        "maxLength": 100,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {operator} = the congregation or band that runs this site (config legal.operatorName; a name, not translated); {email} = the contact email address, shown as a link (not translated)."
+    },
+    "sms.title": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), page title (also the browser tab title)",
+        "who": "anyone (public page)",
+        "maxLength": 48,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "sms.subtitle": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), line under the title",
+        "who": "anyone (public page)",
+        "maxLength": 35,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {operator} = the congregation or band that runs this site (config legal.operatorName; a name, not translated); {appName} = the app's short name for this tenant (a name, not translated)."
+    },
+    "sms.highlight.heading": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), highlighted summary box, heading",
+        "who": "anyone (public page)",
+        "maxLength": 32,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "sms.highlight.intro": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), highlighted summary box",
+        "who": "anyone (public page)",
+        "maxLength": 308,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {appName} = the app's short name for this tenant (a name, not translated)."
+    },
+    "sms.highlight.optInVoluntary": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), highlighted summary box",
+        "who": "anyone (public page)",
+        "maxLength": 209,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {voluntary} = the bold word legal.sms.highlight.voluntary; {notRequired} = the bold words legal.sms.highlight.notRequired; {appName} = the app's short name for this tenant (a name, not translated)."
+    },
+    "sms.highlight.voluntary": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), highlighted summary box, bold word inside legal.sms.highlight.optInVoluntary",
+        "who": "anyone (public page)",
+        "maxLength": 30,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "sms.highlight.notRequired": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), highlighted summary box, bold words inside legal.sms.highlight.optInVoluntary",
+        "who": "anyone (public page)",
+        "maxLength": 30,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "sms.program.heading": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), section heading",
+        "who": "anyone (public page)",
+        "maxLength": 30,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "sms.program.lead": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Program Description”",
+        "who": "anyone (public page)",
+        "maxLength": 312,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {operator} = the congregation or band that runs this site (config legal.operatorName; a name, not translated); {appName} = the app's short name for this tenant (a name, not translated); {platformLine} = the sentence legal.platformLine (already translated)."
+    },
+    "sms.program.assignmentsLabel": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Program Description”, bold lead-in of a bullet",
+        "who": "anyone (public page)",
+        "maxLength": 36,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "sms.program.assignments": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Program Description”, bullet",
+        "who": "anyone (public page)",
+        "maxLength": 97,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {term} = the bold lead-in label (its own key: the same key with 'Label' at the end)."
+    },
+    "sms.program.remindersLabel": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Program Description”, bold lead-in of a bullet",
+        "who": "anyone (public page)",
+        "maxLength": 30,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "sms.program.reminders": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Program Description”, bullet",
+        "who": "anyone (public page)",
+        "maxLength": 107,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {term} = the bold lead-in label (its own key: the same key with 'Label' at the end)."
+    },
+    "sms.program.confirmationsLabel": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Program Description”, bold lead-in of a bullet",
+        "who": "anyone (public page)",
+        "maxLength": 30,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "sms.program.confirmations": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Program Description”, bullet",
+        "who": "anyone (public page)",
+        "maxLength": 96,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {term} = the bold lead-in label (its own key: the same key with 'Label' at the end)."
+    },
+    "sms.program.cancellationsLabel": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Program Description”, bold lead-in of a bullet",
+        "who": "anyone (public page)",
+        "maxLength": 30,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "sms.program.cancellations": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Program Description”, bullet",
+        "who": "anyone (public page)",
+        "maxLength": 102,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {term} = the bold lead-in label (its own key: the same key with 'Label' at the end)."
+    },
+    "sms.program.changesLabel": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Program Description”, bold lead-in of a bullet",
+        "who": "anyone (public page)",
+        "maxLength": 30,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "sms.program.changes": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Program Description”, bullet",
+        "who": "anyone (public page)",
+        "maxLength": 72,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {term} = the bold lead-in label (its own key: the same key with 'Label' at the end)."
+    },
+    "sms.consent.heading": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), section heading",
+        "who": "anyone (public page)",
+        "maxLength": 30,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "sms.consent.lead": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Consent Process”",
+        "who": "anyone (public page)",
+        "maxLength": 128,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "sms.consent.stepSignIn": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Consent Process”, numbered step 1",
+        "who": "anyone (public page)",
+        "maxLength": 72,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {appName} = the app's short name for this tenant (a name, not translated); {web} = the site's web address, shown as a link (not translated)."
+    },
+    "sms.consent.stepNavigate": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Consent Process”, numbered step 2",
+        "who": "anyone (public page)",
+        "maxLength": 41,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {settingsPath} = the bold menu path legal.sms.consent.settingsPath."
+    },
+    "sms.consent.settingsPath": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Consent Process”, step 2, bold menu path",
+        "who": "anyone (public page)",
+        "maxLength": 64,
+        "context": "Legal text — translate precisely, formal register. Use the names the app's own menus show in the target language; the arrows point in reading order."
+    },
+    "sms.consent.stepPhone": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Consent Process”, numbered step 3",
+        "who": "anyone (public page)",
+        "maxLength": 78,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "sms.consent.stepToggle": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Consent Process”, numbered step 4",
+        "who": "anyone (public page)",
+        "maxLength": 80,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {switchLabel} = the bold switch name legal.sms.consent.smsSwitchLabel."
+    },
+    "sms.consent.smsSwitchLabel": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Consent Process”, step 4, bold name of the switch",
+        "who": "anyone (public page)",
+        "maxLength": 30,
+        "context": "Legal text — translate precisely, formal register. Use the label the settings screen shows for the SMS switch."
+    },
+    "sms.consent.stepSave": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Consent Process”, numbered step 5",
+        "who": "anyone (public page)",
+        "maxLength": 41,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "sms.consent.affirm": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Consent Process”",
+        "who": "anyone (public page)",
+        "maxLength": 209,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {appName} = the app's short name for this tenant (a name, not translated)."
+    },
+    "sms.frequency.heading": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), section heading",
+        "who": "anyone (public page)",
+        "maxLength": 30,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "sms.frequency.body": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Message Frequency”",
+        "who": "anyone (public page)",
+        "maxLength": 329,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "sms.rates.heading": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), section heading",
+        "who": "anyone (public page)",
+        "maxLength": 35,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "sms.rates.body": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Message and Data Rates”",
+        "who": "anyone (public page)",
+        "maxLength": 246,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {operator} = the congregation or band that runs this site (config legal.operatorName; a name, not translated)."
+    },
+    "sms.optOut.heading": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), section heading",
+        "who": "anyone (public page)",
+        "maxLength": 30,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "sms.optOut.lead": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Opt-Out”",
+        "who": "anyone (public page)",
+        "maxLength": 75,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "sms.optOut.replyStop": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Opt-Out”, bullet",
+        "who": "anyone (public page)",
+        "maxLength": 97,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {stopKeyword} = the SMS keyword STOP in bold; it stays in English because the carrier only recognises STOP; {appName} = the app's short name for this tenant (a name, not translated)."
+    },
+    "sms.optOut.disableToggle": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Opt-Out”, bullet",
+        "who": "anyone (public page)",
+        "maxLength": 94,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {appName} = the app's short name for this tenant (a name, not translated)."
+    },
+    "sms.optOut.removePhone": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Opt-Out”, bullet",
+        "who": "anyone (public page)",
+        "maxLength": 84,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "sms.optOut.contactUs": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Opt-Out”, bullet",
+        "who": "anyone (public page)",
+        "maxLength": 38,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {email} = the contact email address, shown as a link (not translated)."
+    },
+    "sms.optOut.after": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Opt-Out”",
+        "who": "anyone (public page)",
+        "maxLength": 233,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {appName} = the app's short name for this tenant (a name, not translated)."
+    },
+    "sms.help.heading": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), section heading",
+        "who": "anyone (public page)",
+        "maxLength": 30,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "sms.help.body": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Help”",
+        "who": "anyone (public page)",
+        "maxLength": 148,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {helpKeyword} = the SMS keyword HELP in bold; it stays in English because the carrier only recognises HELP; {email} = the contact email address, shown as a link (not translated)."
+    },
+    "sms.privacy.heading": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), section heading",
+        "who": "anyone (public page)",
+        "maxLength": 30,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "sms.privacy.mobileInfoNotShared": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Data Privacy”, highlighted box",
+        "who": "anyone (public page)",
+        "maxLength": 193,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "sms.privacy.body": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Data Privacy”",
+        "who": "anyone (public page)",
+        "maxLength": 326,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {privacyLink} = a link to the Privacy Policy whose text is legal.sms.privacy.privacyPolicyLink."
+    },
+    "sms.privacy.privacyPolicyLink": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Data Privacy”, link text inside legal.sms.privacy.body",
+        "who": "anyone (public page)",
+        "maxLength": 30,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "sms.contact.heading": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), section heading",
+        "who": "anyone (public page)",
+        "maxLength": 30,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "sms.contact.application": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Contact Information”, card, second line",
+        "who": "anyone (public page)",
+        "maxLength": 33,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {appName} = the app's short name for this tenant (a name, not translated)."
+    },
+    "sms.contact.platform": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Contact Information”, card, third line",
+        "who": "anyone (public page)",
+        "maxLength": 99,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {platformHost} = the platform's web address, centralreform.live (not translated); {platformOperator} = the platform operator's name, Rabbi Daniel Bogard (not translated)."
+    },
+    "sms.contact.email": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Contact Information”, card",
+        "who": "anyone (public page)",
+        "maxLength": 30,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {email} = the contact email address, shown as a link (not translated)."
+    },
+    "sms.contact.web": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Contact Information”, card",
+        "who": "anyone (public page)",
+        "maxLength": 30,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {web} = the site's web address, shown as a link (not translated)."
+    },
+    "sms.related.heading": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), section heading",
+        "who": "anyone (public page)",
+        "maxLength": 30,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "sms.related.privacyTitle": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Related Policies”, link card title",
+        "who": "anyone (public page)",
+        "maxLength": 30,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "sms.related.privacyBlurb": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Related Policies”, link card description",
+        "who": "anyone (public page)",
+        "maxLength": 36,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "sms.related.termsTitle": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Related Policies”, link card title",
+        "who": "anyone (public page)",
+        "maxLength": 30,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "sms.related.termsBlurb": {
+        "where": "Platform legal page “SMS Messaging Consent” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Related Policies”, link card description",
+        "who": "anyone (public page)",
+        "maxLength": 30,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "accessibility.title": {
+        "where": "Platform legal page “Accessibility Statement” (tenants without CRC's own legal text, e.g. Hebrew tenants), page title (also the browser tab title)",
+        "who": "anyone (public page)",
+        "maxLength": 36,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "accessibility.lastUpdated": {
+        "where": "Platform legal page “Accessibility Statement” (tenants without CRC's own legal text, e.g. Hebrew tenants), line under the title",
+        "who": "anyone (public page)",
+        "maxLength": 41,
+        "context": "Legal text — translate precisely, formal register. Translate the date as a date in the target language."
+    },
+    "accessibility.intro": {
+        "where": "Platform legal page “Accessibility Statement” (tenants without CRC's own legal text, e.g. Hebrew tenants), introduction paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 345,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {operator} = the congregation or band that runs this site (config legal.operatorName; a name, not translated); {appName} = the app's short name for this tenant (a name, not translated); {platformLine} = the sentence legal.platformLine (already translated)."
+    },
+    "accessibility.doing.heading": {
+        "where": "Platform legal page “Accessibility Statement” (tenants without CRC's own legal text, e.g. Hebrew tenants), section heading",
+        "who": "anyone (public page)",
+        "maxLength": 30,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "accessibility.doing.landmarks": {
+        "where": "Platform legal page “Accessibility Statement” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “What we're doing”, bullet",
+        "who": "anyone (public page)",
+        "maxLength": 113,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {mainTag} = the code sample <main> (not translated); {navTag} = the code sample <nav> (not translated)."
+    },
+    "accessibility.doing.accessibleNames": {
+        "where": "Platform legal page “Accessibility Statement” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “What we're doing”, bullet",
+        "who": "anyone (public page)",
+        "maxLength": 204,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {ariaLabel} = the code sample aria-label (not translated); {labelTag} = the code sample <label> (not translated)."
+    },
+    "accessibility.doing.contrast": {
+        "where": "Platform legal page “Accessibility Statement” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “What we're doing”, bullet",
+        "who": "anyone (public page)",
+        "maxLength": 94,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "accessibility.doing.pinchZoom": {
+        "where": "Platform legal page “Accessibility Statement” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “What we're doing”, bullet",
+        "who": "anyone (public page)",
+        "maxLength": 124,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {maxScale} = the code sample maximum-scale=1 (not translated)."
+    },
+    "accessibility.doing.skipLink": {
+        "where": "Platform legal page “Accessibility Statement” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “What we're doing”, bullet",
+        "who": "anyone (public page)",
+        "maxLength": 73,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "accessibility.doing.keyboard": {
+        "where": "Platform legal page “Accessibility Statement” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “What we're doing”, bullet",
+        "who": "anyone (public page)",
+        "maxLength": 180,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "accessibility.doing.axe": {
+        "where": "Platform legal page “Accessibility Statement” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “What we're doing”, bullet",
+        "who": "anyone (public page)",
+        "maxLength": 94,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "accessibility.limitations.heading": {
+        "where": "Platform legal page “Accessibility Statement” (tenants without CRC's own legal text, e.g. Hebrew tenants), section heading",
+        "who": "anyone (public page)",
+        "maxLength": 30,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "accessibility.limitations.body": {
+        "where": "Platform legal page “Accessibility Statement” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Known limitations”",
+        "who": "anyone (public page)",
+        "maxLength": 446,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "accessibility.report.heading": {
+        "where": "Platform legal page “Accessibility Statement” (tenants without CRC's own legal text, e.g. Hebrew tenants), section heading",
+        "who": "anyone (public page)",
+        "maxLength": 30,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "accessibility.report.body": {
+        "where": "Platform legal page “Accessibility Statement” (tenants without CRC's own legal text, e.g. Hebrew tenants), section “Report a barrier”",
+        "who": "anyone (public page)",
+        "maxLength": 283,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {email} = the contact email address, shown as a link (not translated)."
+    }
+}

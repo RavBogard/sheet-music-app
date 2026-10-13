@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { CheckCircle, ArrowRight, ArrowLeft, Wifi, Radio } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useT } from "@/i18n/client"
+import { DirectionalIcon } from "@/components/i18n/DirectionalIcon"
 
 interface WizardProps {
     bridgeUrl: string
@@ -17,10 +19,10 @@ interface WizardProps {
 }
 
 const STEPS = [
-    { label: "Bridge", icon: Wifi, description: "Connect to the bridge server" },
-    { label: "X32", icon: Radio, description: "Find your Behringer X32" },
-    { label: "Buses", icon: Radio, description: "Choose monitor buses" },
-]
+    { label: "admin-sound.wizardStepBridge", icon: Wifi, description: "admin-sound.wizardStepBridgeDescription" },
+    { label: "admin-sound.wizardStepX32", icon: Radio, description: "admin-sound.wizardStepX32Description" },
+    { label: "admin-sound.wizardStepBuses", icon: Radio, description: "admin-sound.wizardStepBusesDescription" },
+] as const
 
 export function MonitorSetupWizard({
     bridgeUrl, setBridgeUrl,
@@ -29,6 +31,7 @@ export function MonitorSetupWizard({
     onComplete,
 }: WizardProps) {
     const [step, setStep] = useState(0)
+    const t = useT()
 
     const canAdvance = [
         () => bridgeUrl.trim().length > 5,           // Step 0: bridge URL
@@ -51,7 +54,7 @@ export function MonitorSetupWizard({
                             )}
                         >
                             {i < step ? <CheckCircle className="w-3.5 h-3.5" /> : <Icon className="w-3.5 h-3.5" />}
-                            <span className="hidden sm:inline">{s.label}</span>
+                            <span className="hidden sm:inline">{t(s.label)}</span>
                         </div>
                     )
                 })}
@@ -60,17 +63,18 @@ export function MonitorSetupWizard({
             {/* Content */}
             <div className="p-5 space-y-4">
                 <div>
-                    <h3 className="font-semibold text-sm">{STEPS[step].description}</h3>
+                    <h3 className="font-semibold text-sm">{t(STEPS[step].description)}</h3>
                 </div>
 
                 {step === 0 && (
                     <div className="space-y-3">
                         <p className="text-xs text-muted-foreground">
-                            The bridge address is auto-detected on startup. Override it here only if needed.
+                            {t("admin-sound.wizardBridgeHint")}
                         </p>
                         <Input
                             value={bridgeUrl}
                             onChange={e => setBridgeUrl(e.target.value)}
+                            // i18n-ignore: example address, machine text
                             placeholder="firestore://192.168.1.50"
                         />
                     </div>
@@ -79,12 +83,12 @@ export function MonitorSetupWizard({
                 {step === 1 && (
                     <div className="space-y-3">
                         <p className="text-xs text-muted-foreground">
-                            The bridge auto-discovers the X32 on startup. Enter its IP manually only if needed.
+                            {t("admin-sound.wizardX32Hint")}
                         </p>
                         <Input
                             value={x32Address}
                             onChange={e => setX32Address(e.target.value)}
-                            placeholder="Auto-detected by the bridge"
+                            placeholder={t("admin-sound.autoDetectedPlaceholder")}
                         />
                     </div>
                 )}
@@ -92,7 +96,7 @@ export function MonitorSetupWizard({
                 {step === 2 && (
                     <div className="space-y-3">
                         <p className="text-xs text-muted-foreground">
-                            Which X32 mix buses are used as monitor sends? (1–16, comma-separated)
+                            {t("admin-sound.wizardBusesHint")}
                         </p>
                         <Input
                             value={monitorBusesStr}
@@ -111,7 +115,7 @@ export function MonitorSetupWizard({
                     disabled={step === 0}
                     className="gap-2"
                 >
-                    <ArrowLeft className="w-4 h-4" /> Back
+                    <DirectionalIcon icon={ArrowLeft} className="w-4 h-4" /> {t("admin-sound.wizardBack")}
                 </Button>
 
                 {step < STEPS.length - 1 ? (
@@ -120,11 +124,11 @@ export function MonitorSetupWizard({
                         disabled={!canAdvance[step]()}
                         className="gap-2"
                     >
-                        Next <ArrowRight className="w-4 h-4" />
+                        {t("admin-sound.wizardNext")} <DirectionalIcon icon={ArrowRight} className="w-4 h-4" />
                     </Button>
                 ) : (
                     <Button onClick={onComplete} className="gap-2 bg-success hover:bg-success/90">
-                        <CheckCircle className="w-4 h-4" /> Save & Finish
+                        <CheckCircle className="w-4 h-4" /> {t("admin-sound.wizardFinish")}
                     </Button>
                 )}
             </div>

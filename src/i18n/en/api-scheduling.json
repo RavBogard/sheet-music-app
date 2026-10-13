@@ -1,0 +1,13 @@
+{
+    "assignmentNotFound": "Assignment not found",
+    "notYourAssignment": "Not your assignment",
+    "assignmentAlready": "Assignment already {status}",
+    "cannotCancelAssignment": "Cannot cancel assignment in '{status}' state",
+    "statusPending": "pending",
+    "statusConfirmed": "confirmed",
+    "statusDeclined": "declined",
+    "statusCancelled": "cancelled",
+    "setlistIdRequired": "setlistId is required",
+    "setlistIdParamRequired": "setlistId parameter is required",
+    "suggestionsFailed": "Failed to generate suggestions"
+}

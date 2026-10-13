@@ -32,6 +32,7 @@ export const POST = createApiHandler(
 
         if (!initAdmin()) {
             return NextResponse.json(
+                // i18n-ignore: no browser caller (src/lib/push-send.ts sends in-process); server-to-server diagnostics
                 { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
                 { status: 500 },
             )
@@ -61,6 +62,7 @@ export const POST = createApiHandler(
         }
 
         if (allTokens.length === 0) {
+            // i18n-ignore: no browser caller (src/lib/push-send.ts sends in-process); server-to-server diagnostics
             return NextResponse.json({ sent: 0, message: "No FCM tokens found" })
         }
 

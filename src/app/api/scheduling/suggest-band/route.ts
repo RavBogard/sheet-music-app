@@ -1,3 +1,4 @@
+import { getT } from "@/i18n/server"
 import { NextResponse } from "next/server"
 import { getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
@@ -35,8 +36,9 @@ export const GET = createApiHandler(
         const selectedUids = (url.searchParams.get('selectedUids') || '')
             .split(',').filter(Boolean)
 
+        const t = await getT()
         if (!setlistId) {
-            return NextResponse.json({ error: 'setlistId is required' }, { status: 400 })
+            return NextResponse.json({ error: t("api-scheduling.setlistIdRequired") }, { status: 400 })
         }
 
         try {
@@ -137,7 +139,7 @@ export const GET = createApiHandler(
         } catch (err) {
             logger.error('[suggest-band] Failed:', err)
             return NextResponse.json(
-                { error: 'Failed to generate suggestions' },
+                { error: t("api-scheduling.suggestionsFailed") },
                 { status: 500 }
             )
         }

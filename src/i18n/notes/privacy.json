@@ -1,0 +1,296 @@
+{
+    "eyebrow": {
+        "where": "Privacy Policy page (the CRC text, shown on CRC and Brothers Lazaroff), page header / introduction, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "title": {
+        "where": "Privacy Policy page (the CRC text, shown on CRC and Brothers Lazaroff), page header / introduction, page title",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "lastUpdated": {
+        "where": "Privacy Policy page (the CRC text, shown on CRC and Brothers Lazaroff), page header / introduction, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 50,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "intro": {
+        "where": "Privacy Policy page (the CRC text, shown on CRC and Brothers Lazaroff), page header / introduction, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 384,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "informationCollect.heading": {
+        "where": "Privacy Policy page (the CRC text, shown on CRC and Brothers Lazaroff), section “Information We Collect”, section heading",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "informationCollect.collectFollowingTypes": {
+        "where": "Privacy Policy page (the CRC text, shown on CRC and Brothers Lazaroff), section “Information We Collect”, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 74,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "informationCollect.accountInformationLabel": {
+        "where": "Privacy Policy page (the CRC text, shown on CRC and Brothers Lazaroff), section “Information We Collect”, bold lead-in label",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "informationCollect.accountInformation": {
+        "where": "Privacy Policy page (the CRC text, shown on CRC and Brothers Lazaroff), section “Information We Collect”, list item text",
+        "who": "anyone (public page)",
+        "maxLength": 143,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {term} = a bold lead-in phrase (translated as its own key)."
+    },
+    "informationCollect.phoneNumberLabel": {
+        "where": "Privacy Policy page (the CRC text, shown on CRC and Brothers Lazaroff), section “Information We Collect”, bold lead-in label",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "informationCollect.phoneNumber": {
+        "where": "Privacy Policy page (the CRC text, shown on CRC and Brothers Lazaroff), section “Information We Collect”, list item text",
+        "who": "anyone (public page)",
+        "maxLength": 133,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {term} = a bold lead-in phrase (translated as its own key)."
+    },
+    "informationCollect.musicianProfileDataLabel": {
+        "where": "Privacy Policy page (the CRC text, shown on CRC and Brothers Lazaroff), section “Information We Collect”, bold lead-in label",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "informationCollect.musicianProfileData": {
+        "where": "Privacy Policy page (the CRC text, shown on CRC and Brothers Lazaroff), section “Information We Collect”, list item text",
+        "who": "anyone (public page)",
+        "maxLength": 140,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {term} = a bold lead-in phrase (translated as its own key)."
+    },
+    "informationCollect.usageDataLabel": {
+        "where": "Privacy Policy page (the CRC text, shown on CRC and Brothers Lazaroff), section “Information We Collect”, bold lead-in label",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "informationCollect.usageData": {
+        "where": "Privacy Policy page (the CRC text, shown on CRC and Brothers Lazaroff), section “Information We Collect”, list item text",
+        "who": "anyone (public page)",
+        "maxLength": 148,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {term} = a bold lead-in phrase (translated as its own key)."
+    },
+    "howUseInformation.heading": {
+        "where": "Privacy Policy page (the CRC text, shown on CRC and Brothers Lazaroff), section “How We Use Your Information”, section heading",
+        "who": "anyone (public page)",
+        "maxLength": 44,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "howUseInformation.useCollectedInformation": {
+        "where": "Privacy Policy page (the CRC text, shown on CRC and Brothers Lazaroff), section “How We Use Your Information”, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 52,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "howUseInformation.provideMaintainService": {
+        "where": "Privacy Policy page (the CRC text, shown on CRC and Brothers Lazaroff), section “How We Use Your Information”, list item",
+        "who": "anyone (public page)",
+        "maxLength": 52,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "howUseInformation.sendSchedulingNotifications": {
+        "where": "Privacy Policy page (the CRC text, shown on CRC and Brothers Lazaroff), section “How We Use Your Information”, list item",
+        "who": "anyone (public page)",
+        "maxLength": 109,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "howUseInformation.facilitateMusicianCoordination": {
+        "where": "Privacy Policy page (the CRC text, shown on CRC and Brothers Lazaroff), section “How We Use Your Information”, list item",
+        "who": "anyone (public page)",
+        "maxLength": 88,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "howUseInformation.improveService": {
+        "where": "Privacy Policy page (the CRC text, shown on CRC and Brothers Lazaroff), section “How We Use Your Information”, list item",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "smsMobileMessaging.heading": {
+        "where": "Privacy Policy page (the CRC text, shown on CRC and Brothers Lazaroff), section “SMS / Mobile Messaging”, section heading",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "smsMobileMessaging.optReceiveSms": {
+        "where": "Privacy Policy page (the CRC text, shown on CRC and Brothers Lazaroff), section “SMS / Mobile Messaging”, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 280,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "smsMobileMessaging.mobileInformationIncluding": {
+        "where": "Privacy Policy page (the CRC text, shown on CRC and Brothers Lazaroff), section “SMS / Mobile Messaging”, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 436,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "smsMobileMessaging.messageFrequencyVaries": {
+        "where": "Privacy Policy page (the CRC text, shown on CRC and Brothers Lazaroff), section “SMS / Mobile Messaging”, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 333,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "dataSharing.heading": {
+        "where": "Privacy Policy page (the CRC text, shown on CRC and Brothers Lazaroff), section “Data Sharing”, section heading",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "dataSharing.doSellTrade": {
+        "where": "Privacy Policy page (the CRC text, shown on CRC and Brothers Lazaroff), section “Data Sharing”, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 212,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "dataSharing.serviceProvidersLabel": {
+        "where": "Privacy Policy page (the CRC text, shown on CRC and Brothers Lazaroff), section “Data Sharing”, bold lead-in label",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "dataSharing.serviceProviders": {
+        "where": "Privacy Policy page (the CRC text, shown on CRC and Brothers Lazaroff), section “Data Sharing”, list item text",
+        "who": "anyone (public page)",
+        "maxLength": 287,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {term} = a bold lead-in phrase (translated as its own key)."
+    },
+    "dataSharing.withinCrcLabel": {
+        "where": "Privacy Policy page (the CRC text, shown on CRC and Brothers Lazaroff), section “Data Sharing”, bold lead-in label",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "dataSharing.withinCrc": {
+        "where": "Privacy Policy page (the CRC text, shown on CRC and Brothers Lazaroff), section “Data Sharing”, list item text",
+        "who": "anyone (public page)",
+        "maxLength": 197,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {term} = a bold lead-in phrase (translated as its own key)."
+    },
+    "dataSharing.legalRequirementsLabel": {
+        "where": "Privacy Policy page (the CRC text, shown on CRC and Brothers Lazaroff), section “Data Sharing”, bold lead-in label",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "dataSharing.legalRequirements": {
+        "where": "Privacy Policy page (the CRC text, shown on CRC and Brothers Lazaroff), section “Data Sharing”, list item text",
+        "who": "anyone (public page)",
+        "maxLength": 87,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {term} = a bold lead-in phrase (translated as its own key)."
+    },
+    "dataSecurity.heading": {
+        "where": "Privacy Policy page (the CRC text, shown on CRC and Brothers Lazaroff), section “Data Security”, section heading",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "dataSecurity.useIndustryStandard": {
+        "where": "Privacy Policy page (the CRC text, shown on CRC and Brothers Lazaroff), section “Data Security”, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 370,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "dataRetention.heading": {
+        "where": "Privacy Policy page (the CRC text, shown on CRC and Brothers Lazaroff), section “Data Retention”, section heading",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "dataRetention.retainPersonalData": {
+        "where": "Privacy Policy page (the CRC text, shown on CRC and Brothers Lazaroff), section “Data Retention”, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 271,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "rights.heading": {
+        "where": "Privacy Policy page (the CRC text, shown on CRC and Brothers Lazaroff), section “Your Rights”, section heading",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "rights.haveRight": {
+        "where": "Privacy Policy page (the CRC text, shown on CRC and Brothers Lazaroff), section “Your Rights”, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "rights.accessPersonalInformation": {
+        "where": "Privacy Policy page (the CRC text, shown on CRC and Brothers Lazaroff), section “Your Rights”, list item",
+        "who": "anyone (public page)",
+        "maxLength": 79,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "rights.requestCorrectionInaccurate": {
+        "where": "Privacy Policy page (the CRC text, shown on CRC and Brothers Lazaroff), section “Your Rights”, list item",
+        "who": "anyone (public page)",
+        "maxLength": 71,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "rights.requestDeletionAccount": {
+        "where": "Privacy Policy page (the CRC text, shown on CRC and Brothers Lazaroff), section “Your Rights”, list item",
+        "who": "anyone (public page)",
+        "maxLength": 66,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "rights.optOutSms": {
+        "where": "Privacy Policy page (the CRC text, shown on CRC and Brothers Lazaroff), section “Your Rights”, list item",
+        "who": "anyone (public page)",
+        "maxLength": 64,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "rights.optOutEmail": {
+        "where": "Privacy Policy page (the CRC text, shown on CRC and Brothers Lazaroff), section “Your Rights”, list item",
+        "who": "anyone (public page)",
+        "maxLength": 68,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "childrensPrivacy.heading": {
+        "where": "Privacy Policy page (the CRC text, shown on CRC and Brothers Lazaroff), section “Children's Privacy”, section heading",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "childrensPrivacy.serviceIntendedUse": {
+        "where": "Privacy Policy page (the CRC text, shown on CRC and Brothers Lazaroff), section “Children's Privacy”, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 223,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "changesPolicy.heading": {
+        "where": "Privacy Policy page (the CRC text, shown on CRC and Brothers Lazaroff), section “Changes to This Policy”, section heading",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "changesPolicy.updatePrivacyPolicy": {
+        "where": "Privacy Policy page (the CRC text, shown on CRC and Brothers Lazaroff), section “Changes to This Policy”, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 274,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "contact.heading": {
+        "where": "Privacy Policy page (the CRC text, shown on CRC and Brothers Lazaroff), section “Contact Us”, section heading",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "contact.haveQuestionsAbout": {
+        "where": "Privacy Policy page (the CRC text, shown on CRC and Brothers Lazaroff), section “Contact Us”, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 170,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {link} = the contact email or web address, as a link (not translated)."
+    }
+}

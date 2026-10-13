@@ -5,15 +5,27 @@ import { useAuth } from "@/lib/auth-context"
 import { fetchTenantPeople, updateUserRole, type TenantPerson } from "@/lib/users-firebase"
 import { UserRow } from "@/components/admin/UserRow"
 import { useOrg } from "@/lib/org/org-context"
-import { ROLE_LABELS } from "@/lib/roles"
 import type { TenantRole } from "@/lib/org/membership-types"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { Loader2, Search, FilterX } from "lucide-react"
 import { Spinner } from "@/components/ui/spinner"
+import { useT } from "@/i18n/client"
+import { useRoleLabel } from "@/components/admin/people/role-labels"
 
 type FilterRole = 'all' | 'pending' | 'member' | 'musician' | 'band_leader' | 'admin' | 'denied'
+
+/** Filter tab labels (literal keys, so the catalogue test sees them). */
+const FILTER_LABEL_KEYS = {
+    all: "admin-people.filterAll",
+    pending: "admin-people.filterRequests",
+    member: "admin-people.filterMember",
+    musician: "admin-people.filterMusician",
+    band_leader: "admin-people.filterLeader",
+    admin: "admin-people.filterAdmin",
+    denied: "admin-people.roleDenied",
+} as const satisfies Record<FilterRole, string>
 
 /** Re-read the list this often while the page is visible. */
 const REFRESH_MS = 30_000
@@ -26,6 +38,8 @@ const REFRESH_MS = 30_000
 export function PeopleSection() {
     const { user, role: myRole, isAdmin, isBandLeader } = useAuth()
     const org = useOrg()
+    const t = useT()
+    const roleLabel = useRoleLabel()
     const [users, setUsers] = useState<TenantPerson[]>([])
     const [usersLoading, setUsersLoading] = useState(true)
     const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set())
@@ -110,13 +124,14 @@ export function PeopleSection() {
                     failed++
                 }
             }
-            const labels: Record<string, string> = { member: 'Member', musician: 'Musician', band_leader: 'Band Leader' }
+            // The bulk toast names member/musician/band leader; any other role shows as stored.
+            const label = role === 'member' || role === 'musician' || role === 'band_leader' ? roleLabel(role) : role
             if (failed === 0) {
-                toast.success(`Updated ${success} user${success !== 1 ? 's' : ''} to ${labels[role] || role}`)
+                toast.success(t("admin-people.bulkUpdated", { count: success, role: label }))
             } else if (success > 0) {
-                toast.warning(`Updated ${success} user${success !== 1 ? 's' : ''}, but ${failed} failed`)
+                toast.warning(t("admin-people.bulkPartial", { count: success, failed }))
             } else {
-                toast.error(`Failed to update ${failed} user${failed !== 1 ? 's' : ''}`)
+                toast.error(t("admin-people.bulkFailed", { count: failed }))
             }
             clearSelection()
             void reload()
@@ -133,7 +148,7 @@ export function PeopleSection() {
                     {pendingCount > 0 && (
                         <span className="text-[10px] font-bold bg-amber-500/20 text-amber-500 px-1.5 py-0.5 rounded-full flex items-center gap-1">
                             <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-                            {pendingCount} pending requests
+                            {t("admin-people.pendingRequests", { count: pendingCount })}
                         </span>
                     )}
                 </div>
@@ -141,11 +156,11 @@ export function PeopleSection() {
                 {/* Bulk Actions Header (visible when items selected) */}
                 {selectedUsers.size > 0 && (
                     <div className="flex items-center gap-2 bg-brand/10 border border-brand/20 px-3 py-1.5 rounded-lg animate-in fade-in slide-in-from-top-2">
-                        <span className="text-xs font-semibold text-brand mr-2">
-                            {selectedUsers.size} Selected
+                        <span className="text-xs font-semibold text-brand me-2">
+                            {t("admin-people.selectedCount", { count: selectedUsers.size })}
                         </span>
 
-                        <div className="flex items-center gap-1.5 border-l border-brand/20 pl-3">
+                        <div className="flex items-center gap-1.5 border-s border-brand/20 ps-3">
                             <Button
                                 variant="outline"
                                 size="sm"
@@ -154,7 +169,7 @@ export function PeopleSection() {
                                 className="text-xs bg-background/50 hover:bg-background text-foreground"
                             >
                                 {bulkLoading ? <Spinner size="sm" /> : null}
-                                Make Member
+                                {t("admin-people.makeMember")}
                             </Button>
                             <Button
                                 variant="outline"
@@ -164,7 +179,7 @@ export function PeopleSection() {
                                 className="text-xs bg-success/10 hover:bg-success/20 text-success border-success/20"
                             >
                                 {bulkLoading ? <Spinner size="sm" /> : null}
-                                Make Musician
+                                {t("admin-people.makeMusician")}
                             </Button>
                             {isAdmin && (
                                 <Button
@@ -175,7 +190,7 @@ export function PeopleSection() {
                                     className="text-xs bg-brand/10 hover:bg-brand/20 text-foreground border-brand/20"
                                 >
                                     {bulkLoading ? <Spinner size="sm" /> : null}
-                                    Make Band Leader
+                                    {t("admin-people.makeBandLeader")}
                                 </Button>
                             )}
                             <Button
@@ -183,15 +198,15 @@ export function PeopleSection() {
                                 size="sm"
                                 onClick={() => bulkSetRole('denied')}
                                 disabled={bulkLoading}
-                                className="text-xs bg-destructive/10 hover:bg-destructive/20 text-destructive border-destructive/20 ml-2"
-                                title="Set role to denied (removes access)"
-                                aria-label="Deny access — set role to denied"
+                                className="text-xs bg-destructive/10 hover:bg-destructive/20 text-destructive border-destructive/20 ms-2"
+                                title={t("admin-people.denyAccessTitle")}
+                                aria-label={t("admin-people.denyAccessLabel")}
                             >
                                 {bulkLoading ? <Spinner size="sm" /> : null}
-                                Deny Access
+                                {t("admin-people.denyAccess")}
                             </Button>
-                            <Button variant="ghost" size="sm" onClick={clearSelection} className="text-xs text-muted-foreground hover:text-foreground ml-2">
-                                Cancel
+                            <Button variant="ghost" size="sm" onClick={clearSelection} className="text-xs text-muted-foreground hover:text-foreground ms-2">
+                                {t("admin-people.cancel")}
                             </Button>
                         </div>
                     </div>
@@ -201,11 +216,11 @@ export function PeopleSection() {
             {/* Filters Toolbar */}
             <div className="flex items-center gap-3 p-1">
                 <div className="relative flex-1 max-w-xs">
-                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Search className="absolute start-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <input
                         type="text"
-                        placeholder="Search users..."
-                        className="w-full bg-card border border-border rounded-lg pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring transition-shadow min-h-11"
+                        placeholder={t("admin-people.searchPlaceholder")}
+                        className="w-full bg-card border border-border rounded-lg ps-9 pe-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring transition-shadow min-h-11"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
@@ -225,10 +240,7 @@ export function PeopleSection() {
                                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                             )}
                         >
-                            {role === 'band_leader' ? 'Leader'
-                                : role === 'pending' ? 'Requests'
-                                : role === 'denied' ? ROLE_LABELS.denied
-                                : role.charAt(0).toUpperCase() + role.slice(1)}
+                            {t(FILTER_LABEL_KEYS[role])}
                         </Button>
                     ))}
                 </div>
@@ -239,8 +251,8 @@ export function PeopleSection() {
                         size="icon"
                         onClick={() => { setSearchQuery(""); setRoleFilter('all') }}
                         className="text-muted-foreground hover:text-foreground flex-shrink-0"
-                        title="Clear filters"
-                        aria-label="Clear filters"
+                        title={t("admin-people.clearFilters")}
+                        aria-label={t("admin-people.clearFilters")}
                     >
                         <FilterX className="w-4 h-4" />
                     </Button>
@@ -262,10 +274,10 @@ export function PeopleSection() {
                                 className="h-5 w-5 rounded border-border accent-brand shrink-0 cursor-pointer"
                             />
                         </label>
-                        <div className="min-w-0 flex-1 grid grid-cols-12 gap-4 items-center pl-2">
-                            <div className="col-span-12 sm:col-span-5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">User</div>
-                            <div className="hidden sm:block col-span-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Attributes</div>
-                            <div className="hidden sm:block col-span-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right pr-2">Role Management</div>
+                        <div className="min-w-0 flex-1 grid grid-cols-12 gap-4 items-center ps-2">
+                            <div className="col-span-12 sm:col-span-5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("admin-people.columnUser")}</div>
+                            <div className="hidden sm:block col-span-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("admin-people.columnAttributes")}</div>
+                            <div className="hidden sm:block col-span-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-end pe-2">{t("admin-people.columnRoleManagement")}</div>
                         </div>
                     </div>
 
@@ -273,7 +285,7 @@ export function PeopleSection() {
                     <div className="max-h-[600px] overflow-y-auto">
                         {filteredUsers.length === 0 ? (
                             <div className="p-8 text-center text-muted-foreground text-sm">
-                                {users.length === 0 ? "No registered users yet." : "No users match your current filters."}
+                                {users.length === 0 ? t("admin-people.emptyNoUsers") : t("admin-people.emptyNoMatches")}
                             </div>
                         ) : (
                             filteredUsers.map((u) => (

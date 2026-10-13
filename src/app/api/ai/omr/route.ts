@@ -1,3 +1,4 @@
+import { getT } from "@/i18n/server"
 import { NextResponse } from "next/server";
 import { geminiProVision } from "@/lib/gemini";
 import { DriveClient } from "@/lib/google-drive";
@@ -14,7 +15,10 @@ export const POST = createApiHandler(
         if (limited) return limited
 
         const { fileId, mimeType } = await ctx.req.json();
-        if (!fileId) return NextResponse.json({ error: "Missing fileId" }, { status: 400 });
+        if (!fileId) {
+            const t = await getT()
+            return NextResponse.json({ error: t("api-ai.missingFileId") }, { status: 400 });
+        }
 
         // Fetch File from Drive (Use centralized Client)
         const driveClient = new DriveClient();

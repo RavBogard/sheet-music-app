@@ -31,6 +31,7 @@ export async function GET(
         const { token } = await context.params
 
         if (!token || token.length < 10) {
+            // i18n-ignore: read by calendar apps subscribing to the feed, never shown in the browser UI
             return NextResponse.json({ error: 'Invalid token' }, { status: 400 })
         }
 
@@ -51,6 +52,7 @@ export async function GET(
             .get()
 
         if (usersSnap.empty) {
+            // i18n-ignore: read by calendar apps subscribing to the feed, never shown in the browser UI
             return NextResponse.json({ error: 'Invalid feed token' }, { status: 404 })
         }
 
@@ -137,6 +139,7 @@ export async function GET(
         })
     } catch (error) {
         logger.error('[Calendar Feed] Error generating iCal:', error)
+        // i18n-ignore: read by calendar apps subscribing to the feed, never shown in the browser UI
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
     }
 }

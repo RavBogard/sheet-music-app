@@ -1,0 +1,223 @@
+{
+    "wizardStepBridge": {
+        "where": "Manage > Sound System > setup wizard: step tab label",
+        "who": "admins (sound setup)",
+        "maxLength": 12,
+        "context": "The 'bridge' is the small program on the production PC that links iPads to the mixer"
+    },
+    "wizardStepX32": {
+        "where": "Manage > Sound System > setup wizard: step tab label",
+        "who": "admins (sound setup)",
+        "maxLength": 12,
+        "context": "Behringer X32 is the mixing console model; usually kept as is",
+        "translate": false
+    },
+    "wizardStepBuses": {
+        "where": "Manage > Sound System > setup wizard: step tab label",
+        "who": "admins (sound setup)",
+        "maxLength": 12,
+        "context": "Mixer output buses used as monitor (wedge) sends"
+    },
+    "wizardStepBridgeDescription": {
+        "where": "Manage > Sound System > setup wizard: heading of step 1",
+        "who": "admins (sound setup)",
+        "maxLength": 50
+    },
+    "wizardStepX32Description": {
+        "where": "Manage > Sound System > setup wizard: heading of step 2",
+        "who": "admins (sound setup)",
+        "maxLength": 50,
+        "context": "Behringer X32 is a product name"
+    },
+    "wizardStepBusesDescription": {
+        "where": "Manage > Sound System > setup wizard: heading of step 3",
+        "who": "admins (sound setup)",
+        "maxLength": 50,
+        "context": "Monitors here are stage wedges"
+    },
+    "wizardBridgeHint": {
+        "where": "Manage > Sound System > setup wizard step 1: help text above the address field",
+        "who": "admins (sound setup)",
+        "maxLength": 120
+    },
+    "wizardX32Hint": {
+        "where": "Manage > Sound System > setup wizard step 2: help text above the IP field",
+        "who": "admins (sound setup)",
+        "maxLength": 120
+    },
+    "autoDetectedPlaceholder": {
+        "where": "Manage > Sound System: placeholder in the X32 IP address field (wizard and settings)",
+        "who": "admins (sound setup)",
+        "maxLength": 40
+    },
+    "wizardBusesHint": {
+        "where": "Manage > Sound System > setup wizard step 3: help text above the bus list",
+        "who": "admins (sound setup)",
+        "maxLength": 100
+    },
+    "wizardBack": {
+        "where": "Manage > Sound System > setup wizard: previous-step button",
+        "who": "admins (sound setup)",
+        "maxLength": 12
+    },
+    "wizardNext": {
+        "where": "Manage > Sound System > setup wizard: next-step button",
+        "who": "admins (sound setup)",
+        "maxLength": 12
+    },
+    "wizardFinish": {
+        "where": "Manage > Sound System > setup wizard: final button",
+        "who": "admins (sound setup)",
+        "maxLength": 20
+    },
+    "notSignedIn": {
+        "where": "Manage > Sound System: error toast when generating a setup code while signed out",
+        "who": "admins (sound setup)",
+        "maxLength": 40
+    },
+    "setupCodeFailed": {
+        "where": "Manage > Sound System: error toast when the bridge setup code can't be created",
+        "who": "admins (sound setup)",
+        "maxLength": 50
+    },
+    "setupCodeGenerated": {
+        "where": "Manage > Sound System: toast after a bridge setup code is created",
+        "who": "admins (sound setup)",
+        "maxLength": 40
+    },
+    "configSaved": {
+        "where": "Manage > Sound System: toast after saving the mixer settings",
+        "who": "admins (sound setup)",
+        "maxLength": 40,
+        "context": "Monitor = stage wedge monitors"
+    },
+    "configSaveFailed": {
+        "where": "Manage > Sound System: error toast when saving fails",
+        "who": "admins (sound setup)",
+        "maxLength": 50
+    },
+    "title": {
+        "where": "Manage > Sound System: section heading (CSS uppercase) and its error-fallback label",
+        "who": "admins (sound setup)",
+        "maxLength": 25
+    },
+    "saved": {
+        "where": "Manage > Sound System: Save button right after saving",
+        "who": "admins (sound setup)",
+        "maxLength": 15
+    },
+    "saveSettings": {
+        "where": "Manage > Sound System: Save button",
+        "who": "admins (sound setup)",
+        "maxLength": 20
+    },
+    "bridgeInstallTitle": {
+        "where": "Manage > Sound System: card heading",
+        "who": "admins (sound setup)",
+        "maxLength": 30,
+        "context": "The bridge is a small program on the production PC that links iPads to the mixer"
+    },
+    "bridgeInstallHint": {
+        "where": "Manage > Sound System > Bridge Installation: help paragraph",
+        "who": "admins (sound setup)",
+        "maxLength": 220,
+        "context": "X32 and Firebase Console are product names"
+    },
+    "generateSetupCode": {
+        "where": "Manage > Sound System > Bridge Installation: button",
+        "who": "admins (sound setup)",
+        "maxLength": 25
+    },
+    "copySetupCode": {
+        "where": "Manage > Sound System: accessible name of the copy icon button next to the code",
+        "who": "admins (sound setup)",
+        "maxLength": 30
+    },
+    "copied": {
+        "where": "Manage > Sound System: toast after copying the setup code",
+        "who": "admins (sound setup)",
+        "maxLength": 15
+    },
+    "setupCodeExpires": {
+        "where": "Manage > Sound System: small text next to the setup code",
+        "who": "admins (sound setup)",
+        "maxLength": 25,
+        "context": "{minutes} is a whole number of minutes"
+    },
+    "bridgeServerTitle": {
+        "where": "Manage > Sound System: card heading for addresses",
+        "who": "admins (sound setup)",
+        "maxLength": 30
+    },
+    "bridgeAddress": {
+        "where": "Manage > Sound System: field label",
+        "who": "admins (sound setup)",
+        "maxLength": 25
+    },
+    "bridgeAddressHint": {
+        "where": "Manage > Sound System: help line under the Bridge Address field",
+        "who": "admins (sound setup)",
+        "maxLength": 60
+    },
+    "bridgeOnline": {
+        "where": "Manage > Sound System: status banner (green)",
+        "who": "admins (sound setup)",
+        "maxLength": 20
+    },
+    "bridgeOffline": {
+        "where": "Manage > Sound System: status banner (red)",
+        "who": "admins (sound setup)",
+        "maxLength": 20
+    },
+    "bridgeX32": {
+        "where": "Manage > Sound System: status banner detail, whether the mixer is connected",
+        "who": "admins (sound setup)",
+        "maxLength": 12,
+        "context": "{mark} is ✓ or ✗; X32 is the mixer model"
+    },
+    "bridgeClients": {
+        "where": "Manage > Sound System: status banner detail, how many iPads are connected to the bridge",
+        "who": "admins (sound setup)",
+        "maxLength": 15,
+        "context": "{count} is a number of connected devices"
+    },
+    "bridgeVersion": {
+        "where": "Manage > Sound System: status banner detail, bridge software version",
+        "who": "admins (sound setup)",
+        "maxLength": 12,
+        "context": "{version} is a version number like 1.4.2; 'v' abbreviates version"
+    },
+    "x32Address": {
+        "where": "Manage > Sound System: field label",
+        "who": "admins (sound setup)",
+        "maxLength": 25
+    },
+    "x32AddressHint": {
+        "where": "Manage > Sound System: help line under the X32 IP Address field",
+        "who": "admins (sound setup)",
+        "maxLength": 100
+    },
+    "oscPort": {
+        "where": "Manage > Sound System: field label (network port of the mixer)",
+        "who": "admins (sound setup)",
+        "maxLength": 15,
+        "context": "OSC is a protocol name"
+    },
+    "monitorBuses": {
+        "where": "Manage > Sound System: field label",
+        "who": "admins (sound setup)",
+        "maxLength": 25,
+        "context": "Mixer buses that feed the stage wedge monitors"
+    },
+    "busCount": {
+        "where": "Manage > Sound System: small badge next to Monitor Buses",
+        "who": "admins (sound setup)",
+        "maxLength": 12,
+        "context": "{count} is a number. English uses one form for all counts; Hebrew may add plural variants (busCount_one/_two/_other)."
+    },
+    "monitorBusesHint": {
+        "where": "Manage > Sound System: help line under the Monitor Buses field",
+        "who": "admins (sound setup)",
+        "maxLength": 80
+    }
+}

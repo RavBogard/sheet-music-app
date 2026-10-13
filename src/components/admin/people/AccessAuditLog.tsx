@@ -9,6 +9,9 @@ import { cn } from "@/lib/utils"
 import { logger } from "@/lib/logger"
 import { SectionErrorBoundary } from "@/components/ui/SectionErrorBoundary"
 import { useOrg } from "@/lib/org/org-context"
+import { useFormat, useT } from "@/i18n/client"
+import { DirectionalIcon } from "@/components/i18n/DirectionalIcon"
+import { interpolateNodes } from "@/components/admin/interpolate-nodes"
 
 interface AuditLog {
     id: string
@@ -25,6 +28,8 @@ export function AccessAuditLog() {
     const [logs, setLogs] = useState<AuditLog[]>([])
     const [loading, setLoading] = useState(true)
     const org = useOrg()
+    const t = useT()
+    const fmt = useFormat()
 
     // Firestore SDK is lazy-loaded; resolve the query in an effect.
     // useSafeFirestoreSync tolerates `q === null` and renders loading:false.
@@ -67,10 +72,10 @@ export function AccessAuditLog() {
     )
 
     return (
-        <SectionErrorBoundary label="Access Audit Log">
+        <SectionErrorBoundary label={t("admin-people.auditLogLabel")}>
         <div className="bg-card border border-border rounded-xl p-5 space-y-4">
             {logs.length === 0 ? (
-                <p className="text-sm text-muted-foreground p-4 text-center bg-muted/20 rounded-lg">No audit records found.</p>
+                <p className="text-sm text-muted-foreground p-4 text-center bg-muted/20 rounded-lg">{t("admin-people.auditEmpty")}</p>
             ) : (
                 <div className="space-y-3">
                     {logs.map(log => {
@@ -83,17 +88,20 @@ export function AccessAuditLog() {
                                 </div>
                                 <div className="flex-1 space-y-1">
                                     <p className="text-foreground">
-                                        <span className="font-semibold">{(log.actorEmail || log.actorUid || '').split('@')[0]}</span> changed role for user <code className="text-xs bg-muted px-1 py-0.5 rounded">{(log.targetUserId || '').slice(-6)}</code>
+                                        {interpolateNodes(t("admin-people.auditChangedRole"), {
+                                            actor: <span className="font-semibold">{(log.actorEmail || log.actorUid || '').split('@')[0]}</span>,
+                                            target: <code className="text-xs bg-muted px-1 py-0.5 rounded">{(log.targetUserId || '').slice(-6)}</code>,
+                                        })}
                                     </p>
                                     <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground">
                                         <span className="line-through opacity-70">{log.previousRole ?? '—'}</span>
-                                        <ArrowRight className="w-3 h-3" />
+                                        <DirectionalIcon icon={ArrowRight} className="w-3 h-3" />
                                         <span className={cn("font-medium", isPromotion ? "text-success" : "text-amber-500")}>
                                             {log.newRole ?? '—'}
                                         </span>
                                     </div>
                                     <p className="text-[10px] text-muted-foreground/60 uppercase">
-                                        {log.timestamp?.toDate ? log.timestamp.toDate().toLocaleString() : 'Just now'}
+                                        {log.timestamp?.toDate ? fmt.dateTime(log.timestamp) : t("admin-people.auditJustNow")}
                                     </p>
                                 </div>
                             </div>

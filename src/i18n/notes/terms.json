@@ -1,0 +1,236 @@
+{
+    "eyebrow": {
+        "where": "Terms & Conditions page (the CRC text, shown on CRC and Brothers Lazaroff), page header / introduction, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "title": {
+        "where": "Terms & Conditions page (the CRC text, shown on CRC and Brothers Lazaroff), page header / introduction, page title",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "lastUpdated": {
+        "where": "Terms & Conditions page (the CRC text, shown on CRC and Brothers Lazaroff), page header / introduction, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 50,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "intro": {
+        "where": "Terms & Conditions page (the CRC text, shown on CRC and Brothers Lazaroff), page header / introduction, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 276,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "acceptanceTerms.heading": {
+        "where": "Terms & Conditions page (the CRC text, shown on CRC and Brothers Lazaroff), section “1. Acceptance of Terms”, section heading",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "acceptanceTerms.accessingUsingCrc": {
+        "where": "Terms & Conditions page (the CRC text, shown on CRC and Brothers Lazaroff), section “1. Acceptance of Terms”, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 242,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "descriptionService.heading": {
+        "where": "Terms & Conditions page (the CRC text, shown on CRC and Brothers Lazaroff), section “2. Description of Service”, section heading",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "descriptionService.crcMusicMusician": {
+        "where": "Terms & Conditions page (the CRC text, shown on CRC and Brothers Lazaroff), section “2. Description of Service”, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 141,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "descriptionService.setlistCreationManagement": {
+        "where": "Terms & Conditions page (the CRC text, shown on CRC and Brothers Lazaroff), section “2. Description of Service”, list item",
+        "who": "anyone (public page)",
+        "maxLength": 50,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "descriptionService.sheetMusicLibrary": {
+        "where": "Terms & Conditions page (the CRC text, shown on CRC and Brothers Lazaroff), section “2. Description of Service”, list item",
+        "who": "anyone (public page)",
+        "maxLength": 60,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "descriptionService.musicianSchedulingAssignment": {
+        "where": "Terms & Conditions page (the CRC text, shown on CRC and Brothers Lazaroff), section “2. Description of Service”, list item",
+        "who": "anyone (public page)",
+        "maxLength": 55,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "descriptionService.notificationServicesEmail": {
+        "where": "Terms & Conditions page (the CRC text, shown on CRC and Brothers Lazaroff), section “2. Description of Service”, list item",
+        "who": "anyone (public page)",
+        "maxLength": 64,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "descriptionService.calendarSynchronization": {
+        "where": "Terms & Conditions page (the CRC text, shown on CRC and Brothers Lazaroff), section “2. Description of Service”, list item",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "userAccounts.heading": {
+        "where": "Terms & Conditions page (the CRC text, shown on CRC and Brothers Lazaroff), section “3. User Accounts”, section heading",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "userAccounts.responsibleMaintainingConfidentiality": {
+        "where": "Terms & Conditions page (the CRC text, shown on CRC and Brothers Lazaroff), section “3. User Accounts”, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 317,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "smsMessagingTerms.heading": {
+        "where": "Terms & Conditions page (the CRC text, shown on CRC and Brothers Lazaroff), section “4. SMS Messaging Terms”, section heading",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "smsMessagingTerms.optingSmsNotifications": {
+        "where": "Terms & Conditions page (the CRC text, shown on CRC and Brothers Lazaroff), section “4. SMS Messaging Terms”, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 109,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "smsMessagingTerms.receiveTextMessages": {
+        "where": "Terms & Conditions page (the CRC text, shown on CRC and Brothers Lazaroff), section “4. SMS Messaging Terms”, list item",
+        "who": "anyone (public page)",
+        "maxLength": 108,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "smsMessagingTerms.messageTypesInclude": {
+        "where": "Terms & Conditions page (the CRC text, shown on CRC and Brothers Lazaroff), section “4. SMS Messaging Terms”, list item",
+        "who": "anyone (public page)",
+        "maxLength": 148,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "smsMessagingTerms.messageFrequencyVaries": {
+        "where": "Terms & Conditions page (the CRC text, shown on CRC and Brothers Lazaroff), section “4. SMS Messaging Terms”, list item",
+        "who": "anyone (public page)",
+        "maxLength": 93,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "smsMessagingTerms.messageDataRates": {
+        "where": "Terms & Conditions page (the CRC text, shown on CRC and Brothers Lazaroff), section “4. SMS Messaging Terms”, list item",
+        "who": "anyone (public page)",
+        "maxLength": 104,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "smsMessagingTerms.optOutSms": {
+        "where": "Terms & Conditions page (the CRC text, shown on CRC and Brothers Lazaroff), section “4. SMS Messaging Terms”, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 324,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {term1} = the SMS keyword in bold (kept in English); {term2} = the SMS keyword in bold (kept in English); {link} = the contact email or web address, as a link (not translated)."
+    },
+    "smsMessagingTerms.mobileInformationShared": {
+        "where": "Terms & Conditions page (the CRC text, shown on CRC and Brothers Lazaroff), section “4. SMS Messaging Terms”, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 152,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "acceptableUse.heading": {
+        "where": "Terms & Conditions page (the CRC text, shown on CRC and Brothers Lazaroff), section “5. Acceptable Use”, section heading",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "acceptableUse.agree": {
+        "where": "Terms & Conditions page (the CRC text, shown on CRC and Brothers Lazaroff), section “5. Acceptable Use”, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "acceptableUse.useServiceUnlawful": {
+        "where": "Terms & Conditions page (the CRC text, shown on CRC and Brothers Lazaroff), section “5. Acceptable Use”, list item",
+        "who": "anyone (public page)",
+        "maxLength": 64,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "acceptableUse.shareAccountCredentials": {
+        "where": "Terms & Conditions page (the CRC text, shown on CRC and Brothers Lazaroff), section “5. Acceptable Use”, list item",
+        "who": "anyone (public page)",
+        "maxLength": 68,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "acceptableUse.attemptAccessOther": {
+        "where": "Terms & Conditions page (the CRC text, shown on CRC and Brothers Lazaroff), section “5. Acceptable Use”, list item",
+        "who": "anyone (public page)",
+        "maxLength": 92,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "acceptableUse.uploadMaliciousContent": {
+        "where": "Terms & Conditions page (the CRC text, shown on CRC and Brothers Lazaroff), section “5. Acceptable Use”, list item",
+        "who": "anyone (public page)",
+        "maxLength": 106,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "content.heading": {
+        "where": "Terms & Conditions page (the CRC text, shown on CRC and Brothers Lazaroff), section “6. Content”, section heading",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "content.sheetMusicOther": {
+        "where": "Terms & Conditions page (the CRC text, shown on CRC and Brothers Lazaroff), section “6. Content”, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 258,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "disclaimerWarranties.heading": {
+        "where": "Terms & Conditions page (the CRC text, shown on CRC and Brothers Lazaroff), section “7. Disclaimer of Warranties”, section heading",
+        "who": "anyone (public page)",
+        "maxLength": 44,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "disclaimerWarranties.serviceProvidedWithout": {
+        "where": "Terms & Conditions page (the CRC text, shown on CRC and Brothers Lazaroff), section “7. Disclaimer of Warranties”, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 282,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "limitationLiability.heading": {
+        "where": "Terms & Conditions page (the CRC text, shown on CRC and Brothers Lazaroff), section “8. Limitation of Liability”, section heading",
+        "who": "anyone (public page)",
+        "maxLength": 42,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "limitationLiability.crcShallLiable": {
+        "where": "Terms & Conditions page (the CRC text, shown on CRC and Brothers Lazaroff), section “8. Limitation of Liability”, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 216,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "changesTerms.heading": {
+        "where": "Terms & Conditions page (the CRC text, shown on CRC and Brothers Lazaroff), section “9. Changes to Terms”, section heading",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "changesTerms.reserveRightModify": {
+        "where": "Terms & Conditions page (the CRC text, shown on CRC and Brothers Lazaroff), section “9. Changes to Terms”, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 223,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "contact.heading": {
+        "where": "Terms & Conditions page (the CRC text, shown on CRC and Brothers Lazaroff), section “10. Contact”, section heading",
+        "who": "anyone (public page)",
+        "maxLength": 40,
+        "context": "Legal text — translate precisely, formal register."
+    },
+    "contact.questionsAboutThese": {
+        "where": "Terms & Conditions page (the CRC text, shown on CRC and Brothers Lazaroff), section “10. Contact”, paragraph",
+        "who": "anyone (public page)",
+        "maxLength": 127,
+        "context": "Legal text — translate precisely, formal register. Keep the placeholders: {link} = the contact email or web address, as a link (not translated)."
+    }
+}

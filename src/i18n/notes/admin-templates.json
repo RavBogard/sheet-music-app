@@ -1,0 +1,87 @@
+{
+    "selectFirst": {
+        "where": "Manage > Templates: error toast when Import from Setlist is pressed with no template chosen",
+        "who": "admins",
+        "maxLength": 40
+    },
+    "untitledSetlist": {
+        "where": "Manage > Templates > Import from Setlist picker: name shown for a setlist with no name",
+        "who": "admins",
+        "maxLength": 20
+    },
+    "fetchSetlistsFailed": {
+        "where": "Manage > Templates: error toast when the setlist picker can't load",
+        "who": "admins",
+        "maxLength": 40
+    },
+    "loadTracksFailed": {
+        "where": "Manage > Templates: error toast when the chosen setlist's songs can't be read",
+        "who": "admins",
+        "maxLength": 50
+    },
+    "imported": {
+        "where": "Manage > Templates: toast after importing a setlist into a template",
+        "who": "admins",
+        "maxLength": 100,
+        "context": "{count} is a number of template slots (rows), {setlistName} is the setlist's name. English uses 'slots' for every count; Hebrew may add plural variants (imported_one/_two/_other)."
+    },
+    "loading": {
+        "where": "Manage > Templates: Import button while the setlist list loads",
+        "who": "admins",
+        "maxLength": 20
+    },
+    "importFromSetlist": {
+        "where": "Manage > Templates: button above the editor, and the picker dialog title",
+        "who": "admins",
+        "maxLength": 25
+    },
+    "regularServices": {
+        "where": "Manage > Templates: sidebar group heading (CSS uppercase)",
+        "who": "admins",
+        "maxLength": 25,
+        "context": "Weekly services, as opposed to holidays"
+    },
+    "holidayServices": {
+        "where": "Manage > Templates: sidebar group heading (CSS uppercase)",
+        "who": "admins",
+        "maxLength": 25
+    },
+    "selectToEdit": {
+        "where": "Manage > Templates: empty editor area before a template is chosen",
+        "who": "admins",
+        "maxLength": 50
+    },
+    "importPickerHint": {
+        "where": "Manage > Templates > Import from Setlist dialog: instruction",
+        "who": "admins",
+        "maxLength": 140,
+        "context": "{templateLabel} is the service template's name (e.g. 'Shabbat Morning'); keep the quotation marks around it in your language's style"
+    },
+    "noSetlists": {
+        "where": "Manage > Templates > Import from Setlist dialog: empty state",
+        "who": "admins",
+        "maxLength": 40
+    },
+    "trackCount": {
+        "where": "Manage > Templates > Import from Setlist dialog: under each setlist's name, optionally followed by ' · <date>'",
+        "who": "admins",
+        "maxLength": 20,
+        "context": "{count} is a number of songs. English uses one form for all counts; Hebrew may add plural variants."
+    },
+    "cancel": {
+        "where": "Manage > Templates > Import from Setlist dialog: close button",
+        "who": "admins",
+        "maxLength": 15
+    },
+    "customBadge": {
+        "where": "Manage > Templates: small badge on a template that was edited from the default",
+        "who": "admins",
+        "maxLength": 10
+    },
+    "slotCount": {
+        "where": "Manage > Templates: sidebar line under each template's name",
+        "who": "admins",
+        "maxLength": 20,
+        "context": "{count} is a number of rows in the template. English uses one form for all counts; Hebrew may add plural variants."
+    }
+}
