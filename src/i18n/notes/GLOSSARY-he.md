@@ -51,6 +51,26 @@ admins who manage people and the library.
 | section (library collection: core / supplemental / uploads) | אוסף | אוספים | "קטגוריה" is for tags. |
 | tag | תגית | תגיות | Standard. |
 | Changelog | יומן שינויים | — | Heading only; changelog entries stay English. |
+| liturgy rows (fixed prayer-text rows in a setlist) | שורות נוסח | נוסח התפילה | "תפילה" is already "service". |
+| rabbi (setlist field) | רב/ה | chip: הרב/ה {name} | Gender-neutral slash form. |
+| chord / chord shapes | אקורד / תנוחות | — | Guitarists' terms; chord symbols stay Latin. |
+| semitone; flat / sharp | חצי טון; במול / דיאז | חצאי טונים | Standard. |
+| concert pitch | סולם קונצרט | — | One term everywhere. |
+| backing track / recording | רצועת ליווי / הקלטה | — | — |
+| bind a chart to a row | חיבור תווים | לחבר תווים | — |
+| clone (setlist) | שכפול | — | "יצירת עותק" only where English says "duplicate". |
+| archive / restore | העברה לארכיון / שחזור | — | Standard. |
+| import | ייבוא | — | Standard. |
+| mix bus (sound) | יציאה | יציאות מוניטור | "באס" collides with bass. |
+| sound engineer | טכנאי/ת סאונד | — | Role, slash form. |
+| bridge (program on the sound PC) | גשר | — | — |
+| push notifications | התראות דחיפה | toggle: דחיפה | One term in UI and legal pages. |
+| email | אימייל (UI) / דוא״ל (legal pages) | — | Register difference, deliberate. |
+| AI | AI | importer title: בינה מלאכותית | Short form common in Israeli software. |
+| opt in / opt out (SMS) | הצטרפות / ביטול ההצטרפות | — | Legal pages. |
+| Terms & Conditions / Privacy Policy / Accessibility Statement | תנאי שימוש / מדיניות פרטיות / הצהרת נגישות | — | Standard Israeli titles; one form everywhere. |
+| Musician Profile (settings section) | פרופיל נגינה | — | Same words in the settings page and the legal "Settings → …" paths. |
+| Friday evening / Shabbat morning (service-type options) | ערב שבת / שבת בבוקר | — | UI options, not prayer text; Nava may prefer "קבלת שבת". |
 
 ## Conventions
 
