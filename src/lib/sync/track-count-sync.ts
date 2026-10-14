@@ -9,6 +9,7 @@ import {
 } from 'firebase/firestore'
 
 import { logger } from '@/lib/logger'
+import { coerceOrgId } from '@/lib/org/registry'
 
 /**
  * Cycle-9 Lane B — trackCount drift-producer fix.
@@ -47,12 +48,20 @@ import { logger } from '@/lib/logger'
 export async function reconcileSetlistTrackCount(
     fsDb: Firestore,
     setlistId: string,
+    orgId?: string,
 ): Promise<void> {
     if (!setlistId) return
     try {
+        // Phase 9: listing tracks is tenant-scoped, and a rule cannot see a
+        // setlistId filter — only an orgId one. The caller's tenant when it
+        // knows it, otherwise the site this page is on.
+        const org = coerceOrgId(
+            orgId ?? (typeof document !== 'undefined' ? document.documentElement.dataset.org : undefined),
+        )
         const snap = await getDocs(
             query(
                 collection(fsDb, 'tracks'),
+                where('orgId', '==', org),
                 where('setlistId', '==', setlistId),
             ),
         )

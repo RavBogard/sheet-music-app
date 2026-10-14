@@ -28,13 +28,17 @@ import { A, B, busCmd, dbOf, EVENT_DAY, makeEnv, matrixCmd, pendingCmds, seedFix
 type Op = (db: Db) => Promise<unknown>
 
 function readsFor(p: Persona, own: string): Array<[string, Op]> {
-    const otherSetlist = own === A ? "sB" : "sA"
+    // (the cross-tenant Perform link moved to the public per-setlist endpoint)
     const ownSetlist = own === A ? "sA" : "sB"
     const cfg = (base: string) => (own === A ? `config/${base}` : `config/${base}__${own}`)
     const tplKey = own === A ? "shabbat_morning" : `${own}__shabbat_morning`
     const missingTpl = own === A ? "friday_night" : `${own}__friday_night`
     return [
-        ["list setlists (signed-in)", (db) => db.collection("setlists").get()],
+        // Phase 9: a BARE setlists query used to be allowed for anyone signed
+        // in, which handed every tenant's rows to every other tenant's
+        // members. It is gone; the org-filtered queries below are the ones the
+        // app actually runs, and they still pass for every persona here.
+        ["list setlists orgId==own (signed-in)", (db) => db.collection("setlists").where("orgId", "==", own).get()],
         ["S6 setlists orgId==own orderBy date desc limit 50", (db) => db.collection("setlists").where("orgId", "==", own).orderBy("date", "desc").limit(50).get()],
         [
             "S8 setlists orgId==own eventDate>=now orderBy eventDate limit 1",
@@ -46,8 +50,13 @@ function readsFor(p: Persona, own: string): Array<[string, Op]> {
                 db.collection("setlists").where("orgId", "==", own).where("eventDate", ">=", new Date("2026-01-01")).where("eventDate", "<", new Date("2027-01-01")).orderBy("eventDate").limit(5).get(),
         ],
         ["get own setlist", (db) => db.doc(`setlists/${ownSetlist}`).get()],
-        ["T1 tracks setlistId==own setlist", (db) => db.collection("tracks").where("setlistId", "==", ownSetlist).get()],
-        ["T2 tracks setlistId==other tenant's setlist (Perform link)", (db) => db.collection("tracks").where("setlistId", "==", otherSetlist).get()],
+        // Phase 9: listing tracks is tenant-scoped, because the row contents
+        // ARE the setlist and the bare query handed every tenant's rows to
+        // everyone. The app's reader carries the orgId filter now, so that is
+        // the query this asserts. The cross-tenant Perform link (T2) moved to
+        // the public per-setlist endpoint, which can answer for one setlist
+        // where a rule could only answer for the whole collection.
+        ["T1 tracks orgId==own + setlistId==own setlist", (db) => db.collection("tracks").where("orgId", "==", own).where("setlistId", "==", ownSetlist).get()],
         ["G1 songs orgId==own", (db) => db.collection("songs").where("orgId", "==", own).get()],
         ["R1 recordings orgId==own songId== orderBy createdAt desc", (db) => db.collection("recordings").where("orgId", "==", own).where("songId", "==", own === A ? "songA" : "songB").orderBy("createdAt", "desc").get()],
         ["SA1 own assignments", (db) => db.collection("scheduling_assignments").where("musicianUid", "==", p).where("status", "in", ["pending", "confirmed"]).orderBy("assignedAt", "desc").get()],

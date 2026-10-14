@@ -303,11 +303,13 @@ describe("Drive-sync poller (emulator)", () => {
         expect(row.source).toBe("drive-sync")
         expect(row.name).toBe("Shalom Rav") // ext stripped
 
-        // library_signals broadcast happened (atomic-guard contract).
+        // library_signals broadcast happened (atomic-guard contract). Phase 9
+        // took the fileId and the uid out of this doc — it is a single global
+        // document every tenant can read, and the listeners only use `at`.
         const sig = (
             await db().collection("library_signals").doc("latest").get()
         ).data()!
-        expect(sig.fileId).toBe(rowSnap.docs[0].id)
+        expect(Object.keys(sig).sort()).toEqual(["at", "op"])
     })
 
     it("rename: same md5 + different name → updates library row name; no Storage rewrite", async () => {
@@ -481,7 +483,7 @@ describe("Drive-sync poller (emulator)", () => {
             await db().collection("library_signals").doc("latest").get()
         ).data()!
         expect(sig.op).toBe("drive-sync:replace")
-        expect(sig.fileId).toBe(initialDocId)
+        expect(sig.fileId).toBeUndefined() // phase 9: no tenant data in the global signal
     })
 
     it("permission_lost: writes chartImportQueue row, library untouched", async () => {

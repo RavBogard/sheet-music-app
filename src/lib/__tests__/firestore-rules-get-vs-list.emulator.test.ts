@@ -161,22 +161,44 @@ describe("R-0919-audit-2 firestore.rules — get is public, list is not", () => 
     // ── Signed in, listing works again ──────────────────────────────────────
 
     describe.each(ORGS)("%s — signed in", (org) => {
-        it("may list setlists", async () => {
-            const db = testEnv
-                .authenticatedContext(`member-${org}`)
-                .firestore()
-            const snap = await assertSucceeds(getDocs(collection(db, "setlists")))
-            expect(snap.size).toBe(ORGS.length)
+        // Phase 9 narrowed this. R-0919-audit-2 split read into get and list
+        // so a signed-OUT caller could not enumerate the collection; it left
+        // `list: if signedIn()`, and this test asserted the consequence —
+        // every signed-in caller received EVERY tenant's setlists in one
+        // query (`snap.size === ORGS.length`). The N-tenant probe found it
+        // from the outside, as a Nava member reading CRC's rows. Listing is
+        // now scoped to a tenant the caller has standing in. A single get
+        // stays public, which is what the Perform link needs.
+        it("may list its own tenant's setlists", async () => {
+            const db = testEnv.authenticatedContext(`member-${org}`, { m: { [org]: "me" } }).firestore()
+            const snap = await assertSucceeds(
+                getDocs(query(collection(db, "setlists"), where("orgId", "==", org))),
+            )
+            expect(snap.size).toBe(1)
         })
 
-        it("may run the tracks-by-setlistId query", async () => {
-            const db = testEnv
-                .authenticatedContext(`member-${org}`)
-                .firestore()
+        it("is denied the bare collection query that used to return every tenant", async () => {
+            const db = testEnv.authenticatedContext(`member-${org}`, { m: { [org]: "me" } }).firestore()
+            await assertFails(getDocs(collection(db, "setlists")))
+        })
+
+        it("is denied another tenant's setlists", async () => {
+            const other = ORGS.find((o) => o !== org)!
+            const db = testEnv.authenticatedContext(`member-${org}`, { m: { [org]: "me" } }).firestore()
+            await assertFails(getDocs(query(collection(db, "setlists"), where("orgId", "==", other))))
+        })
+
+        // Phase 9: the same narrowing as setlists, for the same reason and
+        // with more at stake — the row contents live here. The reader now
+        // sends the orgId filter the rule needs; a setlistId on its own names
+        // a tenant the rule cannot see.
+        it("may run the tracks-by-orgId-and-setlistId query", async () => {
+            const db = testEnv.authenticatedContext(`member-${org}`, { m: { [org]: "me" } }).firestore()
             const snap = await assertSucceeds(
                 getDocs(
                     query(
                         collection(db, "tracks"),
+                        where("orgId", "==", org),
                         where("setlistId", "==", `setlist-${org}`),
                     ),
                 ),

@@ -71,6 +71,7 @@ async function seedSetlist(
         batch.set(adminDb.collection('tracks').doc(`${setlistId}-t${i}`), {
             id: `${setlistId}-t${i}`,
             setlistId,
+            orgId: 'crc',
             title: `Song ${i}`,
             order: i,
             type: 'song',
@@ -88,7 +89,9 @@ async function readDeclaredCount(setlistId: string): Promise<number | undefined>
 
 async function actualTrackCount(setlistId: string): Promise<number> {
     const snap = await getDocs(
-        query(collection(webDb, 'tracks'), where('setlistId', '==', setlistId)),
+        // Phase 9: listing tracks is tenant-scoped, so the query carries the
+        // orgId filter the app's own reader now carries.
+        query(collection(webDb, 'tracks'), where('orgId', '==', 'crc'), where('setlistId', '==', setlistId)),
     )
     return snap.size
 }
@@ -155,9 +158,16 @@ describe('cycle-9 Lane B — reconcileSetlistTrackCount (real emulator Firestore
 
         // Reproduce SetlistGrid's add: write a new tracks/{id} doc and DO NOT
         // touch the parent trackCount.
+        // The real add stamps orgId before it commits — twice over: applyEdit
+        // takes it from the Dexie parent, and stampTrackOrgForCommit takes it
+        // from the Firestore parent for anything that slipped through. Phase 9
+        // made that stamping load-bearing rather than merely tidy: the
+        // reconcile query is now tenant-scoped, so an unstamped row would not
+        // be counted.
         await setDoc(doc(webDb, 'tracks', `${id}-new`), {
             id: `${id}-new`,
             setlistId: id,
+            orgId: 'crc',
             title: 'Newly added',
             order: 3,
             type: 'song',

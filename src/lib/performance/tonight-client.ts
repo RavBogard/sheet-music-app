@@ -9,6 +9,7 @@
  */
 
 import { doc, onSnapshot, runTransaction } from "firebase/firestore"
+import { coerceOrgId } from "@/lib/org/registry"
 
 import { auth, getDb, subscribeWithDb, type Unsubscribe } from "@/lib/firebase"
 import {
@@ -175,10 +176,19 @@ export async function fetchMomentFileIds(
     try {
         const { collection, getDocs, limit, query, where } = await import("firebase/firestore")
         const db = await getDb()
-        const queries = [query(collection(db, "tracks"), where("momentId", "==", momentId), limit(500))]
+        // Phase 9: listing tracks needs standing in the tenant that owns the
+        // rows, so every query carries the orgId of the site this page is on.
+        // It also means this history lookup can no longer answer with another
+        // tenant's settings, which it never should have.
+        const org = coerceOrgId(typeof document !== "undefined" ? document.documentElement.dataset.org : undefined)
+        const queries = [
+            query(collection(db, "tracks"), where("orgId", "==", org), where("momentId", "==", momentId), limit(500)),
+        ]
         const units = unitIds.filter(Boolean).slice(0, 30)
         if (units.length > 0) {
-            queries.push(query(collection(db, "tracks"), where("liturgyRef.unitId", "in", units), limit(500)))
+            queries.push(
+                query(collection(db, "tracks"), where("orgId", "==", org), where("liturgyRef.unitId", "in", units), limit(500)),
+            )
         }
         const snaps = await Promise.allSettled(queries.map((q) => getDocs(q)))
         for (const s of snaps) {

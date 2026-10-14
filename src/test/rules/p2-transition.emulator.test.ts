@@ -118,9 +118,15 @@ describe("P2 §3.5 — legacy-claims personas", () => {
             await assertFails(d.doc("config/defaults").get())
             await assertFails(d.doc("config/monitor").get())
         })
-        it("still has the signed-in basics (list setlists, branding, own profile)", async () => {
+        it("still has the signed-in basics (branding, own profile, a setlist by id)", async () => {
             const d = db("oldPending")
-            await assertSucceeds(d.collection("setlists").get())
+            // Phase 9: listing setlists now needs standing in the tenant, and
+            // a claimless token has none anywhere. Nothing this persona can
+            // see changes — no client query is unfiltered, and every surface
+            // that lists setlists is already behind a role gate. Opening one
+            // setlist by id stays public, which is the service-block case.
+            await assertFails(d.collection("setlists").get())
+            await assertSucceeds(d.doc("setlists/sA").get())
             await assertSucceeds(d.doc("config/congregation").get())
             await assertSucceeds(d.doc("users/oldPending").get())
             await assertSucceeds(d.doc(`memberships/${A}__oldPending`).get())

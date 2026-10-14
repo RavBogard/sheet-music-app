@@ -505,11 +505,10 @@ async function handleExistingFile(
             .collection("library_index")
             .doc(existing.docId)
             .update(stripUndefined(updates))
+        // No fileId, no uid: every tenant can read this doc (phase 9).
         await db.collection("library_signals").doc("latest").set({
             at: nowIso,
-            fileId: existing.docId,
             op: "drive-sync:replace",
-            by: "cron:drive-sync",
         })
         return { kind: "replaced" }
     }

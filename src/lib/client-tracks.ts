@@ -29,6 +29,7 @@
 
 import { collection, query, where, getDocs } from "firebase/firestore"
 import { getDb, auth } from "@/lib/firebase"
+import { coerceOrgId } from "@/lib/org/registry"
 import { logger } from "@/lib/logger"
 import type { LocalTrack } from "@/lib/local/types"
 import type { SetlistTrack } from "@/types/models"
@@ -79,11 +80,16 @@ async function fetchViaApi(setlistId: string): Promise<SetlistTrack[] | null> {
     }
 }
 
+/** The tenant whose rows we are asking for: the setlist's, else this site's. */
+function orgOf(setlistData?: { orgId?: string } | null): string {
+    if (setlistData?.orgId) return coerceOrgId(setlistData.orgId)
+    return coerceOrgId(typeof document !== "undefined" ? document.documentElement.dataset.org : undefined)
+}
+
 export async function fetchTracksForSetlistClient(
     setlistId: string,
-    _setlistData?: { hydrated?: boolean; tracks?: unknown } | null,
+    setlistData?: { hydrated?: boolean; tracks?: unknown; orgId?: string } | null,
 ): Promise<SetlistTrack[]> {
-    void _setlistData
 
     // Signed out, the Firestore query is denied by the rules — go to the
     // endpoint that can answer for one setlist.
@@ -93,14 +99,39 @@ export async function fetchTracksForSetlistClient(
     }
 
     const db = await getDb()
+    // Phase 9: the orgId filter is not an optimisation, it is what makes the
+    // query legal. Listing tracks now needs standing in the tenant the rows
+    // belong to, and a rule cannot see a `setlistId` filter — only an orgId
+    // one. The setlist's own tenant when the caller handed us the setlist
+    // (clone reads a source that may, in principle, be another tenant's),
+    // otherwise the site this page is on, which the root layout puts on
+    // <html data-org>.
     const q = query(
         collection(db, "tracks"),
+        where("orgId", "==", orgOf(setlistData)),
         where("setlistId", "==", setlistId),
     )
-    const snap = await getDocs(q)
+    let snap
+    try {
+        snap = await getDocs(q)
+    } catch {
+        // The rules refused the query — the caller is signed in to a tenant
+        // that does not own these rows. That is a cross-tenant Perform link,
+        // which P2 kept working on purpose. The server can answer for one
+        // setlist where a security rule can only answer for a whole
+        // collection, so it answers this one.
+        return (await fetchViaApi(setlistId)) ?? []
+    }
     const rows: Record<string, unknown>[] = snap.docs.map((d) => ({
         ...(d.data() as Record<string, unknown>),
         id: d.id,
     }))
+    // An empty result for a setlist that does have rows means the orgId guess
+    // was wrong, not that the setlist is empty; ask the server before
+    // believing it.
+    if (rows.length === 0) {
+        const viaApi = await fetchViaApi(setlistId)
+        if (viaApi && viaApi.length > 0) return viaApi
+    }
     return sortRows(rows) as unknown as SetlistTrack[]
 }

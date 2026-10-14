@@ -254,6 +254,87 @@ describe("v11-01-04 firestore.rules org-scope", () => {
         await assertSucceeds(db.collection("tracks").doc("tk-crc").get())
     })
 
+    // ─── Phase 9: listing setlists is tenant-scoped ───────────────────────
+    //
+    // A single get stays public (above). What phase 9's N-tenant probe caught
+    // is that the LIST rule was still `signedIn()` alone, so a member of any
+    // tenant could enumerate every other tenant's setlists straight from a
+    // browser. The bar is the lowest that still means standing in the tenant —
+    // a pending member keeps the access they had — and every client query
+    // already filters by orgId, so no served surface changes.
+
+    it("P9: a CRC member lists CRC setlists (orgId-filtered) — unchanged", async () => {
+        const db = testEnv.authenticatedContext("crc-member", { role: "member" }).firestore()
+        await assertSucceeds(db.collection("setlists").where("orgId", "==", "crc").get())
+    })
+
+    it("P9: a PENDING CRC member still lists CRC setlists (err-public inside a tenant)", async () => {
+        const db = testEnv.authenticatedContext("crc-pending", { m: { crc: "pe" } }).firestore()
+        await assertSucceeds(db.collection("setlists").where("orgId", "==", "crc").get())
+    })
+
+    it("P9: a BL leader CANNOT list CRC setlists", async () => {
+        await assertFails(blLeader().collection("setlists").where("orgId", "==", "crc").get())
+    })
+
+    it("P9: a third tenant's admin CANNOT list CRC setlists", async () => {
+        const nava = testEnv.authenticatedContext("nava-admin", { m: { navatehila: "ad" } }).firestore()
+        await assertFails(nava.collection("setlists").where("orgId", "==", "crc").get())
+    })
+
+    it("P9: an UNFILTERED list is refused — no branch is satisfiable without an orgId filter", async () => {
+        await assertFails(
+            testEnv.authenticatedContext("crc-member", { role: "member" }).firestore().collection("setlists").get(),
+        )
+    })
+
+    it("P9: the platform owner still lists any tenant's setlists", async () => {
+        const owner = testEnv.authenticatedContext("owner-uid", { po: true }).firestore()
+        await assertSucceeds(owner.collection("setlists").where("orgId", "==", "crc").get())
+    })
+
+    // ─── Phase 9: tracks are the setlist's CONTENT ─────────────────────────
+    //
+    // Scoping the setlists list while `tracks` stayed `signedIn()` would have
+    // been theatre: the titles, keys, notes and chart bonds all live in
+    // tracks, and any signed-in person of any tenant could read every row of
+    // every tenant in one unfiltered query. Found by the adversarial pass.
+
+    it("P9: a CRC member lists CRC tracks by orgId + setlistId — the query the app runs", async () => {
+        const db = testEnv.authenticatedContext("crc-member", { m: { crc: "me" } }).firestore()
+        await assertSucceeds(
+            db.collection("tracks").where("orgId", "==", "crc").where("setlistId", "==", "sl-crc").get(),
+        )
+    })
+
+    it("P9: the bare tracks query that used to return every tenant is refused", async () => {
+        const db = testEnv.authenticatedContext("crc-member", { m: { crc: "me" } }).firestore()
+        await assertFails(db.collection("tracks").get())
+    })
+
+    it("P9: a setlistId filter alone is not enough — a rule cannot see which tenant it names", async () => {
+        const nava = testEnv.authenticatedContext("nava-admin", { m: { navatehila: "ad" } }).firestore()
+        await assertFails(nava.collection("tracks").where("setlistId", "==", "sl-crc").get())
+    })
+
+    it("P9: one track by id stays public (R-0919-audit-2)", async () => {
+        await assertSucceeds(testEnv.unauthenticatedContext().firestore().collection("tracks").doc("tk-crc").get())
+    })
+
+    it("P9: tonight's overrides are not readable from another tenant", async () => {
+        await testEnv.withSecurityRulesDisabled(async (ctx) => {
+            await ctx
+                .firestore()
+                .doc("setlists/sl-crc/performance/overrides")
+                .set({ rows: {}, eventDay: "2026-10-16", rev: 1, updatedAt: 1, updatedBy: "crc-leader" })
+        })
+        const nava = testEnv.authenticatedContext("nava-admin", { m: { navatehila: "ad" } }).firestore()
+        await assertFails(nava.doc("setlists/sl-crc/performance/overrides").get())
+        await assertSucceeds(
+            testEnv.authenticatedContext("crc-member", { m: { crc: "me" } }).firestore().doc("setlists/sl-crc/performance/overrides").get(),
+        )
+    })
+
     it("AC-3: a CRC member can still read songs + recordings", async () => {
         const member = testEnv
             .authenticatedContext("member-uid", { role: "member" })

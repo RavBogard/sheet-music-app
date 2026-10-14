@@ -464,8 +464,9 @@ describe("MCP salvage_chart_bytes — DATA-001 cycle-3 (emulator)", () => {
             .doc("latest")
             .get()
         expect(signal.data()?.op).toBe("salvage")
-        expect(signal.data()?.fileId).toBe("upload-1")
-        expect(signal.data()?.by).toBe(ADMIN)
+        // Phase 9: the global signal doc is readable by every tenant, so it
+        // no longer names the file or the person who touched it.
+        expect(Object.keys(signal.data() ?? {}).sort()).toEqual(["at", "op"])
 
         // library.row.created emitted to re-trigger AI enrichment on the
         // freshly-healed bytes (the heal path was previously enrichment-blind).

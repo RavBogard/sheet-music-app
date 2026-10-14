@@ -858,9 +858,7 @@ async function broadcastReconcileSignal(
     try {
         await db.collection("library_signals").doc("latest").set({
             at: new Date().toISOString(),
-            fileId: "<reconcile-batch>",
             op: "reconcile",
-            by: uid,
             count: committed,
         })
     } catch (err) {

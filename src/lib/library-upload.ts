@@ -782,11 +782,14 @@ export async function processChartUpload(
     // on this single doc and refetch the React Query cache when it changes.
     // A failure here MUST NOT fail the upload (the chart is fully written).
     try {
+        // Phase 9: this doc is readable by every signed-in person of every
+        // tenant and the listeners only look at `at`, so it carries no fileId
+        // and no uid any more — a cross-tenant activity side-channel for
+        // nothing. (Per-tenant signal docs would be better still; that is a
+        // change to three writers and the hook, not to a security rule.)
         await db.collection("library_signals").doc("latest").set({
             at: new Date().toISOString(),
-            fileId,
             op: "upload",
-            by: input.uploaderUid,
         })
     } catch (sigErr) {
         const message =

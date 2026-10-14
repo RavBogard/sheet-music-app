@@ -948,9 +948,7 @@ export async function deleteChart(
     try {
         await db.collection("library_signals").doc("latest").set({
             at: new Date().toISOString(),
-            fileId: args.fileId,
             op: "delete",
-            by: uid,
         })
     } catch (sigErr) {
         logger.warn(

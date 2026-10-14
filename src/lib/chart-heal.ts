@@ -247,11 +247,10 @@ export async function healChartBytes(
 
     // library_signals broadcast — fail-open (same pattern as the callers).
     try {
+        // No fileId, no uid: every tenant can read this doc (phase 9).
         await db.collection("library_signals").doc("latest").set({
             at: nowIso,
-            fileId,
             op: "salvage",
-            by: uid,
         })
     } catch (sigErr) {
         logger.warn(

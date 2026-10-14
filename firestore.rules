@@ -44,6 +44,16 @@ service cloud.firestore {
     // Every tenant-owned doc carries orgId (stamped 2026-10-12). A missing
     // orgId still means crc for reads/updates; creates must stamp it.
     function docOrg() { return resource.data.get('orgId', 'crc'); }
+    // The same question without the default, for verbs that DESTROY. Reading
+    // an unstamped row as crc is the err-public side of the trade and keeps a
+    // legacy row openable; deleting or rewriting one on that guess is not —
+    // an unstamped row would be another tenant's the moment one appeared.
+    // Phase 9's adversarial pass: a crc band_leader could delete an unstamped
+    // song. Production has no unstamped rows in any collection (checked:
+    // tracks, setlists, songs, templates, library_index, recordings), so this
+    // refuses nothing that exists; it closes the hole a single forgetful
+    // writer would open.
+    function strictDocOrg() { return resource.data.orgId; }
     // List (query) rules must not default a missing orgId: the query prover
     // accepts an UNFILTERED query when any branch of the rule is satisfiable
     // without a constraint on orgId (proved on the emulator: with
@@ -72,6 +82,12 @@ service cloud.firestore {
     // templates/{id}: "<tenant>__<key>"; a bare key is crc.
     function templateOrgOfId(id) {
       return id.matches('^[a-z0-9-]+__.+$') ? id.split('__')[0] : 'crc';
+    }
+    // The tenant of an EXISTING template: the stored field wins over the id,
+    // so a bare-id row stamped for another tenant is that tenant's (phase 9).
+    function templateOrg(id) {
+      return resource == null ? templateOrgOfId(id)
+        : resource.data.get('orgId', templateOrgOfId(id));
     }
     // config/<base> is crc; config/<base>__<tenant> is that tenant.
     function cfgTenant(docId) {
@@ -136,8 +152,13 @@ service cloud.firestore {
     // ── MEMBERSHIPS / PLATFORM / ORGS ──────────────────────────────────────
     match /memberships/{membershipId} {
       // One's own record is readable even before it exists (client listener).
+      // Phase 9: the uid used to be interpolated into a regex, so a uid of
+      // `.*` would have matched every membership document in the project.
+      // Firebase Auth does not mint such uids, but anything that signs a
+      // custom token with a caller-influenced uid would have made it real.
+      // Split the id instead of pattern-matching user data into a regex.
       allow get: if signedIn() && (
-        membershipId.matches('^[a-z0-9-]+__' + request.auth.uid + '$')
+        (membershipId.split('__').size() == 2 && membershipId.split('__')[1] == request.auth.uid)
         || (resource != null && atLeast(resource.data.tenantId, 'bl')));
       allow list: if signedIn() && (
         resource.data.uid == request.auth.uid || atLeast(resource.data.tenantId, 'bl'));
@@ -181,7 +202,16 @@ service cloud.firestore {
     // R-0919-audit-2: get public (Perform links), list signed-in. Unchanged.
     match /setlists/{setlistId} {
       allow get: if true;
-      allow list: if signedIn();
+      // Phase 9 found this was the one tenant-blind list left: every other
+      // collection moved to listOrg() in phase 2, and a signed-in member of
+      // ANY tenant could enumerate every other tenant's setlists from a
+      // browser. A single get stays public on purpose (R-0919-audit-2) and a
+      // musician who cannot open the setlist they are playing is a
+      // service-block — so the bar here is the lowest one that still means
+      // "you have standing in this tenant": any membership at all, pending
+      // included. Every client query already filters by orgId, so nobody who
+      // is served today is refused.
+      allow list: if signedIn() && atLeast(listOrg(), 'pe');
       allow create: if signedIn()
         && request.resource.data.get('ownerId', '') == request.auth.uid
         && newOrgSet()
@@ -212,7 +242,12 @@ service cloud.firestore {
         && d.updatedBy == request.auth.uid;
     }
     match /setlists/{setlistId}/performance/{docId} {
-      allow get: if signedIn() && docId == 'overrides';
+      // Phase 9: this was `signedIn()` alone — the only subcollection under
+      // setlists with no tenant check, while history, emailEvents and
+      // performedDeviations all have one. It carries tonight's live swap
+      // state. It already required a signed-in caller, so it never served the
+      // anonymous Perform link; it was serving every OTHER tenant's users.
+      allow get: if signedIn() && docId == 'overrides' && atLeast(setlistOrgOf(setlistId), 'pe');
       allow list: if false;
       allow create: if docId == 'overrides' && canLeadSetlist(setlistId)
                     && overridesShapeOk() && request.resource.data.rev >= 1;
@@ -242,8 +277,16 @@ service cloud.firestore {
 
     // ── TRACKS ─────────────────────────────────────────────────────────────
     match /tracks/{trackId} {
+      // get stays public: an anonymous Perform link opens a setlist by id and
+      // reads its rows, and R-0919-audit-2 keeps that deliberately open.
       allow get: if true;
-      allow list: if signedIn();
+      // Phase 9's adversarial pass: list was `signedIn()` alone, so any
+      // signed-in person of any tenant could read every tenant's track rows —
+      // titles, notes, keys, chart bonds, liturgyRef — in one unfiltered
+      // query. That is the setlist CONTENT, so it defeated the setlists fix
+      // above. Same bar as setlists: standing in the tenant, pending
+      // included. Both client queries now carry the orgId filter this needs.
+      allow list: if signedIn() && atLeast(listOrg(), 'pe');
       allow create: if signedIn()
         && request.resource.data.get('setlistId', '') is string
         && request.resource.data.get('setlistId', '') != ''
@@ -295,14 +338,14 @@ service cloud.firestore {
       allow list: if atLeast(listOrg(), 'me') || sharedSeesList();
       allow create: if newOrgSet() && atLeast(newOrg(), 'bl');
       allow update: if atLeast(docOrg(), 'bl') && orgKept();
-      allow delete: if atLeast(docOrg(), 'bl');
+      allow delete: if atLeast(strictDocOrg(), 'bl');
     }
     match /recordings/{recordingId} {
       allow get: if atLeast(docOrg(), 'me');
       allow list: if atLeast(listOrg(), 'me');
       allow create: if newOrgSet() && atLeast(newOrg(), 'bl');
       allow update: if atLeast(docOrg(), 'bl') && orgKept();
-      allow delete: if atLeast(docOrg(), 'bl');
+      allow delete: if atLeast(strictDocOrg(), 'bl');
     }
     // library_index: read by the same visibility as songs (P5; server-only
     // before). Writes stay server-only.
@@ -335,23 +378,32 @@ service cloud.firestore {
       allow list: if atLeast(listOrg(), 'bl');
       allow create: if newOrgSet() && atLeast(newOrg(), 'bl');
       allow update: if atLeast(docOrg(), 'bl') && orgKept();
-      allow delete: if atLeast(docOrg(), 'bl');
+      allow delete: if atLeast(strictDocOrg(), 'bl');
     }
     match /templates/{templateId} {
       allow get: if atLeast(resource == null
                              ? templateOrgOfId(templateId)
                              : resource.data.get('orgId', templateOrgOfId(templateId)), 'me');
       allow list: if atLeast(listOrg(), 'me');
-      allow create, update: if atLeast(templateOrgOfId(templateId), 'bl')
-        && request.resource.data.get('orgId', '') == templateOrgOfId(templateId);
-      allow delete: if atLeast(templateOrgOfId(templateId), 'bl');
+      // Phase 9: the read path prefers the STORED orgId and the write path
+      // trusted the document id alone, so the two disagreed for any row whose
+      // id carries no `<tenant>__` prefix — exactly the pre-P2 bare-key shape.
+      // A crc band_leader could delete, or overwrite and re-stamp to crc, a
+      // template belonging to another tenant that they could not even read.
+      // Writes now ask the same question reads do.
+      allow create: if atLeast(templateOrgOfId(templateId), 'bl')
+        && request.resource.data.get('orgId', '') == templateOrgOfId(templateId)
+        && resource == null;
+      allow update: if atLeast(templateOrg(templateId), 'bl')
+        && request.resource.data.get('orgId', '') == templateOrg(templateId);
+      allow delete: if atLeast(templateOrg(templateId), 'bl');
     }
     match /setlistTemplates/{templateId} {
       allow get: if atLeast(docOrg(), 'bl');
       allow list: if atLeast(listOrg(), 'bl');
       allow create: if newOrgSet() && atLeast(newOrg(), 'bl');
       allow update: if atLeast(docOrg(), 'bl') && orgKept();
-      allow delete: if atLeast(docOrg(), 'bl');
+      allow delete: if atLeast(strictDocOrg(), 'bl');
     }
     match /bond_flags/{flagId} {
       allow get: if atLeast(docOrg(), 'bl');

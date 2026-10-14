@@ -1,6 +1,6 @@
 import "server-only"
 
-import { getFirestore } from "@/lib/firebase-admin"
+import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
 import { CODE_ORG_IDS } from "@/lib/org/config-code"
 import { getOrgConfig, orgConfigSource } from "@/lib/org/get-org-config"
@@ -21,6 +21,14 @@ export async function cronTenantIds(): Promise<OrgId[]> {
     const ids: OrgId[] = [...CODE_ORG_IDS]
     if (orgConfigSource() === "firestore") {
         try {
+            // Phase 9: /api/cron/drive-sync asked for its tenants BEFORE it
+            // called initAdmin, so `getFirestore()` threw on the missing
+            // default app, the catch below swallowed it as "orgs read failed"
+            // and every run quietly saw the code tenants only — a registry
+            // tenant could never get a Drive sync. Initialising here fixes it
+            // for every cron rather than for the one that happened to notice,
+            // and is a no-op when the caller already did it.
+            initAdmin()
             const snap = await getFirestore().collection("orgs").get()
             for (const doc of snap.docs) {
                 if (ids.includes(doc.id)) continue

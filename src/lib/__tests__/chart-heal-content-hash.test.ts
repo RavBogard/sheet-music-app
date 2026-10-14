@@ -98,6 +98,21 @@ describe("healChartBytes · contentHash follows the bytes", () => {
         expect(hash.sizeBytes).toBe(patch.fileSize)
     })
 
+    it("broadcasts a library signal with no tenant data in it", async () => {
+        // Phase 9: `library_signals/latest` is a single global document that
+        // every signed-in person of every tenant can read, and it used to
+        // carry the fileId just touched and the uid that touched it. The
+        // listeners only look at `at`, so the payload bought nothing and
+        // leaked across tenants.
+        h.rows["file-4"] = { name: "Chart", orgId: "navatehila", collection: "nava" }
+
+        await healChartBytes(fakeDb(), "admin", "file-4", NEW_BYTES, "application/pdf", "drive")
+
+        const signal = h.patches.find((p) => p.collection === "library_signals")
+        expect(signal).toBeTruthy()
+        expect(Object.keys(signal!.data).sort()).toEqual(["at", "op"])
+    })
+
     it("clears hashFailed, because these bytes hashed fine", async () => {
         h.rows["file-3"] = {
             name: "Chart",

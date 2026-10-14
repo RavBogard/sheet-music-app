@@ -27,11 +27,16 @@ service firebase.storage {
       return c == 'ad' ? 4 : c == 'bl' ? 3 : c == 'mu' ? 2 : c == 'me' ? 1 : c == 'pe' ? 0 : -1;
     }
     function atLeast(t, c) { return po() || rank(code(t)) >= rank(c); }
+    // A MISSING orgId still means crc — what a missing tenant has always
+    // meant, and legacy objects predate the stamping. An orgId that is
+    // present but EMPTY does not: phase 9's adversarial pass pointed out that
+    // a writer with `?? ''` instead of `?? undefined` would silently publish
+    // another tenant's chart bytes to crc, and that Firestore refuses the
+    // same value (rank -1) while Storage accepted it. An explicit empty
+    // string is now no tenant, which nobody can be a member of.
     function objectOrg() {
-      return (resource.metadata != null
-              && resource.metadata.get('orgId', '') is string
-              && resource.metadata.get('orgId', '') != '')
-        ? resource.metadata.orgId : 'crc';
+      return resource.metadata == null || !('orgId' in resource.metadata) ? 'crc'
+        : resource.metadata.orgId;
     }
 
     // Multi-tenant P5: shared collections. The visibility job stamps

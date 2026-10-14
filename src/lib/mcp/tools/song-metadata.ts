@@ -207,11 +207,10 @@ async function broadcastLibrarySignal(
     uid: string,
 ): Promise<void> {
     try {
+        // No fileId, no uid: every tenant can read this doc (phase 9).
         await db.collection("library_signals").doc("latest").set({
             at: new Date().toISOString(),
-            fileId,
             op: "update",
-            by: uid,
         })
     } catch (err) {
         logger.warn(
