@@ -202,6 +202,25 @@ async function main() {
         process.exit(1)
     }
 
+    // The personas live an hour. Check every one of them BEFORE asserting
+    // anything: an expired bearer otherwise fails forty assertions at once and
+    // reads like a catastrophic isolation break instead of a stale credential.
+    const stale = []
+    for (const t of tenants) {
+        const probe = await rpc(`${t.origin}/api/mcp`, secrets[t.orgId].bearer, "tools/call", {
+            name: "get_congregation_context",
+            arguments: {},
+        })
+        if (probe?.error || probe?.__status === 401 || !probe?.result) stale.push(t.orgId)
+    }
+    if (stale.length) {
+        console.error(
+            `FATAL: the probe credential for ${stale.join(", ")} is not working — most likely expired ` +
+                `(an admin-test persona lasts an hour). Re-mint with mint-throwaway-bearer.ts and run again.`,
+        )
+        process.exit(1)
+    }
+
     // ── per tenant: it works at its own address, and it is itself ───────────
     const state = {}
     for (const t of tenants) {

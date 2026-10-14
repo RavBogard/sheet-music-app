@@ -41,6 +41,18 @@ import { getAuth, getFirestore } from "@/lib/firebase-admin"
 
 const PROJECT_ID = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "crcmusiccharts"
 const PROTECTED = new Set(["crc", "brotherslazaroff"])
+const DEFAULT_TEAM_ID = "team_AyFDvnGV3IHjAY32PlW1tltN"
+const DEFAULT_PROJECT_NAME = "sheet-music-app"
+
+/** The project the tenant addresses hang off, by name. */
+async function findProjectId(token: string, team: string | undefined): Promise<string | null> {
+    const res = await fetch(`https://api.vercel.com/v9/projects?limit=100${team ? `&teamId=${encodeURIComponent(team)}` : ""}`, {
+        headers: { Authorization: `Bearer ${token}` },
+    })
+    if (!res.ok) return null
+    const body = (await res.json()) as { projects?: Array<{ id: string; name: string }> }
+    return body.projects?.find((p) => p.name === (process.env.VERCEL_PROJECT_NAME ?? DEFAULT_PROJECT_NAME))?.id ?? null
+}
 
 /** Collections holding tenant-owned documents, and how the tenant is written. */
 const BY_FIELD = [
@@ -122,9 +134,12 @@ async function buildPlan(orgId: string): Promise<Plan> {
 
 async function removeAlias(address: string): Promise<string> {
     const token = envLocal("VERCEL_API_TOKEN")
-    const project = envLocal("VERCEL_PROJECT_ID")
-    if (!token || !project) return "skipped: VERCEL_API_TOKEN / VERCEL_PROJECT_ID not set"
-    const team = envLocal("VERCEL_TEAM_ID")
+    if (!token) return "skipped: VERCEL_API_TOKEN not set"
+    const team = envLocal("VERCEL_TEAM_ID") ?? DEFAULT_TEAM_ID
+    // The project id is only in Vercel's own environment, not in .env.local,
+    // so look it up by name rather than making the caller supply it.
+    const project = envLocal("VERCEL_PROJECT_ID") ?? (await findProjectId(token, team))
+    if (!project) return "skipped: could not resolve the Vercel project"
     const url = `https://api.vercel.com/v9/projects/${encodeURIComponent(project)}/domains/${encodeURIComponent(address)}${team ? `?teamId=${encodeURIComponent(team)}` : ""}`
     const res = await fetch(url, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } })
     if (res.status === 404) return "already gone"

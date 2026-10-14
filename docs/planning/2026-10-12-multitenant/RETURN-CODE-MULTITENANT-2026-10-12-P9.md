@@ -7,7 +7,7 @@ production. That is "done" (mission, Proof). This is the last phase of the campa
 
 | Item | Result |
 | --- | --- |
-| **N-tenant probe** generalised from the BL one, registry-driven, every ordered pair | **PASS** — `scripts/dev/e2e-tenant-probe.mjs`, **208 assertions, 0 failures** against production across 4 tenants and all 12 ordered pairs |
+| **N-tenant probe** generalised from the BL one, registry-driven, every ordered pair | **PASS** — `scripts/dev/e2e-tenant-probe.mjs`, **224 assertions, 0 failures** against production across 4 tenants and all 12 ordered pairs |
 | **Throwaway tenant end to end**, address attached automatically, a real sign-in lands in it alone | **PASS** — `p9probe` created through `create_tenant`, live at `p9probe-crl.vercel.app` in ~75 s, a brand-new account signing in there landed `pending` in `p9probe` and nowhere else |
 | **Platform-MCP isolation** | **PASS** — a tenant bearer is refused at `/api/platform/mcp` (403); a platform bearer is refused at `/api/mcp` and `/api/ops/mcp` (401); the throwaway tenant's connection saw no CRC data |
 | **Adversarial rules pass by a separate Opus subagent**, given the rules but not my tests | **PASS** — see §Adversarial pass |
@@ -217,16 +217,107 @@ collections; Storage cross-tenant reads, writes, overwrites and reverse-directio
 
 ## Teardown
 
-<!--TEARDOWN-->
+`p9probe` was created through `create_tenant` with nothing but an id, a name and a
+subdomain. Its address was attached automatically and answered `data-org="p9probe"` about 75
+seconds later — the lag is the address list's 60-second CDN cache plus the proxy's own
+60-second memo, which is worth knowing when a tenant is onboarded and does not appear at
+once.
+
+A brand-new account — created through Identity Toolkit, no prior membership anywhere —
+signed in at that address and landed `pending` in `p9probe` and in no other tenant. Its claim
+map read `{"m":{"p9probe":"pe"}}`. The same account was refused at CRC's address (403) and,
+being only pending, refused at its own (403). The Google button itself was not clicked; the
+provider is Firebase's and the part that is ours is what happens after it, which is what was
+tested. **If you want the literal Google sign-in exercised, that is the one click on the
+Needs Daniel list.**
+
+Then it was deleted, and here the campaign had a gap: `create_tenant` makes a tenant end to
+end and nothing unmakes one. The console and the platform tools can suspend a tenant;
+`remove_tenant_domain` refuses a default address outright ("vercel.app names are default
+addresses, not custom domains"). So a tenant created through the supported path could not be
+removed through any path. `scripts/ops/multitenant/delete-tenant.ts` is that missing half,
+written as a tool rather than as the one-off this gate needed: dry run by default, refuses
+crc and brotherslazaroff outright, refuses any tenant that owns charts unless you say so,
+and leaves `auditLogs` and `platformAudit` alone — a delete tool that erases its own trail is
+worse than no tool.
+
+Confirmed gone, each checked rather than assumed:
+
+| | |
+| --- | --- |
+| `orgs/p9probe` | gone |
+| memberships, setlists, tracks, songs, collections | 0 rows each |
+| `mcpTokens` stamped `p9probe` | 31 deleted, 0 left |
+| the probe persona's Auth user | gone |
+| Firebase authorized domain | removed |
+| Vercel alias | removed; the API returns 404 for the name |
+| the address itself | `https://p9probe-crl.vercel.app/login` → 404 |
+| the address list | no longer names it |
+
+The probe then ran once more over the three real tenants: **121 assertions, 0 failures**, and
+CRC, Brothers Lazaroff and Nava Tehila all answer 200.
 
 ## Gates
 
-<!--GATES-->
+| Gate | Result |
+| --- | --- |
+| `npx tsc --noEmit` | exit 0 |
+| `npm test` | 6,434 tests, 575 files — all pass |
+| `npm run test:emulator` | **2,341 tests, 120 files — all pass** (131 of them the new adversarial suite) |
+| `SKIP_ENV_VALIDATION=1 npx next build --webpack` | clean |
+| `scripts/dev/e2e-tenant-probe.mjs --rules` | **224 assertions, 0 failures** over four tenants; 121 over the three real ones after teardown |
+
+Two flakes, both chased down rather than waved past:
+
+- The full emulator run failed three `p2-storage` cases that passed on their own. The cause
+  was in that file's own comment: the Storage emulator holds one bucket per project, and the
+  new adversarial suite was using the real project id and object names that collided with
+  p2-storage's. It now has its own `demo-` project and its own object prefix, and the full
+  run is clean.
+- Three unit tests failed once at 30-40 s each under full load and passed instantly on their
+  own — the load-adjusted-timing pattern this repo already knows.
 
 ## Decisions logged
 
-<!--DECISIONS-->
+- **GATE: deployed the setlists and tracks list fix without stopping to ask — proceeded
+  because** it closed a live cross-tenant read, and the evidence says no CRC or BL user loses
+  anything: every client query already filtered by orgId, the app's real queries still pass
+  for every persona in `p2-must-work`, and the only thing refused is a bare query no client
+  issues. A hole left open while waiting is the worse side of that trade. Flagged to Daniel
+  in the session report all the same, because it is a security finding.
+- **GATE: the probe's personas are tenant admins, not members — proceeded because** the
+  strongest role inside a tenant is the right adversary; if it cannot reach across, nothing
+  weaker can.
+- **GATE: deleted `scripts/dev/e2e-bl-tenant-probe.mjs` and `scripts/mint-throwaway-bl-bearer.mjs`
+  — proceeded because** the replacements are green over four tenants, and leaving a probe in
+  the tree that borrows David's real account is a hazard rather than a fallback.
+  `docs/BL-MCP-BEARER.md` was rewritten to the new scripts.
+- **GATE: the unstamped-row default stays for reads and goes for deletes — proceeded
+  because** err-public is the standing rule for reads, and destroying a row on a guess about
+  whose it is cannot be defended by the same argument.
+- **GATE: `library_signals` keeps its single global document and loses its payload —
+  proceeded because** the listeners only use `at`; per-tenant signal documents would be
+  better and are a change to seven writers and a hook, not a security fix.
+- **GATE: wrote `delete-tenant.ts` rather than deleting `p9probe` by hand — proceeded
+  because** the gate exposed a missing half of the platform, and the next person to need it
+  should find a tool.
+- **GATE: the one literal Google click is on the Needs Daniel list rather than blocking —
+  proceeded because** the provider step is Firebase's and the tenant assignment after it,
+  which is ours, was tested end to end with a real new account.
 
 ## Needs Daniel
 
-<!--NEEDS-->
+- **A security finding to be aware of, already fixed and deployed:** any signed-in person of
+  any tenant could list every tenant's setlists and — through `tracks` — their rows. It was
+  open from phase 2 until today. Nothing suggests it was used; the app never issued the query
+  that would have exposed it.
+- **One click, if you want it covered:** a real Google sign-in at a new tenant's address.
+  Everything after the provider was proved with a fresh account; only the Google button
+  itself is untested, and automating it needs a throwaway Google account that does not exist.
+- **Nava Tehila's tenant admin** is still unnamed (mission, Open). You administer it as
+  platform owner meanwhile.
+- **Worth doing, not blocking:** per-tenant `library_signals` documents, so an open library
+  tab only wakes for its own tenant's changes; and widening the `collections` list rule to
+  admit pending members, so `get` and `list` agree.
+
+Phase 9 was the last phase. Every item in the mission's Proof section passes in production.

@@ -30,9 +30,11 @@
  * `--platform` mints a platform bearer (`crl_plat_…`) for /api/platform/mcp,
  * admin-side, since no HTTP path mints one without a browser ID token.
  *
- * Secrets go to `--out`; stdout carries only the identity, so a run can be
- * logged without logging the credential. `--cleanup` is the compensating
- * action — run it even when the probe fails.
+ * Secrets go to `--out` — written owner-only (0600), and removed again when
+ * `--cleanup` is passed the same `--out`; make the directory `mkdir -m 700`.
+ * stdout carries only the identity, so a run can be logged without logging the
+ * credential. `--cleanup` is the compensating action — run it even when the
+ * probe fails.
  *
  * Usage:
  *   npx vite-node -c vitest.config.ts scripts/dev/mint-throwaway-bearer.ts -- \
@@ -46,7 +48,7 @@
  * account for the project) for the platform mint and for cleanup;
  * MCP_ADMIN_TEST_SESSION_SECRET (read from .env.local) for a tenant mint.
  */
-import { writeFileSync, readFileSync } from "node:fs"
+import { writeFileSync, readFileSync, chmodSync, rmSync } from "node:fs"
 import { applicationDefault, getApps, initializeApp } from "firebase-admin/app"
 import { getAuth, getFirestore } from "@/lib/firebase-admin"
 import { createPlatformToken } from "@/lib/mcp/tokens"
@@ -81,7 +83,15 @@ function argOf(flag: string): string | undefined {
 function emit(minted: MintedSecrets, outPath: string | undefined): void {
     const { bearer, customToken, ...identity } = minted
     if (outPath) {
-        writeFileSync(outPath, JSON.stringify(minted, null, 2))
+        // Owner-only, and refuse to overwrite silently: this file holds a live
+        // bearer until `--cleanup` removes it.
+        try {
+            writeFileSync(outPath, JSON.stringify(minted, null, 2), { mode: 0o600, flag: "wx" })
+        } catch (e) {
+            if ((e as NodeJS.ErrnoException).code !== "EEXIST") throw e
+            chmodSync(outPath, 0o600)
+            writeFileSync(outPath, JSON.stringify(minted, null, 2), { mode: 0o600 })
+        }
     } else {
         const rule = "=".repeat(64)
         process.stderr.write(`\n${rule}\n  RAW BEARER (stderr only):\n  ${bearer}\n${rule}\n`)
@@ -191,6 +201,12 @@ async function main() {
     if (cleanupArg !== undefined) {
         const parsed = JSON.parse(cleanupArg) as MintedIdentity[] | MintedIdentity
         const rows = await cleanup(Array.isArray(parsed) ? parsed : [parsed])
+        // The credential file outlives the credential otherwise.
+        const secretsFile = argOf("--out")
+        if (secretsFile) {
+            rmSync(secretsFile, { force: true })
+            rows.push({ secretsFile: "deleted" })
+        }
         process.stdout.write(JSON.stringify({ cleaned: rows }, null, 2) + "\n")
         return
     }
