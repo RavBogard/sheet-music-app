@@ -1,0 +1,52 @@
+# Beit Mitzvah music interface, version 1
+
+Producer: centralreform.live. Consumer: the Beit Mitzvah portal server. The runtime schema in `src/lib/beit-mitzvah/contract.ts` owns the contract. This is an authenticated, CRC-only integration; it does not expand MCP, publish charts, grant library membership, or dispatch Overlays commands.
+
+## Server interface
+
+`POST https://centralreform.live/api/integrations/beit-mitzvah/v1`, JSON, with a dedicated `Authorization: Bearer <service credential>` header. This credential permits only setup, reviewed projection reads, and explicitly approved resource resolution. It cannot review sharing or edit existing source music. Runtime schemas reject extra fields, arbitrary URLs, invalid calendar dates, unsupported operations, non-CRC organization IDs, and oversized payloads. All responses are private/no-store.
+
+Every body has `version: 1`, `orgId: "crc"`, and a UUID `ceremonyId`. Joint students share one ceremony UUID. Never use a student ID or a personal name as the ceremony identity.
+
+- `operation: "ensure"` adds `localDate` (YYYY-MM-DD), `ceremonyType` (`morning` or `havdalah`), and `idempotencyKey` (1–128 nonblank characters). Optional `explicitSetlistId` wins; optional `displayName` is used only when explicitly supplied. The default name contains service kind and date, with no participant names.
+- `operation: "projection"` needs no additional fields.
+- `operation: "resource"` adds `rowId` and `resourceId`, taken from the reviewed projection. The caller cannot provide a URL or file path.
+
+Setup preserves an existing ceremony link. Otherwise it uses an explicit source ID or requires a unique current CRC/local-date/structured-template-type match. Several matches return `status: "ambiguous"` with candidate setlist IDs, without creating a service. The durable date/type claim serializes competing setup requests but does not override source ambiguity. No match on a future date creates one native setlist and native top-level track documents from the existing configured `templates/bnei_mitzvah_saturday` or `templates/havdalah_bnei_mitzvah` override, or that built-in template. Only explicit file bonds travel; the fuzzy library matcher is never invoked. Existing configured book defaults are honored. Morning starts at 10:00 and Havdalah at 16:00 America/Chicago. The setlist, rows, link, claim, and receipt commit in one Firestore transaction.
+
+Completed retry keys return the retained service; changed payloads with the same key return HTTP 409 `idempotency_conflict`. Rescheduling retains the source ID and marks the link for review. A delayed replay of the old completed request cannot undo a confirmed reschedule.
+
+Normal HTTP 200 bodies contain `version: 1`, `status: "linked" | "ambiguous" | "review_required"`, and, when available, `setlistId`, `sourceRevision`, and `projection`. The projection contains `setlistId`, `sourceRevision`, `localDate`, `ceremonyType`, `rows`, and `operatorLinks: {music, review}`. Each source row has a stable `rowId`, source `order`, and reviewed `title`; optional fields are `prayerId`, `catalogUnitId`, `biblicalRef`, `edition`, `textIdentity`, `sharedDirections`, `liturgyRef: {book, folio, unitId?, serviceViewId?}`, and `arrangement: {songId?, fileId?, key?}`. A resource is `{resourceId, kind: "score" | "audio", label}`.
+
+No text, private performance notes, honors, reference URLs, participant identities, or credentials cross this projection. Shared directions are intentionally authored in the source review screen. Optional `momentId` is the music source's independent namespace; `catalogUnitId` is emitted only if explicitly stored on the source row and reviewed. It is never populated from `momentId` or the reader's `liturgyRef.unitId`. The portal owns the explicit row-to-approved-practice-unit mapping through its existing catalog choices. Reader service views are literal source identities, never inferred from morning/Havdalah or row titles. Reader content remains owned by its existing source artifacts.
+
+Unreviewed, withdrawn, rescheduled, or musically changed source identities return `review_required` and an empty row list. Source order and private-note changes update the projection revision and order while preserving the approved semantic identities. A changed row, arrangement/file, text identity, book, edition, or reference requires another sharing review. The portal must re-fetch before serving family views/resources and independently enforce its configured CRC tenant and ceremony assignment; a cached projection cannot establish current access.
+
+## Source editor workflow
+
+`/integrations/beit-mitzvah?ceremonyId=<UUID>` is the source editor screen. Its separate `POST /api/integrations/beit-mitzvah/review` API requires a revocation-checked Firebase ID token and a fresh CRC `admin` or `band_leader` source role. The setup credential, portal roles, and read-only View As mode cannot authorize these writes.
+
+1. Load the linked service and open its source setlist to make any actual musical changes there.
+2. For a reschedule, correct the source date/type, then choose **Confirm corrected schedule**. The API verifies the requested date/type and optimistic source revision, retains the setlist, and reconciles the claim. It never regenerates music.
+3. Select the rows, curate shared directions, and deliberately select each score/reference recording. Record the permission or license covering those exact selected files for the assigned family. Library presence is not a rights basis.
+4. **Approve selected sharing** replaces the prior approval. **Withdraw all sharing** blocks future projections and file requests immediately, including previously issued tickets. No UI action grants public-reader access.
+
+Resource grants can only bind the current row's source `fileId` (score) or `audioFileId` (reference audio). The active CRC catalog needs a SHA-256 content hash and exact size; source Storage metadata must match. Version 1 supports PDF scores and `audio/mpeg` reference audio only, each at most 4 MiB. The exact canonical `library/<fileId>.pdf` or `.mp3` object generation is pinned; there is no Drive fallback, guessed alternate path, student upload, or generated voice.
+
+Resource resolution returns `{version:1, resource:{resourceId,kind,url,expiresAt}}`. The URL is a 60-second signed capability for this source's resource proxy, not a Storage URL. Each fetch rechecks the approval, source identity, current catalog, exact generation, MIME, size, SHA-256, and score signature; approval/catalog/source are checked again after downloading. Revocation stops future delivery; bytes already received cannot be recalled. The portal's existing reference-playback hold remains independently enforced.
+
+## Provisioning and release
+
+No configuration, deployment, real ceremony creation, grant, or secret provisioning occurred in this task. Before enabling either application:
+
+1. Complete the required independent adversarial review and applicable rights/release gates.
+2. Generate a dedicated high-entropy server credential through the approved secret manager (32–512 non-whitespace characters); never commit it, put it in browser variables, print it, or reuse a human OAuth/MCP token.
+3. Configure `BEIT_MITZVAH_SERVICE_TOKEN` in both server environments. Configure music `BEIT_MITZVAH_SERVICE_ORG_ID=crc` explicitly. Configure portal `BEIT_MITZVAH_MUSIC_URL` to the full versioned endpoint and its separate local CRC tenant mapping. An absent/invalid music configuration returns HTTP 503 `integration_unconfigured`.
+4. Deploy only after approval. Confirm source host tenant resolution supplies CRC to the routes; other source tenant hosts are refused. New bridge collections remain server-only under the existing Firestore deny-all fallback. No rules or public-reader settings need loosening.
+5. Verify an authorized test ceremony through the portal and source editor, including an intentional grant withdrawal and source-identity change. Live Storage delivery and the deployed cross-application path still require this release verification.
+
+Credential rotation disables future service authentication and resource-ticket verification on deployments using the new credential. Environment changes require deployment; separately protect or retire older deployments. Per-ceremony withdrawal is the immediate data control without a deploy.
+
+Errors expose machine codes only: 400 invalid request, 401 invalid service/editor authentication, 403 source role/read-only refusal, 404 unavailable/revoked/foreign resource, 409 stale source/schedule/link/idempotency conflict, 413 oversized body, 503 unconfigured or unavailable integration.
+
+Measured contract and controls: the route/service/resource source and focused tests in this change. Overlays inspection only confirmed its existing `prepare_service_from_setlist` workflow in `crc-overlays-vercel/docs/MCP.md`; that system and the reader were not edited.
