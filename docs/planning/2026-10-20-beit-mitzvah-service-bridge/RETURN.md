@@ -33,6 +33,12 @@ Storage metadata/download are stubbed with synthetic bytes in emulator tests. Re
 
 ## Remaining / next action
 
+### Canonical-origin contract correction
+
+The release preflight found the production apex redirects to `www.centralreform.live`, while the consumer correctly refuses redirects and requires returned URLs to match its configured source origin. Three broker-returned URLs still named the apex: the signed resource URL and the music/review operator links. On `codex/beit-mitzvah-canonical-origin`, based on merged `master` `3d6b1be7`, those three literals now use the fixed trusted origin `https://www.centralreform.live`. The contract endpoint documentation matches it. No request-derived host, tenant fallback, new credential, or weaker consumer validation was added.
+
+The existing isolated Firestore regressions now assert exact canonical operator links on unreviewed and approved projections, and signed resource origin/path equality with the consumer endpoint before the existing ticket-fetch and immediate-revocation checks. All 19 isolated Firestore tests and five auth/schema tests passed, as did TypeScript and affected-file ESLint. Storage remains stubbed with synthetic bytes, so this is contract/authorization verification rather than real resource delivery. The first regression invocation incorrectly expected the setup receipt to include a projection; the test was corrected to perform the established projection read separately. Diagnostics remain under local `.beit-qa/canonical-*`. Release owner retains deployment/configuration ownership; the runtime correction requires independent review and new exact-head CI before the portal consumer release.
+
 ### Remote CI correction checkpoint
 
 Draft PR #16 initially failed run `39545870780`: the bridge's two optional server variables were absent from the central environment registry/example, and the new review screen bypassed the established translation catalogue. Both are now integrated: dedicated English/Hebrew `beitMitzvah` catalogues and translator notes preserve the English workflow, and unset server configuration still disables the integration. No credential, tenancy, source setup, or resource authorization logic changed.
