@@ -52,30 +52,47 @@ export async function ensureService(db: Firestore, request: EnsureRequest): Prom
     const candidateId = randomUUID()
     const intentRef = db.collection(collections.intents).doc(linkId(request.ceremonyId))
     const scheduleRevision = request.scheduleRevision ?? 1
+    if (request.excludedSetlistId && request.explicitSetlistId === request.excludedSetlistId) throw new BridgeError("excluded_setlist_conflict")
     // Persist ordering before attempting setup: even a failed newer operation
     // must fence a previously unprocessed older queued import.
     await db.runTransaction(async tx => {
         const receipt = (await tx.get(receiptRef)).data()
         if (receipt && receipt.inputHash !== inputHash) throw new BridgeError("idempotency_conflict")
-        if (receipt?.setlistId) return
         const intent = (await tx.get(intentRef)).data()
         if (intent && !isCRC(intent)) throw new BridgeError("link_conflict")
+        if (intent?.excludedSetlistId && intent.excludedSetlistId !== request.excludedSetlistId) throw new BridgeError("excluded_setlist_conflict")
+        if (request.excludedSetlistId) {
+            const excluded = (await tx.get(db.collection("setlists").doc(request.excludedSetlistId))).data()
+            if (!isCRC(excluded)) throw new BridgeError("not_found", 404)
+            if (receipt?.setlistId === request.excludedSetlistId) throw new BridgeError("excluded_setlist_conflict")
+            const linked = (await tx.get(ceremonyRef)).data()
+            if (linked?.setlistId === request.excludedSetlistId) throw new BridgeError("excluded_setlist_conflict")
+        }
+        if (receipt?.setlistId) return
         if (intent && scheduleRevision < Number(intent.scheduleRevision)) throw new BridgeError("stale_schedule_revision")
         if (intent && scheduleRevision === intent.scheduleRevision &&
-            (intent.localDate !== request.localDate || intent.ceremonyType !== request.ceremonyType)) throw new BridgeError("schedule_revision_conflict")
-        if (!intent || scheduleRevision > Number(intent.scheduleRevision)) tx.set(intentRef, {
+            (intent.localDate !== request.localDate || intent.ceremonyType !== request.ceremonyType ||
+                (intent.excludedSetlistId ?? null) !== (request.excludedSetlistId ?? null))) throw new BridgeError("schedule_revision_conflict")
+        if (!intent || scheduleRevision > Number(intent.scheduleRevision)) tx.set(intentRef, clean({
             orgId: "crc", scheduleRevision, localDate: request.localDate, ceremonyType: request.ceremonyType,
-        })
+            excludedSetlistId: request.excludedSetlistId,
+        }))
     })
     return db.runTransaction(async tx => {
         const receipt = (await tx.get(receiptRef)).data()
         if (receipt && receipt.inputHash !== inputHash) throw new BridgeError("idempotency_conflict")
         const intent = (await tx.get(intentRef)).data()
         if (intent && !isCRC(intent)) throw new BridgeError("not_found", 404)
+        if (request.excludedSetlistId) {
+            const excluded = (await tx.get(db.collection("setlists").doc(request.excludedSetlistId))).data()
+            if (!isCRC(excluded)) throw new BridgeError("not_found", 404)
+        }
         if (!receipt?.setlistId && intent && scheduleRevision < Number(intent.scheduleRevision)) throw new BridgeError("stale_schedule_revision")
         const existing = (await tx.get(ceremonyRef)).data()
         if (existing) {
             if (!isCRC(existing)) throw new BridgeError("not_found", 404)
+            const excluded = request.excludedSetlistId ?? intent?.excludedSetlistId ?? existing.excludedSetlistId
+            if (excluded && existing.setlistId === excluded) throw new BridgeError("excluded_setlist_conflict")
             if (request.explicitSetlistId && request.explicitSetlistId !== existing.setlistId) throw new BridgeError("link_conflict")
             const linked = (await tx.get(db.collection("setlists").doc(String(existing.setlistId)))).data()
             if (!isCRC(linked)) throw new BridgeError("not_found", 404)
@@ -107,7 +124,7 @@ export async function ensureService(db: Firestore, request: EnsureRequest): Prom
             if (day.size > 200) throw new BridgeError("date_requires_staff_review")
             const matches = day.docs.filter(doc => {
                 const row = doc.data()
-                return isCRC(row) && row.isTest !== true && row.templateType === templateType(request.ceremonyType)
+                return doc.id !== request.excludedSetlistId && isCRC(row) && row.isTest !== true && row.templateType === templateType(request.ceremonyType)
             })
             if (matches.length > 1) {
                 tx.set(receiptRef, { orgId: "crc", inputHash, ambiguous: true })
@@ -147,9 +164,14 @@ export async function ensureService(db: Firestore, request: EnsureRequest): Prom
             for (const row of rows) tx.create(db.collection("tracks").doc(String(row.id)), { ...row, setlistId })
         }
         const reviewRequired = !!selected && (dateOf(selected.eventDate) !== request.localDate || selected.templateType !== templateType(request.ceremonyType))
-        tx.create(ceremonyRef, { orgId: "crc", ceremonyId: request.ceremonyId, setlistId, localDate: request.localDate, ceremonyType: request.ceremonyType,
-            scheduleRevision, requestedLocalDate: request.localDate, requestedCeremonyType: request.ceremonyType, reviewRequired })
-        if (!claim || !request.explicitSetlistId) tx.set(claimRef, { orgId: "crc", setlistId })
+        tx.create(ceremonyRef, clean({ orgId: "crc", ceremonyId: request.ceremonyId, setlistId, localDate: request.localDate, ceremonyType: request.ceremonyType,
+            excludedSetlistId: request.excludedSetlistId,
+            scheduleRevision, requestedLocalDate: request.localDate, requestedCeremonyType: request.ceremonyType, reviewRequired }))
+        if (request.excludedSetlistId && claim?.setlistId === request.excludedSetlistId) {
+            // Preserve the original claim's pointer while serializing split
+            // creation. Date queries, never this pointer, decide uniqueness.
+            tx.update(claimRef, { revision: FieldValue.increment(1) })
+        } else if (!claim || !request.explicitSetlistId) tx.set(claimRef, { orgId: "crc", setlistId })
         tx.set(receiptRef, { orgId: "crc", inputHash, setlistId })
         return { version: 1, status: reviewRequired ? "review_required" : "linked", setlistId }
     })
@@ -162,8 +184,10 @@ export async function readSource(db: Firestore, ceremonyId: string, tx?: Transac
     const intent = (await get(db.collection(collections.intents).doc(linkId(ceremonyId)))).data() as Data | undefined
     const link = storedLink && { ...storedLink }
     if (!isCRC(link)) throw new BridgeError("not_found", 404)
+    if (link.setlistId === (intent?.excludedSetlistId ?? link.excludedSetlistId)) throw new BridgeError("excluded_setlist_conflict")
     if (intent) {
         if (!isCRC(intent)) throw new BridgeError("not_found", 404)
+        if (intent.excludedSetlistId) link.excludedSetlistId = intent.excludedSetlistId
         link.scheduleRevision = intent.scheduleRevision
         link.requestedLocalDate = intent.localDate
         link.requestedCeremonyType = intent.ceremonyType

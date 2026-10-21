@@ -132,6 +132,73 @@ describe("transactional ceremony setup", () => {
         expect((await db.collection(collections.links).get()).size).toBe(0)
     })
 })
+describe("explicit staff splits", () => {
+    it.each([
+        { split: "moving member", splitDate: "2099-02-21", sourceDate: "2099-02-14", sourceType: "bnei_mitzvah_saturday" },
+        { split: "staying member", splitDate: "2099-02-14", sourceDate: "2099-02-14", sourceType: "bnei_mitzvah_saturday" },
+        { split: "moving member after source moved", splitDate: "2099-02-21", sourceDate: "2099-02-21", sourceType: "bnei_mitzvah_saturday" },
+        { split: "staying member after source moved date and type", splitDate: "2099-02-14", sourceDate: "2099-02-21", sourceType: "havdalah_bnei_mitzvah" },
+        { split: "moving member after source moved to Havdalah", splitDate: "2099-02-21", splitType: "havdalah" as const, sourceDate: "2099-02-21", sourceType: "havdalah_bnei_mitzvah" },
+    ])("never reattaches $split to the excluded original", async ({ splitDate, splitType, sourceDate, sourceType }) => {
+        const joint = make()
+        const original = (await ensureService(db, joint)).setlistId!
+        await db.collection("setlists").doc(original).update({ eventDate: parseEventDate(`${sourceDate}T${sourceType === "havdalah_bnei_mitzvah" ? "16:00" : "10:00"}`, "crc"), templateType: sourceType })
+        const before = (await db.collection("setlists").doc(original).get()).data()
+        const split = make({ localDate: splitDate, ceremonyType: splitType ?? "morning", excludedSetlistId: original, scheduleRevision: 1 })
+        const separate = await ensureService(db, split)
+        expect(separate.setlistId).toBeTruthy()
+        expect(separate.setlistId).not.toBe(original)
+        expect((await db.collection("setlists").doc(original).get()).data()).toEqual(before)
+        expect((await db.collection(collections.links).doc(linkId(joint.ceremonyId)).get()).data()?.setlistId).toBe(original)
+        expect((await db.collection(collections.links).doc(linkId(split.ceremonyId)).get()).data()?.excludedSetlistId).toBe(original)
+        expect((await ensureService(db, split)).setlistId).toBe(separate.setlistId)
+        expect((await db.collection("setlists").get()).size).toBe(2)
+    })
+    it("serializes split retries and reuses only the other unique source while ordinary matching detects ambiguity", async () => {
+        const original = (await ensureService(db, make())).setlistId!
+        const split = make({ excludedSetlistId: original })
+        const results = await Promise.all([
+            ensureService(db, split), ensureService(db, split),
+            ensureService(db, { ...split, idempotencyKey: randomUUID() }),
+        ])
+        const distinct = results[0].setlistId!
+        expect(new Set(results.map(result => result.setlistId))).toEqual(new Set([distinct]))
+        expect(distinct).not.toBe(original)
+        expect((await ensureService(db, make({ excludedSetlistId: original }))).setlistId).toBe(distinct)
+        const ordinary = await ensureService(db, make())
+        expect(ordinary.status).toBe("ambiguous")
+        expect(ordinary.candidates?.map(candidate => candidate.setlistId).sort()).toEqual([original, distinct].sort())
+        const claims = await db.collection(collections.claims).get()
+        expect(claims.size).toBe(1)
+        expect(claims.docs[0].data().setlistId).toBe(original)
+        await expect(ensureService(db, { ...split, excludedSetlistId: undefined, scheduleRevision: 2, idempotencyKey: randomUUID() })).rejects.toThrow("excluded_setlist_conflict")
+        await expect(ensureService(db, { ...split, excludedSetlistId: distinct })).rejects.toThrow("idempotency_conflict")
+        expect((await db.collection("setlists").get()).size).toBe(2)
+    })
+    it("refuses foreign exclusions and explicit/replayed original links without changing the retained original ceremony", async () => {
+        await existing("foreign-excluded", "brotherslazaroff")
+        await expect(ensureService(db, make({ excludedSetlistId: "foreign-excluded" }))).rejects.toThrow("not_found")
+        const request = make()
+        const original = (await ensureService(db, request)).setlistId!
+        await expect(ensureService(db, make({ excludedSetlistId: original, explicitSetlistId: original }))).rejects.toThrow("excluded_setlist_conflict")
+        await expect(ensureService(db, { ...request, excludedSetlistId: original })).rejects.toThrow("idempotency_conflict")
+        await expect(ensureService(db, { ...request, excludedSetlistId: original, scheduleRevision: 2, idempotencyKey: randomUUID() })).rejects.toThrow("excluded_setlist_conflict")
+        expect((await ensureService(db, request)).setlistId).toBe(original)
+        expect((await projection(db, request.ceremonyId)).setlistId).toBe(original)
+    })
+    it("can reconcile a distinct split source onto the original date without taking over the original claim", async () => {
+        const original = (await ensureService(db, make())).setlistId!
+        const split = make({ localDate: "2099-02-21", excludedSetlistId: original, scheduleRevision: 1 })
+        const distinct = (await ensureService(db, split)).setlistId!
+        await ensureService(db, { ...split, localDate: "2099-02-14", scheduleRevision: 2, explicitSetlistId: distinct, idempotencyKey: randomUUID() })
+        await db.collection("setlists").doc(distinct).update({ eventDate: parseEventDate("2099-02-14T10:00", "crc") })
+        const source = await readSource(db, split.ceremonyId)
+        await manageReview(db, "source-editor", { operation: "confirm_schedule", ceremonyId: split.ceremonyId, expectedSourceRevision: source.sourceRevision })
+        expect((await readSource(db, split.ceremonyId)).link).toMatchObject({ setlistId: distinct, localDate: "2099-02-14", reviewRequired: false })
+        expect((await db.collection("setlists").doc(original).get()).data()?.eventDate.toMillis()).toBe(parseEventDate("2099-02-14T10:00", "crc").toMillis())
+        expect((await ensureService(db, make())).status).toBe("ambiguous")
+    })
+})
 describe("reviewed projections and revocable resources", () => {
     it("shares only curated rows/directions, retains order edits, and withdraws changed identities", async () => {
         await existing("crc-source"); await sourceRow("crc-source")

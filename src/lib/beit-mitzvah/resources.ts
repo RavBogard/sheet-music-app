@@ -1,5 +1,5 @@
 import "server-only"
-import type { Firestore } from "firebase-admin/firestore"
+import { FieldValue, type Firestore } from "firebase-admin/firestore"
 import { createHash, randomUUID } from "node:crypto"
 import { getStorage } from "@/lib/firebase-admin"
 import { downloadExactStorageGeneration } from "@/lib/firebase-storage"
@@ -51,9 +51,11 @@ export async function manageReview(db: Firestore, uid: string, request: z.infer<
             const nextClaim = db.collection(collections.claims).doc(hash(["crc", date, type]))
             const old = (await tx.get(previousClaim)).data()
             const next = (await tx.get(nextClaim)).data()
-            if (next && (next.orgId !== "crc" || next.setlistId !== current.link.setlistId)) throw new BridgeError("link_conflict")
+            const preservesExcludedClaim = next?.orgId === "crc" && current.link.excludedSetlistId !== undefined && next.setlistId === current.link.excludedSetlistId
+            if (next && (next.orgId !== "crc" || (next.setlistId !== current.link.setlistId && !preservesExcludedClaim))) throw new BridgeError("link_conflict")
             if (previousClaim.path !== nextClaim.path && old?.orgId === "crc" && old.setlistId === current.link.setlistId) tx.delete(previousClaim)
-            tx.set(nextClaim, { orgId: "crc", setlistId: current.link.setlistId })
+            if (preservesExcludedClaim) tx.update(nextClaim, { revision: FieldValue.increment(1) })
+            else tx.set(nextClaim, { orgId: "crc", setlistId: current.link.setlistId })
             tx.update(db.collection(collections.links).doc(linkId(request.ceremonyId)), {
                 localDate: date, ceremonyType: type, requestedLocalDate: date, requestedCeremonyType: type,
                 reviewRequired: false, scheduleConfirmedBy: uid, scheduleConfirmedAt: new Date().toISOString(),

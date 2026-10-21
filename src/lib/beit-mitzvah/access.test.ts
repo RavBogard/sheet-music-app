@@ -46,6 +46,8 @@ describe("narrow music service authentication", () => {
         expect(bridgeRequest.safeParse({ ...valid, orgId: "brotherslazaroff" }).success).toBe(false)
         expect(bridgeRequest.safeParse({ ...valid, scheduleRevision: 0 }).success).toBe(false)
         expect(bridgeRequest.safeParse({ ...valid, scheduleRevision: 2.5 }).success).toBe(false)
+        expect(bridgeRequest.safeParse({ ...valid, excludedSetlistId: "original-source" }).success).toBe(true)
+        expect(bridgeRequest.safeParse({ ...valid, excludedSetlistId: "https://foreign.test/source" }).success).toBe(false)
     })
     it("requires a fresh verified source editor and rejects the setup credential for review", async () => {
         configure()
