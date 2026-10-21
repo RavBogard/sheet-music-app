@@ -344,6 +344,9 @@ describe('ReconciliationProvider', () => {
         const localId = failedRows[0].localId!
 
         // Don't change radio — default is 'theirs'. Click Resolve all.
+        await waitFor(() => {
+            expect(screen.getByTestId('reconciliation-resolve')).not.toBeDisabled()
+        })
         fireEvent.click(screen.getByTestId('reconciliation-resolve'))
 
         await waitFor(() => {

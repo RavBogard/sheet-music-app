@@ -126,7 +126,9 @@ beforeEach(() => {
 })
 
 function wrapper(org: string) {
-    return ({ children }: { children: React.ReactNode }) => React.createElement(OrgContext.Provider, { value: org }, children)
+    return function TenantWrapper({ children }: { children: React.ReactNode }) {
+        return React.createElement(OrgContext.Provider, { value: org }, children)
+    }
 }
 
 describe("golden template overrides per tenant", () => {

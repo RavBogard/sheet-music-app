@@ -92,7 +92,6 @@ export const GET = createApiHandler(
             const rosterDocs = members
                 .filter(m => m.profile !== null)
                 .sort((a, b) => (a.uid < b.uid ? -1 : a.uid > b.uid ? 1 : 0))
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 .map(m => ({ id: m.uid, data: () => m.profile as Record<string, any> }))
 
             // Build candidates

@@ -22,7 +22,6 @@ import { toEventDateLabel } from "@/lib/mcp/tools/service-sheet"
 const ORGS = ["crc", "brotherslazaroff"] as const
 const LATE_FRIDAY = "2026-06-06T03:30:00.000Z" // Fri 5 Jun 22:30 Chicago
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 const call = (fn: (...a: any[]) => any, ...args: any[]) => fn(...args)
 
 describe.each(ORGS)("golden time zone — %s", (org) => {

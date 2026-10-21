@@ -80,6 +80,9 @@ export const env = createEnv({
         // NOT prodRequired: an unset value disables the surface, which is
         // the safe default. Never reaches the MCP tool registry surface.
         MCP_ADMIN_TEST_SESSION_SECRET: z.string().optional(),
+        /** Dedicated CRC ceremony broker; unset values disable the integration. Never public. */
+        BEIT_MITZVAH_SERVICE_ORG_ID: z.string().optional(),
+        BEIT_MITZVAH_SERVICE_TOKEN: z.string().optional(),
 
         // ── Declared by the 2026-09-19 audit, item (e) ──────────────────────
         // Each of these was read from raw `process.env` in `src/` and declared
@@ -186,6 +189,8 @@ export const env = createEnv({
         CRC_BACKUP_DRIVE_FOLDER_ID: process.env.CRC_BACKUP_DRIVE_FOLDER_ID,
         GEMINI_API_KEY: process.env.GEMINI_API_KEY,
         MCP_ADMIN_TEST_SESSION_SECRET: process.env.MCP_ADMIN_TEST_SESSION_SECRET,
+        BEIT_MITZVAH_SERVICE_ORG_ID: process.env.BEIT_MITZVAH_SERVICE_ORG_ID,
+        BEIT_MITZVAH_SERVICE_TOKEN: process.env.BEIT_MITZVAH_SERVICE_TOKEN,
         ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS,
         MCP_PUBLIC_URL: process.env.MCP_PUBLIC_URL,
         CHART_RENDER_CHROME_PATH: process.env.CHART_RENDER_CHROME_PATH,

@@ -50,7 +50,8 @@ import { OrgContext } from "@/lib/org/org-context"
 
 let seen: ReturnType<typeof useAuth> | null = null
 function Probe() {
-    seen = useAuth()
+    const auth = useAuth()
+    React.useEffect(() => { seen = auth }, [auth])
     return null
 }
 

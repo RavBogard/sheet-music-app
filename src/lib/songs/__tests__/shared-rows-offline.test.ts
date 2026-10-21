@@ -23,7 +23,7 @@ import {
 import { cacheSharedSongs, loadSharedRows, setSharedSourceForTests, toSharedFile } from '@/lib/library/shared-source'
 import { collectionIdOf, isOwnedBy, visibleTo } from '@/lib/library/visibility'
 import { getDb, resetDbForTests } from '@/lib/local/schema'
-import { getFile } from '@/lib/offline-idb'
+import { clearAll, getFile } from '@/lib/offline-idb'
 import { prefetchSetlistPDFs } from '@/lib/prefetch'
 import { scopeLocalSongs, subscribeSongsLibrary, type DocChange, type SubscribeAdapter } from '@/lib/songs/subscribe'
 
@@ -99,6 +99,7 @@ describe('shared-collection helpers', () => {
 describe('offline: shared rows cache like own rows', () => {
     beforeEach(async () => {
         await resetDbForTests()
+        await clearAll()
     })
     afterEach(async () => {
         setSharedSourceForTests(null)
@@ -165,7 +166,12 @@ describe('offline: shared rows cache like own rows', () => {
     })
 
     it('Save offline caches a shared chart’s bytes by fileId like an own chart', async () => {
-        const fetchSpy = vi.fn(async () => new Response(new Blob(['%PDF-shared']), { status: 200 }))
+        // Stay in jsdom's browser Blob realm. Node 22's native Response and
+        // jsdom's FileReader Blob polyfill are not interchangeable.
+        const fetchSpy = vi.fn(async () => ({
+            ok: true,
+            blob: async () => new Blob(['%PDF-shared'], { type: 'application/pdf' }),
+        } as Response))
         vi.stubGlobal('fetch', fetchSpy)
         const n = await prefetchSetlistPDFs(['own-1', 'n1'])
         expect(n).toBe(2)
@@ -173,6 +179,6 @@ describe('offline: shared rows cache like own rows', () => {
             '/api/drive/file/own-1',
             '/api/drive/file/n1',
         ])
-        expect(await getFile('n1')).toBeTruthy()
+        expect(await (await getFile('n1'))?.text()).toBe('%PDF-shared')
     })
 })

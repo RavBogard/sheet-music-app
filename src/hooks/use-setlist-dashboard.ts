@@ -161,7 +161,7 @@ export function useSetlistDashboard({
             org,
         )
         return () => unsubscribe()
-    }, [setlistService, authUser?.uid, org])
+    }, [setlistService, authUser?.uid, org, t])
 
     // Load library in background
     useLibrary()

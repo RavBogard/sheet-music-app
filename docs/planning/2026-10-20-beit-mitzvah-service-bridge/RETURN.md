@@ -33,4 +33,14 @@ Storage metadata/download are stubbed with synthetic bytes in emulator tests. Re
 
 ## Remaining / next action
 
+### Remote CI correction checkpoint
+
+Draft PR #16 initially failed run `39545870780`: the bridge's two optional server variables were absent from the central environment registry/example, and the new review screen bypassed the established translation catalogue. Both are now integrated: dedicated English/Hebrew `beitMitzvah` catalogues and translator notes preserve the English workflow, and unset server configuration still disables the integration. No credential, tenancy, source setup, or resource authorization logic changed.
+
+The same CI run exposed existing lint errors/warnings. Named two test wrappers, captured the auth test probe in an effect, declared the collection reload before its hook consumer, completed two existing dependency arrays, and removed unused lint directives. The exact CI ESLint command now passes without weakening rules; TypeScript passes. Nine affected files' test suites passed (77 tests), including the environment and full catalogue gates.
+
+Two existing test failures were investigated separately: the reconciliation fixture clicked before its action became enabled (now waits for readiness); offline cache failure reproduced under CI's Node 22 but not local Node 24 because native Response crossed jsdom's Blob/FileReader realm. Its fixture now returns browser-response Blob bytes directly, clears its byte store, and checks the exact cached content. Both suites pass under Node 22 (28 tests). Verbose evidence stays in local `.beit-qa/`; full required remote CI must pass at the new head before release. No tests were excluded and no gate was loosened.
+
+Final full local gated rerun: 567 files passed, two failed, three skipped; 6,379 tests passed, 19 failed, 31 skipped. All failures are existing Windows-shell cases in `scripts/__tests__/coord-status.test.ts` and `setup-coord-worktree.test.ts`: Bash strips the Windows path separators and cannot find scripts (exit 127). Those cases passed on Linux CI's original run; no shell infrastructure change is part of this correction. The local gate is not claimed green. Final exact CI ESLint and TypeScript reruns passed after the fixture correction.
+
 Parent integrates the portal adapter against the versioned schema and runs the required independent adversarial review of both repositories. When required checks and applicable rights/release gates are satisfied, provision the dedicated server credential and explicit CRC configuration following CONTRACT.md and the source repository's existing deployment policy; this work adds no separate Daniel checkpoint. Source staff then review actual assigned services and permissions. Preserve the portal reference-playback hold and existing generated-chant release gates. Do not grant resources merely because this local implementation passes.

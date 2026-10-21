@@ -33,7 +33,6 @@ beforeEach(() => {
 })
 afterEach(() => vi.unstubAllGlobals())
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 describe.each(["crc", "brotherslazaroff"])("golden hebcal — %s", (org) => {
     it("asks the Diaspora schedule for the civil date and returns its parasha", async () => {
         const { getParasha } = await import("@/lib/liturgical-calendar")

@@ -10,11 +10,13 @@ import { I18nProvider, readingDirection, useReadingDirection, useT } from "@/i18
 import type { Direction, UiLanguage } from "@/i18n/core"
 
 function wrap(lang: UiLanguage, dir: Direction, messages: Record<string, string> = {}) {
-    return ({ children }: { children: ReactNode }) => (
-        <I18nProvider lang={lang} dir={dir} timeZone={null} messages={messages}>
-            {children}
-        </I18nProvider>
-    )
+    return function LanguageWrapper({ children }: { children: ReactNode }) {
+        return (
+            <I18nProvider lang={lang} dir={dir} timeZone={null} messages={messages}>
+                {children}
+            </I18nProvider>
+        )
+    }
 }
 
 describe("ChartContent / chart renderers keep their own direction", () => {
