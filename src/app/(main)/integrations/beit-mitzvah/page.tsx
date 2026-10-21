@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { useAuth } from "@/lib/auth-context"
 import { apiFetch } from "@/lib/api-client"
 import { Button } from "@/components/ui/button"
@@ -12,6 +12,19 @@ type ReviewRow = SharedRow & { audioFileId?: string | null }
 interface Inspection {
     setlistId: string; sourceRevision: string; reviewRequired: boolean; status: string
     requestedLocalDate: string; requestedCeremonyType: string; rows: ReviewRow[]
+    serviceName: string; localDate: string; ceremonyType: string
+}
+async function call(body: object) {
+    const response = await apiFetch("/api/integrations/beit-mitzvah/review", { method: "POST", body: JSON.stringify(body) })
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.error === "stale_source" ? "The music changed. Refresh the service before approving." :
+        data.error === "source_schedule_mismatch" ? "Update the date and service type in the music setlist first, then confirm the schedule here." :
+        data.error === "resource_manifest_required" ? "A selected file needs an exact source catalog hash and Storage generation before it can be shared." :
+        data.error === "integration_unconfigured" ? "The music connection has not been configured." : "The action could not be completed. Check your music access and refresh the service.")
+    return data
+}
+function humanDate(date: string): string {
+    return new Date(`${date}T12:00:00Z`).toLocaleDateString("en-US", { dateStyle: "long", timeZone: "UTC" })
 }
 export default function BeitMitzvahReviewPage() {
     const { user, loading, role } = useAuth()
@@ -23,24 +36,20 @@ export default function BeitMitzvahReviewPage() {
     const [rights, setRights] = useState("")
     const [busy, setBusy] = useState(false)
     const [message, setMessage] = useState("")
-    useEffect(() => { setCeremonyId(new URLSearchParams(window.location.search).get("ceremonyId") ?? "") }, [])
-    async function call(body: object) {
-        const response = await apiFetch("/api/integrations/beit-mitzvah/review", { method: "POST", body: JSON.stringify(body) })
-        const data = await response.json()
-        if (!response.ok) throw new Error(data.error === "stale_source" ? "The music changed. Load the service again before approving." :
-            data.error === "source_schedule_mismatch" ? "Update the date and service type in the music setlist first, then confirm the schedule here." :
-            data.error === "resource_manifest_required" ? "A selected file needs an exact source catalog hash and Storage generation before it can be shared." :
-            data.error === "integration_unconfigured" ? "The music connection has not been configured." : "The action could not be completed. Check your music access and reload the service.")
-        return data
-    }
-    async function inspect() {
+    const inspect = useCallback(async (id: string) => {
         setBusy(true); setMessage("")
         try {
-            const data = await call({ operation: "inspect", ceremonyId }) as Inspection
+            const data = await call({ operation: "inspect", ceremonyId: id }) as Inspection
             setSource(data); setSelected([]); setFiles([]); setRights("")
             setDirections(Object.fromEntries(data.rows.map(row => [row.rowId, row.sharedDirections ?? ""])))
         } catch (error) { setSource(null); setMessage((error as Error).message) } finally { setBusy(false) }
-    }
+    }, [])
+    const canReview = !!user && ["admin", "band_leader"].includes(role ?? "")
+    useEffect(() => {
+        const id = new URLSearchParams(window.location.search).get("ceremonyId") ?? ""
+        setCeremonyId(id)
+        if (canReview && id) void inspect(id)
+    }, [canReview, inspect])
     async function save(operation: "approve" | "revoke" | "confirm_schedule") {
         if (!source) return
         setBusy(true); setMessage("")
@@ -55,7 +64,7 @@ export default function BeitMitzvahReviewPage() {
                 ...(operation === "approve" ? { rowIds: selected, sharedDirections: Object.fromEntries(selected.map(id => [id, directions[id] ?? ""])), resources } : {}),
             })
             setSource(null)
-            setMessage(operation === "revoke" ? "Sharing withdrawn. Future projection and file requests are blocked." : operation === "confirm_schedule" ? "Schedule confirmed. Load the service to review what families can see." : "Review saved. Only the selected rows and files are shared with the assigned ceremony.")
+            setMessage(operation === "revoke" ? "Sharing withdrawn. New family requests for these rows and files are blocked." : operation === "confirm_schedule" ? "Schedule confirmed. Refresh the service to review what families can see." : "Review saved. Only the selected rows and files are shared with the assigned ceremony.")
         } catch (error) { setMessage((error as Error).message) } finally { setBusy(false) }
     }
     const toggle = (id: string, values: string[], set: (values: string[]) => void) => set(values.includes(id) ? values.filter(value => value !== id) : [...values, id])
@@ -63,21 +72,22 @@ export default function BeitMitzvahReviewPage() {
     if (!user || !["admin", "band_leader"].includes(role ?? "")) return <p className="p-6">Sign in with your CRC music editor account to review family sharing.</p>
     return <main className="mx-auto max-w-3xl space-y-8 px-4 py-8 sm:px-6">
         <header className="space-y-3">
-            <h1 className="text-2xl font-semibold">Beit Mitzvah sharing review</h1>
+            <h1 className="text-2xl font-semibold">Review family sharing</h1>
             <p className="text-muted-foreground">Choose the source rows, practice directions, and authorized files the assigned family may use. Private performance notes stay in the music setlist.</p>
         </header>
-        <form className="flex flex-col gap-3" onSubmit={event => { event.preventDefault(); void inspect() }}>
-            <Label htmlFor="ceremony">Ceremony ID from Beit Mitzvah</Label>
-            <div className="flex flex-col gap-3 sm:flex-row">
-                <Input id="ceremony" value={ceremonyId} onChange={event => { setCeremonyId(event.target.value); setSource(null) }} required disabled={busy} />
-                <Button disabled={busy || !ceremonyId} type="submit">{busy ? "Working…" : "Load service"}</Button>
-            </div>
-        </form>
+        {busy && !source && <p role="status">Loading the service for review…</p>}
+        {!source && !busy && !message && <p>Open a ceremony’s sharing review from Beit Mitzvah to see its service here.</p>}
+        {!source && ceremonyId && !busy && <Button variant="outline" onClick={() => void inspect(ceremonyId)}>Refresh service</Button>}
         {message && <p role="status" className="rounded-md border p-4">{message}</p>}
         {source && <section aria-label="Source service review" className="space-y-6">
+            <header className="space-y-2">
+                <h2 className="text-xl font-semibold">{source.serviceName}</h2>
+                <p>{humanDate(source.localDate)} · {source.ceremonyType === "havdalah" ? "Havdalah service" : "Morning service"}</p>
+            </header>
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <a className="underline underline-offset-4" href={`/perform/setlist/${source.setlistId}`}>Open music setlist</a>
                 <p>Sharing: {source.status}</p>
+                <Button variant="outline" disabled={busy} onClick={() => void inspect(ceremonyId)}>Refresh service</Button>
             </div>
             {source.reviewRequired && <div className="space-y-3 rounded-md border p-4">
                 <p>The schedule needs review. Update the music setlist to {source.requestedLocalDate}, {source.requestedCeremonyType}, then confirm the retained link.</p>
@@ -112,5 +122,15 @@ export default function BeitMitzvahReviewPage() {
                 <Button variant="outline" disabled={busy} onClick={() => void save("revoke")}>Withdraw all sharing</Button>
             </div>
         </section>}
+        <details className="border-t pt-5">
+            <summary className="cursor-pointer text-sm text-muted-foreground">Advanced lookup</summary>
+            <form className="mt-4 flex flex-col gap-3" onSubmit={event => { event.preventDefault(); void inspect(ceremonyId) }}>
+                <Label htmlFor="ceremony">Ceremony reference</Label>
+                <div className="flex flex-col gap-3 sm:flex-row">
+                    <Input id="ceremony" value={ceremonyId} onChange={event => { setCeremonyId(event.target.value); setSource(null) }} required disabled={busy} />
+                    <Button variant="outline" disabled={busy || !ceremonyId} type="submit">Look up service</Button>
+                </div>
+            </form>
+        </details>
     </main>
 }

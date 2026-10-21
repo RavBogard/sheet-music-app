@@ -64,6 +64,8 @@ export async function manageReview(db: Firestore, uid: string, request: z.infer<
     if (request.operation === "inspect") {
         const current = (await ref.get()).data()
         return { version: 1, setlistId: source.link.setlistId, sourceRevision: source.sourceRevision,
+            serviceName: String(source.setlist.name ?? "B'nei Mitzvah service"),
+            localDate: dateOf(source.setlist.eventDate) ?? source.link.localDate, ceremonyType: source.link.ceremonyType,
             reviewRequired: sourceNeedsReview(source), requestedLocalDate: source.link.requestedLocalDate ?? source.link.localDate,
             requestedCeremonyType: source.link.requestedCeremonyType ?? source.link.ceremonyType,
             rows: shareableRows(source).map(row => ({ ...row,

@@ -89,7 +89,7 @@ describe("transactional ceremony setup", () => {
     it("preserves the linked service on reschedule and reconciles only after source correction", async () => {
         const original = make()
         const first = await ensureService(db, original)
-        const rescheduled = { ...original, idempotencyKey: randomUUID(), localDate: "2099-02-21" }
+        const rescheduled = { ...original, idempotencyKey: randomUUID(), localDate: "2099-02-21", scheduleRevision: 2 }
         const result = await ensureService(db, rescheduled)
         expect(result).toMatchObject({ setlistId: first.setlistId, status: "review_required" })
         let source = await readSource(db, original.ceremonyId)
@@ -101,6 +101,35 @@ describe("transactional ceremony setup", () => {
         const link = (await db.collection(collections.links).doc(linkId(original.ceremonyId)).get()).data()!
         expect(link).toMatchObject({ localDate: "2099-02-21", reviewRequired: false })
         expect((await db.collection("setlists").get()).size).toBe(1)
+    })
+    it("fences an unprocessed older schedule intent, including after the newer operation fails", async () => {
+        const request = make({ scheduleRevision: 1 })
+        const linked = await ensureService(db, request)
+        const latest = { ...request, localDate: "2099-02-28", scheduleRevision: 3, idempotencyKey: randomUUID(), explicitSetlistId: "missing-source" }
+        await expect(ensureService(db, latest)).rejects.toThrow("link_conflict")
+        const older = { ...request, localDate: "2099-02-21", scheduleRevision: 2, idempotencyKey: randomUUID() }
+        await expect(ensureService(db, older)).rejects.toThrow("stale_schedule_revision")
+        const source = await readSource(db, request.ceremonyId)
+        expect(source.link).toMatchObject({ requestedLocalDate: "2099-02-28", scheduleRevision: 3, setlistId: linked.setlistId, reviewRequired: true })
+        await ensureService(db, request) // completed old receipt remains a harmless replay
+        expect((await readSource(db, request.ceremonyId)).link.requestedLocalDate).toBe("2099-02-28")
+        expect((await db.collection("setlists").get()).size).toBe(1)
+    })
+    it("keeps duplicate revision intents safe and rejects conflicting schedules at the same revision", async () => {
+        const request = make({ scheduleRevision: 1 })
+        const first = await ensureService(db, request)
+        const duplicate = await ensureService(db, { ...request, idempotencyKey: randomUUID() })
+        expect(duplicate.setlistId).toBe(first.setlistId)
+        await expect(ensureService(db, { ...request, localDate: "2099-02-21", idempotencyKey: randomUUID() })).rejects.toThrow("schedule_revision_conflict")
+        expect((await readSource(db, request.ceremonyId)).link.requestedLocalDate).toBe(request.localDate)
+        expect((await db.collection("setlists").get()).size).toBe(1)
+    })
+    it("does not create an old queued service after a newer initial setup fails", async () => {
+        const newest = make({ scheduleRevision: 5, explicitSetlistId: "missing-source" })
+        await expect(ensureService(db, newest)).rejects.toThrow("not_found")
+        await expect(ensureService(db, { ...newest, explicitSetlistId: undefined, scheduleRevision: 4, localDate: "2099-02-07", idempotencyKey: randomUUID() })).rejects.toThrow("stale_schedule_revision")
+        expect((await db.collection("setlists").get()).size).toBe(0)
+        expect((await db.collection(collections.links).get()).size).toBe(0)
     })
 })
 describe("reviewed projections and revocable resources", () => {

@@ -14,7 +14,7 @@ export class BridgeError extends Error {
 }
 export const hash = (input: unknown) => createHash("sha256").update(JSON.stringify(input)).digest("hex")
 export const linkId = (ceremonyId: string) => hash(["crc", ceremonyId])
-export const collections = { links: "beitMitzvahLinks", claims: "beitMitzvahClaims", receipts: "beitMitzvahReceipts", reviews: "beitMitzvahReviews" }
+export const collections = { links: "beitMitzvahLinks", claims: "beitMitzvahClaims", receipts: "beitMitzvahReceipts", reviews: "beitMitzvahReviews", intents: "beitMitzvahIntents" }
 export const templateType = (type: string) => type === "morning" ? "bnei_mitzvah_saturday" : "havdalah_bnei_mitzvah"
 const str = (value: unknown) => typeof value === "string" ? value : undefined
 const clean = (row: Data) => Object.fromEntries(Object.entries(row).filter(([, value]) => value !== undefined))
@@ -50,9 +50,29 @@ export async function ensureService(db: Firestore, request: EnsureRequest): Prom
     const claimRef = db.collection(collections.claims).doc(hash(["crc", request.localDate, request.ceremonyType]))
     const inputHash = hash(request)
     const candidateId = randomUUID()
+    const intentRef = db.collection(collections.intents).doc(linkId(request.ceremonyId))
+    const scheduleRevision = request.scheduleRevision ?? 1
+    // Persist ordering before attempting setup: even a failed newer operation
+    // must fence a previously unprocessed older queued import.
+    await db.runTransaction(async tx => {
+        const receipt = (await tx.get(receiptRef)).data()
+        if (receipt && receipt.inputHash !== inputHash) throw new BridgeError("idempotency_conflict")
+        if (receipt?.setlistId) return
+        const intent = (await tx.get(intentRef)).data()
+        if (intent && !isCRC(intent)) throw new BridgeError("link_conflict")
+        if (intent && scheduleRevision < Number(intent.scheduleRevision)) throw new BridgeError("stale_schedule_revision")
+        if (intent && scheduleRevision === intent.scheduleRevision &&
+            (intent.localDate !== request.localDate || intent.ceremonyType !== request.ceremonyType)) throw new BridgeError("schedule_revision_conflict")
+        if (!intent || scheduleRevision > Number(intent.scheduleRevision)) tx.set(intentRef, {
+            orgId: "crc", scheduleRevision, localDate: request.localDate, ceremonyType: request.ceremonyType,
+        })
+    })
     return db.runTransaction(async tx => {
         const receipt = (await tx.get(receiptRef)).data()
         if (receipt && receipt.inputHash !== inputHash) throw new BridgeError("idempotency_conflict")
+        const intent = (await tx.get(intentRef)).data()
+        if (intent && !isCRC(intent)) throw new BridgeError("not_found", 404)
+        if (!receipt?.setlistId && intent && scheduleRevision < Number(intent.scheduleRevision)) throw new BridgeError("stale_schedule_revision")
         const existing = (await tx.get(ceremonyRef)).data()
         if (existing) {
             if (!isCRC(existing)) throw new BridgeError("not_found", 404)
@@ -63,7 +83,8 @@ export async function ensureService(db: Firestore, request: EnsureRequest): Prom
             if (receipt?.setlistId) return { version: 1, status: existing.reviewRequired ? "review_required" : "linked", setlistId: String(existing.setlistId) }
             const changed = existing.localDate !== request.localDate || existing.ceremonyType !== request.ceremonyType ||
                 dateOf(linked.eventDate) !== existing.localDate || linked.templateType !== templateType(String(existing.ceremonyType))
-            if (changed) tx.update(ceremonyRef, { reviewRequired: true, requestedLocalDate: request.localDate, requestedCeremonyType: request.ceremonyType })
+            tx.update(ceremonyRef, { reviewRequired: changed || existing.reviewRequired === true,
+                scheduleRevision, requestedLocalDate: request.localDate, requestedCeremonyType: request.ceremonyType })
             tx.set(receiptRef, { orgId: "crc", inputHash, setlistId: existing.setlistId })
             return { version: 1, status: changed || existing.reviewRequired ? "review_required" : "linked", setlistId: String(existing.setlistId) }
         }
@@ -126,7 +147,8 @@ export async function ensureService(db: Firestore, request: EnsureRequest): Prom
             for (const row of rows) tx.create(db.collection("tracks").doc(String(row.id)), { ...row, setlistId })
         }
         const reviewRequired = !!selected && (dateOf(selected.eventDate) !== request.localDate || selected.templateType !== templateType(request.ceremonyType))
-        tx.create(ceremonyRef, { orgId: "crc", ceremonyId: request.ceremonyId, setlistId, localDate: request.localDate, ceremonyType: request.ceremonyType, reviewRequired })
+        tx.create(ceremonyRef, { orgId: "crc", ceremonyId: request.ceremonyId, setlistId, localDate: request.localDate, ceremonyType: request.ceremonyType,
+            scheduleRevision, requestedLocalDate: request.localDate, requestedCeremonyType: request.ceremonyType, reviewRequired })
         if (!claim || !request.explicitSetlistId) tx.set(claimRef, { orgId: "crc", setlistId })
         tx.set(receiptRef, { orgId: "crc", inputHash, setlistId })
         return { version: 1, status: reviewRequired ? "review_required" : "linked", setlistId }
@@ -136,8 +158,17 @@ export async function ensureService(db: Firestore, request: EnsureRequest): Prom
 export interface Source { link: Data; setlist: Data; rows: Data[]; sourceRevision: string }
 export async function readSource(db: Firestore, ceremonyId: string, tx?: Transaction): Promise<Source> {
     const get = (ref: FirebaseFirestore.DocumentReference) => tx ? tx.get(ref) : ref.get()
-    const link = (await get(db.collection(collections.links).doc(linkId(ceremonyId)))).data() as Data | undefined
+    const storedLink = (await get(db.collection(collections.links).doc(linkId(ceremonyId)))).data() as Data | undefined
+    const intent = (await get(db.collection(collections.intents).doc(linkId(ceremonyId)))).data() as Data | undefined
+    const link = storedLink && { ...storedLink }
     if (!isCRC(link)) throw new BridgeError("not_found", 404)
+    if (intent) {
+        if (!isCRC(intent)) throw new BridgeError("not_found", 404)
+        link.scheduleRevision = intent.scheduleRevision
+        link.requestedLocalDate = intent.localDate
+        link.requestedCeremonyType = intent.ceremonyType
+        link.reviewRequired = link.reviewRequired === true || intent.localDate !== link.localDate || intent.ceremonyType !== link.ceremonyType
+    }
     const parent = await get(db.collection("setlists").doc(String(link.setlistId)))
     const setlist = parent.data() as Data | undefined
     if (!isCRC(setlist) || setlist.isTest === true) throw new BridgeError("not_found", 404)
@@ -145,7 +176,7 @@ export async function readSource(db: Firestore, ceremonyId: string, tx?: Transac
     const tracks = tx ? await tx.get(query) : await query.get()
     if (tracks.size > 200 || tracks.docs.some(doc => !isCRC(doc.data()))) throw new BridgeError("source_requires_staff_review")
     const rows = tracks.docs.map(doc => ({ ...doc.data(), id: doc.id } as Data)).sort((a, b) => Number(a.order ?? 0) - Number(b.order ?? 0) || String(a.id).localeCompare(String(b.id)))
-    const sourceRevision = hash([setlist, rows])
+    const sourceRevision = hash([setlist, rows, intent ?? null])
     return { link, setlist, rows, sourceRevision }
 }
 export function shareableRows(source: Source): SharedRow[] {

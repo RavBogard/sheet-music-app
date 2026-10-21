@@ -11,6 +11,7 @@ export const bridgeRequest = z.discriminatedUnion("operation", [
     z.object({ ...base, operation: z.literal("ensure"), localDate,
         ceremonyType: z.enum(["morning", "havdalah"]),
         idempotencyKey: z.string().trim().min(1).max(128),
+        scheduleRevision: z.number().int().min(1).max(2147483647).optional(),
         explicitSetlistId: opaqueId.optional(), displayName: z.string().trim().min(1).max(160).optional(),
     }).strict(),
     z.object({ ...base, operation: z.literal("projection") }).strict(),
