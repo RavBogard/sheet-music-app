@@ -64,7 +64,6 @@ describe("phase 7: no raw user-visible strings outside the not-yet-migrated list
     it("progress (informational)", () => {
         let pending = 0
         for (const [file, found] of findingsByFile) if (isPending(file)) pending += found.length
-        // eslint-disable-next-line no-console
         console.info(`[i18n scan] ${files.length} files scanned; ${pending} raw strings left in ${NOT_YET_MIGRATED.length} not-yet-migrated entries`)
         expect(pending).toBeGreaterThanOrEqual(0)
     })

@@ -82,7 +82,6 @@ export function CollectionsSection({ detail }: { detail: TenantDetail }) {
     const [tenants, setTenants] = useState<TenantSummary[]>([])
     const [error, setError] = useState<string | null>(null)
     const [unassign, setUnassign] = useState<CollectionRecord | null>(null)
-    const assignRun = useDryRun<CollectionRecord>(() => void load())
 
     const load = useCallback(async () => {
         setError(null)
@@ -95,6 +94,8 @@ export function CollectionsSection({ detail }: { detail: TenantDetail }) {
             setAll((cur) => cur ?? [])
         }
     }, [])
+
+    const assignRun = useDryRun<CollectionRecord>(() => void load())
 
     useEffect(() => { void load() }, [load])
 

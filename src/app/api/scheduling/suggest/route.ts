@@ -37,7 +37,6 @@ export const GET = createApiHandler(
             .sort((a, b) => (a.uid < b.uid ? -1 : a.uid > b.uid ? 1 : 0))
 
         const musicians = roster.map(m => {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const data = m.profile as Record<string, any>
             return {
                 uid: m.uid,

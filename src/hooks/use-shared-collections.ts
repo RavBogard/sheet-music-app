@@ -145,7 +145,7 @@ export function useSharedCollections(extraOwnerIds: readonly string[] = []): Sha
                 return next
             })
         },
-        [uid, org],
+        [uid, org, setOnIds],
     )
 
     const chips = useMemo(

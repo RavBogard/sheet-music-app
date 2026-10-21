@@ -1,0 +1,230 @@
+{
+  "loadingAccess": {
+    "where": "Beit Mitzvah family-sharing review: loadingAccess",
+    "who": "leaders",
+    "maxLength": 42,
+    "context": "Source music editor review, not liturgical text. Placeholder values are source metadata."
+  },
+  "signIn": {
+    "where": "Beit Mitzvah family-sharing review: signIn",
+    "who": "leaders",
+    "maxLength": 136,
+    "context": "Source music editor review, not liturgical text. Placeholder values are source metadata."
+  },
+  "title": {
+    "where": "Beit Mitzvah family-sharing review: title",
+    "who": "leaders",
+    "maxLength": 42,
+    "context": "Source music editor review, not liturgical text. Placeholder values are source metadata."
+  },
+  "intro": {
+    "where": "Beit Mitzvah family-sharing review: intro",
+    "who": "leaders",
+    "maxLength": 294,
+    "context": "Source music editor review, not liturgical text. Placeholder values are source metadata."
+  },
+  "loadingService": {
+    "where": "Beit Mitzvah family-sharing review: loadingService",
+    "who": "leaders",
+    "maxLength": 62,
+    "context": "Source music editor review, not liturgical text. Placeholder values are source metadata."
+  },
+  "openFromPortal": {
+    "where": "Beit Mitzvah family-sharing review: openFromPortal",
+    "who": "leaders",
+    "maxLength": 150,
+    "context": "Source music editor review, not liturgical text. Placeholder values are source metadata."
+  },
+  "refresh": {
+    "where": "Beit Mitzvah family-sharing review: refresh",
+    "who": "leaders",
+    "maxLength": 40,
+    "context": "Source music editor review, not liturgical text. Placeholder values are source metadata."
+  },
+  "sourceReview": {
+    "where": "Beit Mitzvah family-sharing review: sourceReview",
+    "who": "leaders",
+    "maxLength": 42,
+    "context": "Source music editor review, not liturgical text. Placeholder values are source metadata."
+  },
+  "havdalah": {
+    "where": "Beit Mitzvah family-sharing review: havdalah",
+    "who": "leaders",
+    "maxLength": 40,
+    "context": "Source music editor review, not liturgical text. Placeholder values are source metadata."
+  },
+  "morning": {
+    "where": "Beit Mitzvah family-sharing review: morning",
+    "who": "leaders",
+    "maxLength": 40,
+    "context": "Source music editor review, not liturgical text. Placeholder values are source metadata."
+  },
+  "openSetlist": {
+    "where": "Beit Mitzvah family-sharing review: openSetlist",
+    "who": "leaders",
+    "maxLength": 40,
+    "context": "Source music editor review, not liturgical text. Placeholder values are source metadata."
+  },
+  "sharingStatus": {
+    "where": "Beit Mitzvah family-sharing review: sharingStatus",
+    "who": "leaders",
+    "maxLength": 40,
+    "context": "Source music editor review, not liturgical text. Placeholder values are source metadata."
+  },
+  "scheduleReview": {
+    "where": "Beit Mitzvah family-sharing review: scheduleReview",
+    "who": "leaders",
+    "maxLength": 204,
+    "context": "Source music editor review, not liturgical text. Placeholder values are source metadata."
+  },
+  "confirmSchedule": {
+    "where": "Beit Mitzvah family-sharing review: confirmSchedule",
+    "who": "leaders",
+    "maxLength": 52,
+    "context": "Source music editor review, not liturgical text. Placeholder values are source metadata."
+  },
+  "approvalNotice": {
+    "where": "Beit Mitzvah family-sharing review: approvalNotice",
+    "who": "leaders",
+    "maxLength": 280,
+    "context": "Source music editor review, not liturgical text. Placeholder values are source metadata."
+  },
+  "empty": {
+    "where": "Beit Mitzvah family-sharing review: empty",
+    "who": "leaders",
+    "maxLength": 190,
+    "context": "Source music editor review, not liturgical text. Placeholder values are source metadata."
+  },
+  "untitled": {
+    "where": "Beit Mitzvah family-sharing review: untitled",
+    "who": "leaders",
+    "maxLength": 40,
+    "context": "Source music editor review, not liturgical text. Placeholder values are source metadata."
+  },
+  "bookPage": {
+    "where": "Beit Mitzvah family-sharing review: bookPage",
+    "who": "leaders",
+    "maxLength": 40,
+    "context": "Source music editor review, not liturgical text. Placeholder values are source metadata."
+  },
+  "directions": {
+    "where": "Beit Mitzvah family-sharing review: directions",
+    "who": "leaders",
+    "maxLength": 66,
+    "context": "Source music editor review, not liturgical text. Placeholder values are source metadata."
+  },
+  "scoreShare": {
+    "where": "Beit Mitzvah family-sharing review: scoreShare",
+    "who": "leaders",
+    "maxLength": 52,
+    "context": "Source music editor review, not liturgical text. Placeholder values are source metadata."
+  },
+  "audioShare": {
+    "where": "Beit Mitzvah family-sharing review: audioShare",
+    "who": "leaders",
+    "maxLength": 100,
+    "context": "Source music editor review, not liturgical text. Placeholder values are source metadata."
+  },
+  "rights": {
+    "where": "Beit Mitzvah family-sharing review: rights",
+    "who": "leaders",
+    "maxLength": 150,
+    "context": "Source music editor review, not liturgical text. Placeholder values are source metadata."
+  },
+  "rightsNotice": {
+    "where": "Beit Mitzvah family-sharing review: rightsNotice",
+    "who": "leaders",
+    "maxLength": 154,
+    "context": "Source music editor review, not liturgical text. Placeholder values are source metadata."
+  },
+  "approve": {
+    "where": "Beit Mitzvah family-sharing review: approve",
+    "who": "leaders",
+    "maxLength": 48,
+    "context": "Source music editor review, not liturgical text. Placeholder values are source metadata."
+  },
+  "revoke": {
+    "where": "Beit Mitzvah family-sharing review: revoke",
+    "who": "leaders",
+    "maxLength": 40,
+    "context": "Source music editor review, not liturgical text. Placeholder values are source metadata."
+  },
+  "advanced": {
+    "where": "Beit Mitzvah family-sharing review: advanced",
+    "who": "leaders",
+    "maxLength": 40,
+    "context": "Source music editor review, not liturgical text. Placeholder values are source metadata."
+  },
+  "ceremonyReference": {
+    "where": "Beit Mitzvah family-sharing review: ceremonyReference",
+    "who": "leaders",
+    "maxLength": 40,
+    "context": "Source music editor review, not liturgical text. Placeholder values are source metadata."
+  },
+  "lookup": {
+    "where": "Beit Mitzvah family-sharing review: lookup",
+    "who": "leaders",
+    "maxLength": 40,
+    "context": "Source music editor review, not liturgical text. Placeholder values are source metadata."
+  },
+  "stale": {
+    "where": "Beit Mitzvah family-sharing review: stale",
+    "who": "leaders",
+    "maxLength": 112,
+    "context": "Source music editor review, not liturgical text. Placeholder values are source metadata."
+  },
+  "scheduleMismatch": {
+    "where": "Beit Mitzvah family-sharing review: scheduleMismatch",
+    "who": "leaders",
+    "maxLength": 184,
+    "context": "Source music editor review, not liturgical text. Placeholder values are source metadata."
+  },
+  "manifestRequired": {
+    "where": "Beit Mitzvah family-sharing review: manifestRequired",
+    "who": "leaders",
+    "maxLength": 196,
+    "context": "Source music editor review, not liturgical text. Placeholder values are source metadata."
+  },
+  "unconfigured": {
+    "where": "Beit Mitzvah family-sharing review: unconfigured",
+    "who": "leaders",
+    "maxLength": 90,
+    "context": "Source music editor review, not liturgical text. Placeholder values are source metadata."
+  },
+  "failed": {
+    "where": "Beit Mitzvah family-sharing review: failed",
+    "who": "leaders",
+    "maxLength": 166,
+    "context": "Source music editor review, not liturgical text. Placeholder values are source metadata."
+  },
+  "withdrawn": {
+    "where": "Beit Mitzvah family-sharing review: withdrawn",
+    "who": "leaders",
+    "maxLength": 152,
+    "context": "Source music editor review, not liturgical text. Placeholder values are source metadata."
+  },
+  "scheduleConfirmed": {
+    "where": "Beit Mitzvah family-sharing review: scheduleConfirmed",
+    "who": "leaders",
+    "maxLength": 144,
+    "context": "Source music editor review, not liturgical text. Placeholder values are source metadata."
+  },
+  "saved": {
+    "where": "Beit Mitzvah family-sharing review: saved",
+    "who": "leaders",
+    "maxLength": 170,
+    "context": "Source music editor review, not liturgical text. Placeholder values are source metadata."
+  },
+  "score": {
+    "where": "Beit Mitzvah family-sharing review: score",
+    "who": "leaders",
+    "maxLength": 40,
+    "context": "Source music editor review, not liturgical text. Placeholder values are source metadata."
+  },
+  "audio": {
+    "where": "Beit Mitzvah family-sharing review: audio",
+    "who": "leaders",
+    "maxLength": 40,
+    "context": "Source music editor review, not liturgical text. Placeholder values are source metadata."
+  }
+}
