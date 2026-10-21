@@ -119,7 +119,7 @@ export async function resourceURL(db: Firestore, ceremonyId: string, rowId: stri
     const expires = Date.now() + 60_000
     const ticket = signTicket({ ceremonyId, rowId, resourceId, approvalId, expires })
     return { version: 1, resource: { resourceId, kind: grant.kind, expiresAt: new Date(expires).toISOString(),
-        url: `https://centralreform.live/api/integrations/beit-mitzvah/v1/resource?ticket=${ticket}` } }
+        url: `https://www.centralreform.live/api/integrations/beit-mitzvah/v1/resource?ticket=${ticket}` } }
 }
 export async function fetchResource(db: Firestore, ticket: Record<string, unknown>) {
     const { ceremonyId, rowId, resourceId, approvalId } = ticket

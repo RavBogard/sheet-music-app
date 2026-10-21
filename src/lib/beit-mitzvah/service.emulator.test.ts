@@ -18,6 +18,8 @@ vi.mock("@/lib/firebase-admin", async importOriginal => ({
 vi.mock("@/lib/firebase-storage", () => ({ downloadExactStorageGeneration: vi.fn(async () => ({ success: true, data: { buffer: bytes, contentType: "application/pdf", generation: "123", sizeBytes: bytes.length } })) }))
 
 const projectId = "demo-beit-mitzvah-bridge"
+// The consumer refuses redirects and accepts links only on its configured source origin.
+const consumerEndpoint = new URL("https://www.centralreform.live/api/integrations/beit-mitzvah/v1")
 let db: FirebaseFirestore.Firestore
 const make = (overrides: Partial<EnsureRequest> = {}): EnsureRequest => ({ version: 1, operation: "ensure", orgId: "crc", ceremonyId: randomUUID(), localDate: "2099-02-14", ceremonyType: "morning", idempotencyKey: randomUUID(), ...overrides })
 beforeAll(() => {
@@ -203,9 +205,16 @@ describe("reviewed projections and revocable resources", () => {
     it("shares only curated rows/directions, retains order edits, and withdraws changed identities", async () => {
         await existing("crc-source"); await sourceRow("crc-source")
         const request = make({ explicitSetlistId: "crc-source" })
-        await ensureService(db, request); await approve(request)
+        await ensureService(db, request)
+        const setup = await projection(db, request.ceremonyId)
+        const expectedLinks = { music: "https://www.centralreform.live/perform/setlist/crc-source",
+            review: `https://www.centralreform.live/integrations/beit-mitzvah?ceremonyId=${request.ceremonyId}` }
+        expect(setup.projection?.operatorLinks).toEqual(expectedLinks)
+        await approve(request)
         const first = await projection(db, request.ceremonyId)
         expect(first.status).toBe("linked")
+        expect(first.projection?.operatorLinks).toEqual(expectedLinks)
+        for (const url of Object.values(first.projection!.operatorLinks)) expect(new URL(url).origin).toBe(consumerEndpoint.origin)
         expect(first.projection?.rows[0]).toMatchObject({ rowId: "source-row", sharedDirections: "Share only this deliberate direction", catalogUnitId: "verified-portal-unit" })
         expect(first.projection?.rows[0].momentId).toBe("source-moment-not-portal-unit")
         expect(first.projection?.rows[0].catalogUnitId).not.toBe(first.projection?.rows[0].momentId)
@@ -224,7 +233,10 @@ describe("reviewed projections and revocable resources", () => {
         await expect(resourceURL(db, request.ceremonyId, "source-row", "score-grant")).rejects.toThrow("not_found")
         await approve(request, true)
         const resource = await resourceURL(db, request.ceremonyId, "source-row", "score-grant")
-        const ticket = verifyTicket(new URL(resource.resource.url).searchParams.get("ticket")!)
+        const resourceUrl = new URL(resource.resource.url)
+        expect(resourceUrl.origin).toBe(consumerEndpoint.origin)
+        expect(resourceUrl.pathname).toBe(`${consumerEndpoint.pathname}/resource`)
+        const ticket = verifyTicket(resourceUrl.searchParams.get("ticket")!)
         expect((await fetchResource(db, ticket)).buffer).toEqual(bytes)
         await manageReview(db, "source-editor", { operation: "revoke", ceremonyId: request.ceremonyId })
         expect((await projection(db, request.ceremonyId)).projection?.rows).toEqual([])

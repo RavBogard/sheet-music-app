@@ -233,8 +233,8 @@ export async function projection(db: Firestore, ceremonyId: string): Promise<Bri
     const projection: Projection = {
         setlistId: String(source.link.setlistId), sourceRevision: source.sourceRevision,
         localDate: String(source.link.localDate), ceremonyType: source.link.ceremonyType as "morning" | "havdalah", rows,
-        operatorLinks: { music: `https://centralreform.live/perform/setlist/${source.link.setlistId}`,
-            review: `https://centralreform.live/integrations/beit-mitzvah?ceremonyId=${ceremonyId}` },
+        operatorLinks: { music: `https://www.centralreform.live/perform/setlist/${source.link.setlistId}`,
+            review: `https://www.centralreform.live/integrations/beit-mitzvah?ceremonyId=${ceremonyId}` },
     }
     return { version: 1, status: approved ? "linked" : "review_required", setlistId: projection.setlistId, sourceRevision: source.sourceRevision, projection }
 }
