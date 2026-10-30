@@ -28,6 +28,18 @@ describe("parseSetting", () => {
         expect(parseSetting(title)).toBe(expected)
     })
 
+    it.each([
+        ["Oseh Shalom (Alto)", null],
+        ["Oseh Shalom (Hanson) Soprano", "Hanson"],
+        ["Oseh Shalom (Hanson) - Tenor", "Hanson"],
+        ["Oseh Shalom - Baritone", null],
+        ["Oseh Shalom (Hanson) (Alto)", "Hanson"],
+        ["Oseh Shalom (Alto, Hanson)", "Hanson"],
+        ["Oseh Shalom (Soprano) extra", null],
+    ])("a vocal part is not a setting: %s -> %s", (title, expected) => {
+        expect(parseSetting(title)).toBe(expected)
+    })
+
     it("does not read an instrument part as a setting", () => {
         expect(parseSetting("2. Porter Haus - C Lead")).toBeNull()
         expect(parseSetting("Barchu (Walkdown) Bb")).toBe("Walkdown")
@@ -41,6 +53,12 @@ describe("parsePart", () => {
         ["L'cha Dodi (Simpler) Clarinet in Bb", { baseTitle: "L'cha Dodi (Simpler)", part: "Clarinet in Bb" }],
         ["L'cha Dodi Tenor Saxophone", { baseTitle: "L'cha Dodi", part: "Tenor Saxophone" }],
         ["2. Porter Haus - C Lead", { baseTitle: "2. Porter Haus", part: "C Lead" }],
+        ["Oseh Shalom (Alto)", { baseTitle: "Oseh Shalom", part: "Alto" }],
+        ["Oseh Shalom (Hanson) Soprano", { baseTitle: "Oseh Shalom (Hanson)", part: "Soprano" }],
+        ["Oseh Shalom - Tenor", { baseTitle: "Oseh Shalom", part: "Tenor" }],
+        ["Oseh Shalom (Hanson) (Baritone)", { baseTitle: "Oseh Shalom (Hanson)", part: "Baritone" }],
+        ["Oseh Shalom Alto Saxophone", { baseTitle: "Oseh Shalom", part: "Alto Saxophone" }],
+        ["Oseh Shalom Soprano Saxophone", { baseTitle: "Oseh Shalom", part: "Soprano Saxophone" }],
     ])("%s", (title, expected) => {
         expect(parsePart(title)).toEqual(expected)
     })
@@ -52,6 +70,10 @@ describe("parsePart", () => {
         "All About That Bass",
         "Ain't No Sunshine in C",
         "Hava Nagila in Bb",
+        "Alto Rhapsody",
+        "Tenor of Our Ways",
+        "Sing Soprano Loud",
+        "Shir Alto",
     ])("%s has no part", (title) => {
         expect(parsePart(title)).toBeNull()
     })
