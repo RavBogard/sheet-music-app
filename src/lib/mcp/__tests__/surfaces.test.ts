@@ -124,7 +124,7 @@ describe("forSurface — registration is filtered, nothing else is", () => {
 
 describe("OPS_TOOLS — the list itself", () => {
     it("has no duplicates and is not accidentally empty or enormous", () => {
-        expect(OPS_TOOLS.size).toBe(47)
+        expect(OPS_TOOLS.size).toBe(49)
     })
 
     it("keeps the hygiene sweeps that still find live drift", () => {

@@ -27,6 +27,7 @@ import { salvageChartBytes } from "./salvage-chart-bytes"
 import { backfillHealMetadata } from "./backfill-heal-metadata"
 import { backfillTrackMimetype } from "./backfill-track-mimetype"
 import { backfillLibrarySettingParts } from "./backfill-setting-parts"
+import { backfillLibraryKeys } from "./backfill-library-keys"
 import { archiveNonChartArtifacts } from "./archive-nonchart-artifacts"
 import { getAiConfig, setAiAutoApply, setAiThreshold } from "./ai-config"
 import { getCorrectionStats } from "./correction-stats"
@@ -2481,6 +2482,32 @@ export function registerWriteTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await backfillLibrarySettingParts(uidFrom(extra), args, orgFrom(extra))),
+    )
+
+    server.registerTool(
+        "backfill_library_keys",
+        {
+            description:
+                "Admin / band_leader back-fill: fill an EMPTY library `key` (the chart's written key) from the chart's own AI reading (`aiSuggestion.suggested_key`) when its confidence is at least 0.9. Never from setlist usage. Skips and counts rows a person curated (`human_curated`), rows that already have a key, rows with no suggested key, and low-confidence readings. `minConfidence` can raise the 0.9 floor, never lower it. Writes only `key` and `keySource: 'ai_backfill'`. Your org only. F-05: `dryRun` defaults true and returns the full report; a real run needs `dryRun: false, force: true`. Returns `{ok, dryRun, scanned, changed: [{fileId, name, key, confidence}], skipped: {human, lowConfidence, noSuggestion, hasKey}}`.",
+            inputSchema: {
+                dryRun: z
+                    .boolean()
+                    .optional()
+                    .describe("When true (default), report without writing."),
+                force: z
+                    .boolean()
+                    .optional()
+                    .describe("Required with `dryRun: false` to write."),
+                minConfidence: z
+                    .number()
+                    .min(0)
+                    .max(1)
+                    .optional()
+                    .describe("Confidence floor (default 0.9; values under 0.9 are raised to 0.9)."),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await backfillLibraryKeys(uidFrom(extra), args, orgFrom(extra))),
     )
 
     // library-bulk-archive-nonchart (Tier-1 P2 2026-05-27, data-health dh-20260527a
