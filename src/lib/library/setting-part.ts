@@ -30,6 +30,10 @@ const PART_LABELS = [
     "Piano",
     "Vocals",
     "Guitar",
+    "Soprano",
+    "Alto",
+    "Tenor",
+    "Baritone",
 ].sort((a, b) => b.length - a.length)
 
 /**
@@ -37,7 +41,21 @@ const PART_LABELS = [
  * They count as a part only after " - " or right after a parenthesised
  * clarifier: "Shema (Major) Bass", "Porter Haus - C".
  */
-const SHORT_LABELS = new Set(["C", "Bass", "Piano", "Guitar", "Vocals", "Flute"])
+const SHORT_LABELS = new Set([
+    "C",
+    "Bass",
+    "Piano",
+    "Guitar",
+    "Vocals",
+    "Flute",
+    "Soprano",
+    "Alto",
+    "Tenor",
+    "Baritone",
+])
+/** Vocal parts: a part of the chart, never a setting. */
+const VOCAL_PARTS = ["Soprano", "Alto", "Tenor", "Baritone"]
+const VOCAL_PAREN_RE = new RegExp(String.raw`^(.*?\S)\s*\((${VOCAL_PARTS.join("|")})\)$`, "i")
 /** The only labels that may follow the word "in". */
 const IN_LABELS = new Set(["Clarinet in Bb", "Trumpet in Bb"])
 
@@ -64,6 +82,12 @@ function stripExtension(title: string): string {
 
 export function parsePart(title: string): { baseTitle: string; part: string } | null {
     const t = stripExtension(title)
+    // The vocal part as the parenthesised clarifier itself: "Oseh Shalom (Alto)".
+    const paren = VOCAL_PAREN_RE.exec(t)
+    if (paren) {
+        const part = VOCAL_PARTS.find((v) => v.toLowerCase() === paren[2].toLowerCase())
+        if (part) return { baseTitle: paren[1].trim(), part }
+    }
     for (const label of PART_LABELS) {
         if (!t.endsWith(label)) continue
         const before = t.slice(0, t.length - label.length)
@@ -107,6 +131,7 @@ function cleanSetting(raw: string): string | null {
         .map((s) => s.trim().replace(/^[A-G][#b]?m?\s+(?=\S)/, ""))
         .filter((s) => {
             if (!s || KEY_RE.test(s) || /^\d+$/.test(s)) return false
+            if (VOCAL_PARTS.some((v) => v.toLowerCase() === s.toLowerCase())) return false
             const lower = s.toLowerCase()
             return ![...FORMAT_WORDS].some((w) => lower === w || lower.includes(w))
         })

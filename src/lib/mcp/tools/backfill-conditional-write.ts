@@ -33,9 +33,19 @@ export async function updateRowsIfUnchanged(
     rows: ConditionalRowUpdate[],
     /** The collection the row ids live in. `fileId` is the doc id. */
     collection: string = "library_index",
-): Promise<{ written: Set<string>; changedDuringRun: Set<string> }> {
+    /**
+     * When true, a write that fails for a reason other than its precondition
+     * skips that row and is reported in `failed`; otherwise it aborts the run.
+     */
+    opts: { skipFailures?: boolean } = {},
+): Promise<{
+    written: Set<string>
+    changedDuringRun: Set<string>
+    failed: Array<{ id: string; message: string }>
+}> {
     const written = new Set<string>()
     const changedDuringRun = new Set<string>()
+    const failed: Array<{ id: string; message: string }> = []
     let next = 0
     const worker = async () => {
         while (next < rows.length) {
@@ -49,13 +59,21 @@ export async function updateRowsIfUnchanged(
                 }
                 written.add(row.fileId)
             } catch (error) {
-                if (!changedSinceScan(error)) throw error
-                changedDuringRun.add(row.fileId)
+                if (changedSinceScan(error)) {
+                    changedDuringRun.add(row.fileId)
+                } else if (opts.skipFailures) {
+                    failed.push({
+                        id: row.fileId,
+                        message: error instanceof Error ? error.message : String(error),
+                    })
+                } else {
+                    throw error
+                }
             }
         }
     }
     await Promise.all(
         Array.from({ length: Math.min(WRITE_CONCURRENCY, rows.length) }, worker),
     )
-    return { written, changedDuringRun }
+    return { written, changedDuringRun, failed }
 }

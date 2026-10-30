@@ -145,6 +145,18 @@ describe("exportSetlistsTool", () => {
         expect(r.setlists[0].tracks).toHaveLength(1)
     })
 
+    it("reads from/to as whole days in the tenant's time zone", async () => {
+        // 03:00Z on Oct 31 is Friday evening, Oct 30, in Chicago.
+        mockGetAllSetlists.mockResolvedValue([setlistRow("fri", "2026-10-31T03:00:00.000Z")])
+        const ids = async (args: { from?: string; to?: string }) =>
+            ((await exportSetlistsTool("u", args, "crc")) as { setlists: Array<{ id: string }> }).setlists.map(
+                (s) => s.id,
+            )
+        expect(await ids({ to: "2026-10-30" })).toEqual(["fri"])
+        expect(await ids({ from: "2026-10-31" })).toEqual([])
+        expect(await ids({ from: "2026-10-30", to: "2026-10-30" })).toEqual(["fri"])
+    })
+
     it("includes part copies and undated setlists when asked", async () => {
         const r = (await exportSetlistsTool("u", { includeParts: true, includeUndated: true }, "crc")) as {
             setlists: Array<{ id: string; part: string | null }>

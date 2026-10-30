@@ -7,6 +7,7 @@ import { rowOrg } from "@/lib/mcp/org-context"
 import { isTestSetlist } from "@/types/models"
 import { visibleTo } from "@/lib/library/visibility"
 import type { OrgId } from "@/lib/org/types"
+import { dayInZone, orgTimeZone } from "@/lib/org/locale"
 import { momentIdForUnit } from "@/lib/books/moments"
 import { classifyService } from "./classify"
 import type { HistorySetlist, HistoryTrack, LibraryLite } from "./song-history"
@@ -81,11 +82,21 @@ async function mapLimited<T, R>(items: T[], limit: number, fn: (t: T) => Promise
     return out
 }
 
-/** `from` / `to` are inclusive `YYYY-MM-DD` (or ISO) bounds on the event day. */
-export function inDateWindow(eventDate: string | null, from?: string, to?: string): boolean {
+/**
+ * `from` / `to` are inclusive `YYYY-MM-DD` (or ISO) bounds on the event day.
+ * With `timeZone`, the event day is the calendar day the instant falls on in
+ * that zone (a Friday-evening service stays on Friday); without it, the UTC day.
+ */
+export function inDateWindow(
+    eventDate: string | null,
+    from?: string,
+    to?: string,
+    timeZone?: string,
+): boolean {
     if (!from && !to) return true
     if (!eventDate) return false
-    const day = eventDate.slice(0, 10)
+    const ms = Date.parse(eventDate)
+    const day = timeZone && !Number.isNaN(ms) ? dayInZone(ms, timeZone) : eventDate.slice(0, 10)
     if (from && day < from.slice(0, 10)) return false
     if (to && day > to.slice(0, 10)) return false
     return true
@@ -105,11 +116,12 @@ export async function loadHistorySetlists(
     })) as Array<Record<string, unknown>>
     const truncated = rows.length >= MAX_SETLIST_FETCH
 
+    const zone = orgTimeZone(org)
     const wanted = rows.filter((r) => {
         if (rowOrg(r.orgId) !== org) return false
         const ev = eventIso(r.eventDate)
         if (!ev) return opts.includeUndated === true && !opts.from && !opts.to
-        return inDateWindow(ev, opts.from, opts.to)
+        return inDateWindow(ev, opts.from, opts.to, zone)
     })
 
     const setlists = await mapLimited(wanted, TRACK_READ_CONCURRENCY, async (r) => {

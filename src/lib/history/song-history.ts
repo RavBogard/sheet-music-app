@@ -133,7 +133,7 @@ function compact(stem: string): string {
 
 /**
  * True when one stem turns into the other purely by deleting vowels,
- * apostrophes or `h`, or by adding/removing spaces. Swapping one vowel for
+ * apostrophes, `h` or the second copy of a doubled letter, or by adding/removing spaces. Swapping one vowel for
  * another never matches, so Kaddish/Kiddush and Kadosh/Kedusha stay apart
  * even though they share a skeleton. `songSkeleton` equality is the cheap
  * pre-filter; this is the decision.
@@ -147,14 +147,17 @@ export function spellingVariants(a: string, b: string): boolean {
     // reach[j]: short[0..j) can be produced from the long prefix read so far.
     let reach = new Array<boolean>(short.length + 1).fill(false)
     reach[0] = true
+    let prev = ""
     for (const ch of long) {
         const next = new Array<boolean>(short.length + 1).fill(false)
         for (let j = 0; j <= short.length; j++) {
             if (!reach[j]) continue
-            if (DELETABLE.has(ch)) next[j] = true
+            // A doubled letter ("dd" in Kaddish) may lose its second copy.
+            if (DELETABLE.has(ch) || ch === prev) next[j] = true
             if (j < short.length && short[j] === ch) next[j + 1] = true
         }
         reach = next
+        prev = ch
     }
     return reach[short.length]
 }
