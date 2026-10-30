@@ -5,6 +5,7 @@ import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 import { rowOrg } from "@/lib/mcp/org-context"
 import { loadLibraryLite } from "@/lib/history/load"
 import { getTracksForSetlist } from "@/lib/server-tracks"
+import { dayInZone, orgTimeZone } from "@/lib/org/locale"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 import { logger } from "@/lib/logger"
@@ -45,16 +46,22 @@ function str(v: unknown): string | null {
     return typeof v === "string" && v.trim() ? v.trim() : null
 }
 
-/** The event day as YYYY-MM-DD (UTC), from a Timestamp or a date string. */
-function eventDay(v: unknown): string | null {
-    if (v && typeof v === "object" && typeof (v as { toDate?: unknown }).toDate === "function") {
-        return (v as { toDate: () => Date }).toDate().toISOString().slice(0, 10)
+/**
+ * The event day as YYYY-MM-DD in the tenant's zone: eventDate is local wall
+ * time, so an evening service stored as 00:30Z the next day is still its own
+ * day. A bare YYYY-MM-DD string is already a day.
+ */
+function eventDay(v: unknown, org: OrgId): string | null {
+    let ms: number
+    if (v && typeof v === "object" && typeof (v as { toMillis?: unknown }).toMillis === "function") {
+        ms = (v as { toMillis: () => number }).toMillis()
+    } else if (typeof v === "string") {
+        if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v
+        ms = Date.parse(v)
+    } else {
+        return null
     }
-    if (typeof v === "string") {
-        const t = Date.parse(v)
-        return Number.isNaN(t) ? null : new Date(t).toISOString().slice(0, 10)
-    }
-    return null
+    return Number.isNaN(ms) ? null : dayInZone(ms, orgTimeZone(org))
 }
 
 function inKey(key: string | null | undefined): string {
@@ -134,7 +141,7 @@ export async function readBackSetlistTool(
         const readback = buildReadback({
             profileLabel,
             title: profileLabel ? null : str(data.name),
-            date: eventDay(data.eventDate),
+            date: eventDay(data.eventDate, org),
             book: str(data.book),
             special: data.special === true,
             rows: readbackRows,
@@ -209,7 +216,11 @@ async function tieredRows(
         if (tier.promotion) row.promotion = tier.promotion
         if (r.fileId && (tier.tier === "standard" || tier.tier === "usual")) {
             const differs = differsFrom(tier, r, partGroupOf)
-            if (differs) row.differs = `${chartName}${inKey(r.key)} this week; usual is ${tier.chartName ?? ""}${inKey(tier.key)}`
+            if (differs) {
+                row.differs = tier.chartName
+                    ? `${chartName}${inKey(r.key)} this week; usual is ${tier.chartName}${inKey(tier.key)}`
+                    : `${chartName}${inKey(r.key)} this week, not the usual chart${tier.key ? ` (usually${inKey(tier.key)})` : ""}`
+            }
         } else if (r.fileId) {
             // The slot is not usual here, but the row has a chart: say what it is.
             row.phrase = `${chartName}${inKey(r.key)} this week; ${

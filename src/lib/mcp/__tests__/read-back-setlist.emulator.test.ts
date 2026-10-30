@@ -32,11 +32,12 @@ describe("read_back_setlist (emulator)", () => {
         fields: Record<string, unknown>,
         rows: Array<Record<string, unknown>>,
         date = "2026-10-24",
+        eventAt = `${date}T15:00:00Z`,
     ) {
         await db().collection("setlists").doc(id).set({
             orgId: org,
             name: `Setlist ${id}`,
-            eventDate: Timestamp.fromDate(new Date(`${date}T15:00:00Z`)),
+            eventDate: Timestamp.fromDate(new Date(eventAt)),
             date: Timestamp.fromDate(new Date(`${date}T12:00:00Z`)),
             ...fields,
         })
@@ -86,13 +87,20 @@ describe("read_back_setlist (emulator)", () => {
         expect(r.ok).toBe(true)
         expect(r.readback.exceptions).toEqual([])
         expect(r.readback.headline).toMatch(/^Randy Shabbat morning, Oct 24/)
-        expect(r.readback.rest).toMatch(/^Nothing new\. .*2 songs/)
+        expect(r.readback.rest).toBe("All 2 songs are your usual Randy Shabbat morning.")
+    })
+
+    it("dates the headline in the tenant's zone: 00:30Z Nov 7 is a Nov 6 evening in Chicago", async () => {
+        await setlist("sl-eve", CRC, {}, [oseh], "2026-11-06", "2026-11-07T00:30:00Z")
+        const r = (await readBackSetlistTool(ADMIN, { setlistId: "sl-eve" }, CRC)) as Out
+        expect(r.readback.headline).toContain("Nov 6")
+        expect(r.readback.headline).not.toContain("Nov 7")
     })
 
     it("a row in Cm where the usual is Dm is listed", async () => {
         await setlist("sl-now", CRC, randy, [{ type: "header", title: "Shacharit" }, { ...barchu, key: "Cm" }, oseh])
         const r = (await readBackSetlistTool(ADMIN, { setlistId: "sl-now" }, CRC)) as Out
-        expect(r.readback.exceptions.map((e) => [e.kind, e.index])).toEqual([["open_slot", 1]])
+        expect(r.readback.exceptions.map((e) => [e.kind, e.index])).toEqual([["differs", 1]])
         expect(r.readback.exceptions[0].text).toContain("Cm this week")
         expect(r.readback.exceptions[0].text).toContain("in Dm")
         expect(r.readback.rest).toMatch(/1 song\b/)
@@ -102,7 +110,7 @@ describe("read_back_setlist (emulator)", () => {
         await setlist("sl-now", CRC, randy, [{ type: "header", title: "Shacharit" }, { ...barchu, key: "Cm" }, oseh])
         await addOpenItemTool(ADMIN, { setlistId: "sl-now", text: "new arrangement; swap when it lands" }, CRC)
         const r = (await readBackSetlistTool(ADMIN, { setlistId: "sl-now" }, CRC)) as Out
-        expect(r.readback.exceptions.map((e) => e.kind)).toEqual(["open_slot", "open_item"])
+        expect(r.readback.exceptions.map((e) => e.kind)).toEqual(["differs", "open_item"])
         expect(r.readback.exceptions[1].text).toContain("swap when it lands")
     })
 

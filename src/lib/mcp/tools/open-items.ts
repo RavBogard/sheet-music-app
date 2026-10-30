@@ -18,7 +18,9 @@ import type { OpenItem } from "@/lib/profiles/readback"
  * every read shows only the unresolved ones, oldest first. Every readback
  * repeats them until they are resolved.
  *
- * Writes run in a transaction and bump the setlist `version`. Admin or
+ * Writes run in a transaction, bump the setlist `version` and stamp
+ * `updatedAt`. Adding an item whose text matches an unresolved one (trimmed,
+ * any case) writes nothing and returns the existing item. Admin or
  * band_leader; tenant-scoped (another tenant's setlist is setlist_not_found,
  * another tenant's item is open_item_not_found).
  */
@@ -166,15 +168,19 @@ export async function addOpenItemTool(
             const data = snap.exists ? (snap.data() as Record<string, unknown>) : null
             if (!data || rowOrg(data.orgId) !== org) throw new Refusal(setlistNotFound(setlistId))
             const raw = Array.isArray(data.openItems) ? data.openItems : []
+            const same = text.toLowerCase()
+            const existing = storedItems(data).find((i) => !i.resolvedAt && i.text.toLowerCase() === same)
+            if (existing) return { data, item: existing }
             const next = [...raw, item]
             tx.update(ref, {
                 openItems: next,
                 version: FieldValue.increment(1),
                 lastModifiedAt: new Date().toISOString(),
+                updatedAt: FieldValue.serverTimestamp(),
             })
-            return { ...data, openItems: next }
+            return { data: { ...data, openItems: next }, item }
         })
-        return { ok: true, setlistId, item: publicItem(item), openItems: readOpenItems(after) }
+        return { ok: true, setlistId, item: publicItem(after.item), openItems: readOpenItems(after.data) }
     } catch (error) {
         if (error instanceof Refusal) return error.envelope
         logger.warn("add_open_item failed:", error)
@@ -232,6 +238,7 @@ export async function resolveOpenItemTool(
                 openItems: next,
                 version: FieldValue.increment(1),
                 lastModifiedAt: resolvedAt,
+                updatedAt: FieldValue.serverTimestamp(),
             })
             const resolved = storedItems({ openItems: [next[at]] })[0]
             return { resolved: publicItem(resolved), openItems: readOpenItems({ openItems: next }) }

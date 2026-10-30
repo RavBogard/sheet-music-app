@@ -109,6 +109,17 @@ describe("open items on a setlist (emulator)", () => {
         expect(await stored()).toEqual(before)
     })
 
+    it("adding the same text again (any case) returns the existing item and writes nothing", async () => {
+        const a = (await addOpenItemTool(ADMIN, { setlistId: SETLIST, text: "Chart still needed" }, CRC)) as Added
+        expect((await stored()).updatedAt).toBeDefined()
+        const before = await stored()
+        const b = (await addOpenItemTool(ADMIN, { setlistId: SETLIST, text: "  chart STILL needed " }, CRC)) as Added
+        expect(b.ok).toBe(true)
+        expect(b.item.id).toBe(a.item.id)
+        expect(b.openItems).toHaveLength(1)
+        expect(await stored()).toEqual(before)
+    })
+
     it("musician role is refused", async () => {
         const r = (await addOpenItemTool(MUSICIAN, { setlistId: SETLIST, text: "x" }, CRC)) as unknown as Err
         expect(r.error.machine_code).toBe("forbidden_role")

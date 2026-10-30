@@ -72,8 +72,9 @@ describe("buildReadback", () => {
             "Open: chart still needed",
         ])
         expect(r.headline).toBe("Randy Shabbat morning, Nov 7, CRC Saturday Siddur.")
-        // Every song with a chart was listed, so the rest line counts none.
-        expect(r.rest).toBe("Everything else is your usual Randy Shabbat morning, 0 songs.")
+        // Every song with a chart was listed, so there is no rest line.
+        expect(r.rest).toBe("")
+        expect(r.text.endsWith("Open: chart still needed.")).toBe(true)
     })
 
     it("an old standard (40 days) goes to the rest line", () => {
@@ -86,14 +87,14 @@ describe("buildReadback", () => {
         ]
         const r = buildReadback({ ...base, rows })
         expect(r.exceptions).toEqual([])
-        expect(r.rest).toBe("Nothing new. Everything else is your usual Randy Shabbat morning, 1 song.")
+        expect(r.rest).toBe("The one song is your usual Randy Shabbat morning.")
     })
 
-    it("all usual → 'Nothing new.' and the song count", () => {
+    it("all usual → 'All N songs are your usual …'", () => {
         const rows = [header(0, "Shacharit"), song(1, "Barchu"), song(2, "Oseh Shalom"), song(3, "Adon Olam")]
         const r = buildReadback({ ...base, rows })
         expect(r.exceptions).toEqual([])
-        expect(r.rest).toBe("Nothing new. Everything else is your usual Randy Shabbat morning, 3 songs.")
+        expect(r.rest).toBe("All 3 songs are your usual Randy Shabbat morning.")
         expect(r.text).toBe(`${r.headline} ${r.rest}`)
         expect(r.text).not.toMatch(/exception|none|\[\]/i)
     })
@@ -105,7 +106,7 @@ describe("buildReadback", () => {
         ]
         const r = buildReadback({ ...base, rows })
         expect(r.exceptions).toEqual([])
-        expect(r.rest).toBe("Nothing new. Everything else is your usual Randy Shabbat morning, 2 songs (1 with no key on record).")
+        expect(r.rest).toBe("All 2 songs are your usual Randy Shabbat morning (1 with no key on record).")
     })
 
     it("more than 5 exceptions: text lists 5 and says how many more; exceptions keeps all", () => {
@@ -117,9 +118,26 @@ describe("buildReadback", () => {
         expect(READBACK_VOICE_MAX).toBe(5)
         for (let i = 0; i < 5; i++) expect(r.text).toContain(`Song ${i}:`)
         expect(r.text).not.toContain("Song 5:")
-        expect(r.text).toContain("…and 2 more; say 'show all' for the list.")
+        expect(r.text).toContain("And 2 more on screen.")
+        expect(r.text).not.toMatch(/…|show all/)
+        expect(r.rest).toBe("")
+    })
+
+    it("open items are always said, outside the cap of 5", () => {
+        const rows = Array.from({ length: 6 }, (_, i) =>
+            song(i, `Song ${i}`, { tier: "new", phrase: "new — which chart?", hasChart: false, keyOnRecord: false }),
+        )
+        rows.push(song(6, "Adon Olam"))
+        const openItems = [item("a", "chart still needed", "2026-10-30T00:00:00Z"), item("b", "swap when it lands", "2026-10-31T00:00:00Z")]
+        const r = buildReadback({ ...base, rows, openItems })
+        expect(r.exceptions.map((e) => e.kind).slice(-2)).toEqual(["open_item", "open_item"])
+        expect(r.text).not.toContain("Song 5:")
+        const more = r.text.indexOf("And 1 more on screen.")
+        expect(more).toBeGreaterThan(-1)
+        expect(r.text.indexOf("Open: chart still needed.")).toBeGreaterThan(more)
+        expect(r.text.indexOf("Open: swap when it lands.")).toBeGreaterThan(more)
         expect(r.text.endsWith(r.rest)).toBe(true)
-        expect(r.text.indexOf("…and 2 more")).toBeLessThan(r.text.indexOf(r.rest))
+        expect(r.rest).toBe("Everything else is your usual Randy Shabbat morning, 1 song.")
     })
 
     it("special adds the this-week-only line to the headline", () => {
@@ -143,7 +161,7 @@ describe("buildReadback", () => {
         const r = buildReadback({ ...base, rows })
         expect(r.exceptions).toEqual([
             { kind: "no_chart", index: 0, text: "Barchu: no chart yet" },
-            { kind: "open_slot", index: 1, text: "Oseh Shalom: Oseh Shalom (Zeira) in Cm this week; usual is Oseh Shalom (Zeira) in Dm" },
+            { kind: "differs", index: 1, text: "Oseh Shalom: Oseh Shalom (Zeira) in Cm this week; usual is Oseh Shalom (Zeira) in Dm" },
         ])
         expect(r.rest).toBe("Everything else is your usual Randy Shabbat morning, 1 song.")
     })
@@ -164,6 +182,8 @@ describe("buildReadback", () => {
         const r = buildReadback({ ...base, profileLabel: null, book: null, rows })
         expect(r.exceptions).toEqual([{ kind: "no_chart", index: 2, text: "Closer: no chart yet" }])
         expect(r.rest).toBe("2 other songs have charts.")
+        const plain = buildReadback({ ...base, profileLabel: null, book: null, rows: [rows[1], rows[3]] })
+        expect(plain.rest).toBe("All 2 songs have charts.")
         expect(r.text).not.toMatch(/usual|standard|last time/)
     })
 })
