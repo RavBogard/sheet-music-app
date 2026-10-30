@@ -327,6 +327,52 @@ export async function seedServiceProfiles(
     }
 }
 
+/**
+ * Seed one missing core profile from its own history, the way a real
+ * seed_service_profiles run creates it. draft_service calls this the first
+ * time a profile is asked for, so a profile starts as soon as one setlist
+ * with that service type and rabbi exists; past setlists without a stored
+ * rabbi are never attributed. Returns the profile doc, or null when the
+ * profile has no history yet (or the key is not a core profile of this org).
+ */
+export async function seedMissingProfile(
+    uid: string,
+    org: OrgId,
+    profileKey: string,
+): Promise<FirebaseFirestore.QueryDocumentSnapshot | null> {
+    if (org !== DEFAULT_ORG_ID) return null
+    const def = CRC_CORE_PROFILES.find((p) => p.key === profileKey)
+    if (!def) return null
+    initAdmin()
+    const db = getFirestore()
+    const { setlists } = await loadHistorySetlists(org, {})
+    const fileIds = setlists.flatMap((s) => s.tracks.map((t) => t.fileId).filter((f): f is string => !!f))
+    const library = await loadLibraryLite(org, fileIds)
+    const seed = seedProfile(def, setlists, library)
+    if (!seed.basedOn) return null
+    const ref = db.collection(TEMPLATES).doc(`profile__${org}__${def.key}`)
+    try {
+        await ref.create({
+            id: ref.id,
+            name: def.label,
+            templateType: def.serviceType,
+            profile: profileBlock(def),
+            orgId: org,
+            ownerId: uid,
+            ownerName: await ownerNameFor(db, uid),
+            tracks: seed.tracks,
+            version: 1,
+            createdAt: FieldValue.serverTimestamp(),
+            updatedAt: FieldValue.serverTimestamp(),
+        })
+        logger.info("[mcp] profile seeded on first draft", { org, key: def.key, basedOn: seed.basedOn })
+    } catch (error) {
+        // A concurrent first draft created it first: use that one.
+        logger.info("[mcp] profile seed raced; reading the existing one", { org, key: def.key, error: String(error) })
+    }
+    return findProfileTemplate(db, org, def.key)
+}
+
 // ─── get_service_profile ────────────────────────────────────────────────────
 
 export interface GetServiceProfileArgs {
