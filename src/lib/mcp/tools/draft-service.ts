@@ -7,6 +7,7 @@ import { assertEditor } from "@/lib/mcp/server-tracks-write"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 import { rowOrg } from "@/lib/mcp/org-context"
 import { loadLibraryLite } from "@/lib/history/load"
+import { orgTimeZone } from "@/lib/org/locale"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 import { logger } from "@/lib/logger"
@@ -216,6 +217,7 @@ export async function draftServiceTool(
         }
         await ref.set(stored)
         const readback = buildReadback({
+            timeZone: orgTimeZone(org),
             profileLabel: label,
             date,
             book,

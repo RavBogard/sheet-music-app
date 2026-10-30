@@ -1,4 +1,5 @@
 import { getBook } from "@/lib/books/registry"
+import { dayInZone } from "@/lib/org/locale"
 import { OVERRIDE_WINDOW_DAYS } from "./standing"
 import { PROMOTION_WEEKS, type Promotion, type Tier } from "./tiers"
 
@@ -70,6 +71,8 @@ export interface ReadbackInput {
     rows: ReadbackRow[]
     openItems: OpenItem[]
     now: Date
+    /** IANA zone for the date a standard was set; UTC when absent. */
+    timeZone?: string
 }
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
@@ -84,6 +87,12 @@ export function monthDay(value: string | null | undefined): string | null {
     if (Number.isNaN(t)) return null
     const d = new Date(t)
     return `${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}`
+}
+
+/** A timestamp as its YYYY-MM-DD day in `timeZone`; the value unchanged without one. */
+function sinceDay(at: string, timeZone: string | undefined): string {
+    const t = Date.parse(at)
+    return timeZone && !Number.isNaN(t) ? dayInZone(t, timeZone) : at
 }
 
 function bookTitle(slug: string | null): string | null {
@@ -127,7 +136,7 @@ export function buildReadback(input: ReadbackInput): Readback {
             exceptions.push({ kind: "differs", index: r.index, text: `${r.label}: ${r.differs}` })
         }
         if (r.tier === "standard" && r.standing && isRecent(r.standing.at, now)) {
-            const since = monthDay(r.standing.at)
+            const since = monthDay(sinceDay(r.standing.at, input.timeZone))
             exceptions.push({
                 kind: "recent_standard",
                 index: r.index,

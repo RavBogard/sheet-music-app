@@ -139,6 +139,7 @@ export async function readBackSetlistTool(
         }
 
         const readback = buildReadback({
+            timeZone: orgTimeZone(org),
             profileLabel,
             title: profileLabel ? null : str(data.name),
             date: eventDay(data.eventDate, org),

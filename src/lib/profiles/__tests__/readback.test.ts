@@ -39,6 +39,15 @@ const base = {
 }
 
 describe("buildReadback", () => {
+
+    it("dates a standard by the tenant's day when given a time zone", () => {
+        // 02:00Z on Oct 21 is the evening of Oct 20 in Chicago.
+        const rows = [song(0, "Oseh Shalom", { tier: "standard", standing: { byName: "David", at: "2026-10-21T02:00:00Z" } })]
+        const utc = buildReadback({ ...base, rows })
+        const chicago = buildReadback({ ...base, rows, timeZone: "America/Chicago" })
+        expect(utc.exceptions[0].text).toContain("since Oct 21")
+        expect(chicago.exceptions[0].text).toContain("since Oct 20")
+    })
     it("lists open slots, recent standards, promotions and open items, in that order", () => {
         const rows: ReadbackRow[] = [
             header(0, "Shacharit"),
