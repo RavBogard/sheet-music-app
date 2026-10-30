@@ -12,7 +12,7 @@ import {
     initializeApp,
     type App,
 } from "firebase-admin/app"
-import { getFirestore } from "firebase-admin/firestore"
+import { getFirestore, Timestamp } from "firebase-admin/firestore"
 
 import {
     commitStagedChanges,
@@ -179,6 +179,46 @@ describe("W-01 Task 1+2 — propose + commit lifecycle (emulator)", () => {
         expect(stage.proposals[0].flags).toContain("generic_title")
         expect(stage.summary.low).toBe(1)
         expect(stage.summary.flagged).toBe(1)
+    })
+
+    it("setlist memory: a bond to the profile's usual chart is high confidence with 'profile_match'", async () => {
+        await seedLibraryRow("song-house", { orgId: "crc", name: "Lecha Dodi (Carlebach)", partGroup: "pg-house", titleSpecificity: 0.2 })
+        await seedLibraryRow("song-other", { orgId: "crc", name: "Lecha Dodi (Sulzer)", partGroup: "pg-other", titleSpecificity: 0.2 })
+        // Three regular Shir Shabbat services used the same chart: it is usual.
+        for (const [i, date] of ["2026-10-16", "2026-10-09", "2026-10-02"].entries()) {
+            await db().collection("setlists").doc(`hist-${i}`).set({
+                orgId: "crc",
+                name: `Shir Shabbat ${date}`,
+                serviceType: "shir_shabbat",
+                special: false,
+                eventDate: Timestamp.fromDate(new Date(`${date}T23:00:00Z`)),
+                date: Timestamp.fromDate(new Date(`${date}T12:00:00Z`)),
+            })
+            await db().collection("tracks").doc(`hist-${i}-0`).set({
+                setlistId: `hist-${i}`, orgId: "crc", order: 0, type: "song", title: "Lecha Dodi", fileId: "song-house",
+            })
+        }
+        const setlistId = await newSetlist()
+        await db().collection("setlists").doc(setlistId).update({ serviceType: "shir_shabbat" })
+
+        const stage = (await proposeSetlistChanges(ADMIN, {
+            setlistId,
+            proposals: [
+                { action: "add", title: "Lecha Dodi", songId: "song-house" },
+                { action: "add", title: "Lecha Dodi", songId: "song-other" },
+            ],
+        })) as StageRecord
+        expect(stage.proposals[0]).toMatchObject({ confidence: "high", flags: ["profile_match"] })
+        expect(stage.proposals[1].confidence).toBe("low")
+        expect(stage.proposals[1].flags).toEqual(["generic_title"])
+
+        // No stored service type: the old behaviour, no profile check.
+        const plain = await newSetlist()
+        const plainStage = (await proposeSetlistChanges(ADMIN, {
+            setlistId: plain,
+            proposals: [{ action: "add", title: "Lecha Dodi", songId: "song-house" }],
+        })) as StageRecord
+        expect(plainStage.proposals[0]).toMatchObject({ confidence: "low", flags: ["generic_title"] })
     })
 
     it("MCP-004 (cycle-2): propose response carries `stageId` aliasing `id`", async () => {

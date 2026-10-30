@@ -107,7 +107,6 @@ export const WRITE_TOOLS: ReadonlySet<string> = new Set([
     "generate_gig_packet",
     "generate_service_sheet",
     "flag_bond",
-    "record_bond_correction",
     "set_standing_choice",
     "clear_standing_choice",
     "draft_service",

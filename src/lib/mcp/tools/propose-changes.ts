@@ -23,6 +23,7 @@ import {
     type ResolvedTrackBond,
 } from "@/lib/mcp/server-songs"
 import { isSongType } from "@/lib/setlist-track-count"
+import { profileMatches, type ProfileMatchCandidate } from "@/lib/profiles/profile-match"
 import { logger } from "@/lib/logger"
 import {
     WRITE_RECEIPTS_COLLECTION,
@@ -52,7 +53,8 @@ import {
  * Out of scope for this slice (deferred to follow-up W-01 tasks):
  *  - `preview_notify_band` (Task 3 — preview_notify_band wrapper)
  *  - `flag_bond` / `review_flagged_bonds` (Task 4)
- *  - `record_bond_correction` (Task 5)
+ *  - `record_bond_correction` (Task 5; retired in setlist memory release 2 —
+ *    profile matches below replace it)
  *  - AGENT-GUIDE.md + MCP server instructions injection (Task 6)
  *  - `reorder` action inside a proposal stage — callers use the
  *    dedicated `reorder_setlist` MCP tool for full permutations; mixing
@@ -240,9 +242,21 @@ export async function proposeSetlistChanges(
         }
     }
 
+    // Setlist memory (release 2): a bond to the chart the setlist's profile
+    // already holds for that slot (standard or usual) is high confidence.
+    // Read from the setlist's stored class only; fail-soft.
+    const matched = await profileMatchPositions(
+        db,
+        org,
+        setlistData,
+        args.setlistId,
+        args.proposals,
+        libraryRows,
+    )
+
     // Build the envelope: confidence + flags + explanation per proposal.
-    const envelopes: ProposalEnvelope[] = args.proposals.map((p) =>
-        computeProposalEnvelope(p, libraryRows),
+    const envelopes: ProposalEnvelope[] = args.proposals.map((p, i) =>
+        computeProposalEnvelope(p, libraryRows, matched.has(i)),
     )
     const summary = summarize(envelopes)
 
@@ -754,9 +768,52 @@ function validateProposalShape(p: ProposalInput, i: number): string | null {
     return null
 }
 
+async function profileMatchPositions(
+    db: FirebaseFirestore.Firestore,
+    org: OrgId,
+    setlistData: Record<string, unknown>,
+    setlistId: string,
+    proposals: ProposalInput[],
+    libraryRows: Map<string, Record<string, unknown> | null>,
+): Promise<Set<number>> {
+    if (typeof setlistData.serviceType !== "string" || !setlistData.serviceType) return new Set()
+    try {
+        const candidates: ProfileMatchCandidate[] = []
+        for (const [i, p] of proposals.entries()) {
+            if (p.action === "remove" || !p.songId?.trim()) continue
+            const row = libraryRows.get(p.songId)
+            if (!row) continue
+            let momentId: string | null = null
+            let title = p.title ?? (typeof row.name === "string" ? row.name : "")
+            if (p.action === "update" && p.trackId) {
+                const snap = await db.collection("tracks").doc(p.trackId).get()
+                const t = snap.exists ? (snap.data() as Record<string, unknown>) : null
+                if (!t || t.setlistId !== setlistId) continue
+                if (typeof t.momentId === "string" && t.momentId) momentId = t.momentId
+                if (!p.title && typeof t.title === "string") title = t.title
+            }
+            candidates.push({
+                position: i,
+                fileId: p.songId,
+                partGroup: typeof row.partGroup === "string" && row.partGroup ? row.partGroup : p.songId,
+                momentId,
+                title,
+            })
+        }
+        return await profileMatches(org, setlistData, candidates)
+    } catch (err) {
+        logger.warn("[mcp] propose profile check failed (fail-soft)", {
+            setlistId,
+            err: err instanceof Error ? err.message : String(err),
+        })
+        return new Set()
+    }
+}
+
 function computeProposalEnvelope(
     p: ProposalInput,
     libraryRows: Map<string, Record<string, unknown> | null>,
+    profileMatch = false,
 ): ProposalEnvelope {
     // Remove and non-bond updates carry no bonding risk → high confidence.
     if (p.action === "remove") {
@@ -793,6 +850,17 @@ function computeProposalEnvelope(
             : 0.5
     const flags: string[] = []
     if (row.status === "orphaned") flags.push("orphan_risk")
+    if (profileMatch) {
+        // The profile already holds this chart for the slot, so a generic
+        // title is no reason to stop and ask.
+        flags.push("profile_match")
+        return {
+            ...p,
+            confidence: "high",
+            flags,
+            explanation: "the service profile's standard or usual chart for this slot",
+        }
+    }
     if (specificity < STOP_AND_ASK_THRESHOLD) flags.push("generic_title")
     const confidence: ProposalEnvelope["confidence"] =
         specificity >= 0.7 ? "high" : specificity >= 0.5 ? "medium" : "low"

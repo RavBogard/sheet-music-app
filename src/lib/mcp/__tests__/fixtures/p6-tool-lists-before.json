@@ -253,7 +253,6 @@
     "mint_admin_bearer",
     "mint_setlist_reader_bearer",
     "reconcile_library",
-    "record_bond_correction",
     "reject_enrichment",
     "retry_enrichment",
     "review_chart_bonds",

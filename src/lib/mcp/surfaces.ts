@@ -79,7 +79,6 @@ export const OPS_TOOLS: ReadonlySet<string> = new Set([
     // not something done while building a service.
     "flag_bond",
     "review_flagged_bonds",
-    "record_bond_correction",
     "review_chart_bonds",
     "get_correction_stats",
 

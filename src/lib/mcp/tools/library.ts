@@ -509,6 +509,7 @@ async function loadLibraryW02Map(): Promise<Map<string, LibraryW02Fields>> {
  * pair. Returns undefined if no hint exists or the hint hasn't reached
  * the 3-pick threshold yet. Reads from titleContextHints; written by the
  * aggregateContextHints Cloud Function.
+ * Frozen: record_bond_correction is retired and nothing writes new hints; service profiles replace them.
  */
 async function loadContextHint(
     stem: string,

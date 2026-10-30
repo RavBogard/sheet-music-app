@@ -134,7 +134,6 @@ import { listContacts, createContact, deleteContact, findContact } from "./conta
 import {
     flagBond,
     reviewFlaggedBonds,
-    recordBondCorrection,
 } from "./bond-corrections"
 import {
     listMusicians,
@@ -2078,7 +2077,7 @@ export function registerWriteTools(server: McpServer): void {
         "preview_notify_band",
         {
             description:
-                "PREVIEW a band notification before sending it. Wraps notify_band({dryRun: true}) and reformats the response into the four signals needed for a chat-native confirm: chartHealth (`{bondedCount, okCount, missingCount, unreachableCount, unhealthy[]}` — same shape notify_band returns), audience (recipient count + role breakdown across admin/band_leader/musician/member), snapshotDiff against what the band was last told (added / removed / modified track rows), flaggedBonds (count of open bond_flags awaiting review via review_flagged_bonds), and `recommendation`: 'hard_block' if any chart status is 'missing' (the band would 404), 'review_first' if flaggedBonds > 0 (walk them first via review_flagged_bonds + record_bond_correction), 'send' otherwise. Use this between the propose→commit cycle and the actual notify_band call. Read-only — no writes, no notifications, no rate-limited charge.",
+                "PREVIEW a band notification before sending it. Wraps notify_band({dryRun: true}) and reformats the response into the four signals needed for a chat-native confirm: chartHealth (`{bondedCount, okCount, missingCount, unreachableCount, unhealthy[]}` — same shape notify_band returns), audience (recipient count + role breakdown across admin/band_leader/musician/member), snapshotDiff against what the band was last told (added / removed / modified track rows), flaggedBonds (count of open bond_flags awaiting review via review_flagged_bonds), and `recommendation`: 'hard_block' if any chart status is 'missing' (the band would 404), 'review_first' if flaggedBonds > 0 (walk them first via review_flagged_bonds), 'send' otherwise. Use this between the propose→commit cycle and the actual notify_band call. Read-only — no writes, no notifications, no rate-limited charge.",
             inputSchema: {
                 setlistId: z.string().min(1).describe("Setlist id"),
                 audience: z
@@ -2167,7 +2166,7 @@ export function registerWriteTools(server: McpServer): void {
         "flag_bond",
         {
             description:
-                "W-01 — Flag a setlist row for batch review (typically because the bonded song was committed at low confidence and the rabbi should double-check before publish). Upserts `bond_flags/{setlistId}_{trackId}` with the reason, flaggedAt, flaggedBy. Idempotent — re-flagging the same row updates the reason. Pair with `review_flagged_bonds` at end of authoring to walk the queue, then `record_bond_correction` per resolution.",
+                "W-01 — Flag a setlist row for batch review (typically because the bonded song was committed at low confidence and the rabbi should double-check before publish). Upserts `bond_flags/{setlistId}_{trackId}` with the reason, flaggedAt, flaggedBy. Idempotent — re-flagging the same row updates the reason. Pair with `review_flagged_bonds` at end of authoring to walk the queue, then fix each row with swap_chart.",
             inputSchema: {
                 setlistId: z.string().min(1).describe("Setlist id"),
                 trackId: z.string().min(1).describe("Track id to flag"),
@@ -2186,43 +2185,13 @@ export function registerWriteTools(server: McpServer): void {
         "review_flagged_bonds",
         {
             description:
-                "W-01 — Return every open bond_flag for a setlist, joined with the current track state and up to 5 alternative songIds ranked by W-02 signals (titleSpecificity, bondCorrectionHistory bias, contextHint boost when the setlist has a templateType). Use at end of authoring to walk the batch with the rabbi; for each correction the rabbi confirms, follow with record_bond_correction.",
+                "W-01 — Return every open bond_flag for a setlist, joined with the current track state and up to 5 alternative songIds ranked by W-02 signals (titleSpecificity, bondCorrectionHistory bias, contextHint boost when the setlist has a templateType). Use at end of authoring to walk the batch with the rabbi; for each correction the rabbi confirms, fix the row with swap_chart.",
             inputSchema: {
                 setlistId: z.string().min(1).describe("Setlist id"),
             },
         },
         async (args, extra) =>
             jsonResult(await reviewFlaggedBonds(uidFrom(extra), args, orgFrom(extra))),
-    )
-
-    server.registerTool(
-        "record_bond_correction",
-        {
-            description:
-                "W-01 — Record a rabbi-confirmed bond correction as the system's training signal. In one Firestore transaction: writes `bond_corrections/{id}` (audit trail), bumps library_index.{fromSongId}.bondCorrectionHistory.correctedAwayFrom + library_index.{toSongId}.bondCorrectionHistory.correctedTo, deletes the matching `bond_flags/{setlistId}_{trackId}` doc, and — when correctedTo for the (toSongId stem, setlist contextKey) pair hits the 3-pick threshold — upserts `titleContextHints/{stem}_{contextKey}` so search_library biases future calls toward `toSongId`. contextKey is derived from the setlist's templateType (e.g. 'shabbat-morning'). Re-bonding the actual track is a separate call — use update_track / swap_chart to flip the row's songId. record_bond_correction is the LEARNING signal, not the row mutation.",
-            inputSchema: {
-                setlistId: z.string().min(1).describe("Setlist id"),
-                trackId: z.string().min(1).describe("Track id corrected"),
-                fromSongId: z
-                    .string()
-                    .min(1)
-                    .describe("The songId the row WAS bonded to (the wrong one)."),
-                toSongId: z
-                    .string()
-                    .min(1)
-                    .describe(
-                        "The songId the rabbi picked instead. Must differ from fromSongId.",
-                    ),
-                reason: z
-                    .string()
-                    .optional()
-                    .describe(
-                        "Optional rationale ('wrong arrangement', 'composer mismatch') — surfaces in the audit trail.",
-                    ),
-            },
-        },
-        async (args, extra) =>
-            jsonResult(await recordBondCorrection(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -2248,7 +2217,7 @@ export function registerWriteTools(server: McpServer): void {
         "review_chart_bonds",
         {
             description:
-                "Detect WRONG bonds on a setlist — rows where the song title and the bonded chart's filename diverge (e.g. a 'Barchu' row bonded to 'Ahava Raba.pdf'). Complements verify_setlist_charts: that tool checks whether a chart is REACHABLE; this one checks whether the reachable chart is the RIGHT song. For each bonded track it compares the normalized title against `library_index/{fileId}.name` (the raw chart filename) via conservative token-overlap and returns per-row `{trackId, title, fileId, chartFileName, overlapScore (0-1), mismatch}` plus aggregate `mismatchCount` / `bondedCount`. Run it after clone_setlist (clones inherit the source's bonds verbatim) or before publish to catch a mis-bond the band would otherwise see. Read-only — it reports; remediate a flagged row with swap_chart, then record_bond_correction to train ranking. A null `chartFileName` means the fileId has no catalog row (a byte-health issue — run verify_setlist_charts).",
+                "Detect WRONG bonds on a setlist — rows where the song title and the bonded chart's filename diverge (e.g. a 'Barchu' row bonded to 'Ahava Raba.pdf'). Complements verify_setlist_charts: that tool checks whether a chart is REACHABLE; this one checks whether the reachable chart is the RIGHT song. For each bonded track it compares the normalized title against `library_index/{fileId}.name` (the raw chart filename) via conservative token-overlap and returns per-row `{trackId, title, fileId, chartFileName, overlapScore (0-1), mismatch}` plus aggregate `mismatchCount` / `bondedCount`. Run it after clone_setlist (clones inherit the source's bonds verbatim) or before publish to catch a mis-bond the band would otherwise see. Read-only — it reports; remediate a flagged row with swap_chart. A null `chartFileName` means the fileId has no catalog row (a byte-health issue — run verify_setlist_charts).",
             inputSchema: {
                 setlistId: z.string().min(1).describe("Setlist id"),
             },
