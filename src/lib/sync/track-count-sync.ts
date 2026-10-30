@@ -10,16 +10,29 @@ import {
 
 import { logger } from '@/lib/logger'
 import { coerceOrgId } from '@/lib/org/registry'
+import { deriveSetlistCounts } from '@/lib/setlist-derived-counts'
 
 /**
  * Cycle-9 Lane B — trackCount drift-producer fix.
  *
- * Recompute a setlist's denormalized `trackCount` from the live top-level
- * `tracks` subcollection and write it back to the parent setlist doc.
+ * Recompute a setlist's derived fields (`trackCount`, `songCount`, `fileIds`)
+ * from the live top-level `tracks` collection and write them back to the
+ * parent setlist doc, via `deriveSetlistCounts` (the same rules every server
+ * track writer uses).
+ *
+ * This is the ONLY client writer of these fields. The editor used to also
+ * reconcile them through the outbox from its local Dexie copy; that copy is
+ * routinely stale when the setlist is authored over MCP, so those rows
+ * overwrote correct server counts and raised false "Remote changes detected"
+ * conflicts. They were removed; this reads the server's tracks instead.
+ *
+ * No `updatedAt` bump: derived fields are not an edit, so writing them must
+ * not invalidate any editor's pending `expectedUpdatedAt` precondition.
  *
  * Called from the sync-engine flush chokepoint
  * (`ProductionFirestoreAdapter.commitOutboxRow`) after every CLIENT-side
- * track create / delete. The in-app grid editor (`SetlistGrid.tsx`) adds and
+ * track create / delete, and after a track update that changes its type or
+ * chart. The in-app grid editor (`SetlistGrid.tsx`) adds and
  * removes `tracks/{id}` docs through `applyEdit` WITHOUT maintaining the parent
  * counter, so each in-app delete inflated `trackCount` (count > actual — e.g.
  * `UnjLqKTtS4lNKQfMY6hB` 45 vs 30) and each add deflated it. Reconciling at the
@@ -65,8 +78,13 @@ export async function reconcileSetlistTrackCount(
                 where('setlistId', '==', setlistId),
             ),
         )
+        const derived = deriveSetlistCounts(
+            snap.docs.map((d) => d.data() as { type?: unknown; fileId?: unknown }),
+        )
         await updateDoc(doc(fsDb, 'setlists', setlistId), {
-            trackCount: snap.size,
+            trackCount: derived.trackCount,
+            songCount: derived.songCount,
+            fileIds: derived.fileIds,
         })
     } catch (err) {
         logger.warn(

@@ -3,7 +3,7 @@ import { timingSafeEqual } from "crypto"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
 import { env } from "@/env.mjs"
-import { isSongType } from "@/lib/setlist-track-count"
+import { deriveSetlistCounts, sameFileIds } from "@/lib/setlist-derived-counts"
 import { recomputeTrackCount } from "@/lib/setlist-track-count"
 import { getTracksForSetlist } from "@/lib/server-tracks"
 import { captureException, captureMessage } from "@/lib/error-reporting"
@@ -47,6 +47,7 @@ interface DriftRow {
     trackAfter: number
     songBefore: number
     songAfter: number
+    fileIdsDrifted?: boolean
 }
 
 export async function GET(req: NextRequest) {
@@ -97,17 +98,23 @@ export async function GET(req: NextRequest) {
                 if (dryRun) {
                     // Mirror recomputeTrackCount's compute but skip the write.
                     const tracks = await getTracksForSetlist(db, doc.id, data)
-                    const actual = tracks.length
-                    const actualSongs = tracks.filter((t) =>
-                        isSongType((t as { type?: unknown }).type),
-                    ).length
+                    const derived = deriveSetlistCounts(
+                        tracks as Array<{ type?: unknown; fileId?: unknown }>,
+                    )
+                    const actual = derived.trackCount
+                    const actualSongs = derived.songCount
+                    const fileIdsDrifted = !sameFileIds(data.fileIds, derived.fileIds)
                     const declared =
                         typeof data.trackCount === "number"
                             ? data.trackCount
                             : 0
                     const declaredSongs =
                         typeof data.songCount === "number" ? data.songCount : 0
-                    if (declared !== actual || declaredSongs !== actualSongs) {
+                    if (
+                        declared !== actual ||
+                        declaredSongs !== actualSongs ||
+                        fileIdsDrifted
+                    ) {
                         repaired++ // "would-be repaired"
                         driftRows.push({
                             setlistId: doc.id,
@@ -115,6 +122,7 @@ export async function GET(req: NextRequest) {
                             trackAfter: actual,
                             songBefore: declaredSongs,
                             songAfter: actualSongs,
+                            fileIdsDrifted,
                         })
                     }
                     continue
@@ -128,6 +136,7 @@ export async function GET(req: NextRequest) {
                         trackAfter: result.actual,
                         songBefore: result.declaredSongs,
                         songAfter: result.actualSongs,
+                        fileIdsDrifted: result.fileIdsDrifted,
                     })
                 } else if (result.drifted && !result.written) {
                     writeFailures++

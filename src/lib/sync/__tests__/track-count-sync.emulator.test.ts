@@ -152,6 +152,41 @@ describe('cycle-9 Lane B — reconcileSetlistTrackCount (real emulator Firestore
         await batch.commit()
     })
 
+    it('also re-derives songCount and fileIds (sorted, de-duplicated) from the server tracks, without touching updatedAt', async () => {
+        const id = 'sl-derived'
+        const stamp = new Date('2026-10-01T00:00:00Z')
+        await adminDb.collection('setlists').doc(id).set({
+            name: 'Derived',
+            ownerId: OWNER_UID,
+            hydrated: true,
+            trackCount: 9,
+            songCount: 15,
+            fileIds: ['chart-z', 'chart-stale'],
+            updatedAt: stamp,
+        })
+        const rows = [
+            { type: 'song', fileId: 'chart-z' },
+            { type: 'header' },
+            { fileId: 'chart-a' },
+            { type: 'song', fileId: 'chart-z' },
+        ]
+        for (const [i, r] of rows.entries()) {
+            await adminDb.collection('tracks').doc(`${id}-t${i}`).set({
+                id: `${id}-t${i}`, setlistId: id, orgId: 'crc', order: i, title: `Row ${i}`, ...r,
+            })
+        }
+
+        await reconcileSetlistTrackCount(webDb, id)
+
+        const after = (await getDoc(doc(webDb, 'setlists', id))).data() as Record<string, unknown>
+        expect(after.trackCount).toBe(4)
+        expect(after.songCount).toBe(3)
+        expect(after.fileIds).toEqual(['chart-a', 'chart-z'])
+        // A derived-field write is not an edit: it must not move the stamp an
+        // editor's pending precondition was captured against.
+        expect((after.updatedAt as { toMillis(): number }).toMillis()).toBe(stamp.getTime())
+    })
+
     it('add: an in-app track add (no counter maintenance) is reconciled to actual', async () => {
         const id = 'sl-add'
         await seedSetlist(id, 3, 3)

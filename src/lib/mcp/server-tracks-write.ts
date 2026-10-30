@@ -1,7 +1,11 @@
 import crypto from "crypto"
 import { FieldValue } from "firebase-admin/firestore"
 import { getTracksForSetlist } from "@/lib/server-tracks"
-import { isSongType } from "@/lib/setlist-track-count"
+import {
+    canonicalFileIds,
+    deriveSetlistCounts,
+    isSongType,
+} from "@/lib/setlist-derived-counts"
 import { logger } from "@/lib/logger"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
@@ -319,14 +323,11 @@ export async function addTrack(
             }
         })
 
-        const existingSongs = existing.filter((t) => isSongType(t.data.type)).length
         const setlistPatch: Record<string, unknown> = {
-            trackCount: existing.length + 1,
-            songCount: existingSongs + (isSongType(input.type) ? 1 : 0),
+            ...deriveSetlistCounts(postInsert.map((row) => row.data)),
             updatedAt: FieldValue.serverTimestamp(),
             ...versionBumpFields(),
         }
-        if (input.fileId) setlistPatch.fileIds = FieldValue.arrayUnion(input.fileId)
         tx.update(setlistRef, setlistPatch)
         return target
     })
@@ -849,23 +850,21 @@ export async function updateTrack(
         // old, if no siblings), which can leave the aggregate stale if
         // siblings reference the old chart elsewhere on the setlist.
         if (wantsFileIdsRebuild && allTracks) {
-            const canonical = new Set<string>()
-            for (const t of allTracks) {
-                const tFileId =
-                    t.id === trackId ? newFileId : t.fileId
-                if (typeof tFileId === "string" && tFileId) {
-                    canonical.add(tFileId)
-                }
-            }
-            setlistPatch.fileIds = [...canonical]
+            setlistPatch.fileIds = canonicalFileIds(
+                allTracks.map((t) => ({
+                    fileId: t.id === trackId ? newFileId : t.fileId,
+                })),
+            )
         }
 
         // C10I1-002: recompute the song-type subset counter from post-patch
         // state when this update flips the target row's song-ness.
         if (wantsSongCountRecompute && allTracks) {
-            setlistPatch.songCount = allTracks.filter((t) =>
-                isSongType(t.id === trackId ? patch.type : t.type),
-            ).length
+            setlistPatch.songCount = deriveSetlistCounts(
+                allTracks.map((t) => ({
+                    type: t.id === trackId ? patch.type : t.type,
+                })),
+            ).songCount
         }
 
         tx.update(setlistRef, setlistPatch)
@@ -1366,17 +1365,17 @@ export async function bulkUpdateTracks(
                         patchedFileId.set(p.trackId, p.patch.songId)
                     }
                 }
-                const canonical = new Set<string>()
-                for (const t of existing) {
-                    const tRec = t as Record<string, unknown>
-                    const tFileId = patchedFileId.has(tRec.id as string)
-                        ? patchedFileId.get(tRec.id as string)
-                        : (tRec.fileId as string | undefined)
-                    if (typeof tFileId === "string" && tFileId) {
-                        canonical.add(tFileId)
-                    }
-                }
-                setlistPatch.fileIds = [...canonical]
+                setlistPatch.fileIds = canonicalFileIds(
+                    existing.map((t) => {
+                        const tRec = t as Record<string, unknown>
+                        const id = tRec.id as string
+                        return {
+                            fileId: patchedFileId.has(id)
+                                ? patchedFileId.get(id)
+                                : tRec.fileId,
+                        }
+                    }),
+                )
             }
             // C10I1-002: if any patch changes a track's `type`, recompute the
             // song-type subset counter (`songCount`) from post-patch state.
@@ -1390,14 +1389,17 @@ export async function bulkUpdateTracks(
                     if (p.patch.type !== undefined)
                         patchedType.set(p.trackId, p.patch.type)
                 }
-                setlistPatch.songCount = existing.filter((t) => {
-                    const tRec = t as Record<string, unknown>
-                    const id = tRec.id as string
-                    const effectiveType = patchedType.has(id)
-                        ? patchedType.get(id)
-                        : tRec.type
-                    return isSongType(effectiveType)
-                }).length
+                setlistPatch.songCount = deriveSetlistCounts(
+                    existing.map((t) => {
+                        const tRec = t as Record<string, unknown>
+                        const id = tRec.id as string
+                        return {
+                            type: patchedType.has(id)
+                                ? patchedType.get(id)
+                                : tRec.type,
+                        }
+                    }),
+                ).songCount
             }
             tx.update(db.collection("setlists").doc(setlistId), setlistPatch)
             return { kind: "ok" }
@@ -1817,16 +1819,6 @@ export async function bulkAddTracks(
     }
 
     if (mode === "atomic") {
-        const insertCount = planned.filter((p) => p.kind === "ok").length
-        const newFileIds = new Set<string>()
-        let insertSongCount = 0
-        for (const p of planned) {
-            if (p.kind !== "ok") continue
-            if (p.fileId) newFileIds.add(p.fileId)
-            // C10I1-002: count song-type inserts for the songCount denorm.
-            // payload.type defaults to "song" (undefined) — isSongType matches.
-            if (isSongType((p.payload as { type?: unknown }).type)) insertSongCount++
-        }
         const committedOrders = await db.runTransaction(async (tx) => {
             const setlistRef = db.collection("setlists").doc(setlistId)
             const [setlistSnap, tracksSnap] = await Promise.all([
@@ -1886,17 +1878,13 @@ export async function bulkAddTracks(
                 }
             })
 
-            const existingSongs = liveExisting.filter((t) =>
-                isSongType(t.data.type),
-            ).length
+            // Derived fields from the full post-insert list (C10I1-002).
             const setlistPatch: Record<string, unknown> = {
-                trackCount: liveExisting.length + insertCount,
-                songCount: existingSongs + insertSongCount,
+                ...deriveSetlistCounts(
+                    ordered.map((row) => (row.kind === "new" ? row.payload : row.data)),
+                ),
                 updatedAt: FieldValue.serverTimestamp(),
                 ...versionBumpFields(),
-            }
-            if (newFileIds.size > 0) {
-                setlistPatch.fileIds = FieldValue.arrayUnion(...newFileIds)
             }
             tx.update(setlistRef, setlistPatch)
             return [...orderByInputIndex.entries()]
@@ -2082,23 +2070,12 @@ export async function removeTrack(
                 })
             }
         })
+        // Derived fields re-derived from the surviving rows (C10I1-002), so a
+        // remove also heals any earlier drift in the stored values.
         const setlistPatch: Record<string, unknown> = {
-            trackCount: remaining.length,
-            // C10I1-002: recompute song-type subset from the surviving rows.
-            songCount: remaining.filter((t) => isSongType(t.type)).length,
+            ...deriveSetlistCounts(remaining),
             updatedAt: FieldValue.serverTimestamp(),
             ...versionBumpFields(),
-        }
-        // Drop the chart from the parent's fileIds set only when no other
-        // track still references it (the array is a distinct set across
-        // all tracks).
-        const removedFileId = trackData.fileId
-        if (
-            typeof removedFileId === "string" &&
-            removedFileId &&
-            !remaining.some((t) => t.fileId === removedFileId)
-        ) {
-            setlistPatch.fileIds = FieldValue.arrayRemove(removedFileId)
         }
         tx.update(setlistRef, setlistPatch)
         return { ok: true }

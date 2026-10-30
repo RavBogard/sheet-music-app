@@ -11,7 +11,7 @@ import {
     type RichErrorEnvelope,
 } from "@/lib/mcp/error-envelopes"
 import { parseEventDate as toTimestamp } from "@/lib/parse-event-date"
-import { isSongType } from "@/lib/setlist-track-count"
+import { deriveSetlistCounts } from "@/lib/setlist-derived-counts"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 import { rowOrg } from "@/lib/mcp/org-context"
@@ -1136,9 +1136,9 @@ export async function writeSetlistFromTemplateRows(
     // clone_setlist + every server-tracks-write mutation. Templates store
     // tracks inline; payload.type defaults to "song" downstream so isSongType
     // on the source row (which may be undefined → song) is the correct count.
-    const templateSongCount = templateTracks.filter((t) =>
-        isSongType((t as Record<string, unknown>).type),
-    ).length
+    const derived = deriveSetlistCounts(
+        templateTracks as Array<{ type?: unknown; fileId?: unknown }>,
+    )
     const setlistPayload: Record<string, unknown> = {
         id: newSetlistId,
         name: input.name,
@@ -1149,8 +1149,8 @@ export async function writeSetlistFromTemplateRows(
         orgId: org,
         date: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
-        trackCount: templateTracks.length,
-        songCount: templateSongCount,
+        // trackCount / songCount / fileIds from the seeded rows.
+        ...derived,
         hydrated: true,
         ownerId: uid,
         ownerName,
@@ -1178,14 +1178,6 @@ export async function writeSetlistFromTemplateRows(
         if (v !== undefined) setlistPayload[k] = v
     }
 
-    const canonicalFileIds = new Set<string>()
-    for (const t of templateTracks) {
-        const fid = (t as Record<string, unknown>).fileId
-        if (typeof fid === "string" && fid) canonicalFileIds.add(fid)
-    }
-    if (canonicalFileIds.size > 0) {
-        setlistPayload.fileIds = [...canonicalFileIds]
-    }
 
     const batch = db.batch()
     batch.set(db.collection("setlists").doc(newSetlistId), setlistPayload)
@@ -1226,7 +1218,7 @@ export async function writeSetlistFromTemplateRows(
         sourceTemplateId: input.sourceTemplateId,
         newSetlistId,
         trackCount: templateTracks.length,
-        copiedFileIds: canonicalFileIds.size,
+        copiedFileIds: derived.fileIds.length,
     })
 
     // FU-c12-4 — parity with clone_setlist: advisory bond review computed AFTER

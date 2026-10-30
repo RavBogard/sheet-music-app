@@ -99,6 +99,12 @@ export async function stampTrackOrgForCommit(
     }
 }
 
+/** Track fields the parent setlist's derived fields depend on: `type`
+ *  (songCount) and the chart binding (fileIds). Exported for testing. */
+export function touchesDerivedTrackField(payload: Record<string, unknown>): boolean {
+    return 'type' in payload || 'fileId' in payload || 'songId' in payload
+}
+
 class ProductionFirestoreAdapter implements FirestoreAdapter {
     async commitOutboxRow(row: OutboxRow): Promise<CommitResult> {
         try {
@@ -184,9 +190,23 @@ class ProductionFirestoreAdapter implements FirestoreAdapter {
                         })
                     })
                     const after = await getDoc(ref)
-                    const ms = (
-                        after.data() as { updatedAt?: Timestamp } | undefined
-                    )?.updatedAt?.toMillis()
+                    const afterData = after.data() as
+                        | { updatedAt?: Timestamp; setlistId?: unknown }
+                        | undefined
+                    // A track's type decides songCount and its chart decides
+                    // fileIds; re-derive the parent's fields when either moves.
+                    if (
+                        row.collection === 'tracks' &&
+                        touchesDerivedTrackField(row.payload) &&
+                        typeof afterData?.setlistId === 'string' &&
+                        afterData.setlistId
+                    ) {
+                        await reconcileSetlistTrackCount(
+                            firestoreDb,
+                            afterData.setlistId,
+                        )
+                    }
+                    const ms = afterData?.updatedAt?.toMillis()
                     return { updatedAt: ms }
                 }
                 case 'delete': {

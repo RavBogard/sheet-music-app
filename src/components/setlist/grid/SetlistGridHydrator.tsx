@@ -1,6 +1,5 @@
 'use client'
 
-import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useRef, useState } from 'react'
 
 import { useAuth } from '@/lib/auth-context'
@@ -93,15 +92,6 @@ export function SetlistGridHydrator({
      *  once per Hydrator instance; re-mounts cleanly unsubscribe via the
      *  effect's cleanup. Replaces the v53-02-01 primedRef one-shot. */
     const songsSubscribeRef = useRef<(() => void) | null>(null)
-    /** v54-01-03 trackCount reconciler memory of the last value we wrote.
-     *  Declared at the top so the lazy-hydration cascade (below) can seed
-     *  it after writing trackCount in the same setlist update — without
-     *  the seed, the reconciler would fire spuriously on first mount. */
-    const lastWrittenCountRef = useRef<number | null>(null)
-    /** v60-06-02: same dedup pattern for songCount + fileIds, seeded in
-     *  the cascade alongside trackCount. */
-    const lastWrittenSongCountRef = useRef<number | null>(null)
-    const lastWrittenFileIdsRef = useRef<string[] | null>(null)
     /** v60-13-06 content-hash dedup. Keyed `${collection}/${docId}`. Value is
      *  a stable JSON of every field EXCEPT `updatedAt`. Layered ON TOP of the
      *  existing outbox-pending / tombstone / LWW guards: when initialSetlist
@@ -342,54 +332,20 @@ export function SetlistGridHydrator({
                     ),
                 )
                 if (cancelled) return
-                // P0 cascade-race fix (2026-05-12): include trackCount in
-                // the same setlist update that flips hydrated:true. Pre-
-                // fix the trackCount reconciler (below) would fire on its
-                // 800ms debounce after the live count drifted from the
-                // initial snapshot's trackCount, racing the cascade's
-                // hydrated:true write. The race bumped setlists/{S}'s
-                // server updatedAt past initialSetlist.updatedAt, so the
-                // cascade's expectedUpdatedAt precondition failed → the
-                // setlist row went 'failed' → modal opened. Single-write
-                // fixes both.
-                // v60-06-02: bundle songCount + fileIds into the same patch
-                // so all three denormalized fields land atomically with
-                // hydrated:true. Computed from the legacy embedded tracks
-                // (the only authoritative source pre-hydration).
-                const seedSongCount = initialTracks.filter(
-                    (t) => !t.type || t.type === 'song',
-                ).length
-                const seedFileIds = Array.from(
-                    new Set(
-                        initialTracks
-                            .map((t) => (t as { fileId?: string }).fileId)
-                            .filter(
-                                (id): id is string =>
-                                    typeof id === 'string' && id.length > 0,
-                            ),
-                    ),
-                ).sort()
+                // The derived fields (trackCount / songCount / fileIds) are
+                // not written here: each fanned-out track `set` re-derives
+                // them from the server's tracks when it commits
+                // (reconcileSetlistTrackCount in the sync adapter).
                 await applyEdit(
                     {
                         op: 'update',
                         collection: 'setlists',
                         docId: setlistId,
-                        patch: {
-                            hydrated: true,
-                            trackCount: initialTracks.length,
-                            songCount: seedSongCount,
-                            fileIds: seedFileIds,
-                        },
+                        patch: { hydrated: true },
                         expectedUpdatedAt: initialSetlist.updatedAt,
                     },
                     { withoutUndo: true },
                 )
-                // Seed the reconciler's last-written ref so its initial
-                // diff against initialSetlist.trackCount doesn't re-fire
-                // immediately for the count we just wrote.
-                lastWrittenCountRef.current = initialTracks.length
-                lastWrittenSongCountRef.current = seedSongCount
-                lastWrittenFileIdsRef.current = seedFileIds
             } catch (err) {
                 logger.warn(
                     `[SetlistGridHydrator] lazy-hydration fan-out failed for setlist ${setlistId}`,
@@ -439,162 +395,14 @@ export function SetlistGridHydrator({
         }
     }, [hydration, subscribeSongsLibrary, hostOrg, songsUid])
 
-    // v54-01-03: trackCount reconciler. v50-05 moved tracks from the embedded
-    // `setlists/{id}.tracks[]` array into a top-level `tracks/{id}` collection,
-    // but `setlists/{id}.trackCount` was only written at create-time from the
-    // (empty) initial tracks array. Result: every v50-05+ setlist's dashboard
-    // card showed "0 songs" no matter how many tracks the user actually added.
-    //
-    // Fix: subscribe to the live tracks-by-setlistId count via Dexie, and when
-    // it drifts from the last value we wrote (or from the initial snapshot)
-    // patch `setlist.trackCount` via applyEdit. Single coupling point so every
-    // track-mutating path in SetlistGrid (handlePickSong / handleCreateFreeText
-    // / handleAddTrackOfType / handleDelete / handleBulkDelete / handleClone /
-    // bulk drag-reorder) gets correct counts without each having to update
-    // setlist.trackCount itself.
-    //
-    // Debounced 800ms so rapid adds (e.g. paste-multiple) write one count
-    // patch instead of N. Skips the redundant write when the count already
-    // matches what we last wrote (avoids a write loop on listener echo).
-    const liveTrackCount = useLiveQuery(
-        () =>
-            getDb()
-                .tracks.where('setlistId')
-                .equals(setlistId)
-                .count(),
-        [setlistId],
-    )
-    useEffect(() => {
-        if (hydration !== 'done') return
-        if (liveTrackCount === undefined) return
-        const currentStored =
-            lastWrittenCountRef.current ?? initialSetlist.trackCount
-        if (liveTrackCount === currentStored) return
-        const handle = setTimeout(() => {
-            // Re-check post-debounce in case writes raced — only fire the
-            // patch if we still differ.
-            if (liveTrackCount === lastWrittenCountRef.current) return
-            void applyEdit({
-                op: 'update',
-                collection: 'setlists',
-                docId: setlistId,
-                patch: { trackCount: liveTrackCount },
-            })
-                .then(() => {
-                    lastWrittenCountRef.current = liveTrackCount
-                })
-                .catch((err) => {
-                    logger.warn(
-                        '[SetlistGridHydrator] trackCount reconcile failed',
-                        err,
-                    )
-                })
-        }, 800)
-        return () => clearTimeout(handle)
-    }, [hydration, liveTrackCount, setlistId, initialSetlist.trackCount, applyEdit])
-
-    // v60-06-02: parallel reconcilers for songCount + fileIds. Same 800ms
-    // debounced applyEdit pattern as trackCount above. JS-side filter inside
-    // useLiveQuery is fine for ~50 tracks/setlist; dexie-react-hooks
-    // invalidates on any setlistId-scoped track change.
-    const liveSongCount = useLiveQuery(
-        () =>
-            getDb()
-                .tracks.where('setlistId')
-                .equals(setlistId)
-                .filter((t) => !t.type || (t.type as unknown) === 'song')
-                .count(),
-        [setlistId],
-    )
-    useEffect(() => {
-        if (hydration !== 'done') return
-        if (liveSongCount === undefined) return
-        const currentStored =
-            lastWrittenSongCountRef.current ??
-            (initialSetlist as { songCount?: number }).songCount ??
-            null
-        if (liveSongCount === currentStored) return
-        const handle = setTimeout(() => {
-            if (liveSongCount === lastWrittenSongCountRef.current) return
-            void applyEdit({
-                op: 'update',
-                collection: 'setlists',
-                docId: setlistId,
-                patch: { songCount: liveSongCount },
-            })
-                .then(() => {
-                    lastWrittenSongCountRef.current = liveSongCount
-                })
-                .catch((err) => {
-                    logger.warn(
-                        '[SetlistGridHydrator] songCount reconcile failed',
-                        err,
-                    )
-                })
-        }, 800)
-        return () => clearTimeout(handle)
-    }, [hydration, liveSongCount, setlistId, initialSetlist, applyEdit])
-
-    const liveFileIds = useLiveQuery<string[]>(
-        async () => {
-            const rows = await getDb()
-                .tracks.where('setlistId')
-                .equals(setlistId)
-                .toArray()
-            return Array.from(
-                new Set(
-                    rows
-                        .map((r) => (r as { fileId?: string }).fileId)
-                        .filter(
-                            (id): id is string =>
-                                typeof id === 'string' && id.length > 0,
-                        ),
-                ),
-            ).sort()
-        },
-        [setlistId],
-    )
-    useEffect(() => {
-        if (hydration !== 'done') return
-        if (liveFileIds === undefined) return
-        const lastWritten = lastWrittenFileIdsRef.current
-        const lastFromInitial =
-            (initialSetlist as { fileIds?: string[] }).fileIds
-        const currentStored = lastWritten ?? lastFromInitial
-        if (
-            currentStored &&
-            currentStored.length === liveFileIds.length &&
-            currentStored.every((id, i) => id === liveFileIds[i])
-        ) {
-            return
-        }
-        const handle = setTimeout(() => {
-            const echo = lastWrittenFileIdsRef.current
-            if (
-                echo &&
-                echo.length === liveFileIds.length &&
-                echo.every((id, i) => id === liveFileIds[i])
-            ) {
-                return
-            }
-            void applyEdit({
-                op: 'update',
-                collection: 'setlists',
-                docId: setlistId,
-                patch: { fileIds: liveFileIds },
-            })
-                .then(() => {
-                    lastWrittenFileIdsRef.current = liveFileIds
-                })
-                .catch((err) => {
-                    logger.warn(
-                        '[SetlistGridHydrator] fileIds reconcile failed',
-                        err,
-                    )
-                })
-        }, 800)
-        return () => clearTimeout(handle)
-    }, [hydration, liveFileIds, setlistId, initialSetlist, applyEdit])
+    // The setlist's derived fields (trackCount / songCount / fileIds) are not
+    // reconciled from here. This component used to enqueue outbox updates for
+    // them from the local Dexie copy, which is routinely stale when the
+    // setlist is authored over MCP: those rows overwrote correct server
+    // counts and raised false "Remote changes detected" conflicts on open.
+    // Every server track writer maintains them, and the sync adapter
+    // re-derives them from the server's tracks after each client track write
+    // (src/lib/sync/track-count-sync.ts).
 
     return (
         <div data-testid="setlist-grid-hydrator" data-hydration={hydration}>

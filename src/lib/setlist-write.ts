@@ -22,7 +22,7 @@ import {
 } from "@/lib/mcp/error-envelopes"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import { parseEventDate as toTimestamp } from "@/lib/parse-event-date"
-import { isSongType } from "@/lib/setlist-track-count"
+import { deriveSetlistCounts } from "@/lib/setlist-derived-counts"
 import { isTestSetlist, type Setlist } from "@/types/models"
 
 // ─── Types ───────────────────────────────────────────────────────────
@@ -138,7 +138,7 @@ export async function createSetlistServerSide(
     // song, matching the rule used across the codebase. Critical for CSV
     // import (`/api/setlists/import/execute`) so freshly-imported setlists
     // land with the correct landing-card song count, not "0 songs · N items".
-    const seedSongCount = input.tracks.filter((t) => isSongType(t.type)).length
+    const derived = deriveSetlistCounts(input.tracks)
     // v11-01-02: resolve the tenant once — the parent setlist AND every seeded
     // track carry the SAME orgId so a track can never mismatch its setlist.
     const orgId = input.orgId
@@ -148,8 +148,8 @@ export async function createSetlistServerSide(
         name: input.name,
         date: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
-        trackCount: input.tracks.length,
-        songCount: seedSongCount,
+        // trackCount / songCount / fileIds from the seeded rows.
+        ...derived,
         hydrated: true,
         ownerId: input.ownerId,
         ownerName: input.ownerName,

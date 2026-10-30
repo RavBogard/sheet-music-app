@@ -22,7 +22,7 @@ import {
     resolveTrackBondDefaults,
     type ResolvedTrackBond,
 } from "@/lib/mcp/server-songs"
-import { isSongType } from "@/lib/setlist-track-count"
+import { deriveSetlistCounts } from "@/lib/setlist-derived-counts"
 import { profileMatches, type ProfileMatchCandidate } from "@/lib/profiles/profile-match"
 import { logger } from "@/lib/logger"
 import {
@@ -639,50 +639,36 @@ export async function commitStagedChanges(
             }
         })
 
-        // Canonical fileIds[] from post-commit state — same shape as the
-        // single-row write paths' re-bond reconcile.
-        const canonical = new Set<string>()
-        for (const row of working) {
-            if (typeof row.fileId === "string" && row.fileId) {
-                canonical.add(row.fileId)
-            }
-        }
-        // C11M1-001: songCount denorm across the post-commit row set. For
-        // each surviving row, effective type = patch.type if the proposal
-        // updated it, else the existing row's current type; new rows take
-        // their payload.type. Without this every commit_staged_changes call
-        // left songCount frozen at whatever the prior writer wrote — the
-        // primary drift source for Daniel's weekly Claude-Desktop authoring
-        // flow [[user_mcp_is_primary_author_workflow]] (commit_staged_changes
-        // is how propose→confirm batches actually land).
-        const postCommitSongCount = working.reduce((acc, row) => {
-            if (row.kind === "new") {
-                return (
-                    acc +
-                    (isSongType(
-                        (row.payload as { type?: unknown }).type,
-                    )
-                        ? 1
-                        : 0)
-                )
-            }
-            const before = byId.get(row.id)
-            const beforeType = (before?.data as { type?: unknown } | undefined)
-                ?.type
-            const patchedType = (row.patch as { type?: unknown } | undefined)
-                ?.type
-            const effectiveType =
-                patchedType !== undefined ? patchedType : beforeType
-            return acc + (isSongType(effectiveType) ? 1 : 0)
-        }, 0)
+        // Derived fields from the post-commit row set (C11M1-001). Effective
+        // type = the proposal's patch.type when it set one, else the row's
+        // current type; new rows take their payload.type. Without this every
+        // commit_staged_changes call left songCount frozen — the primary
+        // drift source for the weekly Claude-Desktop authoring flow.
+        const derived = deriveSetlistCounts(
+            working.map((row) => {
+                if (row.kind === "new") {
+                    return {
+                        type: (row.payload as { type?: unknown }).type,
+                        fileId: row.fileId,
+                    }
+                }
+                const beforeType = (
+                    byId.get(row.id)?.data as { type?: unknown } | undefined
+                )?.type
+                const patchedType = (row.patch as { type?: unknown } | undefined)
+                    ?.type
+                return {
+                    type: patchedType !== undefined ? patchedType : beforeType,
+                    fileId: row.fileId,
+                }
+            }),
+        )
         const setlistPatch: Record<string, unknown> = {
-            trackCount: working.length,
-            songCount: postCommitSongCount,
+            ...derived,
             updatedAt: FieldValue.serverTimestamp(),
             version: FieldValue.increment(1),
             lastModifiedAt: nowIso,
             lastModifiedBy: uid,
-            fileIds: [...canonical],
         }
         tx.update(setlistRef, setlistPatch)
         const committedResult: CommitResult = {

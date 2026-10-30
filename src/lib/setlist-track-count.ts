@@ -1,6 +1,11 @@
 import 'server-only'
 import { getTracksForSetlist } from '@/lib/server-tracks'
 import { logger } from '@/lib/logger'
+import {
+    deriveSetlistCounts,
+    isSongType,
+    sameFileIds,
+} from '@/lib/setlist-derived-counts'
 
 /**
  * Cycle-7-fixes Lane 3 — shared trackCount-reconcile helper.
@@ -36,17 +41,12 @@ import { logger } from '@/lib/logger'
 interface SetlistData extends Record<string, unknown> {
     trackCount?: unknown
     songCount?: unknown
+    fileIds?: unknown
 }
 
-/**
- * Single source of truth for "does this track count toward songCount". A
- * track is a song unless it carries an explicit non-"song" type (header /
- * reading / prayer / transition / note). Mirrors the same predicate inlined
- * in SetlistPerformClient, SetlistGridHydrator, and print-pipeline.
- */
-export function isSongType(type: unknown): boolean {
-    return !type || type === 'song'
-}
+// `isSongType` lives with the other derived-field rules; re-exported here so
+// existing server imports keep working.
+export { isSongType }
 
 export interface TrackCountRepairResult {
     setlistId: string
@@ -56,6 +56,8 @@ export interface TrackCountRepairResult {
     declaredSongs: number
     /** Actual song-type track count recomputed from the subcollection. */
     actualSongs: number
+    /** True when the stored `fileIds` aggregate differed from the canonical one. */
+    fileIdsDrifted: boolean
     drifted: boolean
     written: boolean
     error?: string
@@ -71,17 +73,20 @@ export async function recomputeTrackCount(
     const declaredSongs =
         typeof setlistData.songCount === 'number' ? setlistData.songCount : 0
     const tracks = await getTracksForSetlist(db, setlistId, setlistData)
-    const actual = tracks.length
-    const actualSongs = tracks.filter((t) =>
-        isSongType((t as { type?: unknown }).type),
-    ).length
-    if (declared === actual && declaredSongs === actualSongs) {
+    const derived = deriveSetlistCounts(
+        tracks as Array<{ type?: unknown; fileId?: unknown }>,
+    )
+    const actual = derived.trackCount
+    const actualSongs = derived.songCount
+    const fileIdsDrifted = !sameFileIds(setlistData.fileIds, derived.fileIds)
+    if (declared === actual && declaredSongs === actualSongs && !fileIdsDrifted) {
         return {
             setlistId,
             declared,
             actual,
             declaredSongs,
             actualSongs,
+            fileIdsDrifted: false,
             drifted: false,
             written: false,
         }
@@ -90,6 +95,7 @@ export async function recomputeTrackCount(
         await db.collection('setlists').doc(setlistId).update({
             trackCount: actual,
             songCount: actualSongs,
+            fileIds: derived.fileIds,
             updatedAt: new Date(),
         })
         logger.info(
@@ -101,6 +107,7 @@ export async function recomputeTrackCount(
             actual,
             declaredSongs,
             actualSongs,
+            fileIdsDrifted,
             drifted: true,
             written: true,
         }
@@ -115,6 +122,7 @@ export async function recomputeTrackCount(
             actual,
             declaredSongs,
             actualSongs,
+            fileIdsDrifted,
             drifted: true,
             written: false,
             error: msg,
