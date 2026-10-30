@@ -326,6 +326,25 @@ describe("MCP list_library (emulator)", () => {
         })
     })
 
+    it("surfaces a stored setting / part / partGroup, and omits them when unset", async () => {
+        await seedIndex("u1", {
+            name: "Barchu (Walkdown) Bb",
+            collection: "core",
+            status: "active",
+            setting: "Walkdown",
+            part: "Bb",
+            partGroup: "barchu walkdown",
+        })
+        await seedIndex("u2", { name: "Hashkivenu", collection: "core", status: "active" })
+
+        const r = await listLibrary(ADMIN, {})
+        if (!("rows" in r)) throw new Error("expected rows result")
+        const byId = new Map(r.rows.map((row) => [row.fileId, row]))
+        expect(byId.get("u1")).toMatchObject({ setting: "Walkdown", part: "Bb", partGroup: "barchu walkdown" })
+        expect(byId.get("u2")?.setting).toBeUndefined()
+        expect(byId.get("u2")?.partGroup).toBeUndefined()
+    })
+
     describe("AI-001 enrichment projection", () => {
         async function seedRetry(fileId: string, attempts = 1) {
             await db()

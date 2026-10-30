@@ -448,9 +448,9 @@ async function loadLibraryW02Map(): Promise<Map<string, LibraryW02Fields>> {
                     typeof data.notationSource === "string"
                         ? data.notationSource
                         : undefined,
-                setting: typeof data.setting === "string" ? data.setting : null,
-                part: typeof data.part === "string" ? data.part : null,
-                partGroup: typeof data.partGroup === "string" ? data.partGroup : null,
+                setting: typeof data.setting === "string" ? data.setting : undefined,
+                part: typeof data.part === "string" ? data.part : undefined,
+                partGroup: typeof data.partGroup === "string" ? data.partGroup : undefined,
                 lastUsedInSetlist:
                     data.lastUsedInSetlist &&
                     typeof data.lastUsedInSetlist === "object"
@@ -1102,9 +1102,9 @@ function toLibraryEntry(
         arranger: typeof data.arranger === "string" ? data.arranger : undefined,
         notationSource:
             typeof data.notationSource === "string" ? data.notationSource : undefined,
-        setting: typeof data.setting === "string" ? data.setting : null,
-        part: typeof data.part === "string" ? data.part : null,
-        partGroup: typeof data.partGroup === "string" ? data.partGroup : null,
+        setting: typeof data.setting === "string" ? data.setting : undefined,
+        part: typeof data.part === "string" ? data.part : undefined,
+        partGroup: typeof data.partGroup === "string" ? data.partGroup : undefined,
         lastUsedInSetlist:
             data.lastUsedInSetlist && typeof data.lastUsedInSetlist === "object"
                 ? (data.lastUsedInSetlist as {
