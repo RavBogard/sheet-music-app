@@ -36,7 +36,14 @@ describe("parsePart", () => {
         expect(parsePart(title)).toEqual(expected)
     })
 
-    it.each(["Barchu Walkdown", "Shake It Off", "Bb"])("%s has no part", (title) => {
+    it.each([
+        "Barchu Walkdown",
+        "Shake It Off",
+        "Bb",
+        "All About That Bass",
+        "Ain't No Sunshine in C",
+        "Hava Nagila in Bb",
+    ])("%s has no part", (title) => {
         expect(parsePart(title)).toBeNull()
     })
 })
@@ -57,7 +64,13 @@ describe("settingPartWriteFields", () => {
         })
     })
 
-    it("leaves a person's own setting alone", () => {
-        expect(settingPartWriteFields("Barchu (Walkdown) Bb", { settingSource: "human" })).toEqual({})
+    it("leaves a person's own setting and part alone, but keeps partGroup current", () => {
+        expect(settingPartWriteFields("Barchu (Walkdown) Bb", { settingSource: "human" })).toEqual({
+            partGroup: partGroupFor("Barchu (Walkdown)"),
+        })
+    })
+
+    it("still finds short labels after a hyphen", () => {
+        expect(parsePart("Porter Haus - Piano")).toEqual({ baseTitle: "Porter Haus", part: "Piano" })
     })
 })

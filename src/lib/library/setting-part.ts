@@ -32,6 +32,15 @@ const PART_LABELS = [
     "Guitar",
 ].sort((a, b) => b.length - a.length)
 
+/**
+ * Labels that are also ordinary words or keys ("All About That Bass", "in C").
+ * They count as a part only after " - " or right after a parenthesised
+ * clarifier: "Shema (Major) Bass", "Porter Haus - C".
+ */
+const SHORT_LABELS = new Set(["C", "Bass", "Piano", "Guitar", "Vocals", "Flute"])
+/** The only labels that may follow the word "in". */
+const IN_LABELS = new Set(["Clarinet in Bb", "Trumpet in Bb"])
+
 const FORMAT_WORDS = new Set([
     "band format",
     "chords",
@@ -61,8 +70,12 @@ export function parsePart(title: string): { baseTitle: string; part: string } | 
         // The label must stand alone: preceded by whitespace or " - ".
         const m = /^(.*?\S)\s*(?:\s-\s*|\s)$/.exec(before)
         if (!m) continue
+        const hyphenated = /\s-\s*$/.test(before)
         const baseTitle = m[1].replace(/\s+-$/, "").trim()
         if (!baseTitle) continue
+        // "Ain't No Sunshine in C", "Song in Bb": a key, not a part.
+        if (!IN_LABELS.has(label) && /(^|\s)in$/i.test(baseTitle)) continue
+        if (SHORT_LABELS.has(label) && !hyphenated && !baseTitle.endsWith(")")) continue
         return { baseTitle, part: label }
     }
     return null
@@ -107,14 +120,17 @@ export function computeSettingPartFields(title: string): SettingPartFields {
 }
 
 /**
- * The fields a `library_index` write stores alongside `stem`. Returns `{}`
- * when a person set the setting/part (`settingSource: 'human'`), so a
- * rename or re-ingest never overwrites their choice.
+ * The fields a `library_index` write stores alongside `stem`. `partGroup`
+ * always follows the title. When a person set the setting/part
+ * (`settingSource: 'human'`), only `partGroup` is returned, so a rename or
+ * re-ingest never overwrites their choice.
  */
 export function settingPartWriteFields(
     title: string,
     existing?: Record<string, unknown> | null,
 ): Partial<SettingPartFields> {
-    if (existing && existing.settingSource === "human") return {}
+    if (existing && existing.settingSource === "human") {
+        return { partGroup: partGroupFor(title) }
+    }
     return computeSettingPartFields(title)
 }

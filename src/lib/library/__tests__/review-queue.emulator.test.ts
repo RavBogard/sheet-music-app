@@ -405,7 +405,7 @@ describe("Library Review Queue — NEW-4 (emulator)", () => {
             expect(row?.bpm).toBeNull()
         })
 
-        it("records a person's setting/part as human, and a later rename keeps it", async () => {
+        it("records a person's setting/part as human; a later rename keeps them and moves partGroup", async () => {
             await seedReviewRow(db(), "upload-1", { name: "Barchu (Walkdown) Bb" })
             const set = await editEnrichment(db(), "upload-1", { setting: "Walkdown", part: "Bb" }, ACTOR)
             expect(set.ok).toBe(true)
@@ -420,6 +420,7 @@ describe("Library Review Queue — NEW-4 (emulator)", () => {
             row = (await db().collection("library_index").doc("upload-1").get()).data()
             expect(row?.setting).toBe("Walkdown")
             expect(row?.part).toBe("Bb")
+            expect(row?.partGroup).toBe("barchu friedman")
         })
 
         it("a title edit on an unset row computes setting, part and partGroup", async () => {
