@@ -196,7 +196,9 @@ async function loadRow(
         },
         (fid) => library.get(fid)?.partGroup ?? null,
     )
-    const profileKey = profileKeyFor(serviceType, cls.rabbiSlot)
+    // The rabbi splits a profile only where the rabbi changes the music
+    // (friday_night, shabbat_morning); elsewhere one profile serves every rabbi.
+    const profileKey = profileKeyFor(serviceType, rabbiRequired(serviceType) ? cls.rabbiSlot : null)
     return {
         db,
         profileKey,

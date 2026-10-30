@@ -153,6 +153,7 @@ import { updateSong } from "./song-metadata"
 import { listBooksTool, lookupBookPageTool } from "./books"
 import { getSongHistoryTool, exportSetlistsTool } from "./history"
 import { setStandingChoiceTool, clearStandingChoiceTool } from "./standing"
+import { seedServiceProfiles, getServiceProfileTool } from "./service-profiles"
 import { richError, liftLegacyErrorEnvelope } from "@/lib/mcp/error-envelopes"
 export { registerTestTokenTools } from "./test-tokens"
 export { registerMintAdminBearerTools } from "./mint-admin-bearer"
@@ -839,6 +840,25 @@ export function registerReadTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await clearStandingChoiceTool(uidFrom(extra), args, orgFrom(extra))),
+    )
+
+    server.registerTool(
+        "get_service_profile",
+        {
+            description:
+                "The living profile of a recurring service: its running order, and for every song slot how sure the server is about the chart and key, computed now from standing choices and history. Each slot's `tier` is `standard` (someone set it with set_standing_choice), `usual` (the same chart on 3 of the last 5 regular weeks), `last_time`, `other_service` or `new`, with a `phrase` to read back. Only standard and usual are ever filled; it never picks a setting nobody chose. friday_night and shabbat_morning need `rabbiSlot`; other services have one profile whoever leads. Tenant-scoped. Returns `{ok, templateId, profile, rows: [{index, type, title, slotKind, slotKey, house, tier?}], truncated}`.",
+            inputSchema: {
+                serviceType: z
+                    .string()
+                    .describe("Service type key, e.g. 'shabbat_morning', 'friday_night', 'shir_shabbat'."),
+                rabbiSlot: z
+                    .enum(["daniel_karen", "randy"])
+                    .optional()
+                    .describe("Required for friday_night and shabbat_morning: which rabbi leads."),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await getServiceProfileTool(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -2549,6 +2569,30 @@ export function registerWriteTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await backfillSetlistServiceClass(uidFrom(extra), args, orgFrom(extra))),
+    )
+
+    server.registerTool(
+        "seed_service_profiles",
+        {
+            description:
+                "Admin / band_leader, CRC only: seed each core service profile (Daniel or Randy Friday night, Daniel or Randy Shabbat morning, Shir Shabbat, B'nei Mitzvah) from its own past setlists. The running order comes from the most recent regular (non-special) setlist of the profile; a song slot keeps its chart and key only when that chart is usual there (3 of the last 5 regular weeks), and every other slot is left open and listed in `unsure` for the author to review. One template per profile, found by its profile key; templates without a profile are never touched, and re-running with no new history changes nothing. Another tenant gets `seeded: []`. F-05: `dryRun` defaults true and returns the full report; a real run needs `dryRun: false, force: true`. Returns `{ok, dryRun, profiles: [{key, label, basedOn, trackCount, tracks, unsure}], seeded: [{key, templateId, outcome}], changed, truncated}`.",
+            inputSchema: {
+                profiles: z
+                    .array(z.string())
+                    .optional()
+                    .describe("Profile keys to seed, e.g. ['shabbat_morning:randy']. Default: every core profile."),
+                dryRun: z
+                    .boolean()
+                    .optional()
+                    .describe("When true (default), report without writing."),
+                force: z
+                    .boolean()
+                    .optional()
+                    .describe("Required with `dryRun: false` to write."),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await seedServiceProfiles(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
