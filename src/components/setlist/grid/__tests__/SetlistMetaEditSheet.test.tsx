@@ -114,7 +114,7 @@ describe('SetlistMetaEditSheet', () => {
         expect(onOpenChange).toHaveBeenCalledWith(false)
     })
 
-    it('AC-3: changing the rabbi saves only the rabbi field', async () => {
+    it('AC-3: changing the rabbi saves the rabbi and the slot it names', async () => {
         const user = userEvent.setup()
         const { applyEdit } = renderSheet()
 
@@ -128,11 +128,11 @@ describe('SetlistMetaEditSheet', () => {
             op: 'update',
             collection: 'setlists',
             docId: 'setlist-1',
-            patch: { rabbi: 'Rabbi Randy' },
+            patch: { rabbi: 'Rabbi Randy', rabbiSlot: 'randy' },
         })
     })
 
-    it('AC-3: changing the service type saves only templateType', async () => {
+    it('AC-3: changing the service type saves templateType and its stored class', async () => {
         const user = userEvent.setup()
         const { applyEdit } = renderSheet()
 
@@ -146,7 +146,7 @@ describe('SetlistMetaEditSheet', () => {
             op: 'update',
             collection: 'setlists',
             docId: 'setlist-1',
-            patch: { templateType: 'friday_night' },
+            patch: { templateType: 'friday_night', serviceType: 'friday_night' },
         })
     })
 

@@ -27,7 +27,6 @@ import { salvageChartBytes } from "./salvage-chart-bytes"
 import { backfillHealMetadata } from "./backfill-heal-metadata"
 import { backfillTrackMimetype } from "./backfill-track-mimetype"
 import { backfillLibrarySettingParts } from "./backfill-setting-parts"
-import { backfillSetlistServiceClass } from "./backfill-service-class"
 import { backfillLibraryKeys } from "./backfill-library-keys"
 import { archiveNonChartArtifacts } from "./archive-nonchart-artifacts"
 import { getAiConfig, setAiAutoApply, setAiThreshold } from "./ai-config"
@@ -814,7 +813,7 @@ export function registerReadTools(server: McpServer): void {
         "set_standing_choice",
         {
             description:
-                "Remember a row's chart, key and vocal lead as the standard for that slot of the service's profile (\"keep it in Dm\"). Use only when the author says to keep a choice for next time; never on your own judgment. Point at the row by `setlistId` + `trackId`; the profile comes from the setlist's service type and rabbi slot, and a song slot is also remembered for the service type as a whole. Replacing someone else's choice from the last 28 days is reported in `overrode`. Undo with clear_standing_choice. Admin / band_leader. Returns `{ok, announcement, scope, slotKey, choice, overrode?}`; read `announcement` back to the author.",
+                "Remember a row's chart, key and vocal lead as the standard for that slot of the service's profile (\"keep it in Dm\"). Use only when the author says to keep a choice for next time; never on your own judgment. Point at the row by `setlistId` + `trackId`; the profile comes from the setlist's service type and rabbi slot, and the choice is remembered for that profile only. Replacing someone else's choice from the last 28 days is reported in `overrode`. Undo with clear_standing_choice. Admin / band_leader. Returns `{ok, announcement, scope, slotKey, choice, overrode?}`; read `announcement` back to the author.",
             inputSchema: {
                 setlistId: z.string().describe("The setlist the row is on."),
                 trackId: z.string().describe("The row whose chart and key become standard."),
@@ -2580,30 +2579,10 @@ export function registerWriteTools(server: McpServer): void {
     )
 
     server.registerTool(
-        "backfill_setlist_service_class",
-        {
-            description:
-                "Admin / band_leader back-fill: store the service class on your org's existing setlists — `serviceType` (a service-type catalog key), `rabbiSlot` ('daniel_karen' | 'randy') and `special` (a week that never counts toward a profile's usual) — read from each setlist's name, template type and rabbi text, the same way song history classifies it. Only fields that are unset are written; an author's value is never replaced, and an unknown type or rabbi is left unset. F-05: `dryRun` defaults true and returns the full report; a real run needs `dryRun: false, force: true`. A setlist edited during the run is left alone and counted. Returns `{ok, dryRun, scanned, changed: [{setlistId, name, patch}], skipped: {alreadySet, changedDuringRun}}`.",
-            inputSchema: {
-                dryRun: z
-                    .boolean()
-                    .optional()
-                    .describe("When true (default), report without writing."),
-                force: z
-                    .boolean()
-                    .optional()
-                    .describe("Required with `dryRun: false` to write."),
-            },
-        },
-        async (args, extra) =>
-            jsonResult(await backfillSetlistServiceClass(uidFrom(extra), args, orgFrom(extra))),
-    )
-
-    server.registerTool(
         "seed_service_profiles",
         {
             description:
-                "Admin / band_leader, CRC only: seed each core service profile (Daniel or Randy Friday night, Daniel or Randy Shabbat morning, Shir Shabbat, B'nei Mitzvah) from its own past setlists. The running order comes from the most recent regular (non-special) setlist of the profile; a song slot keeps its chart and key only when that chart is usual there (3 of the last 5 regular weeks), and every other slot is left open and listed in `unsure` for the author to review. One template per profile, found by its profile key; templates without a profile are never touched, and re-running with no new history changes nothing. Another tenant gets `seeded: []`. F-05: `dryRun` defaults true and returns the full report; a real run needs `dryRun: false, force: true`. Returns `{ok, dryRun, profiles: [{key, label, basedOn, trackCount, tracks, unsure}], seeded: [{key, templateId, outcome}], changed, truncated}`.",
+                "Admin / band_leader, CRC only: seed each core service profile (Daniel or Randy Friday night, Daniel or Randy Shabbat morning, Shir Shabbat, B'nei Mitzvah) from its own past setlists. The running order comes from the most recent regular (non-special) setlist of the profile; a song slot keeps its chart and key only when that chart is usual there (3 of the last 5 regular weeks), and every other slot is left open and listed in `unsure` for the author to review. One template per profile, found by its profile key; templates without a profile are never touched. By default only missing profiles are created and an existing profile is never overwritten (outcome `kept`); pass `replace: true` to re-seed existing ones, and the dry run then lists each row that would change in `rowChanges`. If another write lands on a profile mid-run, the run stops and returns what it wrote with `partial: true`. Another tenant gets `seeded: []`. F-05: `dryRun` defaults true and returns the full report; a real run needs `dryRun: false, force: true`. Returns `{ok, dryRun, profiles: [{key, label, basedOn, trackCount, tracks, unsure}], seeded: [{key, templateId, outcome, rowChanges?}], changed, truncated, partial?, conflict?}`.",
             inputSchema: {
                 profiles: z
                     .array(z.string())
@@ -2617,6 +2596,10 @@ export function registerWriteTools(server: McpServer): void {
                     .boolean()
                     .optional()
                     .describe("Required with `dryRun: false` to write."),
+                replace: z
+                    .boolean()
+                    .optional()
+                    .describe("Re-seed profiles that already exist. Default false: only missing profiles are created."),
             },
         },
         async (args, extra) =>

@@ -73,14 +73,27 @@ describe("draft a service from its profile (emulator)", () => {
             })
             const rows = [
                 { type: "header", title: "Shacharit" },
-                { type: "song", title: "Barchu", momentId: "barchu", fileId: "f-barchu", key: "Dm" },
+                { type: "song", title: "Barchu", momentId: "barchu", fileId: "f-barchu", key: "Dm", liturgyRef: { book: "crc-saturday", folio: 60 } },
                 { type: "song", title: "Oseh Shalom", fileId: i === 0 ? "f-oseh" : "f-oseh-2", key: "C" },
             ]
             for (const [order, row] of rows.entries()) {
                 await db().collection("tracks").doc(`${id}-${order}`).set({ ...row, setlistId: id, orgId: CRC, order })
             }
         }
-        await seedServiceProfiles(ADMIN, { profiles: [KEY], dryRun: false, force: true }, CRC)
+        // One Daniel Shabbat morning, so Daniel's profile exists too.
+        await db().collection("setlists").doc("sl-daniel").set({
+            orgId: CRC,
+            name: "Shabbat Morning with Daniel",
+            serviceType: "shabbat_morning",
+            rabbiSlot: "daniel_karen",
+            special: false,
+            eventDate: Timestamp.fromDate(new Date("2026-10-18T15:00:00Z")),
+            date: Timestamp.fromDate(new Date("2026-10-18T12:00:00Z")),
+        })
+        await db().collection("tracks").doc("sl-daniel-0").set({
+            type: "song", title: "Oseh Shalom", fileId: "f-oseh-2", key: "C", setlistId: "sl-daniel", orgId: CRC, order: 0,
+        })
+        await seedServiceProfiles(ADMIN, { profiles: [KEY, "shabbat_morning:daniel_karen"], dryRun: false, force: true }, CRC)
     })
 
     it("drafts usual slots filled and the rest open, then creates the setlist", async () => {
@@ -121,6 +134,8 @@ describe("draft a service from its profile (emulator)", () => {
             ["Oseh Shalom", "f-oseh", "D"],
         ])
         expect(tracks.every((t) => t.orgId === CRC)).toBe(true)
+        // Pages: the moment row is bound to the profile's book.
+        expect(tracks[1].liturgyRef).toMatchObject({ book: "crc-saturday", folio: 60 })
 
         // Only the standing choice was remembered; the one-off was not.
         const standing = (await db().collection("standing_choices").get()).docs.map((d) => d.data())
@@ -131,6 +146,32 @@ describe("draft a service from its profile (emulator)", () => {
         // Next week the standing choice fills the slot.
         const next = (await draftServiceTool(ADMIN, { date: "2026-10-31", serviceType: "shabbat_morning", rabbiSlot: "randy" }, CRC)) as Draft
         expect(next.rows[2]).toMatchObject({ tier: "standard", fileId: "f-oseh", key: "D" })
+    })
+
+    it("Randy's standing choice never shapes Daniel's profile or draft", async () => {
+        const randy = (await draftServiceTool(ADMIN, { date: "2026-10-24", serviceType: "shabbat_morning", rabbiSlot: "randy" }, CRC)) as Draft
+        await createSetlistFromDraftTool(ADMIN, { draftId: randy.draftId, choices: [{ index: 2, fileId: "f-oseh-2", key: "E", standing: true }] }, CRC)
+        expect((await db().collection("standing_choices").get()).docs.map((d) => d.data().scope)).toEqual([KEY])
+
+        const daniel = (await draftServiceTool(ADMIN, { date: "2026-10-25", serviceType: "shabbat_morning", rabbiSlot: "daniel_karen" }, CRC)) as Draft
+        expect(daniel.ok).toBe(true)
+        expect(daniel.rows.every((r) => r.tier !== "standard")).toBe(true)
+        expect(daniel.rows.every((r) => r.fileId === undefined)).toBe(true)
+    })
+
+    it("one draft makes one setlist: a second create with the same draftId is draft_not_found", async () => {
+        const draft = (await draftServiceTool(ADMIN, { date: "2026-10-24", serviceType: "shabbat_morning", rabbiSlot: "randy" }, CRC)) as Draft
+        const [a, b] = await Promise.all([
+            createSetlistFromDraftTool(ADMIN, { draftId: draft.draftId }, CRC),
+            createSetlistFromDraftTool(ADMIN, { draftId: draft.draftId }, CRC),
+        ])
+        const results = [a, b] as Array<Created | Err>
+        expect(results.filter((r) => r.ok).length).toBe(1)
+        expect(results.filter((r) => !r.ok).map((r) => (r as Err).error.machine_code)).toEqual(["draft_not_found"])
+        const again = (await createSetlistFromDraftTool(ADMIN, { draftId: draft.draftId }, CRC)) as unknown as Err
+        expect(again.error.machine_code).toBe("draft_not_found")
+        const made = (await db().collection("setlists").where("sourceTemplateId", "==", (await db().collection("setlistTemplates").where("profile.key", "==", KEY).get()).docs[0].id).get()).size
+        expect(made).toBe(1)
     })
 
     it("a one-off choice writes nothing to standing_choices; an open slot with no choice has no chart", async () => {

@@ -1,7 +1,7 @@
 import "server-only"
 
 import crypto from "crypto"
-import { Timestamp } from "firebase-admin/firestore"
+import { FieldValue, Timestamp } from "firebase-admin/firestore"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { assertEditor } from "@/lib/mcp/server-tracks-write"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
@@ -116,6 +116,8 @@ interface StoredDraft {
     rows: DraftRow[]
     createdAt: string
     expiresAt: Timestamp
+    /** Set while create_setlist_from_draft is creating the setlist. */
+    claimId?: string
 }
 
 function rowOut(r: DraftRow): DraftServiceRowOut {
@@ -250,6 +252,30 @@ export interface CreateSetlistFromDraftResult {
     bondReviewCount: number
 }
 
+/** In this org, not expired, and not claimed by a create already under way. */
+function draftUsable(draft: StoredDraft, org: OrgId): boolean {
+    if (rowOrg(draft.orgId) !== org) return false
+    const expires = draft.expiresAt instanceof Timestamp ? draft.expiresAt.toMillis() : 0
+    if (expires <= Date.now()) return false
+    return !draft.claimId
+}
+
+/** Undo our own claim after a create that wrote nothing (best effort). */
+async function releaseClaim(ref: FirebaseFirestore.DocumentReference, claimId: string): Promise<void> {
+    try {
+        await ref.firestore.runTransaction(async (tx) => {
+            const s = await tx.get(ref)
+            if (s.exists && s.data()?.claimId === claimId) {
+                tx.update(ref, { claimId: FieldValue.delete(), claimedBy: FieldValue.delete(), claimedAt: FieldValue.delete() })
+            }
+        })
+    } catch (err) {
+        logger.warn("[mcp] create_setlist_from_draft could not release its claim", {
+            err: err instanceof Error ? err.message : String(err),
+        })
+    }
+}
+
 function draftNotFound(draftId: string): RichErrorEnvelope {
     return richError(
         "draft_not_found",
@@ -269,6 +295,7 @@ export async function createSetlistFromDraftTool(
         return richError("invalid_argument", "Pass `draftId`.", { fields: ["draftId"] }, "Get it from draft_service.")
     }
     const choices = Array.isArray(args?.choices) ? args.choices : []
+    let claimToRelease: { ref: FirebaseFirestore.DocumentReference; claimId: string } | null = null
     try {
         initAdmin()
         const db = getFirestore()
@@ -279,11 +306,8 @@ export async function createSetlistFromDraftTool(
 
         const ref = db.collection(DRAFTS_COLLECTION).doc(draftId)
         const snap = await ref.get()
-        if (!snap.exists) return draftNotFound(draftId)
+        if (!snap.exists || !draftUsable(snap.data() as StoredDraft, org)) return draftNotFound(draftId)
         const draft = snap.data() as StoredDraft
-        if (rowOrg(draft.orgId) !== org) return draftNotFound(draftId)
-        const expires = draft.expiresAt instanceof Timestamp ? draft.expiresAt.toMillis() : 0
-        if (expires <= Date.now()) return draftNotFound(draftId)
 
         const rows = Array.isArray(draft.rows) ? draft.rows : []
         const chartIds = new Set<string>()
@@ -309,6 +333,19 @@ export async function createSetlistFromDraftTool(
             )
         }
 
+        // Claim the draft before anything is written: a second call with the
+        // same draftId (a retry, a double click) finds it claimed and gets
+        // draft_not_found, so one draft never makes two setlists.
+        const claimId = crypto.randomUUID()
+        const claimed = await db.runTransaction(async (tx) => {
+            const s = await tx.get(ref)
+            if (!s.exists || !draftUsable(s.data() as StoredDraft, org)) return false
+            tx.update(ref, { claimedBy: uid, claimId, claimedAt: Timestamp.now() })
+            return true
+        })
+        if (!claimed) return draftNotFound(draftId)
+        claimToRelease = { ref, claimId }
+
         const name = str(args.name) ?? draft.name ?? `${draft.profileLabel} ${draft.date}`
         const written = await writeSetlistFromTemplateRows(db, uid, org, {
             rows: applied.rows.map((r) => r.track),
@@ -325,37 +362,32 @@ export async function createSetlistFromDraftTool(
             },
             logLabel: "create_setlist_from_draft",
         })
-        if (!written.ok) return written
+        if (!written.ok) {
+            await releaseClaim(ref, claimId)
+            return written
+        }
 
         const announcements: string[] = []
         if (applied.standing.length > 0) {
             const byName = await displayNameFor(db, uid)
             for (const s of applied.standing) {
-                const scopes = [draft.profileKey]
-                if (s.slotKey.startsWith("song:") && draft.serviceType !== draft.profileKey) {
-                    scopes.push(draft.serviceType)
-                }
-                let primary: Awaited<ReturnType<typeof writeStanding>> | null = null
-                for (const scope of scopes) {
-                    const r = await writeStanding(org, uid, {
-                        scope,
-                        slotKey: s.slotKey,
-                        fileId: s.fileId,
-                        chartName: s.chartName,
-                        key: s.key,
-                        partGroup: s.partGroup,
-                        leadMusician: s.leadMusician,
-                        byName,
-                        quote: s.quote,
-                    })
-                    if (!primary) primary = r
-                }
-                announcements.push(
-                    setAnnouncement(primary!.choice.chartName, primary!.choice.key, draft.profileLabel, primary!.overrode),
-                )
+                // One scope: the draft's own profile (see standing.ts).
+                const { choice, overrode } = await writeStanding(org, uid, {
+                    scope: draft.profileKey,
+                    slotKey: s.slotKey,
+                    fileId: s.fileId,
+                    chartName: s.chartName,
+                    key: s.key,
+                    partGroup: s.partGroup,
+                    leadMusician: s.leadMusician,
+                    byName,
+                    quote: s.quote,
+                })
+                announcements.push(setAnnouncement(choice.chartName, choice.key, draft.profileLabel, overrode))
             }
         }
         await ref.delete()
+        claimToRelease = null
 
         const out: CreateSetlistFromDraftResult = {
             ok: true,
@@ -370,6 +402,7 @@ export async function createSetlistFromDraftTool(
         if (oneOffNote) out.oneOffNote = oneOffNote
         return out
     } catch (error) {
+        if (claimToRelease) await releaseClaim(claimToRelease.ref, claimToRelease.claimId)
         logger.warn("create_setlist_from_draft failed:", error)
         return richError(
             "internal_error",

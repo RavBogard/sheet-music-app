@@ -1,3 +1,4 @@
+import { classifyService } from "@/lib/history/classify"
 import type { OrgId } from "@/lib/org/types"
 import { profileKeyFor, rabbiRequired, slotKeyFor } from "./keys"
 import type { SlotTier, StandingChoice } from "./tiers"
@@ -38,23 +39,35 @@ export interface ProfileMatchCandidate {
     title: string
 }
 
+function str(v: unknown): string | null {
+    return typeof v === "string" && v.trim() ? v : null
+}
+
 /**
  * Positions of the candidates whose chart is the profile's standard or usual
- * chart for their slot. The setlist's class comes from its stored fields
- * only: no stored serviceType, or a rabbi-split service with no stored
- * rabbiSlot, matches nothing.
+ * chart for their slot. The setlist's class is read with classifyService, the
+ * same classification history, standing choices and profiles use: no service
+ * type, or a rabbi-split service with no rabbi, matches nothing.
  */
 export async function profileMatches(
     org: OrgId,
-    setlist: { serviceType?: unknown; rabbiSlot?: unknown },
+    setlist: Record<string, unknown>,
     candidates: ProfileMatchCandidate[],
 ): Promise<Set<number>> {
     const out = new Set<number>()
-    const serviceType = typeof setlist.serviceType === "string" && setlist.serviceType ? setlist.serviceType : null
-    if (!serviceType || candidates.length === 0) return out
-    const storedRabbi = typeof setlist.rabbiSlot === "string" && setlist.rabbiSlot ? setlist.rabbiSlot : null
-    if (rabbiRequired(serviceType) && !storedRabbi) return out
-    const rabbiSlot = rabbiRequired(serviceType) ? storedRabbi : null
+    if (candidates.length === 0) return out
+    const cls = classifyService({
+        name: typeof setlist.name === "string" ? setlist.name : "",
+        templateType: str(setlist.templateType),
+        rabbi: str(setlist.rabbi),
+        serviceType: str(setlist.serviceType),
+        rabbiSlot: str(setlist.rabbiSlot),
+        special: typeof setlist.special === "boolean" ? setlist.special : null,
+    })
+    const serviceType = cls.serviceType
+    if (!serviceType) return out
+    if (rabbiRequired(serviceType) && !cls.rabbiSlot) return out
+    const rabbiSlot = rabbiRequired(serviceType) ? cls.rabbiSlot : null
     const profileKey = profileKeyFor(serviceType, rabbiSlot)
 
     const { loadSlotUses } = await import("./slot-uses")
@@ -66,13 +79,10 @@ export async function profileMatches(
     const slotKeys = candidates.map((c) =>
         slotKeyFor({ momentId: c.momentId ?? null, title: c.title, fileId: c.fileId }, partGroupOf),
     )
-    const standing = await readStanding(org, [profileKey, serviceType], slotKeys)
+    const standing = await readStanding(org, [profileKey], slotKeys)
     candidates.forEach((c, i) => {
         const slotKey = slotKeys[i]
-        const choice =
-            standing.get(standingMapKey(profileKey, slotKey)) ??
-            (slotKey.startsWith("song:") ? standing.get(standingMapKey(serviceType, slotKey)) : undefined) ??
-            null
+        const choice = standing.get(standingMapKey(profileKey, slotKey)) ?? null
         const tier = computeSlotTier({
             standing: choice,
             profileUses: index.profileUses(slotKey),

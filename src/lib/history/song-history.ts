@@ -21,6 +21,8 @@ export interface HistoryTrack {
     notes: string | null
     /** Stored `momentId`, else the moment behind `liturgyRef.unitId`, else null. */
     momentId: string | null
+    /** The row's page in the setlist's book, when it has one. */
+    liturgyRef?: { book: string; folio: number; unitId?: string; stale?: boolean } | null
 }
 
 export interface HistorySetlist {

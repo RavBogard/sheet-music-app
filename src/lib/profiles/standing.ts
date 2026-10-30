@@ -11,8 +11,9 @@ import type { StandingChoice as TierStandingChoice } from "./tiers"
  * tenant-scoped `standing_choices` collection; the org is in the doc id and
  * in `orgId`, and every read re-checks `rowOrg`.
  *
- * `scope` is a profile key (`friday_night:randy`), or a bare service type for
- * per-song memory (BrosLaz uses its service type, e.g. `gig`).
+ * `scope` is a profile key (`friday_night:randy`); for a service not split
+ * by rabbi that is the bare service type (BrosLaz uses its own, e.g. `gig`).
+ * A choice is stored in its profile's scope only.
  *
  * Each write keeps the doc it replaced in `previous` (one step deep), so a
  * clear restores it. Server-only: clients never write (firestore.rules).

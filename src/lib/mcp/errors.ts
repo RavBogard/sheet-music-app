@@ -72,6 +72,7 @@ export const ERROR_CODE_MAP: Record<string, number> = {
     no_chart: 400,
     service_type_unknown: 400,
     rabbi_required: 400,
+    use_draft_service: 400,
     empty_file: 400,
     empty_patch: 400,
     empty_setlist: 400,

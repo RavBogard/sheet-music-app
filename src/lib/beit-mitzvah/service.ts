@@ -1,3 +1,4 @@
+import { storedClassFor } from "@/lib/history/classify"
 import "server-only"
 import { createHash, randomUUID } from "node:crypto"
 import { FieldValue, Timestamp, type Firestore, type Transaction } from "firebase-admin/firestore"
@@ -155,7 +156,7 @@ export async function ensureService(db: Firestore, request: EnsureRequest): Prom
             const stamp = FieldValue.serverTimestamp()
             tx.create(db.collection("setlists").doc(setlistId), clean({
                 id: setlistId, orgId: "crc", name: request.displayName ?? `B'nei Mitzvah ${request.ceremonyType === "morning" ? "Morning" : "Havdalah"} — ${request.localDate}`,
-                eventDate: parseEventDate(`${request.localDate}T${request.ceremonyType === "morning" ? "10:00" : "16:00"}`, "crc"), templateType: key,
+                eventDate: parseEventDate(`${request.localDate}T${request.ceremonyType === "morning" ? "10:00" : "16:00"}`, "crc"), templateType: key, serviceType: storedClassFor({ templateType: key }).serviceType ?? null,
                 date: stamp, updatedAt: stamp, version: 1, lastModifiedAt: new Date().toISOString(),
                 ownerId: "beit-mitzvah-service", ownerName: "Beit Mitzvah", hydrated: true, isTest: false,
                 trackCount: rows.length, songCount: rows.filter(row => row.type === "song").length,

@@ -8,6 +8,7 @@
 // Firestore SDK or the v6.0 client-side applyEdit outbox; it writes directly
 // via the Admin SDK (the same pattern import/execute already used).
 
+import { storedClassFor } from "@/lib/history/classify"
 import crypto from "crypto"
 
 import { FieldValue } from "firebase-admin/firestore"
@@ -185,6 +186,11 @@ export async function createSetlistServerSide(
     if (input.rabbi !== undefined) {
         setlistPayload.rabbi = input.rabbi
     }
+    // Setlist memory r2: the stored class follows the author's own entries.
+    Object.assign(
+        setlistPayload,
+        storedClassFor({ templateType: input.serviceType, rabbi: input.rabbi }),
+    )
     if (input.book !== undefined) {
         setlistPayload.book = input.book
     }
@@ -278,6 +284,15 @@ export async function updateSetlistServerSide(
     }
     if (patch.rabbiSlot !== undefined) mapped.rabbiSlot = patch.rabbiSlot
     if (patch.special !== undefined) mapped.special = patch.special
+    // Setlist memory r2: a templateType / rabbi edit with no explicit stored
+    // value writes the stored class from the same normalisation, so it can
+    // never go stale.
+    if (patch.serviceType !== undefined && patch.storedServiceType === undefined) {
+        mapped.serviceType = storedClassFor({ templateType: patch.serviceType }).serviceType ?? null
+    }
+    if (patch.rabbi !== undefined && patch.rabbiSlot === undefined) {
+        mapped.rabbiSlot = storedClassFor({ rabbi: patch.rabbi }).rabbiSlot ?? null
+    }
     if (patch.eventDate !== undefined) {
         mapped.eventDate = toTimestamp(patch.eventDate, org)
     }

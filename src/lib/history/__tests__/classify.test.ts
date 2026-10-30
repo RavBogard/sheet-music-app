@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { classifyService } from "../classify"
+import { classifyService, storedClassFor } from "../classify"
 
 describe("classifyService", () => {
     it.each([
@@ -69,5 +69,17 @@ describe("classifyService", () => {
         it("a stored holiday type with no stored special is still special", () => {
             expect(classifyService({ name: "x", serviceType: "yom_kippur_morning" }).special).toBe(true)
         })
+    })
+})
+
+describe("storedClassFor", () => {
+    it("normalises an author's own entries exactly as classifyService reads them", () => {
+        expect(storedClassFor({ templateType: "shabbat-morning", rabbi: "Rabbi Randy Fleisher" })).toEqual({
+            serviceType: "shabbat_morning",
+            rabbiSlot: "randy",
+        })
+        expect(storedClassFor({ templateType: "other", rabbi: "Guest" })).toEqual({ serviceType: null, rabbiSlot: null })
+        expect(storedClassFor({ rabbi: "Daniel" })).toEqual({ rabbiSlot: "daniel_karen" })
+        expect(storedClassFor({})).toEqual({})
     })
 })

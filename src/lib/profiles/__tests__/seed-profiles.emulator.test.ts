@@ -3,6 +3,7 @@ import { initializeApp, deleteApp, getApps, type App } from "firebase-admin/app"
 import { getFirestore, Timestamp } from "firebase-admin/firestore"
 
 import { getServiceProfileTool, seedServiceProfiles } from "@/lib/mcp/tools/service-profiles"
+import { cloneSetlistFromTemplate } from "@/lib/mcp/tools/templates"
 import { standingDocId } from "../standing"
 
 /**
@@ -121,6 +122,49 @@ describe("service profiles (emulator)", () => {
         const plain = (await db().collection("setlistTemplates").doc("tpl-plain").get()).data()!
         expect(plain).toMatchObject({ name: "Hand-made Shabbat", version: 3, tracks: [{ type: "song", title: "Anything" }] })
         expect(plain.profile).toBeUndefined()
+    })
+
+    it("never overwrites an existing profile unless asked; replace lists the rows it changes", async () => {
+        const first = (await seedServiceProfiles(ADMIN, { profiles: [KEY], dryRun: false, force: true }, CRC)) as SeedRun
+        const id = first.seeded[0].templateId!
+        // New history: Oseh Shalom (Zeira) on a fourth week makes it usual.
+        await db().collection("setlists").doc("sl-new").set({
+            orgId: CRC, name: "Shabbat Morning 2026-10-24", serviceType: "shabbat_morning", rabbiSlot: "randy", special: false,
+            eventDate: Timestamp.fromDate(new Date("2026-10-24T15:00:00Z")), date: Timestamp.fromDate(new Date("2026-10-24T12:00:00Z")),
+        })
+        for (const [order, row] of [
+            { type: "header", title: "Shacharit" },
+            { type: "song", title: "Barchu", momentId: "barchu", fileId: "f-barchu", key: "Dm" },
+            { type: "song", title: "Oseh Shalom", fileId: "f-oseh-2", key: "C" },
+        ].entries()) {
+            await db().collection("tracks").doc(`sl-new-${order}`).set({ ...row, setlistId: "sl-new", orgId: CRC, order })
+        }
+        const before = (await db().collection("setlistTemplates").doc(id).get()).data()!
+
+        const kept = (await seedServiceProfiles(ADMIN, { profiles: [KEY], dryRun: false, force: true }, CRC)) as SeedRun
+        expect(kept.seeded[0].outcome).toBe("kept")
+        expect(kept.changed).toBe(0)
+        expect((await db().collection("setlistTemplates").doc(id).get()).data()!.tracks).toEqual(before.tracks)
+
+        type Replace = SeedRun & { seeded: Array<{ outcome: string; rowChanges?: Array<{ index: number; after: { fileId: string | null } }> }> }
+        const dry = (await seedServiceProfiles(ADMIN, { profiles: [KEY], replace: true }, CRC)) as Replace
+        expect(dry.seeded[0].outcome).toBe("updated")
+        expect(dry.seeded[0].rowChanges?.map((c) => c.index)).toContain(2)
+        expect(dry.seeded[0].rowChanges?.find((c) => c.index === 2)?.after.fileId).toBe("f-oseh-2")
+
+        const real = (await seedServiceProfiles(ADMIN, { profiles: [KEY], replace: true, dryRun: false, force: true }, CRC)) as Replace
+        expect(real.changed).toBe(1)
+        expect((await db().collection("setlistTemplates").doc(id).get()).data()!.tracks[2].fileId).toBe("f-oseh-2")
+    })
+
+    it("clone_setlist_from_template refuses a profile template", async () => {
+        const first = (await seedServiceProfiles(ADMIN, { profiles: [KEY], dryRun: false, force: true }, CRC)) as SeedRun
+        const r = (await cloneSetlistFromTemplate(ADMIN, { templateId: first.seeded[0].templateId!, newName: "X" }, CRC)) as unknown as {
+            error: { machine_code: string }
+        }
+        expect(r.error.machine_code).toBe("use_draft_service")
+        const plain = (await cloneSetlistFromTemplate(ADMIN, { templateId: "tpl-plain", newName: "Y" }, CRC)) as { ok: boolean }
+        expect(plain.ok).toBe(true)
     })
 
     it("seeds nothing for Brothers Lazaroff", async () => {

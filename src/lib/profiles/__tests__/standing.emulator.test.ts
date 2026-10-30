@@ -99,11 +99,20 @@ describe("standing choices (emulator)", () => {
         expect(doc).toMatchObject({ orgId: CRC, fileId: "f-barchu-a", key: "Dm", by: DANIEL, quote: "keep it in Dm", previous: null })
     })
 
-    it("a song slot is also remembered at the bare service type", async () => {
+    it("a song slot is remembered for its rabbi's profile only, and undo restores the real previous value", async () => {
         const r = (await setStandingChoiceTool(DANIEL, { setlistId: "sl-crc", trackId: "t-oseh" }, CRC)) as SetOk
         expect(r.slotKey).toBe("song:pg-f-oseh")
-        const m = await readStanding(CRC, ["friday_night:randy", "friday_night"], ["song:pg-f-oseh"])
-        expect([...m.keys()].sort()).toEqual(["friday_night:randy|song:pg-f-oseh", "friday_night|song:pg-f-oseh"])
+        const m = await readStanding(CRC, ["friday_night:randy", "friday_night", "friday_night:daniel_karen"], ["song:pg-f-oseh"])
+        expect([...m.keys()]).toEqual(["friday_night:randy|song:pg-f-oseh"])
+        expect((await db().collection("standing_choices").get()).size).toBe(1)
+
+        // Change the key on the row and keep it again; undo brings back Hirsch in G.
+        await db().collection("tracks").doc("t-oseh").update({ key: "A" })
+        await setStandingChoiceTool(DAVID, { setlistId: "sl-crc", trackId: "t-oseh" }, CRC)
+        const undo = (await clearStandingChoiceTool(DAVID, { setlistId: "sl-crc", trackId: "t-oseh" }, CRC)) as { ok: true; announcement: string }
+        expect(undo.announcement).toBe("Undone: back to Oseh Shalom (Hirsch) in G.")
+        const now = (await readStanding(CRC, ["friday_night:randy"], ["song:pg-f-oseh"])).get("friday_night:randy|song:pg-f-oseh")
+        expect(now).toMatchObject({ fileId: "f-oseh", key: "G" })
     })
 
     it("keeps tenants apart in both directions", async () => {

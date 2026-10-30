@@ -1,3 +1,4 @@
+import { validateLiturgyRef } from "@/lib/books/registry"
 import type { HistorySetlist, LibraryLite } from "@/lib/history/song-history"
 import { isSongType } from "@/lib/setlist-track-count"
 import type { CoreProfile } from "./keys"
@@ -30,7 +31,15 @@ export interface HouseMark {
 export interface SeededTrack {
     type: string
     title: string
+    notes?: string
     momentId?: string
+    /**
+     * The base row's page, keyed by its book (template `liturgyRefs` shape),
+     * so a setlist made from the profile is bound to the profile's book the
+     * way clone_setlist_from_template binds it; a row with no page for that
+     * book is reported as unresolved, never given another book's page.
+     */
+    liturgyRefs?: Record<string, { unitId?: string; folio: number }>
     fileId?: string
     fileName?: string
     key?: string
@@ -68,9 +77,12 @@ export function seedProfile(
 
     for (const t of base.tracks) {
         const title = t.title ?? ""
+        const refs = pageOf(t)
         if (!isSongType(t.type)) {
             const row: SeededTrack = { type: t.type, title }
+            if (t.notes) row.notes = t.notes
             if (t.momentId) row.momentId = t.momentId
+            if (refs) row.liturgyRefs = refs
             tracks.push(row)
             continue
         }
@@ -94,6 +106,7 @@ export function seedProfile(
                 },
             }
             if (t.momentId) row.momentId = t.momentId
+            if (refs) row.liturgyRefs = refs
             if (t.fileId === tier.fileId && t.fileName) row.fileName = t.fileName
             if (tier.key) row.key = tier.key
             tracks.push(row)
@@ -101,9 +114,18 @@ export function seedProfile(
         }
         const row: SeededTrack = { type: "song", title, slotKind: "open", slotKey, house: null }
         if (t.momentId) row.momentId = t.momentId
+        if (refs) row.liturgyRefs = refs
         tracks.push(row)
         unsure.push({ label: title, reason: tier.tier, phrase: tier.phrase })
     }
 
     return { tracks, unsure, basedOn: { setlistId: base.id, eventDate: base.eventDate! } }
+}
+
+/** A row's valid, current page as per-book refs; null when it has none. */
+function pageOf(t: HistorySetlist["tracks"][number]): SeededTrack["liturgyRefs"] | null {
+    const ref = t.liturgyRef
+    if (!ref || ref.stale) return null
+    if (!validateLiturgyRef({ book: ref.book, folio: ref.folio, ...(ref.unitId ? { unitId: ref.unitId } : {}) }).ok) return null
+    return { [ref.book]: ref.unitId ? { unitId: ref.unitId, folio: ref.folio } : { folio: ref.folio } }
 }

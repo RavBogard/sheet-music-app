@@ -244,7 +244,7 @@ export async function proposeSetlistChanges(
 
     // Setlist memory (release 2): a bond to the chart the setlist's profile
     // already holds for that slot (standard or usual) is high confidence.
-    // Read from the setlist's stored class only; fail-soft.
+    // The setlist's class is read as everywhere else (classifyService); fail-soft.
     const matched = await profileMatchPositions(
         db,
         org,
@@ -776,7 +776,6 @@ async function profileMatchPositions(
     proposals: ProposalInput[],
     libraryRows: Map<string, Record<string, unknown> | null>,
 ): Promise<Set<number>> {
-    if (typeof setlistData.serviceType !== "string" || !setlistData.serviceType) return new Set()
     try {
         const candidates: ProfileMatchCandidate[] = []
         for (const [i, p] of proposals.entries()) {

@@ -1,3 +1,4 @@
+import { storedClassFor } from "@/lib/history/classify"
 import crypto from "crypto"
 import { FieldValue } from "firebase-admin/firestore"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
@@ -977,6 +978,16 @@ export async function cloneSetlistFromTemplate(
             "Verify the id via list_templates.",
         )
     }
+    // Setlist memory r2: a profile's rows are only as good as their live
+    // tiers. Cloning it verbatim would copy charts that are no longer usual.
+    if (template.profile && typeof template.profile === "object") {
+        return richError(
+            "use_draft_service",
+            `Template '${args.templateId}' is a service profile.`,
+            { templateId: args.templateId, profileKey: (template.profile as Record<string, unknown>).key ?? null },
+            "This is a service profile; use draft_service so every row's tier is rechecked.",
+        )
+    }
     const templateTracks = Array.isArray(template.tracks)
         ? (template.tracks as Record<string, unknown>[])
         : []
@@ -1148,9 +1159,6 @@ export async function writeSetlistFromTemplateRows(
         lastModifiedBy: uid,
         sourceTemplateId: input.sourceTemplateId,
     }
-    for (const [k, v] of Object.entries(input.extraSetlistFields ?? {})) {
-        if (v !== undefined) setlistPayload[k] = v
-    }
 
     if (eventDate !== undefined && eventDate !== null) {
         setlistPayload.eventDate = toTimestamp(eventDate, org)
@@ -1159,9 +1167,15 @@ export async function writeSetlistFromTemplateRows(
     if (cloneBook) setlistPayload.book = cloneBook
     if (typeof input.templateType === "string") {
         setlistPayload.templateType = input.templateType
+        // Setlist memory r2: the stored class follows the templateType written
+        // (a draft's explicit class, in extraSetlistFields, wins below).
+        Object.assign(setlistPayload, storedClassFor({ templateType: input.templateType }))
     }
     if (typeof input.serviceNotes === "string") {
         setlistPayload.serviceNotes = input.serviceNotes
+    }
+    for (const [k, v] of Object.entries(input.extraSetlistFields ?? {})) {
+        if (v !== undefined) setlistPayload[k] = v
     }
 
     const canonicalFileIds = new Set<string>()

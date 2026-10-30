@@ -35,7 +35,7 @@ import { getSongById, resolveTrackBondDefaults } from "@/lib/mcp/server-songs"
 import { getChartHealth } from "@/lib/file-fetcher"
 import { liturgyRefGuard, bookSlugGuard } from "@/lib/mcp/liturgy-ref-guard"
 import { rowOrg } from "@/lib/mcp/org-context"
-import { catalogServiceType } from "@/lib/history/classify"
+import { catalogServiceType, rabbiSlotOf, storedClassFor } from "@/lib/history/classify"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 import { parseEventDate } from "@/lib/parse-event-date"
@@ -251,6 +251,7 @@ export async function createSetlist(
             }
             if (args.serviceType !== undefined) setlistPayload.templateType = args.serviceType
             if (args.rabbi !== undefined) setlistPayload.rabbi = args.rabbi
+            Object.assign(setlistPayload, storedClassFor({ templateType: args.serviceType, rabbi: args.rabbi }))
             if (args.book !== undefined) setlistPayload.book = args.book
 
             tx.create(db.collection("setlists").doc(candidateSetlistId), setlistPayload)
@@ -389,9 +390,9 @@ export async function updateSetlist(
     }
     if (args.rabbi !== undefined) {
         patch.rabbi = args.rabbi
-        // New rabbi text without an explicit slot: drop the stored slot so
-        // the class is read from the new text, never from the old value.
-        if (args.rabbiSlot === undefined) patch.rabbiSlot = null
+        // New rabbi text without an explicit slot: the stored slot is the
+        // one the new text names (null when it names none), never the old value.
+        if (args.rabbiSlot === undefined) patch.rabbiSlot = rabbiSlotOf(args.rabbi)
     }
     if (args.rabbiSlot !== undefined) patch.rabbiSlot = args.rabbiSlot
     if (args.special !== undefined) patch.special = args.special

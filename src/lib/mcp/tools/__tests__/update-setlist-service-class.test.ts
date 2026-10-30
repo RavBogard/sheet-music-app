@@ -27,7 +27,7 @@ vi.mock("@/lib/mcp/server-tracks-write", () => ({
 import { updateSetlist } from "../setlist-write"
 
 function patchOf(): Record<string, unknown> {
-    return updateServer.mock.calls[0][1] as Record<string, unknown>
+    return updateServer.mock.calls[updateServer.mock.calls.length - 1][1] as Record<string, unknown>
 }
 
 beforeEach(() => {
@@ -51,9 +51,11 @@ describe("update_setlist service class", () => {
         expect(patchOf()).toMatchObject({ rabbiSlot: null })
     })
 
-    it("new rabbi text without a slot drops the stored slot so it is read from the text", async () => {
+    it("new rabbi text without a slot stores the slot that text names, never the old one", async () => {
         await updateSetlist("u", { id: "s1", rabbi: "Randy Fleisher" }, "crc")
-        expect(patchOf()).toMatchObject({ rabbi: "Randy Fleisher", rabbiSlot: null })
+        expect(patchOf()).toMatchObject({ rabbi: "Randy Fleisher", rabbiSlot: "randy" })
+        await updateSetlist("u", { id: "s1", rabbi: "Guest cantor" }, "crc")
+        expect(patchOf()).toMatchObject({ rabbi: "Guest cantor", rabbiSlot: null })
     })
 
     it("a new service type also sets the stored catalog key", async () => {

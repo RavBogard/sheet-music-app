@@ -47,7 +47,20 @@ function toTrack(raw: Record<string, unknown>): HistoryTrack {
         leadMusician: str(raw.leadMusician),
         notes: str(raw.notes),
         momentId: str(raw.momentId) ?? momentIdForUnit(unitIdOf(raw.liturgyRef)),
+        liturgyRef: liturgyRefOf(raw.liturgyRef),
     }
+}
+
+function liturgyRefOf(ref: unknown): HistoryTrack["liturgyRef"] {
+    if (!ref || typeof ref !== "object") return null
+    const r = ref as Record<string, unknown>
+    const book = str(r.book)
+    if (!book || typeof r.folio !== "number") return null
+    const out: NonNullable<HistoryTrack["liturgyRef"]> = { book, folio: r.folio }
+    const unitId = str(r.unitId)
+    if (unitId) out.unitId = unitId
+    if (r.stale === true) out.stale = true
+    return out
 }
 
 function unitIdOf(ref: unknown): string | null {

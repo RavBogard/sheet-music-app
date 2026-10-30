@@ -212,12 +212,13 @@ async function loadRow(
     }
 }
 
-/** The scopes a row's choice is remembered in: the profile, plus the bare service type for a song slot. */
-function scopesFor(ctx: RowContext): string[] {
-    const scopes = [ctx.profileKey]
-    if (ctx.slotKey.startsWith("song:") && ctx.serviceType !== ctx.profileKey) scopes.push(ctx.serviceType)
-    return scopes
-}
+/*
+ * A choice is remembered in ONE scope: the row's profile. Where the rabbi is
+ * part of the profile key (friday_night, shabbat_morning), a choice for one
+ * rabbi's service never shapes the other's; elsewhere the profile key is the
+ * bare service type already. One doc per choice, so undo and `overrode`
+ * describe exactly that doc.
+ */
 
 export async function setStandingChoiceTool(
     uid: string,
@@ -249,12 +250,11 @@ export async function setStandingChoiceTool(
             byName,
             quote,
         }
-        let primary: Awaited<ReturnType<typeof writeStanding>> | null = null
-        for (const scope of scopesFor(ctx)) {
-            const r = await writeStanding(org, uid, { ...input, scope, slotKey: ctx.slotKey })
-            if (!primary) primary = r
-        }
-        const { choice, overrode } = primary!
+        const { choice, overrode } = await writeStanding(org, uid, {
+            ...input,
+            scope: ctx.profileKey,
+            slotKey: ctx.slotKey,
+        })
         const out = {
             ok: true as const,
             announcement: setAnnouncement(choice.chartName, choice.key, ctx.profileLabel, overrode),
@@ -285,12 +285,8 @@ export async function clearStandingChoiceTool(
     try {
         const ctx = await loadRow(uid, args, org)
         if ("error" in ctx) return ctx
-        let primary: Awaited<ReturnType<typeof clearStanding>> | null = null
-        for (const scope of scopesFor(ctx)) {
-            const r = await clearStanding(org, uid, scope, ctx.slotKey)
-            if (!primary) primary = r
-        }
-        if (!primary?.cleared) {
+        const primary = await clearStanding(org, uid, ctx.profileKey, ctx.slotKey)
+        if (!primary.cleared) {
             return richError(
                 "standing_not_found",
                 `Nothing is standard for this slot of ${ctx.profileLabel}.`,

@@ -180,8 +180,8 @@ export interface Setlist {
      * SERVICE_TYPE_CATALOG key, `rabbiSlot` a CRC_RABBI_SLOTS key, `special`
      * marks a week that never counts toward a profile's usual. When present
      * they win over inference from name / templateType / rabbi text (see
-     * `classifyService`). Written by update_setlist and
-     * `backfill_setlist_service_class`.
+     * `classifyService`). Written only by explicit author actions: update_setlist,
+     * create_setlist_from_draft, and any edit of `templateType` / `rabbi`.
      */
     serviceType?: string | null
     rabbiSlot?: string | null
