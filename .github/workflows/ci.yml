@@ -239,7 +239,7 @@ jobs:
       - run: npm ci
 
       - name: Build
-        run: npm run build
+        run: bash scripts/ci/build-with-font-retry.sh
         env:
           NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'test-project' }}
           NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY || 'test-key' }}
@@ -316,7 +316,7 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Build
-        run: npm run build
+        run: bash scripts/ci/build-with-font-retry.sh
         env:
           NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'test-project' }}
           NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY || 'test-key' }}
