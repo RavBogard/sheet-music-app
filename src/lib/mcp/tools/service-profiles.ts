@@ -257,7 +257,9 @@ export async function seedServiceProfiles(
         const out: SeedOutcome[] = []
         const writePlan = async (p: (typeof plans)[number]): Promise<SeedOutcome> => {
             if (p.outcome === "created") {
-                const ref = db.collection(TEMPLATES).doc()
+                // One doc id per profile: a concurrent second seed run fails create() instead of
+                // making a duplicate profile.
+                const ref = db.collection(TEMPLATES).doc(`profile__${org}__${p.def.key}`)
                 await ref.create({
                     id: ref.id,
                     name: p.def.label,

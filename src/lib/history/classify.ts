@@ -116,7 +116,8 @@ function rabbiSlotFor(rabbi: string | null | undefined): RabbiSlotKey | null {
     return hits.length === 1 ? (hits[0].key as RabbiSlotKey) : null
 }
 
-function storedRabbiSlot(v: unknown): RabbiSlotKey | null {
+/** A stored rabbi-slot value if it is a known slot key, else null. */
+export function storedRabbiSlot(v: unknown): RabbiSlotKey | null {
     return CRC_RABBI_SLOTS.some((slot) => slot.key === v) ? (v as RabbiSlotKey) : null
 }
 

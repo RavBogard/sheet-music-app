@@ -1,4 +1,4 @@
-import { storedClassFor } from "@/lib/history/classify"
+import { storedClassFor, storedRabbiSlot } from "@/lib/history/classify"
 import { getDb, subscribeWithDb } from "./firebase";
 import {
     collection,
@@ -520,7 +520,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
                     ownerName: userName || "Anonymous",
                     musicians: source.musicians || [],
                     assignedUids: (source.musicians || []).map(m => m.uid).filter(Boolean),
-                    ...(source.rabbi ? { rabbi: source.rabbi, rabbiSlot: storedClassFor({ rabbi: source.rabbi }).rabbiSlot ?? null } : {}),
+                    ...(source.rabbi ? { rabbi: source.rabbi, rabbiSlot: storedRabbiSlot((source as { rabbiSlot?: unknown }).rabbiSlot) ?? storedClassFor({ rabbi: source.rabbi }).rabbiSlot ?? null } : {}),
                     // v11-05-05: a clone inherits the SOURCE setlist's tenant
                     // (rowOrg: missing → 'crc', matching the v11-01-03 backfill).
                     orgId: rowOrg(source.orgId),

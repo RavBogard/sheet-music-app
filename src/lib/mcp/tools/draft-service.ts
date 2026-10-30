@@ -248,6 +248,8 @@ export interface CreateSetlistFromDraftResult {
     book: string | null
     announcements: string[]
     oneOffNote?: string
+    /** Follow-up writes that failed after the setlist was created. */
+    warnings?: string[]
     unresolvedLiturgy: UnresolvedLiturgyRow[]
     bondReviewCount: number
 }
@@ -347,6 +349,9 @@ export async function createSetlistFromDraftTool(
         claimToRelease = { ref, claimId }
 
         const name = str(args.name) ?? draft.name ?? `${draft.profileLabel} ${draft.date}`
+        // A write that throws may still have landed, so from here the claim is only released
+        // on a clean refusal: a retry must never create a second setlist.
+        claimToRelease = null
         const written = await writeSetlistFromTemplateRows(db, uid, org, {
             rows: applied.rows.map((r) => r.track),
             name,
@@ -366,28 +371,33 @@ export async function createSetlistFromDraftTool(
             await releaseClaim(ref, claimId)
             return written
         }
-
+        // The setlist exists now; the follow-up writes are best-effort.
         const announcements: string[] = []
+        const warnings: string[] = []
         if (applied.standing.length > 0) {
-            const byName = await displayNameFor(db, uid)
+            const byName = await displayNameFor(db, uid).catch(() => "")
             for (const s of applied.standing) {
-                // One scope: the draft's own profile (see standing.ts).
-                const { choice, overrode } = await writeStanding(org, uid, {
-                    scope: draft.profileKey,
-                    slotKey: s.slotKey,
-                    fileId: s.fileId,
-                    chartName: s.chartName,
-                    key: s.key,
-                    partGroup: s.partGroup,
-                    leadMusician: s.leadMusician,
-                    byName,
-                    quote: s.quote,
-                })
-                announcements.push(setAnnouncement(choice.chartName, choice.key, draft.profileLabel, overrode))
+                try {
+                    // One scope: the draft's own profile (see standing.ts).
+                    const { choice, overrode } = await writeStanding(org, uid, {
+                        scope: draft.profileKey,
+                        slotKey: s.slotKey,
+                        fileId: s.fileId,
+                        chartName: s.chartName,
+                        key: s.key,
+                        partGroup: s.partGroup,
+                        leadMusician: s.leadMusician,
+                        byName,
+                        quote: s.quote,
+                    })
+                    announcements.push(setAnnouncement(choice.chartName, choice.key, draft.profileLabel, overrode))
+                } catch (error) {
+                    logger.warn("create_setlist_from_draft: standing write failed:", error)
+                    warnings.push(`Could not save ${s.chartName} as standard; use set_standing_choice on that row.`)
+                }
             }
         }
-        await ref.delete()
-        claimToRelease = null
+        await ref.delete().catch((error) => logger.warn("create_setlist_from_draft: draft delete failed:", error))
 
         const out: CreateSetlistFromDraftResult = {
             ok: true,
@@ -400,6 +410,7 @@ export async function createSetlistFromDraftTool(
         }
         const oneOffNote = oneOffNoteFor(applied.oneOff)
         if (oneOffNote) out.oneOffNote = oneOffNote
+        if (warnings.length > 0) out.warnings = warnings
         return out
     } catch (error) {
         if (claimToRelease) await releaseClaim(claimToRelease.ref, claimToRelease.claimId)
@@ -408,7 +419,7 @@ export async function createSetlistFromDraftTool(
             "internal_error",
             "Could not create the setlist from the draft.",
             { errorCode: 500 },
-            "Check list_setlists before retrying; the draft is kept until a setlist is created.",
+            "Check list_setlists first: the setlist may exist. If it doesn't, run draft_service again.",
         )
     }
 }
