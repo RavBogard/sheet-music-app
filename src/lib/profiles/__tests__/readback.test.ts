@@ -1,0 +1,149 @@
+import { describe, expect, it } from "vitest"
+
+import { buildReadback, READBACK_VOICE_MAX, type OpenItem, type ReadbackRow } from "../readback"
+
+/**
+ * Setlist memory, release 3 — the exceptions-first readback. Pure.
+ */
+
+const NOW = new Date("2026-11-01T12:00:00Z")
+
+function song(index: number, label: string, over: Partial<ReadbackRow> = {}): ReadbackRow {
+    return {
+        index,
+        label,
+        isSong: true,
+        hasChart: true,
+        tier: "usual",
+        phrase: `the usual ${label} in Dm`,
+        keyOnRecord: true,
+        ...over,
+    }
+}
+
+function header(index: number, label: string): ReadbackRow {
+    return { index, label, isSong: false, hasChart: false, tier: null, phrase: null, keyOnRecord: false }
+}
+
+function item(id: string, text: string, createdAt: string): OpenItem {
+    return { id, text, trackId: null, createdAt, createdByName: "Daniel" }
+}
+
+const base = {
+    profileLabel: "Randy Shabbat morning",
+    date: "2026-11-07",
+    book: "crc-saturday",
+    special: false,
+    openItems: [] as OpenItem[],
+    now: NOW,
+}
+
+describe("buildReadback", () => {
+    it("lists open slots, recent standards, promotions and open items, in that order", () => {
+        const rows: ReadbackRow[] = [
+            header(0, "Shacharit"),
+            song(1, "Barchu", { tier: "last_time", phrase: "last time it was Barchu (Walkdown) in Dm", hasChart: false }),
+            song(2, "Oseh Shalom", {
+                tier: "standard",
+                phrase: "your standard Oseh Shalom (Hirsch) in C",
+                standing: { byName: "Daniel", at: "2026-10-20T10:00:00Z" },
+            }),
+            song(3, "Mi Chamocha", {
+                tier: "standard",
+                phrase: "your standard Mi Chamocha in F",
+                standing: { byName: "Daniel", at: "2026-01-01T10:00:00Z" },
+                promotion: { fileId: "f-mi", chartName: "Mi Chamocha (Klepper)", key: "G", weeks: 3 },
+            }),
+            song(4, "Adon Olam", { tier: "new", phrase: "new — which chart?", hasChart: false, keyOnRecord: false }),
+        ]
+        const r = buildReadback({ ...base, rows, openItems: [item("a", "chart still needed", "2026-10-30T00:00:00Z")] })
+        expect(r.exceptions.map((e) => [e.kind, e.index])).toEqual([
+            ["open_slot", 1],
+            ["recent_standard", 2],
+            ["promotion", 3],
+            ["open_slot", 4],
+            ["open_item", null],
+        ])
+        expect(r.exceptions.map((e) => e.text)).toEqual([
+            "Barchu: last time it was Barchu (Walkdown) in Dm",
+            "Oseh Shalom: your standard since Oct 20 (set by Daniel)",
+            "Mi Chamocha: third week of Mi Chamocha (Klepper) in G. Make it standard?",
+            "Adon Olam: new — which chart?",
+            "Open: chart still needed",
+        ])
+        expect(r.headline).toBe("Randy Shabbat morning, Nov 7, CRC Saturday Siddur.")
+        // Every song with a chart was listed, so the rest line counts none.
+        expect(r.rest).toBe("Everything else is your usual Randy Shabbat morning, 0 songs.")
+    })
+
+    it("an old standard (40 days) goes to the rest line", () => {
+        const rows = [
+            song(0, "Oseh Shalom", {
+                tier: "standard",
+                phrase: "your standard Oseh Shalom in C",
+                standing: { byName: "Daniel", at: new Date(NOW.getTime() - 40 * 86_400_000).toISOString() },
+            }),
+        ]
+        const r = buildReadback({ ...base, rows })
+        expect(r.exceptions).toEqual([])
+        expect(r.rest).toBe("Nothing new. Everything else is your usual Randy Shabbat morning, 1 song.")
+    })
+
+    it("all usual → 'Nothing new.' and the song count", () => {
+        const rows = [header(0, "Shacharit"), song(1, "Barchu"), song(2, "Oseh Shalom"), song(3, "Adon Olam")]
+        const r = buildReadback({ ...base, rows })
+        expect(r.exceptions).toEqual([])
+        expect(r.rest).toBe("Nothing new. Everything else is your usual Randy Shabbat morning, 3 songs.")
+        expect(r.text).toBe(`${r.headline} ${r.rest}`)
+        expect(r.text).not.toMatch(/exception|none|\[\]/i)
+    })
+
+    it("usual with no key counts in the rest line, not as an exception", () => {
+        const rows = [
+            song(0, "Barchu"),
+            song(1, "Oseh Shalom", { phrase: "the usual Oseh Shalom, key not on record", keyOnRecord: false }),
+        ]
+        const r = buildReadback({ ...base, rows })
+        expect(r.exceptions).toEqual([])
+        expect(r.rest).toBe("Nothing new. Everything else is your usual Randy Shabbat morning, 2 songs (1 with no key on record).")
+    })
+
+    it("more than 5 exceptions: text lists 5 and says how many more; exceptions keeps all", () => {
+        const rows = Array.from({ length: 7 }, (_, i) =>
+            song(i, `Song ${i}`, { tier: "new", phrase: "new — which chart?", hasChart: false, keyOnRecord: false }),
+        )
+        const r = buildReadback({ ...base, rows })
+        expect(r.exceptions).toHaveLength(7)
+        expect(READBACK_VOICE_MAX).toBe(5)
+        for (let i = 0; i < 5; i++) expect(r.text).toContain(`Song ${i}:`)
+        expect(r.text).not.toContain("Song 5:")
+        expect(r.text).toContain("…and 2 more; say 'show all' for the list.")
+        expect(r.text.endsWith(r.rest)).toBe(true)
+        expect(r.text.indexOf("…and 2 more")).toBeLessThan(r.text.indexOf(r.rest))
+    })
+
+    it("special adds the this-week-only line to the headline", () => {
+        const r = buildReadback({ ...base, special: true, rows: [song(0, "Barchu")] })
+        expect(r.headline).toBe(
+            "Randy Shabbat morning, Nov 7, CRC Saturday Siddur. Marked special: changes are for this week only.",
+        )
+    })
+
+    it("leaves a missing headline part out with its comma", () => {
+        expect(buildReadback({ ...base, book: null, rows: [] }).headline).toBe("Randy Shabbat morning, Nov 7.")
+        expect(buildReadback({ ...base, profileLabel: null, book: null, rows: [] }).headline).toBe("Nov 7.")
+    })
+
+    it("no profile: no tier wording, lists rows with no chart", () => {
+        const rows: ReadbackRow[] = [
+            header(0, "Set 1"),
+            song(1, "Opener", { tier: null, phrase: null }),
+            song(2, "Closer", { tier: null, phrase: null, hasChart: false, keyOnRecord: false }),
+            song(3, "Encore", { tier: null, phrase: null }),
+        ]
+        const r = buildReadback({ ...base, profileLabel: null, book: null, rows })
+        expect(r.exceptions).toEqual([{ kind: "no_chart", index: 2, text: "Closer: no chart yet" }])
+        expect(r.rest).toBe("2 other songs have charts.")
+        expect(r.text).not.toMatch(/usual|standard|last time/)
+    })
+})
