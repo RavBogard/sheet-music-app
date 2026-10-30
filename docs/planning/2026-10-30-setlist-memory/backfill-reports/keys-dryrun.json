@@ -1,0 +1,17 @@
+{
+  "ok": true,
+  "dryRun": true,
+  "scanned": 904,
+  "changed": [],
+  "skipped": {
+    "human": 36,
+    "rejected": 85,
+    "reviewHeld": 24,
+    "lowConfidence": 0,
+    "noSuggestion": 495,
+    "notChart": 0,
+    "badKey": 0,
+    "hasKey": 264,
+    "changedDuringRun": 0
+  }
+}

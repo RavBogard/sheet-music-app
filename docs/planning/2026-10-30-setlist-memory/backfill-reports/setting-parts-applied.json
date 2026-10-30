@@ -1,0 +1,6340 @@
+{
+  "ok": true,
+  "dryRun": false,
+  "scanned": 904,
+  "changed": [
+    {
+      "fileId": "000cc80a-9c65-4b55-929e-c9ca1f6737c3",
+      "name": "Yih'Yeh Shalom (Recht) - Yih'Yeh Tov (Broza).pdf",
+      "setting": "Recht",
+      "part": null,
+      "partGroup": "yih'yeh shalom recht yih'yeh tov broza"
+    },
+    {
+      "fileId": "012dd661-f451-444c-88fb-11d589028908",
+      "name": "T'filat HaDerech (Friedman)",
+      "setting": "Friedman",
+      "part": null,
+      "partGroup": "t'filat haderech friedman"
+    },
+    {
+      "fileId": "0281c548-8aea-48c9-8991-98cb381b3f3a",
+      "name": "David Melech Yisraeil (Frankel) - Dodi Li (Sher).pdf",
+      "setting": "Frankel",
+      "part": null,
+      "partGroup": "david melech yisraeil frankel dodi li sher"
+    },
+    {
+      "fileId": "055bf376-f545-45f9-9f40-da81544b312f",
+      "name": "V'nomar L'fanav (Chassidic folk song)",
+      "setting": "Chassidic folk song",
+      "part": null,
+      "partGroup": "v'nomar l'fanav chassidic folk song"
+    },
+    {
+      "fileId": "07478587-664a-4153-8a82-c35364f4ec12",
+      "name": "Hodu (Silver).pdf",
+      "setting": "Silver",
+      "part": null,
+      "partGroup": "hodu silver"
+    },
+    {
+      "fileId": "077a95a9-da4a-4703-97c5-77c6bebeb5f6",
+      "name": "Hal'luyah (Oshrat)",
+      "setting": "Oshrat",
+      "part": null,
+      "partGroup": "hal'luyah oshrat"
+    },
+    {
+      "fileId": "0afb3e5a-9554-43e2-b6e4-bf3b4470ca68",
+      "name": "Ein Keiloheinu (Freudenthal).pdf",
+      "setting": "Freudenthal",
+      "part": null,
+      "partGroup": "ein keiloheinu freudenthal"
+    },
+    {
+      "fileId": "0b478d9a-f544-4e77-8657-a3c70af76d86",
+      "name": "Al Naharot Bavel (Billings) - Al Tifrosh (Schachet-Briskin).pdf",
+      "setting": "Billings",
+      "part": null,
+      "partGroup": "al naharot bavel billings al tifrosh schachet briskin"
+    },
+    {
+      "fileId": "0ca658e4-c2e0-43df-9888-a7f2d536710a",
+      "name": "Adonai Oz (Klepper-Freelander) - Al Hanisim (Frimer) - Al Kol Eileh (Shemer).pdf",
+      "setting": "Klepper-Freelander",
+      "part": null,
+      "partGroup": "adonai oz klepper freelander al hanisim frimer al kol eileh shemer"
+    },
+    {
+      "fileId": "0eb186b2-9146-46c6-8615-ed971085bad1",
+      "name": "Y'rushalayim Shel Zahav (Shemer)",
+      "setting": "Shemer",
+      "part": null,
+      "partGroup": "y'rushalayim shel zahav shemer"
+    },
+    {
+      "fileId": "1-7s6O5YGk5noWiVhtktHwpr7SHOq8_09",
+      "name": "B'sefer chayim & Hashiveinu.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "b'sefer chayim hashiveinu"
+    },
+    {
+      "fileId": "1-GuL3x3yXCj4CpUieKyqriSYLIewYBW8",
+      "name": "Mi Shebeirach.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "mi shebeirach"
+    },
+    {
+      "fileId": "1-NNEkYLm4R7PJ7ttd1HVVQ55FYqps5fT",
+      "name": "Shema (major).pdf",
+      "setting": "major",
+      "part": null,
+      "partGroup": "shema major"
+    },
+    {
+      "fileId": "1-aabMnNguIMwqICh3Yd5OOESSsX1YD1H",
+      "name": "May it be a Good Year - Full Score.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "may it be a good year full score"
+    },
+    {
+      "fileId": "1-nZdkk3WmzecIti5rgOKG5Km7kditRSP",
+      "name": "Hashiveinu.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "hashiveinu"
+    },
+    {
+      "fileId": "1-utmHPjawkoiudZ9pjm5fLMCBoSDLgUU",
+      "name": "Lecha dodi (Yerushalmi).pdf",
+      "setting": "Yerushalmi",
+      "part": null,
+      "partGroup": "lecha dodi yerushalmi"
+    },
+    {
+      "fileId": "109L_MNigAZlIcxOJDVGu-mR1cPEWVDvH",
+      "name": "Eitz chayim.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "eitz chayim"
+    },
+    {
+      "fileId": "10K2pRG64Mph8DzVOw11I2Pvxsg3LxCLf",
+      "name": "HH Band Charts",
+      "setting": null,
+      "part": null,
+      "partGroup": "hh band charts"
+    },
+    {
+      "fileId": "10_OkoTpn-27dVH3IEwtJXeC3L4rJsSs0",
+      "name": "zochrenu Lehayim - Full Score.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "zochrenu lehayim full score"
+    },
+    {
+      "fileId": "10f54MTtUltfX4lm7YcxoV9MeXxtDXUWZ",
+      "name": "Yah ribon alam.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "yah ribon alam"
+    },
+    {
+      "fileId": "10i20SEfzKTvGJ5tqWfPScip78eXszCHH",
+      "name": "Michamocha (Shir Shabbat) [2:15]",
+      "setting": "Shir Shabbat",
+      "part": null,
+      "partGroup": "michamocha shir shabbat 215"
+    },
+    {
+      "fileId": "10z53rDn8ZRw_m5esW54nbxBEjPTNIjp5",
+      "name": "Ve_Imru Amen-Bass.mp3",
+      "setting": null,
+      "part": null,
+      "partGroup": "ve imru amen bass"
+    },
+    {
+      "fileId": "113D2wnFt1K9Vqgmp5pFn8wK6lnLEFwRL",
+      "name": "Dis Trust - Full Score.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "dis trust full score"
+    },
+    {
+      "fileId": "11985wRgE09raY4usgF5Y6lIErTyoKKch",
+      "name": "gminor_spirits.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "gminor spirits"
+    },
+    {
+      "fileId": "11bYBh-IiVb4eUxFythxUBdhfmbfZCiHY",
+      "name": "Barechu_trad_Bass.mp3",
+      "setting": null,
+      "part": null,
+      "partGroup": "barechu trad bass"
+    },
+    {
+      "fileId": "11hnNdTgFcqqmK1ExZYEeM3HqqHLfC28y",
+      "name": "Yedid Nefesh.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "yedid nefesh"
+    },
+    {
+      "fileId": "11vAgPi9J45X2b_MLc9SuqnNbKr_U2ePZ",
+      "name": "Adio kerida.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "adio kerida"
+    },
+    {
+      "fileId": "11w4r08HnXYR-eRFzcMIs-ud4k1Ut1jwB",
+      "name": "Fiddley Tune.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "fiddley tune"
+    },
+    {
+      "fileId": "129d7632-3954-45e0-9085-cf52d204d6cd",
+      "name": "Erev Ba (Levanson) - Erev Shel Shoshanim (Hadar) - Esa Einai (Carlebach).pdf",
+      "setting": "Levanson",
+      "part": null,
+      "partGroup": "erev ba levanson erev shel shoshanim hadar esa einai carlebach"
+    },
+    {
+      "fileId": "12JfLCHytM5q59btBQ05sz-V_SurQmUoT",
+      "name": "Adon Olam.mp3",
+      "setting": null,
+      "part": null,
+      "partGroup": "adon olam"
+    },
+    {
+      "fileId": "12Q_6mN94HnSFNcDsHZtvzXX2TqXm9sqh",
+      "name": "Adonai S'fatai (trad)",
+      "setting": "trad",
+      "part": null,
+      "partGroup": "adonai s'fatai trad"
+    },
+    {
+      "fileId": "12a55b49-215d-49dd-87a8-f3fb695ee088",
+      "name": "Yism'chu HaShamayim (Chassidic Folk Song)",
+      "setting": "Chassidic Folk Song",
+      "part": null,
+      "partGroup": "yism'chu hashamayim chassidic folk song"
+    },
+    {
+      "fileId": "12jOqCRu1d3CMEqEXhIlvtH6fISPb8_kU",
+      "name": "Barchu (Am I Awake ) - Full Score.pdf",
+      "setting": "I Awake",
+      "part": null,
+      "partGroup": "barchu am i awake full score"
+    },
+    {
+      "fileId": "139f1251-1373-409e-8fc7-4c447f7c7f92",
+      "name": "Shir Hama-Alot (Taubman).pdf",
+      "setting": "Taubman",
+      "part": null,
+      "partGroup": "shir hama alot taubman"
+    },
+    {
+      "fileId": "139wiZLQyzIVrwfjapGdfhzHHeZR7eiNk",
+      "name": "Niggun_Tenor_Bass.mp3",
+      "setting": null,
+      "part": null,
+      "partGroup": "niggun tenor bass"
+    },
+    {
+      "fileId": "13aYPTWGNeCpbOFk4CjccIWKvADcRvCNg",
+      "name": "Od Yavo Shalom Aleinu.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "od yavo shalom aleinu"
+    },
+    {
+      "fileId": "13c6fcba-7b42-44f6-8582-581194e2431d",
+      "name": "Havah Nashirah (Haydn) - Havah Neitzei B'machol (Chassidic folk song) - Hayom Yom Huledet (Israeli folk song)",
+      "setting": "Haydn",
+      "part": null,
+      "partGroup": "havah nashirah haydn havah neitzei b'machol chassidic folk song hayom yom huledet israeli folk song"
+    },
+    {
+      "fileId": "13ddc1bb-07e4-480a-bf24-5ee5ed22af6f",
+      "name": "L'Chah Dodi (Friedman).pdf",
+      "setting": "Friedman",
+      "part": null,
+      "partGroup": "l'chah dodi friedman"
+    },
+    {
+      "fileId": "13xN_EFxJ0igz9oYROL_DGx-hj6cvbGOy",
+      "name": "Elohai neshama - Pourmorady.pdf",
+      "setting": "Pourmorady",
+      "part": null,
+      "partGroup": "elohai neshama pourmorady"
+    },
+    {
+      "fileId": "14SMDmqaXkzSH_pAKYQ86cekbY7Doelfm",
+      "name": "Aleinu- trad - Full Score.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "aleinu trad full score"
+    },
+    {
+      "fileId": "14vROgFHB9FPTgTE0su4ALy8Pno0L5o9UkX4DkzMK5zk",
+      "name": "Yom Kippur Day Service (Daniel and Karen) Band Charts to be Printed",
+      "setting": "Daniel and Karen",
+      "part": null,
+      "partGroup": "yom kippur day service daniel and karen band charts to be printed"
+    },
+    {
+      "fileId": "15AghrjXqcoP12z70OGcZ7pY0EU8t7OBm",
+      "name": "Candle lighting (Ladino).pdf",
+      "setting": "Ladino",
+      "part": null,
+      "partGroup": "candle lighting ladino"
+    },
+    {
+      "fileId": "15JPaQTkyZckMCXWNuc0qQ6DWSiK1NBGJ",
+      "name": "Ahava raba (echo).pdf",
+      "setting": "echo",
+      "part": null,
+      "partGroup": "ahava raba echo"
+    },
+    {
+      "fileId": "15VGnxYtiSEEV_LfXc-oddi_fXCRaD7wK",
+      "name": "May the Memory - Full Score.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "may the memory full score"
+    },
+    {
+      "fileId": "16hgfPydSNfbuAbTMWVRncQCJkwlxlMDB",
+      "name": "Avinu Malkeinu_trad_Choir_Em.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "avinu malkeinu trad choir em"
+    },
+    {
+      "fileId": "173N8yeP19xEqNcofAbj0ZOnMK9pA7bGp",
+      "name": "Audio Files",
+      "setting": null,
+      "part": null,
+      "partGroup": "audio files"
+    },
+    {
+      "fileId": "17989ffb-a13a-47b4-b17e-df8212b14f92",
+      "name": "B'makom (Isaacson)",
+      "setting": "Isaacson",
+      "part": null,
+      "partGroup": "b'makom isaacson"
+    },
+    {
+      "fileId": "17AVgm1u0g862bhM8WnvvL54hc3tthymc",
+      "name": "HHD",
+      "setting": null,
+      "part": null,
+      "partGroup": "hhd"
+    },
+    {
+      "fileId": "17WKpAjPPT6E8D2VpRgiwNEy9V48BtwhR",
+      "name": "Kedusha (compact).pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "kedusha compact"
+    },
+    {
+      "fileId": "17YFbGz0YNvC1o-K1VKRrqgZGae-WMsbg",
+      "name": "Michamocha (Shir Shabbat) [4:35]",
+      "setting": "Shir Shabbat",
+      "part": null,
+      "partGroup": "michamocha shir shabbat 435"
+    },
+    {
+      "fileId": "18TFm0ba9AzJ5kdyQQyNqbtRw-RdqBk_-",
+      "name": "CRC Music Backup",
+      "setting": null,
+      "part": null,
+      "partGroup": "crc music backup"
+    },
+    {
+      "fileId": "18ip_oBzFOZmb6qwYHcHUerGvKlWLS9ZU",
+      "name": "Niggun 3 part choral score.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "niggun 3 part choral score"
+    },
+    {
+      "fileId": "193e1533-9952-4fad-a4c0-7cdcfb508ba0",
+      "name": "L'dor Vador (Friedman)",
+      "setting": "Friedman",
+      "part": null,
+      "partGroup": "l'dor vador friedman"
+    },
+    {
+      "fileId": "198fc291-2b1f-46db-8e84-b0c7e19b3c8c",
+      "name": "Pitchu Li (Dropkin)",
+      "setting": "Dropkin",
+      "part": null,
+      "partGroup": "pitchu li dropkin"
+    },
+    {
+      "fileId": "19E8aTettqSQO1ZVtVhXCPfUJw1dw0f3G",
+      "name": "Shiru L_Adonai Shir Shabbat.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "shiru l adonai shir shabbat"
+    },
+    {
+      "fileId": "19FuqP-rbkufIUdAVCGMbXLuvDJKnicZM",
+      "name": "Mi shebeirach.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "mi shebeirach"
+    },
+    {
+      "fileId": "19HZjTlXx_pXGMy3VV5k-o71vIB6amI9S",
+      "name": "R'tzei - Full Score.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "r'tzei full score"
+    },
+    {
+      "fileId": "19JE0aPISEwHYTC5RtieFX1EOVdYTP-yV",
+      "name": "Unetaneh_Tokef 4 parts.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "unetaneh tokef 4 parts"
+    },
+    {
+      "fileId": "19W6W99B9smYQqqZEtU2fYUTLvrV4HjDG",
+      "name": "L'Cha Dodi Dmin .pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "l'cha dodi dmin"
+    },
+    {
+      "fileId": "19XVik7nlDmoUr8CcBJbjDsecLuqInQ_Z",
+      "name": "Shema (major).pdf",
+      "setting": "major",
+      "part": null,
+      "partGroup": "shema major"
+    },
+    {
+      "fileId": "19aJQKD1H868a8tDZFphNLPh_rH4tFwLN",
+      "name": "Shiru Medley .wav",
+      "setting": null,
+      "part": null,
+      "partGroup": "shiru medley"
+    },
+    {
+      "fileId": "19bFqLwp-TX_T3xlnV78DoMj3U80FsehP",
+      "name": "Erev Shel Shoshanim : Yamin U’smol.wav",
+      "setting": null,
+      "part": null,
+      "partGroup": "erev shel shoshanim yamin u’smol"
+    },
+    {
+      "fileId": "19pHyy-g7WN48xqh6IEtRSWpqBQCkWftP",
+      "name": "Avinu Malkeinu_traditional_Em_Soprano.mp3",
+      "setting": null,
+      "part": null,
+      "partGroup": "avinu malkeinu traditional em soprano"
+    },
+    {
+      "fileId": "1AFK0Bydf8HZC2EOKbirdssqAS-52JBtr",
+      "name": "HH Charts",
+      "setting": null,
+      "part": null,
+      "partGroup": "hh charts"
+    },
+    {
+      "fileId": "1AIwCXDw1mGHm_uhaoJfbpkri-ibzOLI4",
+      "name": "Shiru L_Adonai Shir Shabbat.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "shiru l adonai shir shabbat"
+    },
+    {
+      "fileId": "1ARw4lnY2SdZO2ka7aj-rkxkdP_iEWm37",
+      "name": "Tzur mishelo.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "tzur mishelo"
+    },
+    {
+      "fileId": "1AZumqP1QVsv_1AQRi6DeO4RfBcP5mlkg",
+      "name": "Adonai S'fatai (Taubman).pdf",
+      "setting": "Taubman",
+      "part": null,
+      "partGroup": "adonai s'fatai taubman"
+    },
+    {
+      "fileId": "1BLARziE-ImWCPWDoU8utX5Cu7Jm4mxxJ",
+      "name": "Shalom Alechem Shir Shabbat.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "shalom alechem shir shabbat"
+    },
+    {
+      "fileId": "1BLrzro7SQrZVdapxuo0I_vSv-KpeXbLp",
+      "name": "Avinu Malkeinu Janowski D minor SATB Choir.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "avinu malkeinu janowski d minor satb choir"
+    },
+    {
+      "fileId": "1BQ-zjhN7hoUCooF02Z1mawgtMZJ_EfEM",
+      "name": "Oseh shalom (S&P).pdf",
+      "setting": "S&P",
+      "part": null,
+      "partGroup": "oseh shalom sp"
+    },
+    {
+      "fileId": "1BfI_rzgNRfVwjDAD2ynhXkUW257MumjT",
+      "name": "Od Yavo Shalom Aleinu trombone.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "od yavo shalom aleinu trombone"
+    },
+    {
+      "fileId": "1BfwOSMZIDkTfRrjMDRBpz8B9qAZAdJh9",
+      "name": "Modeh_Ani F minor.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "modeh ani f minor"
+    },
+    {
+      "fileId": "1BlUWuZh0eWe6BLpBYjJLpY1VJXyiISHr",
+      "name": "Sheet Music",
+      "setting": null,
+      "part": null,
+      "partGroup": "sheet music"
+    },
+    {
+      "fileId": "1Bquaq3tlSoRAovWcCkynShUuepgEgYZ_",
+      "name": "Hineni Rosenblatt.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "hineni rosenblatt"
+    },
+    {
+      "fileId": "1CKCIpT3q8q4257D2i6klXsRl8GFWpJee",
+      "name": "Lecha Dodi (Lincoln's Nigun — Weisenberg, with Yamin U'smol)",
+      "setting": "Lincoln's Nigun — Weisenberg, with Yamin U'smol",
+      "part": null,
+      "partGroup": "lecha dodi lincoln's nigun weisenberg with yamin u'smol"
+    },
+    {
+      "fileId": "1Cw69wE2-8eUViZ6ID66nULfNVDVU_est",
+      "name": "Ve_Imru Amen-Tenor.mp3",
+      "setting": null,
+      "part": null,
+      "partGroup": "ve imru amen tenor"
+    },
+    {
+      "fileId": "1CwH1LALn4s3bDRyyRQvLlLnbc6j7zhXH",
+      "name": "Modeh Ani Klepper.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "modeh ani klepper"
+    },
+    {
+      "fileId": "1D-rUMfhk4pinIQX97bYMi_rsKaNoS9s4",
+      "name": "Dodi Li.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "dodi li"
+    },
+    {
+      "fileId": "1D08wPsT5Fk5nm-uXW9tHf50BvccX5gu3",
+      "name": "Ve_Imru Amen Full Choir.mp3",
+      "setting": null,
+      "part": null,
+      "partGroup": "ve imru amen full choir"
+    },
+    {
+      "fileId": "1DF0UOysVOpGEGkSswU3FwEvjU_lcRm5_",
+      "name": "Unetaneh_Tokef_Full Choir.mp3",
+      "setting": null,
+      "part": null,
+      "partGroup": "unetaneh tokef full choir"
+    },
+    {
+      "fileId": "1DYQ4IZXCMjtCIzxCD2lkLEofO5q-sf6r",
+      "name": "Niggun - Bonia Full Score.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "niggun bonia full score"
+    },
+    {
+      "fileId": "1D_ERo9369UkNlZGO3FLYhYPatkY2m4Jm",
+      "name": "Kedusha in Am Full Choir with solo.mp3",
+      "setting": null,
+      "part": null,
+      "partGroup": "kedusha in am full choir with solo"
+    },
+    {
+      "fileId": "1DclXj1fcg3VTtf82HECzbk51-3GeowPH",
+      "name": "Barechu_trad_Soprano.mp3",
+      "setting": null,
+      "part": null,
+      "partGroup": "barechu trad soprano"
+    },
+    {
+      "fileId": "1DeiuwNlb8i8nwz3vUwaXdiNIICSdPgTt",
+      "name": "2. Rosh",
+      "setting": null,
+      "part": null,
+      "partGroup": "2 rosh"
+    },
+    {
+      "fileId": "1DiSbHUzzXGAAl3je1g40Q-pEM2rR3laa",
+      "name": "Kedusha in Am (Tenor_Bass).mp3",
+      "setting": "Tenor_Bass",
+      "part": null,
+      "partGroup": "kedusha in am tenor bass"
+    },
+    {
+      "fileId": "1DncwbDd_B0LnGRNRmBQCG6D4_7MoV1nI",
+      "name": "Aleinu Shur melody (low voice).mp3",
+      "setting": "low voice",
+      "part": null,
+      "partGroup": "aleinu shur melody low voice"
+    },
+    {
+      "fileId": "1Dx-47EpIUtGvo15ItMA_Imb6IijHC6uM",
+      "name": "T'filah Adonai s'fatai - Full Score.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "t'filah adonai s'fatai full score"
+    },
+    {
+      "fileId": "1EPzxHjEkvvHnIQm7L98X4hl8DvuJFHQh",
+      "name": "Bina in G.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "bina in g"
+    },
+    {
+      "fileId": "1Eas8fNP2KqWkqnSXrrE9mB74xwA962-7",
+      "name": "Landlocked.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "landlocked"
+    },
+    {
+      "fileId": "1EhNYnQc4YBzD_vtTZRunaNW2dhS57E0s",
+      "name": "Mi Chamocha Traditional - Full Score.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "mi chamocha traditional full score"
+    },
+    {
+      "fileId": "1EiJJKn3ZmsWnXVYiEjMHQmR17t0ByDbG",
+      "name": "Mizmor l_David D.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "mizmor l david d"
+    },
+    {
+      "fileId": "1EppZUInFMrBcjl9nU9p-5d7sCJYO6gfz",
+      "name": "Barchu (Siegel).pdf",
+      "setting": "Siegel",
+      "part": null,
+      "partGroup": "barchu siegel"
+    },
+    {
+      "fileId": "1Et48zTFQny12HjkFv25Wz7L7-wAqvZmg",
+      "name": "Mi Chamocha Shur Cantor Choir Descant.mp3",
+      "setting": null,
+      "part": null,
+      "partGroup": "mi chamocha shur cantor choir descant"
+    },
+    {
+      "fileId": "1Exi_bsvw4nK0AUkW12bGwJ2WzZ-B5cS0",
+      "name": "Avinu Malkeinu Janowski D minor (Tenor).mp3",
+      "setting": "Tenor",
+      "part": null,
+      "partGroup": "avinu malkeinu janowski d minor tenor"
+    },
+    {
+      "fileId": "1FGzPfLlSH3fzQtHAht3SfRoWLUFWICl1",
+      "name": "Avinu Malkeinu Janowski D minor (Bass).mp3",
+      "setting": "Bass",
+      "part": null,
+      "partGroup": "avinu malkeinu janowski d minor bass"
+    },
+    {
+      "fileId": "1FNvv9UToD9t1k4FqXhWPzb50naHZfo-T",
+      "name": "Niggun_Soprano.mp3",
+      "setting": null,
+      "part": null,
+      "partGroup": "niggun soprano"
+    },
+    {
+      "fileId": "1FZw5QmsYPhe2hNLnAz8CWD1yN0lruOXP",
+      "name": "Kedusha in Am (Soprano).mp3",
+      "setting": "Soprano",
+      "part": null,
+      "partGroup": "kedusha in am soprano"
+    },
+    {
+      "fileId": "1FsZhGl3bxWja_KLVAliZb2hHg88JBcw3",
+      "name": "Choral Arrangements",
+      "setting": null,
+      "part": null,
+      "partGroup": "choral arrangements"
+    },
+    {
+      "fileId": "1G4DJBRKB_DwZXJ7yqeQVkRR-5-R7EvU9",
+      "name": "Oseh shalom (S&P).pdf",
+      "setting": "S&P",
+      "part": null,
+      "partGroup": "oseh shalom sp"
+    },
+    {
+      "fileId": "1G4kvrAslYsUezK2fy696w8XUt3T-zEjR",
+      "name": "Unetaneh_Tokef_Soprano.mp3",
+      "setting": null,
+      "part": null,
+      "partGroup": "unetaneh tokef soprano"
+    },
+    {
+      "fileId": "1G4mI5dUgORJlwew8HnndtuORNLq89SgYXpQLYPJV12E",
+      "name": "Kol Nidre 2025/5786",
+      "setting": null,
+      "part": null,
+      "partGroup": "kol nidre 20255786"
+    },
+    {
+      "fileId": "1G90XvxjphRA3ZenORmcO1P3FDUQJQNjugwN4D5aDb4s",
+      "name": "Rosh Day 2025/5786",
+      "setting": null,
+      "part": null,
+      "partGroup": "rosh day 20255786"
+    },
+    {
+      "fileId": "1GOBhTkfPUz1vg_dgbnwS7eNDNdPkRcCA",
+      "name": "May The Memory Choir.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "may the memory choir"
+    },
+    {
+      "fileId": "1GU2wRegmUYj-jSqRpTBv2xV9Ywx7OrgAEn2_UyXjTdc",
+      "name": "Hashkeveinu",
+      "setting": null,
+      "part": null,
+      "partGroup": "hashkeveinu"
+    },
+    {
+      "fileId": "1GpH741dvm8j8CQOPzHPE0w9b_7Sl2q6X",
+      "name": "kanfe yona.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "kanfe yona"
+    },
+    {
+      "fileId": "1Gtp4pR3MGaRK7ZjjX4Rtmjg2anfvoEsN",
+      "name": "Avinu Malkeinu - Full Score.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "avinu malkeinu full score"
+    },
+    {
+      "fileId": "1H9292Q0XH0-lmNf0sso3vpKhqdONpuAhsyMj2yIGIwg",
+      "name": "Come the Healing",
+      "setting": null,
+      "part": null,
+      "partGroup": "come the healing"
+    },
+    {
+      "fileId": "1HDRDxBLX7Rj41qF1LDcDAdi2cmPYOAQ96xj8IXB9GvA",
+      "name": "Erev Rosh 5786/2025",
+      "setting": null,
+      "part": null,
+      "partGroup": "erev rosh 57862025"
+    },
+    {
+      "fileId": "1HVCUZLeCu2_W3G3hMDwYxXd7o519rlcO",
+      "name": "Avinu Malkeinu_traditional_Em_Full Choir.mp3",
+      "setting": null,
+      "part": null,
+      "partGroup": "avinu malkeinu traditional em full choir"
+    },
+    {
+      "fileId": "1HmJ7mu9qYx6eGVaJcg88Hklsei7bnjcAR-ZYmjkgfbU",
+      "name": "Hashiveinu",
+      "setting": null,
+      "part": null,
+      "partGroup": "hashiveinu"
+    },
+    {
+      "fileId": "1Ho4zPDwCihy2HOt7f7MuVRMMLbFMLWYR",
+      "name": "Oseh Shalom (Dub Remix).mp3",
+      "setting": "Dub Remix",
+      "part": null,
+      "partGroup": "oseh shalom dub remix"
+    },
+    {
+      "fileId": "1Hq-7tDIFY0C7NbCgDR6zZC1rlkib3xOQ",
+      "name": "Mi Chamocha Shur Cantor Choir Descant.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "mi chamocha shur cantor choir descant"
+    },
+    {
+      "fileId": "1ITxhruZY56v3j96hnqsk7YJ32-0coLcZ",
+      "name": "May The Memory Bass.mp3",
+      "setting": null,
+      "part": null,
+      "partGroup": "may the memory bass"
+    },
+    {
+      "fileId": "1IpxlOczNDtSg6GMI5cY4nrM2vBEAIiBy",
+      "name": "crl-test-charts-cycle5C",
+      "setting": null,
+      "part": null,
+      "partGroup": "crl test charts cycle5c"
+    },
+    {
+      "fileId": "1J4XKbecFdEJiEt-yuXWLmAXGqTi8L_Mk",
+      "name": "Piyutim-Pizmonim",
+      "setting": null,
+      "part": null,
+      "partGroup": "piyutim pizmonim"
+    },
+    {
+      "fileId": "1J6H_F6Ba02_rMRQEJbi_lBbMXCBag6SQ",
+      "name": "Avinu Malkeynu Janowski - Full Score.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "avinu malkeynu janowski full score"
+    },
+    {
+      "fileId": "1J_RYWUgwlAoPrq29DN6VoDFft3YpMSom",
+      "name": "Mi chamocha (Moshav).pdf",
+      "setting": "Moshav",
+      "part": null,
+      "partGroup": "mi chamocha moshav"
+    },
+    {
+      "fileId": "1J_YSGz4C9Fmx2CDQpUJ9iC5O19uA0j8o",
+      "name": "Unetaneh_Tokef_Bass.mp3",
+      "setting": null,
+      "part": null,
+      "partGroup": "unetaneh tokef bass"
+    },
+    {
+      "fileId": "1JhWf3p0Y1wmJaVNL40XFyNqSuFCwLxIw",
+      "name": "Shabbat morning.xlsx",
+      "setting": null,
+      "part": null,
+      "partGroup": "shabbat morningxlsx"
+    },
+    {
+      "fileId": "1JlQ6xacP4pH5FZ6ja_kaZ2DayoEpkrZs",
+      "name": "L'Cha Dodi Dmin .pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "l'cha dodi dmin"
+    },
+    {
+      "fileId": "1K6ENNHsN324AcZmC6tFLLSdAKSpSyqF1",
+      "name": "Candle Blessing - Full Score.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "candle blessing full score"
+    },
+    {
+      "fileId": "1K6cAZSsAcxurLVyHjW3MKCpfZzseE5kQ",
+      "name": "Hayom teamtzeinu - Full Score.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "hayom teamtzeinu full score"
+    },
+    {
+      "fileId": "1KV7ImMQF2i82sfPj9wvCnsZWZWo1SGlS",
+      "name": "Un'taneh Tokef - Full Score.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "un'taneh tokef full score"
+    },
+    {
+      "fileId": "1LIQvf7FQmRRKpfI1lP06PH70ef6Rn5I3",
+      "name": "May The Memory Tenor.mp3",
+      "setting": null,
+      "part": null,
+      "partGroup": "may the memory tenor"
+    },
+    {
+      "fileId": "1LPfmwfa8On5YHco9nC-dt5IyWk7QO4gV",
+      "name": "Barchu (Friedman).pdf",
+      "setting": "Friedman",
+      "part": null,
+      "partGroup": "barchu friedman"
+    },
+    {
+      "fileId": "1LYIRI8GH4fA9Typust_4D98LjOWo5eSn",
+      "name": "The Great Aleinu (Alto).mp3",
+      "setting": "Alto",
+      "part": null,
+      "partGroup": "the great aleinu alto"
+    },
+    {
+      "fileId": "1MQBRtiDK77MOTTKR25mEZEqmclSRat1q",
+      "name": "Niggun_Full Choir.mp3",
+      "setting": null,
+      "part": null,
+      "partGroup": "niggun full choir"
+    },
+    {
+      "fileId": "1Mqje155L1D2TpfeoLycAL_pxEs04epFw",
+      "name": "V'shamru",
+      "setting": null,
+      "part": null,
+      "partGroup": "v'shamru"
+    },
+    {
+      "fileId": "1N3sQbSjY_Cq_ykw6zp32XvAJfq9tjvYG",
+      "name": "Mi chamocha (Moroccan).pdf",
+      "setting": "Moroccan",
+      "part": null,
+      "partGroup": "mi chamocha moroccan"
+    },
+    {
+      "fileId": "1NTR6j9rhwHAwoZjX34AVdyymz9IvPkTz",
+      "name": "Pre-Ceremony Music",
+      "setting": null,
+      "part": null,
+      "partGroup": "pre ceremony music"
+    },
+    {
+      "fileId": "1NhFwI5Bf91gSuCiONrIAj-SttN6GEG3u",
+      "name": "Dis Trust - Full Score.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "dis trust full score"
+    },
+    {
+      "fileId": "1NqqJXEfTW1_B0sWBlcqAM4paZJOOmLuk",
+      "name": "Avinu Malkeinu.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "avinu malkeinu"
+    },
+    {
+      "fileId": "1Nz7ih3xr6Wb2XMeZZgrLJDCq_NoNAz7v",
+      "name": "T'filah Adonai s'fatai - Full Score.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "t'filah adonai s'fatai full score"
+    },
+    {
+      "fileId": "1O1pvTb9_U_1Dh9TCookPxS7AlwfMA_Nh",
+      "name": "Fish Jam .mp3",
+      "setting": null,
+      "part": null,
+      "partGroup": "fish jam"
+    },
+    {
+      "fileId": "1OUhfx4EW3ZAtuh-ZPnHxTF4-wGOJdBFy",
+      "name": "Ana B'Koach (Weisenberg — Mozi's Nigun)",
+      "setting": "Weisenberg — Mozi's Nigun",
+      "part": null,
+      "partGroup": "ana b'koach weisenberg mozi's nigun"
+    },
+    {
+      "fileId": "1PL-rwuqZOnftWzBFYa4ElTWinUpLSiyo",
+      "name": "Shir Shabbat (Choir)",
+      "setting": "Choir",
+      "part": null,
+      "partGroup": "shir shabbat choir"
+    },
+    {
+      "fileId": "1PYUlbQY0hweTHW2Qrc7Xn3_9vlHaUtee",
+      "name": "Bminor_simpletune.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "bminor simpletune"
+    },
+    {
+      "fileId": "1PYjUUqxH12ip7Uz5aFP7q1wRKwi-pKbvVNJB8G-wV6k",
+      "name": "Mi shebeirach",
+      "setting": null,
+      "part": null,
+      "partGroup": "mi shebeirach"
+    },
+    {
+      "fileId": "1PxJ-AxXwI5GUS4s_RutSAO_gEsDF8Got",
+      "name": "Refa tziri.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "refa tziri"
+    },
+    {
+      "fileId": "1Q27iTstQskArSk4-kHFfN0ZnQjV7Oau8",
+      "name": "Aleinu - .pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "aleinu"
+    },
+    {
+      "fileId": "1Q6yGoFDerBBWV7OYovZweFEIbzgRv--w",
+      "name": "Avinu Malkeinu Janowski D minor (Alto).mp3",
+      "setting": "Alto",
+      "part": null,
+      "partGroup": "avinu malkeinu janowski d minor alto"
+    },
+    {
+      "fileId": "1QOy2Lbs3AIj6LGvsnbstcihltGK5r7KQ",
+      "name": "L'chai olamim English English.docx",
+      "setting": null,
+      "part": null,
+      "partGroup": "l'chai olamim english englishdocx"
+    },
+    {
+      "fileId": "1QvrCC8R1yvCbK5jIB-yqw-vMQX1S62It637BHwSMaX4",
+      "name": "Shir Shabbat List",
+      "setting": null,
+      "part": null,
+      "partGroup": "shir shabbat list"
+    },
+    {
+      "fileId": "1R7lq5sBnwIH6WxZda_IshPjTpAtN30tJ",
+      "name": "Nigun # 5.PDF",
+      "setting": null,
+      "part": null,
+      "partGroup": "nigun 5"
+    },
+    {
+      "fileId": "1RBpYbHvv44QhjezUIkQgWPN0nnel3zuy",
+      "name": "Sim Shalom - Full Score.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "sim shalom full score"
+    },
+    {
+      "fileId": "1RQzrqpgVhkcL3tvBWGCYUIhtPNhF1Fnr",
+      "name": "Mi chamocha shur.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "mi chamocha shur"
+    },
+    {
+      "fileId": "1RV-_S-0vCgswP7VfskC6wIchaBDQFNDa",
+      "name": "Michael's B'Mitzvah Jams.mp3",
+      "setting": null,
+      "part": null,
+      "partGroup": "michael's b'mitzvah jams"
+    },
+    {
+      "fileId": "1SH9vxGsFfIJ4mU_FaAaIX13hThwuqfH5",
+      "name": "Shalom Alechem Shir Shabbat.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "shalom alechem shir shabbat"
+    },
+    {
+      "fileId": "1SYdDp-DbhO7e362YRZr3GQQ1pGwrdUlc",
+      "name": "4. Yom Kippur",
+      "setting": null,
+      "part": null,
+      "partGroup": "4 yom kippur"
+    },
+    {
+      "fileId": "1Sh8IiLb3n9iit1ImvlvS2SYvprbwLRRf",
+      "name": "Kabbalat Shabbat.xlsx",
+      "setting": null,
+      "part": null,
+      "partGroup": "kabbalat shabbatxlsx"
+    },
+    {
+      "fileId": "1TCP25KtpY0BZ1ixLPMSkhT7_HdFNW7IL",
+      "name": "Mi_shebeirach jazz.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "mi shebeirach jazz"
+    },
+    {
+      "fileId": "1TJwxurV4SgcpM58SG9x6hQ8e7cY6Yp9T",
+      "name": "Mi Chamochah - Full Score.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "mi chamochah full score"
+    },
+    {
+      "fileId": "1TRCzECDBOal5mr1SFh7JEY-r-NkhtaaW",
+      "name": "Avinu Malkeinu_traditional_Em_Bass.mp3",
+      "setting": null,
+      "part": null,
+      "partGroup": "avinu malkeinu traditional em bass"
+    },
+    {
+      "fileId": "1TeiP5BlGnlP9ogYXO9yFL25J1Tz5k_RX",
+      "name": "dodi li (sher).png",
+      "setting": "sher",
+      "part": null,
+      "partGroup": "dodi li sher"
+    },
+    {
+      "fileId": "1Tlx0xppOSXNZpO1idUqg2bNQfhyUgrfa",
+      "name": "Om-Ney Dm - Full Score.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "om ney dm full score"
+    },
+    {
+      "fileId": "1U9Ku90io-9lvaPNt6_vDv1rxjTLZaEGc",
+      "name": "Sim Shalom (Jim).pdf",
+      "setting": "Jim",
+      "part": null,
+      "partGroup": "sim shalom jim"
+    },
+    {
+      "fileId": "1UC0SmGpSLTNyH998kCfMaJzcZPkSOATA",
+      "name": "Om-Ney Dm - Full Score.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "om ney dm full score"
+    },
+    {
+      "fileId": "1URRI7OBQnlsji5zn3oMkx6IplU3qhw99",
+      "name": "Shabbat morning",
+      "setting": null,
+      "part": null,
+      "partGroup": "shabbat morning"
+    },
+    {
+      "fileId": "1URzdt7mdDjXZjO6J0ibl_E4SukMxfD4t",
+      "name": "Mi chamocha (6-8).pdf",
+      "setting": "6-8",
+      "part": null,
+      "partGroup": "mi chamocha 6 8"
+    },
+    {
+      "fileId": "1Uf0bVHJJ_PHn6gZ0OtGRf2RFytrx01qU",
+      "name": "Ana B_Koach.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "ana b koach"
+    },
+    {
+      "fileId": "1V2T04NsfROLjyEDOvAc0F3Bz_Tc20Kzi",
+      "name": "Modeh Ani Ma Tovu P'sukei - Full Score.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "modeh ani ma tovu p'sukei full score"
+    },
+    {
+      "fileId": "1VFVL-HAEa1XHVcqTPiIV-_DSlOdg4M2V",
+      "name": "Yihyu Leratzon - Full Score.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "yihyu leratzon full score"
+    },
+    {
+      "fileId": "1VSB3wRDJN_1nvab8nyNG3W65QXup2YQV",
+      "name": "Ma tovu_Hinei ma tov - trad.pdf",
+      "setting": "trad",
+      "part": null,
+      "partGroup": "ma tovu hinei ma tov trad"
+    },
+    {
+      "fileId": "1VXSQUMCADACnGEitvANMLuBF3BsJa_b9",
+      "name": "Veshamru .mp3",
+      "setting": null,
+      "part": null,
+      "partGroup": "veshamru"
+    },
+    {
+      "fileId": "1VbcRGqSXF28Kf4DWdddpeQ9ANcV8W5CL",
+      "name": "Lecha Dodi Lincoln_s Nigun.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "lecha dodi lincoln s nigun"
+    },
+    {
+      "fileId": "1VcD-E7ZKj48zN-20JaJT2MOLB-5WSkpR",
+      "name": "Veshamru.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "veshamru"
+    },
+    {
+      "fileId": "1VetfwZmNivMhVPjWFiShdhCRBoncTQOh",
+      "name": "Sim Shalom (Silver, Dm)",
+      "setting": "Silver",
+      "part": null,
+      "partGroup": "sim shalom silver dm"
+    },
+    {
+      "fileId": "1VmpBREQWoux2gOCAeMzNPlZ1VWLCWQdf",
+      "name": "Hashkiveinu - Full Score.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "hashkiveinu full score"
+    },
+    {
+      "fileId": "1VuMq83_0W8ya9SCeBaQ0vCvuFeHgGHeC",
+      "name": "Mizmor Shiru L'adonai .mp3",
+      "setting": null,
+      "part": null,
+      "partGroup": "mizmor shiru l'adonai"
+    },
+    {
+      "fileId": "1W3mVu5MmsLklXhhh6WpQe5KrCr71Z6iJ",
+      "name": "Shalom alechem (Goldfarb, Em — lead sheet)",
+      "setting": "Goldfarb",
+      "part": null,
+      "partGroup": "shalom alechem goldfarb em lead sheet"
+    },
+    {
+      "fileId": "1WJag4LEVyYDL2YxvWxiDBM5zgTzOgfAm",
+      "name": "KEDUSHAH - Full Score.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "kedushah full score"
+    },
+    {
+      "fileId": "1WNBHOQhMyr8Aokyp1ECGCibyUZr0UnFT",
+      "name": "Tu Bishvat.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "tu bishvat"
+    },
+    {
+      "fileId": "1WdIXm5jTtgtcBcQC_MggjybIGfP2b604",
+      "name": "May the Door - Full Score.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "may the door full score"
+    },
+    {
+      "fileId": "1WusU1xlwOKQvKu2kemrowh6oZ16S9UeR",
+      "name": "V'Shamru.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "v'shamru"
+    },
+    {
+      "fileId": "1X1rYxPSOC_CME5P72Sjf-HVYczAVt7TK",
+      "name": "Dodi nehmad.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "dodi nehmad"
+    },
+    {
+      "fileId": "1X6St0GAreLGpJIcPMdA4HJlohuFhPp5W",
+      "name": "3 Songs Office Hours.mp3",
+      "setting": null,
+      "part": null,
+      "partGroup": "3 songs office hours"
+    },
+    {
+      "fileId": "1X9O_4wIudGORlU9rZ-i2Ub7zN4tBhLt-",
+      "name": "Avodah Retzei.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "avodah retzei"
+    },
+    {
+      "fileId": "1X9l2ZE7dGrJdej9Fr3PFieVt9EE3dEYT",
+      "name": "MP3's to Jam To",
+      "setting": null,
+      "part": null,
+      "partGroup": "mp3's to jam to"
+    },
+    {
+      "fileId": "1XVmOLlmKI2ztKTsVOg2-YbkJ9_DzJA7A23gJp-s_Xu4",
+      "name": "Shir Shabbat Set List",
+      "setting": null,
+      "part": null,
+      "partGroup": "shir shabbat set list"
+    },
+    {
+      "fileId": "1Y6ELHFu--GfuIz3FgiHitfWyjG4OZvQ0",
+      "name": "The Great Aleinu Full Choir.mp3",
+      "setting": null,
+      "part": null,
+      "partGroup": "the great aleinu full choir"
+    },
+    {
+      "fileId": "1YkIEE4lx2Vp3U2nQA2M8nIKCBgFoylhf",
+      "name": "Lecha dodi (Lincoln's niggun — full transliteration)",
+      "setting": "Lincoln's niggun — full transliteration",
+      "part": null,
+      "partGroup": "lecha dodi lincoln's niggun full transliteration"
+    },
+    {
+      "fileId": "1YuN6XyS2oLDWE-6F7JztRAtBz7K_lTBL",
+      "name": "Ana B'koach (Rauscher, Em)",
+      "setting": "Rauscher",
+      "part": null,
+      "partGroup": "ana b'koach rauscher em"
+    },
+    {
+      "fileId": "1YuXOp7krlxedG4OGIXmIDWv55LZNRIlL",
+      "name": "Niggun 3 part choral score.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "niggun 3 part choral score"
+    },
+    {
+      "fileId": "1Z37pBaRXW45LQ551WSfMFzDHQ8jFYt0x",
+      "name": "The Great Aleinu (Bass).mp3",
+      "setting": "Bass",
+      "part": null,
+      "partGroup": "the great aleinu bass"
+    },
+    {
+      "fileId": "1ZPh6Ge2WUl21w2sL7gq0rf1q3396QL07",
+      "name": "B'sefer Chayim - Full Score.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "b'sefer chayim full score"
+    },
+    {
+      "fileId": "1ZQUvXg4McVGhlkQ9rnJM4_2pdHup9mFBDXqoHqZtAds",
+      "name": "Yizkor and Neila",
+      "setting": null,
+      "part": null,
+      "partGroup": "yizkor and neila"
+    },
+    {
+      "fileId": "1Zj5951AvRUwUdE8FeBuqMj1u615u3q84",
+      "name": "Hashkivenu (Randy).pdf",
+      "setting": "Randy",
+      "part": null,
+      "partGroup": "hashkivenu randy"
+    },
+    {
+      "fileId": "1ZuXxV8dAhfFRXaXaSk1zAbbp9yce8MwH",
+      "name": "CRC On Hold Klezmer.wav",
+      "setting": null,
+      "part": null,
+      "partGroup": "crc on hold klezmer"
+    },
+    {
+      "fileId": "1ZvnGWrEAwXkF5RNAPJE1bjRx0vP5JSFH",
+      "name": "Los bilbilikos.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "los bilbilikos"
+    },
+    {
+      "fileId": "1ZvsnHlvqAirjvpbWJ1FWAM2IgEuLbPOO",
+      "name": "Shalom Rav - Full Score.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "shalom rav full score"
+    },
+    {
+      "fileId": "1_AGMn2Ls4Eo15tDwC4vtrGeHvu4aoe8f",
+      "name": "Niggun_Alto.mp3",
+      "setting": null,
+      "part": null,
+      "partGroup": "niggun alto"
+    },
+    {
+      "fileId": "1_E1AIJH9j0I-jkESHlhKFN8ZGazdusFd",
+      "name": "El Dyo alto.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "el dyo alto"
+    },
+    {
+      "fileId": "1_Gd8degQp-_CwXhYQM_jtxqRCtjdKvTi",
+      "name": "Avinu Malkeinu Janowski D minor Full Choir.mp3",
+      "setting": null,
+      "part": null,
+      "partGroup": "avinu malkeinu janowski d minor full choir"
+    },
+    {
+      "fileId": "1_O1lxgddm1zhWk2iL7xINC9evUx4zbzn",
+      "name": "Ve'imru amen - Full Score.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "ve'imru amen full score"
+    },
+    {
+      "fileId": "1ace0be3-5238-4f8f-b21e-8a95f3fcd0a7",
+      "name": "Nas'U (Josh Warshawsky).pdf",
+      "setting": "Josh Warshawsky",
+      "part": null,
+      "partGroup": "nas'u josh warshawsky"
+    },
+    {
+      "fileId": "1av4wG0mTcKSjYTwKWbDoynvNrFdwSCrW",
+      "name": "Eitz Chayim and HashiVeinu - Full Score.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "eitz chayim and hashiveinu full score"
+    },
+    {
+      "fileId": "1b9n_WsSuXkjbAgYcnK1M9XVTHNOalKAq",
+      "name": "Barchu (Friedman).pdf",
+      "setting": "Friedman",
+      "part": null,
+      "partGroup": "barchu friedman"
+    },
+    {
+      "fileId": "1bOTH11M28N7_c7avQGTYwzhhQlM2vKEK",
+      "name": "Aleinu Shur.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "aleinu shur"
+    },
+    {
+      "fileId": "1bntK0UHLQmq_z1dNsek7Rwue_HNr4jNQ",
+      "name": "Hashkivenu.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "hashkivenu"
+    },
+    {
+      "fileId": "1c1efa1f-491c-4925-a8de-07a115437fc5",
+      "name": "Shalom Shalom (Rogow)",
+      "setting": "Rogow",
+      "part": null,
+      "partGroup": "shalom shalom rogow"
+    },
+    {
+      "fileId": "1cFzp0F-TbCdUFtjJwJ6yPCxQi9IIkpR7",
+      "name": "Mah Tovu - Full Score.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "mah tovu full score"
+    },
+    {
+      "fileId": "1cGBg4BgdM5ZJ2HFQOMZv4mxzoJrAHNez",
+      "name": "Lecha dodi (Italian).pdf",
+      "setting": "Italian",
+      "part": null,
+      "partGroup": "lecha dodi italian"
+    },
+    {
+      "fileId": "1cISCkDz9PYogPzoAH8nK0uOc92ItKORV",
+      "name": "Barchu Am I Awake leadsheet.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "barchu am i awake leadsheet"
+    },
+    {
+      "fileId": "1cXHGyTKzQ3Dxgf2wBk4iTNTAgxKgZbtp",
+      "name": "Para Ti .pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "para ti"
+    },
+    {
+      "fileId": "1cZ0dW7ioUqQkV8m2ENr0ExEpMuYiP7ov6vy790kjbe4",
+      "name": "5786 / 2025 Kol Nidre Alternative Service Music Flow",
+      "setting": null,
+      "part": null,
+      "partGroup": "5786 2025 kol nidre alternative service music flow"
+    },
+    {
+      "fileId": "1c_8FuLAzM3S7TECBb4e1o11oUdoN8tlK",
+      "name": "Adonai s_fatai (chant).pdf",
+      "setting": "chant",
+      "part": null,
+      "partGroup": "adonai s fatai chant"
+    },
+    {
+      "fileId": "1ch79JH6B3rWcMnSLd9HtO4myytRHoicd",
+      "name": "Shabbat",
+      "setting": null,
+      "part": null,
+      "partGroup": "shabbat"
+    },
+    {
+      "fileId": "1cqxulkFHUjA0-w6tmUwK6t4TnPgLWbpx",
+      "name": "V'Shamru (Old Skool).pdf",
+      "setting": "Old Skool",
+      "part": null,
+      "partGroup": "v'shamru old skool"
+    },
+    {
+      "fileId": "1czN_ywRWm2bnjIrnNVg7ad4RyynM_GcR",
+      "name": "Mizmor Shiru Ladonai.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "mizmor shiru ladonai"
+    },
+    {
+      "fileId": "1d-aXA4WzVjKYvCxAaVyezGgzRKlXs9y_",
+      "name": "Mizmor Shiru Ladonai.mp3",
+      "setting": null,
+      "part": null,
+      "partGroup": "mizmor shiru ladonai"
+    },
+    {
+      "fileId": "1d69155e-992a-4f35-a16b-1a3bd5745f68",
+      "name": "Bo-I Kalah (Shur).pdf",
+      "setting": "Shur",
+      "part": null,
+      "partGroup": "bo i kalah shur"
+    },
+    {
+      "fileId": "1dAtZlJQ_3xbvfPLTG0F31Tbntid7d01W",
+      "name": "Avinu Malkeinu_traditional_Em_Alto.mp3",
+      "setting": null,
+      "part": null,
+      "partGroup": "avinu malkeinu traditional em alto"
+    },
+    {
+      "fileId": "1dS-0aYsqxyxS5DIqs4iP521Obwgh7yLL",
+      "name": "Barechu_trad_Choir_C.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "barechu trad choir c"
+    },
+    {
+      "fileId": "1ds1Ql2M3Fb9LRX-k8tGxbixPHZ756WE0",
+      "name": "Ahava raba.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "ahava raba"
+    },
+    {
+      "fileId": "1dxdNC33CZDbruEYFwsyV44a4sWR0nx8x",
+      "name": "Barechu_trad_Tenor.mp3",
+      "setting": null,
+      "part": null,
+      "partGroup": "barechu trad tenor"
+    },
+    {
+      "fileId": "1e36kWrER7lDRLjCe1n_YGXlGKq15CMz2",
+      "name": "Niggun - Full Score.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "niggun full score"
+    },
+    {
+      "fileId": "1eBRJoo2uNWzEG-Hu4kejU0GRPzVQdd1V",
+      "name": "C-Saw Niggun Score.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "c saw niggun score"
+    },
+    {
+      "fileId": "1ea4505a-a3eb-423f-8398-93b06664da5b",
+      "name": "Dona Dona (Secunda)",
+      "setting": "Secunda",
+      "part": null,
+      "partGroup": "dona dona secunda"
+    },
+    {
+      "fileId": "1eada1e3-c629-4fce-af21-83e81d480b5a",
+      "name": "Shir BaBoker BaBoker (Artzi & Koren)",
+      "setting": "Artzi & Koren",
+      "part": null,
+      "partGroup": "shir baboker baboker artzi koren"
+    },
+    {
+      "fileId": "1ecPTYaPCPkHuqdZrPKFLVCQWgeCXPus6",
+      "name": "Eitz Chayim (Old Skool).pdf",
+      "setting": "Old Skool",
+      "part": null,
+      "partGroup": "eitz chayim old skool"
+    },
+    {
+      "fileId": "1edX7GlHavLu4fvYHkSg0HQ_ftYhfOMuK",
+      "name": "Benediction - Full Score.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "benediction full score"
+    },
+    {
+      "fileId": "1etxl5D1liZFHOAGfsReSt0gNtWXUpD_f",
+      "name": "Avinu Malkeinu_traditional_Em_Tenor.mp3",
+      "setting": null,
+      "part": null,
+      "partGroup": "avinu malkeinu traditional em tenor"
+    },
+    {
+      "fileId": "1eyarxSuTHi7r-LedbgJ7jxG5cL4f8ukb",
+      "name": "Ma Tovu (CRC) 2.pdf",
+      "setting": "CRC",
+      "part": null,
+      "partGroup": "ma tovu crc 2"
+    },
+    {
+      "fileId": "1fCgl4H4wIiqLK42rUkHmRYV5WzqLEOIU",
+      "name": "Kabbalat Shabbat",
+      "setting": null,
+      "part": null,
+      "partGroup": "kabbalat shabbat"
+    },
+    {
+      "fileId": "1fDW83DxtZgoTEVABabdxi7lzopNx-Hnx",
+      "name": "Shalom alechem (Goldfarb).pdf",
+      "setting": "Goldfarb",
+      "part": null,
+      "partGroup": "shalom alechem goldfarb"
+    },
+    {
+      "fileId": "1fb983c0-12be-4a51-bcd8-4be089e70b1f",
+      "name": "Rad HaLailah (Chassidic melody)",
+      "setting": "Chassidic melody",
+      "part": null,
+      "partGroup": "rad halailah chassidic melody"
+    },
+    {
+      "fileId": "1g-Czee2Cm5I_k4qtDQ86M3t7-9c3pHnW",
+      "name": "Kedusha in Am (Alto).mp3",
+      "setting": "Alto",
+      "part": null,
+      "partGroup": "kedusha in am alto"
+    },
+    {
+      "fileId": "1g1cnvJjQwoS9sudXMsEv-Psx7IiPjkAJ",
+      "name": "Unetaneh_Tokef_Alto.mp3",
+      "setting": null,
+      "part": null,
+      "partGroup": "unetaneh tokef alto"
+    },
+    {
+      "fileId": "1gTZdh60yL9zN6zhQmbBeK7n-zxMxoshkZwHqwpYN99k",
+      "name": "Adon Olam",
+      "setting": null,
+      "part": null,
+      "partGroup": "adon olam"
+    },
+    {
+      "fileId": "1gey19JRRH6b-sPmeeR2_vbP6conu0ZK_",
+      "name": "Lecha Dodi > Erev Shel Shoshamim : yasmin U'smol.mp3",
+      "setting": null,
+      "part": null,
+      "partGroup": "lecha dodi erev shel shoshamim yasmin u'smol"
+    },
+    {
+      "fileId": "1gyFFxL0k_Gzmo0-y9vi6ieT1j0vtOznF",
+      "name": "Ve_Imru Amen Choir.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "ve imru amen choir"
+    },
+    {
+      "fileId": "1h03XAsuq2FWWn_ZHRHvtQz1ZHfgZSi23",
+      "name": "May The Memory Full Choir.mp3",
+      "setting": null,
+      "part": null,
+      "partGroup": "may the memory full choir"
+    },
+    {
+      "fileId": "1h2-nbJYTO7fVioa6uFwUwpyzH1d1bVce",
+      "name": "Mi chamocha (Moshav) morning.pdf",
+      "setting": "Moshav",
+      "part": null,
+      "partGroup": "mi chamocha moshav morning"
+    },
+    {
+      "fileId": "1hBW82D0waHKgB4DA53rCcd4WGV5u9LQw",
+      "name": "Ve_Imru Amen-Alto.mp3",
+      "setting": null,
+      "part": null,
+      "partGroup": "ve imru amen alto"
+    },
+    {
+      "fileId": "1hkeXYm-kJMBbhHKAnGWWr5AWAF54X-o-",
+      "name": "Ma_navu_alei.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "ma navu alei"
+    },
+    {
+      "fileId": "1i3jy2Co3gNHsnzDXyEvrLpE249lD-KhS",
+      "name": "Bar'chu Walkdown.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "bar'chu walkdown"
+    },
+    {
+      "fileId": "1iZJWnsukROkqmZ_uSnDFl1Z5dsRcgWDG",
+      "name": "May The Memory Soprano.mp3",
+      "setting": null,
+      "part": null,
+      "partGroup": "may the memory soprano"
+    },
+    {
+      "fileId": "1ioTLwHfdaDXQu7z2aHwOBhqqYplcWkhI",
+      "name": "Lecha Dodi Erev Shel Shoshanim.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "lecha dodi erev shel shoshanim"
+    },
+    {
+      "fileId": "1j0vPyAIniwYKOh3mdo7Tly4WwugWuKLw",
+      "name": "Avodah.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "avodah"
+    },
+    {
+      "fileId": "1j9UHSajBGbP_YLqrHygy6Tv3PkvSD_tu",
+      "name": "Berosh Hashanah Yikateivun - Full Score.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "berosh hashanah yikateivun full score"
+    },
+    {
+      "fileId": "1jQoHlG412NCbvMhk8yJbR8RKBPm0Mi4r",
+      "name": "Pitchu_Li.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "pitchu li"
+    },
+    {
+      "fileId": "1jiX9o2PFj6fGb-qDC5Uw5EtOTOnydzWh",
+      "name": "Kedusha Em.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "kedusha em"
+    },
+    {
+      "fileId": "1k9hNIPVwvf4kf_WdYj7RlfJVbi5ElgIT",
+      "name": "The Great Aleinu (Lewandowski) Choir.pdf",
+      "setting": "Lewandowski",
+      "part": null,
+      "partGroup": "the great aleinu lewandowski choir"
+    },
+    {
+      "fileId": "1khYYPDmj7pOn_G8yl8mTJHcYFsLH5O65",
+      "name": "3. Kol Nidre",
+      "setting": null,
+      "part": null,
+      "partGroup": "3 kol nidre"
+    },
+    {
+      "fileId": "1lhfSuwVN0-QmiaXm-nVQBlgIOX3bGkby",
+      "name": "Psukei d_zimrah.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "psukei d zimrah"
+    },
+    {
+      "fileId": "1ljIZkOUyUrFE3Djvv1j0-WnWcziorwyV",
+      "name": "L'chai Olamim - Full Score (1).pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "l'chai olamim full score 1"
+    },
+    {
+      "fileId": "1m9IrT8SHyVU9nM5jbYXVMu75EG0Mo1a4",
+      "name": "Esa Einai - Full Score.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "esa einai full score"
+    },
+    {
+      "fileId": "1mFyejfhYBYxLacZWcCuPgBpI006BjqV7",
+      "name": "dodi li (sher).png",
+      "setting": "sher",
+      "part": null,
+      "partGroup": "dodi li sher"
+    },
+    {
+      "fileId": "1mKr3bKOxholt8isagwFgD8lglX2YykIa",
+      "name": "Aleinu Shur melody (high voice).mp3",
+      "setting": "high voice",
+      "part": null,
+      "partGroup": "aleinu shur melody high voice"
+    },
+    {
+      "fileId": "1monkKpBnbwh6YO6FAKBIQmD4vGqzbyIZ",
+      "name": "The Great Aleinu (Tenor).mp3",
+      "setting": "Tenor",
+      "part": null,
+      "partGroup": "the great aleinu tenor"
+    },
+    {
+      "fileId": "1n8ur933csmrxPJYKZn2cFtFNwRac7PWZ",
+      "name": "Avinu Shebashamayim.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "avinu shebashamayim"
+    },
+    {
+      "fileId": "1nAEsEgzHIU3T9Ym9kJpBxJylWWqa_vnK",
+      "name": "Barechu_trad_Alto.mp3",
+      "setting": null,
+      "part": null,
+      "partGroup": "barechu trad alto"
+    },
+    {
+      "fileId": "1nM6XI_TvFX85mZe3el19-g6TYXZ5KwtE",
+      "name": "Shalom Rav.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "shalom rav"
+    },
+    {
+      "fileId": "1nmHWbmh67h4YF8QVTz8hofgrP-4WTL3a",
+      "name": "Veshameru - Full Score.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "veshameru full score"
+    },
+    {
+      "fileId": "1oOys8D12_uDOG_2vcssAq8k5PLf4ZhBQ",
+      "name": "Mi chamocha (Moshav) morning.pdf",
+      "setting": "Moshav",
+      "part": null,
+      "partGroup": "mi chamocha moshav morning"
+    },
+    {
+      "fileId": "1odYJKS1JLzDVVVbuHRV4oIw-gAAVDqFT",
+      "name": "Ve_Imru Amen-Soprano.mp3",
+      "setting": null,
+      "part": null,
+      "partGroup": "ve imru amen soprano"
+    },
+    {
+      "fileId": "1oqBCSHTMzCVUPvMtQNXEdg5V49mwvOYh",
+      "name": "High Holidays 2025 (Choir)",
+      "setting": "Choir",
+      "part": null,
+      "partGroup": "high holidays 2025 choir"
+    },
+    {
+      "fileId": "1orCw2GbmC7QzDFQnNeK1hyA83Kh9B6XR",
+      "name": "Oseh shalom (camp).pdf",
+      "setting": "camp",
+      "part": null,
+      "partGroup": "oseh shalom camp"
+    },
+    {
+      "fileId": "1p-iGMt8OCpCJtk0eOn0mJL3aoNPcGUaK",
+      "name": "CRC Music Book",
+      "setting": null,
+      "part": null,
+      "partGroup": "crc music book"
+    },
+    {
+      "fileId": "1p32ui1nyleLqmLU0On2pkOQSUlgJRUEE",
+      "name": "Yedid Nefesh.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "yedid nefesh"
+    },
+    {
+      "fileId": "1pFGvjKzoeCIj6CJuk6vFkYkUbV4I5zam",
+      "name": "May The Memory Alto.mp3",
+      "setting": null,
+      "part": null,
+      "partGroup": "may the memory alto"
+    },
+    {
+      "fileId": "1pToiRfD44ioU26hX8u8c3eayNYc6KOMb",
+      "name": "Mi Chamocha Ana B'Koach.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "mi chamocha ana b'koach"
+    },
+    {
+      "fileId": "1pu2JsvkgVnzmQ4CJySUd7PSm7F0yEd_x",
+      "name": "Mizmor leDavid.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "mizmor ledavid"
+    },
+    {
+      "fileId": "1pwmleWt7QMPuEqTrM_Az9JFj5RUMS9F4",
+      "name": "Shir Shabbat Lead Sheets",
+      "setting": null,
+      "part": null,
+      "partGroup": "shir shabbat lead sheets"
+    },
+    {
+      "fileId": "1q8kGn48kh9CXdJPmm4i6g_wx67Zl8GHB",
+      "name": "Avodah Ritzei - Full Score.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "avodah ritzei full score"
+    },
+    {
+      "fileId": "1qAWeiH9_0eeXaseL0e-dMxDDwpBvO6xx",
+      "name": "Barechu_trad_Cantor + Choir.mp3",
+      "setting": null,
+      "part": null,
+      "partGroup": "barechu trad cantor choir"
+    },
+    {
+      "fileId": "1qHPm7jPm6uqwBzm5MMy3ypdQZwzmAh4k",
+      "name": "Achot ketana.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "achot ketana"
+    },
+    {
+      "fileId": "1qTDacSD6J12oeEMg22KueDQgwMm8EeVJ",
+      "name": "Unetaneh_Tokef_Tenor.mp3",
+      "setting": null,
+      "part": null,
+      "partGroup": "unetaneh tokef tenor"
+    },
+    {
+      "fileId": "1qdX4_IHvHKX5sKfaHRo6sU4vymTmE12d",
+      "name": "Barchu - Full Score.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "barchu full score"
+    },
+    {
+      "fileId": "1qlfMKLD6qrr98JUmoeBJHRE5I0-FsIRp",
+      "name": "Sim Shalom.mp3",
+      "setting": null,
+      "part": null,
+      "partGroup": "sim shalom"
+    },
+    {
+      "fileId": "1r2GLfKEj0PZSPn0XbPO9sXfmzhJfcRTu",
+      "name": "V_shamru_(trad).pdf",
+      "setting": "trad",
+      "part": null,
+      "partGroup": "v shamru trad"
+    },
+    {
+      "fileId": "1r2V2tJnZauBVhuiDC2zjLLb3iyhAw8Nj",
+      "name": "Mi shebeirach.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "mi shebeirach"
+    },
+    {
+      "fileId": "1r6EerKdaIfJmaS4kdwLNA5rWeSnF56uk",
+      "name": "Avinu Malkeinu_trad_Choir_Em.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "avinu malkeinu trad choir em"
+    },
+    {
+      "fileId": "1rmnciu0PVh2pL6GQkuJBasmEZzHgK5b4",
+      "name": "Bar'chu Walkdown.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "bar'chu walkdown"
+    },
+    {
+      "fileId": "1rmxBzOdjhutYWB_HGxuCJnBR8ieSu--_",
+      "name": "Ve'al kulam - Full Score.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "ve'al kulam full score"
+    },
+    {
+      "fileId": "1sNPYY73-mI4XBfASJBoHaTwxQH3IHr50",
+      "name": "Eitz chayim - Weisenberg.pdf",
+      "setting": "Weisenberg",
+      "part": null,
+      "partGroup": "eitz chayim weisenberg"
+    },
+    {
+      "fileId": "1sRzRHytARhFFrlAqJUtDDH25YhuZZ792",
+      "name": "Yotzeir or - Klepper.pdf",
+      "setting": "Klepper",
+      "part": null,
+      "partGroup": "yotzeir or klepper"
+    },
+    {
+      "fileId": "1sv7fGYEciwW6XbS10f3XKOE31iytS9hB",
+      "name": "Refa Tziri.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "refa tziri"
+    },
+    {
+      "fileId": "1t120h-tSRphOOwemf0tu5_j2j58ErazM",
+      "name": "Unetaneh_Tokef 4 parts.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "unetaneh tokef 4 parts"
+    },
+    {
+      "fileId": "1t7fPtGbxIVUUaskwynvKjMYactKDbvGq",
+      "name": "Modeh ani - Klepper.pdf",
+      "setting": "Klepper",
+      "part": null,
+      "partGroup": "modeh ani klepper"
+    },
+    {
+      "fileId": "1tIet97g6zgIt-uCu-HrBRcj1tmXj_6ep",
+      "name": "B'sefer chayim.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "b'sefer chayim"
+    },
+    {
+      "fileId": "1tLxE6aG8TOuLAtv3DCcuPKSRQUa_Nz7_",
+      "name": "Kedusha in Am SAB with solo.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "kedusha in am sab with solo"
+    },
+    {
+      "fileId": "1tRHJFJSq99c1SuWZBOJCjbLyFHhIPYWO",
+      "name": "The Great Aleinu (Soprano).mp3",
+      "setting": "Soprano",
+      "part": null,
+      "partGroup": "the great aleinu soprano"
+    },
+    {
+      "fileId": "1tYtW5qo5iOuytY9GflbwCQjWerjaov4b",
+      "name": "Avinu Malkeinu Janowski D minor (Soprano).mp3",
+      "setting": "Soprano",
+      "part": null,
+      "partGroup": "avinu malkeinu janowski d minor soprano"
+    },
+    {
+      "fileId": "1tcdg8vTGcwuGX7gar1xJ0JDBdcyEi9yz",
+      "name": "1. Erev Rosh",
+      "setting": null,
+      "part": null,
+      "partGroup": "1 erev rosh"
+    },
+    {
+      "fileId": "1u0I8PCz1MQ_RLCN-6Kw0-JlF0R0Nm40R",
+      "name": "Eil Malei Rachamim.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "eil malei rachamim"
+    },
+    {
+      "fileId": "1u2g0w4OLjbL5JfjACyL_3kDzUZpaGjng",
+      "name": "Oseh Shalom (Nava Tehila)",
+      "setting": "Nava Tehila",
+      "part": null,
+      "partGroup": "oseh shalom nava tehila"
+    },
+    {
+      "fileId": "1ut9fS0F6yHsKvgaAzkNXqDSshHjjesN-",
+      "name": "Mi Shebeirach - Full Score.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "mi shebeirach full score"
+    },
+    {
+      "fileId": "1v1aFYuQ57HHoILQWcT_rtv3zhMWq2IR9",
+      "name": "Barechu_trad_Choir_C.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "barechu trad choir c"
+    },
+    {
+      "fileId": "1v6a8TfMdNjaz-HzGPnVmOB-BI3u0q_zz",
+      "name": "V_shamru_(trad).pdf",
+      "setting": "trad",
+      "part": null,
+      "partGroup": "v shamru trad"
+    },
+    {
+      "fileId": "1vY2cfQMn1-QgtslbQZaCYc8JNZkX0g1s",
+      "name": "Elohai Neshama .mp3",
+      "setting": null,
+      "part": null,
+      "partGroup": "elohai neshama"
+    },
+    {
+      "fileId": "1w1cwgilpMxe-KGQCDOc7RjoyaS91hgTI",
+      "name": "Come Healing - Full Score.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "come healing full score"
+    },
+    {
+      "fileId": "1w6SuGzU6pTpzMk-hGdfsq6dDEJSxivoH",
+      "name": "C-Saw Niggun Score.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "c saw niggun score"
+    },
+    {
+      "fileId": "1wHijjyvHroSV_Z_wClVprppEpBYIUAsa",
+      "name": "kolnidre_intro.m4a",
+      "setting": null,
+      "part": null,
+      "partGroup": "kolnidre intro"
+    },
+    {
+      "fileId": "1wKn6KPXBRQpLV6USzU5vP_qd53tT9Aa1",
+      "name": "Barchu (Siegel).pdf",
+      "setting": "Siegel",
+      "part": null,
+      "partGroup": "barchu siegel"
+    },
+    {
+      "fileId": "1wNTlj3sB2Z3Zra7jhYlniuGcHpxnuEWk",
+      "name": "Oseh shalom (camp).pdf",
+      "setting": "camp",
+      "part": null,
+      "partGroup": "oseh shalom camp"
+    },
+    {
+      "fileId": "1wzz1eOblUC0tOTnJZh_JAarpeRdZ0oPq",
+      "name": "Lecha dodi (Nava -led).wav",
+      "setting": "Nava -led",
+      "part": null,
+      "partGroup": "lecha dodi nava led"
+    },
+    {
+      "fileId": "1xGM06NwCC3Nk4ZdiFZz6hYI9yR-fNvEw",
+      "name": "Mi Chamocha (compact).pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "mi chamocha compact"
+    },
+    {
+      "fileId": "1xTYqs7MHxm8Q69jt9nNMqNwmU3QTM7uxEkofZpxIzcE",
+      "name": "Yom Kippur 2025/5786",
+      "setting": null,
+      "part": null,
+      "partGroup": "yom kippur 20255786"
+    },
+    {
+      "fileId": "1xYt6Mp1Ica-2C_VYS2mw_cfhxo3dMkg_",
+      "name": "twilight.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "twilight"
+    },
+    {
+      "fileId": "1yEIuuAPUvE0vAcM__QucJZgdJKpR0Nt2",
+      "name": "Bryn Tunes - Mi Shebarach, Sim Shalom.mp3",
+      "setting": "Mi Shebarach, Sim Shalom",
+      "part": null,
+      "partGroup": "bryn tunes mi shebarach sim shalom"
+    },
+    {
+      "fileId": "1yJjdDZ1ivU0if-T-d_uCYkH1rEIH-xs3",
+      "name": "Mizmor l_David D.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "mizmor l david d"
+    },
+    {
+      "fileId": "1yLSZnOX9RKJKliQpNvJ78yWhzJ51jLNW",
+      "name": "Kedusha Am.pdf",
+      "setting": null,
+      "part": null,
+      "partGroup": "kedusha am"
+    },
+    {
+      "fileId": "1zeTBJoffgVoqJYvjvZ6p3Tmm1JGXeOvR",
+      "name": "Niggunim",
+      "setting": null,
+      "part": null,
+      "partGroup": "niggunim"
+    },
+    {
+      "fileId": "20811bd6-bda9-43ee-ad7a-4ae3b704def2",
+      "name": "Hal'luyah Ivdu Avdei (Grossman)",
+      "setting": "Grossman",
+      "part": null,
+      "partGroup": "hal'luyah ivdu avdei grossman"
+    },
+    {
+      "fileId": "218fc2a9-cbe4-4ff1-a056-68f7f55bbac2",
+      "name": "Mizmor Shir (Unknown).pdf",
+      "setting": "Unknown",
+      "part": null,
+      "partGroup": "mizmor shir unknown"
+    },
+    {
+      "fileId": "2245fe4b-7562-475e-be0d-709cb28bf48c",
+      "name": "HaTikvah (Czech Folk)",
+      "setting": "Czech Folk",
+      "part": null,
+      "partGroup": "hatikvah czech folk"
+    },
+    {
+      "fileId": "235c703e-600e-4cc4-aca5-283ae3b81af9",
+      "name": "Kadish D'rabanan (Friedman)",
+      "setting": "Friedman",
+      "part": null,
+      "partGroup": "kadish d'rabanan friedman"
+    },
+    {
+      "fileId": "23d61fc5-59fa-4cb4-99f1-e24eccb88fce",
+      "name": "Hold Fast To Dreams (Klepper) - Hoshiah Et Amecha (Chassidic Folk)",
+      "setting": "Klepper",
+      "part": null,
+      "partGroup": "hold fast to dreams klepper hoshiah et amecha chassidic folk"
+    },
+    {
+      "fileId": "24308467-f3c9-4fba-b7e8-6795821d3a69",
+      "name": "Y'varech'cha (Klepper-Freelander)",
+      "setting": "Klepper-Freelander",
+      "part": null,
+      "partGroup": "y'varech'cha klepper freelander"
+    },
+    {
+      "fileId": "2485f761-d134-416a-89d8-5bb8d7cc27f1",
+      "name": "Wherever You Go (Milder)",
+      "setting": "Milder",
+      "part": null,
+      "partGroup": "wherever you go milder"
+    },
+    {
+      "fileId": "25a1305b-ff4f-4c59-8aaa-9d646962b513",
+      "name": "Lev B'lev (Schafer)",
+      "setting": "Schafer",
+      "part": null,
+      "partGroup": "lev b'lev schafer"
+    },
+    {
+      "fileId": "25df4be7-0a5d-4a8d-bf7b-64d2d03f67e5",
+      "name": "Shalom Aleichem (Goldfarb — licensed scan)",
+      "setting": null,
+      "part": null,
+      "partGroup": "shalom aleichem goldfarb licensed scan"
+    },
+    {
+      "fileId": "267cc451-17af-42ab-a004-9c4e6ed1f76d",
+      "name": "Tein Lo Mishelo (Zubren) - Tempo (Israeli Jingle)",
+      "setting": "Zubren",
+      "part": null,
+      "partGroup": "tein lo mishelo zubren tempo israeli jingle"
+    },
+    {
+      "fileId": "26864af2-2a80-4f93-a8ec-e81f63f075e0",
+      "name": "Ashreinu / Sh'ma (Sharlin / Helfman)",
+      "setting": "Sharlin / Helfman",
+      "part": null,
+      "partGroup": "ashreinu sh'ma sharlin helfman"
+    },
+    {
+      "fileId": "26b904af-782b-4b6a-bbca-6a53aeb09c33",
+      "name": "Shabbos Yidn Zol Zain (Chassidic).pdf",
+      "setting": "Chassidic",
+      "part": null,
+      "partGroup": "shabbos yidn zol zain chassidic"
+    },
+    {
+      "fileId": "27f2ec75-1a5a-4241-ab4b-e95879f03168",
+      "name": "Shiru Shir (Rogow) - Siman Tov (Chassidic Folk) - Siman Tov (Feingold)",
+      "setting": "Rogow",
+      "part": null,
+      "partGroup": "shiru shir rogow siman tov chassidic folk siman tov feingold"
+    },
+    {
+      "fileId": "288a0399-23b7-478c-bccc-369db1a30cd6",
+      "name": "Mayim (Amiran)",
+      "setting": "Amiran",
+      "part": null,
+      "partGroup": "mayim amiran"
+    },
+    {
+      "fileId": "289a11d0-fbb3-4a21-8c98-50473b6e1001",
+      "name": "Hodu Ladonai (Folk) - Hodu Ladonai (Dropkin).pdf",
+      "setting": "Folk",
+      "part": null,
+      "partGroup": "hodu ladonai folk hodu ladonai dropkin"
+    },
+    {
+      "fileId": "28c99c48-dbac-479f-9bae-80342fdb3253",
+      "name": "Ashrei (Aly Halpert).pdf",
+      "setting": "Aly Halpert",
+      "part": null,
+      "partGroup": "ashrei aly halpert"
+    },
+    {
+      "fileId": "28f1ea16-4dab-4198-8d0b-dc1c7ef66624",
+      "name": "HaFinjan (Wilensky)",
+      "setting": "Wilensky",
+      "part": null,
+      "partGroup": "hafinjan wilensky"
+    },
+    {
+      "fileId": "2aede3b4-205a-4bbb-a996-76c46cd83de2",
+      "name": "Aleinu (Sulzer) - Shehu Noteh Shamayim (Traditional) - Bayom Hahu (Traditional).pdf",
+      "setting": "Sulzer",
+      "part": null,
+      "partGroup": "aleinu sulzer shehu noteh shamayim traditional bayom hahu traditional"
+    },
+    {
+      "fileId": "2aefdc50-ad45-494e-a2d6-f3351995b24a",
+      "name": "Yeish Kochavim (Klepper-Freelander)",
+      "setting": "Klepper-Freelander",
+      "part": null,
+      "partGroup": "yeish kochavim klepper freelander"
+    },
+    {
+      "fileId": "2c594bea-32c0-4794-b625-060848ad576c",
+      "name": "Eileh Chamdah Libi (Abbie Strauss And Joe Buchanan).pdf",
+      "setting": "Abbie Strauss And Joe Buchanan",
+      "part": null,
+      "partGroup": "eileh chamdah libi abbie strauss and joe buchanan"
+    },
+    {
+      "fileId": "2c5a74a5-bd72-4a3f-aa62-c8ab25b33d75",
+      "name": "Torah Blessings (Davidson)",
+      "setting": "Davidson",
+      "part": null,
+      "partGroup": "torah blessings davidson"
+    },
+    {
+      "fileId": "2d7ede35-04fd-4337-8eb7-db69444304ce",
+      "name": "Hinei Tov M'od (Lustig)",
+      "setting": "Lustig",
+      "part": null,
+      "partGroup": "hinei tov m'od lustig"
+    },
+    {
+      "fileId": "2dc43bcb-7c37-44fb-ac29-5ed7d20e87a9",
+      "name": "Pitchu Li (Carlebach)",
+      "setting": "Carlebach",
+      "part": null,
+      "partGroup": "pitchu li carlebach"
+    },
+    {
+      "fileId": "2fc76c49-023f-4eaf-a063-d5f69e22ab72",
+      "name": "Modeh Ani (Klepper & Freelander)",
+      "setting": "Klepper & Freelander",
+      "part": null,
+      "partGroup": "modeh ani klepper freelander"
+    },
+    {
+      "fileId": "30982932-7c78-432b-9350-68a0c2fe35de",
+      "name": "Sh'ma Koleinu (Friedman)",
+      "setting": "Friedman",
+      "part": null,
+      "partGroup": "sh'ma koleinu friedman"
+    },
+    {
+      "fileId": "30e3d10d-aede-4d56-86a2-a9f183ba5b2a",
+      "name": "Modeh Ani (Jacob Spike Kraus).pdf",
+      "setting": "Jacob Spike Kraus",
+      "part": null,
+      "partGroup": "modeh ani jacob spike kraus"
+    },
+    {
+      "fileId": "31248276-14b6-4bc0-914a-0c129d023586",
+      "name": "Tzadik Katamar (Maslo) - Tzadik Katamar (Lewandowski).pdf",
+      "setting": "Maslo",
+      "part": null,
+      "partGroup": "tzadik katamar maslo tzadik katamar lewandowski"
+    },
+    {
+      "fileId": "31e5ec53-8330-457f-aef3-33e10e35ec05",
+      "name": "Ashreinu (Silver)",
+      "setting": "Silver",
+      "part": null,
+      "partGroup": "ashreinu silver"
+    },
+    {
+      "fileId": "31e88e83-c880-43e5-9b12-37a7a119aeb0",
+      "name": "Bim Bam-Shabbat Shalom (Frankel).pdf",
+      "setting": "Frankel",
+      "part": null,
+      "partGroup": "bim bam shabbat shalom frankel"
+    },
+    {
+      "fileId": "323ccd88-d31e-40f1-afbd-bd4601136e27",
+      "name": "B'tzelem Elohim (Nichols, Moskowitz)",
+      "setting": "Nichols, Moskowitz",
+      "part": null,
+      "partGroup": "b'tzelem elohim nichols moskowitz"
+    },
+    {
+      "fileId": "3371ff94-1774-4c2b-a25b-f1537a419e13",
+      "name": "Ani V'Atah (Gavrielov)",
+      "setting": "Gavrielov",
+      "part": null,
+      "partGroup": "ani v'atah gavrielov"
+    },
+    {
+      "fileId": "33d9e425-2ed1-4054-988f-2935119d90e8",
+      "name": "This Is Very Good (Klepper) - Todah (Kviomandizis) - Torat Chayim (Carr Reuben).pdf",
+      "setting": "Klepper",
+      "part": null,
+      "partGroup": "this is very good klepper todah kviomandizis torat chayim carr reuben"
+    },
+    {
+      "fileId": "34a3c3fc-d5ce-4b80-8d4f-77014f5412da",
+      "name": "Et Hamanginah (Rosenblum) - Fixin' the World (Schachet-Briskin)",
+      "setting": "Rosenblum",
+      "part": null,
+      "partGroup": "et hamanginah rosenblum fixin' the world schachet briskin"
+    },
+    {
+      "fileId": "35eeeadb-af0d-4b49-b966-aa63655a4435",
+      "name": "Make Those Waters Part (Mishkin) - Makom Shelibi Oheiv (Sher).pdf",
+      "setting": "Mishkin",
+      "part": null,
+      "partGroup": "make those waters part mishkin makom shelibi oheiv sher"
+    },
+    {
+      "fileId": "36928f78-7327-4d7f-ba5a-4291ccc74084",
+      "name": "Tov L'Hodot (Klepper-Freelander) - Tumbalalaikah (Yiddish Folk)",
+      "setting": "Klepper-Freelander",
+      "part": null,
+      "partGroup": "tov l'hodot klepper freelander tumbalalaikah yiddish folk"
+    },
+    {
+      "fileId": "36b65d8a-065f-4711-a8aa-304886451aab",
+      "name": "Al Sh'loshah D'varim (Tzur)",
+      "setting": "Tzur",
+      "part": null,
+      "partGroup": "al sh'loshah d'varim tzur"
+    },
+    {
+      "fileId": "37b74f7a-31b1-4ed7-99df-2421c8a81e92",
+      "name": "Oseh Shalom (Pinto)",
+      "setting": "Pinto",
+      "part": null,
+      "partGroup": "oseh shalom pinto"
+    },
+    {
+      "fileId": "395c9ef8-3cf3-4c3d-8785-3deb852da074",
+      "name": "Light These Lights (O Hear My Prayer) (Friedman).pdf",
+      "setting": "O Hear My Prayer",
+      "part": null,
+      "partGroup": "light these lights o hear my prayer friedman"
+    },
+    {
+      "fileId": "39a123f9-f6df-434f-85f7-8a5f2b607ead",
+      "name": "Livrachah (Schiller)",
+      "setting": "Schiller",
+      "part": null,
+      "partGroup": "livrachah schiller"
+    },
+    {
+      "fileId": "3a65f5c6-e18f-4f45-acde-eaf125b310eb",
+      "name": "L'Chu N'Ran'Nah (Sirotkin).pdf",
+      "setting": "Sirotkin",
+      "part": null,
+      "partGroup": "l'chu n'ran'nah sirotkin"
+    },
+    {
+      "fileId": "3b90c6ba-e8f2-4fa2-ac26-ad4fa316c9c3",
+      "name": "Let The Heavens Be Glad (Weinberg) - Let The Rivers (Schachet-Briskin).pdf",
+      "setting": "Weinberg",
+      "part": null,
+      "partGroup": "let the heavens be glad weinberg let the rivers schachet briskin"
+    },
+    {
+      "fileId": "3bd7af7a-2a4b-42a2-80c5-9d1b4073db4a",
+      "name": "Al Tira (Pik)",
+      "setting": "Pik",
+      "part": null,
+      "partGroup": "al tira pik"
+    },
+    {
+      "fileId": "3bf73686-08ba-4b28-bf78-0520963a215b",
+      "name": "Zamar Nodeid (Shemer) - Zum Gali Gali (Folk)",
+      "setting": "Shemer",
+      "part": null,
+      "partGroup": "zamar nodeid shemer zum gali gali folk"
+    },
+    {
+      "fileId": "3c965b50-cd20-4a05-88d8-ccec39b59f41",
+      "name": "Mi Shebeirach (Levine).pdf",
+      "setting": "Levine",
+      "part": null,
+      "partGroup": "mi shebeirach levine"
+    },
+    {
+      "fileId": "3cb6a75d-a704-4bfb-b3c4-93ab5f7613f0",
+      "name": "Yotzeir (Shankman-Lippe).pdf",
+      "setting": "Shankman-Lippe",
+      "part": null,
+      "partGroup": "yotzeir shankman lippe"
+    },
+    {
+      "fileId": "3dc9f49f-b773-46aa-a5d5-ede22f7b8fc2",
+      "name": "Creator of All Things (Taubman)",
+      "setting": "Taubman",
+      "part": null,
+      "partGroup": "creator of all things taubman"
+    },
+    {
+      "fileId": "3df0360d-9078-45e0-ab96-73804fa7276b",
+      "name": "Hinei Mah Tov (Folk) - Hinei Mah Tov (Dropkin) - Hinei Mah Tov (Jacobson-Drozi).pdf",
+      "setting": "Folk",
+      "part": null,
+      "partGroup": "hinei mah tov folk hinei mah tov dropkin hinei mah tov jacobson drozi"
+    },
+    {
+      "fileId": "3df80222-8fe3-4f83-a641-8eb27839608a",
+      "name": "Oseh Shalom (Friedman)",
+      "setting": "Friedman",
+      "part": null,
+      "partGroup": "oseh shalom friedman"
+    },
+    {
+      "fileId": "3e967bd3-cf6a-455d-a6c0-f80fc68b0831",
+      "name": "V'Ahavta (Isaacson).pdf",
+      "setting": "Isaacson",
+      "part": null,
+      "partGroup": "v'ahavta isaacson"
+    },
+    {
+      "fileId": "405c6a9b-0870-4e4f-a335-d8d34dce7c20",
+      "name": "Yom Zeh L'Yisraeil (Cohen)",
+      "setting": "Cohen",
+      "part": null,
+      "partGroup": "yom zeh l'yisraeil cohen"
+    },
+    {
+      "fileId": "4069c33b-2011-4768-83c6-ccc2ece60f13",
+      "name": "Eitz Chayim (Friedman).pdf",
+      "setting": "Friedman",
+      "part": null,
+      "partGroup": "eitz chayim friedman"
+    },
+    {
+      "fileId": "407d23e5-5cd6-4d02-9618-7acefb33df7a",
+      "name": "Ani Ma-amin (Friedman)",
+      "setting": "Friedman",
+      "part": null,
+      "partGroup": "ani ma amin friedman"
+    },
+    {
+      "fileId": "41379850-2021-48c5-8acd-e867e4dfa119",
+      "name": "Modeh Ani (Folk) - Mah Tovu (Folk)",
+      "setting": "Folk",
+      "part": null,
+      "partGroup": "modeh ani folk mah tovu folk"
+    },
+    {
+      "fileId": "41749406-91a4-410d-bf45-1a1a39f84aed",
+      "name": "Oseh Shalom (Dropkin)",
+      "setting": "Dropkin",
+      "part": null,
+      "partGroup": "oseh shalom dropkin"
+    },
+    {
+      "fileId": "42003f22-0d5d-49f0-a45e-87e5ade38d6b",
+      "name": "LaM'natzei-ach (Seltzer)",
+      "setting": "Seltzer",
+      "part": null,
+      "partGroup": "lam'natzei ach seltzer"
+    },
+    {
+      "fileId": "422d3103-d7b3-437e-ba7e-f864c6e570fa",
+      "name": "Psalm 150 (Yemenite Melody)",
+      "setting": "Yemenite Melody",
+      "part": null,
+      "partGroup": "psalm 150 yemenite melody"
+    },
+    {
+      "fileId": "42a1cd5d-93ef-4a02-8a8d-7a669ff9c921",
+      "name": "N'ran'nah (Chassidic Folk) - Ochel (Unknown)",
+      "setting": "Chassidic Folk",
+      "part": null,
+      "partGroup": "n'ran'nah chassidic folk ochel unknown"
+    },
+    {
+      "fileId": "43a4fc6c-4d27-45bd-988f-492db59f73d1",
+      "name": "Chiri Biri Bam (Yiddish).pdf",
+      "setting": "Yiddish",
+      "part": null,
+      "partGroup": "chiri biri bam yiddish"
+    },
+    {
+      "fileId": "44c38248-6925-4921-b833-eeae0854e63a",
+      "name": "L'Chah Dodi (Isaacson).pdf",
+      "setting": "Isaacson",
+      "part": null,
+      "partGroup": "l'chah dodi isaacson"
+    },
+    {
+      "fileId": "44e0d496-88a6-46c3-bd09-fec655d3edc4",
+      "name": "Y'varech'cha (Weinkranz)",
+      "setting": "Weinkranz",
+      "part": null,
+      "partGroup": "y'varech'cha weinkranz"
+    },
+    {
+      "fileId": "452cc138-503f-4f0a-8b27-7ebd8d5741d1",
+      "name": "Alef Bet Song (Friedman)",
+      "setting": "Friedman",
+      "part": null,
+      "partGroup": "alef bet song friedman"
+    },
+    {
+      "fileId": "45a57edb-cc78-4fb0-97e9-a9ab372d7943",
+      "name": "Waking Up Nigun (Ariel Root Wolpe).pdf",
+      "setting": "Ariel Root Wolpe",
+      "part": null,
+      "partGroup": "waking up nigun ariel root wolpe"
+    },
+    {
+      "fileId": "45d7d670-f2c5-4437-a7d7-b40fe5ebe416",
+      "name": "Lo Yisa Goi (Altman) - L'Shanah Haba-Ah (Folk)",
+      "setting": "Altman",
+      "part": null,
+      "partGroup": "lo yisa goi altman l'shanah haba ah folk"
+    },
+    {
+      "fileId": "46dbc366-04ba-406a-aadc-55e500597250",
+      "name": "Shalom Chaveirim (Folk / Feingold-Abrams)",
+      "setting": "Folk / Feingold-Abrams",
+      "part": null,
+      "partGroup": "shalom chaveirim folk feingold abrams"
+    },
+    {
+      "fileId": "46e66e0d-4f0d-47e7-baaa-125891f997b4",
+      "name": "K'dushah (Shur)",
+      "setting": "Shur",
+      "part": null,
+      "partGroup": "k'dushah shur"
+    },
+    {
+      "fileId": "471113d7-9755-4599-b32f-ea66548ea36d",
+      "name": "Torah Service (Sulzer, Ephros)",
+      "setting": "Sulzer, Ephros",
+      "part": null,
+      "partGroup": "torah service sulzer ephros"
+    },
+    {
+      "fileId": "4724db72-8e1e-4405-90ff-8be1955af822",
+      "name": "Ani Ma-amin (Fastag)",
+      "setting": "Fastag",
+      "part": null,
+      "partGroup": "ani ma amin fastag"
+    },
+    {
+      "fileId": "4a00f597-70ef-4267-a363-10b081eabc66",
+      "name": "Ashrei (Klepper/Freelander)",
+      "setting": "Klepper/Freelander",
+      "part": null,
+      "partGroup": "ashrei klepperfreelander"
+    },
+    {
+      "fileId": "4a2fcc5e-3684-486c-af94-6f48bea4188c",
+      "name": "Lu Y'hi (Shemer) - Mah Dodeich (Unknown)",
+      "setting": "Shemer",
+      "part": null,
+      "partGroup": "lu y'hi shemer mah dodeich unknown"
+    },
+    {
+      "fileId": "4a5faa48-43d0-435c-a9b0-8d069cb88e11",
+      "name": "Yism'chu (Klepper) - Yism'chu (Folk)",
+      "setting": "Klepper",
+      "part": null,
+      "partGroup": "yism'chu klepper yism'chu folk"
+    },
+    {
+      "fileId": "4ecc47bd-97a8-4aa6-988c-f490695b0d98",
+      "name": "Shir Hama-Alot (Traditional).pdf",
+      "setting": "Traditional",
+      "part": null,
+      "partGroup": "shir hama alot traditional"
+    },
+    {
+      "fileId": "4f5d5c70-4dc2-4071-9960-174bda73f761",
+      "name": "Modim (Weiner-Cohen) - Modim (Friedman)",
+      "setting": "Weiner-Cohen",
+      "part": null,
+      "partGroup": "modim weiner cohen modim friedman"
+    },
+    {
+      "fileId": "509d8360-46da-43da-9ba3-75fdf2032838",
+      "name": "Yah Ribon (Traditional).pdf",
+      "setting": "Traditional",
+      "part": null,
+      "partGroup": "yah ribon traditional"
+    },
+    {
+      "fileId": "52b4fed1-de13-49f7-9dc6-732a6899f127",
+      "name": "Bar'chu (Jacobson-Libava) - Bar'chu (Siegel)",
+      "setting": "Jacobson-Libava",
+      "part": null,
+      "partGroup": "bar'chu jacobson libava bar'chu siegel"
+    },
+    {
+      "fileId": "5366aef1-5349-44c3-9dc1-7462e69fe4db",
+      "name": "Ani Oheiv Otach (Jungreis)",
+      "setting": "Jungreis",
+      "part": null,
+      "partGroup": "ani oheiv otach jungreis"
+    },
+    {
+      "fileId": "56c4c7ba-b264-427e-8c32-16d7c29bba50",
+      "name": "Hashiveinu (Dropkin).pdf",
+      "setting": "Dropkin",
+      "part": null,
+      "partGroup": "hashiveinu dropkin"
+    },
+    {
+      "fileId": "58587ef0-0747-4abe-9c00-4b77a543d851",
+      "name": "Haftarah Blessings (Cantillation).pdf",
+      "setting": "Cantillation",
+      "part": null,
+      "partGroup": "haftarah blessings cantillation"
+    },
+    {
+      "fileId": "5aa91e83-02ef-44c6-bc28-833be56d0bed",
+      "name": "Hinei Rakevet (Folk)",
+      "setting": "Folk",
+      "part": null,
+      "partGroup": "hinei rakevet folk"
+    },
+    {
+      "fileId": "5b5a4ec7-36f0-451c-adfe-1b6186ddd2a1",
+      "name": "B'yado (Taubman)",
+      "setting": "Taubman",
+      "part": null,
+      "partGroup": "b'yado taubman"
+    },
+    {
+      "fileId": "5e893824-0d8c-47e7-82fe-51240d027c00",
+      "name": "Candle Blessing (For Shabbat) (Binder).pdf",
+      "setting": "For Shabbat",
+      "part": null,
+      "partGroup": "candle blessing for shabbat binder"
+    },
+    {
+      "fileId": "5ed550bc-b6d3-498a-8c9c-6fc42212d9d6",
+      "name": "Lo Alecha (Klepper & Freelander)",
+      "setting": "Klepper & Freelander",
+      "part": null,
+      "partGroup": "lo alecha klepper freelander"
+    },
+    {
+      "fileId": "5fa69e00-2115-4915-9aa3-f68ad3c42466",
+      "name": "The Last Butterfly (Glatzer Shenson)",
+      "setting": "Glatzer Shenson",
+      "part": null,
+      "partGroup": "the last butterfly glatzer shenson"
+    },
+    {
+      "fileId": "61aeb253-df01-471a-a9fa-2eb885c4ef35",
+      "name": "Modim (Zach Singer).pdf",
+      "setting": "Zach Singer",
+      "part": null,
+      "partGroup": "modim zach singer"
+    },
+    {
+      "fileId": "61f0c403-0d98-45a9-ad90-c813329a0d6d",
+      "name": "Havah Nagilah (Chassidic folk song)",
+      "setting": "Chassidic folk song",
+      "part": null,
+      "partGroup": "havah nagilah chassidic folk song"
+    },
+    {
+      "fileId": "6259b551-24b8-441b-ad62-6f4cc45a011a",
+      "name": "Hashiveinu (Folk).pdf",
+      "setting": "Folk",
+      "part": null,
+      "partGroup": "hashiveinu folk"
+    },
+    {
+      "fileId": "64816b31-79d9-44a1-b582-f8bba765eeb2",
+      "name": "L'Chah Dodi (Zeira) - L'Chah Dodi (Rotenberg).pdf",
+      "setting": "Zeira",
+      "part": null,
+      "partGroup": "l'chah dodi zeira l'chah dodi rotenberg"
+    },
+    {
+      "fileId": "662dd31d-b975-42c0-877d-57084950fffb",
+      "name": "Olim (Falashas No More) (Mishkin)",
+      "setting": "Falashas No More",
+      "part": null,
+      "partGroup": "olim falashas no more mishkin"
+    },
+    {
+      "fileId": "663aa70e-d676-4fbe-b370-afef86119c44",
+      "name": "Ahavat Olam (Friedman).pdf",
+      "setting": "Friedman",
+      "part": null,
+      "partGroup": "ahavat olam friedman"
+    },
+    {
+      "fileId": "66bd1185-8e9e-46ef-9ea2-7a5646504503",
+      "name": "V'yashvu Ish (Klepper-Freelander)",
+      "setting": "Klepper-Freelander",
+      "part": null,
+      "partGroup": "v'yashvu ish klepper freelander"
+    },
+    {
+      "fileId": "672e94b4-9da7-40f7-8ec1-ae56bd67cce7",
+      "name": "Open Up Our Eyes (Klepper).pdf",
+      "setting": "Klepper",
+      "part": null,
+      "partGroup": "open up our eyes klepper"
+    },
+    {
+      "fileId": "6738e47c-e710-4f65-9655-d93d2ee8332e",
+      "name": "Mi Shebeirach (Friedman).pdf",
+      "setting": "Friedman",
+      "part": null,
+      "partGroup": "mi shebeirach friedman"
+    },
+    {
+      "fileId": "6bddf129-6f1c-4fa4-bf54-3cf431a53219",
+      "name": "If All Of The World (Sheldon Low).pdf",
+      "setting": "Sheldon Low",
+      "part": null,
+      "partGroup": "if all of the world sheldon low"
+    },
+    {
+      "fileId": "6ca6e82c-e3be-4e6b-b6c1-63f60b3ac5cc",
+      "name": "Eili Eili (Zahavi) - Eit Dodim (Oriental Folk) - Elijah Rock (Spiritual)",
+      "setting": "Zahavi",
+      "part": null,
+      "partGroup": "eili eili zahavi eit dodim oriental folk elijah rock spiritual"
+    },
+    {
+      "fileId": "6ce470ac-cf9a-44f4-9602-158d5508a45d",
+      "name": "Lach Y'rushalayim (Rubinstein)",
+      "setting": "Rubinstein",
+      "part": null,
+      "partGroup": "lach y'rushalayim rubinstein"
+    },
+    {
+      "fileId": "6d704852-b119-4611-b2a9-b05bbd92aa8d",
+      "name": "V'shinantam (Taubman)",
+      "setting": "Taubman",
+      "part": null,
+      "partGroup": "v'shinantam taubman"
+    },
+    {
+      "fileId": "6d8343b3-9a3d-4550-a529-bac4ca04ab00",
+      "name": "V'Zot Hatorah (Idelsohn) - Hodo Al Eretz (Sulzer).pdf",
+      "setting": "Idelsohn",
+      "part": null,
+      "partGroup": "v'zot hatorah idelsohn hodo al eretz sulzer"
+    },
+    {
+      "fileId": "6eb445b8-66f0-4958-a1b0-e6f4fadc449f",
+      "name": "S'u Sh'arim (Friedman)",
+      "setting": "Friedman",
+      "part": null,
+      "partGroup": "s'u sh'arim friedman"
+    },
+    {
+      "fileId": "6ec8bf57-a358-4ae2-a251-e8200d9351bb",
+      "name": "Amar Rabi Y'hudah (Nof)",
+      "setting": "Nof",
+      "part": null,
+      "partGroup": "amar rabi y'hudah nof"
+    },
+    {
+      "fileId": "708b8023-7689-4a58-ab8d-428e2bcafaa7",
+      "name": "Chazak Chazak (Silver) - Chelki Adonai (Elsberg)",
+      "setting": "Silver",
+      "part": null,
+      "partGroup": "chazak chazak silver chelki adonai elsberg"
+    },
+    {
+      "fileId": "70a83fa1-d1a8-45ac-bb03-601bb5103b60",
+      "name": "Sh'Ma-V'Ahavta (Friedman).pdf",
+      "setting": "Friedman",
+      "part": null,
+      "partGroup": "sh'ma v'ahavta friedman"
+    },
+    {
+      "fileId": "70efd098-6c4d-44ac-8884-8115af528ab9",
+      "name": "Sim Shalom (Dropkin)",
+      "setting": "Dropkin",
+      "part": null,
+      "partGroup": "sim shalom dropkin"
+    },
+    {
+      "fileId": "72a7aa6a-7b08-4c78-862c-197bbffb9515",
+      "name": "Adon Olam (Folk).pdf",
+      "setting": "Folk",
+      "part": null,
+      "partGroup": "adon olam folk"
+    },
+    {
+      "fileId": "75dc9298-772b-4092-a3de-b7e54f1c6403",
+      "name": "Mah Gadlu (Gold) - Mah Navu (Spivak)",
+      "setting": "Gold",
+      "part": null,
+      "partGroup": "mah gadlu gold mah navu spivak"
+    },
+    {
+      "fileId": "76dda851-02b7-434f-a36b-f5b99c5fb1bd",
+      "name": "L'Chu N'Ran'Nah (Alan Goodis).pdf",
+      "setting": "Alan Goodis",
+      "part": null,
+      "partGroup": "l'chu n'ran'nah alan goodis"
+    },
+    {
+      "fileId": "77c2bf09-7a4b-4f38-9bf2-c7b3b120506e",
+      "name": "Birkat HaLevana (Friedman) - Bless This House (Sher) - B'makom (Axler)",
+      "setting": "Friedman",
+      "part": null,
+      "partGroup": "birkat halevana friedman bless this house sher b'makom axler"
+    },
+    {
+      "fileId": "77f77a9e-31b1-46ae-85b8-a6864953fc83",
+      "name": "Bar'chu (Nelson)",
+      "setting": "Nelson",
+      "part": null,
+      "partGroup": "bar'chu nelson"
+    },
+    {
+      "fileId": "78ae5689-071f-4502-aa0f-e16e6fb7b480",
+      "name": "Hal'luyah - Psalm 150 (Friedman)",
+      "setting": "Friedman",
+      "part": null,
+      "partGroup": "hal'luyah psalm 150 friedman"
+    },
+    {
+      "fileId": "7ac2da98-6353-4fd2-ae8a-ad28eb2f243c",
+      "name": "Az Der Rebbe Est (Chassidic Folk Song) - BaShanah HaBa-ah (Hirsch)",
+      "setting": "Chassidic Folk Song",
+      "part": null,
+      "partGroup": "az der rebbe est chassidic folk song bashanah haba ah hirsch"
+    },
+    {
+      "fileId": "7bc7a556-04f4-42a3-a766-d300270d71cd",
+      "name": "Birchot Havdalah (Friedman) - Hamavdil Bein Kodesh-Shavu-A Tov.pdf",
+      "setting": "Friedman",
+      "part": null,
+      "partGroup": "birchot havdalah friedman hamavdil bein kodesh shavu a tov"
+    },
+    {
+      "fileId": "7c15883f-41bd-4a32-875e-dbca4ec4188f",
+      "name": "Hamotzi (Adler).pdf",
+      "setting": "Adler",
+      "part": null,
+      "partGroup": "hamotzi adler"
+    },
+    {
+      "fileId": "7d15b7ee-692e-42c9-99bb-8e543eb0014d",
+      "name": "Ein Keiloheinu (Dropkin)",
+      "setting": "Dropkin",
+      "part": null,
+      "partGroup": "ein keiloheinu dropkin"
+    },
+    {
+      "fileId": "7e9a37aa-4427-428f-8801-b2a5405bd3be",
+      "name": "Elohai (Friedman) - Elohai (Gold) - Baruch She-Amar (Comess-Daniels).pdf",
+      "setting": "Friedman",
+      "part": null,
+      "partGroup": "elohai friedman elohai gold baruch she amar comess daniels"
+    },
+    {
+      "fileId": "7eda392b-2472-418b-a0e8-918e48776945",
+      "name": "V'ha-eir Eineinu (Sharlin)",
+      "setting": "Sharlin",
+      "part": null,
+      "partGroup": "v'ha eir eineinu sharlin"
+    },
+    {
+      "fileId": "7f6b5f88-d7f5-426d-8feb-822691025fd9",
+      "name": "Mi Chamochah (Shenson) - Mi Chamochah (Friedman).pdf",
+      "setting": "Shenson",
+      "part": null,
+      "partGroup": "mi chamochah shenson mi chamochah friedman"
+    },
+    {
+      "fileId": "7fac9e4d-21ee-4830-91e6-1e05f3cf93c0",
+      "name": "Nolad'ti LaShalom (Hitman) - Not By Might, Not By Power (Friedman)",
+      "setting": "Hitman",
+      "part": null,
+      "partGroup": "nolad'ti lashalom hitman not by might not by power friedman"
+    },
+    {
+      "fileId": "81b0bc66-c339-4e0e-a1ab-880920ede4e3",
+      "name": "Shir Hama-Alot (Friedman).pdf",
+      "setting": "Friedman",
+      "part": null,
+      "partGroup": "shir hama alot friedman"
+    },
+    {
+      "fileId": "82d38077-d6d9-4755-b797-3654de352da3",
+      "name": "Shir Chadash (Silver)",
+      "setting": "Silver",
+      "part": null,
+      "partGroup": "shir chadash silver"
+    },
+    {
+      "fileId": "8311b9ad-cce4-4d96-aa4d-ec615a7f7401",
+      "name": "Abanibi (Hirsch) - Achshav (Folk).pdf",
+      "setting": "Hirsch",
+      "part": null,
+      "partGroup": "abanibi hirsch achshav folk"
+    },
+    {
+      "fileId": "837e0ce9-4525-4258-b0e1-0cf483189f81",
+      "name": "La-Asok B'Divrei Torah (Klepper) - Eilu D'Varim (Klepper-Freelander).pdf",
+      "setting": "Klepper",
+      "part": null,
+      "partGroup": "la asok b'divrei torah klepper eilu d'varim klepper freelander"
+    },
+    {
+      "fileId": "83d15dde-b4c6-4fc0-bf66-047d6d2f7142",
+      "name": "Shir Chadash (Taubman)",
+      "setting": "Taubman",
+      "part": null,
+      "partGroup": "shir chadash taubman"
+    },
+    {
+      "fileId": "8454f8fa-0904-43b9-a73c-06f41910bc1f",
+      "name": "Vihi Noam (Schachet-Briskin & Rosen) - Vihudah L'Olam Teisheiv (Jacobson)",
+      "setting": "Schachet-Briskin & Rosen",
+      "part": null,
+      "partGroup": "vihi noam schachet briskin rosen vihudah l'olam teisheiv jacobson"
+    },
+    {
+      "fileId": "87bddcb0-5d4a-47f7-a7f2-20a99a17b5fc",
+      "name": "Birkat Hamazon (The Blessing After Meals) (Traditional).pdf",
+      "setting": "The Blessing After Meals",
+      "part": null,
+      "partGroup": "birkat hamazon the blessing after meals traditional"
+    },
+    {
+      "fileId": "88088b30-ef2e-41ad-bcd0-5d460377bd63",
+      "name": "Ushmor (Klepper-Freelander) - Ufros Aleinu (Folk).pdf",
+      "setting": "Klepper-Freelander",
+      "part": null,
+      "partGroup": "ushmor klepper freelander ufros aleinu folk"
+    },
+    {
+      "fileId": "88726e5b-6464-4b0b-948a-f444bcdd005f",
+      "name": "Shir LaShalom (Rosenblum) - Shiru Ladonai (Holander)",
+      "setting": "Rosenblum",
+      "part": null,
+      "partGroup": "shir lashalom rosenblum shiru ladonai holander"
+    },
+    {
+      "fileId": "89501d6f-d130-4a4a-8c41-2e274b06775c",
+      "name": "I Have A Voice (Elana Arian).pdf",
+      "setting": "Elana Arian",
+      "part": null,
+      "partGroup": "i have a voice elana arian"
+    },
+    {
+      "fileId": "8a2e0e9c-e453-49e2-a1a9-8e39dd126a4c",
+      "name": "Bedtime Sh'ma (Franzel-Tzur)",
+      "setting": "Franzel-Tzur",
+      "part": null,
+      "partGroup": "bedtime sh'ma franzel tzur"
+    },
+    {
+      "fileId": "8adc4ca1-a52f-4e4b-8909-d3d600a49993",
+      "name": "Laugh At All My Dreams (Friedman) - L'chi Lach (Friedman)",
+      "setting": "Friedman",
+      "part": null,
+      "partGroup": "laugh at all my dreams friedman l'chi lach friedman"
+    },
+    {
+      "fileId": "8b574308-24ce-4720-916e-98393d1042c9",
+      "name": "Yo-Yah (Sanderson)",
+      "setting": "Sanderson",
+      "part": null,
+      "partGroup": "yo yah sanderson"
+    },
+    {
+      "fileId": "8b7d7ef0-66a1-4058-bcab-de63cb10105f",
+      "name": "Elohai N'Tzor (Dan Nichols).pdf",
+      "setting": "Dan Nichols",
+      "part": null,
+      "partGroup": "elohai n'tzor dan nichols"
+    },
+    {
+      "fileId": "8b86ad63-38cc-4412-ad6d-7f194d3cd1e4",
+      "name": "G'Vurot (Traditional).pdf",
+      "setting": "Traditional",
+      "part": null,
+      "partGroup": "g'vurot traditional"
+    },
+    {
+      "fileId": "8e175a22-f23d-4fd2-9d45-8e5c1b797f6c",
+      "name": "Bayom Hahu (Gordon).pdf",
+      "setting": "Gordon",
+      "part": null,
+      "partGroup": "bayom hahu gordon"
+    },
+    {
+      "fileId": "8fd11bd4-9d8c-4602-8fbd-7f4451e14c9d",
+      "name": "Haporeis Sukat Shalom (Klepper)",
+      "setting": "Klepper",
+      "part": null,
+      "partGroup": "haporeis sukat shalom klepper"
+    },
+    {
+      "fileId": "9294a143-e27e-4638-afc2-4d3851912420",
+      "name": "Im Tirtzu (Friedman) - Iti Milvanon (Chen).pdf",
+      "setting": "Friedman",
+      "part": null,
+      "partGroup": "im tirtzu friedman iti milvanon chen"
+    },
+    {
+      "fileId": "938fee53-1e52-4f4a-8846-75090fd132ba",
+      "name": "Tree Of Life (Silverman) - Eitz Chayim Hi (Traditional).pdf",
+      "setting": "Silverman",
+      "part": null,
+      "partGroup": "tree of life silverman eitz chayim hi traditional"
+    },
+    {
+      "fileId": "979106ff-0de4-4c2f-bb30-bec95c154c72",
+      "name": "The Prophet You (Silver)",
+      "setting": "Silver",
+      "part": null,
+      "partGroup": "the prophet you silver"
+    },
+    {
+      "fileId": "98f55ba9-5d00-41b4-ba6a-e1edf7a42a24",
+      "name": "Yad B'yad (Taubman) - Y'did Nefesh (Zweig)",
+      "setting": "Taubman",
+      "part": null,
+      "partGroup": "yad b'yad taubman y'did nefesh zweig"
+    },
+    {
+      "fileId": "991ccdfe-940a-4c5b-a1bb-68fc42432682",
+      "name": "Mi Chamochah (Freed).pdf",
+      "setting": "Freed",
+      "part": null,
+      "partGroup": "mi chamochah freed"
+    },
+    {
+      "fileId": "99876430-8fc9-43f6-b41b-ada31937c260",
+      "name": "Milibeinu (Lustig) - Mipi Eil - Ein Adir (Sephardic) - Miriam's Song (Friedman)",
+      "setting": "Lustig",
+      "part": null,
+      "partGroup": "milibeinu lustig mipi eil ein adir sephardic miriam's song friedman"
+    },
+    {
+      "fileId": "9a1ac289-1717-4eb7-8cf4-59c5ced1b82f",
+      "name": "Lo Yisa Goi (Emily Groff).pdf",
+      "setting": "Emily Groff",
+      "part": null,
+      "partGroup": "lo yisa goi emily groff"
+    },
+    {
+      "fileId": "9b6a0ab0-9cdf-4862-94c8-5b63b6b77e6b",
+      "name": "L'Chah Dodi (Israeli).pdf",
+      "setting": "Israeli",
+      "part": null,
+      "partGroup": "l'chah dodi israeli"
+    },
+    {
+      "fileId": "9bc6a05a-cb52-45ac-b91e-7bd3c68aef9f",
+      "name": "Mi Chamochah (Friedman).pdf",
+      "setting": "Friedman",
+      "part": null,
+      "partGroup": "mi chamochah friedman"
+    },
+    {
+      "fileId": "9c45f962-5894-44cd-852e-6b84e871067e",
+      "name": "Gesher Tzar M'od (Chait)",
+      "setting": "Chait",
+      "part": null,
+      "partGroup": "gesher tzar m'od chait"
+    },
+    {
+      "fileId": "9e9c3ff0-404b-44d1-ae7f-0bc924ae0fd8",
+      "name": "Mah Tovu (Maseng) - Mah Tovu (Chassidic)",
+      "setting": "Maseng",
+      "part": null,
+      "partGroup": "mah tovu maseng mah tovu chassidic"
+    },
+    {
+      "fileId": "a220002e-3f12-49af-9310-abf3ab0dbe71",
+      "name": "Eil Na R'fa Na Lah (Friedman) - Eileh Chamdah Libi (Chassidic Folk)",
+      "setting": "Friedman",
+      "part": null,
+      "partGroup": "eil na r'fa na lah friedman eileh chamdah libi chassidic folk"
+    },
+    {
+      "fileId": "a34e23e9-0bed-4585-ae3e-89af4fc2e53c",
+      "name": "Al Tira (Taubman)",
+      "setting": "Taubman",
+      "part": null,
+      "partGroup": "al tira taubman"
+    },
+    {
+      "fileId": "a5713e22-a445-4ae8-ae61-9ec45b05c14d",
+      "name": "Ufaratzta (Friedman)",
+      "setting": "Friedman",
+      "part": null,
+      "partGroup": "ufaratzta friedman"
+    },
+    {
+      "fileId": "a5c6d619-9578-45cc-90da-155a73b57c58",
+      "name": "How Glorious (Bronstein)",
+      "setting": "Bronstein",
+      "part": null,
+      "partGroup": "how glorious bronstein"
+    },
+    {
+      "fileId": "a71c69d3-7967-4a14-8547-abc2d193e28d",
+      "name": "Oseh Shalom (Josh Goldberg).pdf",
+      "setting": "Josh Goldberg",
+      "part": null,
+      "partGroup": "oseh shalom josh goldberg"
+    },
+    {
+      "fileId": "a8c83317-b120-4e7e-8590-d33c43519b78",
+      "name": "Levi The Leviathan (Milder) - Light One Candle (Yarrow).pdf",
+      "setting": "Milder",
+      "part": null,
+      "partGroup": "levi the leviathan milder light one candle yarrow"
+    },
+    {
+      "fileId": "a8d3aa9e-6cf4-4960-9580-416b522255df",
+      "name": "Sim Shalom (Dinitz-Grosky) - Sim Shalom (Folk)",
+      "setting": "Dinitz-Grosky",
+      "part": null,
+      "partGroup": "sim shalom dinitz grosky sim shalom folk"
+    },
+    {
+      "fileId": "a9d07bdd-0591-406c-a4e7-03c3b7cc94b8",
+      "name": "HaGalshan (Sanderson)",
+      "setting": "Sanderson",
+      "part": null,
+      "partGroup": "hagalshan sanderson"
+    },
+    {
+      "fileId": "aa51edfb-c177-4f94-b7a7-8098b8679d1c",
+      "name": "Mitachat LaShamayim (Broza) - Mitzvah Goreret Mitzvah (Vogel)",
+      "setting": "Broza",
+      "part": null,
+      "partGroup": "mitachat lashamayim broza mitzvah goreret mitzvah vogel"
+    },
+    {
+      "fileId": "abd6a2ca-3fc6-46e1-9f51-62946db19ae1",
+      "name": "Al Sh'loshah D'varim (Dropkin)",
+      "setting": "Dropkin",
+      "part": null,
+      "partGroup": "al sh'loshah d'varim dropkin"
+    },
+    {
+      "fileId": "ac2ab0cd-4a3d-4fe2-99f3-3a2b50e24978",
+      "name": "Yeish L'vavot (Silver)",
+      "setting": "Silver",
+      "part": null,
+      "partGroup": "yeish l'vavot silver"
+    },
+    {
+      "fileId": "ad2ceb97-f1d1-416a-acac-f28646bbe5e4",
+      "name": "Dreamer (Wyatt) - Dugit (Unknown).pdf",
+      "setting": "Wyatt",
+      "part": null,
+      "partGroup": "dreamer wyatt dugit unknown"
+    },
+    {
+      "fileId": "ad8e4572-c58e-44cc-ae89-b3d898bc5bb9",
+      "name": "Tzenah Tzenah (Miron & Grossman)",
+      "setting": "Miron & Grossman",
+      "part": null,
+      "partGroup": "tzenah tzenah miron grossman"
+    },
+    {
+      "fileId": "adf52c8e-1bbf-450c-8972-b4ca8b8bea01",
+      "name": "Coming Home (Klepper)",
+      "setting": "Klepper",
+      "part": null,
+      "partGroup": "coming home klepper"
+    },
+    {
+      "fileId": "ae83649a-718d-4fc4-ace8-82a9f6c2a400",
+      "name": "Shiru Ladonai (Neimark & Gumer)",
+      "setting": "Neimark & Gumer",
+      "part": null,
+      "partGroup": "shiru ladonai neimark gumer"
+    },
+    {
+      "fileId": "ae971440-9066-4059-bf27-80c095b28058",
+      "name": "Shavu-A Tov (Klepper).pdf",
+      "setting": "Klepper",
+      "part": null,
+      "partGroup": "shavu a tov klepper"
+    },
+    {
+      "fileId": "b097e578-24cf-42df-b669-05f1580a295e",
+      "name": "Hal'luhu (Folk)",
+      "setting": "Folk",
+      "part": null,
+      "partGroup": "hal'luhu folk"
+    },
+    {
+      "fileId": "b20a213e-a12a-4275-bccf-ed48c7492fd7",
+      "name": "Eiliyahu Hanavi (Traditional) - Eiliyahu (Friedman).pdf",
+      "setting": "Traditional",
+      "part": null,
+      "partGroup": "eiliyahu hanavi traditional eiliyahu friedman"
+    },
+    {
+      "fileId": "b23501fe-05d4-42c7-9527-42f124dec097",
+      "name": "Ashrei (Smilow) - Hal'luyah (Friedman)",
+      "setting": "Smilow",
+      "part": null,
+      "partGroup": "ashrei smilow hal'luyah friedman"
+    },
+    {
+      "fileId": "b3661947-77a0-4de9-9800-00efe92f7ed0",
+      "name": "Esa Einai (Dropkin)",
+      "setting": "Dropkin",
+      "part": null,
+      "partGroup": "esa einai dropkin"
+    },
+    {
+      "fileId": "b3f1cdba-6e1d-497f-89e2-0b4facf13e0c",
+      "name": "Ko Amar HaShem (Calek) - Kol HaN'shamah (Praetorius)",
+      "setting": "Calek",
+      "part": null,
+      "partGroup": "ko amar hashem calek kol han'shamah praetorius"
+    },
+    {
+      "fileId": "b5084753-96d6-4ec7-a94f-a2a37b17af98",
+      "name": "HaB'rachah (Roman)",
+      "setting": "Roman",
+      "part": null,
+      "partGroup": "hab'rachah roman"
+    },
+    {
+      "fileId": "b557bab2-5e48-4e83-80f5-a9391e10241f",
+      "name": "Sh'Ma (Sulzer) - Sh'Ma (Pik).pdf",
+      "setting": "Sulzer",
+      "part": null,
+      "partGroup": "sh'ma sulzer sh'ma pik"
+    },
+    {
+      "fileId": "b5d5aaa3-9556-453a-95ff-be7f84498877",
+      "name": "Oseh Shalom (Klepper)",
+      "setting": "Klepper",
+      "part": null,
+      "partGroup": "oseh shalom klepper"
+    },
+    {
+      "fileId": "b60cd3c4-3e50-4449-a115-c068a81cb75e",
+      "name": "V'Ahavta (Silver).pdf",
+      "setting": "Silver",
+      "part": null,
+      "partGroup": "v'ahavta silver"
+    },
+    {
+      "fileId": "b61290eb-8df3-4081-bad0-b4e54ff0112e",
+      "name": "Hodu (Friedman)",
+      "setting": "Friedman",
+      "part": null,
+      "partGroup": "hodu friedman"
+    },
+    {
+      "fileId": "b6c40290-eb24-4461-8c58-947c9f3bf904",
+      "name": "Bayom Hahu (Kanarek)",
+      "setting": "Kanarek",
+      "part": null,
+      "partGroup": "bayom hahu kanarek"
+    },
+    {
+      "fileId": "b718c24a-03f5-4743-ae15-74a97245111e",
+      "name": "Mah Gadlu (Isaacson)",
+      "setting": "Isaacson",
+      "part": null,
+      "partGroup": "mah gadlu isaacson"
+    },
+    {
+      "fileId": "b836abfb-7be3-44f3-b81c-0382e92be27e",
+      "name": "Bayom Hahu (Tzur)",
+      "setting": "Tzur",
+      "part": null,
+      "partGroup": "bayom hahu tzur"
+    },
+    {
+      "fileId": "b8860acc-ebbe-4b7e-a668-7aa92a1a7039",
+      "name": "Know Who Came Before (Shira Kobren).pdf",
+      "setting": "Shira Kobren",
+      "part": null,
+      "partGroup": "know who came before shira kobren"
+    },
+    {
+      "fileId": "bd71fe2e-65aa-46aa-8674-0fb38c5f12c9",
+      "name": "Harachaman (For Shabbat) (Folk) - Ki Eshm'Ra Shabbat (Baghdad Melody).pdf",
+      "setting": "For Shabbat",
+      "part": null,
+      "partGroup": "harachaman for shabbat folk ki eshm'ra shabbat baghdad melody"
+    },
+    {
+      "fileId": "bd8e39cd-94d3-4ec3-a2a7-5eb7c2f6eded",
+      "name": "Mi Ha-Ish (Chait)",
+      "setting": "Chait",
+      "part": null,
+      "partGroup": "mi ha ish chait"
+    },
+    {
+      "fileId": "be2df12e-6055-4ab7-9db0-c11515d15c48",
+      "name": "Artik (Israeli commercial jingle) - Artzah Alinu (Navon)",
+      "setting": "Israeli commercial jingle",
+      "part": null,
+      "partGroup": "artik israeli commercial jingle artzah alinu navon"
+    },
+    {
+      "fileId": "be82b110-a864-41e8-a19e-a0789cd0c437",
+      "name": "Sabbath Prayer (Bock).pdf",
+      "setting": "Bock",
+      "part": null,
+      "partGroup": "sabbath prayer bock"
+    },
+    {
+      "fileId": "bea31cf5-59f9-47b9-ac1c-aeecc345a7ed",
+      "name": "Yom Zeh L'Yisraeil (Dropkin).pdf",
+      "setting": "Dropkin",
+      "part": null,
+      "partGroup": "yom zeh l'yisraeil dropkin"
+    },
+    {
+      "fileId": "bf3b034a-c117-459a-be3d-743f2e2f9b97",
+      "name": "Simi Yadeich (Israeli Folk) - Sing (Dobin).pdf",
+      "setting": "Israeli Folk",
+      "part": null,
+      "partGroup": "simi yadeich israeli folk sing dobin"
+    },
+    {
+      "fileId": "bf84ee28-7bb7-436e-9ab7-bdb5157a3e06",
+      "name": "And the Youth Shall See Visions (Friedman)",
+      "setting": "Friedman",
+      "part": null,
+      "partGroup": "and the youth shall see visions friedman"
+    },
+    {
+      "fileId": "c046a053-6a8a-45d2-8f88-64e35dc830c9",
+      "name": "Ashreinu (Dropkin)",
+      "setting": "Dropkin",
+      "part": null,
+      "partGroup": "ashreinu dropkin"
+    },
+    {
+      "fileId": "c35834ef-23e5-4db5-9db1-f91650d87812",
+      "name": "Kiddush (Lewandowski).pdf",
+      "setting": "Lewandowski",
+      "part": null,
+      "partGroup": "kiddush lewandowski"
+    },
+    {
+      "fileId": "c4761aac-f40d-45b0-a151-94869bcebdb3",
+      "name": "Sing Unto God (Friedman) - Sisu Et Y'rushalayim (Nof) - Stars in the Sky (Milder)",
+      "setting": "Friedman",
+      "part": null,
+      "partGroup": "sing unto god friedman sisu et y'rushalayim nof stars in the sky milder"
+    },
+    {
+      "fileId": "c5452a63-094f-40ce-a24c-bb7077ec0f92",
+      "name": "Down by the Riverside (Spiritual)",
+      "setting": "Spiritual",
+      "part": null,
+      "partGroup": "down by the riverside spiritual"
+    },
+    {
+      "fileId": "c7e91f89-c940-4b30-8162-c5780ccdbcb1",
+      "name": "Eitz Chayim (Matthew Check And Naomi Less).pdf",
+      "setting": "Matthew Check And Naomi Less",
+      "part": null,
+      "partGroup": "eitz chayim matthew check and naomi less"
+    },
+    {
+      "fileId": "c8392be2-6de4-4f2d-bb87-a9f64012ea01",
+      "name": "Mah Tovu (Klepper)",
+      "setting": "Klepper",
+      "part": null,
+      "partGroup": "mah tovu klepper"
+    },
+    {
+      "fileId": "c98dd389-724e-4ffe-9eb0-8eed621b782b",
+      "name": "Sim Shalom (Silver)",
+      "setting": "Silver",
+      "part": null,
+      "partGroup": "sim shalom silver"
+    },
+    {
+      "fileId": "c9efe661-9eb8-42fc-89d5-13f026629dc7",
+      "name": "Adon Olam (Hitman-Ben-Hur) - Adon Olam (Dobin) - Shehecheyanu (Pik).pdf",
+      "setting": "Hitman-Ben-Hur",
+      "part": null,
+      "partGroup": "adon olam hitman ben hur adon olam dobin shehecheyanu pik"
+    },
+    {
+      "fileId": "ccfd3a8e-8e83-448b-948e-96b2cf14401a",
+      "name": "Emet (Folk) - Eretz Yisraeil Sheli (Ben-Dor).pdf",
+      "setting": "Folk",
+      "part": null,
+      "partGroup": "emet folk eretz yisraeil sheli ben dor"
+    },
+    {
+      "fileId": "cf704b73-5f35-45fe-901f-a8b68d4fdc22",
+      "name": "Hashkiveinu (Brodsky-Zweiback)",
+      "setting": "Brodsky-Zweiback",
+      "part": null,
+      "partGroup": "hashkiveinu brodsky zweiback"
+    },
+    {
+      "fileId": "d182a8c3-2bba-4a8b-8399-57d640cb2044",
+      "name": "You Are The One (Friedman) - Rise And Shine (Folk) - Rock O' My Soul (Folk).pdf",
+      "setting": "Friedman",
+      "part": null,
+      "partGroup": "you are the one friedman rise and shine folk rock o' my soul folk"
+    },
+    {
+      "fileId": "d1ccd776-0d8b-4860-8958-d8a9b0a5c254",
+      "name": "Just Another Foreigner (Sussman)",
+      "setting": "Sussman",
+      "part": null,
+      "partGroup": "just another foreigner sussman"
+    },
+    {
+      "fileId": "d22779d6-bd3f-436c-8d5a-cc6daa3d92e6",
+      "name": "Shalom Rav (Klepper/Freelander)",
+      "setting": "Klepper/Freelander",
+      "part": null,
+      "partGroup": "shalom rav klepperfreelander"
+    },
+    {
+      "fileId": "d2ba8f16-9eeb-49a0-b0b1-372065bc17be",
+      "name": "Shalom Aleichem (Brazil).pdf",
+      "setting": "Brazil",
+      "part": null,
+      "partGroup": "shalom aleichem brazil"
+    },
+    {
+      "fileId": "d4385faa-e668-4a49-9a3b-b357a2933c49",
+      "name": "V'ha-eir Eineinu (Carlebach)",
+      "setting": "Carlebach",
+      "part": null,
+      "partGroup": "v'ha eir eineinu carlebach"
+    },
+    {
+      "fileId": "d56ad543-bac7-4fb9-825f-b9ceb8efd4cc",
+      "name": "Hillel's Song (Brodsky & Zweiback / Glaser)",
+      "setting": "Brodsky & Zweiback / Glaser",
+      "part": null,
+      "partGroup": "hillel's song brodsky zweiback glaser"
+    },
+    {
+      "fileId": "d5899a90-cff2-4128-9d46-92f478bd9ced",
+      "name": "Hei Artzeinu (African) - Heiveinu (Feingold) - Heiveinu Shalom Aleichem (Folk).pdf",
+      "setting": "African",
+      "part": null,
+      "partGroup": "hei artzeinu african heiveinu feingold heiveinu shalom aleichem folk"
+    },
+    {
+      "fileId": "d5e81756-3b00-400e-9e5a-03a865e15fd6",
+      "name": "HaRachaman (Kirsch)",
+      "setting": "Kirsch",
+      "part": null,
+      "partGroup": "harachaman kirsch"
+    },
+    {
+      "fileId": "d600ce2c-61d5-4a38-8508-e819e1a2b140",
+      "name": "Ein Keiloheinu (Carlebach).pdf",
+      "setting": "Carlebach",
+      "part": null,
+      "partGroup": "ein keiloheinu carlebach"
+    },
+    {
+      "fileId": "d630644f-befe-4991-862f-8cb0d9bcb68f",
+      "name": "Or Zarua (Klepper)",
+      "setting": "Klepper",
+      "part": null,
+      "partGroup": "or zarua klepper"
+    },
+    {
+      "fileId": "d74c9faf-ccd2-47e3-a5bf-efbf6e153b9a",
+      "name": "Ki Beiti (Schachet-Briskin & Rosen)",
+      "setting": "Schachet-Briskin & Rosen",
+      "part": null,
+      "partGroup": "ki beiti schachet briskin rosen"
+    },
+    {
+      "fileId": "da5ef9be-c840-42c8-aedc-4065cbe3e2d9",
+      "name": "Eretz Zavat Chalav (Gamliel)",
+      "setting": "Gamliel",
+      "part": null,
+      "partGroup": "eretz zavat chalav gamliel"
+    },
+    {
+      "fileId": "da7f973d-c7e6-4cdc-9581-046a0dce2cf0",
+      "name": "Mah Yafeh Hayom (Miron).pdf",
+      "setting": "Miron",
+      "part": null,
+      "partGroup": "mah yafeh hayom miron"
+    },
+    {
+      "fileId": "da949a70-a1d1-45ba-9406-161c634e0585",
+      "name": "Dodi Li (Chen)",
+      "setting": "Chen",
+      "part": null,
+      "partGroup": "dodi li chen"
+    },
+    {
+      "fileId": "db332014-1948-4445-9cb5-f983b24f9a27",
+      "name": "Ki Mitziyon (Shachar)",
+      "setting": "Shachar",
+      "part": null,
+      "partGroup": "ki mitziyon shachar"
+    },
+    {
+      "fileId": "dc3389ab-af69-42ac-ba08-e2f13c3d343f",
+      "name": "L'takein (The Na Na Song) (Nichols)",
+      "setting": "The Na Na Song",
+      "part": null,
+      "partGroup": "l'takein the na na song nichols"
+    },
+    {
+      "fileId": "dc4fb084-3b23-4481-8353-efc8bbafdb3d",
+      "name": "Ivdu Et HaShem (Sher)",
+      "setting": "Sher",
+      "part": null,
+      "partGroup": "ivdu et hashem sher"
+    },
+    {
+      "fileId": "dcacad1e-5f4b-4d03-b221-58692b1b8d1e",
+      "name": "All The World Sings To You (Rothchild)",
+      "setting": "Rothchild",
+      "part": null,
+      "partGroup": "all the world sings to you rothchild"
+    },
+    {
+      "fileId": "ddc758b3-2e1f-46df-853a-153d2a920c68",
+      "name": "Dodi Li (Friedman)",
+      "setting": "Friedman",
+      "part": null,
+      "partGroup": "dodi li friedman"
+    },
+    {
+      "fileId": "df306e1c-5687-4031-893c-32de03310bc8",
+      "name": "I Am All Around (Silver)",
+      "setting": "Silver",
+      "part": null,
+      "partGroup": "i am all around silver"
+    },
+    {
+      "fileId": "e0d2d8d8-86a4-4692-b70f-404e2f911fd6",
+      "name": "Hashkiveinu (Steven Chaitman).pdf",
+      "setting": "Steven Chaitman",
+      "part": null,
+      "partGroup": "hashkiveinu steven chaitman"
+    },
+    {
+      "fileId": "e14dd153-549a-4803-b484-37ccedabffa1",
+      "name": "Yih'Yu L'Ratzon - Yih'Yu L'Ratzon (Silver-Schorsch) - May The Words (Friedman).pdf",
+      "setting": "Silver-Schorsch",
+      "part": null,
+      "partGroup": "yih'yu l'ratzon yih'yu l'ratzon silver schorsch may the words friedman"
+    },
+    {
+      "fileId": "e16dbb6e-9b17-4518-978f-bc32de99fa39",
+      "name": "Aleinu-The Adoration (Isaacson) - Aleinu (Chajes).pdf",
+      "setting": "Isaacson",
+      "part": null,
+      "partGroup": "aleinu the adoration isaacson aleinu chajes"
+    },
+    {
+      "fileId": "e36d7e15-6c9b-4f1f-98ec-e0683bfea7cc",
+      "name": "Kol HaN'shamah (Sufi Chant) - K'shoshanah (Hadar) - Kum Bachur Atzeil (Folk)",
+      "setting": "Sufi Chant",
+      "part": null,
+      "partGroup": "kol han'shamah sufi chant k'shoshanah hadar kum bachur atzeil folk"
+    },
+    {
+      "fileId": "e3708fd4-7182-4b11-ac84-d6e0ebd9e661",
+      "name": "Nefesh Achat (Gold-Hutner-Kane-Katzman)",
+      "setting": "Gold-Hutner-Kane-Katzman",
+      "part": null,
+      "partGroup": "nefesh achat gold hutner kane katzman"
+    },
+    {
+      "fileId": "e48e03d1-6c4b-4656-be2c-a5527ac516a2",
+      "name": "May the Words (Schiller)",
+      "setting": "Schiller",
+      "part": null,
+      "partGroup": "may the words schiller"
+    },
+    {
+      "fileId": "e50241ed-5c6e-4616-84ae-df9f9abda905",
+      "name": "Im Ein Ani Li / B'chol Dor Vador (Friedman)",
+      "setting": "Friedman",
+      "part": null,
+      "partGroup": "im ein ani li b'chol dor vador friedman"
+    },
+    {
+      "fileId": "e51ba89e-a687-407f-bb32-992173dfd65f",
+      "name": "V'eizehu (Escovitz)",
+      "setting": "Escovitz",
+      "part": null,
+      "partGroup": "v'eizehu escovitz"
+    },
+    {
+      "fileId": "e54ff293-2e3a-41c1-ac1e-079bdb1c31d4",
+      "name": "Kumi Lach (Friedman)",
+      "setting": "Friedman",
+      "part": null,
+      "partGroup": "kumi lach friedman"
+    },
+    {
+      "fileId": "e8f1b65c-1571-4303-bb2f-f3d180419583",
+      "name": "B'ruchot HaBa-ot (Friedman)",
+      "setting": "Friedman",
+      "part": null,
+      "partGroup": "b'ruchot haba ot friedman"
+    },
+    {
+      "fileId": "ec4d7894-8dfa-4ea4-bff0-a36d43451ac3",
+      "name": "Mah Rabu (Noah Aronson And Coleen Dieker).pdf",
+      "setting": "Noah Aronson And Coleen Dieker",
+      "part": null,
+      "partGroup": "mah rabu noah aronson and coleen dieker"
+    },
+    {
+      "fileId": "ed609fc6-d1da-40e1-8f6b-b389ab5ce6a1",
+      "name": "The Angels' Blessing (Friedman)",
+      "setting": "Friedman",
+      "part": null,
+      "partGroup": "the angels' blessing friedman"
+    },
+    {
+      "fileId": "ed77e409-a4fc-4518-82e2-4b9a71a9cde5",
+      "name": "Hal'Luyah (Nigunim Ensemble).pdf",
+      "setting": "Nigunim Ensemble",
+      "part": null,
+      "partGroup": "hal'luyah nigunim ensemble"
+    },
+    {
+      "fileId": "edc49352-b032-4967-8ac4-c76ef3cf0beb",
+      "name": "Adonai Adonai (Sher)",
+      "setting": "Sher",
+      "part": null,
+      "partGroup": "adonai adonai sher"
+    },
+    {
+      "fileId": "ee2b1395-b9ce-4fcb-85b5-ed0d8bb9e067",
+      "name": "L'Chah Dodi (Sephardic).pdf",
+      "setting": "Sephardic",
+      "part": null,
+      "partGroup": "l'chah dodi sephardic"
+    },
+    {
+      "fileId": "f1015c5a-b953-4511-9378-141c155e3f91",
+      "name": "D'Ror Yikra (Yemenite).pdf",
+      "setting": "Yemenite",
+      "part": null,
+      "partGroup": "d'ror yikra yemenite"
+    },
+    {
+      "fileId": "f1168454-effb-4a7e-943b-23ed1b8b78a8",
+      "name": "Lo Ira (Fuchs) - Lo Yarei-u / V'chit'tu (Sharlin-Gabbai) - Lo Yisa Goi (Folk)",
+      "setting": "Fuchs",
+      "part": null,
+      "partGroup": "lo ira fuchs lo yarei u v'chit'tu sharlin gabbai lo yisa goi folk"
+    },
+    {
+      "fileId": "f1600ae6-d7bb-4076-ba42-1a3e5e24c112",
+      "name": "Yom Zeh L'Yisraeil (Sharlin).pdf",
+      "setting": "Sharlin",
+      "part": null,
+      "partGroup": "yom zeh l'yisraeil sharlin"
+    },
+    {
+      "fileId": "f173a88d-64e8-4af2-9abc-ca7c7e662797",
+      "name": "Hari-u Ladonai (Sher)",
+      "setting": "Sher",
+      "part": null,
+      "partGroup": "hari u ladonai sher"
+    },
+    {
+      "fileId": "f19400b3-dfed-43da-b957-566517cccb75",
+      "name": "Pharaoh Pharaoh (Berry)",
+      "setting": "Berry",
+      "part": null,
+      "partGroup": "pharaoh pharaoh berry"
+    },
+    {
+      "fileId": "f270dee3-fc29-4047-ac9c-0e3dcb998126",
+      "name": "Yism'chu (Solomon)",
+      "setting": "Solomon",
+      "part": null,
+      "partGroup": "yism'chu solomon"
+    },
+    {
+      "fileId": "f34bf3e8-f306-4945-b212-e2dab83b7b8d",
+      "name": "Od Yishama (Carlebach)",
+      "setting": "Carlebach",
+      "part": null,
+      "partGroup": "od yishama carlebach"
+    },
+    {
+      "fileId": "f3533786-9922-4b85-a6a3-5e7651237d78",
+      "name": "Vayiven Uziyahu (Zarai) - V'David Y'feih Einayim (Israeli folk song)",
+      "setting": "Zarai",
+      "part": null,
+      "partGroup": "vayiven uziyahu zarai v'david y'feih einayim israeli folk song"
+    },
+    {
+      "fileId": "f462cfc0-6f29-4460-9422-071c07b6c717",
+      "name": "Am Yisraeil Chai (Carlebach / Rockoff)",
+      "setting": "Carlebach / Rockoff",
+      "part": null,
+      "partGroup": "am yisraeil chai carlebach rockoff"
+    },
+    {
+      "fileId": "f4e8fd6c-06e2-4b65-afe5-756698b8d678",
+      "name": "I Rise (Eliana Light)",
+      "setting": "Eliana Light",
+      "part": null,
+      "partGroup": "i rise eliana light"
+    },
+    {
+      "fileId": "f4fd95a8-6d2e-4477-bf70-ff83f5ade912",
+      "name": "Uri Tziyon (Wilensky)",
+      "setting": "Wilensky",
+      "part": null,
+      "partGroup": "uri tziyon wilensky"
+    },
+    {
+      "fileId": "f719b0dd-1662-4c70-9142-f1e99e580487",
+      "name": "Go Down Moses (Spiritual)",
+      "setting": "Spiritual",
+      "part": null,
+      "partGroup": "go down moses spiritual"
+    },
+    {
+      "fileId": "f8f97785-c7b0-4a1a-8015-b6ef108a7939",
+      "name": "Hodu LaSultan (Kuhlau)",
+      "setting": "Kuhlau",
+      "part": null,
+      "partGroup": "hodu lasultan kuhlau"
+    },
+    {
+      "fileId": "f9921a95-cab9-4b2b-9869-a024cfc21e2b",
+      "name": "Tein Shabbat (Seltzer) - Tzur Mishelo (Sephardic).pdf",
+      "setting": "Seltzer",
+      "part": null,
+      "partGroup": "tein shabbat seltzer tzur mishelo sephardic"
+    },
+    {
+      "fileId": "fa1f678c-9f4d-4cd8-8e4e-897278c4840f",
+      "name": "Oseh Shalom (Hirsch)",
+      "setting": "Hirsch",
+      "part": null,
+      "partGroup": "oseh shalom hirsch"
+    },
+    {
+      "fileId": "fa8d38f9-cf6a-4349-9c2b-d514ca42fc2f",
+      "name": "Ufaratzta (Maslo)",
+      "setting": "Maslo",
+      "part": null,
+      "partGroup": "ufaratzta maslo"
+    },
+    {
+      "fileId": "fb0c1ad8-f068-47fe-a61a-aa8f6f2cc607",
+      "name": "Rom'mu (Taubman)",
+      "setting": "Taubman",
+      "part": null,
+      "partGroup": "rom'mu taubman"
+    },
+    {
+      "fileId": "fb29fdcb-6db1-44a8-8df1-e76aaeae5475",
+      "name": "Adonai S'Fatai (Traditional) - Avot V'Imahot (Katchko-Nusach).pdf",
+      "setting": "Traditional",
+      "part": null,
+      "partGroup": "adonai s'fatai traditional avot v'imahot katchko nusach"
+    },
+    {
+      "fileId": "fbf15797-3d74-4397-86c4-931b16a334cf",
+      "name": "V'Shamru (Friedman).pdf",
+      "setting": "Friedman",
+      "part": null,
+      "partGroup": "v'shamru friedman"
+    },
+    {
+      "fileId": "fcc1c2fe-358e-43ec-b39f-bfa84ba1b6e2",
+      "name": "V'Shamru (Rothblum).pdf",
+      "setting": "Rothblum",
+      "part": null,
+      "partGroup": "v'shamru rothblum"
+    },
+    {
+      "fileId": "fcdeef79-f662-4ac6-aa94-bdf74511ac2c",
+      "name": "Anachnu M'Vorachim (Recht) - Anatoly (Mishkin)",
+      "setting": "Recht",
+      "part": null,
+      "partGroup": "anachnu m'vorachim recht anatoly mishkin"
+    },
+    {
+      "fileId": "fe495975-d73d-43ca-ba6c-2a16b2702bdf",
+      "name": "Od Lo Ahavti Dai (Shemer)",
+      "setting": "Shemer",
+      "part": null,
+      "partGroup": "od lo ahavti dai shemer"
+    },
+    {
+      "fileId": "upload-001c4dd1-6eb2-4977-91ad-6380f535c6f7",
+      "name": "Avinu Malkeinu - Full Score",
+      "setting": null,
+      "part": null,
+      "partGroup": "avinu malkeinu full score"
+    },
+    {
+      "fileId": "upload-007f0124-418e-4013-9ba9-c0afce822b8a",
+      "name": "Wagon Wheel (chords)",
+      "setting": null,
+      "part": null,
+      "partGroup": "wagon wheel chords"
+    },
+    {
+      "fileId": "upload-01a2e461-4365-4c02-80b5-b7cce8a1feac",
+      "name": "Birkot Havdalah (Friedman)",
+      "setting": "Friedman",
+      "part": null,
+      "partGroup": "birkot havdalah friedman"
+    },
+    {
+      "fileId": "upload-01f2fe42-3f3a-494e-89ab-57e785b5455b",
+      "name": "Mozi's Nigun:Ana B'Koach (Lead Sheet) C",
+      "setting": null,
+      "part": "C",
+      "partGroup": "mozi's nigunana b'koach lead sheet"
+    },
+    {
+      "fileId": "upload-020ebbe3-19ca-445b-8150-bc02c279f64a",
+      "name": "Shalom Alehem (Fast) Bass (Lead Sheet)",
+      "setting": "Fast",
+      "part": null,
+      "partGroup": "shalom alehem fast bass lead sheet"
+    },
+    {
+      "fileId": "upload-027264c7-3167-4df4-abf6-02c40f5b1bab",
+      "name": "sanctuary chords (1)",
+      "setting": null,
+      "part": null,
+      "partGroup": "sanctuary chords 1"
+    },
+    {
+      "fileId": "upload-02b7fbf2-b3d8-4109-a79a-deb759a39339",
+      "name": "Shalom Alechem (Simpler) Flute",
+      "setting": null,
+      "part": "Flute",
+      "partGroup": "shalom alechem simpler"
+    },
+    {
+      "fileId": "upload-032c9c10-e9e8-4794-bb49-d192129f14d4",
+      "name": "All Along The Watchtower",
+      "setting": null,
+      "part": null,
+      "partGroup": "all along the watchtower"
+    },
+    {
+      "fileId": "upload-046649f0-1c68-4586-b021-964bb84c3228",
+      "name": "Barchu Walkdown",
+      "setting": null,
+      "part": null,
+      "partGroup": "barchu walkdown"
+    },
+    {
+      "fileId": "upload-0550f8d1-1b5f-4469-aa68-cb64ec2b0918",
+      "name": "Not Fade Away",
+      "setting": null,
+      "part": null,
+      "partGroup": "not fade away"
+    },
+    {
+      "fileId": "upload-05dfb994-8615-47a5-9ebf-d9a52fb5dcdb",
+      "name": "Queen Jane Approximately",
+      "setting": null,
+      "part": null,
+      "partGroup": "queen jane approximately"
+    },
+    {
+      "fileId": "upload-0748de38-924c-4033-854d-f24804b0fd14",
+      "name": "Esa Einai (English/Hebrew)",
+      "setting": "English/Hebrew",
+      "part": null,
+      "partGroup": "esa einai englishhebrew"
+    },
+    {
+      "fileId": "upload-076df066-78f7-4cef-bc0f-fc5ae778ab5b",
+      "name": "Avinu Malkeinu (Janowski)",
+      "setting": "Janowski",
+      "part": null,
+      "partGroup": "avinu malkeinu janowski"
+    },
+    {
+      "fileId": "upload-081159b1-d5d9-4fc1-8869-e956ab811a7d",
+      "name": "L'cha Dodi (Lyrics) - Greg Dallas arr.",
+      "setting": "Greg Dallas arr.",
+      "part": null,
+      "partGroup": "l'cha dodi lyrics greg dallas arr"
+    },
+    {
+      "fileId": "upload-08b911ef-d0ac-4b90-9a26-d6193df5245b",
+      "name": "Union Of The Soul(bgvox).docx",
+      "setting": "bgvox",
+      "part": null,
+      "partGroup": "union of the soulbgvoxdocx"
+    },
+    {
+      "fileId": "upload-0b38dadf-816c-46bf-8573-c4b5f29b0125",
+      "name": "Never Can Tell",
+      "setting": null,
+      "part": null,
+      "partGroup": "never can tell"
+    },
+    {
+      "fileId": "upload-0cd12bd2-3555-4651-a094-cd0dd72cdfc2",
+      "name": "L'cha Dodi Alto Saxophone",
+      "setting": null,
+      "part": "Alto Saxophone",
+      "partGroup": "l'cha dodi"
+    },
+    {
+      "fileId": "upload-0d2d12c0-e9a9-45d6-928a-d62500c8fa6c",
+      "name": "Eliyahu_Hanavi_(fast) Dm",
+      "setting": "fast",
+      "part": null,
+      "partGroup": "eliyahu hanavi fast dm"
+    },
+    {
+      "fileId": "upload-0dc4438c-253d-4e54-ad94-b25e9460a157",
+      "name": "YMH lead sheet - Full Score",
+      "setting": null,
+      "part": null,
+      "partGroup": "ymh lead sheet full score"
+    },
+    {
+      "fileId": "upload-0dd9f521-b336-47a4-b69b-f0da52090237",
+      "name": "Barchu - Full Score",
+      "setting": null,
+      "part": null,
+      "partGroup": "barchu full score"
+    },
+    {
+      "fileId": "upload-0e1c11d4-a798-4cfa-82b6-18e6547f897f",
+      "name": "Nigun # 5",
+      "setting": null,
+      "part": null,
+      "partGroup": "nigun 5"
+    },
+    {
+      "fileId": "upload-0e33ddae-8de8-401c-9f7f-1231b812a07c",
+      "name": "L'cha Adonai HaGedulah (D)",
+      "setting": null,
+      "part": null,
+      "partGroup": "l'cha adonai hagedulah d"
+    },
+    {
+      "fileId": "upload-0e9a5028-0040-4477-ad11-4e060916a045",
+      "name": "If I Needed You",
+      "setting": null,
+      "part": null,
+      "partGroup": "if i needed you"
+    },
+    {
+      "fileId": "upload-10da060e-40d1-41c2-bc14-36174d7a1b8a",
+      "name": "Modah Ani G#m",
+      "setting": null,
+      "part": null,
+      "partGroup": "modah ani gm"
+    },
+    {
+      "fileId": "upload-11a3e3a1-a0ac-4a12-8bc7-f33c7aa30716",
+      "name": "Dodi Li",
+      "setting": null,
+      "part": null,
+      "partGroup": "dodi li"
+    },
+    {
+      "fileId": "upload-11cff05e-72ea-4853-8645-e47684fbf614",
+      "name": "Mississippi Goddam",
+      "setting": null,
+      "part": null,
+      "partGroup": "mississippi goddam"
+    },
+    {
+      "fileId": "upload-125766c3-c69b-4cd6-ba2e-2fafc4518d49",
+      "name": "One Day (band format)",
+      "setting": null,
+      "part": null,
+      "partGroup": "one day band format"
+    },
+    {
+      "fileId": "upload-12f7d8a4-3d71-4f71-8635-d389ff304cd3",
+      "name": "Build Me Up Buttercup (band format)",
+      "setting": null,
+      "part": null,
+      "partGroup": "build me up buttercup band format"
+    },
+    {
+      "fileId": "upload-131a5208-f2b6-4531-8f17-8fafb1b56cee",
+      "name": "Battle Hymn Of The Republic.doc",
+      "setting": null,
+      "part": null,
+      "partGroup": "battle hymn of the republicdoc"
+    },
+    {
+      "fileId": "upload-13dd65c6-6184-4c6a-a9bc-e118a6438d28",
+      "name": "Kolomeykes Score(2)",
+      "setting": null,
+      "part": null,
+      "partGroup": "kolomeykes score2"
+    },
+    {
+      "fileId": "upload-140cf129-9420-43bd-9c67-5d4094b87e05",
+      "name": "V'Shamru",
+      "setting": null,
+      "part": null,
+      "partGroup": "v'shamru"
+    },
+    {
+      "fileId": "upload-1530752d-b10b-41d9-b2fc-e8cfb8278cea",
+      "name": "Element 115",
+      "setting": null,
+      "part": null,
+      "partGroup": "element 115"
+    },
+    {
+      "fileId": "upload-15ef5ef0-e64b-4186-98aa-4de1a2867583",
+      "name": "althea chords",
+      "setting": null,
+      "part": null,
+      "partGroup": "althea chords"
+    },
+    {
+      "fileId": "upload-16216b5d-bbba-448b-aacd-8b25f0f26b8c",
+      "name": "roadto",
+      "setting": null,
+      "part": null,
+      "partGroup": "roadto"
+    },
+    {
+      "fileId": "upload-1a10dfee-c79a-437b-9d31-f3b310ba2d6f",
+      "name": "Shiru L'Adonai (trimmed down) Tenor Saxophone",
+      "setting": "trimmed down",
+      "part": "Tenor Saxophone",
+      "partGroup": "shiru l'adonai trimmed down"
+    },
+    {
+      "fileId": "upload-1a9447f9-3a78-475f-9bff-793f23709b49",
+      "name": "Rural Sunset (Bb)",
+      "setting": null,
+      "part": null,
+      "partGroup": "rural sunset bb"
+    },
+    {
+      "fileId": "upload-1b01768e-6319-4c82-9fe7-32220f971063",
+      "name": "What a Wonderful World (Louis Armstrong)",
+      "setting": "Louis Armstrong",
+      "part": null,
+      "partGroup": "what a wonderful world louis armstrong"
+    },
+    {
+      "fileId": "upload-1ca849da-f779-465b-a978-918b719d4da3",
+      "name": "We All Live on Our Own Mountain (band format)",
+      "setting": null,
+      "part": null,
+      "partGroup": "we all live on our own mountain band format"
+    },
+    {
+      "fileId": "upload-1ec9cf41-b088-4040-acdd-c1569640f322",
+      "name": "Kolomeykes Piano",
+      "setting": null,
+      "part": null,
+      "partGroup": "kolomeykes piano"
+    },
+    {
+      "fileId": "upload-2385e6f9-06d9-4742-913c-0dc8d7d60ca0",
+      "name": "HeyFever rev 12 16 14 Piano",
+      "setting": null,
+      "part": null,
+      "partGroup": "heyfever rev 12 16 14 piano"
+    },
+    {
+      "fileId": "upload-259d886a-2bb1-48df-9fc2-eba7916e18bb",
+      "name": "Elohai N'shamah (Pourmorady, Cm)",
+      "setting": "Pourmorady",
+      "part": null,
+      "partGroup": "elohai n'shamah pourmorady cm"
+    },
+    {
+      "fileId": "upload-27952415-e4ae-43ab-a3d4-0dbdec30def3",
+      "name": "Kedusha (compact)",
+      "setting": null,
+      "part": null,
+      "partGroup": "kedusha compact"
+    },
+    {
+      "fileId": "upload-27be4d3c-6b01-4b09-af47-68ffc365d7ad",
+      "name": "Pink Pony Club (band format)",
+      "setting": null,
+      "part": null,
+      "partGroup": "pink pony club band format"
+    },
+    {
+      "fileId": "upload-284f77a4-0110-416b-be33-89556f465fb8",
+      "name": "Shiru L'Adonai (trimmed down) Trombone",
+      "setting": "trimmed down",
+      "part": "Trombone",
+      "partGroup": "shiru l'adonai trimmed down"
+    },
+    {
+      "fileId": "upload-29d39539-a018-4713-a307-23b5fa5bc0d9",
+      "name": "Pink Pony Club",
+      "setting": null,
+      "part": null,
+      "partGroup": "pink pony club"
+    },
+    {
+      "fileId": "upload-2aaf2f4d-244b-4aa6-bc80-2a1857c6bc46",
+      "name": "Shema (Major) Bass",
+      "setting": "Major",
+      "part": "Bass",
+      "partGroup": "shema major"
+    },
+    {
+      "fileId": "upload-2ac9c1ca-e934-41e1-b9f4-f8ef8f0a6b35",
+      "name": "Good Riddance (Time of Your Life)",
+      "setting": "Time of Your Life",
+      "part": null,
+      "partGroup": "good riddance time of your life"
+    },
+    {
+      "fileId": "upload-2bd435f1-6633-44d9-bc69-97ce6d1b5f21",
+      "name": "L'cha Dodi (Simpler) Piano",
+      "setting": null,
+      "part": "Piano",
+      "partGroup": "l'cha dodi simpler"
+    },
+    {
+      "fileId": "upload-2c61bdcb-0d23-4fb2-b2c0-f3dc377416db",
+      "name": "Barchu (Walkdown) Bass Clef",
+      "setting": "Walkdown",
+      "part": "Bass Clef",
+      "partGroup": "barchu walkdown"
+    },
+    {
+      "fileId": "upload-2d33830c-5b18-4c21-85a0-9dcb2419d135",
+      "name": "Dreams (Fleetwood Mac, band format)",
+      "setting": "Fleetwood Mac",
+      "part": null,
+      "partGroup": "dreams fleetwood mac band format"
+    },
+    {
+      "fileId": "upload-2d87de3a-e39c-4d51-a7d1-34200de98ce3",
+      "name": "Barchu (Walkdown) C",
+      "setting": "Walkdown",
+      "part": "C",
+      "partGroup": "barchu walkdown"
+    },
+    {
+      "fileId": "upload-2e3de31f-5594-4610-95f1-f7f7f2fce00e",
+      "name": "Shalom Alechem (Simpler) Clarinet in Bb",
+      "setting": null,
+      "part": "Clarinet in Bb",
+      "partGroup": "shalom alechem simpler"
+    },
+    {
+      "fileId": "upload-2ec7ca22-aa28-4cc8-b621-5cd45e266881",
+      "name": "B'tzelem Elohim (band format)",
+      "setting": null,
+      "part": null,
+      "partGroup": "b'tzelem elohim band format"
+    },
+    {
+      "fileId": "upload-2ecf9cad-4998-41d9-a024-388ce278168e",
+      "name": "R'tzei - Full Score",
+      "setting": null,
+      "part": null,
+      "partGroup": "r'tzei full score"
+    },
+    {
+      "fileId": "upload-2f87d811-bb7e-43e0-8da9-90a154353421",
+      "name": "Go Shlo — 3-Tune Set",
+      "setting": null,
+      "part": null,
+      "partGroup": "go shlo 3 tune set"
+    },
+    {
+      "fileId": "upload-3050056b-bd89-47d7-a97a-ea6c6881a093",
+      "name": "Shiru L'Adonai (trimmed down) Flute",
+      "setting": "trimmed down",
+      "part": "Flute",
+      "partGroup": "shiru l'adonai trimmed down"
+    },
+    {
+      "fileId": "upload-3053a7a6-0923-4e9a-8f7a-258572c70821",
+      "name": "Refa Tziri",
+      "setting": null,
+      "part": null,
+      "partGroup": "refa tziri"
+    },
+    {
+      "fileId": "upload-31f1ef57-41e5-4879-aa60-21f8188ed144",
+      "name": "Nigun 1",
+      "setting": null,
+      "part": null,
+      "partGroup": "nigun 1"
+    },
+    {
+      "fileId": "upload-3247693f-8c01-45e6-a3ee-c8edcd65bc27",
+      "name": "L'cha Dodi (Simpler) Soprano Saxophone",
+      "setting": null,
+      "part": "Soprano Saxophone",
+      "partGroup": "l'cha dodi simpler"
+    },
+    {
+      "fileId": "upload-33577b47-f762-4390-bc52-e829c3006963",
+      "name": "Shalom Alechem (Simpler) Trumpet in Bb",
+      "setting": null,
+      "part": "Trumpet in Bb",
+      "partGroup": "shalom alechem simpler"
+    },
+    {
+      "fileId": "upload-33dbae7c-ccf2-4081-9529-5109c4962cc5",
+      "name": "Esa Einai (Nichols)",
+      "setting": "Nichols",
+      "part": null,
+      "partGroup": "esa einai nichols"
+    },
+    {
+      "fileId": "upload-3434a765-8931-43a5-9a34-f8c2c56ca69c",
+      "name": "Shalom Alechem (Simpler) Piano",
+      "setting": null,
+      "part": "Piano",
+      "partGroup": "shalom alechem simpler"
+    },
+    {
+      "fileId": "upload-34597f8e-9c4c-4ca7-805b-9005ff4446d8",
+      "name": "Avodah Ritzei - Full Score",
+      "setting": null,
+      "part": null,
+      "partGroup": "avodah ritzei full score"
+    },
+    {
+      "fileId": "upload-35a5d607-775b-4a34-bdcd-8ca60ae81e72",
+      "name": "Shiru L'Adonai (trimmed down) Soprano Saxophone",
+      "setting": "trimmed down",
+      "part": "Soprano Saxophone",
+      "partGroup": "shiru l'adonai trimmed down"
+    },
+    {
+      "fileId": "upload-36867efb-694d-4ee9-884d-b90d0518cf11",
+      "name": "Mi chamocha (Moshav) morning",
+      "setting": "Moshav",
+      "part": null,
+      "partGroup": "mi chamocha moshav morning"
+    },
+    {
+      "fileId": "upload-36f9c403-ea58-4429-a4fb-2a65d4e33eab",
+      "name": "Hinei Mah Tov (Eeoohh!)",
+      "setting": "Eeoohh!",
+      "part": null,
+      "partGroup": "hinei mah tov eeoohh"
+    },
+    {
+      "fileId": "upload-37349a71-aa52-4e6f-9b5b-aaf35b1d28cc",
+      "name": "Hashiveinu",
+      "setting": null,
+      "part": null,
+      "partGroup": "hashiveinu"
+    },
+    {
+      "fileId": "upload-37b1583d-b062-481c-92ce-9f68efa6f5e1",
+      "name": "Aleinu- trad - Full Score",
+      "setting": null,
+      "part": null,
+      "partGroup": "aleinu trad full score"
+    },
+    {
+      "fileId": "upload-382dbb75-d69c-49cc-ad7e-1c67d1e1fa61",
+      "name": "3. Dynawave - C Lead",
+      "setting": null,
+      "part": "C Lead",
+      "partGroup": "3 dynawave"
+    },
+    {
+      "fileId": "upload-38e3db33-5088-44c3-b0c7-fc45e9cfcab5",
+      "name": "nigun2",
+      "setting": null,
+      "part": null,
+      "partGroup": "nigun2"
+    },
+    {
+      "fileId": "upload-38f1df25-7587-446a-94c0-53c6d11512f2",
+      "name": "Shalom Alechem (Simpler) Alto Saxophone",
+      "setting": null,
+      "part": "Alto Saxophone",
+      "partGroup": "shalom alechem simpler"
+    },
+    {
+      "fileId": "upload-39147e0c-06dd-4b1b-81ed-48a295b9ab6b",
+      "name": "Avinu Malkeinu (Am)",
+      "setting": null,
+      "part": null,
+      "partGroup": "avinu malkeinu am"
+    },
+    {
+      "fileId": "upload-398912e7-dc26-4505-aeaf-91d50eb01465",
+      "name": "Lecha Dodi:Erev Shel Shoshanim Eb",
+      "setting": null,
+      "part": "Eb",
+      "partGroup": "lecha dodierev shel shoshanim"
+    },
+    {
+      "fileId": "upload-3a06e127-f44a-47f7-acc1-55efb9982634",
+      "name": "Russian Sher No 3",
+      "setting": null,
+      "part": null,
+      "partGroup": "russian sher no 3"
+    },
+    {
+      "fileId": "upload-3a1d2014-2fc5-4ca5-b179-030f89ae425c",
+      "name": "Yedid Nefesh (Bryn, revised)",
+      "setting": "Bryn, revised",
+      "part": null,
+      "partGroup": "yedid nefesh bryn revised"
+    },
+    {
+      "fileId": "upload-3b09195c-68ea-4ccc-966f-728eb4369449",
+      "name": "Mi_shebeirach jazz",
+      "setting": null,
+      "part": null,
+      "partGroup": "mi shebeirach jazz"
+    },
+    {
+      "fileId": "upload-3bd3bd0e-0a1f-49c9-9eaa-6204ba4aa864",
+      "name": "Berosh Hashanah Yikateivun - Full Score",
+      "setting": null,
+      "part": null,
+      "partGroup": "berosh hashanah yikateivun full score"
+    },
+    {
+      "fileId": "upload-3c2cac71-c348-4cda-9066-564051739ffd",
+      "name": "fire on the mountain chords (1)",
+      "setting": null,
+      "part": null,
+      "partGroup": "fire on the mountain chords 1"
+    },
+    {
+      "fileId": "upload-3ccd9ba4-ea20-4a7e-83d7-0c742776fb5d",
+      "name": "Adonai s'fatai (chant) C",
+      "setting": "chant",
+      "part": "C",
+      "partGroup": "adonai s'fatai chant"
+    },
+    {
+      "fileId": "upload-3d272f88-efa5-4471-b8e5-7da7f33e6a67",
+      "name": "Shir Shabbat (DG Mando) - C (updated PDF)",
+      "setting": "DG Mando",
+      "part": null,
+      "partGroup": "shir shabbat dg mando c updated pdf"
+    },
+    {
+      "fileId": "upload-3dca1209-7e8a-4cdf-9e7b-5a9020ccd883",
+      "name": "Mizmor l'David Eb",
+      "setting": null,
+      "part": "Eb",
+      "partGroup": "mizmor l'david"
+    },
+    {
+      "fileId": "upload-3de18a99-1c8e-4abb-b354-197010ab5fa6",
+      "name": "Nigun 2 (DG Mando) - Eb",
+      "setting": "DG Mando",
+      "part": "Eb",
+      "partGroup": "nigun 2 dg mando"
+    },
+    {
+      "fileId": "upload-3e7d7be4-14ff-48c2-9ae8-549cef36078a",
+      "name": "L'cha Dodi Clarinet in Bb",
+      "setting": null,
+      "part": "Clarinet in Bb",
+      "partGroup": "l'cha dodi"
+    },
+    {
+      "fileId": "upload-40b24b4c-0d3f-46ca-a59a-ffc4342dca87",
+      "name": "B'tzelem Elohim",
+      "setting": null,
+      "part": null,
+      "partGroup": "b'tzelem elohim"
+    },
+    {
+      "fileId": "upload-40ba01dc-675c-4106-a900-b8e225e692aa",
+      "name": "Shalom Alechem (Simpler) Trombone",
+      "setting": null,
+      "part": "Trombone",
+      "partGroup": "shalom alechem simpler"
+    },
+    {
+      "fileId": "upload-41215e9c-e02e-466a-b761-e846bef7e81a",
+      "name": "Benediction - Full Score",
+      "setting": null,
+      "part": null,
+      "partGroup": "benediction full score"
+    },
+    {
+      "fileId": "upload-427e2a4c-bce0-4ff6-ae42-434653e435ad",
+      "name": "L'cha Dodi (Simpler) Alto Saxophone",
+      "setting": null,
+      "part": "Alto Saxophone",
+      "partGroup": "l'cha dodi simpler"
+    },
+    {
+      "fileId": "upload-43a7e3b0-1dd1-4912-9513-95399c3bbd2a",
+      "name": "Kol-HaNeshamah-Joey-Weisenberg-4-4-21",
+      "setting": null,
+      "part": null,
+      "partGroup": "kol haneshamah joey weisenberg 4 4 21"
+    },
+    {
+      "fileId": "upload-43a8d374-7347-46a6-ba23-f6b5f3d057c6",
+      "name": "Shiru L'Adonai (Greg Dallas arr., rev 10-2-26) Tenor Saxophone",
+      "setting": "Greg Dallas arr., rev 10-2-26",
+      "part": "Tenor Saxophone",
+      "partGroup": "shiru l'adonai greg dallas arr rev 10 2 26"
+    },
+    {
+      "fileId": "upload-43de1988-3e69-4d9d-b13b-f95d74170b18",
+      "name": "Lechu Goldman",
+      "setting": null,
+      "part": null,
+      "partGroup": "lechu goldman"
+    },
+    {
+      "fileId": "upload-43f0e894-3ce0-4d01-8b66-bbf870205fb4",
+      "name": "Shalom Alechem Score",
+      "setting": null,
+      "part": null,
+      "partGroup": "shalom alechem score"
+    },
+    {
+      "fileId": "upload-44720da5-3a01-4173-b9fe-a7846be4a31d",
+      "name": "allgather",
+      "setting": null,
+      "part": null,
+      "partGroup": "allgather"
+    },
+    {
+      "fileId": "upload-4551b786-3e61-4f7e-94f3-411f89e57a09",
+      "name": "Summertime (Dee Jazz arr., C Lead)",
+      "setting": "Dee Jazz arr., Lead",
+      "part": null,
+      "partGroup": "summertime dee jazz arr c lead"
+    },
+    {
+      "fileId": "upload-4599a69e-93a8-45ea-b0d1-bb56d6dd1899",
+      "name": "Shiru L'Adonai Shir Shabbat (Bryn, revised 9-30-26)",
+      "setting": "Bryn, revised 9-30-26",
+      "part": null,
+      "partGroup": "shiru l'adonai shir shabbat bryn revised 9 30 26"
+    },
+    {
+      "fileId": "upload-46aa6c3e-32f9-43ff-8c90-b1d5ca4a8b3d",
+      "name": "Om-Ney Dm - Full Score",
+      "setting": null,
+      "part": null,
+      "partGroup": "om ney dm full score"
+    },
+    {
+      "fileId": "upload-46b51532-85a9-4e81-ba48-d62d738a6728",
+      "name": "Eil Malei Rachamim",
+      "setting": null,
+      "part": null,
+      "partGroup": "eil malei rachamim"
+    },
+    {
+      "fileId": "upload-4830f298-d4aa-43e9-b34d-ce5cd2faea44",
+      "name": "Hineni Rosenblatt",
+      "setting": null,
+      "part": null,
+      "partGroup": "hineni rosenblatt"
+    },
+    {
+      "fileId": "upload-48e185ea-250b-448e-a9d8-83fb6ce793d7",
+      "name": "Mizmor l'David Bass",
+      "setting": null,
+      "part": null,
+      "partGroup": "mizmor l'david bass"
+    },
+    {
+      "fileId": "upload-4907d33f-10e6-4560-898d-5b1655ae89b7",
+      "name": "shirshabbat",
+      "setting": null,
+      "part": null,
+      "partGroup": "shirshabbat"
+    },
+    {
+      "fileId": "upload-49b3761e-b92d-495c-a7ec-16234c5a55ee",
+      "name": "D Major Happy Tune",
+      "setting": null,
+      "part": null,
+      "partGroup": "d major happy tune"
+    },
+    {
+      "fileId": "upload-4ab96549-5018-4ed4-b6b4-b5d28306da68",
+      "name": "Take Me Home, Country Roads",
+      "setting": null,
+      "part": null,
+      "partGroup": "take me home country roads"
+    },
+    {
+      "fileId": "upload-4afd0796-32c7-420c-bbfd-fcdfd6577bbc",
+      "name": "The Weight (lyrics)",
+      "setting": null,
+      "part": null,
+      "partGroup": "the weight lyrics"
+    },
+    {
+      "fileId": "upload-4b37c905-257e-45f8-b319-6d88bd978fa1",
+      "name": "Eitz Chayim and HashiVeinu - Full Score",
+      "setting": null,
+      "part": null,
+      "partGroup": "eitz chayim and hashiveinu full score"
+    },
+    {
+      "fileId": "upload-4c33f063-4039-4620-9ed8-36088fe464d1",
+      "name": "Hashkivenu (Randy) (1)",
+      "setting": "Randy",
+      "part": null,
+      "partGroup": "hashkivenu randy 1"
+    },
+    {
+      "fileId": "upload-4c3e871b-f2bf-42d7-97eb-46cc9e41085a",
+      "name": "KEDUSHAH - Full Score",
+      "setting": null,
+      "part": null,
+      "partGroup": "kedushah full score"
+    },
+    {
+      "fileId": "upload-4c53e5d6-7d83-4f56-ba8e-62bfb240de9e",
+      "name": "Sher #2 Score(1)",
+      "setting": null,
+      "part": null,
+      "partGroup": "sher 2 score1"
+    },
+    {
+      "fileId": "upload-4c7d1e0a-409f-40e8-848f-f1b50c5fd4ae",
+      "name": "It Takes A Lot To Laugh",
+      "setting": null,
+      "part": null,
+      "partGroup": "it takes a lot to laugh"
+    },
+    {
+      "fileId": "upload-4cb8138b-4312-4cbd-aedf-4afdf38e28f1",
+      "name": "Shiru L'Adonai (Greg Dallas arr., rev 10-2-26) Piano",
+      "setting": "Greg Dallas arr., rev 10-2-26",
+      "part": "Piano",
+      "partGroup": "shiru l'adonai greg dallas arr rev 10 2 26"
+    },
+    {
+      "fileId": "upload-4cc6a300-7894-452e-84ed-d1598cde6f00",
+      "name": "Ki Anu Amecha",
+      "setting": null,
+      "part": null,
+      "partGroup": "ki anu amecha"
+    },
+    {
+      "fileId": "upload-4cf7990d-2f30-402f-92a7-9f7ba09c688d",
+      "name": "I'm a Believer",
+      "setting": null,
+      "part": null,
+      "partGroup": "i'm a believer"
+    },
+    {
+      "fileId": "upload-4d5f5575-23c8-4b3e-9ae1-1009d0ad9dc0",
+      "name": "Shehecheyanu (Pik)",
+      "setting": "Pik",
+      "part": null,
+      "partGroup": "shehecheyanu pik"
+    },
+    {
+      "fileId": "upload-4e1b7a14-a0d0-486c-a440-6b6b0708da67",
+      "name": "goin down the road feeling bad chords",
+      "setting": null,
+      "part": null,
+      "partGroup": "goin down the road feeling bad chords"
+    },
+    {
+      "fileId": "upload-4e291bf4-ce69-46d2-a4d4-22d556c6a7b0",
+      "name": "She Belongs To Me",
+      "setting": null,
+      "part": null,
+      "partGroup": "she belongs to me"
+    },
+    {
+      "fileId": "upload-4ebc755c-f5ab-4df4-a316-3e7d1f3f2b35",
+      "name": "I Wanna Dance With Somebody",
+      "setting": null,
+      "part": null,
+      "partGroup": "i wanna dance with somebody"
+    },
+    {
+      "fileId": "upload-4f05ce1a-62e9-41f6-8050-46d256a0bff0",
+      "name": "Od Yavo Shalom Aleinu",
+      "setting": null,
+      "part": null,
+      "partGroup": "od yavo shalom aleinu"
+    },
+    {
+      "fileId": "upload-4fffcc62-66af-4280-a9b6-42ba4cd41f7d",
+      "name": "Return Again (Carlebach)",
+      "setting": "Carlebach",
+      "part": null,
+      "partGroup": "return again carlebach"
+    },
+    {
+      "fileId": "upload-5046ea95-c900-41a1-84d9-d7139e0afd26",
+      "name": "Shiru L'Adonai (Eb Lead Sheet)",
+      "setting": null,
+      "part": null,
+      "partGroup": "shiru l'adonai eb lead sheet"
+    },
+    {
+      "fileId": "upload-512627ae-e21e-41be-a1d3-1c204e2f0a74",
+      "name": "Shiru L'Adonai (Bb Lead Sheet)",
+      "setting": null,
+      "part": null,
+      "partGroup": "shiru l'adonai bb lead sheet"
+    },
+    {
+      "fileId": "upload-51da1a60-f376-4d00-9ea5-2ba0ebdc83e1",
+      "name": "Friend of the Devil (band format)",
+      "setting": null,
+      "part": null,
+      "partGroup": "friend of the devil band format"
+    },
+    {
+      "fileId": "upload-5253e0ba-117c-4f6f-b35b-ea663474b988",
+      "name": "Three Little Birds",
+      "setting": null,
+      "part": null,
+      "partGroup": "three little birds"
+    },
+    {
+      "fileId": "upload-52cbc430-2603-4768-b74a-d1b6496c52f3",
+      "name": "Barchu (Walkdown) Eb",
+      "setting": "Walkdown",
+      "part": "Eb",
+      "partGroup": "barchu walkdown"
+    },
+    {
+      "fileId": "upload-53391db5-c8fb-4e93-8e2a-aa8303d92b22",
+      "name": "L'cha Dodi (Simpler) Flute",
+      "setting": null,
+      "part": "Flute",
+      "partGroup": "l'cha dodi simpler"
+    },
+    {
+      "fileId": "upload-53f9529f-85e0-420c-ab25-bea1387a13d1",
+      "name": "Fast Car (band format)",
+      "setting": null,
+      "part": null,
+      "partGroup": "fast car band format"
+    },
+    {
+      "fileId": "upload-542dccd2-7bda-4709-806a-1c1e7cc57d24",
+      "name": "aint no sunshine chords",
+      "setting": null,
+      "part": null,
+      "partGroup": "aint no sunshine chords"
+    },
+    {
+      "fileId": "upload-55eeee92-d295-4f84-b1e7-c9ea96a1494a",
+      "name": "Hal'luyah (Psalm 150) (Am)",
+      "setting": "Psalm 150",
+      "part": null,
+      "partGroup": "hal'luyah psalm 150 am"
+    },
+    {
+      "fileId": "upload-564e525c-2111-45ba-a436-7bd4badd9eae",
+      "name": "L'cha Dodi Piano",
+      "setting": null,
+      "part": null,
+      "partGroup": "l'cha dodi piano"
+    },
+    {
+      "fileId": "upload-56f755d4-3b93-4df9-ba32-c27ae912f2f0",
+      "name": "Wonderwall",
+      "setting": null,
+      "part": null,
+      "partGroup": "wonderwall"
+    },
+    {
+      "fileId": "upload-56fcb173-ac67-46ae-9afc-4430d25b5c7c",
+      "name": "Modah Ani (Halpert) band simple score",
+      "setting": "Halpert",
+      "part": null,
+      "partGroup": "modah ani halpert band simple score"
+    },
+    {
+      "fileId": "upload-57a1c3aa-d977-41d3-8d93-a42d93d4a297",
+      "name": "Adonai S'fatai (Em)",
+      "setting": null,
+      "part": null,
+      "partGroup": "adonai s'fatai em"
+    },
+    {
+      "fileId": "upload-57c5decd-aed5-4b51-9d63-b1e0aa772c8e",
+      "name": "Nigun 2 (DG Mando) - Bass",
+      "setting": "DG Mando",
+      "part": "Bass",
+      "partGroup": "nigun 2 dg mando"
+    },
+    {
+      "fileId": "upload-58e533f7-cfab-448a-9582-c7349dbecd8b",
+      "name": "B'sefer chayim",
+      "setting": null,
+      "part": null,
+      "partGroup": "b'sefer chayim"
+    },
+    {
+      "fileId": "upload-593af115-7dda-40ef-acc9-d506d5cb1a22",
+      "name": "eits chayim hi tree of life chords (1)",
+      "setting": null,
+      "part": null,
+      "partGroup": "eits chayim hi tree of life chords 1"
+    },
+    {
+      "fileId": "upload-593b25a3-3bda-4466-9bcb-3fb87f75ae67",
+      "name": "Come On In This House",
+      "setting": null,
+      "part": null,
+      "partGroup": "come on in this house"
+    },
+    {
+      "fileId": "upload-5959a3d8-c59e-408b-82fe-e741722b69dd",
+      "name": "L'cha Dodi Trombone",
+      "setting": null,
+      "part": "Trombone",
+      "partGroup": "l'cha dodi"
+    },
+    {
+      "fileId": "upload-596a2313-675c-47d4-97bb-abef54851414",
+      "name": "Modeh Ani (CRC band chart, Cm)",
+      "setting": null,
+      "part": null,
+      "partGroup": "modeh ani crc band chart cm"
+    },
+    {
+      "fileId": "upload-5aced51b-a5dd-4126-a64a-4d71198f8c5f",
+      "name": "Hayom teamtzeinu - Full Score",
+      "setting": null,
+      "part": null,
+      "partGroup": "hayom teamtzeinu full score"
+    },
+    {
+      "fileId": "upload-5b8f9f94-b182-45da-98a5-1ec236dbf7c1",
+      "name": "L'cha Dodi Flute",
+      "setting": null,
+      "part": null,
+      "partGroup": "l'cha dodi flute"
+    },
+    {
+      "fileId": "upload-5c0e4715-9c63-4bb4-bb5e-a2a1e2beec8f",
+      "name": "Shiru L'Adonai (trimmed down) Trumpet in Bb",
+      "setting": "trimmed down",
+      "part": "Trumpet in Bb",
+      "partGroup": "shiru l'adonai trimmed down"
+    },
+    {
+      "fileId": "upload-5d633068-bfc9-4b74-af9a-9beff3c2fd25",
+      "name": "zochrenu Lehayim - Full Score",
+      "setting": null,
+      "part": null,
+      "partGroup": "zochrenu lehayim full score"
+    },
+    {
+      "fileId": "upload-5f746517-9d6c-41b8-a85d-e683ea7e56c1",
+      "name": "Nigun 2 (DG Mando)",
+      "setting": "DG Mando",
+      "part": null,
+      "partGroup": "nigun 2 dg mando"
+    },
+    {
+      "fileId": "upload-6018fde5-49f4-437d-be74-062bc065844a",
+      "name": "Adonai s'fatai (chant) Bb",
+      "setting": "chant",
+      "part": "Bb",
+      "partGroup": "adonai s'fatai chant"
+    },
+    {
+      "fileId": "upload-608c2154-876e-4f60-9202-b2eb0512cf0e",
+      "name": "Wagon Wheel",
+      "setting": null,
+      "part": null,
+      "partGroup": "wagon wheel"
+    },
+    {
+      "fileId": "upload-610c127f-8112-45db-9d6a-f4d68bbc5daf",
+      "name": "Mozi's Nigun:Ana B'Koach (Lead Sheet) Bb",
+      "setting": null,
+      "part": "Bb",
+      "partGroup": "mozi's nigunana b'koach lead sheet"
+    },
+    {
+      "fileId": "upload-61bbc7d5-fda6-45af-8462-050bc00e3de5",
+      "name": "You Ain't Goin' Nowhere",
+      "setting": null,
+      "part": null,
+      "partGroup": "you ain't goin' nowhere"
+    },
+    {
+      "fileId": "upload-61cca960-f930-4c87-9bb8-dd644db30a4f",
+      "name": "Wagon Wheel (band format)",
+      "setting": null,
+      "part": null,
+      "partGroup": "wagon wheel band format"
+    },
+    {
+      "fileId": "upload-640d86f4-fb3a-40a9-b44c-795353b06119",
+      "name": "Shema (Major) Eb",
+      "setting": "Major",
+      "part": "Eb",
+      "partGroup": "shema major"
+    },
+    {
+      "fileId": "upload-65fc3cb9-8b84-4ce7-9711-aa4af95b6a62",
+      "name": "Hashkiveinu (CRC custom, C) — band chart",
+      "setting": "CRC custom",
+      "part": null,
+      "partGroup": "hashkiveinu crc custom c band chart"
+    },
+    {
+      "fileId": "upload-66d3e6d0-890e-4e17-8b98-09ac71689a76",
+      "name": "Sunscreen (Camp Sabra) (band format)",
+      "setting": "Camp Sabra",
+      "part": null,
+      "partGroup": "sunscreen camp sabra band format"
+    },
+    {
+      "fileId": "upload-67a41a8a-709b-40e8-a0c0-5cdf2df6fa0a",
+      "name": "6. Summertime - C Lead",
+      "setting": null,
+      "part": "C Lead",
+      "partGroup": "6 summertime"
+    },
+    {
+      "fileId": "upload-697f24f1-e809-40f6-b68d-8c51735f68a1",
+      "name": "This Land is Your Land",
+      "setting": null,
+      "part": null,
+      "partGroup": "this land is your land"
+    },
+    {
+      "fileId": "upload-6a08e2b5-36c5-46b9-b6d3-e4db666133e4",
+      "name": "Come Healing - Full Score",
+      "setting": null,
+      "part": null,
+      "partGroup": "come healing full score"
+    },
+    {
+      "fileId": "upload-6b6764c7-d521-4ac6-8f04-c62af89cacbd",
+      "name": "Who By Fire (Rosh Hashanah)",
+      "setting": "Rosh Hashanah",
+      "part": null,
+      "partGroup": "who by fire rosh hashanah"
+    },
+    {
+      "fileId": "upload-6c6cb367-f875-47d9-a66c-287f2f259d53",
+      "name": "olam_chesed_chord_chart_Cm",
+      "setting": null,
+      "part": null,
+      "partGroup": "olam chesed chord chart cm"
+    },
+    {
+      "fileId": "upload-6e481528-831d-4e2a-bb94-0a7de32c4a0d",
+      "name": "Lecha Dodi:Erev Shel Shoshanim Bb",
+      "setting": null,
+      "part": "Bb",
+      "partGroup": "lecha dodierev shel shoshanim"
+    },
+    {
+      "fileId": "upload-700110f2-68d6-4d8e-b7b4-963e78ad6857",
+      "name": "Shiru L'Adonai (Greg Dallas arr., rev 10-2-26) Flute",
+      "setting": "Greg Dallas arr., rev 10-2-26",
+      "part": "Flute",
+      "partGroup": "shiru l'adonai greg dallas arr rev 10 2 26"
+    },
+    {
+      "fileId": "upload-70ce0a36-c1fb-42aa-9ef0-db6aca08e1d1",
+      "name": "Hal'luyah (Psalm 150) (Dm)",
+      "setting": "Psalm 150",
+      "part": null,
+      "partGroup": "hal'luyah psalm 150 dm"
+    },
+    {
+      "fileId": "upload-710525d2-d458-41e0-9835-143c01bdd3aa",
+      "name": "Alle Brider D Minor piano",
+      "setting": null,
+      "part": null,
+      "partGroup": "alle brider d minor piano"
+    },
+    {
+      "fileId": "upload-7131ee81-97e9-4064-8d7c-cb07b9370063",
+      "name": "Twilight (D Goldenberg)",
+      "setting": "Goldenberg",
+      "part": null,
+      "partGroup": "twilight d goldenberg"
+    },
+    {
+      "fileId": "upload-7243a2ef-7448-43ff-afcc-f29fb9074b63",
+      "name": "Shir Shabbat (DG Mando) - Eb",
+      "setting": "DG Mando",
+      "part": "Eb",
+      "partGroup": "shir shabbat dg mando"
+    },
+    {
+      "fileId": "upload-73299be0-4be2-41f8-936a-564f8407be09",
+      "name": "One Day (chords)",
+      "setting": null,
+      "part": null,
+      "partGroup": "one day chords"
+    },
+    {
+      "fileId": "upload-74891fe8-e20d-4ab5-a72b-0c1eb79b241a",
+      "name": "Dis Trust - Full Score",
+      "setting": null,
+      "part": null,
+      "partGroup": "dis trust full score"
+    },
+    {
+      "fileId": "upload-75899fcb-d75a-45cb-9740-4ab0ff6a810b",
+      "name": "aly modah ani",
+      "setting": null,
+      "part": null,
+      "partGroup": "aly modah ani"
+    },
+    {
+      "fileId": "upload-7770cb04-25a8-401b-8961-7254cc71b12e",
+      "name": "Barchu (Walkdown) C",
+      "setting": "Walkdown",
+      "part": "C",
+      "partGroup": "barchu walkdown"
+    },
+    {
+      "fileId": "upload-783e2b75-596c-40b0-972d-3ebdcf23f17d",
+      "name": "erev shel lcha dodi",
+      "setting": null,
+      "part": null,
+      "partGroup": "erev shel lcha dodi"
+    },
+    {
+      "fileId": "upload-7853815f-6c11-47ec-a2b5-cfde2d5021f8",
+      "name": "Adon Olam",
+      "setting": null,
+      "part": null,
+      "partGroup": "adon olam"
+    },
+    {
+      "fileId": "upload-791dd1cd-ce54-46f4-8cc2-5f10b13fd16b",
+      "name": "Barchu (Walkdown) Eb",
+      "setting": "Walkdown",
+      "part": "Eb",
+      "partGroup": "barchu walkdown"
+    },
+    {
+      "fileId": "upload-79b1b827-67e0-4a62-8f96-1c06459a6fb3",
+      "name": "Esa Einai - Full Score",
+      "setting": null,
+      "part": null,
+      "partGroup": "esa einai full score"
+    },
+    {
+      "fileId": "upload-7a463ece-e626-4b41-9306-98edec329411",
+      "name": "L'cha Dodi Soprano Saxophone",
+      "setting": null,
+      "part": "Soprano Saxophone",
+      "partGroup": "l'cha dodi"
+    },
+    {
+      "fileId": "upload-7acc4962-c361-429a-b384-b5ac2024d6bc",
+      "name": "Yihyu Leratzon - Full Score",
+      "setting": null,
+      "part": null,
+      "partGroup": "yihyu leratzon full score"
+    },
+    {
+      "fileId": "upload-7b4da954-ba5f-4f59-84de-d39bc487c91d",
+      "name": "Modah Ani (Am Aly Halpert)",
+      "setting": "Aly Halpert",
+      "part": null,
+      "partGroup": "modah ani am aly halpert"
+    },
+    {
+      "fileId": "upload-7d66338e-b287-43c4-8264-e672670e65a3",
+      "name": "Ain't No Sunshine",
+      "setting": null,
+      "part": null,
+      "partGroup": "ain't no sunshine"
+    },
+    {
+      "fileId": "upload-7d942ce4-1cc6-42a3-b9dd-276b5e045911",
+      "name": "Barchu (Walkdown) Bb",
+      "setting": "Walkdown",
+      "part": "Bb",
+      "partGroup": "barchu walkdown"
+    },
+    {
+      "fileId": "upload-7e54f2e8-bfda-4da6-8a22-a52a49eced87",
+      "name": "Shalom Alechem Baritone voice",
+      "setting": null,
+      "part": null,
+      "partGroup": "shalom alechem baritone voice"
+    },
+    {
+      "fileId": "upload-7f4febd7-bd2c-4d08-a311-daeed27b7298",
+      "name": "By the Rivers of Babylon (Sublime, band format)",
+      "setting": "Sublime",
+      "part": null,
+      "partGroup": "by the rivers of babylon sublime band format"
+    },
+    {
+      "fileId": "upload-7fb95fac-c0cf-4cb1-91a3-6e5828c212b8",
+      "name": "Bina in G",
+      "setting": null,
+      "part": null,
+      "partGroup": "bina in g"
+    },
+    {
+      "fileId": "upload-8076119a-b820-46e3-8375-e2b1743c7c25",
+      "name": "Three Little Birds",
+      "setting": null,
+      "part": null,
+      "partGroup": "three little birds"
+    },
+    {
+      "fileId": "upload-80a57d32-eee9-4e2f-bd47-3dbfaa486a65",
+      "name": "Take Me Home, Country Roads (band format)",
+      "setting": null,
+      "part": null,
+      "partGroup": "take me home country roads band format"
+    },
+    {
+      "fileId": "upload-823b20aa-c36f-4163-aab7-a1487a7526f0",
+      "name": "Achot ketana",
+      "setting": null,
+      "part": null,
+      "partGroup": "achot ketana"
+    },
+    {
+      "fileId": "upload-8274323a-1078-40db-8332-855e5fc96340",
+      "name": "B'sefer Chayim (Em)",
+      "setting": null,
+      "part": null,
+      "partGroup": "b'sefer chayim em"
+    },
+    {
+      "fileId": "upload-8308d134-a39a-486a-b380-8226bf1ceaa2",
+      "name": "Kol HaNeshamah (Greg Dallas arr.)",
+      "setting": "Greg Dallas arr.",
+      "part": null,
+      "partGroup": "kol haneshamah greg dallas arr"
+    },
+    {
+      "fileId": "upload-830c9fa8-5fac-4124-8112-c3376fa9d316",
+      "name": "newtune_july2026",
+      "setting": null,
+      "part": null,
+      "partGroup": "newtune july2026"
+    },
+    {
+      "fileId": "upload-83902164-2c15-4a45-9908-1cfcc56ee376",
+      "name": "Mississippi Goddam (Nina Simone)",
+      "setting": "Nina Simone",
+      "part": null,
+      "partGroup": "mississippi goddam nina simone"
+    },
+    {
+      "fileId": "upload-8396793f-f74b-4361-a4a8-fa0a5bf1903a",
+      "name": "B'sefer chayim & Hashiveinu",
+      "setting": null,
+      "part": null,
+      "partGroup": "b'sefer chayim hashiveinu"
+    },
+    {
+      "fileId": "upload-83a208d3-6b48-431d-b90c-f4d67ef1ed02",
+      "name": "Shalom Rav - Full Score",
+      "setting": null,
+      "part": null,
+      "partGroup": "shalom rav full score"
+    },
+    {
+      "fileId": "upload-83bc4462-d37c-45a8-83b0-32e767a97e5d",
+      "name": "Shema (Major) C",
+      "setting": "Major",
+      "part": "C",
+      "partGroup": "shema major"
+    },
+    {
+      "fileId": "upload-841f0a0c-fda6-464e-853a-81124e7026d7",
+      "name": "Ma Tovu (CRC) 2",
+      "setting": "CRC",
+      "part": null,
+      "partGroup": "ma tovu crc 2"
+    },
+    {
+      "fileId": "upload-851993d0-452c-422c-9fed-e1a0f694066e",
+      "name": "Mi Chamochah - Full Score",
+      "setting": null,
+      "part": null,
+      "partGroup": "mi chamochah full score"
+    },
+    {
+      "fileId": "upload-855e5d02-2011-4aab-8ddc-8534fa8abf8b",
+      "name": "I Shall Be Released Lead C - Score",
+      "setting": null,
+      "part": null,
+      "partGroup": "i shall be released lead c score"
+    },
+    {
+      "fileId": "upload-85b75ced-5571-4900-89b9-df2099513430",
+      "name": "Barchu (Am I Awake ) - Full Score",
+      "setting": "I Awake",
+      "part": null,
+      "partGroup": "barchu am i awake full score"
+    },
+    {
+      "fileId": "upload-86205ead-e713-4134-a279-864d1adb4224",
+      "name": "Water Song",
+      "setting": null,
+      "part": null,
+      "partGroup": "water song"
+    },
+    {
+      "fileId": "upload-868720ea-f36e-4ce9-bb0e-b61507025a36",
+      "name": "Driving Quiet - one pager",
+      "setting": "one pager",
+      "part": null,
+      "partGroup": "driving quiet one pager"
+    },
+    {
+      "fileId": "upload-86eca487-4f42-456e-ad73-5065aeafbc55",
+      "name": "Shiru L'Adonai (Greg Dallas arr., rev 10-2-26) Alto Saxophone",
+      "setting": "Greg Dallas arr., rev 10-2-26",
+      "part": "Alto Saxophone",
+      "partGroup": "shiru l'adonai greg dallas arr rev 10 2 26"
+    },
+    {
+      "fileId": "upload-870b3198-861e-4282-86bf-0d521fee3c33",
+      "name": "Hashiveinu (Bogard)",
+      "setting": "Bogard",
+      "part": null,
+      "partGroup": "hashiveinu bogard"
+    },
+    {
+      "fileId": "upload-88d22e26-5679-4d39-9281-2397bdd01259",
+      "name": "Hakafot for Simchat Torah Score",
+      "setting": null,
+      "part": null,
+      "partGroup": "hakafot for simchat torah score"
+    },
+    {
+      "fileId": "upload-8964fbc4-92f6-452b-9da7-a1c2a46eafaa",
+      "name": "Achat Sha'alti (Cm)",
+      "setting": null,
+      "part": null,
+      "partGroup": "achat sha'alti cm"
+    },
+    {
+      "fileId": "upload-8a09d3ea-13ba-44bf-9022-68609616a452",
+      "name": "Sunscreen (Camp Sabra)",
+      "setting": "Camp Sabra",
+      "part": null,
+      "partGroup": "sunscreen camp sabra"
+    },
+    {
+      "fileId": "upload-8ae8cfff-c2ed-4190-99fa-35a3f2d67cee",
+      "name": "Shiru L'Adonai (trimmed down) Piano",
+      "setting": "trimmed down",
+      "part": "Piano",
+      "partGroup": "shiru l'adonai trimmed down"
+    },
+    {
+      "fileId": "upload-8b5d8aa5-f769-40b6-85ed-0871e2b8ce66",
+      "name": "summertime chords",
+      "setting": null,
+      "part": null,
+      "partGroup": "summertime chords"
+    },
+    {
+      "fileId": "upload-8bf896c5-b260-478d-95b7-d6437f350cf1",
+      "name": "Sim Shalom - Full Score",
+      "setting": null,
+      "part": null,
+      "partGroup": "sim shalom full score"
+    },
+    {
+      "fileId": "upload-8cf12700-fb49-4d3c-8b96-fcadab19999f",
+      "name": "Bar'chu Walkdown",
+      "setting": null,
+      "part": null,
+      "partGroup": "bar'chu walkdown"
+    },
+    {
+      "fileId": "upload-8d4cc9be-4f84-42fc-8a07-9a0bd97d42de",
+      "name": "Shalom Alehem (Fast) Eb (Lead Sheet)",
+      "setting": "Fast",
+      "part": null,
+      "partGroup": "shalom alehem fast eb lead sheet"
+    },
+    {
+      "fileId": "upload-8d6d5a21-3951-40a2-b207-d9d88a481011",
+      "name": "B'sefer Chayim - Full Score",
+      "setting": null,
+      "part": null,
+      "partGroup": "b'sefer chayim full score"
+    },
+    {
+      "fileId": "upload-8dd4c514-41a2-446b-b479-aa1fba1548a4",
+      "name": "Mizmor l'David. Bb",
+      "setting": null,
+      "part": "Bb",
+      "partGroup": "mizmor l'david"
+    },
+    {
+      "fileId": "upload-8e13ab0f-8b58-474f-b235-8b781c71e5b9",
+      "name": "Hava Nagilah",
+      "setting": null,
+      "part": null,
+      "partGroup": "hava nagilah"
+    },
+    {
+      "fileId": "upload-8ec34922-bf79-42b0-9900-8efae374c47a",
+      "name": "What a Wonderful World",
+      "setting": null,
+      "part": null,
+      "partGroup": "what a wonderful world"
+    },
+    {
+      "fileId": "upload-8fa04d9d-77c7-47dd-8187-0fca9844a030",
+      "name": "David Melech Yisrael (Carlebach, band format)",
+      "setting": "Carlebach",
+      "part": null,
+      "partGroup": "david melech yisrael carlebach band format"
+    },
+    {
+      "fileId": "upload-8fc96cb9-2802-4a29-a35b-b2fd970d7441",
+      "name": "L'chai Olamim - Full Score (1)",
+      "setting": null,
+      "part": null,
+      "partGroup": "l'chai olamim full score 1"
+    },
+    {
+      "fileId": "upload-903050d4-31c5-4ab9-a353-14ba8fe6331b",
+      "name": "nigun2_updated_Bb",
+      "setting": null,
+      "part": null,
+      "partGroup": "nigun2 updated bb"
+    },
+    {
+      "fileId": "upload-9123b585-1da9-44ab-87ba-5d7f2f6fc828",
+      "name": "mandomang",
+      "setting": null,
+      "part": null,
+      "partGroup": "mandomang"
+    },
+    {
+      "fileId": "upload-91b99c44-563c-4066-85ca-180006c98d14",
+      "name": "Friend Of The Devil",
+      "setting": null,
+      "part": null,
+      "partGroup": "friend of the devil"
+    },
+    {
+      "fileId": "upload-920b42b5-5d64-43cb-b65c-3ec24ee47abb",
+      "name": "L'cha Dodi (Simpler) Clarinet in Bb",
+      "setting": null,
+      "part": "Clarinet in Bb",
+      "partGroup": "l'cha dodi simpler"
+    },
+    {
+      "fileId": "upload-92aa9e84-4f40-4f92-b2c0-3b7d0ca0d36e",
+      "name": "Sh'ma Yisrael (Sabra custom, C) — band chart",
+      "setting": "Sabra custom",
+      "part": null,
+      "partGroup": "sh'ma yisrael sabra custom c band chart"
+    },
+    {
+      "fileId": "upload-936a4c24-014c-4b6c-a8ab-8a5a6d3021ae",
+      "name": "American Girl (band format)",
+      "setting": null,
+      "part": null,
+      "partGroup": "american girl band format"
+    },
+    {
+      "fileId": "upload-93f68f6e-a9c7-455e-9288-4d0a47288455",
+      "name": "Hine Ma Tov (Sabra, C) — band chart",
+      "setting": "Sabra",
+      "part": null,
+      "partGroup": "hine ma tov sabra c band chart"
+    },
+    {
+      "fileId": "upload-94531082-4b5f-4215-bfbd-d6d7b6d624e0",
+      "name": "Ki Anu Amecha (Trad)",
+      "setting": "Trad",
+      "part": null,
+      "partGroup": "ki anu amecha trad"
+    },
+    {
+      "fileId": "upload-94650195-4b51-4e80-b4f1-ee8c7b0a80f5",
+      "name": "Mi Chamocha Traditional - Full Score",
+      "setting": null,
+      "part": null,
+      "partGroup": "mi chamocha traditional full score"
+    },
+    {
+      "fileId": "upload-9493bcd9-506f-475b-8242-7f096de3c384",
+      "name": "L'cha Dodi Trumpet in Bb",
+      "setting": null,
+      "part": "Trumpet in Bb",
+      "partGroup": "l'cha dodi"
+    },
+    {
+      "fileId": "upload-94a871ef-e21b-492f-9c2c-2a62fd8a44f6",
+      "name": "Adon Olam — IWITW (Em) — band chart DRAFT v2",
+      "setting": null,
+      "part": null,
+      "partGroup": "adon olam iwitw em band chart draft v2"
+    },
+    {
+      "fileId": "upload-94ed978b-1bba-46c4-9c5d-af1a34f83333",
+      "name": "Free Fallin' (band format)",
+      "setting": null,
+      "part": null,
+      "partGroup": "free fallin' band format"
+    },
+    {
+      "fileId": "upload-95a39ada-6b29-45c1-8573-620756bb0167",
+      "name": "Stick Season (A - concert)",
+      "setting": "- concert",
+      "part": null,
+      "partGroup": "stick season a concert"
+    },
+    {
+      "fileId": "upload-96610c43-3703-4557-9e18-05d76029d84b",
+      "name": "twilight",
+      "setting": null,
+      "part": null,
+      "partGroup": "twilight"
+    },
+    {
+      "fileId": "upload-971ad1fe-cc86-4a60-90ae-e72a63b9508c",
+      "name": "The Weight (band format)",
+      "setting": null,
+      "part": null,
+      "partGroup": "the weight band format"
+    },
+    {
+      "fileId": "upload-971f8250-15dd-40db-a0e6-5378ed4eb94f",
+      "name": "Shiru L'Adonai (Greg Dallas arr., rev 10-2-26) Trombone",
+      "setting": "Greg Dallas arr., rev 10-2-26",
+      "part": "Trombone",
+      "partGroup": "shiru l'adonai greg dallas arr rev 10 2 26"
+    },
+    {
+      "fileId": "upload-9722ec75-2e1e-4f06-b542-7a2e2174143a",
+      "name": "Shir Shabbat Packet — Cover & Tune List",
+      "setting": null,
+      "part": null,
+      "partGroup": "shir shabbat packet cover tune list"
+    },
+    {
+      "fileId": "upload-97f18cfd-de1f-42fd-b77e-4f151021a8ca",
+      "name": "B'rosh HaShanah (Dm)",
+      "setting": null,
+      "part": null,
+      "partGroup": "b'rosh hashanah dm"
+    },
+    {
+      "fileId": "upload-98157dc6-c3c8-49a2-b4e1-be7249e89423",
+      "name": "B-minor Simple Tune",
+      "setting": null,
+      "part": null,
+      "partGroup": "b minor simple tune"
+    },
+    {
+      "fileId": "upload-999b47bc-eaba-4a06-b1b4-0fe52b6b8d87",
+      "name": "Mah Tovu - Full Score",
+      "setting": null,
+      "part": null,
+      "partGroup": "mah tovu full score"
+    },
+    {
+      "fileId": "upload-99e60a5e-387e-4574-8b5c-016f01d39c18",
+      "name": "Lecha Dodi:Erev Shel Shoshanim Bass",
+      "setting": null,
+      "part": null,
+      "partGroup": "lecha dodierev shel shoshanim bass"
+    },
+    {
+      "fileId": "upload-9a474660-c642-4627-bc1c-53b5d564ae86",
+      "name": "Strange Fruit",
+      "setting": null,
+      "part": null,
+      "partGroup": "strange fruit"
+    },
+    {
+      "fileId": "upload-9ac0cdd9-580a-498f-9790-4f061605131d",
+      "name": "Shiru L'Adonai (Greg Dallas arr., rev 10-2-26) Soprano Saxophone",
+      "setting": "Greg Dallas arr., rev 10-2-26",
+      "part": "Soprano Saxophone",
+      "partGroup": "shiru l'adonai greg dallas arr rev 10 2 26"
+    },
+    {
+      "fileId": "upload-9b48d5b0-fb3c-4663-b753-9ebec2da518f",
+      "name": "Shiru L'Adonai (C Lead Sheet)",
+      "setting": null,
+      "part": null,
+      "partGroup": "shiru l'adonai c lead sheet"
+    },
+    {
+      "fileId": "upload-9b8ba126-9019-4b0e-9261-2a0a34965f0a",
+      "name": "Shiru L'Adonai (trimmed down) Clarinet in Bb",
+      "setting": "trimmed down",
+      "part": "Clarinet in Bb",
+      "partGroup": "shiru l'adonai trimmed down"
+    },
+    {
+      "fileId": "upload-9f340d8c-5d20-40f0-9dec-8ef39ede84af",
+      "name": "May it be a Good Year - Full Score",
+      "setting": null,
+      "part": null,
+      "partGroup": "may it be a good year full score"
+    },
+    {
+      "fileId": "upload-9fb8f8e5-1e47-41cc-84b5-126dc3737631",
+      "name": "C-minor Funky",
+      "setting": null,
+      "part": null,
+      "partGroup": "c minor funky"
+    },
+    {
+      "fileId": "upload-a01c47b8-ebea-4fb9-97c8-e87bd37bf3a6",
+      "name": "Shir Shabbat (DG Mando) - Bb",
+      "setting": "DG Mando",
+      "part": "Bb",
+      "partGroup": "shir shabbat dg mando"
+    },
+    {
+      "fileId": "upload-a059e0d5-e919-466a-9e83-757af222f042",
+      "name": "Eitz Chayim (Old Skool)",
+      "setting": "Old Skool",
+      "part": null,
+      "partGroup": "eitz chayim old skool"
+    },
+    {
+      "fileId": "upload-a0afa725-19c7-4afc-8583-a0da8cf9b21f",
+      "name": "Hallelujah - Leonard Cohen (G)",
+      "setting": "Leonard Cohen (G)",
+      "part": null,
+      "partGroup": "hallelujah leonard cohen g"
+    },
+    {
+      "fileId": "upload-a0e12ee5-2e0f-48e2-a2f4-597f1aebd5af",
+      "name": "Avinu Malkeinu",
+      "setting": null,
+      "part": null,
+      "partGroup": "avinu malkeinu"
+    },
+    {
+      "fileId": "upload-a0f8501c-5e76-4a8c-bdd8-fc21f003b147",
+      "name": "Ay Oh / Lo Yisa Goy",
+      "setting": null,
+      "part": null,
+      "partGroup": "ay oh lo yisa goy"
+    },
+    {
+      "fileId": "upload-a14f2545-34c3-44e7-8b40-74a3ffd7e0c7",
+      "name": "Barchu (Walkdown) Bass Clef",
+      "setting": "Walkdown",
+      "part": "Bass Clef",
+      "partGroup": "barchu walkdown"
+    },
+    {
+      "fileId": "upload-a19641cd-a3db-47d7-9f7b-99582425e478",
+      "name": "Adonai s'fatai (chant) Eb",
+      "setting": "chant",
+      "part": "Eb",
+      "partGroup": "adonai s'fatai chant"
+    },
+    {
+      "fileId": "upload-a1b9ac59-8d6d-4b72-96c8-743c971aaa84",
+      "name": "Shalom Alechem (Simpler) Soprano Saxophone",
+      "setting": null,
+      "part": "Soprano Saxophone",
+      "partGroup": "shalom alechem simpler"
+    },
+    {
+      "fileId": "upload-a1d9da02-75a0-46e8-8ef4-385ad5c8f634",
+      "name": "shirshabbat_updated_Bb",
+      "setting": null,
+      "part": null,
+      "partGroup": "shirshabbat updated bb"
+    },
+    {
+      "fileId": "upload-a1e83cba-2dee-4266-8d46-4b5e76ceb816",
+      "name": "Shalom Alehem (Fast) Bb (Lead Sheet)",
+      "setting": "Fast",
+      "part": null,
+      "partGroup": "shalom alehem fast bb lead sheet"
+    },
+    {
+      "fileId": "upload-a22cfc06-b187-4464-95fa-b81264af6374",
+      "name": "V'Shamru (Old Skool)",
+      "setting": "Old Skool",
+      "part": null,
+      "partGroup": "v'shamru old skool"
+    },
+    {
+      "fileId": "upload-a2d63636-adb8-4c13-8baa-19daf742bb18",
+      "name": "L'cha Dodi (Simpler) Trumpet in Bb",
+      "setting": null,
+      "part": "Trumpet in Bb",
+      "partGroup": "l'cha dodi simpler"
+    },
+    {
+      "fileId": "upload-a37bc6db-9089-401e-b276-f5bd0cc50bf2",
+      "name": "Mizmor l'David C",
+      "setting": null,
+      "part": null,
+      "partGroup": "mizmor l'david c"
+    },
+    {
+      "fileId": "upload-a469ceba-603c-4fa6-8273-3213771b3222",
+      "name": "Aleinu -",
+      "setting": null,
+      "part": null,
+      "partGroup": "aleinu"
+    },
+    {
+      "fileId": "upload-a48d5d28-aa0b-426a-a0e9-0ca2a024fed5",
+      "name": "Mark's Hora Score",
+      "setting": null,
+      "part": null,
+      "partGroup": "mark's hora score"
+    },
+    {
+      "fileId": "upload-a5b7deab-3f6a-4e1e-a18a-c64d4b97dada",
+      "name": "Adonai s'fatai (chant) Bass",
+      "setting": "chant",
+      "part": "Bass",
+      "partGroup": "adonai s'fatai chant"
+    },
+    {
+      "fileId": "upload-a60b0dce-daa8-4231-b743-724bd69962e1",
+      "name": "Modeh_Ani F minor",
+      "setting": null,
+      "part": null,
+      "partGroup": "modeh ani f minor"
+    },
+    {
+      "fileId": "upload-a73d8721-3f66-4b3c-aac8-295717ffabdc",
+      "name": "Avinu Malkeinu - Selichot",
+      "setting": "Selichot",
+      "part": null,
+      "partGroup": "avinu malkeinu selichot"
+    },
+    {
+      "fileId": "upload-a74baa8b-f410-47c2-b310-85c848406793",
+      "name": "Shalom Alechem (Lyrics) - Greg Dallas arr.",
+      "setting": "Greg Dallas arr.",
+      "part": null,
+      "partGroup": "shalom alechem lyrics greg dallas arr"
+    },
+    {
+      "fileId": "upload-a76bf9a6-64ec-45f1-b05b-3572eacc00bd",
+      "name": "Avodah Retzei",
+      "setting": null,
+      "part": null,
+      "partGroup": "avodah retzei"
+    },
+    {
+      "fileId": "upload-a77150c0-7b90-43fc-9375-17594bcba824",
+      "name": "Friend of the Devil (Englishtown notation)",
+      "setting": "Englishtown notation",
+      "part": null,
+      "partGroup": "friend of the devil englishtown notation"
+    },
+    {
+      "fileId": "upload-a8008825-423e-4336-9a22-f91b4de5eb9e",
+      "name": "Wonderwall (chords)",
+      "setting": null,
+      "part": null,
+      "partGroup": "wonderwall chords"
+    },
+    {
+      "fileId": "upload-aa8d0c3d-bd6f-4a3d-966c-d6082d21b011",
+      "name": "Twilight",
+      "setting": null,
+      "part": null,
+      "partGroup": "twilight"
+    },
+    {
+      "fileId": "upload-ab846e0b-c84b-4826-91c7-971c28d01987",
+      "name": "Shalom Alechem (Simpler) Tenor Saxophone",
+      "setting": null,
+      "part": "Tenor Saxophone",
+      "partGroup": "shalom alechem simpler"
+    },
+    {
+      "fileId": "upload-aba4e6dc-96fe-47eb-9e66-7dc5c0a8af31",
+      "name": "Lean on Me (band format)",
+      "setting": null,
+      "part": null,
+      "partGroup": "lean on me band format"
+    },
+    {
+      "fileId": "upload-ac582fb1-f27d-4530-9a01-1c3b74cf7500",
+      "name": "Modah_Ani_Halpert_chart",
+      "setting": null,
+      "part": null,
+      "partGroup": "modah ani halpert chart"
+    },
+    {
+      "fileId": "upload-aee6da3f-1f18-4f2b-be4f-1cbb37a22e86",
+      "name": "Tangled Up In Blue",
+      "setting": null,
+      "part": null,
+      "partGroup": "tangled up in blue"
+    },
+    {
+      "fileId": "upload-b062ba29-be04-44e5-ab49-95c60f5c36e2",
+      "name": "Baruch She'amar (Taubman, D)",
+      "setting": "Taubman",
+      "part": null,
+      "partGroup": "baruch she'amar taubman d"
+    },
+    {
+      "fileId": "upload-b1853a30-b4b9-4dea-a9d9-de6078d2b295",
+      "name": "Nigun 2 (DG Mando) Bb",
+      "setting": "DG Mando",
+      "part": "Bb",
+      "partGroup": "nigun 2 dg mando"
+    },
+    {
+      "fileId": "upload-b1a68cc8-c34d-4e41-bd3e-2d90c2b2c188",
+      "name": "Shiru L'Adonai (Greg Dallas arr., rev 10-2-26) Clarinet in Bb",
+      "setting": "Greg Dallas arr., rev 10-2-26",
+      "part": "Clarinet in Bb",
+      "partGroup": "shiru l'adonai greg dallas arr rev 10 2 26"
+    },
+    {
+      "fileId": "upload-b1eb5beb-df7e-4dd2-b0e3-4bd0beedc317",
+      "name": "One Day",
+      "setting": null,
+      "part": null,
+      "partGroup": "one day"
+    },
+    {
+      "fileId": "upload-b2254163-50bb-4ce3-925d-1a80d2463a89",
+      "name": "Good Riddance (Time of Your Life) (band format)",
+      "setting": "Time of Your Life",
+      "part": null,
+      "partGroup": "good riddance time of your life band format"
+    },
+    {
+      "fileId": "upload-b31035ce-4b21-4486-8079-2c9676e2d290",
+      "name": "Take Me Home, Country Roads (chords)",
+      "setting": null,
+      "part": null,
+      "partGroup": "take me home country roads chords"
+    },
+    {
+      "fileId": "upload-b3fc3304-49a8-448b-b91f-8849038737b3",
+      "name": "Wonderwall (band format)",
+      "setting": null,
+      "part": null,
+      "partGroup": "wonderwall band format"
+    },
+    {
+      "fileId": "upload-b4a79ab5-b279-4b04-83f9-f2aa36a90039",
+      "name": "Free Fallin'",
+      "setting": null,
+      "part": null,
+      "partGroup": "free fallin'"
+    },
+    {
+      "fileId": "upload-b5e16165-640d-4ef0-b523-c7da3945057f",
+      "name": "Oseh Shalom (Nefesh Mountain)",
+      "setting": "Nefesh Mountain",
+      "part": null,
+      "partGroup": "oseh shalom nefesh mountain"
+    },
+    {
+      "fileId": "upload-b6350b58-b1dd-4119-800a-0398062c2ee2",
+      "name": "Hashkiveinu - Full Score",
+      "setting": null,
+      "part": null,
+      "partGroup": "hashkiveinu full score"
+    },
+    {
+      "fileId": "upload-b65fc2c5-8b83-44a1-831f-24c508c28f81",
+      "name": "Three Little Birds (F)",
+      "setting": null,
+      "part": null,
+      "partGroup": "three little birds f"
+    },
+    {
+      "fileId": "upload-b8da08f1-40ac-4746-9f83-4ddcb0497cfd",
+      "name": "Fiddley Tune",
+      "setting": null,
+      "part": null,
+      "partGroup": "fiddley tune"
+    },
+    {
+      "fileId": "upload-b9d68d44-589e-4014-a17f-ed4924bb11f8",
+      "name": "Mozi's Nigun:Ana B'Koach (Lead Sheet) Eb",
+      "setting": null,
+      "part": "Eb",
+      "partGroup": "mozi's nigunana b'koach lead sheet"
+    },
+    {
+      "fileId": "upload-b9dd35a4-198d-4fe6-a440-3839096770f2",
+      "name": "Shake It Off (chords)",
+      "setting": null,
+      "part": null,
+      "partGroup": "shake it off chords"
+    },
+    {
+      "fileId": "upload-ba2e9a94-c101-4ebd-808c-15517c5d23ec",
+      "name": "Barchu (Walkdown) Bb",
+      "setting": "Walkdown",
+      "part": "Bb",
+      "partGroup": "barchu walkdown"
+    },
+    {
+      "fileId": "upload-bac3a36d-3bef-482d-a971-1b5014b5dc56",
+      "name": "Shalom Rav",
+      "setting": null,
+      "part": null,
+      "partGroup": "shalom rav"
+    },
+    {
+      "fileId": "upload-bd2bdeb1-7b65-4bdc-95b7-77ba9a37ec85",
+      "name": "Shema (Major) Bb",
+      "setting": "Major",
+      "part": "Bb",
+      "partGroup": "shema major"
+    },
+    {
+      "fileId": "upload-bd6496ab-bc68-40b8-8393-0ade288ecfa8",
+      "name": "Mi Shebeirach - Full Score",
+      "setting": null,
+      "part": null,
+      "partGroup": "mi shebeirach full score"
+    },
+    {
+      "fileId": "upload-bdc98eac-c72a-48f7-aa8c-d0d025205899",
+      "name": "KLEZMANIACS piano",
+      "setting": null,
+      "part": null,
+      "partGroup": "klezmaniacs piano"
+    },
+    {
+      "fileId": "upload-be7d97c7-00c4-48a1-ab3e-8c42f9b7abdb",
+      "name": "4. Untitled (Josiah) - C Lead",
+      "setting": "Josiah",
+      "part": "C Lead",
+      "partGroup": "4 untitled josiah"
+    },
+    {
+      "fileId": "upload-beb61ba9-cf48-4917-b544-935e885313a5",
+      "name": "Zochreinu (Remember Us) - simple",
+      "setting": "Remember Us",
+      "part": null,
+      "partGroup": "zochreinu remember us simple"
+    },
+    {
+      "fileId": "upload-bef8b711-2764-42ed-954d-31abbb722c19",
+      "name": "Kaddish Shalem (Chassidic - Gottlieb/Litvack)",
+      "setting": "Chassidic - Gottlieb/Litvack",
+      "part": null,
+      "partGroup": "kaddish shalem chassidic gottlieblitvack"
+    },
+    {
+      "fileId": "upload-bf126e3e-fa81-453f-beee-824516c6cc0d",
+      "name": "RABBI's TUBA piano",
+      "setting": null,
+      "part": null,
+      "partGroup": "rabbi's tuba piano"
+    },
+    {
+      "fileId": "upload-c01f4494-6c6a-4de5-a9ea-9b2e9c8572ff",
+      "name": "Avinu Malkeynu Janowski - Full Score",
+      "setting": null,
+      "part": null,
+      "partGroup": "avinu malkeynu janowski full score"
+    },
+    {
+      "fileId": "upload-c0adf6e7-c646-4401-adc0-3e5b67842d48",
+      "name": "L_chi_Lach__Friedman_",
+      "setting": null,
+      "part": null,
+      "partGroup": "l chi lach friedman"
+    },
+    {
+      "fileId": "upload-c189b527-2979-4218-bf3f-213102e52aa9",
+      "name": "G-minor Spirits",
+      "setting": null,
+      "part": null,
+      "partGroup": "g minor spirits"
+    },
+    {
+      "fileId": "upload-c227945c-c4cf-40f7-8bc4-f90891fa8194",
+      "name": "Shake It Off (band format)",
+      "setting": null,
+      "part": null,
+      "partGroup": "shake it off band format"
+    },
+    {
+      "fileId": "upload-c439392c-1fb2-4076-bdda-63e0e7a675e7",
+      "name": "Stick Season",
+      "setting": null,
+      "part": null,
+      "partGroup": "stick season"
+    },
+    {
+      "fileId": "upload-c4f93b40-7bd5-4da4-85f8-1169ad6fde68",
+      "name": "L'cha Dodi (Simpler) Trombone",
+      "setting": null,
+      "part": "Trombone",
+      "partGroup": "l'cha dodi simpler"
+    },
+    {
+      "fileId": "upload-c506bdac-0340-4141-8e38-c07ef2c5740b",
+      "name": "Stand By Me (Ab)",
+      "setting": null,
+      "part": null,
+      "partGroup": "stand by me ab"
+    },
+    {
+      "fileId": "upload-c5df9530-9dfc-4648-8ba8-433da8bf502a",
+      "name": "Build Me Up Buttercup",
+      "setting": null,
+      "part": null,
+      "partGroup": "build me up buttercup"
+    },
+    {
+      "fileId": "upload-c65838b6-cea5-46d4-ae08-1ee27e917118",
+      "name": "Mi Chamocha — Shut Up and Dance mashup (C) — band chart",
+      "setting": null,
+      "part": null,
+      "partGroup": "mi chamocha shut up and dance mashup c band chart"
+    },
+    {
+      "fileId": "upload-c8fcd8a4-2480-4a8c-86ef-4d90e9e25f90",
+      "name": "Back Home-C_Lead",
+      "setting": null,
+      "part": null,
+      "partGroup": "back home c lead"
+    },
+    {
+      "fileId": "upload-c93d23f5-8c6a-4805-a176-0b8aafac2c84",
+      "name": "Mozi's Nigun:Ana B'Koach (Lead Sheet) Bass",
+      "setting": null,
+      "part": "Bass",
+      "partGroup": "mozi's nigunana b'koach lead sheet"
+    },
+    {
+      "fileId": "upload-cd24bc2e-5ecb-4a99-a29d-c6e37f51726c",
+      "name": "L'cha Dodi (Taubman, Dm) — band chart",
+      "setting": "Taubman",
+      "part": null,
+      "partGroup": "l'cha dodi taubman dm band chart"
+    },
+    {
+      "fileId": "upload-cd9c2d9c-ce6c-4cb5-8ce8-dc60e3b863b4",
+      "name": "Un'taneh Tokef - Full Score",
+      "setting": null,
+      "part": null,
+      "partGroup": "un'taneh tokef full score"
+    },
+    {
+      "fileId": "upload-ce31ee4b-9692-4940-b0ef-a4886894673a",
+      "name": "Leavingthehouse",
+      "setting": null,
+      "part": null,
+      "partGroup": "leavingthehouse"
+    },
+    {
+      "fileId": "upload-d0d9c0a9-9341-4adb-80fe-df907eb11ad5",
+      "name": "Lean on Me",
+      "setting": null,
+      "part": null,
+      "partGroup": "lean on me"
+    },
+    {
+      "fileId": "upload-d0f4f509-16cf-4b31-abaf-0b1c38f71afd",
+      "name": "Shir Shabbat (DG Mando) - Bass",
+      "setting": "DG Mando",
+      "part": "Bass",
+      "partGroup": "shir shabbat dg mando"
+    },
+    {
+      "fileId": "upload-d1fa193e-3fe5-4066-acc9-6fe9de1b716b",
+      "name": "Witch Hunt Flip C Lead",
+      "setting": null,
+      "part": "C Lead",
+      "partGroup": "witch hunt flip"
+    },
+    {
+      "fileId": "upload-d25724b8-5799-4e07-8ff1-1908d0fa6ca8",
+      "name": "T'filah Adonai s'fatai - Full Score",
+      "setting": null,
+      "part": null,
+      "partGroup": "t'filah adonai s'fatai full score"
+    },
+    {
+      "fileId": "upload-d3cad314-5a40-41af-b921-0382518eaff8",
+      "name": "Od Yavo Shalom Aleinu (band format)",
+      "setting": null,
+      "part": null,
+      "partGroup": "od yavo shalom aleinu band format"
+    },
+    {
+      "fileId": "upload-d3e2f55a-682b-4111-94d2-103139aa9a50",
+      "name": "Heavy World",
+      "setting": null,
+      "part": null,
+      "partGroup": "heavy world"
+    },
+    {
+      "fileId": "upload-d403d74e-026b-4596-8d7b-9bc91bbee7e8",
+      "name": "Candle Blessing - Full Score",
+      "setting": null,
+      "part": null,
+      "partGroup": "candle blessing full score"
+    },
+    {
+      "fileId": "upload-d548d96c-22fb-4252-ac0d-8cd46cbcfd26",
+      "name": "landslide chords",
+      "setting": null,
+      "part": null,
+      "partGroup": "landslide chords"
+    },
+    {
+      "fileId": "upload-d55dd11e-f3d2-48d2-a4b2-05efa0ac8e34",
+      "name": "Shiru L'Adonai (Bass Lead Sheet)",
+      "setting": null,
+      "part": null,
+      "partGroup": "shiru l'adonai bass lead sheet"
+    },
+    {
+      "fileId": "upload-d5d457f5-7ad9-4bac-bf56-f4bb863b8753",
+      "name": "Brown Eyed Girl (band format)",
+      "setting": null,
+      "part": null,
+      "partGroup": "brown eyed girl band format"
+    },
+    {
+      "fileId": "upload-d88c0559-1c31-44e0-b3fb-96198477d770",
+      "name": "Lecha Dodi:Erev Shel Shoshanim C",
+      "setting": null,
+      "part": null,
+      "partGroup": "lecha dodierev shel shoshanim c"
+    },
+    {
+      "fileId": "upload-d904e39d-1acf-4b9f-86b6-0a8a1bc6ba87",
+      "name": "Modeh Ani Ma Tovu P'sukei - Full Score",
+      "setting": null,
+      "part": null,
+      "partGroup": "modeh ani ma tovu p'sukei full score"
+    },
+    {
+      "fileId": "upload-dc5ed795-3e2d-4ddc-b0c1-69834fec2ed5",
+      "name": "Simon Tov",
+      "setting": null,
+      "part": null,
+      "partGroup": "simon tov"
+    },
+    {
+      "fileId": "upload-dc6c3306-783d-4f9d-9ed5-4ed6a1bb414e",
+      "name": "I Want It That Way",
+      "setting": null,
+      "part": null,
+      "partGroup": "i want it that way"
+    },
+    {
+      "fileId": "upload-dcd07426-ebdf-4241-876e-50792c8cd271",
+      "name": "Ve'al kulam - Full Score",
+      "setting": null,
+      "part": null,
+      "partGroup": "ve'al kulam full score"
+    },
+    {
+      "fileId": "upload-de741730-8d53-48e5-b683-ebc3513a9520",
+      "name": "Stand By Me",
+      "setting": null,
+      "part": null,
+      "partGroup": "stand by me"
+    },
+    {
+      "fileId": "upload-de8ea2b9-c1aa-4731-924a-ff88d9178bca",
+      "name": "brown eyed girl chords",
+      "setting": null,
+      "part": null,
+      "partGroup": "brown eyed girl chords"
+    },
+    {
+      "fileId": "upload-df0bb3dd-9d08-4055-918d-a4322442ae33",
+      "name": "I'm a Believer (band format)",
+      "setting": null,
+      "part": null,
+      "partGroup": "i'm a believer band format"
+    },
+    {
+      "fileId": "upload-df708321-c643-4871-b36a-945f947fab6b",
+      "name": "Shalom Alehem (Fast) C (Lead Sheet)",
+      "setting": "Fast",
+      "part": null,
+      "partGroup": "shalom alehem fast c lead sheet"
+    },
+    {
+      "fileId": "upload-e1616706-e346-4f1a-a247-43d44b4a84a7",
+      "name": "Rom'mu (Bm)",
+      "setting": null,
+      "part": null,
+      "partGroup": "rom'mu bm"
+    },
+    {
+      "fileId": "upload-e2fc431e-a2c3-4a6d-9685-ba92f528fef9",
+      "name": "thesnake",
+      "setting": null,
+      "part": null,
+      "partGroup": "thesnake"
+    },
+    {
+      "fileId": "upload-e4df5f9c-fd96-4631-9699-c85734ee6df2",
+      "name": "L'Cha Dodi (Nava)",
+      "setting": "Nava",
+      "part": null,
+      "partGroup": "l'cha dodi nava"
+    },
+    {
+      "fileId": "upload-e61f04fc-fa83-4a95-ac95-efde2db89b73",
+      "name": "Mi Chamocha (compact)",
+      "setting": null,
+      "part": null,
+      "partGroup": "mi chamocha compact"
+    },
+    {
+      "fileId": "upload-e64047ae-c1ec-475c-99c8-4ad2ed446c0e",
+      "name": "Shalom Rav (klepper)",
+      "setting": "klepper",
+      "part": null,
+      "partGroup": "shalom rav klepper"
+    },
+    {
+      "fileId": "upload-e67f8d2d-0e7e-4e26-a535-d09d34785ee9",
+      "name": "Ay Oh / Lo Yisa Goy (band format)",
+      "setting": null,
+      "part": null,
+      "partGroup": "ay oh lo yisa goy band format"
+    },
+    {
+      "fileId": "upload-e6ce412c-e48c-4a2c-8563-5d6ff2900084",
+      "name": "L'cha Dodi Tenor Saxophone",
+      "setting": null,
+      "part": "Tenor Saxophone",
+      "partGroup": "l'cha dodi"
+    },
+    {
+      "fileId": "upload-e9011fe3-08c4-4318-b84a-25394199b1f5",
+      "name": "Shiru L'Adonai (Greg Dallas arr., rev 10-2-26) Trumpet in Bb",
+      "setting": "Greg Dallas arr., rev 10-2-26",
+      "part": "Trumpet in Bb",
+      "partGroup": "shiru l'adonai greg dallas arr rev 10 2 26"
+    },
+    {
+      "fileId": "upload-e9e75aa0-69c3-4f9d-a6a5-7e0e6e81961c",
+      "name": "Take Me Home, Country Roads (band format, capo 2)",
+      "setting": "capo 2",
+      "part": null,
+      "partGroup": "take me home country roads band format capo 2"
+    },
+    {
+      "fileId": "upload-e9f04fbf-1294-4f18-9961-9554c14be072",
+      "name": "May the Door - Full Score",
+      "setting": null,
+      "part": null,
+      "partGroup": "may the door full score"
+    },
+    {
+      "fileId": "upload-ea00d7f6-64b8-4996-8263-66297330f4ea",
+      "name": "Barchu (HHD trad, E)",
+      "setting": "HHD trad",
+      "part": null,
+      "partGroup": "barchu hhd trad e"
+    },
+    {
+      "fileId": "upload-eac2e193-ae8b-437a-9815-683450c480ea",
+      "name": "Achat Sha'alti (Am loop)",
+      "setting": "loop",
+      "part": null,
+      "partGroup": "achat sha'alti am loop"
+    },
+    {
+      "fileId": "upload-ec92326e-e356-45fa-9d9c-93d4737001c5",
+      "name": "Man I Need (Olivia Dean, band format)",
+      "setting": "Olivia Dean",
+      "part": null,
+      "partGroup": "man i need olivia dean band format"
+    },
+    {
+      "fileId": "upload-ece4da1e-9488-4f7d-86a5-a1e6f7cc7709",
+      "name": "Niggun - Full Score",
+      "setting": null,
+      "part": null,
+      "partGroup": "niggun full score"
+    },
+    {
+      "fileId": "upload-edd03a5f-0fc2-4278-9e3d-6005b2d5bc47",
+      "name": "Shiru L'Adonai (trimmed down) Alto Saxophone",
+      "setting": "trimmed down",
+      "part": "Alto Saxophone",
+      "partGroup": "shiru l'adonai trimmed down"
+    },
+    {
+      "fileId": "upload-eddef0d5-8a46-4137-81d8-a3ecdd813b93",
+      "name": "Landslide",
+      "setting": null,
+      "part": null,
+      "partGroup": "landslide"
+    },
+    {
+      "fileId": "upload-ee04ea3c-3aa8-4697-9a35-e9aad06cf387",
+      "name": "Strange Fruit (Billie Holiday)",
+      "setting": "Billie Holiday",
+      "part": null,
+      "partGroup": "strange fruit billie holiday"
+    },
+    {
+      "fileId": "upload-ee1b2077-dae9-4aeb-ad66-3f1290a7b015",
+      "name": "L'cha Dodi (Simpler) Tenor Saxophone",
+      "setting": null,
+      "part": "Tenor Saxophone",
+      "partGroup": "l'cha dodi simpler"
+    },
+    {
+      "fileId": "upload-ef1dda28-cf3e-4220-b993-0ec12830b78a",
+      "name": "Mi Shebeirach",
+      "setting": null,
+      "part": null,
+      "partGroup": "mi shebeirach"
+    },
+    {
+      "fileId": "upload-ef3552ad-fa6e-41b4-b8d2-0a0bc0e83a0a",
+      "name": "Shiru L'Adonai (Lyrics) - Greg Dallas arr.",
+      "setting": "Greg Dallas arr.",
+      "part": null,
+      "partGroup": "shiru l'adonai lyrics greg dallas arr"
+    },
+    {
+      "fileId": "upload-f16a45fd-5dc5-4595-8e2a-f33fb93304f6",
+      "name": "Veshameru - Full Score",
+      "setting": null,
+      "part": null,
+      "partGroup": "veshameru full score"
+    },
+    {
+      "fileId": "upload-f2d76d73-0d02-4461-98db-9da5bddbe77c",
+      "name": "I Want It That Way (band format)",
+      "setting": null,
+      "part": null,
+      "partGroup": "i want it that way band format"
+    },
+    {
+      "fileId": "upload-f5a32ac0-2836-4db5-b4e7-5ae7058ed6e5",
+      "name": "Sim Shalom (Jim)",
+      "setting": "Jim",
+      "part": null,
+      "partGroup": "sim shalom jim"
+    },
+    {
+      "fileId": "upload-f5b7f19f-0572-4eb7-b920-67ab4ab08673",
+      "name": "Shiru L'Adonai Shir Shabbat",
+      "setting": null,
+      "part": null,
+      "partGroup": "shiru l'adonai shir shabbat"
+    },
+    {
+      "fileId": "upload-f68b7e30-55ae-460a-870b-9decf59698da",
+      "name": "Shake It Off",
+      "setting": null,
+      "part": null,
+      "partGroup": "shake it off"
+    },
+    {
+      "fileId": "upload-f6e88945-f878-4030-8ef5-52109b6dadd2",
+      "name": "man i need chords",
+      "setting": null,
+      "part": null,
+      "partGroup": "man i need chords"
+    },
+    {
+      "fileId": "upload-f6f0e278-480f-4197-8619-f799323f78c6",
+      "name": "Mi Chamocha (walk-down, Dm)",
+      "setting": "walk-down",
+      "part": null,
+      "partGroup": "mi chamocha walk down dm"
+    },
+    {
+      "fileId": "upload-f83cc27f-23e2-4e55-9ae3-b44aa51b1351",
+      "name": "i wanna dance with somebody who loves me chords",
+      "setting": null,
+      "part": null,
+      "partGroup": "i wanna dance with somebody who loves me chords"
+    },
+    {
+      "fileId": "upload-f9412380-8a5f-4cef-96ca-e4dd14a4f140",
+      "name": "Shehecheyanu__Pik_alone",
+      "setting": null,
+      "part": null,
+      "partGroup": "shehecheyanu pik alone"
+    },
+    {
+      "fileId": "upload-fa34f345-11b0-4ba8-809a-d62ec0af4977",
+      "name": "Adon Olam (F)",
+      "setting": null,
+      "part": null,
+      "partGroup": "adon olam f"
+    },
+    {
+      "fileId": "upload-fac49eae-d922-4bb2-9b63-72d60f918c41",
+      "name": "2. Porter Haus - C Lead",
+      "setting": null,
+      "part": "C Lead",
+      "partGroup": "2 porter haus"
+    },
+    {
+      "fileId": "upload-fb3dde53-498a-48d6-9a76-330a47c6dd9f",
+      "name": "Avinu Shebashamayim",
+      "setting": null,
+      "part": null,
+      "partGroup": "avinu shebashamayim"
+    },
+    {
+      "fileId": "upload-fb617c97-0019-4037-acb5-af5707bc0f3c",
+      "name": "Ripple (band format)",
+      "setting": null,
+      "part": null,
+      "partGroup": "ripple band format"
+    },
+    {
+      "fileId": "upload-fc1424bf-38e6-4ca2-81ee-49a87fc0ea8a",
+      "name": "I'm a Believer (chords)",
+      "setting": null,
+      "part": null,
+      "partGroup": "i'm a believer chords"
+    },
+    {
+      "fileId": "upload-fc56515c-2557-4efa-b387-49e9a0343191",
+      "name": "Mi chamocha shur",
+      "setting": null,
+      "part": null,
+      "partGroup": "mi chamocha shur"
+    },
+    {
+      "fileId": "upload-fc907a65-fd69-4338-9057-d4624aad5f5b",
+      "name": "Eliyahu HaNavi (Traditional Waltz)",
+      "setting": "Traditional Waltz",
+      "part": null,
+      "partGroup": "eliyahu hanavi traditional waltz"
+    }
+  ],
+  "skippedHuman": 0,
+  "skipped": {
+    "human": 0,
+    "changedDuringRun": 0
+  }
+}
