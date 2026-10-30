@@ -152,6 +152,7 @@ import { listServicePersonnel } from "./service-personnel"
 import { updateSong } from "./song-metadata"
 import { listBooksTool, lookupBookPageTool } from "./books"
 import { getSongHistoryTool, exportSetlistsTool } from "./history"
+import { setStandingChoiceTool, clearStandingChoiceTool } from "./standing"
 import { richError, liftLegacyErrorEnvelope } from "@/lib/mcp/error-envelopes"
 export { registerTestTokenTools } from "./test-tokens"
 export { registerMintAdminBearerTools } from "./mint-admin-bearer"
@@ -806,6 +807,38 @@ export function registerReadTools(server: McpServer): void {
             jsonResult(
                 await exportSetlistsTool(uidFrom(extra), args, orgFrom(extra)),
             ),
+    )
+
+    server.registerTool(
+        "set_standing_choice",
+        {
+            description:
+                "Remember a row's chart, key and vocal lead as the standard for that slot of the service's profile (\"keep it in Dm\"). Use only when the author says to keep a choice for next time; never on your own judgment. Point at the row by `setlistId` + `trackId`; the profile comes from the setlist's service type and rabbi slot, and a song slot is also remembered for the service type as a whole. Replacing someone else's choice from the last 28 days is reported in `overrode`. Undo with clear_standing_choice. Admin / band_leader. Returns `{ok, announcement, scope, slotKey, choice, overrode?}`; read `announcement` back to the author.",
+            inputSchema: {
+                setlistId: z.string().describe("The setlist the row is on."),
+                trackId: z.string().describe("The row whose chart and key become standard."),
+                quote: z
+                    .string()
+                    .optional()
+                    .describe("The author's words, kept with the choice (e.g. 'keep it in Dm')."),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await setStandingChoiceTool(uidFrom(extra), args, orgFrom(extra))),
+    )
+
+    server.registerTool(
+        "clear_standing_choice",
+        {
+            description:
+                "Undo the standing choice for a row's slot: the choice it replaced comes back, or the slot has no standard. Same `setlistId` + `trackId` as set_standing_choice. Admin / band_leader. Returns `{ok, announcement, scope, slotKey, restored}`; read `announcement` back to the author.",
+            inputSchema: {
+                setlistId: z.string().describe("The setlist the row is on."),
+                trackId: z.string().describe("The row whose slot's standard is undone."),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await clearStandingChoiceTool(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(

@@ -415,6 +415,13 @@ service cloud.firestore {
       allow list: if atLeast(listOrg(), 'bl');
       allow write: if false;
     }
+    // Setlist memory: remembered standard choices per profile slot. Any
+    // member of the doc's tenant reads; only the server writes.
+    match /standing_choices/{choiceId} {
+      allow get: if atLeast(docOrg(), 'me');
+      allow list: if atLeast(listOrg(), 'me');
+      allow write: if false;
+    }
     match /tasks/{taskId} {
       allow get: if signedIn()
         && (resource.data.get('assigneeId', '') == request.auth.uid || atLeast(docOrg(), 'me'));

@@ -68,6 +68,10 @@ export const ERROR_CODE_MAP: Record<string, number> = {
     reorder_failed: 400, // v11.2-03 (BUG-2): caller-supplied bad/incomplete orderedTrackIds set
     title_required: 400, // v11.2-03-02 (BUG-3): bulk/single add row has neither title nor resolvable songId
     no_changes: 400,
+    // Setlist memory release 2: profiles and standing choices.
+    no_chart: 400,
+    service_type_unknown: 400,
+    rabbi_required: 400,
     empty_file: 400,
     empty_patch: 400,
     empty_setlist: 400,
@@ -106,6 +110,8 @@ export const ERROR_CODE_MAP: Record<string, number> = {
     not_found: 404,
     setlist_not_found: 404,
     track_not_found: 404,
+    standing_not_found: 404,
+    profile_not_found: 404,
     song_not_found: 404, // v11.2-03 (BUG-2): add_track/update_track/swap_chart/update_song unknown songId
 
     file_not_found: 404,

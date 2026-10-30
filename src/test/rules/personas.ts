@@ -169,6 +169,7 @@ export async function seedFixtures(env: RulesTestEnvironment): Promise<void> {
             set(`tasks/task${s}`, { assigneeId: t === A ? "aMu" : "bSE", status: "todo", createdAt: 1, orgId: t })
             set(`bond_flags/bf${s}`, { setlistId: `s${s}`, orgId: t })
             set(`proposal_stages/ps${s}`, { setlistId: `s${s}`, orgId: t })
+            set(`standing_choices/sc${s}`, { scope: "gig", slotKey: "song:x", fileId: "f", orgId: t })
             set(`songUsage/u${s}`, { count: 1, orgId: t })
             set(`songUsage/u${s}/events/e1`, { at: 1 })
             set(`auditLogs/al${s}`, { action: "set-role", orgId: t, timestamp: 1 })
