@@ -83,22 +83,34 @@ export function parsePart(title: string): { baseTitle: string; part: string } | 
 
 export function parseSetting(title: string): string | null {
     const t = parsePart(title)?.baseTitle ?? stripExtension(title)
-    let raw: string | null = null
-    const paren = /\(([^)]*)\)/.exec(t)
-    if (paren && paren[1].trim()) {
-        raw = paren[1]
-    } else {
-        const hyphen = /\s+-\s+(.+)$/.exec(t)
-        if (hyphen) raw = hyphen[1]
+    // Candidates in order: each parenthesised clarifier, then a hyphen suffix.
+    // The first that still says something after cleaning is the setting.
+    const candidates = [...t.matchAll(/\(([^)]*)\)/g)].map((m) => m[1])
+    const hyphen = /\s+-\s+(.+)$/.exec(t)
+    if (hyphen) candidates.push(hyphen[1])
+    for (const raw of candidates) {
+        const setting = cleanSetting(raw)
+        if (setting) return setting
     }
-    if (raw === null) return null
-    let setting = raw.trim()
-    const comma = /^(.*?),\s*([A-G][#b]?m?)$/.exec(setting)
-    if (comma) setting = comma[1].trim()
-    if (!setting) return null
-    if (KEY_RE.test(setting)) return null
-    if (FORMAT_WORDS.has(setting.toLowerCase())) return null
-    return setting
+    return null
+}
+
+/**
+ * Keep the comma segments that name a setting: drop keys, download-copy
+ * counters like "(1)", and anything carrying a format word ("band format",
+ * "CRC band chart"). A key written in front of a name ("Am Aly Halpert")
+ * is dropped too.
+ */
+function cleanSetting(raw: string): string | null {
+    const kept = raw
+        .split(",")
+        .map((s) => s.trim().replace(/^[A-G][#b]?m?\s+(?=\S)/, ""))
+        .filter((s) => {
+            if (!s || KEY_RE.test(s) || /^\d+$/.test(s)) return false
+            const lower = s.toLowerCase()
+            return ![...FORMAT_WORDS].some((w) => lower === w || lower.includes(w))
+        })
+    return kept.length ? kept.join(", ") : null
 }
 
 export function partGroupFor(title: string): string {
