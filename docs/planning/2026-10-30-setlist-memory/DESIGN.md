@@ -270,8 +270,9 @@ history should prefer what was played over what was planned.
 
 ### 5.8 Data cleanup this depends on
 
-- **Keys**: back-fill library keys where evidence is strong (the chart's own AI-enrichment
-  `suggested_key`, or consistent use on setlists), and leave the rest blank rather than guess.
+- **Keys**: back-fill library keys (the *written* key) only from the chart itself: its AI-enrichment
+  `suggested_key` at high confidence. Leave the rest blank rather than guess. The key a song is
+  *played* in, as seen on setlists, feeds per-song memory (§5.1), never the library row.
 - **Arranger**: a real field on the library row, parsed from the title's parentheses where clear,
   and editable.
 - **Instrument parts**: link part rows ("Barchu (Walkdown) Bb / Eb / C / Bass Clef", the L'cha
