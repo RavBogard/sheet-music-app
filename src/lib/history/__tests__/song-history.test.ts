@@ -123,6 +123,8 @@ describe("historyStem / songSkeleton", () => {
         [["Sh'ma", "Shema", "Shema pdf"]],
         [["Bar'chu", "Barchu", "Barchu (Friedman)"]],
         [["Adonai S'fatai (trad)", "Adonai s_fatai (chant)"]],
+        [["Kadish", "Kaddish"]],
+        [["Shabat", "Shabbat"]],
     ])("spelling variants share a skeleton: %j", (titles) => {
         const skeletons = new Set(titles.map((t) => songSkeleton(historyStem(t))))
         expect(skeletons.size).toBe(1)
