@@ -182,7 +182,6 @@ export async function writeStanding(
 }
 
 function withoutPreviousOf(c: StandingChoice): Omit<StandingChoice, "previous"> {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { previous, ...rest } = c
     return rest
 }
