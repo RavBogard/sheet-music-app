@@ -7,6 +7,7 @@ import { rowOrg } from "@/lib/mcp/org-context"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 import { logger } from "@/lib/logger"
+import { updateRowsIfUnchanged } from "./backfill-conditional-write"
 
 /**
  * `backfill_library_keys` — fill an empty library `key` (the chart's WRITTEN
@@ -14,17 +15,22 @@ import { logger } from "@/lib/logger"
  * that reading's confidence is at least 0.9. Never from setlist usage: the
  * key a band played is not the key the chart is written in.
  *
- * Skips, and counts: a row a person curated (`enrichmentStatus:
- * 'human_curated'`), a row that already has a key, a row with no suggested
- * key, and a reading under the confidence floor. `minConfidence` can raise
- * the floor, never lower it below 0.9. F-05: `dryRun` defaults true and
- * returns the full report; a real run needs `dryRun: false, force: true`,
- * and writes only `key` and `keySource: 'ai_backfill'`. Admin + band_leader,
- * caller's org only. Ops surface.
+ * Writes only a reading the AI itself was sure of: `is_chart === true`, no
+ * `review_required`, and a plain key (`/^[A-G][#b]?m?$/`). Skips, and counts:
+ *   - human:      a row a person curated (`human_curated`)
+ *   - rejected:   a row a person rejected (`human_rejected`)
+ *   - reviewHeld: a row waiting in the review queue (`review_pending`), or a
+ *                 reading that flagged `review_required`
+ *   - hasKey / noSuggestion / notChart / badKey / lowConfidence
+ *   - changedDuringRun: a row edited or deleted between scan and write
+ * `minConfidence` can raise the floor, never lower it below 0.9. F-05:
+ * `dryRun` defaults true and returns the full report; a real run needs
+ * `dryRun: false, force: true`, and updates only `key` and
+ * `keySource: 'ai_backfill'`. Admin + band_leader, caller's org only.
  */
 
 export const KEY_BACKFILL_CONFIDENCE_FLOOR = 0.9
-const WRITE_BATCH_MAX = 400
+const PLAIN_KEY_RE = /^[A-G][#b]?m?$/
 
 export interface BackfillLibraryKeysArgs {
     dryRun?: boolean
@@ -40,18 +46,24 @@ export interface KeyChange {
     confidence: number
 }
 
+export interface KeyBackfillSkips {
+    human: number
+    rejected: number
+    reviewHeld: number
+    lowConfidence: number
+    noSuggestion: number
+    notChart: number
+    badKey: number
+    hasKey: number
+    changedDuringRun: number
+}
+
 export async function backfillLibraryKeys(
     uid: string,
     args: BackfillLibraryKeysArgs = {},
     org: OrgId = DEFAULT_ORG_ID,
 ): Promise<
-    | {
-          ok: true
-          dryRun: boolean
-          scanned: number
-          changed: KeyChange[]
-          skipped: { human: number; lowConfidence: number; noSuggestion: number; hasKey: number }
-      }
+    | { ok: true; dryRun: boolean; scanned: number; changed: KeyChange[]; skipped: KeyBackfillSkips }
     | RichErrorEnvelope
 > {
     const dryRun = args?.dryRun !== false
@@ -73,12 +85,27 @@ export async function backfillLibraryKeys(
         const snap = await db.collection("library_index").get()
         const docs = snap.docs.filter((d) => rowOrg(d.data().orgId) === org)
 
-        const skipped = { human: 0, lowConfidence: 0, noSuggestion: 0, hasKey: 0 }
+        const skipped: KeyBackfillSkips = {
+            human: 0,
+            rejected: 0,
+            reviewHeld: 0,
+            lowConfidence: 0,
+            noSuggestion: 0,
+            notChart: 0,
+            badKey: 0,
+            hasKey: 0,
+            changedDuringRun: 0,
+        }
         const changed: KeyChange[] = []
+        const updateTimes = new Map<string, (typeof docs)[number]["updateTime"]>()
         for (const d of docs) {
             const data = d.data()
             if (data.enrichmentStatus === "human_curated") {
                 skipped.human++
+                continue
+            }
+            if (data.enrichmentStatus === "human_rejected") {
+                skipped.rejected++
                 continue
             }
             if (typeof data.key === "string" && data.key.trim()) {
@@ -86,16 +113,28 @@ export async function backfillLibraryKeys(
                 continue
             }
             const sug = data.aiSuggestion as
-                | { suggested_key?: unknown; confidence?: unknown }
+                | { suggested_key?: unknown; confidence?: unknown; is_chart?: unknown; review_required?: unknown }
                 | null
                 | undefined
+            if (data.enrichmentStatus === "review_pending" || sug?.review_required === true) {
+                skipped.reviewHeld++
+                continue
+            }
             const key =
                 sug && typeof sug.suggested_key === "string" ? sug.suggested_key.trim() : ""
             if (!key) {
                 skipped.noSuggestion++
                 continue
             }
-            const confidence = typeof sug?.confidence === "number" ? sug.confidence : 0
+            if (sug?.is_chart !== true) {
+                skipped.notChart++
+                continue
+            }
+            if (!PLAIN_KEY_RE.test(key)) {
+                skipped.badKey++
+                continue
+            }
+            const confidence = typeof sug.confidence === "number" ? sug.confidence : 0
             if (confidence < minConfidence) {
                 skipped.lowConfidence++
                 continue
@@ -105,31 +144,35 @@ export async function backfillLibraryKeys(
                 (typeof data.title === "string" && data.title) ||
                 d.id
             changed.push({ fileId: d.id, name, key, confidence })
+            updateTimes.set(d.id, d.updateTime)
         }
 
-        const report = { ok: true as const, dryRun, scanned: docs.length, changed, skipped }
-        if (dryRun) return report
+        if (dryRun) return { ok: true, dryRun, scanned: docs.length, changed, skipped }
         if (!force) {
             return richError(
                 "force_required",
                 "backfill_library_keys requires force:true to commit.",
-                { dryRunPlan: { ...report, dryRun: false } },
+                { dryRunPlan: { ok: true, dryRun: false, scanned: docs.length, changed, skipped } },
                 "Review the dry-run report, then re-call with { dryRun: false, force: true }.",
             )
         }
 
-        for (let i = 0; i < changed.length; i += WRITE_BATCH_MAX) {
-            const batch = db.batch()
-            for (const c of changed.slice(i, i + WRITE_BATCH_MAX)) {
-                batch.set(
-                    db.collection("library_index").doc(c.fileId),
-                    { key: c.key, keySource: "ai_backfill" },
-                    { merge: true },
-                )
-            }
-            await batch.commit()
+        const { changedDuringRun } = await updateRowsIfUnchanged(
+            db,
+            changed.map((c) => ({
+                fileId: c.fileId,
+                updateTime: updateTimes.get(c.fileId),
+                patch: { key: c.key, keySource: "ai_backfill" },
+            })),
+        )
+        skipped.changedDuringRun = changedDuringRun.size
+        return {
+            ok: true,
+            dryRun,
+            scanned: docs.length,
+            changed: changed.filter((c) => !changedDuringRun.has(c.fileId)),
+            skipped,
         }
-        return report
     } catch (error) {
         logger.warn("backfill_library_keys failed:", error)
         return richError(

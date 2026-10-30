@@ -8,6 +8,7 @@ import { computeSettingPartFields } from "@/lib/library/setting-part"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 import { logger } from "@/lib/logger"
+import { updateRowsIfUnchanged } from "./backfill-conditional-write"
 
 /**
  * `backfill_library_setting_parts` — stamp `setting`, `part` and `partGroup`
@@ -17,10 +18,11 @@ import { logger } from "@/lib/logger"
  *
  * A row a person set (`settingSource: 'human'`) is never touched. F-05:
  * `dryRun` defaults true and returns the full report; a real run needs
- * `dryRun: false, force: true`. Admin + band_leader. Ops surface.
+ * `dryRun: false, force: true`. A real run updates (never sets) each row
+ * with a lastUpdateTime precondition; a row edited or deleted mid-run is
+ * counted in `skipped.changedDuringRun` and left alone. Admin + band_leader.
+ * Ops surface.
  */
-
-const WRITE_BATCH_MAX = 400
 
 export interface BackfillLibrarySettingPartsArgs {
     dryRun?: boolean
@@ -46,6 +48,7 @@ export async function backfillLibrarySettingParts(
           scanned: number
           changed: SettingPartChange[]
           skippedHuman: number
+          skipped: { human: number; changedDuringRun: number }
       }
     | RichErrorEnvelope
 > {
@@ -66,6 +69,7 @@ export async function backfillLibrarySettingParts(
 
         let skippedHuman = 0
         const changed: SettingPartChange[] = []
+        const updateTimes = new Map<string, (typeof docs)[number]["updateTime"]>()
         for (const d of docs) {
             const data = d.data()
             if (data.settingSource === "human") {
@@ -84,6 +88,7 @@ export async function backfillLibrarySettingParts(
                 data.partGroup === next.partGroup
             if (same) continue
             changed.push({ fileId: d.id, name, ...next })
+            updateTimes.set(d.id, d.updateTime)
         }
 
         const report = {
@@ -92,6 +97,7 @@ export async function backfillLibrarySettingParts(
             scanned: docs.length,
             changed,
             skippedHuman,
+            skipped: { human: skippedHuman, changedDuringRun: 0 },
         }
         if (dryRun) return report
         if (!force) {
@@ -103,18 +109,19 @@ export async function backfillLibrarySettingParts(
             )
         }
 
-        for (let i = 0; i < changed.length; i += WRITE_BATCH_MAX) {
-            const batch = db.batch()
-            for (const c of changed.slice(i, i + WRITE_BATCH_MAX)) {
-                batch.set(
-                    db.collection("library_index").doc(c.fileId),
-                    { setting: c.setting, part: c.part, partGroup: c.partGroup },
-                    { merge: true },
-                )
-            }
-            await batch.commit()
+        const { changedDuringRun } = await updateRowsIfUnchanged(
+            db,
+            changed.map((c) => ({
+                fileId: c.fileId,
+                updateTime: updateTimes.get(c.fileId),
+                patch: { setting: c.setting, part: c.part, partGroup: c.partGroup },
+            })),
+        )
+        return {
+            ...report,
+            changed: changed.filter((c) => !changedDuringRun.has(c.fileId)),
+            skipped: { human: skippedHuman, changedDuringRun: changedDuringRun.size },
         }
-        return report
     } catch (error) {
         logger.warn("backfill_library_setting_parts failed:", error)
         return richError(

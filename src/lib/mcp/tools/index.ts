@@ -2468,7 +2468,7 @@ export function registerWriteTools(server: McpServer): void {
         "backfill_library_setting_parts",
         {
             description:
-                "Admin / band_leader back-fill: stamp `setting` (whose setting or melody, parsed from the title's clarifier, e.g. 'Barchu (Friedman)' → 'Friedman'), `part` (instrument copy, e.g. '… Bb') and `partGroup` (shared by every instrument copy of one arrangement) on your org's existing library rows. Title parsing only; a row whose setting a person set (`settingSource: 'human'`) is never touched. F-05: `dryRun` defaults true and returns the full report; a real run needs `dryRun: false, force: true`. Returns `{ok, dryRun, scanned, changed: [{fileId, name, setting, part, partGroup}], skippedHuman}`.",
+                "Admin / band_leader back-fill: stamp `setting` (whose setting or melody, parsed from the title's clarifier, e.g. 'Barchu (Friedman)' → 'Friedman'), `part` (instrument copy, e.g. '… Bb') and `partGroup` (shared by every instrument copy of one arrangement) on your org's existing library rows. Title parsing only; a row whose setting a person set (`settingSource: 'human'`) is never touched. F-05: `dryRun` defaults true and returns the full report; a real run needs `dryRun: false, force: true`. A row edited during the run is left alone and counted. Returns `{ok, dryRun, scanned, changed: [{fileId, name, setting, part, partGroup}], skippedHuman, skipped: {human, changedDuringRun}}`.",
             inputSchema: {
                 dryRun: z
                     .boolean()
@@ -2488,7 +2488,7 @@ export function registerWriteTools(server: McpServer): void {
         "backfill_library_keys",
         {
             description:
-                "Admin / band_leader back-fill: fill an EMPTY library `key` (the chart's written key) from the chart's own AI reading (`aiSuggestion.suggested_key`) when its confidence is at least 0.9. Never from setlist usage. Skips and counts rows a person curated (`human_curated`), rows that already have a key, rows with no suggested key, and low-confidence readings. `minConfidence` can raise the 0.9 floor, never lower it. Writes only `key` and `keySource: 'ai_backfill'`. Your org only. F-05: `dryRun` defaults true and returns the full report; a real run needs `dryRun: false, force: true`. Returns `{ok, dryRun, scanned, changed: [{fileId, name, key, confidence}], skipped: {human, lowConfidence, noSuggestion, hasKey}}`.",
+                "Admin / band_leader back-fill: fill an EMPTY library `key` (the chart's written key) from the chart's own AI reading (`aiSuggestion.suggested_key`) when its confidence is at least 0.9, the reading says it is a chart (`is_chart`) and did not ask for review, and the key is plain (e.g. 'G', 'Em', 'Bb'). Never from setlist usage. Skips and counts rows a person curated or rejected, rows held for review, rows that already have a key, missing, non-chart, malformed and low-confidence readings, and rows changed during the run. `minConfidence` can raise the 0.9 floor, never lower it. Updates only `key` and `keySource: 'ai_backfill'`, and only on a row unchanged since the scan. Your org only. F-05: `dryRun` defaults true and returns the full report; a real run needs `dryRun: false, force: true`. Returns `{ok, dryRun, scanned, changed: [{fileId, name, key, confidence}], skipped: {human, rejected, reviewHeld, lowConfidence, noSuggestion, notChart, badKey, hasKey, changedDuringRun}}`.",
             inputSchema: {
                 dryRun: z
                     .boolean()
