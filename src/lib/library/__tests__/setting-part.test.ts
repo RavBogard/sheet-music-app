@@ -15,6 +15,15 @@ describe("parseSetting", () => {
         ["Shema (major)", "major"],
         ["B'sefer Chayim - Full Score", null],
         ["Hashkivenu", null],
+        // Download-copy counters and format words are not settings.
+        ["fire on the mountain chords (1)", null],
+        ["Kolomeykes Score(2)", null],
+        ["L'chai Olamim - Full Score (1).pdf", null],
+        ["Dreams (Fleetwood Mac, band format)", "Fleetwood Mac"],
+        ["Modeh Ani (CRC band chart, Cm)", null],
+        // A key written in front of the arranger is dropped.
+        ["Modah Ani (Am Aly Halpert)", "Aly Halpert"],
+        ["Baruch She'amar (Taubman, D)", "Taubman"],
     ])("%s → %s", (title, expected) => {
         expect(parseSetting(title)).toBe(expected)
     })
