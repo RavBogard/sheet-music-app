@@ -148,6 +148,7 @@ import {
 import { listServicePersonnel } from "./service-personnel"
 import { updateSong } from "./song-metadata"
 import { listBooksTool, lookupBookPageTool } from "./books"
+import { getSongHistoryTool, exportSetlistsTool } from "./history"
 import { richError, liftLegacyErrorEnvelope } from "@/lib/mcp/error-envelopes"
 export { registerTestTokenTools } from "./test-tokens"
 export { registerMintAdminBearerTools } from "./mint-admin-bearer"
@@ -730,6 +731,77 @@ export function registerReadTools(server: McpServer): void {
         async (args, extra) =>
             jsonResult(
                 await searchSetlists(uidFrom(extra), args, orgFrom(extra)),
+            ),
+    )
+
+    server.registerTool(
+        "get_song_history",
+        {
+            description:
+                "How have we done this song before? Use while building a setlist, before choosing a chart or key. Pass `title` (spelling variants match: Sh'ma/Shema, Bar'chu/Barchu) or `fileId` (that chart and its instrument-part copies). Reports what was done, newest first: each service's date, service type, rabbi slot, chart, setting, played key vs the chart's written key, vocal lead and notes, plus `byChart` use counts with played-key tallies. It recommends nothing. Leaves out test setlists, undated setlists and per-instrument copies. Tenant-scoped to your org. Returns `{ok, entries, total, byChart, truncated}`.",
+            inputSchema: {
+                title: z
+                    .string()
+                    .optional()
+                    .describe("Song title, e.g. 'Mi Chamocha'. Spelling variants match."),
+                fileId: z
+                    .string()
+                    .optional()
+                    .describe("A chart fileId; also matches the chart's instrument-part copies."),
+                serviceType: z
+                    .string()
+                    .optional()
+                    .describe("Service type key, e.g. 'shabbat_morning', 'friday_night', 'shir_shabbat'."),
+                rabbiSlot: z
+                    .enum(["daniel_karen", "randy"])
+                    .optional()
+                    .describe("Only services led by this rabbi slot."),
+                includeSpecial: z
+                    .boolean()
+                    .optional()
+                    .describe("Include holidays, guest-artist and memorial services (default true)."),
+                limit: z
+                    .number()
+                    .int()
+                    .min(1)
+                    .max(100)
+                    .optional()
+                    .describe("Max entries returned (default 25, max 100). `total` and `byChart` count every match."),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(
+                await getSongHistoryTool(uidFrom(extra), args, orgFrom(extra)),
+            ),
+    )
+
+    server.registerTool(
+        "export_setlists",
+        {
+            description:
+                "Every setlist with its tracks in one call, for review and analysis. Each setlist carries its classified service type, rabbi slot, special flag and instrument part; each track its order, type, title, chart, key, vocal lead and notes. Newest first. Leaves out test setlists, and by default per-instrument copies and undated setlists. Tenant-scoped to your org. Returns `{ok, count, truncated, setlists}`.",
+            inputSchema: {
+                from: z
+                    .string()
+                    .optional()
+                    .describe("Inclusive start day, YYYY-MM-DD."),
+                to: z
+                    .string()
+                    .optional()
+                    .describe("Inclusive end day, YYYY-MM-DD."),
+                includeParts: z
+                    .boolean()
+                    .optional()
+                    .describe("Include per-instrument copies such as '… · Bb' (default false)."),
+                includeUndated: z
+                    .boolean()
+                    .optional()
+                    .describe("Include setlists with no event date (default false; ignored when from/to is set)."),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(
+                await exportSetlistsTool(uidFrom(extra), args, orgFrom(extra)),
             ),
     )
 
