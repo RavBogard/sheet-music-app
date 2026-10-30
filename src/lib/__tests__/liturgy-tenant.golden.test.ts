@@ -105,6 +105,7 @@ const GOLDEN_BOOKS = [
     { slug: 'shirei-tshuvah', title: 'Shirei Tshuvah — Rosh Hashanah', tier: 'feed' },
     { slug: 'legacy-shabbat-evening', title: 'CRC Kabbalat Shabbat (feed)', tier: 'feed' },
     { slug: 'legacy-shabbat-morning', title: 'CRC Shabbat Morning (feed)', tier: 'feed' },
+    { slug: 'legacy-beit-mitzvah', title: 'CRC Beit Mitzvah Siddur (feed)', tier: 'feed', pages: 63 },
 ]
 
 describe('P1 golden: rabbi slots, service types and books (crc + brotherslazaroff)', () => {

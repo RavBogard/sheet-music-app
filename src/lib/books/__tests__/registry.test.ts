@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest"
-import { listBooks, getBook, validateLiturgyRef, bookFolioFloor } from "../registry"
+import { listBooks, getBook, getRegistryEntry, validateLiturgyRef, bookFolioFloor } from "../registry"
+import { lookupBookPage } from "../lookup"
 
 describe("book registry", () => {
     it("lists every registered book with slug, title, tier and page count", () => {
@@ -281,6 +282,38 @@ describe("validateLiturgyRef — companion feed units on a booklet", () => {
                 unitId: "shma.barchu@shabbat-maariv",
                 folio: 10,
             }),
+        ).toMatchObject({ ok: false, machineCode: "unknown_unit_id" })
+    })
+})
+
+/**
+ * Setlist memory r4 — the Beit Mitzvah siddur, registered from the feed's
+ * `printedFolio`. The numbers are the PRINTED book's (Beit Mitzvah Siddur 6.0,
+ * 63 printed pages, folio = PDF page), measured, not the reader edition's.
+ */
+describe("legacy-beit-mitzvah", () => {
+    it("is a feed-tier book with the printed book's 63 pages", () => {
+        expect(getRegistryEntry("legacy-beit-mitzvah")).toMatchObject({ tier: "feed", pages: 63 })
+        const book = getBook("legacy-beit-mitzvah")
+        expect(book).toMatchObject({ slug: "legacy-beit-mitzvah", tier: "feed", pages: 63 })
+        expect(book?.units?.length).toBe(85)
+    })
+
+    it("resolves the morning Bar'chu unit to its printed page", () => {
+        const res = lookupBookPage("legacy-beit-mitzvah", "shma.barchu@bm-shacharit")
+        expect(res.ok).toBe(true)
+        if (!res.ok) return
+        // The id is the one exact hit; names it contains rank after it as partials.
+        expect(res.matches.filter((m) => m.confidence === "high")).toHaveLength(1)
+        expect(res.matches[0]).toMatchObject({ unitId: "shma.barchu@bm-shacharit", folio: 7, confidence: "high" })
+        expect(
+            validateLiturgyRef({ book: "legacy-beit-mitzvah", unitId: "shma.barchu@bm-shacharit", folio: 7 }),
+        ).toEqual({ ok: true })
+    })
+
+    it("never takes another book's unit", () => {
+        expect(
+            validateLiturgyRef({ book: "legacy-beit-mitzvah", unitId: "shma.barchu@legacy-shabbat-morning", folio: 7 }),
         ).toMatchObject({ ok: false, machineCode: "unknown_unit_id" })
     })
 })

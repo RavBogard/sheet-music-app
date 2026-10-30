@@ -7,6 +7,7 @@ import shabbatShacharit from "@/data/books/shabbat-shacharit.json"
 import shireiTshuvah from "@/data/books/shirei-tshuvah.json"
 import legacyShabbatEvening from "@/data/books/legacy-shabbat-evening.json"
 import legacyShabbatMorning from "@/data/books/legacy-shabbat-morning.json"
+import legacyBeitMitzvah from "@/data/books/legacy-beit-mitzvah.json"
 import { bookServiceFor, SERVICE_SCOPED_BOOKS } from "./machzor-services"
 import { isCompanionUnit } from "./companion"
 import type {
@@ -34,6 +35,9 @@ const BOOK_FILES: Record<string, BookFile> = {
     // sit alongside rather than replacing.
     "legacy-shabbat-evening": legacyShabbatEvening as BookFile,
     "legacy-shabbat-morning": legacyShabbatMorning as BookFile,
+    // Setlist memory r4 — the printed Beit Mitzvah Siddur 6.0, same `printedFolio`
+    // footing as the two booklets above. One volume, two services: resolve by unit id.
+    "legacy-beit-mitzvah": legacyBeitMitzvah as BookFile,
 }
 
 const REGISTRY = registryJson as BookRegistryEntry[]
