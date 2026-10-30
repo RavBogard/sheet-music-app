@@ -32,8 +32,8 @@ setlist history is the better source and is already what release 2 learns from.
   Briggs has an account.
 - Drew Brodsky has two admin accounts (personal and engineer addresses). Left as is.
 
-## For Daniel (not decided here)
+## Decided
 
-- Brothers Lazaroff Hullabaloo tribute acts are secret in public materials. Setlist pages are
-  public by design (perform links). If a Hullabaloo setlist names the acts, its perform link
-  shows them. Whether BrosLaz needs a non-public setlist is a product decision for Daniel.
+- Brothers Lazaroff Hullabaloo tribute acts are secret in public materials, and setlist pages are
+  public by design. Daniel (2026-10-30): no change. Nobody outside the band goes to the BrosLaz
+  site.
