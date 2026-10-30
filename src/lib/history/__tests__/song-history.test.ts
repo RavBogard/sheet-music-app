@@ -3,6 +3,7 @@ import {
     buildSongHistory,
     historyStem,
     songSkeleton,
+    spellingVariants,
     type HistorySetlist,
     type HistoryTrack,
     type LibraryLite,
@@ -121,6 +122,23 @@ describe("historyStem / songSkeleton", () => {
         expect(songSkeleton(historyStem("Sim Shalom"))).not.toBe(
             songSkeleton(historyStem("Shalom Rav")),
         )
+    })
+
+    it.each([
+        [["Sh'ma", "Shema", "Shema pdf"]],
+        [["Bar'chu", "Barchu", "Barchu (Friedman)"]],
+        [["Adonai S'fatai (trad)", "Adonai s_fatai (chant)"]],
+    ])("spelling variants match: %j", (titles) => {
+        const [first, ...rest] = titles.map(historyStem)
+        for (const t of rest) expect(spellingVariants(first, t), t).toBe(true)
+    })
+
+    it.each([
+        ["Kaddish", "Kiddush"],
+        ["Kadosh", "Kedusha"],
+        ["Sim Shalom", "Shalom Rav"],
+    ])("%s and %s are different songs", (a, b) => {
+        expect(spellingVariants(historyStem(a), historyStem(b))).toBe(false)
     })
 })
 
@@ -242,6 +260,18 @@ describe("buildSongHistory", () => {
         ]
         const r = buildSongHistory(sets, library, { fileId: "f1" })
         expect(r.entries.map((e) => e.fileId).sort()).toEqual(["f1", "f1-bb"])
+    })
+
+    it("a Kiddush query does not return Kaddish", () => {
+        const sets = [
+            setlist({
+                id: "k1",
+                eventDate: "2026-09-05T15:00:00.000Z",
+                tracks: [track({ title: "Kaddish" }), track({ title: "Kiddush" }), track({ title: "Kedusha" })],
+            }),
+        ]
+        const r = buildSongHistory(sets, LIBRARY, { title: "Kiddush" })
+        expect(r.entries.map((e) => e.title)).toEqual(["Kiddush"])
     })
 
     it("only ever returns song rows", () => {

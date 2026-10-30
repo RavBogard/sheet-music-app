@@ -113,6 +113,41 @@ export function songSkeleton(stem: string): string {
         .join("")
 }
 
+const DELETABLE = new Set(["a", "e", "i", "o", "u", "h"])
+
+/** Stem with spaces and apostrophes removed: the form spelling match compares. */
+function compact(stem: string): string {
+    return stem.replace(/['’\s]/g, "")
+}
+
+/**
+ * True when one stem turns into the other purely by deleting vowels,
+ * apostrophes or `h`, or by adding/removing spaces. Swapping one vowel for
+ * another never matches, so Kaddish/Kiddush and Kadosh/Kedusha stay apart
+ * even though they share a skeleton. `songSkeleton` equality is the cheap
+ * pre-filter; this is the decision.
+ */
+export function spellingVariants(a: string, b: string): boolean {
+    if (!a || !b) return false
+    const x = compact(a)
+    const y = compact(b)
+    if (x === y) return true
+    const [long, short] = x.length >= y.length ? [x, y] : [y, x]
+    // reach[j]: short[0..j) can be produced from the long prefix read so far.
+    let reach = new Array<boolean>(short.length + 1).fill(false)
+    reach[0] = true
+    for (const ch of long) {
+        const next = new Array<boolean>(short.length + 1).fill(false)
+        for (let j = 0; j <= short.length; j++) {
+            if (!reach[j]) continue
+            if (DELETABLE.has(ch)) next[j] = true
+            if (j < short.length && short[j] === ch) next[j + 1] = true
+        }
+        reach = next
+    }
+    return reach[short.length]
+}
+
 function clampLimit(limit: number | undefined): number {
     if (typeof limit !== "number" || !Number.isFinite(limit) || limit <= 0) {
         return SONG_HISTORY_DEFAULT_LIMIT
@@ -143,7 +178,13 @@ export function buildSongHistory(
         if (qStem !== null) {
             const stem = historyStem(t.title ?? "")
             if (stem && stem === qStem) return true
-            if (qSkeleton && songSkeleton(stem) === qSkeleton) return true
+            if (
+                qSkeleton &&
+                songSkeleton(stem) === qSkeleton &&
+                spellingVariants(stem, qStem)
+            ) {
+                return true
+            }
         }
         return false
     }
