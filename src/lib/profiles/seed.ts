@@ -1,3 +1,4 @@
+import { getMoment } from "@/lib/books/moments"
 import { validateLiturgyRef } from "@/lib/books/registry"
 import type { HistorySetlist, LibraryLite } from "@/lib/history/song-history"
 import { isSongType } from "@/lib/setlist-track-count"
@@ -112,11 +113,15 @@ export function seedProfile(
             tracks.push(row)
             continue
         }
-        const row: SeededTrack = { type: "song", title, slotKind: "open", slotKey, house: null }
+        // An open slot is labelled by its moment ("Mi Chamocha"), never by the one week's song
+        // that happened to fill it, or the profile would read as if that song were the usual.
+        const openLabel =
+            getMoment(t.momentId)?.display.en ?? (title.split(/\s+[—–-]\s+|\s*\(/)[0].trim() || title)
+        const row: SeededTrack = { type: "song", title: openLabel, slotKind: "open", slotKey, house: null }
         if (t.momentId) row.momentId = t.momentId
         if (refs) row.liturgyRefs = refs
         tracks.push(row)
-        unsure.push({ label: title, reason: tier.tier, phrase: tier.phrase })
+        unsure.push({ label: openLabel === title ? title : `${openLabel} (last: ${title})`, reason: tier.tier, phrase: tier.phrase })
     }
 
     return { tracks, unsure, basedOn: { setlistId: base.id, eventDate: base.eventDate! } }
