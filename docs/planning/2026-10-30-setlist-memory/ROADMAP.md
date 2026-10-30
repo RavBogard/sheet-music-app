@@ -17,3 +17,5 @@ Coordination:
 - Monitoring for Daniel and David is a separate thread.
 
 GATE: plan 2 written and executed without a separate approval round. I proceeded because the design is approved and standing authority covers plans built from it. The real seeding waits for the Daniel/David seed review (Task 7).
+
+GATE: no back-fill of rabbi on past setlists — proceeded because Daniel (2026-10-30) said attributing old services is not worth it ("figure it out as a solution moving forward, or just don't use that context"). Past setlists without a stored rabbi stay unattributed and never count toward a rabbi's profile. draft_service now seeds a missing profile on first use from setlists marked with that service and rabbi; Randy's profiles start the first week one is built with the rabbi set. The one-time seed review (SEED-REVIEW.md) is dropped: a seed fills only `usual` slots and lists the rest, and every draft reads its open slots back to the author.

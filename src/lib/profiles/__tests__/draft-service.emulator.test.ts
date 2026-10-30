@@ -186,6 +186,23 @@ describe("draft a service from its profile (emulator)", () => {
         expect(open.fileId).toBeUndefined()
     })
 
+    it("seeds a missing profile from its marked history on the first draft", async () => {
+        const id = `profile__${CRC}__${KEY}`
+        await db().collection("setlistTemplates").doc(id).delete()
+        const draft = (await draftServiceTool(ADMIN, { date: "2026-10-24", serviceType: "shabbat_morning", rabbiSlot: "randy" }, CRC)) as Draft
+        expect(draft.ok).toBe(true)
+        expect(draft.profile.key).toBe(KEY)
+        expect(draft.rows.map((r) => r.tier)).toEqual([null, "usual", "last_time"])
+        expect((await db().collection("setlistTemplates").doc(id).get()).exists).toBe(true)
+    })
+
+    it("says no_profile when no setlist is marked with that service and rabbi", async () => {
+        await db().collection("setlistTemplates").doc(`profile__${CRC}__friday_night:randy`).delete()
+        const r = (await draftServiceTool(ADMIN, { date: "2026-10-23", serviceType: "friday_night", rabbiSlot: "randy" }, CRC)) as unknown as Err
+        expect(r.error.machine_code).toBe("no_profile")
+        expect((await db().collection("setlistTemplates").where("profile.key", "==", "friday_night:randy").get()).size).toBe(0)
+    })
+
     it("refuses without a rabbi, never inferring one", async () => {
         const r = (await draftServiceTool(ADMIN, { date: "2026-10-24", serviceType: "shabbat_morning" }, CRC)) as unknown as Err
         expect(r.error.machine_code).toBe("rabbi_required")

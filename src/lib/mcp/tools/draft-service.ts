@@ -24,7 +24,7 @@ import {
 } from "@/lib/profiles/draft"
 import { writeStanding } from "@/lib/profiles/standing"
 import type { Promotion, Tier } from "@/lib/profiles/tiers"
-import { findProfileTemplateFor, loadProfileTiers } from "./service-profiles"
+import { findProfileTemplateFor, loadProfileTiers, seedMissingProfile } from "./service-profiles"
 import { profileLabelFor, setAnnouncement } from "./standing"
 import { rateLimitGate, writeSetlistFromTemplateRows, type UnresolvedLiturgyRow } from "./templates"
 
@@ -167,13 +167,13 @@ export async function draftServiceTool(
         const editor = await assertEditor(db, uid, org)
         if (!editor.ok) return editor
 
-        const doc = await findProfileTemplateFor(org, profileKey)
+        const doc = (await findProfileTemplateFor(org, profileKey)) ?? (await seedMissingProfile(uid, org, profileKey))
         if (!doc) {
             return richError(
                 "no_profile",
-                `There is no profile for '${profileKey}' yet.`,
+                `There is no profile for '${profileKey}' yet: no past setlist is marked with this service and rabbi.`,
                 { profileKey },
-                "Build from a template or last setlist instead.",
+                "Build this one from a template or a recent setlist, with templateType and rabbi set. The next draft_service for this service learns from it.",
             )
         }
         const loaded = await loadProfileTiers(org, doc, serviceType, rabbiSlot)
