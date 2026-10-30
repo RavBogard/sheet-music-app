@@ -6,6 +6,7 @@ import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { assertEditor } from "@/lib/mcp/server-tracks-write"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 import { rowOrg } from "@/lib/mcp/org-context"
+import { bookSlugGuard } from "@/lib/mcp/liturgy-ref-guard"
 import { loadLibraryLite } from "@/lib/history/load"
 import { orgTimeZone } from "@/lib/org/locale"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
@@ -267,6 +268,13 @@ export interface CreateSetlistFromDraftArgs {
     draftId: string
     name?: string
     choices?: DraftChoice[]
+    /**
+     * Setlist memory r4 — the book this service prays from, when it is not the
+     * profile's. `null` is "no book": a B'nei Mitzvah family praying from its
+     * own printed booklet gets no page numbers rather than the siddur's. Rows
+     * keep pages only where the profile has one for THIS book.
+     */
+    book?: string | null
 }
 
 export interface CreateSetlistFromDraftResult {
@@ -325,6 +333,16 @@ export async function createSetlistFromDraftTool(
         return richError("invalid_argument", "Pass `draftId`.", { fields: ["draftId"] }, "Get it from draft_service.")
     }
     const choices = Array.isArray(args?.choices) ? args.choices : []
+    const bookOverride = args?.book
+    if (bookOverride !== undefined && bookOverride !== null) {
+        const badBook = typeof bookOverride === "string" ? bookSlugGuard(bookOverride) : null
+        if (typeof bookOverride !== "string" || !bookOverride || badBook) {
+            return (
+                badBook ??
+                richError("invalid_argument", "`book` is a book slug, or null for no book.", { book: bookOverride }, "Call list_books for valid slugs.")
+            )
+        }
+    }
     let claimToRelease: { ref: FirebaseFirestore.DocumentReference; claimId: string } | null = null
     try {
         initAdmin()
@@ -384,7 +402,7 @@ export async function createSetlistFromDraftTool(
             rows: applied.rows.map((r) => r.track),
             name,
             eventDate: draft.date,
-            book: draft.book,
+            book: bookOverride !== undefined ? bookOverride : draft.book,
             templateType: draft.serviceType,
             serviceNotes: draft.serviceNotes,
             sourceTemplateId: draft.templateId,

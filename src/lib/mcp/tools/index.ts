@@ -891,7 +891,7 @@ export function registerReadTools(server: McpServer): void {
         "create_setlist_from_draft",
         {
             description:
-                "Create the setlist from a draft_service draft, after the author has chosen charts for the open slots. Rows keep the draft's order; the profile's book is bound as clone_setlist_from_template does, and the setlist stores its service type, rabbi slot and special flag. Each choice names a song row by its draft `index` and may set `fileId`, `key` and `leadMusician`. Set `standing: true` only when the author says to keep that choice for next time; it is then remembered as the slot's standard and announced. Changes to filled rows without `standing` are one-offs, summed up in `oneOffNote`. An open slot with no choice is created with its label and no chart. The draft is deleted. Admin / band_leader. Tenant-scoped. Returns `{ok, setlistId, trackCount, book, announcements, oneOffNote?, unresolvedLiturgy, bondReviewCount}`; read `announcements` and `oneOffNote` back to the author.",
+                "Create the setlist from a draft_service draft, after the author has chosen charts for the open slots. Rows keep the draft's order; the profile's book is bound as clone_setlist_from_template does, and the setlist stores its service type, rabbi slot and special flag. Each choice names a song row by its draft `index` and may set `fileId`, `key` and `leadMusician`. Set `standing: true` only when the author says to keep that choice for next time; it is then remembered as the slot's standard and announced. Changes to filled rows without `standing` are one-offs, summed up in `oneOffNote`. An open slot with no choice is created with its label and no chart. Pass `book: null` when the service prays from no registered book (a B'nei Mitzvah family's own booklet): no row gets a page, because a wrong page is worse than none. The draft is deleted. Admin / band_leader. Tenant-scoped. Returns `{ok, setlistId, trackCount, book, announcements, oneOffNote?, unresolvedLiturgy, bondReviewCount}`; read `announcements` and `oneOffNote` back to the author.",
             inputSchema: {
                 draftId: z.string().describe("The draftId from draft_service."),
                 name: z.string().optional().describe("Name for the setlist; overrides the draft's."),
@@ -914,6 +914,13 @@ export function registerReadTools(server: McpServer): void {
                     )
                     .optional()
                     .describe("The author's choices for draft rows."),
+                book: z
+                    .string()
+                    .nullable()
+                    .optional()
+                    .describe(
+                        "Overrides the profile's book. null = no book: no row gets a page (a family's own printed booklet). Omit to use the profile's book.",
+                    ),
             },
         },
         async (args, extra) =>
