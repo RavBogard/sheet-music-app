@@ -1,0 +1,69 @@
+{
+  "ok": true,
+  "dryRun": false,
+  "scanned": 904,
+  "changed": [
+    {
+      "fileId": "1Exi_bsvw4nK0AUkW12bGwJ2WzZ-B5cS0",
+      "name": "Avinu Malkeinu Janowski D minor (Tenor).mp3",
+      "setting": null,
+      "part": "Tenor",
+      "partGroup": "avinu malkeinu janowski d minor"
+    },
+    {
+      "fileId": "1FZw5QmsYPhe2hNLnAz8CWD1yN0lruOXP",
+      "name": "Kedusha in Am (Soprano).mp3",
+      "setting": null,
+      "part": "Soprano",
+      "partGroup": "kedusha in am"
+    },
+    {
+      "fileId": "1LYIRI8GH4fA9Typust_4D98LjOWo5eSn",
+      "name": "The Great Aleinu (Alto).mp3",
+      "setting": null,
+      "part": "Alto",
+      "partGroup": "the great aleinu"
+    },
+    {
+      "fileId": "1Q6yGoFDerBBWV7OYovZweFEIbzgRv--w",
+      "name": "Avinu Malkeinu Janowski D minor (Alto).mp3",
+      "setting": null,
+      "part": "Alto",
+      "partGroup": "avinu malkeinu janowski d minor"
+    },
+    {
+      "fileId": "1g-Czee2Cm5I_k4qtDQ86M3t7-9c3pHnW",
+      "name": "Kedusha in Am (Alto).mp3",
+      "setting": null,
+      "part": "Alto",
+      "partGroup": "kedusha in am"
+    },
+    {
+      "fileId": "1monkKpBnbwh6YO6FAKBIQmD4vGqzbyIZ",
+      "name": "The Great Aleinu (Tenor).mp3",
+      "setting": null,
+      "part": "Tenor",
+      "partGroup": "the great aleinu"
+    },
+    {
+      "fileId": "1tRHJFJSq99c1SuWZBOJCjbLyFHhIPYWO",
+      "name": "The Great Aleinu (Soprano).mp3",
+      "setting": null,
+      "part": "Soprano",
+      "partGroup": "the great aleinu"
+    },
+    {
+      "fileId": "1tYtW5qo5iOuytY9GflbwCQjWerjaov4b",
+      "name": "Avinu Malkeinu Janowski D minor (Soprano).mp3",
+      "setting": null,
+      "part": "Soprano",
+      "partGroup": "avinu malkeinu janowski d minor"
+    }
+  ],
+  "skippedHuman": 0,
+  "skipped": {
+    "human": 0,
+    "changedDuringRun": 0
+  },
+  "failed": []
+}
