@@ -41,6 +41,12 @@ export interface SongRecord {
     arranger?: string
     /** Free-text — populated via W-03 enrichment campaign. */
     notationSource?: string
+    /** Setlist memory: whose setting this chart is, parsed from the title or set by a person. */
+    setting?: string | null
+    /** Setlist memory: instrument part ("Bb", "Tenor Saxophone"), else null. */
+    part?: string | null
+    /** Setlist memory: shared by every instrument copy of one arrangement. */
+    partGroup?: string | null
     /** Most-recent setlist this song was bonded to (denormalized). */
     lastUsedInSetlist?: { setlistId: string; eventDate: string }
     /** Learning-loop counters per [[feedback_learning_self_healing]]. */

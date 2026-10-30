@@ -341,6 +341,12 @@ interface LibraryW02Fields {
     composer?: string
     arranger?: string
     notationSource?: string
+    /** Setlist memory: whose setting this chart is, parsed from the title or set by a person. */
+    setting?: string | null
+    /** Setlist memory: instrument part ("Bb", "Tenor Saxophone"), else null. */
+    part?: string | null
+    /** Setlist memory: shared by every instrument copy of one arrangement. */
+    partGroup?: string | null
     lastUsedInSetlist?: { setlistId: string; eventDate: string }
     bondCorrectionHistory?: {
         correctedTo: number
@@ -442,6 +448,9 @@ async function loadLibraryW02Map(): Promise<Map<string, LibraryW02Fields>> {
                     typeof data.notationSource === "string"
                         ? data.notationSource
                         : undefined,
+                setting: typeof data.setting === "string" ? data.setting : undefined,
+                part: typeof data.part === "string" ? data.part : undefined,
+                partGroup: typeof data.partGroup === "string" ? data.partGroup : undefined,
                 lastUsedInSetlist:
                     data.lastUsedInSetlist &&
                     typeof data.lastUsedInSetlist === "object"
@@ -953,6 +962,12 @@ export interface LibraryIndexEntry {
     composer?: string
     arranger?: string
     notationSource?: string
+    /** Setlist memory: whose setting this chart is, parsed from the title or set by a person. */
+    setting?: string | null
+    /** Setlist memory: instrument part ("Bb", "Tenor Saxophone"), else null. */
+    part?: string | null
+    /** Setlist memory: shared by every instrument copy of one arrangement. */
+    partGroup?: string | null
     lastUsedInSetlist?: { setlistId: string; eventDate: string }
     bondCorrectionHistory?: {
         correctedTo: number
@@ -1087,6 +1102,9 @@ function toLibraryEntry(
         arranger: typeof data.arranger === "string" ? data.arranger : undefined,
         notationSource:
             typeof data.notationSource === "string" ? data.notationSource : undefined,
+        setting: typeof data.setting === "string" ? data.setting : undefined,
+        part: typeof data.part === "string" ? data.part : undefined,
+        partGroup: typeof data.partGroup === "string" ? data.partGroup : undefined,
         lastUsedInSetlist:
             data.lastUsedInSetlist && typeof data.lastUsedInSetlist === "object"
                 ? (data.lastUsedInSetlist as {

@@ -55,6 +55,7 @@ import {
 } from "@/lib/library/correction-signals"
 import { normalizeChartTitle } from "@/lib/library/normalize-chart-title"
 import { recomputeIndexNameFields } from "@/lib/library/recompute-index-name-fields"
+import { partGroupFor, settingPartWriteFields } from "@/lib/library/setting-part"
 import { bareStem } from "@/lib/mcp/title-specificity"
 import { logger } from "@/lib/logger"
 import { KNOWN_COLLECTIONS } from "@/lib/library/collections"
@@ -169,6 +170,10 @@ export interface EditPayload {
     bpm?: number | null
     leadMusician?: string
     tags?: string[]
+    /** Setlist memory: whose setting this chart is ("Friedman", "trad"); null clears. */
+    setting?: string | null
+    /** Setlist memory: instrument part ("Bb", "Tenor Saxophone"); null clears. */
+    part?: string | null
 }
 
 export type FailedKind = "enrichment" | "import"
@@ -581,6 +586,7 @@ export async function editEnrichment(
         update.normalizedName = w02.normalizedName
         update.stem = w02.stem
         update.titleSpecificity = w02.titleSpecificity
+        Object.assign(update, settingPartWriteFields(t, data))
         update.humanRenamedAt = new Date().toISOString()
         fieldsChanged.push("title")
     }
@@ -616,6 +622,26 @@ export async function editEnrichment(
     if (edits.leadMusician !== undefined) {
         update.leadMusician = edits.leadMusician
         fieldsChanged.push("leadMusician")
+    }
+    if (edits.setting !== undefined || edits.part !== undefined) {
+        // A person's own setting/part: recorded as human so no back-fill or
+        // rename recompute ever overwrites it. partGroup follows the title.
+        const title =
+            typeof update.name === "string"
+                ? update.name
+                : (typeof data.name === "string" && data.name) ||
+                  (typeof data.title === "string" && data.title) ||
+                  rowId
+        if (edits.setting !== undefined) {
+            update.setting = edits.setting === null ? null : edits.setting.trim() || null
+            fieldsChanged.push("setting")
+        }
+        if (edits.part !== undefined) {
+            update.part = edits.part === null ? null : edits.part.trim() || null
+            fieldsChanged.push("part")
+        }
+        update.partGroup = partGroupFor(title)
+        update.settingSource = "human"
     }
     if (edits.tags !== undefined) {
         if (!Array.isArray(edits.tags) || edits.tags.some((t) => typeof t !== "string")) {

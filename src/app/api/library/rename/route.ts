@@ -12,6 +12,7 @@ import {
     recomputeIndexNameFields,
 } from "@/lib/library/recompute-index-name-fields"
 import { bareStem } from "@/lib/mcp/title-specificity"
+import { settingPartWriteFields } from "@/lib/library/setting-part"
 
 const schema = z.object({
     fileId: z.string().min(1),
@@ -103,6 +104,9 @@ export const PATCH = createApiHandler(
                 normalizedName: w02.normalizedName,
                 stem: w02.stem,
                 titleSpecificity: w02.titleSpecificity,
+                // Setlist memory: setting + part follow the title unless a
+                // person set them (settingSource 'human').
+                ...settingPartWriteFields(trimmed, docSnap.data()),
                 // Pre-F-7 fields preserved verbatim — UI consumers (library
                 // grid, bind picker fallback) read `displayName` directly.
                 displayName: trimmed,

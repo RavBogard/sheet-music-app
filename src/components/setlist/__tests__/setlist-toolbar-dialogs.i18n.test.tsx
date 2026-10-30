@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { cleanup, fireEvent, render, screen } from "@testing-library/react"
 
 /** Phase 7 i18n: dashboard toolbar, the delete/duplicate/transfer dialogs, the dashboard shell, the audio picker and the editor error page. */
@@ -174,7 +174,17 @@ describe("toolbar + dialogs English output is unchanged", () => {
 })
 
 describe("SetlistDashboard welcome line names the host tenant", () => {
-    afterEach(() => cleanup())
+    // The greeting reads the clock: on Shabbat (Friday from 16:00) or a
+    // holiday it says "Shabbat Shalom" instead of "Welcome to <name>". Pin an
+    // ordinary weekday morning so the test doesn't depend on when it runs.
+    beforeEach(() => {
+        vi.useFakeTimers({ toFake: ["Date"] })
+        vi.setSystemTime(new Date(2026, 9, 14, 10, 0, 0)) // Wed 14 Oct 2026, 10:00 local
+    })
+    afterEach(() => {
+        cleanup()
+        vi.useRealTimers()
+    })
 
     it("uses the server's short name over the client store's fallback", () => {
         dash.value = dashboardValue({ user: { uid: "u", displayName: null } })

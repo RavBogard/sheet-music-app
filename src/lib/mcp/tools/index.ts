@@ -26,6 +26,8 @@ import { reconcileLibrary } from "./reconcile-library"
 import { salvageChartBytes } from "./salvage-chart-bytes"
 import { backfillHealMetadata } from "./backfill-heal-metadata"
 import { backfillTrackMimetype } from "./backfill-track-mimetype"
+import { backfillLibrarySettingParts } from "./backfill-setting-parts"
+import { backfillLibraryKeys } from "./backfill-library-keys"
 import { archiveNonChartArtifacts } from "./archive-nonchart-artifacts"
 import { getAiConfig, setAiAutoApply, setAiThreshold } from "./ai-config"
 import { getCorrectionStats } from "./correction-stats"
@@ -148,6 +150,7 @@ import {
 import { listServicePersonnel } from "./service-personnel"
 import { updateSong } from "./song-metadata"
 import { listBooksTool, lookupBookPageTool } from "./books"
+import { getSongHistoryTool, exportSetlistsTool } from "./history"
 import { richError, liftLegacyErrorEnvelope } from "@/lib/mcp/error-envelopes"
 export { registerTestTokenTools } from "./test-tokens"
 export { registerMintAdminBearerTools } from "./mint-admin-bearer"
@@ -730,6 +733,77 @@ export function registerReadTools(server: McpServer): void {
         async (args, extra) =>
             jsonResult(
                 await searchSetlists(uidFrom(extra), args, orgFrom(extra)),
+            ),
+    )
+
+    server.registerTool(
+        "get_song_history",
+        {
+            description:
+                "How have we done this song before? Use while building a setlist, before choosing a chart or key. Pass `title` (spelling variants match: Sh'ma/Shema, Bar'chu/Barchu) or `fileId` (that chart and its instrument-part copies). Reports what was done, newest first: each service's date, service type, rabbi slot, chart, setting, played key vs the chart's written key, vocal lead and notes, plus `byChart` use counts with played-key tallies. It recommends nothing. Leaves out test setlists, undated setlists and per-instrument copies. Tenant-scoped to your org. Returns `{ok, entries, total, byChart, truncated}`.",
+            inputSchema: {
+                title: z
+                    .string()
+                    .optional()
+                    .describe("Song title, e.g. 'Mi Chamocha'. Spelling variants match."),
+                fileId: z
+                    .string()
+                    .optional()
+                    .describe("A chart fileId; also matches the chart's instrument-part copies."),
+                serviceType: z
+                    .string()
+                    .optional()
+                    .describe("Service type key, e.g. 'shabbat_morning', 'friday_night', 'shir_shabbat'."),
+                rabbiSlot: z
+                    .enum(["daniel_karen", "randy"])
+                    .optional()
+                    .describe("Only services led by this rabbi slot."),
+                includeSpecial: z
+                    .boolean()
+                    .optional()
+                    .describe("Include holidays, guest-artist and memorial services (default true)."),
+                limit: z
+                    .number()
+                    .int()
+                    .min(1)
+                    .max(100)
+                    .optional()
+                    .describe("Max entries returned (default 25, max 100). `total` and `byChart` count every match."),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(
+                await getSongHistoryTool(uidFrom(extra), args, orgFrom(extra)),
+            ),
+    )
+
+    server.registerTool(
+        "export_setlists",
+        {
+            description:
+                "Every setlist with its tracks in one call, for review and analysis. Each setlist carries its classified service type, rabbi slot, special flag and instrument part; each track its order, type, title, chart, key, vocal lead and notes. Newest first. Leaves out test setlists, and by default per-instrument copies and undated setlists. Tenant-scoped to your org. Returns `{ok, count, truncated, setlists}`.",
+            inputSchema: {
+                from: z
+                    .string()
+                    .optional()
+                    .describe("Inclusive start day, YYYY-MM-DD."),
+                to: z
+                    .string()
+                    .optional()
+                    .describe("Inclusive end day, YYYY-MM-DD."),
+                includeParts: z
+                    .boolean()
+                    .optional()
+                    .describe("Include per-instrument copies such as '… · Bb' (default false)."),
+                includeUndated: z
+                    .boolean()
+                    .optional()
+                    .describe("Include setlists with no event date (default false; ignored when from/to is set)."),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(
+                await exportSetlistsTool(uidFrom(extra), args, orgFrom(extra)),
             ),
     )
 
@@ -2390,6 +2464,52 @@ export function registerWriteTools(server: McpServer): void {
             jsonResult(await backfillTrackMimetype(uidFrom(extra), args, orgFrom(extra))),
     )
 
+    server.registerTool(
+        "backfill_library_setting_parts",
+        {
+            description:
+                "Admin / band_leader back-fill: stamp `setting` (whose setting or melody, parsed from the title's clarifier, e.g. 'Barchu (Friedman)' → 'Friedman'), `part` (instrument copy, e.g. '… Bb') and `partGroup` (shared by every instrument copy of one arrangement) on your org's existing library rows. Title parsing only; a row whose setting a person set (`settingSource: 'human'`) is never touched. F-05: `dryRun` defaults true and returns the full report; a real run needs `dryRun: false, force: true`. A row edited during the run is left alone and counted. Returns `{ok, dryRun, scanned, changed: [{fileId, name, setting, part, partGroup}], skippedHuman, skipped: {human, changedDuringRun}}`.",
+            inputSchema: {
+                dryRun: z
+                    .boolean()
+                    .optional()
+                    .describe("When true (default), report without writing."),
+                force: z
+                    .boolean()
+                    .optional()
+                    .describe("Required with `dryRun: false` to write."),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await backfillLibrarySettingParts(uidFrom(extra), args, orgFrom(extra))),
+    )
+
+    server.registerTool(
+        "backfill_library_keys",
+        {
+            description:
+                "Admin / band_leader back-fill: fill an EMPTY library `key` (the chart's written key) from the chart's own AI reading (`aiSuggestion.suggested_key`) when its confidence is at least 0.9, the reading says it is a chart (`is_chart`) and did not ask for review, and the key is plain (e.g. 'G', 'Em', 'Bb'). Never from setlist usage. Skips and counts rows a person curated or rejected, rows held for review, rows that already have a key, missing, non-chart, malformed and low-confidence readings, and rows changed during the run. `minConfidence` can raise the 0.9 floor, never lower it. Updates only `key` and `keySource: 'ai_backfill'`, and only on a row unchanged since the scan. Your org only. F-05: `dryRun` defaults true and returns the full report; a real run needs `dryRun: false, force: true`. Returns `{ok, dryRun, scanned, changed: [{fileId, name, key, confidence}], skipped: {human, rejected, reviewHeld, lowConfidence, noSuggestion, notChart, badKey, hasKey, changedDuringRun}}`.",
+            inputSchema: {
+                dryRun: z
+                    .boolean()
+                    .optional()
+                    .describe("When true (default), report without writing."),
+                force: z
+                    .boolean()
+                    .optional()
+                    .describe("Required with `dryRun: false` to write."),
+                minConfidence: z
+                    .number()
+                    .min(0)
+                    .max(1)
+                    .optional()
+                    .describe("Confidence floor (default 0.9; values under 0.9 are raised to 0.9)."),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await backfillLibraryKeys(uidFrom(extra), args, orgFrom(extra))),
+    )
+
     // library-bulk-archive-nonchart (Tier-1 P2 2026-05-27, data-health dh-20260527a
     // Class 3): bulk soft-archive the UNAMBIGUOUS non-chart residents of
     // library_index (Drive folders + Google Sheets). Google Docs are HELD for
@@ -2651,6 +2771,20 @@ export function registerWriteTools(server: McpServer): void {
                     .array(z.string())
                     .optional()
                     .describe("Tag list (replaces existing tags)."),
+                setting: z
+                    .string()
+                    .nullable()
+                    .optional()
+                    .describe(
+                        "Whose setting or melody this chart is (e.g. 'Friedman', 'trad'); null clears. Marks the row's setting as set by a person, so no back-fill overwrites it.",
+                    ),
+                part: z
+                    .string()
+                    .nullable()
+                    .optional()
+                    .describe(
+                        "Instrument part of this chart (e.g. 'Bb', 'Tenor Saxophone'); null clears. Same protection as setting.",
+                    ),
             })
             .describe(
                 "At least one field required. The helper rejects empty / unknown fields with a rich invalid_field envelope.",

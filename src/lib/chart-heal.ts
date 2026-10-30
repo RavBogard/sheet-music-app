@@ -12,6 +12,7 @@ import { recomputeRowVisibilitySafe } from "@/lib/library/visibility-job"
 import { auditSharedBytesReplaced } from "@/lib/library/shared-bytes-audit"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 import { bareStem, titleSpecificity } from "@/lib/mcp/title-specificity"
+import { settingPartWriteFields } from "@/lib/library/setting-part"
 import {
     emitLibraryRowCreated,
     type LibraryRowCreatedEvent,
@@ -202,6 +203,7 @@ export async function healChartBytes(
         normalizedName: meta.normalizedName,
         stem: meta.stem,
         titleSpecificity: meta.titleSpecificity,
+        ...settingPartWriteFields(title, rowData),
         enrichmentStatus: meta.enrichmentStatus,
         // The row's hash is of the bytes the row points at, so a heal must
         // rewrite it or the row keeps claiming the bytes it no longer holds.

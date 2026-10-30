@@ -74,6 +74,8 @@ const ALLOWED_EDIT_FIELDS = new Set([
     "bpm",
     "leadMusician",
     "tags",
+    "setting",
+    "part",
 ])
 const ALLOWED_FAILED_KINDS = ["enrichment", "import"] as const
 
@@ -885,6 +887,17 @@ function validateEditPayload(edits: EditPayload): RichErrorEnvelope | null {
                 "invalid_field",
                 "bpm must be a positive number or null.",
                 { field: "bpm" },
+                hintFor("invalid_field"),
+            )
+        }
+    }
+    for (const field of ["setting", "part"] as const) {
+        const v = edits[field]
+        if (v !== undefined && v !== null && typeof v !== "string") {
+            return richError(
+                "invalid_field",
+                `${field} must be a string or null.`,
+                { field },
                 hintFor("invalid_field"),
             )
         }
