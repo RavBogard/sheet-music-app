@@ -233,7 +233,8 @@ describe('useAddToSetlist', () => {
       const [id, data] = mockUpdateSetlist.mock.calls[0]
       expect(id).toBe('sl-1')
       expect(data.tracks).toBeUndefined()
-      expect(data.trackCount).toBe(1)
+      // Derived counts are re-derived server-side after each track commit.
+      expect(data.trackCount).toBeUndefined()
       expect(data.hydrated).toBe(true)
     })
 
@@ -309,9 +310,8 @@ describe('useAddToSetlist', () => {
       expect(mockApplyEdit).toHaveBeenCalledOnce()
       expect(mockUpdateSetlist).toHaveBeenCalledOnce()
       const data = mockUpdateSetlist.mock.calls[0][1]
-      // v60-07-01: trackCount reflects existing 1 + new 1; no embedded tracks field.
       expect(data.tracks).toBeUndefined()
-      expect(data.trackCount).toBe(2)
+      expect(data.trackCount).toBeUndefined()
 
       // Toast should mention duplicate
       expect(mockToast.mock.calls[0][0]).toContain('already in this setlist')
@@ -352,16 +352,6 @@ describe('useAddToSetlist', () => {
         fileIds: ['file-old'],
       })
 
-      // Mock subscribeToSetlist to return current state (used by undo for
-      // freshly-read trackCount before the decrement).
-      mockSubscribeToSetlist.mockImplementation((_id: string, cb: (setlist: Setlist | null) => void) => {
-        cb({
-          ...setlist,
-          trackCount: 2, // existing 1 + added 1 (simulating post-add state)
-        })
-        return vi.fn() // unsubscribe
-      })
-
       act(() => {
         result.current.openForSongs([file])
       })
@@ -393,11 +383,8 @@ describe('useAddToSetlist', () => {
       expect(edit.docId).toBe(addedTrackId)
       expect(opts).toEqual({ withoutUndo: true })
 
-      // Parent doc gets trackCount decrement — no embedded tracks field.
-      expect(mockUpdateSetlist).toHaveBeenCalledOnce()
-      const undoData = mockUpdateSetlist.mock.calls[0][1]
-      expect(undoData.tracks).toBeUndefined()
-      expect(undoData.trackCount).toBe(1) // 2 - 1 = 1
+      // No parent-doc count write: the delete re-derives it server-side.
+      expect(mockUpdateSetlist).not.toHaveBeenCalled()
     })
   })
 })

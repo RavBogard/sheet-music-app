@@ -1,6 +1,7 @@
 import "server-only"
 
 import crypto from "crypto"
+import { deriveSetlistCounts } from "@/lib/setlist-derived-counts"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { assertEditor } from "@/lib/mcp/server-tracks-write"
 import { readTenantRole } from "@/lib/org/access"
@@ -322,6 +323,7 @@ async function promote(
             ref: d.ref,
             id: d.id,
             order: Number((d.data() as { order?: unknown }).order) || 0,
+            data: d.data() as { type?: unknown; fileId?: unknown },
         }))
         .sort((a, b) => a.order - b.order || a.id.localeCompare(b.id))
 
@@ -348,6 +350,7 @@ async function promote(
             // The performed version carries the tune actually played: a row
             // the band swapped for tonight is re-bonded, on the CLONE only.
             if (row.chart?.swapped && row.chart.performedFileId) {
+                target.data = { ...target.data, fileId: row.chart.performedFileId }
                 patch.fileId = row.chart.performedFileId
                 patch.songId = row.chart.performedFileId
                 patch.title = row.chart.performedTitle || row.title
@@ -386,9 +389,11 @@ async function promote(
     // so the performed version reads top-to-bottom as the service ran.
     let position = 0
     let addedCursor = 0
+    const finalRows: Array<{ type?: unknown; fileId?: unknown }> = []
     for (const row of diff.rows) {
         if (row.status === "added") {
             batch.update(db.collection("tracks").doc(newIds[addedCursor++]), { order: position++ })
+            finalRows.push({ type: row.type ?? "prayer" })
             continue
         }
         if (row.plannedPosition === undefined) continue
@@ -396,10 +401,12 @@ async function promote(
         const target = cloneDocs[row.plannedPosition]
         if (!target) continue
         batch.update(target.ref, { order: position++ })
+        finalRows.push(target.data)
     }
 
     batch.update(db.collection("setlists").doc(cloneId), {
-        trackCount: position,
+        // trackCount / songCount / fileIds of the performed version.
+        ...deriveSetlistCounts(finalRows),
         performedFromSetlistId: sourceSetlistId,
         lastModifiedAt: nowIso,
         lastModifiedBy: uid,

@@ -1,5 +1,6 @@
 import { storedClassFor } from "@/lib/history/classify"
 import "server-only"
+import { deriveSetlistCounts } from "@/lib/setlist-derived-counts"
 import { createHash, randomUUID } from "node:crypto"
 import { FieldValue, Timestamp, type Firestore, type Transaction } from "firebase-admin/firestore"
 import { getTemplate, type TemplateSlot } from "@/lib/liturgical-templates"
@@ -159,7 +160,7 @@ export async function ensureService(db: Firestore, request: EnsureRequest): Prom
                 eventDate: parseEventDate(`${request.localDate}T${request.ceremonyType === "morning" ? "10:00" : "16:00"}`, "crc"), templateType: key, serviceType: storedClassFor({ templateType: key }).serviceType ?? null,
                 date: stamp, updatedAt: stamp, version: 1, lastModifiedAt: new Date().toISOString(),
                 ownerId: "beit-mitzvah-service", ownerName: "Beit Mitzvah", hydrated: true, isTest: false,
-                trackCount: rows.length, songCount: rows.filter(row => row.type === "song").length,
+                ...deriveSetlistCounts(rows),
                 book,
             }))
             for (const row of rows) tx.create(db.collection("tracks").doc(String(row.id)), { ...row, setlistId })

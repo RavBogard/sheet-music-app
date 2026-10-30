@@ -290,17 +290,9 @@ describe('SetlistGridHydrator', () => {
         const [updateEdit, updateOptions] = updateCalls[0]!
         if (updateEdit.op !== 'update') throw new Error('unreachable')
         expect(updateEdit.docId).toBe(SETLIST_ID)
-        // P0 cascade-race fix (2026-05-12): trackCount is now folded into
-        // the cascade's hydrated:true update so a parallel reconciler
-        // write doesn't race the cascade on setlists/{S}.
-        // v60-06-02: songCount + fileIds also folded in (same race-prevention
-        // reasoning — denormalized fields land atomically with hydrated:true).
-        expect(updateEdit.patch).toEqual({
-            hydrated: true,
-            trackCount: 2,
-            songCount: 2,
-            fileIds: [],
-        })
+        // Derived fields (trackCount / songCount / fileIds) are re-derived
+        // server-side after each track commit, never sent from here.
+        expect(updateEdit.patch).toEqual({ hydrated: true })
         expect(updateEdit.expectedUpdatedAt).toBe(updatedAt)
         expect(updateOptions).toEqual({ withoutUndo: true })
     })
@@ -875,29 +867,31 @@ describe('SetlistGridHydrator', () => {
         })
     })
 
-    // v54-01-03 trackCount reconciler — fires applyEdit on setlists/{id}
-    // whenever the live Dexie tracks-by-setlistId count drifts from
-    // initialSetlist.trackCount. Fixes the dashboard "0 songs" display
-    // for v50-05+ setlists where trackCount was only set at create-time
-    // from the (empty) initial tracks array.
-    describe('v54-01-03 trackCount reconciliation', () => {
-        it('patches setlist.trackCount when Dexie count differs from initial snapshot', async () => {
+    // Derived setlist fields belong to the server. A stale local copy (the
+    // normal case when the setlist is authored over MCP) must not enqueue a
+    // setlist update: those rows overwrote correct counts and opened the
+    // "Remote changes detected" dialog on every open.
+    describe('derived setlist fields', () => {
+        it('enqueues no setlist update when the local copy disagrees with the stored counts', async () => {
             const setlist: LocalSetlist = {
                 id: SETLIST_ID,
                 ownerId: 'user-1',
                 name: 'Friday Service',
                 updatedAt: 1_700_000_000_000,
-                trackCount: 0,        // stored on doc — stale
-                hydrated: true,        // skip lazy-hydration cascade
+                trackCount: 0,
+                hydrated: true,
             }
-            // 3 tracks in Dexie but setlist.trackCount = 0 → reconciler should patch to 3
+            const stored = setlist as LocalSetlist & { songCount?: number; fileIds?: string[] }
+            stored.songCount = 9
+            stored.fileIds = ['z-chart', 'a-chart']
             const tracks: LocalTrack[] = [0, 1, 2].map((i) => ({
                 id: `t-${i}`,
                 setlistId: SETLIST_ID,
                 order: i,
                 title: `Track ${i}`,
+                fileId: `chart-${i}`,
                 updatedAt: 1_700_000_000_000,
-            }))
+            }) as LocalTrack)
             await getDb().setlists.put(setlist)
             await getDb().tracks.bulkPut(tracks)
 
@@ -912,68 +906,15 @@ describe('SetlistGridHydrator', () => {
                 />,
             )
 
-            // Reconciler is debounced 800ms; allow up to 3s for the spy to fire.
-            // Scaled by VITEST_LOAD_FACTOR so suite-wide parallel CPU pressure
-            // doesn't squeeze the (3000 - 800) ≈ 2200ms buffer below the
-            // debounce + applyEdit settlement window.
-            await waitFor(
-                () => {
-                    const trackCountCall = applyEditSpy.mock.calls.find(
-                        ([edit]) =>
-                            edit.op === 'update' &&
-                            edit.collection === 'setlists' &&
-                            edit.docId === SETLIST_ID &&
-                            (edit.patch as Record<string, unknown>)?.trackCount === 3,
-                    )
-                    expect(trackCountCall).toBeDefined()
-                },
-                { timeout: loadAdjusted(3000) },
-            )
-        })
-
-        it('does NOT patch when trackCount already matches', async () => {
-            const setlist: LocalSetlist = {
-                id: SETLIST_ID,
-                ownerId: 'user-1',
-                name: 'Friday Service',
-                updatedAt: 1_700_000_000_000,
-                trackCount: 2,        // matches
-                hydrated: true,
-            }
-            const tracks: LocalTrack[] = [0, 1].map((i) => ({
-                id: `t-${i}`,
-                setlistId: SETLIST_ID,
-                order: i,
-                title: `Track ${i}`,
-                updatedAt: 1_700_000_000_000,
-            }))
-            await getDb().setlists.put(setlist)
-            await getDb().tracks.bulkPut(tracks)
-
-            const applyEditSpy = makeApplyEditSpy()
-
-            render(
-                <SetlistGridHydrator
-                    setlistId={SETLIST_ID}
-                    initialSetlist={setlist}
-                    initialTracks={tracks}
-                    applyEdit={applyEditSpy}
-                />,
-            )
-
-            // Wait past the debounce window. No trackCount patch should fire.
-            // 1200ms vs 800ms debounce → only 400ms cushion; scaled by
-            // VITEST_LOAD_FACTOR so parallel-load timer drift can't fire the
-            // debounce later than our absence-assertion window.
+            // Past the old 800ms reconciler debounce.
             await loadAdjustedDelay(1200)
-            const trackCountCalls = applyEditSpy.mock.calls.filter(
+            const setlistUpdates = applyEditSpy.mock.calls.filter(
                 ([edit]) =>
                     edit.op === 'update' &&
                     edit.collection === 'setlists' &&
-                    edit.docId === SETLIST_ID &&
-                    (edit.patch as Record<string, unknown>)?.trackCount !== undefined,
+                    edit.docId === SETLIST_ID,
             )
-            expect(trackCountCalls).toHaveLength(0)
+            expect(setlistUpdates).toHaveLength(0)
         })
     })
 })

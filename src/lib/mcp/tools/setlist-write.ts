@@ -1373,6 +1373,8 @@ export interface RecomputeSetlistTrackCountResult {
     declaredSongs: number
     /** Actual song-type track count recomputed from the subcollection. */
     actualSongs: number
+    /** The stored `fileIds` aggregate differed from the canonical one. */
+    fileIdsDrifted: boolean
     drifted: boolean
     written: boolean
 }
@@ -1448,6 +1450,7 @@ export async function recomputeSetlistTrackCount(
         actual: result.actual,
         declaredSongs: result.declaredSongs,
         actualSongs: result.actualSongs,
+        fileIdsDrifted: result.fileIdsDrifted,
         drifted: result.drifted,
         written: result.written,
     }

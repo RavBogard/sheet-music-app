@@ -11,7 +11,7 @@ import {
     type RichErrorEnvelope,
 } from "@/lib/mcp/error-envelopes"
 import { isTestSetlist } from "@/types/models"
-import { isSongType } from "@/lib/setlist-track-count"
+import { deriveSetlistCounts } from "@/lib/setlist-derived-counts"
 import { parseEventDate as toTimestamp } from "@/lib/parse-event-date"
 import { rowOrg } from "@/lib/mcp/org-context"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
@@ -239,9 +239,9 @@ export async function cloneSetlist(
     // at "0 songs" until the in-app client-side reconciler ran (which never
     // runs for setlists authored end-to-end through Claude Desktop, the
     // primary authoring surface per [[user_mcp_is_primary_author_workflow]]).
-    const sourceSongCount = sourceTracks.filter((t) =>
-        isSongType((t.data as { type?: unknown }).type),
-    ).length
+    const derived = deriveSetlistCounts(
+        sourceTracks.map((t) => t.data as { type?: unknown; fileId?: unknown }),
+    )
     const setlistPayload: Record<string, unknown> = {
         id: newSetlistId,
         name: newName,
@@ -252,8 +252,9 @@ export async function cloneSetlist(
         orgId: org,
         date: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
-        trackCount: sourceTracks.length,
-        songCount: sourceSongCount,
+        // trackCount / songCount / fileIds, re-derived from the copied rows
+        // (the source's stored values could be drifted).
+        ...derived,
         hydrated: true,
         ownerId: uid,
         ownerName,
@@ -336,17 +337,6 @@ export async function cloneSetlist(
         setlistPayload.isTest = true
     }
 
-    // Carry the denormalized fileIds[] over so the client renders charts
-    // before the SetlistGridHydrator reconciler runs. Dedupe defensively
-    // (source could be drifted) — same shape arrayUnion would produce.
-    const canonicalFileIds = new Set<string>()
-    for (const t of sourceTracks) {
-        const fid = t.data.fileId
-        if (typeof fid === "string" && fid) canonicalFileIds.add(fid)
-    }
-    if (canonicalFileIds.size > 0) {
-        setlistPayload.fileIds = [...canonicalFileIds]
-    }
 
     // Atomic batch — parent + every track in one commit, same shape
     // createSetlistServerSide uses. A typical weekly setlist is well under
@@ -386,7 +376,7 @@ export async function cloneSetlist(
         sourceSetlistId: args.sourceSetlistId,
         newSetlistId,
         trackCount: sourceTracks.length,
-        copiedFileIds: canonicalFileIds.size,
+        copiedFileIds: derived.fileIds.length,
         bypass,
     })
 

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { checkUpdatePrecondition, stampTrackOrgForCommit } from '../init'
+import { checkUpdatePrecondition, stampTrackOrgForCommit, touchesDerivedTrackField } from '../init'
 
 /**
  * T1.3 (2026-05-12) — unit tests for the precondition helper that the
@@ -86,5 +86,13 @@ describe('stampTrackOrgForCommit', () => {
         const p = { setlistId: 's1' }
         expect(await stampTrackOrgForCommit('setlists', p, r)).toBe(p)
         expect(r).not.toHaveBeenCalled()
+    })
+})
+
+describe('touchesDerivedTrackField', () => {
+    it('re-derives the parent setlist only for a track type or chart change', () => {
+        expect(touchesDerivedTrackField({ type: 'header' })).toBe(true)
+        expect(touchesDerivedTrackField({ fileId: 'c', songId: 'c' })).toBe(true)
+        expect(touchesDerivedTrackField({ key: 'F', notes: 'slow' })).toBe(false)
     })
 })

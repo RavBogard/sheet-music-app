@@ -492,6 +492,30 @@ describe("MCP setlist write tools (emulator)", () => {
         expect(fileIds).toEqual(["song-oseh"])
     })
 
+    it("remove_track re-derives songCount and fileIds from the surviving rows, healing earlier drift", async () => {
+        const id = await newSetlist()
+        await db().collection("songs").doc("song-other").set({ title: "Hinei Ma Tov.pdf" })
+        await addTrackToSetlist(ADMIN, { setlistId: id, songId: "song-other" })
+        await addTrackToSetlist(ADMIN, { setlistId: id, songId: "song-oseh" })
+        await addTrackToSetlist(ADMIN, { setlistId: id, title: "Barechu", type: "prayer" })
+        const doomed = (await addTrackToSetlist(ADMIN, { setlistId: id, title: "Song C" })) as {
+            trackId: string
+        }
+        // Plant the drift seen in production: a stale songCount and a
+        // track-ordered fileIds that still lists a chart no row uses.
+        await db().collection("setlists").doc(id).update({
+            songCount: 15,
+            fileIds: ["song-other", "song-gone", "song-oseh"],
+        })
+
+        await removeSetlistTrack(ADMIN, { setlistId: id, trackId: doomed.trackId })
+
+        const doc = (await db().collection("setlists").doc(id).get()).data()!
+        expect(doc.trackCount).toBe(3)
+        expect(doc.songCount).toBe(2)
+        expect(doc.fileIds).toEqual(["song-oseh", "song-other"])
+    })
+
     it("add_track_to_setlist supports header rows and rejects a titleless song", async () => {
         const id = await newSetlist()
         await addTrackToSetlist(ADMIN, { setlistId: id, title: "— Opening —", type: "header" })

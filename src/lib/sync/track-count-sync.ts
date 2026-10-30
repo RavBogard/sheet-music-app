@@ -9,17 +9,30 @@ import {
 } from 'firebase/firestore'
 
 import { logger } from '@/lib/logger'
-import { coerceOrgId } from '@/lib/org/registry'
+import { deriveSetlistCounts } from '@/lib/setlist-derived-counts'
 
 /**
  * Cycle-9 Lane B — trackCount drift-producer fix.
  *
- * Recompute a setlist's denormalized `trackCount` from the live top-level
- * `tracks` subcollection and write it back to the parent setlist doc.
+ * Recompute a setlist's derived fields (`trackCount`, `songCount`, `fileIds`)
+ * from the live top-level `tracks` collection and write them back to the
+ * parent setlist doc, via `deriveSetlistCounts` (the same rules every server
+ * track writer uses).
+ *
+ * This is the ONLY client writer of these fields (no client code writes
+ * them through `updateSetlist` or the outbox any more). The editor used to
+ * reconcile them through the outbox from its local Dexie copy; that copy is
+ * routinely stale when the setlist is authored over MCP, so those rows
+ * overwrote correct server counts and raised false "Remote changes detected"
+ * conflicts. They were removed; this reads the server's tracks instead.
+ *
+ * No `updatedAt` bump: derived fields are not an edit, so writing them must
+ * not invalidate any editor's pending `expectedUpdatedAt` precondition.
  *
  * Called from the sync-engine flush chokepoint
  * (`ProductionFirestoreAdapter.commitOutboxRow`) after every CLIENT-side
- * track create / delete. The in-app grid editor (`SetlistGrid.tsx`) adds and
+ * track create / delete, and after a track update that changes its type or
+ * chart. The in-app grid editor (`SetlistGrid.tsx`) adds and
  * removes `tracks/{id}` docs through `applyEdit` WITHOUT maintaining the parent
  * counter, so each in-app delete inflated `trackCount` (count > actual — e.g.
  * `UnjLqKTtS4lNKQfMY6hB` 45 vs 30) and each add deflated it. Reconciling at the
@@ -48,16 +61,24 @@ import { coerceOrgId } from '@/lib/org/registry'
 export async function reconcileSetlistTrackCount(
     fsDb: Firestore,
     setlistId: string,
-    orgId?: string,
+    orgId: unknown,
 ): Promise<void> {
     if (!setlistId) return
-    try {
-        // Phase 9: listing tracks is tenant-scoped, and a rule cannot see a
-        // setlistId filter — only an orgId one. The caller's tenant when it
-        // knows it, otherwise the site this page is on.
-        const org = coerceOrgId(
-            orgId ?? (typeof document !== 'undefined' ? document.documentElement.dataset.org : undefined),
+    // Listing tracks is tenant-scoped (a rule can only see an orgId filter),
+    // so the count is only true when the query names the setlist's own
+    // tenant. The caller passes the tenant of the committed track (stamped
+    // from its parent setlist). When it is unknown — a legacy track with no
+    // orgId — skip: guessing (e.g. the host site's tenant) would count zero
+    // rows for another tenant's setlist and write trackCount 0 / fileIds [].
+    // The crons heal anything left behind.
+    if (typeof orgId !== 'string' || orgId.length === 0) {
+        logger.warn(
+            `[track-count-sync] skipped reconcile for setlist ${setlistId}: tenant unknown`,
         )
+        return
+    }
+    try {
+        const org = orgId
         const snap = await getDocs(
             query(
                 collection(fsDb, 'tracks'),
@@ -65,8 +86,13 @@ export async function reconcileSetlistTrackCount(
                 where('setlistId', '==', setlistId),
             ),
         )
+        const derived = deriveSetlistCounts(
+            snap.docs.map((d) => d.data() as { type?: unknown; fileId?: unknown }),
+        )
         await updateDoc(doc(fsDb, 'setlists', setlistId), {
-            trackCount: snap.size,
+            trackCount: derived.trackCount,
+            songCount: derived.songCount,
+            fileIds: derived.fileIds,
         })
     } catch (err) {
         logger.warn(

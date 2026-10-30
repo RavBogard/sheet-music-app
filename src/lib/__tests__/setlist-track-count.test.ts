@@ -66,6 +66,7 @@ describe("recomputeTrackCount", () => {
             actual: 3,
             declaredSongs: 3,
             actualSongs: 3,
+            fileIdsDrifted: false,
             drifted: false,
             written: false,
         })
@@ -86,6 +87,7 @@ describe("recomputeTrackCount", () => {
             actual: 0,
             declaredSongs: 40,
             actualSongs: 0,
+            fileIdsDrifted: false,
             drifted: true,
             written: true,
         })
@@ -93,7 +95,8 @@ describe("recomputeTrackCount", () => {
         const patch = updateSpy.mock.calls[0]![0] as Record<string, unknown>
         expect(patch.trackCount).toBe(0)
         expect(patch.songCount).toBe(0)
-        expect(patch.updatedAt).toBeInstanceOf(Date)
+        // A heal is not an edit: no updatedAt bump.
+        expect(patch).not.toHaveProperty("updatedAt")
     })
 
     it("C10I1-002 — heals stale songCount even when trackCount is already correct", async () => {
@@ -119,6 +122,7 @@ describe("recomputeTrackCount", () => {
             actual: 5,
             declaredSongs: 0,
             actualSongs: 3,
+            fileIdsDrifted: false,
             drifted: true,
             written: true,
         })
@@ -149,5 +153,51 @@ describe("recomputeTrackCount", () => {
         expect(result.drifted).toBe(true)
         expect(result.written).toBe(false)
         expect(result.error).toMatch(/permission_denied/)
+    })
+
+    it("heals a drifted fileIds aggregate to the sorted, de-duplicated chart ids", async () => {
+        vi.mocked(getTracksForSetlist).mockResolvedValue([
+            { id: "t1", fileId: "c-chart" },
+            { id: "t2", fileId: "a-chart" },
+            { id: "t3", fileId: "c-chart" },
+            { id: "t4", type: "header" },
+        ] as never)
+        const updateSpy = vi.fn().mockResolvedValue(undefined)
+        const result = await recomputeTrackCount(mockDb(updateSpy), "s-4", {
+            trackCount: 4,
+            songCount: 3,
+            // Track order, plus a chart no row uses any more.
+            fileIds: ["c-chart", "gone-chart", "a-chart"],
+        })
+        expect(result.fileIdsDrifted).toBe(true)
+        expect(result.written).toBe(true)
+        const patch = updateSpy.mock.calls[0]![0] as Record<string, unknown>
+        expect(patch.fileIds).toEqual(["a-chart", "c-chart"])
+    })
+
+    it("does not rewrite a chartless setlist that has no fileIds field", async () => {
+        vi.mocked(getTracksForSetlist).mockResolvedValue([{ id: "t1", type: "header" }] as never)
+        const updateSpy = vi.fn().mockResolvedValue(undefined)
+        const result = await recomputeTrackCount(mockDb(updateSpy), "s-5", {
+            trackCount: 1,
+            songCount: 0,
+        })
+        expect(result.drifted).toBe(false)
+        expect(updateSpy).not.toHaveBeenCalled()
+    })
+
+    it("does not rewrite a setlist whose fileIds hold the right charts in another order", async () => {
+        vi.mocked(getTracksForSetlist).mockResolvedValue([
+            { id: "t1", fileId: "c-chart" },
+            { id: "t2", fileId: "a-chart" },
+        ] as never)
+        const updateSpy = vi.fn().mockResolvedValue(undefined)
+        const result = await recomputeTrackCount(mockDb(updateSpy), "s-6", {
+            trackCount: 2,
+            songCount: 2,
+            fileIds: ["c-chart", "a-chart"],
+        })
+        expect(result.drifted).toBe(false)
+        expect(updateSpy).not.toHaveBeenCalled()
     })
 })

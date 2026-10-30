@@ -152,6 +152,41 @@ describe('cycle-9 Lane B — reconcileSetlistTrackCount (real emulator Firestore
         await batch.commit()
     })
 
+    it('also re-derives songCount and fileIds (sorted, de-duplicated) from the server tracks, without touching updatedAt', async () => {
+        const id = 'sl-derived'
+        const stamp = new Date('2026-10-01T00:00:00Z')
+        await adminDb.collection('setlists').doc(id).set({
+            name: 'Derived',
+            ownerId: OWNER_UID,
+            hydrated: true,
+            trackCount: 9,
+            songCount: 15,
+            fileIds: ['chart-z', 'chart-stale'],
+            updatedAt: stamp,
+        })
+        const rows = [
+            { type: 'song', fileId: 'chart-z' },
+            { type: 'header' },
+            { fileId: 'chart-a' },
+            { type: 'song', fileId: 'chart-z' },
+        ]
+        for (const [i, r] of rows.entries()) {
+            await adminDb.collection('tracks').doc(`${id}-t${i}`).set({
+                id: `${id}-t${i}`, setlistId: id, orgId: 'crc', order: i, title: `Row ${i}`, ...r,
+            })
+        }
+
+        await reconcileSetlistTrackCount(webDb, id, 'crc')
+
+        const after = (await getDoc(doc(webDb, 'setlists', id))).data() as Record<string, unknown>
+        expect(after.trackCount).toBe(4)
+        expect(after.songCount).toBe(3)
+        expect(after.fileIds).toEqual(['chart-a', 'chart-z'])
+        // A derived-field write is not an edit: it must not move the stamp an
+        // editor's pending precondition was captured against.
+        expect((after.updatedAt as { toMillis(): number }).toMillis()).toBe(stamp.getTime())
+    })
+
     it('add: an in-app track add (no counter maintenance) is reconciled to actual', async () => {
         const id = 'sl-add'
         await seedSetlist(id, 3, 3)
@@ -174,7 +209,7 @@ describe('cycle-9 Lane B — reconcileSetlistTrackCount (real emulator Firestore
         })
         expect(await readDeclaredCount(id)).toBe(3) // drifted low pre-fix
 
-        await reconcileSetlistTrackCount(webDb, id)
+        await reconcileSetlistTrackCount(webDb, id, 'crc')
 
         expect(await readDeclaredCount(id)).toBe(4)
         expect(await readDeclaredCount(id)).toBe(await actualTrackCount(id))
@@ -188,7 +223,7 @@ describe('cycle-9 Lane B — reconcileSetlistTrackCount (real emulator Firestore
         await deleteDoc(doc(webDb, 'tracks', `${id}-t1`))
         expect(await readDeclaredCount(id)).toBe(3) // drifted high pre-fix
 
-        await reconcileSetlistTrackCount(webDb, id)
+        await reconcileSetlistTrackCount(webDb, id, 'crc')
 
         expect(await readDeclaredCount(id)).toBe(2)
         expect(await readDeclaredCount(id)).toBe(await actualTrackCount(id))
@@ -198,7 +233,7 @@ describe('cycle-9 Lane B — reconcileSetlistTrackCount (real emulator Firestore
         const id = 'sl-drift'
         await seedSetlist(id, 45, 30) // declared 45, actually 30 (C8I2-003 shape)
 
-        await reconcileSetlistTrackCount(webDb, id)
+        await reconcileSetlistTrackCount(webDb, id, 'crc')
 
         expect(await readDeclaredCount(id)).toBe(30)
         expect(await readDeclaredCount(id)).toBe(await actualTrackCount(id))
@@ -208,9 +243,9 @@ describe('cycle-9 Lane B — reconcileSetlistTrackCount (real emulator Firestore
         const id = 'sl-idem'
         await seedSetlist(id, 10, 4)
 
-        await reconcileSetlistTrackCount(webDb, id)
+        await reconcileSetlistTrackCount(webDb, id, 'crc')
         expect(await readDeclaredCount(id)).toBe(4)
-        await reconcileSetlistTrackCount(webDb, id)
+        await reconcileSetlistTrackCount(webDb, id, 'crc')
         expect(await readDeclaredCount(id)).toBe(4)
     })
 
@@ -226,10 +261,25 @@ describe('cycle-9 Lane B — reconcileSetlistTrackCount (real emulator Firestore
         })
 
         await expect(
-            reconcileSetlistTrackCount(webDb, id),
+            reconcileSetlistTrackCount(webDb, id, 'crc'),
         ).resolves.toBeUndefined()
 
         const parent = await getDoc(doc(webDb, 'setlists', id))
         expect(parent.exists()).toBe(false)
+    })
+
+    it('skips (writes nothing) when the tenant is unknown, rather than counting zero rows', async () => {
+        const id = 'sl-unknown-org'
+        await seedSetlist(id, 3, 3)
+        await adminDb.collection('setlists').doc(id).update({ fileIds: ['chart-keep'] })
+
+        for (const org of [undefined, null, '']) {
+            await reconcileSetlistTrackCount(webDb, id, org)
+        }
+
+        const after = (await adminDb.collection('setlists').doc(id).get()).data()!
+        expect(after.trackCount).toBe(3)
+        expect(after.fileIds).toEqual(['chart-keep'])
+        expect(after.songCount).toBeUndefined()
     })
 })
