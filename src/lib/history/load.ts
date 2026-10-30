@@ -5,15 +5,17 @@ import { getAllSetlists, MAX_SETLIST_FETCH } from "@/lib/server-setlists"
 import { getTracksForSetlist } from "@/lib/server-tracks"
 import { rowOrg } from "@/lib/mcp/org-context"
 import { isTestSetlist } from "@/types/models"
+import { visibleTo } from "@/lib/library/visibility"
 import type { OrgId } from "@/lib/org/types"
 import type { HistorySetlist, HistoryTrack, LibraryLite } from "./song-history"
 
 /**
  * Setlist memory, release 1 — the one Firestore loader behind
- * `get_song_history` and `export_setlists`. Tenant-scoped twice: the setlist
- * query filters on `orgId`, and every returned row (setlist and library) is
- * re-checked with `rowOrg`, so the other tenant's data never reaches the
- * pure history builder.
+ * `get_song_history` and `export_setlists`. Setlists are tenant-scoped twice:
+ * the query filters on `orgId` and each row is re-checked with `rowOrg`.
+ * Library rows resolve when visible to the caller's org (owned, or shared to
+ * it via `visibleToOrgs`). A Firestore failure throws, so the tools report
+ * an error rather than an empty history.
  */
 
 const TRACK_READ_CONCURRENCY = 8
@@ -78,6 +80,7 @@ export async function loadHistorySetlists(
         org,
         limit: MAX_SETLIST_FETCH,
         orderBy: "eventDate",
+        throwOnError: true,
     })) as Array<Record<string, unknown>>
     const truncated = rows.length >= MAX_SETLIST_FETCH
 
@@ -132,7 +135,9 @@ export async function loadLibraryLite(
         for (const s of snaps) {
             if (!s.exists) continue
             const d = (s.data() ?? {}) as Record<string, unknown>
-            if (rowOrg(d.orgId) !== org) continue
+            // Owned by the caller's org, or shared to it: a shared chart a
+            // setlist is bound to must still resolve to its name and key.
+            if (!visibleTo(d, org)) continue
             out.set(s.id, {
                 fileId: s.id,
                 name: str(d.name) ?? str(d.title) ?? s.id,

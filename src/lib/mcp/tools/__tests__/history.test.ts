@@ -84,6 +84,34 @@ describe("getSongHistoryTool", () => {
         expect(ids).toEqual(["f1"])
     })
 
+    it("reports a setlist read failure as internal_error, not an empty history", async () => {
+        mockGetAllSetlists.mockRejectedValue(new Error("firestore down"))
+        expect(code(await getSongHistoryTool("u", { title: "Mi Chamocha" }, "crc"))).toBe("internal_error")
+        expect(code(await exportSetlistsTool("u", {}, "crc"))).toBe("internal_error")
+        expect(mockGetAllSetlists).toHaveBeenCalledWith(expect.objectContaining({ throwOnError: true }))
+    })
+
+    it("resolves a chart shared to the caller's org, and hides one that is not", async () => {
+        LIB.shared = { name: "Mi Chamocha (BL, shared)", orgId: "brotherslazaroff", visibleToOrgs: ["brotherslazaroff", "crc"] }
+        LIB.private = { name: "Mi Chamocha (BL only)", orgId: "brotherslazaroff" }
+        TRACKS.a = [
+            { id: "a1", order: 0, type: "song", title: "Mi Chamocha", fileId: "shared" },
+            { id: "a2", order: 1, type: "song", title: "Mi Chamocha", fileId: "private", fileName: "private.pdf" },
+        ]
+        try {
+            const r = (await getSongHistoryTool("u", { title: "Mi Chamocha" }, "crc")) as {
+                entries: Array<{ fileId: string; chartName: string; chartInLibrary: boolean }>
+            }
+            const byId = new Map(r.entries.map((e) => [e.fileId, e]))
+            expect(byId.get("shared")).toMatchObject({ chartInLibrary: true, chartName: "Mi Chamocha (BL, shared)" })
+            expect(byId.get("private")).toMatchObject({ chartInLibrary: false, chartName: "private.pdf" })
+        } finally {
+            delete LIB.shared
+            delete LIB.private
+            TRACKS.a = [{ id: "a1", order: 0, type: "song", title: "Mi Chamocha", fileId: "f1", key: "Dm" }]
+        }
+    })
+
     it("drops a setlist stamped with another org even if the query returned it", async () => {
         mockGetAllSetlists.mockResolvedValue([
             setlistRow("a", "2026-10-03T15:00:00.000Z"),

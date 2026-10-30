@@ -123,7 +123,15 @@ export const MAX_SETLIST_FETCH = 200
 export type AllSetlistsOrderBy = "date" | "eventDate"
 
 export async function getAllSetlists(
-    opts: { limit?: number; orderBy?: AllSetlistsOrderBy; org?: OrgId } = {},
+    opts: {
+        limit?: number
+        orderBy?: AllSetlistsOrderBy
+        org?: OrgId
+        /** Rethrow a Firestore failure instead of returning []. Off by default,
+         *  so existing callers keep their degrade-to-empty behaviour; history
+         *  reads turn it on so "read failed" never looks like "never played". */
+        throwOnError?: boolean
+    } = {},
 ) {
     try {
         initAdmin()
@@ -183,6 +191,7 @@ export async function getAllSetlists(
         return snap.docs.map((d) => serializeSetlist(d.id, d.data()))
     } catch (error) {
         logger.warn("Server all setlist fetch failed:", error)
+        if (opts.throwOnError) throw error
         return []
     }
 }
