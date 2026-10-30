@@ -153,6 +153,7 @@ import { updateSong } from "./song-metadata"
 import { listBooksTool, lookupBookPageTool } from "./books"
 import { getSongHistoryTool, exportSetlistsTool } from "./history"
 import { setStandingChoiceTool, clearStandingChoiceTool } from "./standing"
+import { draftServiceTool, createSetlistFromDraftTool } from "./draft-service"
 import { seedServiceProfiles, getServiceProfileTool } from "./service-profiles"
 import { richError, liftLegacyErrorEnvelope } from "@/lib/mcp/error-envelopes"
 export { registerTestTokenTools } from "./test-tokens"
@@ -859,6 +860,64 @@ export function registerReadTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await getServiceProfileTool(uidFrom(extra), args, orgFrom(extra))),
+    )
+
+    server.registerTool(
+        "draft_service",
+        {
+            description:
+                "Draft one service from its living profile, for the author to review before anything is created. A song slot is filled only when it is `standard` (set with set_standing_choice) or `usual` (the same chart on 3 of the last 5 regular weeks); every other song slot is left open with its label and listed in `openIndexes`. It never picks a setting nobody chose. friday_night and shabbat_morning need `rabbiSlot`: ask who is leading, never infer it. `special` defaults to true for holiday services. The draft is kept 30 minutes; create the setlist with create_setlist_from_draft. Admin / band_leader. Tenant-scoped. Returns `{ok, draftId, expiresAt, profile:{key,label,book}, special, rows:[{index, label, type, slotKey, fileId?, chartName?, key?, tier, phrase, promotion?}], openIndexes, truncated}`.",
+            inputSchema: {
+                date: z.string().describe("Service date, YYYY-MM-DD."),
+                serviceType: z
+                    .string()
+                    .describe("Service type key, e.g. 'shabbat_morning', 'friday_night', 'shir_shabbat'."),
+                rabbiSlot: z
+                    .enum(["daniel_karen", "randy"])
+                    .optional()
+                    .describe("Required for friday_night and shabbat_morning: which rabbi leads. Ask; never infer."),
+                special: z
+                    .boolean()
+                    .optional()
+                    .describe("A special week (holiday, guest service). Special weeks never count toward 'usual'."),
+                name: z.string().optional().describe("Name for the setlist; defaults to the profile label and date."),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await draftServiceTool(uidFrom(extra), args, orgFrom(extra))),
+    )
+
+    server.registerTool(
+        "create_setlist_from_draft",
+        {
+            description:
+                "Create the setlist from a draft_service draft, after the author has chosen charts for the open slots. Rows keep the draft's order; the profile's book is bound as clone_setlist_from_template does, and the setlist stores its service type, rabbi slot and special flag. Each choice names a song row by its draft `index` and may set `fileId`, `key` and `leadMusician`. Set `standing: true` only when the author says to keep that choice for next time; it is then remembered as the slot's standard and announced. Changes to filled rows without `standing` are one-offs, summed up in `oneOffNote`. An open slot with no choice is created with its label and no chart. The draft is deleted. Admin / band_leader. Tenant-scoped. Returns `{ok, setlistId, trackCount, book, announcements, oneOffNote?, unresolvedLiturgy, bondReviewCount}`; read `announcements` and `oneOffNote` back to the author.",
+            inputSchema: {
+                draftId: z.string().describe("The draftId from draft_service."),
+                name: z.string().optional().describe("Name for the setlist; overrides the draft's."),
+                choices: z
+                    .array(
+                        z.object({
+                            index: z.number().int().describe("The draft row's index."),
+                            fileId: z.string().optional().describe("Chart for the row (a library fileId)."),
+                            key: z.string().optional().describe("Key for the row, e.g. 'Dm'."),
+                            leadMusician: z.string().optional().describe("Vocal Lead for the row."),
+                            standing: z
+                                .boolean()
+                                .optional()
+                                .describe("True only when the author says to keep this for next time."),
+                            quote: z
+                                .string()
+                                .optional()
+                                .describe("The author's words, kept with a standing choice (e.g. 'keep it in Dm')."),
+                        }),
+                    )
+                    .optional()
+                    .describe("The author's choices for draft rows."),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await createSetlistFromDraftTool(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(

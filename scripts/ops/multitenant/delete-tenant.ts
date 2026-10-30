@@ -67,6 +67,8 @@ const BY_FIELD = [
     "library_index",
     "bond_flags",
     "proposal_stages",
+    "standing_choices",
+    "service_drafts",
     "tasks",
     "live_sessions",
     "scheduling_assignments",

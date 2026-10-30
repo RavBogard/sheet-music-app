@@ -19,7 +19,7 @@ import {
 } from "@/lib/profiles/keys"
 import { seedProfile, type SeedUnsure, type SeededTrack } from "@/lib/profiles/seed"
 import { loadSlotUses } from "@/lib/profiles/slot-uses"
-import { readStanding, standingMapKey } from "@/lib/profiles/standing"
+import { readStanding, standingMapKey, type StandingChoice } from "@/lib/profiles/standing"
 import { computeSlotTier, type SlotTier } from "@/lib/profiles/tiers"
 import type { TemplateProfile } from "./templates"
 
@@ -285,6 +285,106 @@ function str(v: unknown): string | null {
     return typeof v === "string" && v.trim() ? v : null
 }
 
+export interface LoadedProfileRow {
+    index: number
+    type: string
+    title: string
+    slotKind: string | null
+    slotKey: string | null
+    house: unknown
+    /** The stored template row, as written. */
+    track: Record<string, unknown>
+    /** Song rows only. */
+    tier?: SlotTier
+    /** The standing choice behind a `standard` tier. */
+    standing?: StandingChoice
+}
+
+export interface LoadedProfile {
+    templateId: string
+    profileKey: string
+    profile: TemplateProfile
+    serviceNotes: string | null
+    rows: LoadedProfileRow[]
+    truncated: boolean
+}
+
+/** The profile template for a key in this org, or null (a template without `profile` never matches). */
+export async function findProfileTemplateFor(
+    org: OrgId,
+    profileKey: string,
+): Promise<FirebaseFirestore.QueryDocumentSnapshot | null> {
+    initAdmin()
+    return findProfileTemplate(getFirestore(), org, profileKey)
+}
+
+/**
+ * Every row of a profile template with its live tier: standing choices for
+ * the profile (and, for a song slot, the bare service type) first, then
+ * history. Shared by get_service_profile and draft_service.
+ */
+export async function loadProfileTiers(
+    org: OrgId,
+    doc: FirebaseFirestore.QueryDocumentSnapshot,
+    serviceType: string,
+    rabbiSlot: string | null,
+): Promise<LoadedProfile> {
+    const data = doc.data()
+    const profile = data.profile as TemplateProfile
+    const profileKey = profileKeyFor(serviceType, rabbiSlot)
+    const tracks = Array.isArray(data.tracks) ? (data.tracks as Record<string, unknown>[]) : []
+
+    const { index, truncated } = await loadSlotUses(org, { serviceType, rabbiSlot })
+    const slotKeys = tracks.map((t) =>
+        isSongType(t.type)
+            ? (str(t.slotKey) ??
+              slotKeyFor(
+                  { momentId: str(t.momentId), title: typeof t.title === "string" ? t.title : "", fileId: str(t.fileId) },
+                  index.partGroupOf,
+              ))
+            : null,
+    )
+    const standing = await readStanding(
+        org,
+        [profileKey, serviceType],
+        slotKeys.filter((k): k is string => !!k),
+    )
+
+    const rows: LoadedProfileRow[] = tracks.map((t, i) => {
+        const slotKey = slotKeys[i]
+        const row: LoadedProfileRow = {
+            index: i,
+            type: typeof t.type === "string" ? t.type : "song",
+            title: typeof t.title === "string" ? t.title : "",
+            slotKind: str(t.slotKind),
+            slotKey,
+            house: t.house ?? null,
+            track: t,
+        }
+        if (slotKey) {
+            const choice =
+                standing.get(standingMapKey(profileKey, slotKey)) ??
+                (slotKey.startsWith("song:") ? standing.get(standingMapKey(serviceType, slotKey)) : undefined) ??
+                null
+            row.tier = computeSlotTier({
+                standing: choice,
+                profileUses: index.profileUses(slotKey),
+                otherUses: index.otherUses(slotKey),
+            })
+            if (choice) row.standing = choice
+        }
+        return row
+    })
+    return {
+        templateId: doc.id,
+        profileKey,
+        profile,
+        serviceNotes: typeof data.serviceNotes === "string" ? data.serviceNotes : null,
+        rows,
+        truncated,
+    }
+}
+
 export async function getServiceProfileTool(
     _uid: string,
     args: GetServiceProfileArgs,
@@ -318,49 +418,20 @@ export async function getServiceProfileTool(
                 "Profiles are seeded by an admin with seed_service_profiles.",
             )
         }
-        const data = doc.data()
-        const profile = data.profile as TemplateProfile
-        const tracks = Array.isArray(data.tracks) ? (data.tracks as Record<string, unknown>[]) : []
-
-        const { index, truncated } = await loadSlotUses(org, { serviceType, rabbiSlot })
-        const slotKeys = tracks.map((t) =>
-            isSongType(t.type)
-                ? (str(t.slotKey) ??
-                  slotKeyFor(
-                      { momentId: str(t.momentId), title: typeof t.title === "string" ? t.title : "", fileId: str(t.fileId) },
-                      index.partGroupOf,
-                  ))
-                : null,
-        )
-        const standing = await readStanding(
-            org,
-            [profileKey, serviceType],
-            slotKeys.filter((k): k is string => !!k),
-        )
-
-        const rows: ProfileRow[] = tracks.map((t, i) => {
-            const slotKey = slotKeys[i]
+        const loaded = await loadProfileTiers(org, doc, serviceType, rabbiSlot)
+        const rows: ProfileRow[] = loaded.rows.map((r) => {
             const row: ProfileRow = {
-                index: i,
-                type: typeof t.type === "string" ? t.type : "song",
-                title: typeof t.title === "string" ? t.title : "",
-                slotKind: str(t.slotKind),
-                slotKey,
-                house: t.house ?? null,
+                index: r.index,
+                type: r.type,
+                title: r.title,
+                slotKind: r.slotKind,
+                slotKey: r.slotKey,
+                house: r.house,
             }
-            if (slotKey) {
-                const choice =
-                    standing.get(standingMapKey(profileKey, slotKey)) ??
-                    (slotKey.startsWith("song:") ? standing.get(standingMapKey(serviceType, slotKey)) : undefined) ??
-                    null
-                row.tier = computeSlotTier({
-                    standing: choice,
-                    profileUses: index.profileUses(slotKey),
-                    otherUses: index.otherUses(slotKey),
-                })
-            }
+            if (r.tier) row.tier = r.tier
             return row
         })
+        const { profile, truncated } = loaded
         return { ok: true, templateId: doc.id, profile, rows, truncated }
     } catch (error) {
         logger.warn("get_service_profile failed:", error)

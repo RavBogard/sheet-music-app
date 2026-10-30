@@ -110,6 +110,8 @@ export const WRITE_TOOLS: ReadonlySet<string> = new Set([
     "record_bond_correction",
     "set_standing_choice",
     "clear_standing_choice",
+    "draft_service",
+    "create_setlist_from_draft",
     // congregation, contacts, people
     "update_congregation_services",
     "create_contact",

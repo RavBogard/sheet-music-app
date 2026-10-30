@@ -112,6 +112,8 @@ export const ERROR_CODE_MAP: Record<string, number> = {
     track_not_found: 404,
     standing_not_found: 404,
     profile_not_found: 404,
+    no_profile: 404,
+    draft_not_found: 404,
     song_not_found: 404, // v11.2-03 (BUG-2): add_track/update_track/swap_chart/update_song unknown songId
 
     file_not_found: 404,

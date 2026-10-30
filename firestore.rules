@@ -422,6 +422,11 @@ service cloud.firestore {
       allow list: if atLeast(listOrg(), 'me');
       allow write: if false;
     }
+    // Setlist memory: a service drafted from its profile, kept 30 minutes
+    // until the author creates the setlist. Server only.
+    match /service_drafts/{draftId} {
+      allow read, write: if false;
+    }
     match /tasks/{taskId} {
       allow get: if signedIn()
         && (resource.data.get('assigneeId', '') == request.auth.uid || atLeast(docOrg(), 'me'));

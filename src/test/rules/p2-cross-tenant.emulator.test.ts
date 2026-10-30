@@ -29,6 +29,7 @@ const B_READS: Array<[string, string]> = [
     ["bond_flags", "bfB"],
     ["proposal_stages", "psB"],
     ["standing_choices", "scB"],
+    ["service_drafts", "sdB"],
     ["songUsage", "uB"],
     ["tasks", "taskB"],
     ["auditLogs", "alB"],
