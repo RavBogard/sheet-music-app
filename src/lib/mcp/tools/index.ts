@@ -152,6 +152,7 @@ import { listBooksTool, lookupBookPageTool } from "./books"
 import { getSongHistoryTool, exportSetlistsTool } from "./history"
 import { setStandingChoiceTool, clearStandingChoiceTool } from "./standing"
 import { draftServiceTool, createSetlistFromDraftTool } from "./draft-service"
+import { addOpenItemTool, resolveOpenItemTool } from "./open-items"
 import { seedServiceProfiles, getServiceProfileTool } from "./service-profiles"
 import { richError, liftLegacyErrorEnvelope } from "@/lib/mcp/error-envelopes"
 export { registerTestTokenTools } from "./test-tokens"
@@ -916,6 +917,35 @@ export function registerReadTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await createSetlistFromDraftTool(uidFrom(extra), args, orgFrom(extra))),
+    )
+
+    server.registerTool(
+        "add_open_item",
+        {
+            description:
+                "Record something this setlist still needs ('chart still needed', 'new arrangement; swap when it lands'). It is repeated in every readback until resolved. Optionally tie it to one row with `trackId`. Admin / band_leader. Tenant-scoped. Returns `{ok, setlistId, item:{id, text, trackId, createdAt, createdByName}, openItems}`.",
+            inputSchema: {
+                setlistId: z.string().min(1).describe("Setlist id."),
+                text: z.string().describe("What is still needed, 1–300 characters."),
+                trackId: z.string().optional().describe("A track of this setlist the item is about."),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await addOpenItemTool(uidFrom(extra), args, orgFrom(extra))),
+    )
+
+    server.registerTool(
+        "resolve_open_item",
+        {
+            description:
+                "Mark an open item done. It leaves get_setlist and every readback; the setlist keeps it as resolved. Admin / band_leader. Tenant-scoped. Returns `{ok, setlistId, resolved, openItems}`; an unknown or already-resolved item is `open_item_not_found`.",
+            inputSchema: {
+                setlistId: z.string().min(1).describe("Setlist id."),
+                itemId: z.string().min(1).describe("The open item's id, from get_setlist or add_open_item."),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await resolveOpenItemTool(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(

@@ -7,6 +7,7 @@ import { rowOrg } from "@/lib/mcp/org-context"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 import { logger } from "@/lib/logger"
+import { readOpenItems } from "./open-items"
 
 /**
  * MCP read tools for setlists. Plain async functions wrapping the existing
@@ -168,6 +169,8 @@ export async function getSetlist(
         ...setlist,
         version: setlistVersion,
         lastModifiedAt: setlistLastModifiedAt,
+        // Setlist memory release 3: unresolved open items only, oldest first.
+        openItems: readOpenItems(data),
         tracks: tracks.map((t) => {
             const row = t as Record<string, unknown>
             return {
