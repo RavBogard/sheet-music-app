@@ -158,7 +158,8 @@ describe('useUpcomingPrep', () => {
   })
 
   it('computes urgency label "Tomorrow"', async () => {
-    const now = new Date()
+    // Fixed mid-June date: a real "now" near a DST change makes day counts off by one.
+    const now = new Date('2026-06-10T12:00:00')
     now.setHours(0, 0, 0, 0)
     vi.setSystemTime(now)
     const tomorrow = new Date(now)
@@ -205,7 +206,7 @@ describe('useUpcomingPrep', () => {
   })
 
   it('computes urgency label "In N days" for multi-day', async () => {
-    const now = new Date()
+    const now = new Date('2026-06-10T12:00:00')
     now.setHours(0, 0, 0, 0)
     vi.setSystemTime(now)
     const inFive = new Date(now)
