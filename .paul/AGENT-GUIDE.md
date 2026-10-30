@@ -17,6 +17,45 @@ ad-hoc instinct to "just be helpful and ship it".
 
 ---
 
+## Building a service
+
+Most weeks Daniel asks for a service ("give me the setlist for Shabbat").
+The server drafts it from the service's profile and says back only what
+needs him. Keep it short: he is often listening, not reading.
+
+1. **Who is leading.** Before building Friday night or Shabbat morning,
+   ask who is leading ("Randy or you this week?"). Skip the question only
+   when the request names the rabbi. Never infer it from past weeks or the
+   calendar.
+2. **"Shabbat" means Shabbat morning.** Say so in your first line
+   ("Shabbat morning, Nov 7…").
+3. **First Fridays.** When "Friday" falls on the month's first Friday, ask
+   "Shir Shabbat or regular Friday night?".
+4. **The flow.** Call `draft_service`, then say `readback.text` aloud. Show
+   `readback.exceptions` as a short list on screen; give the full table only
+   when asked. Then take short answers: "yes" creates the setlist
+   (`create_setlist_from_draft`); "number 2 is the Klepper" and "keep it in
+   Dm" become choices on those rows.
+5. **One-off or standing.** "This week" makes a one-off. "Keep it", "from
+   now on", "always" or "standard" makes it standing (`standing: true`, or
+   `set_standing_choice` on an existing setlist). With no such words it is a
+   one-off: read `oneOffNote` back. Read every `announcement` back. When a
+   row carries `promotion`, offer it once.
+6. **Special weeks.** When Daniel mentions guests, a memorial, a family's
+   requests or a holiday, pass `special: true`. Changes on a special week
+   are one-offs unless he says "keep it".
+7. **Email exceptions.** "Use Bryn's email about Saturday" means: read it
+   with the client's Gmail connector, turn each request into a one-off
+   change against the draft, and read back only those. Texts are pasted or
+   dictated the same way.
+8. **Open items.** Whatever can't be done yet becomes `add_open_item`.
+   Every readback repeats it until `resolve_open_item`.
+9. **Ambiguous titles.** Resolve a low-confidence title through the profile
+   and `get_song_history` first. Ask only when both are silent.
+10. **`no_profile`.** Build that week from a recent setlist with
+    `templateType` and `rabbi` set. The next draft learns from it.
+11. **After any change,** `read_back_setlist` is the summary to say.
+
 ## When to ask vs. proceed
 
 Every bond proposal carries a `confidence` score derived from W-02's
@@ -83,37 +122,20 @@ Anything you committed with `flags.length > 0` lives as an open
 `bond_flags` entry. Walk them at end-of-session, before you hand the
 setlist back:
 
-1. Call `preview_publish(setlistId)`. Despite the name this is a
-   READINESS REPORT, not a publish step. If `recommendation` is
-   `'review_first'`, you have flags to walk.
-2. Call `review_flagged_bonds(setlistId)`. Returns each open flag joined
+1. Call `review_flagged_bonds(setlistId)`. Returns each open flag joined
    with the current track and up to 5 alternative songIds ranked by W-02
    signals (titleSpecificity, bondCorrectionHistory bias, contextHint
    boost when the setlist has a templateType).
-3. Present each row in chat. For every correction Daniel confirms:
-   - Call `update_track` (or `swap_chart` if you want the title/key to
-     auto-refresh from the new song) to flip the row's `songId`.
-   - Call `record_bond_correction(setlistId, trackId, fromSongId,
-     toSongId, reason?)`. This is the **learning signal** — it bumps
-     library_index counters and, once 3 consistent picks land for a
-     (stem, contextKey) pair, inline-aggregates a `titleContextHints`
-     doc that gives the preferred songId a +0.5 boost in future
-     `search_library` calls.
-4. After the batch, call `preview_publish` again. If recommendation is
-   now `'publish'`, you're clear — the setlist is done and you stop
-   there.
+2. Present each row in chat. For every correction Daniel confirms,
+   call `update_track` (or `swap_chart` if you want the title/key to
+   auto-refresh from the new song) to flip the row's `songId`. When he
+   says to keep it for next time, also `set_standing_choice` on that row.
+3. Finish with `read_back_setlist`.
 
 **CRC does not use publish** (Daniel, 2026-09-15 — R2-f). A setlist is
 live the moment it exists: `/today.json`, the reader, Overlays and
 `/perform` all select by service date, never by `publishedAt`. Never
-tell Daniel a setlist needs publishing, and never call `publish_setlist`
-on your own initiative. It survives only as an optional marker for
-anyone who wants one; nothing downstream reads it.
-
-`record_bond_correction` is NOT the same as `update_track`. The former
-records the **rationale** for the change as a training signal; the
-latter mutates the row. Run them as a pair every time the rabbi says
-"no, swap that one out."
+tell Daniel a setlist needs publishing.
 
 ## The Bar Mitzvah failure mode (canonical anti-pattern)
 
@@ -131,9 +153,9 @@ What should have happened:
    — 3 versions in library; I picked the Klepper-Freelander variant.
    Confirm?" before the row lands.
 3. Commit only on confirm. Flag the low-confidence picks.
-4. After the rabbi reviews and corrects, `record_bond_correction` for
-   each. Next week's "Hashkivenu" for a Bar Mitzvah service auto-ranks
-   the rabbi-preferred arrangement first.
+4. After the rabbi reviews and corrects, `set_standing_choice` for each
+   correction he wants kept. Next week's draft for that service fills the
+   slot with the rabbi-preferred arrangement.
 
 This guide exists so the agent never recreates that failure shape.
 
@@ -192,17 +214,17 @@ on the rabbi's sheet is read aloud from the lectern with nothing to catch it.
 ## Tool inventory cheat-sheet
 
 - Stage: `propose_setlist_changes`, `commit_staged_changes`
-- Flag / review / correct: `flag_bond`, `review_flagged_bonds`,
-  `record_bond_correction`
+- Build and remember: `draft_service`, `create_setlist_from_draft`,
+  `get_service_profile`, `set_standing_choice`, `clear_standing_choice`,
+  `get_song_history`, `export_setlists`, `read_back_setlist`,
+  `add_open_item`, `resolve_open_item`
+- Flag / review: `flag_bond`, `review_flagged_bonds`
 - Mutate rows: `update_track`, `swap_chart`, `bulk_update_tracks`,
   `reorder_setlist`, `remove_track`, `add_track_to_setlist`,
   `bulk_add_tracks`
 - Pages: `propose_liturgy_bindings` (batch),
   `merge_always_rows_into_template` (template),
   `propose_service_frame` (the Sometimes offer) — all `dryRun` by default
-- Readiness report: `preview_publish` (a report, not a publish)
-- Publish: `publish_setlist` — optional marker only; CRC does not use it
-  and nothing downstream reads it (R2-f)
 - Verify: `verify_setlist_charts`, `get_chart_status`,
   `wait_for_setlist_change`
 - Chart YOU wrote in this chat → `create_chart` mode:'preview' (shows the
@@ -214,8 +236,8 @@ on the rabbi's sheet is read aloud from the lectern with nothing to catch it.
   dropped files. For a Drive folder they already have: `import_drive_folder`.
   Never ask a user to paste a file into the chat for upload.
 
-When in doubt, prefer `preview_publish` + `propose_setlist_changes` over
-their direct counterparts. The propose-confirm loop is the trust contract.
+When in doubt, prefer `propose_setlist_changes` over its direct
+counterparts. The propose-confirm loop is the trust contract.
 
 ## This server is part of a family
 
