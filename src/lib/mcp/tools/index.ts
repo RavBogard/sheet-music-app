@@ -27,6 +27,7 @@ import { salvageChartBytes } from "./salvage-chart-bytes"
 import { backfillHealMetadata } from "./backfill-heal-metadata"
 import { backfillTrackMimetype } from "./backfill-track-mimetype"
 import { backfillLibrarySettingParts } from "./backfill-setting-parts"
+import { backfillSetlistServiceClass } from "./backfill-service-class"
 import { backfillLibraryKeys } from "./backfill-library-keys"
 import { archiveNonChartArtifacts } from "./archive-nonchart-artifacts"
 import { getAiConfig, setAiAutoApply, setAiThreshold } from "./ai-config"
@@ -1576,6 +1577,19 @@ export function registerWriteTools(server: McpServer): void {
                     .describe(
                         "Wall-clock start time for THIS service, 24-hour `HH:mm` in the tenant's local time (e.g. '18:00' for 6pm). Overrides the per-serviceType default start held in the congregation config. Read by the public today.json that the siddur reader and the stream overlays use, so set it when a service starts at an unusual time.",
                     ),
+                special: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "Mark this a special week (guests, holiday, memorial). A special week never counts toward what a service profile usually plays.",
+                    ),
+                rabbiSlot: z
+                    .enum(["daniel_karen", "randy"])
+                    .nullable()
+                    .optional()
+                    .describe(
+                        "Which rabbi slot leads this service: 'daniel_karen' or 'randy'. null clears it. Changing `rabbi` without this clears the stored slot, so it is read from the new rabbi text.",
+                    ),
                 lastSeenVersion: lastSeenVersionSchema.describe(
                     "Optional optimistic-concurrency gate: pass the setlist's `version` from your last get_setlist / list_setlists. The write rejects with `{error: 'stale_version', currentVersion, lastSeenVersion, hint, ...}` if it doesn't match — call get_setlist and retry.",
                 ),
@@ -2482,6 +2496,26 @@ export function registerWriteTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await backfillLibrarySettingParts(uidFrom(extra), args, orgFrom(extra))),
+    )
+
+    server.registerTool(
+        "backfill_setlist_service_class",
+        {
+            description:
+                "Admin / band_leader back-fill: store the service class on your org's existing setlists — `serviceType` (a service-type catalog key), `rabbiSlot` ('daniel_karen' | 'randy') and `special` (a week that never counts toward a profile's usual) — read from each setlist's name, template type and rabbi text, the same way song history classifies it. Only fields that are unset are written; an author's value is never replaced, and an unknown type or rabbi is left unset. F-05: `dryRun` defaults true and returns the full report; a real run needs `dryRun: false, force: true`. A setlist edited during the run is left alone and counted. Returns `{ok, dryRun, scanned, changed: [{setlistId, name, patch}], skipped: {alreadySet, changedDuringRun}}`.",
+            inputSchema: {
+                dryRun: z
+                    .boolean()
+                    .optional()
+                    .describe("When true (default), report without writing."),
+                force: z
+                    .boolean()
+                    .optional()
+                    .describe("Required with `dryRun: false` to write."),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await backfillSetlistServiceClass(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(

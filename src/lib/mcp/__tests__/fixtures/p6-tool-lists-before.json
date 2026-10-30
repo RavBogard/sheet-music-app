@@ -214,6 +214,7 @@
     "backfill_library_index",
     "backfill_library_keys",
     "backfill_library_setting_parts",
+    "backfill_setlist_service_class",
     "backfill_setlist_test_flag",
     "backfill_track_mimetype",
     "bridge_clear_acks",

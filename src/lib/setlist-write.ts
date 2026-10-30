@@ -88,6 +88,14 @@ export type SetlistMetadataPatch = Partial<{
     book: string
     /** `HH:mm`, tenant wall clock — see Setlist.startsAtLocal. */
     startsAtLocal: string
+    /**
+     * Setlist memory r2 — the stored service class (see Setlist.serviceType).
+     * `storedServiceType` is the catalog key written to the setlist's own
+     * `serviceType` field; null clears it so the class is inferred again.
+     */
+    storedServiceType: string | null
+    rabbiSlot: string | null
+    special: boolean
 }>
 
 // ─── Helpers ─────────────────────────────────────────────────────────
@@ -265,6 +273,11 @@ export async function updateSetlistServerSide(
     if (patch.serviceType !== undefined) {
         mapped.templateType = patch.serviceType
     }
+    if (patch.storedServiceType !== undefined) {
+        mapped.serviceType = patch.storedServiceType
+    }
+    if (patch.rabbiSlot !== undefined) mapped.rabbiSlot = patch.rabbiSlot
+    if (patch.special !== undefined) mapped.special = patch.special
     if (patch.eventDate !== undefined) {
         mapped.eventDate = toTimestamp(patch.eventDate, org)
     }

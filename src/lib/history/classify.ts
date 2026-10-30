@@ -116,21 +116,42 @@ function rabbiSlotFor(rabbi: string | null | undefined): RabbiSlotKey | null {
     return hits.length === 1 ? (hits[0].key as RabbiSlotKey) : null
 }
 
+function storedRabbiSlot(v: unknown): RabbiSlotKey | null {
+    return CRC_RABBI_SLOTS.some((slot) => slot.key === v) ? (v as RabbiSlotKey) : null
+}
+
+/**
+ * Classify a setlist. Values stored on the setlist (`serviceType`,
+ * `rabbiSlot`, `special`, written by the author or by
+ * `backfill_setlist_service_class`) win; a stored value that is missing,
+ * null or not a known key falls back to inference from name / templateType /
+ * rabbi text. `part` always comes from the name.
+ */
 export function classifyService(s: {
     name: string
     templateType?: string | null
     rabbi?: string | null
+    serviceType?: string | null
+    rabbiSlot?: string | null
+    special?: boolean | null
 }): ServiceClass {
     const name = typeof s.name === "string" ? s.name : ""
     const part = setlistPart(name)
-    const serviceType = serviceTypeFor(name, s.templateType)
-    const rabbiSlot = rabbiSlotFor(s.rabbi)
+    const serviceType = mapTemplateType(s.serviceType) ?? serviceTypeFor(name, s.templateType)
+    const rabbiSlot = storedRabbiSlot(s.rabbiSlot) ?? rabbiSlotFor(s.rabbi)
     const tt = typeof s.templateType === "string" ? s.templateType.trim() : ""
     const special =
-        (serviceType !== null && CATALOG_CATEGORY.get(serviceType) === "holiday") ||
-        /\b(with|w\/)\s/i.test(name) ||
-        /memorial/i.test(name) ||
-        SPECIAL_TEMPLATE_TYPES.has(tt) ||
-        serviceType === null
+        typeof s.special === "boolean"
+            ? s.special
+            : (serviceType !== null && CATALOG_CATEGORY.get(serviceType) === "holiday") ||
+              /\b(with|w\/)\s/i.test(name) ||
+              /memorial/i.test(name) ||
+              SPECIAL_TEMPLATE_TYPES.has(tt) ||
+              serviceType === null
     return { serviceType, rabbiSlot, special, part }
+}
+
+/** The catalog key a free `templateType` / service-type string maps to, or null. */
+export function catalogServiceType(value: string | null | undefined): string | null {
+    return mapTemplateType(value)
 }

@@ -7,6 +7,8 @@ import { rowOrg } from "@/lib/mcp/org-context"
 import { isTestSetlist } from "@/types/models"
 import { visibleTo } from "@/lib/library/visibility"
 import type { OrgId } from "@/lib/org/types"
+import { momentIdForUnit } from "@/lib/books/moments"
+import { classifyService } from "./classify"
 import type { HistorySetlist, HistoryTrack, LibraryLite } from "./song-history"
 
 /**
@@ -44,7 +46,13 @@ function toTrack(raw: Record<string, unknown>): HistoryTrack {
         key: str(raw.key),
         leadMusician: str(raw.leadMusician),
         notes: str(raw.notes),
+        momentId: str(raw.momentId) ?? momentIdForUnit(unitIdOf(raw.liturgyRef)),
     }
+}
+
+function unitIdOf(ref: unknown): string | null {
+    if (!ref || typeof ref !== "object") return null
+    return str((ref as Record<string, unknown>).unitId)
 }
 
 async function mapLimited<T, R>(items: T[], limit: number, fn: (t: T) => Promise<R>): Promise<R[]> {
@@ -95,12 +103,23 @@ export async function loadHistorySetlists(
         const id = String(r.id)
         const tracks = (await getTracksForSetlist(db, id, {})) as unknown as Array<Record<string, unknown>>
         const name = typeof r.name === "string" ? r.name : "(untitled)"
+        const cls = classifyService({
+            name,
+            templateType: str(r.templateType),
+            rabbi: str(r.rabbi),
+            serviceType: str(r.serviceType),
+            rabbiSlot: str(r.rabbiSlot),
+            special: typeof r.special === "boolean" ? r.special : null,
+        })
         const hs: HistorySetlist = {
             id,
             name,
             eventDate: eventIso(r.eventDate),
             templateType: str(r.templateType),
             rabbi: str(r.rabbi),
+            serviceType: cls.serviceType,
+            rabbiSlot: cls.rabbiSlot,
+            special: cls.special,
             book: str(r.book),
             ownerName: str(r.ownerName),
             isTest:

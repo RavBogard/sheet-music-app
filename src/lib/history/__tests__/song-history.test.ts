@@ -8,6 +8,7 @@ import {
     type HistoryTrack,
     type LibraryLite,
 } from "../song-history"
+import { classifyService } from "../classify"
 
 let trackSeq = 0
 function track(p: Partial<HistoryTrack>): HistoryTrack {
@@ -22,12 +23,13 @@ function track(p: Partial<HistoryTrack>): HistoryTrack {
         key: null,
         leadMusician: null,
         notes: null,
+        momentId: null,
         ...p,
     }
 }
 
 function setlist(p: Partial<HistorySetlist> & { id: string }): HistorySetlist {
-    return {
+    const base = {
         name: "Shabbat Morning",
         eventDate: null,
         templateType: "shabbat_morning",
@@ -37,6 +39,14 @@ function setlist(p: Partial<HistorySetlist> & { id: string }): HistorySetlist {
         isTest: false,
         tracks: [],
         ...p,
+    }
+    // The loader fills the class; a fixture infers it unless given.
+    const cls = classifyService({ name: base.name, templateType: base.templateType, rabbi: base.rabbi })
+    return {
+        serviceType: cls.serviceType,
+        rabbiSlot: cls.rabbiSlot,
+        special: cls.special,
+        ...base,
     }
 }
 

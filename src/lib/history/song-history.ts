@@ -1,5 +1,5 @@
 import { bareStem } from "@/lib/mcp/title-specificity"
-import { classifyService, type RabbiSlotKey } from "./classify"
+import { classifyService, type RabbiSlotKey, type ServiceClass } from "./classify"
 
 /**
  * Setlist memory, release 1 — "how have we done this song before?"
@@ -19,6 +19,8 @@ export interface HistoryTrack {
     key: string | null
     leadMusician: string | null
     notes: string | null
+    /** Stored `momentId`, else the moment behind `liturgyRef.unitId`, else null. */
+    momentId: string | null
 }
 
 export interface HistorySetlist {
@@ -27,6 +29,13 @@ export interface HistorySetlist {
     eventDate: string | null
     templateType: string | null
     rabbi: string | null
+    /**
+     * The service class: the setlist's stored values where present, else
+     * inferred (`classifyService`). Filled by the loader.
+     */
+    serviceType: string | null
+    rabbiSlot: RabbiSlotKey | null
+    special: boolean
     book: string | null
     ownerName: string | null
     isTest: boolean
@@ -148,6 +157,18 @@ export function spellingVariants(a: string, b: string): boolean {
     return reach[short.length]
 }
 
+/** The service class of a loaded setlist; its carried class fields win. */
+export function classifyHistorySetlist(s: HistorySetlist): ServiceClass {
+    return classifyService({
+        name: s.name,
+        templateType: s.templateType,
+        rabbi: s.rabbi,
+        serviceType: s.serviceType,
+        rabbiSlot: s.rabbiSlot,
+        special: s.special,
+    })
+}
+
 function clampLimit(limit: number | undefined): number {
     if (typeof limit !== "number" || !Number.isFinite(limit) || limit <= 0) {
         return SONG_HISTORY_DEFAULT_LIMIT
@@ -194,11 +215,7 @@ export function buildSongHistory(
 
     for (const s of setlists) {
         if (s.isTest || !s.eventDate) continue
-        const cls = classifyService({
-            name: s.name,
-            templateType: s.templateType,
-            rabbi: s.rabbi,
-        })
+        const cls = classifyHistorySetlist(s)
         if (cls.part) continue
         if (!includeSpecial && cls.special) continue
         if (q.serviceType && cls.serviceType !== q.serviceType) continue

@@ -38,4 +38,36 @@ describe("classifyService", () => {
     it("never reads a rabbi name inside a longer word", () => {
         expect(classifyService({ name: "Shabbat Morning", rabbi: "Danielle" }).rabbiSlot).toBeNull()
     })
+
+    describe("stored service class", () => {
+        it("a stored value wins over inference", () => {
+            const c = classifyService({ name: "Shabbat with guests", serviceType: "shabbat_morning", special: false })
+            expect(c.special).toBe(false)
+            expect(c.serviceType).toBe("shabbat_morning")
+        })
+
+        it("a stored special:true marks an ordinary-looking week", () => {
+            expect(classifyService({ name: "Shabbat Morning", templateType: "shabbat_morning", special: true }).special).toBe(true)
+        })
+
+        it("a stored rabbiSlot wins over the rabbi text", () => {
+            expect(classifyService({ name: "Shabbat Morning", rabbi: "Daniel", rabbiSlot: "randy" }).rabbiSlot).toBe("randy")
+        })
+
+        it("null or unknown stored values fall back to inference", () => {
+            const c = classifyService({
+                name: "Kabbalat Shabbat — May 22, 2026",
+                templateType: "kabbalat-shabbat",
+                rabbi: "Daniel",
+                serviceType: "nonsense",
+                rabbiSlot: null,
+                special: null,
+            })
+            expect(c).toEqual({ serviceType: "friday_night", rabbiSlot: "daniel_karen", special: false, part: null })
+        })
+
+        it("a stored holiday type with no stored special is still special", () => {
+            expect(classifyService({ name: "x", serviceType: "yom_kippur_morning" }).special).toBe(true)
+        })
+    })
 })
