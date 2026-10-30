@@ -291,13 +291,21 @@ export class SyncEngine {
                             // and terminal ('failed') rows are untouched —
                             // they get re-evaluated on the next pump or via
                             // resolveConflict respectively.
+                            //
+                            // Only rows that already carry a precondition
+                            // are re-stamped. A row queued with no
+                            // `expectedUpdatedAt` asked for last-write-wins;
+                            // giving it this commit's stamp made any later
+                            // server write (an MCP edit) fail it as a
+                            // phantom "Remote changes detected" conflict.
                             const pendingSameDoc = await this.db.outbox
                                 .where('status')
                                 .equals('pending')
                                 .filter(
                                     (r) =>
                                         r.collection === row.collection &&
-                                        r.docId === row.docId,
+                                        r.docId === row.docId &&
+                                        r.expectedUpdatedAt !== undefined,
                                 )
                                 .toArray()
                             for (const p of pendingSameDoc) {
