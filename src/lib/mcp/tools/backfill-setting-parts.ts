@@ -49,6 +49,8 @@ export async function backfillLibrarySettingParts(
           changed: SettingPartChange[]
           skippedHuman: number
           skipped: { human: number; changedDuringRun: number }
+          /** Rows whose write failed for a reason other than a changed row; the run kept going. */
+          failed: Array<{ id: string; message: string }>
       }
     | RichErrorEnvelope
 > {
@@ -98,6 +100,7 @@ export async function backfillLibrarySettingParts(
             changed,
             skippedHuman,
             skipped: { human: skippedHuman, changedDuringRun: 0 },
+            failed: [] as Array<{ id: string; message: string }>,
         }
         if (dryRun) return report
         if (!force) {
@@ -109,18 +112,22 @@ export async function backfillLibrarySettingParts(
             )
         }
 
-        const { changedDuringRun } = await updateRowsIfUnchanged(
+        const { changedDuringRun, failed } = await updateRowsIfUnchanged(
             db,
             changed.map((c) => ({
                 fileId: c.fileId,
                 updateTime: updateTimes.get(c.fileId),
                 patch: { setting: c.setting, part: c.part, partGroup: c.partGroup },
             })),
+            "library_index",
+            { skipFailures: true },
         )
+        const failedIds = new Set(failed.map((f) => f.id))
         return {
             ...report,
-            changed: changed.filter((c) => !changedDuringRun.has(c.fileId)),
+            changed: changed.filter((c) => !changedDuringRun.has(c.fileId) && !failedIds.has(c.fileId)),
             skipped: { human: skippedHuman, changedDuringRun: changedDuringRun.size },
+            failed,
         }
     } catch (error) {
         logger.warn("backfill_library_setting_parts failed:", error)

@@ -24,6 +24,8 @@ import { backfillLibrarySettingParts } from "../backfill-setting-parts"
 
 beforeEach(() => {
     vi.clearAllMocks()
+    docUpdate.mockReset()
+    docUpdate.mockImplementation(async () => undefined)
     ROWS = [
         { id: "a", data: { orgId: "crc", name: "Barchu (Walkdown) Bb" } },
         { id: "b", data: { orgId: "crc", name: "Barchu (Friedman)", settingSource: "human", setting: "Mine" } },
@@ -73,6 +75,28 @@ describe("backfillLibrarySettingParts", () => {
         expect(r.ok).toBe(true)
         expect(r.changed.map((c) => c.fileId)).toEqual(["e"])
         expect(r.skipped.changedDuringRun).toBe(1)
+    })
+
+    it("a row whose write fails is skipped and reported; the run keeps going", async () => {
+        docUpdate.mockImplementation(async (id: unknown) => {
+            if (id === "a") throw new Error("boom")
+        })
+        const r = (await backfillLibrarySettingParts("u", { dryRun: false, force: true }, "crc")) as {
+            ok: boolean
+            changed: Array<{ fileId: string }>
+            failed: Array<{ id: string; message: string }>
+        }
+        expect(r.ok).toBe(true)
+        expect(r.failed).toEqual([{ id: "a", message: "boom" }])
+        expect(r.changed.map((c) => c.fileId)).toEqual(["e"])
+        expect(docUpdate.mock.calls.map((c) => c[0]).sort()).toEqual(["a", "e"])
+    })
+
+    it("failed is empty when every write lands", async () => {
+        const r = (await backfillLibrarySettingParts("u", { dryRun: false, force: true }, "crc")) as {
+            failed: unknown[]
+        }
+        expect(r.failed).toEqual([])
     })
 
     it("only reads the caller's org", async () => {
