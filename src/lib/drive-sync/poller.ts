@@ -13,6 +13,7 @@ import {
     type IndexNameFields,
 } from "@/lib/library/recompute-index-name-fields"
 import { bareStem } from "@/lib/mcp/title-specificity"
+import { settingPartWriteFields } from "@/lib/library/setting-part"
 import { logger } from "@/lib/logger"
 
 /**
@@ -540,6 +541,7 @@ async function handleExistingFile(
             normalizedName: renamedFields.normalizedName,
             stem: renamedFields.stem,
             titleSpecificity: renamedFields.titleSpecificity,
+            ...settingPartWriteFields(newTitle, existing.data),
             originalName: driveName,
         }
         if (file.modifiedTime) updates.driveModifiedTime = file.modifiedTime

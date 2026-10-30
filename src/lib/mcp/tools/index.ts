@@ -26,6 +26,7 @@ import { reconcileLibrary } from "./reconcile-library"
 import { salvageChartBytes } from "./salvage-chart-bytes"
 import { backfillHealMetadata } from "./backfill-heal-metadata"
 import { backfillTrackMimetype } from "./backfill-track-mimetype"
+import { backfillLibrarySettingParts } from "./backfill-setting-parts"
 import { archiveNonChartArtifacts } from "./archive-nonchart-artifacts"
 import { getAiConfig, setAiAutoApply, setAiThreshold } from "./ai-config"
 import { getCorrectionStats } from "./correction-stats"
@@ -2462,6 +2463,26 @@ export function registerWriteTools(server: McpServer): void {
             jsonResult(await backfillTrackMimetype(uidFrom(extra), args, orgFrom(extra))),
     )
 
+    server.registerTool(
+        "backfill_library_setting_parts",
+        {
+            description:
+                "Admin / band_leader back-fill: stamp `setting` (whose setting or melody, parsed from the title's clarifier, e.g. 'Barchu (Friedman)' → 'Friedman'), `part` (instrument copy, e.g. '… Bb') and `partGroup` (shared by every instrument copy of one arrangement) on your org's existing library rows. Title parsing only; a row whose setting a person set (`settingSource: 'human'`) is never touched. F-05: `dryRun` defaults true and returns the full report; a real run needs `dryRun: false, force: true`. Returns `{ok, dryRun, scanned, changed: [{fileId, name, setting, part, partGroup}], skippedHuman}`.",
+            inputSchema: {
+                dryRun: z
+                    .boolean()
+                    .optional()
+                    .describe("When true (default), report without writing."),
+                force: z
+                    .boolean()
+                    .optional()
+                    .describe("Required with `dryRun: false` to write."),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await backfillLibrarySettingParts(uidFrom(extra), args, orgFrom(extra))),
+    )
+
     // library-bulk-archive-nonchart (Tier-1 P2 2026-05-27, data-health dh-20260527a
     // Class 3): bulk soft-archive the UNAMBIGUOUS non-chart residents of
     // library_index (Drive folders + Google Sheets). Google Docs are HELD for
@@ -2723,6 +2744,20 @@ export function registerWriteTools(server: McpServer): void {
                     .array(z.string())
                     .optional()
                     .describe("Tag list (replaces existing tags)."),
+                setting: z
+                    .string()
+                    .nullable()
+                    .optional()
+                    .describe(
+                        "Whose setting or melody this chart is (e.g. 'Friedman', 'trad'); null clears. Marks the row's setting as set by a person, so no back-fill overwrites it.",
+                    ),
+                part: z
+                    .string()
+                    .nullable()
+                    .optional()
+                    .describe(
+                        "Instrument part of this chart (e.g. 'Bb', 'Tenor Saxophone'); null clears. Same protection as setting.",
+                    ),
             })
             .describe(
                 "At least one field required. The helper rejects empty / unknown fields with a rich invalid_field envelope.",

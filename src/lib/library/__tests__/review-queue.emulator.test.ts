@@ -404,6 +404,32 @@ describe("Library Review Queue — NEW-4 (emulator)", () => {
             ).data()
             expect(row?.bpm).toBeNull()
         })
+
+        it("records a person's setting/part as human, and a later rename keeps it", async () => {
+            await seedReviewRow(db(), "upload-1", { name: "Barchu (Walkdown) Bb" })
+            const set = await editEnrichment(db(), "upload-1", { setting: "Walkdown", part: "Bb" }, ACTOR)
+            expect(set.ok).toBe(true)
+            let row = (await db().collection("library_index").doc("upload-1").get()).data()
+            expect(row?.setting).toBe("Walkdown")
+            expect(row?.part).toBe("Bb")
+            expect(row?.settingSource).toBe("human")
+            expect(row?.partGroup).toBe("barchu walkdown")
+
+            const renamed = await editEnrichment(db(), "upload-1", { title: "Barchu (Friedman) Eb" }, ACTOR)
+            expect(renamed.ok).toBe(true)
+            row = (await db().collection("library_index").doc("upload-1").get()).data()
+            expect(row?.setting).toBe("Walkdown")
+            expect(row?.part).toBe("Bb")
+        })
+
+        it("a title edit on an unset row computes setting, part and partGroup", async () => {
+            await seedReviewRow(db(), "upload-1")
+            await editEnrichment(db(), "upload-1", { title: "Barchu (Friedman) Eb" }, ACTOR)
+            const row = (await db().collection("library_index").doc("upload-1").get()).data()
+            expect(row?.setting).toBe("Friedman")
+            expect(row?.part).toBe("Eb")
+            expect(row?.partGroup).toBe("barchu friedman")
+        })
     })
 
     // ─── retryFailed ─────────────────────────────────────────────────────

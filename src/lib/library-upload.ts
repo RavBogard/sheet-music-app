@@ -27,6 +27,7 @@ import {
     type LibraryRowCreatedEvent,
 } from "@/lib/library/library-events"
 import { normalizeChartTitle } from "@/lib/library/normalize-chart-title"
+import { computeSettingPartFields } from "@/lib/library/setting-part"
 // F-5 (setlist-import-via-pcu-with-defaults-mirror lane): post-batch
 // dual-write of key/bpm/leadMusician to BOTH `library_index` and
 // `songs/{id}.defaults` via the shared `applySongMetadata` helper, so a
@@ -645,6 +646,9 @@ export async function processChartUpload(
         normalizedName,
         stem,
         titleSpecificity: titleSpecificity(title, siblingsInCatalog),
+        // Setlist memory: setting + instrument-part grouping, parsed from the
+        // title. A brand-new row, so there is no human choice to preserve.
+        ...computeSettingPartFields(title),
         bondCorrectionHistory: { correctedTo: 0, correctedAwayFrom: 0 },
         // Cycle-3 NEW-3 (A3) — AI enrichment lifecycle field. Defaults to
         // 'pending' on every new row; the post-import AI subscriber
