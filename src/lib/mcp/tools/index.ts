@@ -153,6 +153,7 @@ import { getSongHistoryTool, exportSetlistsTool } from "./history"
 import { setStandingChoiceTool, clearStandingChoiceTool } from "./standing"
 import { draftServiceTool, createSetlistFromDraftTool } from "./draft-service"
 import { addOpenItemTool, resolveOpenItemTool } from "./open-items"
+import { readBackSetlistTool } from "./read-back-setlist"
 import { seedServiceProfiles, getServiceProfileTool } from "./service-profiles"
 import { richError, liftLegacyErrorEnvelope } from "@/lib/mcp/error-envelopes"
 export { registerTestTokenTools } from "./test-tokens"
@@ -946,6 +947,19 @@ export function registerReadTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await resolveOpenItemTool(uidFrom(extra), args, orgFrom(extra))),
+    )
+
+    server.registerTool(
+        "read_back_setlist",
+        {
+            description:
+                "Read an existing setlist back the way it should be said aloud: exceptions first, then one line for everything else, plus open items. Use after any change and whenever the author asks 'what's on Saturday?'. When the setlist stores its service type (and rabbi, where that changes the music) and the profile exists, rows are compared with their standard or usual; otherwise it lists only rows with no chart and open items. Say `readback.text`; show `readback.exceptions` as a short list. Read-only. Tenant-scoped. Returns `{ok, setlistId, readback:{headline, exceptions:[{kind, index, text}], rest, text}}`.",
+            inputSchema: {
+                setlistId: z.string().min(1).describe("Setlist id."),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await readBackSetlistTool(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(

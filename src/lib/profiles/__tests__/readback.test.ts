@@ -134,6 +134,26 @@ describe("buildReadback", () => {
         expect(buildReadback({ ...base, profileLabel: null, book: null, rows: [] }).headline).toBe("Nov 7.")
     })
 
+    it("a usual row whose chart was taken off reads 'no chart yet'; a differing row reads its note", () => {
+        const rows = [
+            song(0, "Barchu", { hasChart: false, keyOnRecord: false }),
+            song(1, "Oseh Shalom", { differs: "Oseh Shalom (Zeira) in Cm this week; usual is Oseh Shalom (Zeira) in Dm" }),
+            song(2, "Adon Olam"),
+        ]
+        const r = buildReadback({ ...base, rows })
+        expect(r.exceptions).toEqual([
+            { kind: "no_chart", index: 0, text: "Barchu: no chart yet" },
+            { kind: "open_slot", index: 1, text: "Oseh Shalom: Oseh Shalom (Zeira) in Cm this week; usual is Oseh Shalom (Zeira) in Dm" },
+        ])
+        expect(r.rest).toBe("Everything else is your usual Randy Shabbat morning, 1 song.")
+    })
+
+    it("no profile: the setlist name heads the readback", () => {
+        expect(buildReadback({ ...base, profileLabel: null, title: "Gig at Off Broadway", book: null, rows: [] }).headline).toBe(
+            "Gig at Off Broadway, Nov 7.",
+        )
+    })
+
     it("no profile: no tier wording, lists rows with no chart", () => {
         const rows: ReadbackRow[] = [
             header(0, "Set 1"),

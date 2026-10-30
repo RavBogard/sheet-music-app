@@ -18,6 +18,7 @@ export const READ_TOOLS: ReadonlySet<string> = new Set([
     "search_setlists",
     "get_song_history",
     "get_service_profile",
+    "read_back_setlist",
     "export_setlists",
     "find_setlists_referencing_chart",
     "find_setlists_from_template",

@@ -29,6 +29,12 @@ export interface ReadbackRow {
     keyOnRecord: boolean
     standing?: { byName: string; at: string } | null
     promotion?: Promotion
+    /**
+     * An existing setlist only: how this row differs from its standard or
+     * usual chart ("Barchu (Walkdown) in Cm this week; usual is Barchu
+     * (Walkdown) in Dm"). Listed as an open slot.
+     */
+    differs?: string
 }
 
 export interface OpenItem {
@@ -54,6 +60,8 @@ export interface Readback {
 
 export interface ReadbackInput {
     profileLabel: string | null
+    /** Headline name when there is no profile (the setlist's own name). */
+    title?: string | null
     /** YYYY-MM-DD. */
     date: string | null
     /** A book slug; the headline says its title. */
@@ -98,7 +106,7 @@ function spoken(text: string): string {
 export function buildReadback(input: ReadbackInput): Readback {
     const { profileLabel, rows, openItems, now } = input
 
-    const parts = [profileLabel, monthDay(input.date), bookTitle(input.book)].filter((p): p is string => !!p)
+    const parts = [profileLabel ?? input.title ?? null, monthDay(input.date), bookTitle(input.book)].filter((p): p is string => !!p)
     let headline = parts.length > 0 ? `${parts.join(", ")}.` : ""
     if (input.special) {
         headline = `${headline} Marked special: changes are for this week only.`.trim()
@@ -111,8 +119,10 @@ export function buildReadback(input: ReadbackInput): Readback {
         const before = exceptions.length
         if (r.tier && OPEN_TIERS.has(r.tier)) {
             exceptions.push({ kind: "open_slot", index: r.index, text: `${r.label}: ${r.phrase ?? ""}`.trim() })
-        } else if (!r.hasChart && r.tier === null) {
+        } else if (!r.hasChart) {
             exceptions.push({ kind: "no_chart", index: r.index, text: `${r.label}: no chart yet` })
+        } else if (r.differs) {
+            exceptions.push({ kind: "open_slot", index: r.index, text: `${r.label}: ${r.differs}` })
         }
         if (r.tier === "standard" && r.standing && isRecent(r.standing.at, now)) {
             const since = monthDay(r.standing.at)
