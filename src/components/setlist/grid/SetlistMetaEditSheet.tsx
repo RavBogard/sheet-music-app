@@ -1,5 +1,6 @@
 'use client'
 
+import { storedClassFor } from '@/lib/history/classify'
 import { Calendar as CalendarIcon, Check, Loader2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
@@ -145,12 +146,17 @@ export function SetlistMetaEditSheet({
             patch.eventDate = eventDate ? eventDate.toISOString() : null
         }
 
+        // Setlist memory r2: the stored class (serviceType / rabbiSlot) is
+        // written from the same normalisation as the edited field, so it can
+        // never go stale against what the author just typed.
         if (serviceType !== initial.templateType) {
             patch.templateType = serviceType ?? null
+            patch.serviceType = storedClassFor({ templateType: serviceType ?? null }).serviceType ?? null
         }
 
         if (rabbi !== (initial.rabbi ?? '')) {
             patch.rabbi = rabbi.trim() ? rabbi.trim() : null
+            patch.rabbiSlot = storedClassFor({ rabbi: rabbi.trim() || null }).rabbiSlot ?? null
         }
 
         // Nothing changed — close without enqueueing a write (AC-4).

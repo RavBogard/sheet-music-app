@@ -133,7 +133,6 @@ import { listContacts, createContact, deleteContact, findContact } from "./conta
 import {
     flagBond,
     reviewFlaggedBonds,
-    recordBondCorrection,
 } from "./bond-corrections"
 import {
     listMusicians,
@@ -151,6 +150,9 @@ import { listServicePersonnel } from "./service-personnel"
 import { updateSong } from "./song-metadata"
 import { listBooksTool, lookupBookPageTool } from "./books"
 import { getSongHistoryTool, exportSetlistsTool } from "./history"
+import { setStandingChoiceTool, clearStandingChoiceTool } from "./standing"
+import { draftServiceTool, createSetlistFromDraftTool } from "./draft-service"
+import { seedServiceProfiles, getServiceProfileTool } from "./service-profiles"
 import { richError, liftLegacyErrorEnvelope } from "@/lib/mcp/error-envelopes"
 export { registerTestTokenTools } from "./test-tokens"
 export { registerMintAdminBearerTools } from "./mint-admin-bearer"
@@ -805,6 +807,115 @@ export function registerReadTools(server: McpServer): void {
             jsonResult(
                 await exportSetlistsTool(uidFrom(extra), args, orgFrom(extra)),
             ),
+    )
+
+    server.registerTool(
+        "set_standing_choice",
+        {
+            description:
+                "Remember a row's chart, key and vocal lead as the standard for that slot of the service's profile (\"keep it in Dm\"). Use only when the author says to keep a choice for next time; never on your own judgment. Point at the row by `setlistId` + `trackId`; the profile comes from the setlist's service type and rabbi slot, and the choice is remembered for that profile only. Replacing someone else's choice from the last 28 days is reported in `overrode`. Undo with clear_standing_choice. Admin / band_leader. Returns `{ok, announcement, scope, slotKey, choice, overrode?}`; read `announcement` back to the author.",
+            inputSchema: {
+                setlistId: z.string().describe("The setlist the row is on."),
+                trackId: z.string().describe("The row whose chart and key become standard."),
+                quote: z
+                    .string()
+                    .optional()
+                    .describe("The author's words, kept with the choice (e.g. 'keep it in Dm')."),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await setStandingChoiceTool(uidFrom(extra), args, orgFrom(extra))),
+    )
+
+    server.registerTool(
+        "clear_standing_choice",
+        {
+            description:
+                "Undo the standing choice for a row's slot: the choice it replaced comes back, or the slot has no standard. Same `setlistId` + `trackId` as set_standing_choice. Admin / band_leader. Returns `{ok, announcement, scope, slotKey, restored}`; read `announcement` back to the author.",
+            inputSchema: {
+                setlistId: z.string().describe("The setlist the row is on."),
+                trackId: z.string().describe("The row whose slot's standard is undone."),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await clearStandingChoiceTool(uidFrom(extra), args, orgFrom(extra))),
+    )
+
+    server.registerTool(
+        "get_service_profile",
+        {
+            description:
+                "The living profile of a recurring service: its running order, and for every song slot how sure the server is about the chart and key, computed now from standing choices and history. Each slot's `tier` is `standard` (someone set it with set_standing_choice), `usual` (the same chart on 3 of the last 5 regular weeks), `last_time`, `other_service` or `new`, with a `phrase` to read back. Only standard and usual are ever filled; it never picks a setting nobody chose. friday_night and shabbat_morning need `rabbiSlot`; other services have one profile whoever leads. Tenant-scoped. Returns `{ok, templateId, profile, rows: [{index, type, title, slotKind, slotKey, house, tier?}], truncated}`.",
+            inputSchema: {
+                serviceType: z
+                    .string()
+                    .describe("Service type key, e.g. 'shabbat_morning', 'friday_night', 'shir_shabbat'."),
+                rabbiSlot: z
+                    .enum(["daniel_karen", "randy"])
+                    .optional()
+                    .describe("Required for friday_night and shabbat_morning: which rabbi leads."),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await getServiceProfileTool(uidFrom(extra), args, orgFrom(extra))),
+    )
+
+    server.registerTool(
+        "draft_service",
+        {
+            description:
+                "Draft one service from its living profile, for the author to review before anything is created. A song slot is filled only when it is `standard` (set with set_standing_choice) or `usual` (the same chart on 3 of the last 5 regular weeks); every other song slot is left open with its label and listed in `openIndexes`. It never picks a setting nobody chose. friday_night and shabbat_morning need `rabbiSlot`: ask who is leading, never infer it. `special` defaults to true for holiday services. The draft is kept 30 minutes; create the setlist with create_setlist_from_draft. Admin / band_leader. Tenant-scoped. Returns `{ok, draftId, expiresAt, profile:{key,label,book}, special, rows:[{index, label, type, slotKey, fileId?, chartName?, key?, tier, phrase, promotion?}], openIndexes, truncated}`.",
+            inputSchema: {
+                date: z.string().describe("Service date, YYYY-MM-DD."),
+                serviceType: z
+                    .string()
+                    .describe("Service type key, e.g. 'shabbat_morning', 'friday_night', 'shir_shabbat'."),
+                rabbiSlot: z
+                    .enum(["daniel_karen", "randy"])
+                    .optional()
+                    .describe("Required for friday_night and shabbat_morning: which rabbi leads. Ask; never infer."),
+                special: z
+                    .boolean()
+                    .optional()
+                    .describe("A special week (holiday, guest service). Special weeks never count toward 'usual'."),
+                name: z.string().optional().describe("Name for the setlist; defaults to the profile label and date."),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await draftServiceTool(uidFrom(extra), args, orgFrom(extra))),
+    )
+
+    server.registerTool(
+        "create_setlist_from_draft",
+        {
+            description:
+                "Create the setlist from a draft_service draft, after the author has chosen charts for the open slots. Rows keep the draft's order; the profile's book is bound as clone_setlist_from_template does, and the setlist stores its service type, rabbi slot and special flag. Each choice names a song row by its draft `index` and may set `fileId`, `key` and `leadMusician`. Set `standing: true` only when the author says to keep that choice for next time; it is then remembered as the slot's standard and announced. Changes to filled rows without `standing` are one-offs, summed up in `oneOffNote`. An open slot with no choice is created with its label and no chart. The draft is deleted. Admin / band_leader. Tenant-scoped. Returns `{ok, setlistId, trackCount, book, announcements, oneOffNote?, unresolvedLiturgy, bondReviewCount}`; read `announcements` and `oneOffNote` back to the author.",
+            inputSchema: {
+                draftId: z.string().describe("The draftId from draft_service."),
+                name: z.string().optional().describe("Name for the setlist; overrides the draft's."),
+                choices: z
+                    .array(
+                        z.object({
+                            index: z.number().int().describe("The draft row's index."),
+                            fileId: z.string().optional().describe("Chart for the row (a library fileId)."),
+                            key: z.string().optional().describe("Key for the row, e.g. 'Dm'."),
+                            leadMusician: z.string().optional().describe("Vocal Lead for the row."),
+                            standing: z
+                                .boolean()
+                                .optional()
+                                .describe("True only when the author says to keep this for next time."),
+                            quote: z
+                                .string()
+                                .optional()
+                                .describe("The author's words, kept with a standing choice (e.g. 'keep it in Dm')."),
+                        }),
+                    )
+                    .optional()
+                    .describe("The author's choices for draft rows."),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await createSetlistFromDraftTool(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -1576,6 +1687,19 @@ export function registerWriteTools(server: McpServer): void {
                     .describe(
                         "Wall-clock start time for THIS service, 24-hour `HH:mm` in the tenant's local time (e.g. '18:00' for 6pm). Overrides the per-serviceType default start held in the congregation config. Read by the public today.json that the siddur reader and the stream overlays use, so set it when a service starts at an unusual time.",
                     ),
+                special: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "Mark this a special week (guests, holiday, memorial). A special week never counts toward what a service profile usually plays.",
+                    ),
+                rabbiSlot: z
+                    .enum(["daniel_karen", "randy"])
+                    .nullable()
+                    .optional()
+                    .describe(
+                        "Which rabbi slot leads this service: 'daniel_karen' or 'randy'. null clears it. Changing `rabbi` without this clears the stored slot, so it is read from the new rabbi text.",
+                    ),
                 lastSeenVersion: lastSeenVersionSchema.describe(
                     "Optional optimistic-concurrency gate: pass the setlist's `version` from your last get_setlist / list_setlists. The write rejects with `{error: 'stale_version', currentVersion, lastSeenVersion, hint, ...}` if it doesn't match — call get_setlist and retry.",
                 ),
@@ -1952,7 +2076,7 @@ export function registerWriteTools(server: McpServer): void {
         "preview_notify_band",
         {
             description:
-                "PREVIEW a band notification before sending it. Wraps notify_band({dryRun: true}) and reformats the response into the four signals needed for a chat-native confirm: chartHealth (`{bondedCount, okCount, missingCount, unreachableCount, unhealthy[]}` — same shape notify_band returns), audience (recipient count + role breakdown across admin/band_leader/musician/member), snapshotDiff against what the band was last told (added / removed / modified track rows), flaggedBonds (count of open bond_flags awaiting review via review_flagged_bonds), and `recommendation`: 'hard_block' if any chart status is 'missing' (the band would 404), 'review_first' if flaggedBonds > 0 (walk them first via review_flagged_bonds + record_bond_correction), 'send' otherwise. Use this between the propose→commit cycle and the actual notify_band call. Read-only — no writes, no notifications, no rate-limited charge.",
+                "PREVIEW a band notification before sending it. Wraps notify_band({dryRun: true}) and reformats the response into the four signals needed for a chat-native confirm: chartHealth (`{bondedCount, okCount, missingCount, unreachableCount, unhealthy[]}` — same shape notify_band returns), audience (recipient count + role breakdown across admin/band_leader/musician/member), snapshotDiff against what the band was last told (added / removed / modified track rows), flaggedBonds (count of open bond_flags awaiting review via review_flagged_bonds), and `recommendation`: 'hard_block' if any chart status is 'missing' (the band would 404), 'review_first' if flaggedBonds > 0 (walk them first via review_flagged_bonds), 'send' otherwise. Use this between the propose→commit cycle and the actual notify_band call. Read-only — no writes, no notifications, no rate-limited charge.",
             inputSchema: {
                 setlistId: z.string().min(1).describe("Setlist id"),
                 audience: z
@@ -2041,7 +2165,7 @@ export function registerWriteTools(server: McpServer): void {
         "flag_bond",
         {
             description:
-                "W-01 — Flag a setlist row for batch review (typically because the bonded song was committed at low confidence and the rabbi should double-check before publish). Upserts `bond_flags/{setlistId}_{trackId}` with the reason, flaggedAt, flaggedBy. Idempotent — re-flagging the same row updates the reason. Pair with `review_flagged_bonds` at end of authoring to walk the queue, then `record_bond_correction` per resolution.",
+                "W-01 — Flag a setlist row for batch review (typically because the bonded song was committed at low confidence and the rabbi should double-check before publish). Upserts `bond_flags/{setlistId}_{trackId}` with the reason, flaggedAt, flaggedBy. Idempotent — re-flagging the same row updates the reason. Pair with `review_flagged_bonds` at end of authoring to walk the queue, then fix each row with swap_chart.",
             inputSchema: {
                 setlistId: z.string().min(1).describe("Setlist id"),
                 trackId: z.string().min(1).describe("Track id to flag"),
@@ -2060,43 +2184,13 @@ export function registerWriteTools(server: McpServer): void {
         "review_flagged_bonds",
         {
             description:
-                "W-01 — Return every open bond_flag for a setlist, joined with the current track state and up to 5 alternative songIds ranked by W-02 signals (titleSpecificity, bondCorrectionHistory bias, contextHint boost when the setlist has a templateType). Use at end of authoring to walk the batch with the rabbi; for each correction the rabbi confirms, follow with record_bond_correction.",
+                "W-01 — Return every open bond_flag for a setlist, joined with the current track state and up to 5 alternative songIds ranked by W-02 signals (titleSpecificity, bondCorrectionHistory bias, contextHint boost when the setlist has a templateType). Use at end of authoring to walk the batch with the rabbi; for each correction the rabbi confirms, fix the row with swap_chart.",
             inputSchema: {
                 setlistId: z.string().min(1).describe("Setlist id"),
             },
         },
         async (args, extra) =>
             jsonResult(await reviewFlaggedBonds(uidFrom(extra), args, orgFrom(extra))),
-    )
-
-    server.registerTool(
-        "record_bond_correction",
-        {
-            description:
-                "W-01 — Record a rabbi-confirmed bond correction as the system's training signal. In one Firestore transaction: writes `bond_corrections/{id}` (audit trail), bumps library_index.{fromSongId}.bondCorrectionHistory.correctedAwayFrom + library_index.{toSongId}.bondCorrectionHistory.correctedTo, deletes the matching `bond_flags/{setlistId}_{trackId}` doc, and — when correctedTo for the (toSongId stem, setlist contextKey) pair hits the 3-pick threshold — upserts `titleContextHints/{stem}_{contextKey}` so search_library biases future calls toward `toSongId`. contextKey is derived from the setlist's templateType (e.g. 'shabbat-morning'). Re-bonding the actual track is a separate call — use update_track / swap_chart to flip the row's songId. record_bond_correction is the LEARNING signal, not the row mutation.",
-            inputSchema: {
-                setlistId: z.string().min(1).describe("Setlist id"),
-                trackId: z.string().min(1).describe("Track id corrected"),
-                fromSongId: z
-                    .string()
-                    .min(1)
-                    .describe("The songId the row WAS bonded to (the wrong one)."),
-                toSongId: z
-                    .string()
-                    .min(1)
-                    .describe(
-                        "The songId the rabbi picked instead. Must differ from fromSongId.",
-                    ),
-                reason: z
-                    .string()
-                    .optional()
-                    .describe(
-                        "Optional rationale ('wrong arrangement', 'composer mismatch') — surfaces in the audit trail.",
-                    ),
-            },
-        },
-        async (args, extra) =>
-            jsonResult(await recordBondCorrection(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -2122,7 +2216,7 @@ export function registerWriteTools(server: McpServer): void {
         "review_chart_bonds",
         {
             description:
-                "Detect WRONG bonds on a setlist — rows where the song title and the bonded chart's filename diverge (e.g. a 'Barchu' row bonded to 'Ahava Raba.pdf'). Complements verify_setlist_charts: that tool checks whether a chart is REACHABLE; this one checks whether the reachable chart is the RIGHT song. For each bonded track it compares the normalized title against `library_index/{fileId}.name` (the raw chart filename) via conservative token-overlap and returns per-row `{trackId, title, fileId, chartFileName, overlapScore (0-1), mismatch}` plus aggregate `mismatchCount` / `bondedCount`. Run it after clone_setlist (clones inherit the source's bonds verbatim) or before publish to catch a mis-bond the band would otherwise see. Read-only — it reports; remediate a flagged row with swap_chart, then record_bond_correction to train ranking. A null `chartFileName` means the fileId has no catalog row (a byte-health issue — run verify_setlist_charts).",
+                "Detect WRONG bonds on a setlist — rows where the song title and the bonded chart's filename diverge (e.g. a 'Barchu' row bonded to 'Ahava Raba.pdf'). Complements verify_setlist_charts: that tool checks whether a chart is REACHABLE; this one checks whether the reachable chart is the RIGHT song. For each bonded track it compares the normalized title against `library_index/{fileId}.name` (the raw chart filename) via conservative token-overlap and returns per-row `{trackId, title, fileId, chartFileName, overlapScore (0-1), mismatch}` plus aggregate `mismatchCount` / `bondedCount`. Run it after clone_setlist (clones inherit the source's bonds verbatim) or before publish to catch a mis-bond the band would otherwise see. Read-only — it reports; remediate a flagged row with swap_chart. A null `chartFileName` means the fileId has no catalog row (a byte-health issue — run verify_setlist_charts).",
             inputSchema: {
                 setlistId: z.string().min(1).describe("Setlist id"),
             },
@@ -2482,6 +2576,34 @@ export function registerWriteTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await backfillLibrarySettingParts(uidFrom(extra), args, orgFrom(extra))),
+    )
+
+    server.registerTool(
+        "seed_service_profiles",
+        {
+            description:
+                "Admin / band_leader, CRC only: seed each core service profile (Daniel or Randy Friday night, Daniel or Randy Shabbat morning, Shir Shabbat, B'nei Mitzvah) from its own past setlists. The running order comes from the most recent regular (non-special) setlist of the profile; a song slot keeps its chart and key only when that chart is usual there (3 of the last 5 regular weeks), and every other slot is left open and listed in `unsure` for the author to review. One template per profile, found by its profile key; templates without a profile are never touched. By default only missing profiles are created and an existing profile is never overwritten (outcome `kept`); pass `replace: true` to re-seed existing ones, and the dry run then lists each row that would change in `rowChanges`. If another write lands on a profile mid-run, the run stops and returns what it wrote with `partial: true`. Another tenant gets `seeded: []`. F-05: `dryRun` defaults true and returns the full report; a real run needs `dryRun: false, force: true`. Returns `{ok, dryRun, profiles: [{key, label, basedOn, trackCount, tracks, unsure}], seeded: [{key, templateId, outcome, rowChanges?}], changed, truncated, partial?, conflict?}`.",
+            inputSchema: {
+                profiles: z
+                    .array(z.string())
+                    .optional()
+                    .describe("Profile keys to seed, e.g. ['shabbat_morning:randy']. Default: every core profile."),
+                dryRun: z
+                    .boolean()
+                    .optional()
+                    .describe("When true (default), report without writing."),
+                force: z
+                    .boolean()
+                    .optional()
+                    .describe("Required with `dryRun: false` to write."),
+                replace: z
+                    .boolean()
+                    .optional()
+                    .describe("Re-seed profiles that already exist. Default false: only missing profiles are created."),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await seedServiceProfiles(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(

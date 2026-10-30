@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { classifyService } from "../classify"
+import { classifyService, storedClassFor } from "../classify"
 
 describe("classifyService", () => {
     it.each([
@@ -37,5 +37,49 @@ describe("classifyService", () => {
 
     it("never reads a rabbi name inside a longer word", () => {
         expect(classifyService({ name: "Shabbat Morning", rabbi: "Danielle" }).rabbiSlot).toBeNull()
+    })
+
+    describe("stored service class", () => {
+        it("a stored value wins over inference", () => {
+            const c = classifyService({ name: "Shabbat with guests", serviceType: "shabbat_morning", special: false })
+            expect(c.special).toBe(false)
+            expect(c.serviceType).toBe("shabbat_morning")
+        })
+
+        it("a stored special:true marks an ordinary-looking week", () => {
+            expect(classifyService({ name: "Shabbat Morning", templateType: "shabbat_morning", special: true }).special).toBe(true)
+        })
+
+        it("a stored rabbiSlot wins over the rabbi text", () => {
+            expect(classifyService({ name: "Shabbat Morning", rabbi: "Daniel", rabbiSlot: "randy" }).rabbiSlot).toBe("randy")
+        })
+
+        it("null or unknown stored values fall back to inference", () => {
+            const c = classifyService({
+                name: "Kabbalat Shabbat — May 22, 2026",
+                templateType: "kabbalat-shabbat",
+                rabbi: "Daniel",
+                serviceType: "nonsense",
+                rabbiSlot: null,
+                special: null,
+            })
+            expect(c).toEqual({ serviceType: "friday_night", rabbiSlot: "daniel_karen", special: false, part: null })
+        })
+
+        it("a stored holiday type with no stored special is still special", () => {
+            expect(classifyService({ name: "x", serviceType: "yom_kippur_morning" }).special).toBe(true)
+        })
+    })
+})
+
+describe("storedClassFor", () => {
+    it("normalises an author's own entries exactly as classifyService reads them", () => {
+        expect(storedClassFor({ templateType: "shabbat-morning", rabbi: "Rabbi Randy Fleisher" })).toEqual({
+            serviceType: "shabbat_morning",
+            rabbiSlot: "randy",
+        })
+        expect(storedClassFor({ templateType: "other", rabbi: "Guest" })).toEqual({ serviceType: null, rabbiSlot: null })
+        expect(storedClassFor({ rabbi: "Daniel" })).toEqual({ rabbiSlot: "daniel_karen" })
+        expect(storedClassFor({})).toEqual({})
     })
 })

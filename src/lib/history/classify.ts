@@ -116,21 +116,64 @@ function rabbiSlotFor(rabbi: string | null | undefined): RabbiSlotKey | null {
     return hits.length === 1 ? (hits[0].key as RabbiSlotKey) : null
 }
 
+/** A stored rabbi-slot value if it is a known slot key, else null. */
+export function storedRabbiSlot(v: unknown): RabbiSlotKey | null {
+    return CRC_RABBI_SLOTS.some((slot) => slot.key === v) ? (v as RabbiSlotKey) : null
+}
+
+/**
+ * Classify a setlist. Values stored on the setlist (`serviceType`,
+ * `rabbiSlot`, `special`, written only by explicit author actions) win; a stored value that is missing,
+ * null or not a known key falls back to inference from name / templateType /
+ * rabbi text. `part` always comes from the name.
+ */
 export function classifyService(s: {
     name: string
     templateType?: string | null
     rabbi?: string | null
+    serviceType?: string | null
+    rabbiSlot?: string | null
+    special?: boolean | null
 }): ServiceClass {
     const name = typeof s.name === "string" ? s.name : ""
     const part = setlistPart(name)
-    const serviceType = serviceTypeFor(name, s.templateType)
-    const rabbiSlot = rabbiSlotFor(s.rabbi)
+    const serviceType = mapTemplateType(s.serviceType) ?? serviceTypeFor(name, s.templateType)
+    const rabbiSlot = storedRabbiSlot(s.rabbiSlot) ?? rabbiSlotFor(s.rabbi)
     const tt = typeof s.templateType === "string" ? s.templateType.trim() : ""
     const special =
-        (serviceType !== null && CATALOG_CATEGORY.get(serviceType) === "holiday") ||
-        /\b(with|w\/)\s/i.test(name) ||
-        /memorial/i.test(name) ||
-        SPECIAL_TEMPLATE_TYPES.has(tt) ||
-        serviceType === null
+        typeof s.special === "boolean"
+            ? s.special
+            : (serviceType !== null && CATALOG_CATEGORY.get(serviceType) === "holiday") ||
+              /\b(with|w\/)\s/i.test(name) ||
+              /memorial/i.test(name) ||
+              SPECIAL_TEMPLATE_TYPES.has(tt) ||
+              serviceType === null
     return { serviceType, rabbiSlot, special, part }
+}
+
+/**
+ * The stored class to write next to an author's own `templateType` / `rabbi`
+ * edit, normalised exactly as classifyService reads them, so a stored value
+ * can never go stale against the fields it was taken from. Only the keys
+ * given are returned (`templateType` -> `serviceType`, `rabbi` -> `rabbiSlot`);
+ * a value that maps to nothing stores null.
+ */
+export function storedClassFor(v: {
+    templateType?: string | null
+    rabbi?: string | null
+}): { serviceType?: string | null; rabbiSlot?: RabbiSlotKey | null } {
+    const out: { serviceType?: string | null; rabbiSlot?: RabbiSlotKey | null } = {}
+    if (v.templateType !== undefined) out.serviceType = mapTemplateType(v.templateType)
+    if (v.rabbi !== undefined) out.rabbiSlot = rabbiSlotFor(v.rabbi)
+    return out
+}
+
+/** The rabbi slot a free-text rabbi entry names, or null. */
+export function rabbiSlotOf(rabbi: string | null | undefined): RabbiSlotKey | null {
+    return rabbiSlotFor(rabbi)
+}
+
+/** The catalog key a free `templateType` / service-type string maps to, or null. */
+export function catalogServiceType(value: string | null | undefined): string | null {
+    return mapTemplateType(value)
 }

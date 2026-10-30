@@ -35,6 +35,7 @@ import { getSongById, resolveTrackBondDefaults } from "@/lib/mcp/server-songs"
 import { getChartHealth } from "@/lib/file-fetcher"
 import { liturgyRefGuard, bookSlugGuard } from "@/lib/mcp/liturgy-ref-guard"
 import { rowOrg } from "@/lib/mcp/org-context"
+import { catalogServiceType, rabbiSlotOf, storedClassFor } from "@/lib/history/classify"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 import { parseEventDate } from "@/lib/parse-event-date"
@@ -250,6 +251,7 @@ export async function createSetlist(
             }
             if (args.serviceType !== undefined) setlistPayload.templateType = args.serviceType
             if (args.rabbi !== undefined) setlistPayload.rabbi = args.rabbi
+            Object.assign(setlistPayload, storedClassFor({ templateType: args.serviceType, rabbi: args.rabbi }))
             if (args.book !== undefined) setlistPayload.book = args.book
 
             tx.create(db.collection("setlists").doc(candidateSetlistId), setlistPayload)
@@ -332,6 +334,13 @@ export interface UpdateSetlistArgs {
      * `today.json`.
      */
     startsAtLocal?: string
+    /**
+     * Setlist memory r2 — a special week (guests, holiday, memorial) never
+     * counts toward a profile's usual. Stored on the setlist.
+     */
+    special?: boolean
+    /** Setlist memory r2 — which CRC rabbi slot leads; null clears it. */
+    rabbiSlot?: "daniel_karen" | "randy" | null
     /** W-04 Plan 02 optimistic-concurrency gate (setlist-level version). */
     lastSeenVersion?: number
 }
@@ -350,6 +359,8 @@ export async function updateSetlist(
               rabbi: string | null
               serviceType: string | null
               serviceNotes: string | null
+              rabbiSlot: string | null
+              special: boolean | null
           }
           /** Present only when the book changed. See `rebookRows`. */
           rebook?: RebookReport & { from: string; to: string }
@@ -373,8 +384,18 @@ export async function updateSetlist(
     if (args.eventDate !== undefined) patch.eventDate = args.eventDate
     if (args.serviceType !== undefined) {
         patch.serviceType = args.serviceType as SetlistMetadataPatch["serviceType"]
+        // The stored class follows the author's new service type, so a stale
+        // stored value never outranks it. An unknown type clears it (inferred).
+        patch.storedServiceType = catalogServiceType(args.serviceType)
     }
-    if (args.rabbi !== undefined) patch.rabbi = args.rabbi
+    if (args.rabbi !== undefined) {
+        patch.rabbi = args.rabbi
+        // New rabbi text without an explicit slot: the stored slot is the
+        // one the new text names (null when it names none), never the old value.
+        if (args.rabbiSlot === undefined) patch.rabbiSlot = rabbiSlotOf(args.rabbi)
+    }
+    if (args.rabbiSlot !== undefined) patch.rabbiSlot = args.rabbiSlot
+    if (args.special !== undefined) patch.special = args.special
     if (args.serviceNotes !== undefined) patch.serviceNotes = args.serviceNotes
     if (args.book !== undefined) patch.book = args.book
     if (args.startsAtLocal !== undefined) {
@@ -492,6 +513,8 @@ export async function updateSetlist(
             rabbi: str(updated?.rabbi),
             serviceType: str(updated?.templateType ?? updated?.serviceType),
             serviceNotes: str(updated?.serviceNotes),
+            rabbiSlot: str(updated?.rabbiSlot),
+            special: typeof updated?.special === "boolean" ? updated.special : null,
         },
         ...(rebook ? { rebook } : {}),
     }

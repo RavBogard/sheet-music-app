@@ -3,7 +3,8 @@ import "server-only"
 import type { Firestore, Timestamp } from "firebase-admin/firestore"
 
 /**
- * Shared write step for the setlist-memory library back-fills.
+ * Shared write step for the setlist-memory back-fills (library rows by
+ * default; `setlists` for the service-class back-fill).
  *
  * Each row is written with `update` (never `set`, so a row deleted since the
  * scan is not recreated without its orgId) and a `lastUpdateTime`
@@ -30,6 +31,8 @@ function changedSinceScan(error: unknown): boolean {
 export async function updateRowsIfUnchanged(
     db: Firestore,
     rows: ConditionalRowUpdate[],
+    /** The collection the row ids live in. `fileId` is the doc id. */
+    collection: string = "library_index",
 ): Promise<{ written: Set<string>; changedDuringRun: Set<string> }> {
     const written = new Set<string>()
     const changedDuringRun = new Set<string>()
@@ -37,7 +40,7 @@ export async function updateRowsIfUnchanged(
     const worker = async () => {
         while (next < rows.length) {
             const row = rows[next++]
-            const ref = db.collection("library_index").doc(row.fileId)
+            const ref = db.collection(collection).doc(row.fileId)
             try {
                 if (row.updateTime) {
                     await ref.update(row.patch, { lastUpdateTime: row.updateTime })

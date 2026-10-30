@@ -4,9 +4,10 @@ import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 import { logger } from "@/lib/logger"
-import { classifyService, type RabbiSlotKey } from "@/lib/history/classify"
+import type { RabbiSlotKey } from "@/lib/history/classify"
 import {
     buildSongHistory,
+    classifyHistorySetlist,
     type HistorySetlist,
     type SongHistoryQuery,
     type SongHistoryResult,
@@ -123,7 +124,7 @@ export async function exportSetlistsTool(
         for (const s of setlists as HistorySetlist[]) {
             if (s.isTest) continue
             if (!s.eventDate && args?.includeUndated !== true) continue
-            const cls = classifyService({ name: s.name, templateType: s.templateType, rabbi: s.rabbi })
+            const cls = classifyHistorySetlist(s)
             if (cls.part && args?.includeParts !== true) continue
             out.push({
                 id: s.id,

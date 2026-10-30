@@ -36,7 +36,13 @@ import type { SongRecord } from "@/lib/mcp/server-songs"
  * Tools shipped in this module:
  *   - `flag_bond(setlistId, trackId, reason)`               — Task 4
  *   - `review_flagged_bonds(setlistId)`                     — Task 4
- *   - `record_bond_correction(setlistId, trackId, fromSongId, toSongId, reason?)` — Task 5
+ *
+ * `record_bond_correction` is RETIRED as an MCP tool (setlist memory,
+ * release 2): service profiles and standing choices are the one learning
+ * system now, and propose_setlist_changes reads them. `recordBondCorrection`
+ * stays exported, unregistered, so the stored `bond_corrections`,
+ * counters and `titleContextHints` keep their documented writer and tests;
+ * the hints are frozen and still read by search_library.
  *
  * Doc-id shape for the flags collection: `bond_flags/{setlistId}_{trackId}` —
  * composite natural key so a re-flag of the same row upserts cleanly. The

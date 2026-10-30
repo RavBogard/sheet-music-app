@@ -74,6 +74,7 @@ function readsFor(p: Persona, own: string): Array<[string, Op]> {
         ["GA1 system/globalAlert", (db) => db.doc("system/globalAlert").get()],
         ["P1 overrides get", (db) => db.doc(`setlists/${ownSetlist}/performance/overrides`).get()],
         ["U1 own users doc", (db) => db.doc(`users/${p}`).get()],
+        ["standing_choices orgId==own", (db) => db.collection("standing_choices").where("orgId", "==", own).get()],
         ["UN1 own notifications", (db) => db.collection("users").doc(p).collection("notifications").where("read", "==", false).get()],
     ]
 }

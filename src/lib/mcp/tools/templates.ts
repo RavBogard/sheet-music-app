@@ -1,3 +1,4 @@
+import { storedClassFor } from "@/lib/history/classify"
 import crypto from "crypto"
 import { FieldValue } from "firebase-admin/firestore"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
@@ -99,6 +100,37 @@ export interface TemplateTrack {
     liturgyRefs?: SlotLiturgyRefs | null
     /** Fixed-liturgy row — see SetlistTrack.fixed. */
     fixed?: boolean | null
+    /**
+     * Profile templates only (setlist memory, release 2). What the slot is —
+     * a liturgical moment, a song, or open (no chart chosen) — its slot key,
+     * and where a remembered chart came from. Template-only: never copied
+     * onto setlist rows (`slotKey` is recomputed when needed).
+     */
+    slotKind?: "moment" | "song" | "open" | null
+    slotKey?: string | null
+    house?: { source: "history"; count: number; of: number; seededAt: string } | null
+}
+
+/** A profile template's identity (setlist memory, release 2). */
+export interface TemplateProfile {
+    key: string
+    serviceType: string
+    rabbiSlot: string | null
+    book: string | null
+    label: string
+}
+
+/** Template-only row fields carried next to COPYABLE_TRACK_FIELDS. */
+const TEMPLATE_ONLY_TRACK_FIELDS = ["liturgyRefs", "slotKind", "slotKey", "house"] as const
+
+function copyTemplateOnlyFields(from: Record<string, unknown>, to: Record<string, unknown>): void {
+    const refs = from.liturgyRefs
+    if (refs && typeof refs === "object") to.liturgyRefs = refs
+    if (from.slotKind === "moment" || from.slotKind === "song" || from.slotKind === "open") {
+        to.slotKind = from.slotKind
+    }
+    if (typeof from.slotKey === "string" && from.slotKey) to.slotKey = from.slotKey
+    if (from.house && typeof from.house === "object") to.house = from.house
 }
 
 async function ownerNameFor(db: DB, uid: string): Promise<string> {
@@ -116,7 +148,7 @@ async function ownerNameFor(db: DB, uid: string): Promise<string> {
  * Trusted-leader rate-limit bypass per [[feedback_admin_rate_limit_bypass]].
  * Returns a rich-envelope `rate_limited` if the caller is over budget.
  */
-async function rateLimitGate(
+export async function rateLimitGate(
     db: DB,
     uid: string,
     org: OrgId,
@@ -162,12 +194,12 @@ function normalizeTemplateTrack(input: TemplateTrack | undefined): Record<string
         const v = (input as Record<string, unknown>)[field]
         if (v !== undefined && v !== null) row[field] = v
     }
-    // `liturgyRefs` is template-only — it never becomes a track field, so it is
-    // deliberately absent from COPYABLE_TRACK_FIELDS and carried here instead.
-    // Without this the field would be silently dropped on every template write,
-    // which is the exact failure the shared-list module exists to prevent.
-    const refs = (input as Record<string, unknown>).liturgyRefs
-    if (refs && typeof refs === "object") row.liturgyRefs = refs
+    // `liturgyRefs` (and the profile slot fields) are template-only — they
+    // never become track fields, so they are deliberately absent from
+    // COPYABLE_TRACK_FIELDS and carried here instead. Without this the fields
+    // would be silently dropped on every template write, which is the exact
+    // failure the shared-list module exists to prevent.
+    copyTemplateOnlyFields(input as Record<string, unknown>, row)
     if (typeof row.title !== "string") row.title = ""
     if (typeof row.type !== "string") row.type = "song"
     return row
@@ -260,6 +292,8 @@ export interface GetTemplateResult {
     createdAt: string | null
     updatedAt: string | null
     version: number
+    /** Set on a profile template (setlist memory, release 2). */
+    profile?: TemplateProfile
 }
 
 export async function getTemplate(
@@ -317,10 +351,7 @@ export async function getTemplate(
               // template could carry a printed page for every row and read back
               // with none: the pages were in Firestore and invisible to anyone
               // asking the server what the template says.
-              const refs = t.liturgyRefs
-              if (refs && typeof refs === "object") {
-                  row.liturgyRefs = refs as TemplateTrack["liturgyRefs"]
-              }
+              copyTemplateOnlyFields(t, row as Record<string, unknown>)
               return row
           })
         : []
@@ -339,6 +370,9 @@ export async function getTemplate(
         createdAt: isoOfMaybeTimestamp(data.createdAt),
         updatedAt: isoOfMaybeTimestamp(data.updatedAt),
         version: typeof data.version === "number" ? data.version : 1,
+        ...(data.profile && typeof data.profile === "object"
+            ? { profile: data.profile as TemplateProfile }
+            : {}),
     }
 }
 
@@ -522,8 +556,10 @@ export function patchHasChange(
             // Same omission, same consequence in the other direction: a patch
             // that changes ONLY the printed pages read as "no change" and was
             // skipped without a write.
-            if (!fieldValuesEqual(a.liturgyRefs, (b as Record<string, unknown>).liturgyRefs)) {
-                return true
+            for (const field of TEMPLATE_ONLY_TRACK_FIELDS) {
+                if (!fieldValuesEqual(a[field], (b as Record<string, unknown>)[field])) {
+                    return true
+                }
             }
         }
     }
@@ -942,16 +978,100 @@ export async function cloneSetlistFromTemplate(
             "Verify the id via list_templates.",
         )
     }
+    // Setlist memory r2: a profile's rows are only as good as their live
+    // tiers. Cloning it verbatim would copy charts that are no longer usual.
+    if (template.profile && typeof template.profile === "object") {
+        return richError(
+            "use_draft_service",
+            `Template '${args.templateId}' is a service profile.`,
+            { templateId: args.templateId, profileKey: (template.profile as Record<string, unknown>).key ?? null },
+            "This is a service profile; use draft_service so every row's tier is rechecked.",
+        )
+    }
     const templateTracks = Array.isArray(template.tracks)
         ? (template.tracks as Record<string, unknown>[])
         : []
 
+    const copyServiceNotes = args.copyServiceNotes !== false
+    const written = await writeSetlistFromTemplateRows(db, uid, org, {
+        rows: templateTracks,
+        name: args.newName.trim(),
+        eventDate: args.newEventDate,
+        book: args.book,
+        templateType: typeof template.templateType === "string" ? template.templateType : null,
+        serviceNotes:
+            copyServiceNotes && typeof template.serviceNotes === "string" ? template.serviceNotes : null,
+        sourceTemplateId: args.templateId,
+        logLabel: "clone_setlist_from_template",
+    })
+    if (!written.ok) return written
+
+    return {
+        ok: true,
+        setlistId: written.setlistId,
+        sourceTemplateId: args.templateId,
+        trackCount: templateTracks.length,
+        ownerId: uid,
+        ownerName: written.ownerName,
+        version: 1,
+        bondReviewCount: written.bondReviewCount,
+        bondReviewRows: written.bondReviewRows,
+        book: written.book,
+        unresolvedLiturgy: written.unresolvedLiturgy,
+    }
+}
+
+// ─── shared: write a new setlist from template-shaped rows ──────────────────
+
+export interface WriteSetlistFromRowsInput {
+    /** Template-shaped rows: COPYABLE_TRACK_FIELDS plus optional `liturgyRefs`. */
+    rows: Record<string, unknown>[]
+    name: string
+    /** See CloneSetlistFromTemplateArgs.newEventDate. */
+    eventDate?: string | null
+    /** See CloneSetlistFromTemplateArgs.book. */
+    book?: string | null
+    templateType?: string | null
+    serviceNotes?: string | null
+    sourceTemplateId: string
+    /** Further setlist fields to store (e.g. the service class). Undefined values are skipped. */
+    extraSetlistFields?: Record<string, unknown>
+    logLabel: string
+}
+
+export interface WriteSetlistFromRowsResult {
+    ok: true
+    setlistId: string
+    trackIds: string[]
+    ownerName: string
+    book: string | null
+    bondReviewCount: number
+    bondReviewRows: BondReviewRow[]
+    unresolvedLiturgy: UnresolvedLiturgyRow[]
+}
+
+/**
+ * Create a setlist and its track docs from template-shaped rows, in one batch.
+ * Shared by clone_setlist_from_template and create_setlist_from_draft so both
+ * write the same track docs, bind the book the same way (per-book
+ * `liturgyRefs` resolved for `book`; unresolved rows listed, never given a
+ * borrowed page) and run the same advisory bond audit. The caller has already
+ * checked the editor role and the rate limit. Validation (unknown book, bad
+ * event date, a template page outside its book) is refused before any write.
+ */
+export async function writeSetlistFromTemplateRows(
+    db: DB,
+    uid: string,
+    org: OrgId,
+    input: WriteSetlistFromRowsInput,
+): Promise<WriteSetlistFromRowsResult | RichErrorEnvelope> {
+    const templateTracks = input.rows
     // Resolve the per-book liturgy refs BEFORE the batch. A template slot with
     // a page outside its book's range is a defect in the template, not in this
     // clone — refuse the whole clone with the registry's own message rather
     // than writing a setlist that is quietly missing page numbers.
     const cloneBook =
-        typeof args.book === "string" && args.book.trim() ? args.book.trim() : null
+        typeof input.book === "string" && input.book.trim() ? input.book.trim() : null
     if (cloneBook && !getRegistryEntry(cloneBook)) {
         return richError(
             "unknown_book",
@@ -989,9 +1109,28 @@ export async function cloneSetlistFromTemplate(
         }
     }
 
+    const eventDate = input.eventDate
+    if (eventDate !== undefined && eventDate !== null) {
+        if (!eventDate.trim()) {
+            return richError(
+                "invalid_argument",
+                "newEventDate must be a non-empty ISO date.",
+                { newEventDate: eventDate },
+                "Pass a YYYY-MM-DD or full ISO date string, or omit to skip the override.",
+            )
+        }
+        if (Number.isNaN(Date.parse(eventDate))) {
+            return richError(
+                "invalid_argument",
+                `newEventDate must be an ISO date string (got "${eventDate}").`,
+                { newEventDate: eventDate },
+                "Pass a YYYY-MM-DD or full ISO date string.",
+            )
+        }
+    }
+
     const ownerName = await ownerNameFor(db, uid)
     const newSetlistId = crypto.randomUUID()
-    const copyServiceNotes = args.copyServiceNotes !== false
 
     // C11M1-001: denormalize songCount on the new setlist — same rule as
     // clone_setlist + every server-tracks-write mutation. Templates store
@@ -1002,7 +1141,7 @@ export async function cloneSetlistFromTemplate(
     ).length
     const setlistPayload: Record<string, unknown> = {
         id: newSetlistId,
-        name: args.newName.trim(),
+        name: input.name,
         // v11-02-03: stamp the caller's org on the setlist created from a
         // template. Like clone_setlist, this raw-batch writer previously stamped
         // no orgId — a BL template-clone would default to crc and leak into CRC's
@@ -1018,35 +1157,25 @@ export async function cloneSetlistFromTemplate(
         version: 1,
         lastModifiedAt: new Date().toISOString(),
         lastModifiedBy: uid,
-        sourceTemplateId: args.templateId,
+        sourceTemplateId: input.sourceTemplateId,
     }
 
-    if (args.newEventDate !== undefined && args.newEventDate !== null) {
-        if (!args.newEventDate.trim()) {
-            return richError(
-                "invalid_argument",
-                "newEventDate must be a non-empty ISO date.",
-                { newEventDate: args.newEventDate },
-                "Pass a YYYY-MM-DD or full ISO date string, or omit to skip the override.",
-            )
-        }
-        if (Number.isNaN(Date.parse(args.newEventDate))) {
-            return richError(
-                "invalid_argument",
-                `newEventDate must be an ISO date string (got "${args.newEventDate}").`,
-                { newEventDate: args.newEventDate },
-                "Pass a YYYY-MM-DD or full ISO date string.",
-            )
-        }
-        setlistPayload.eventDate = toTimestamp(args.newEventDate, org)
+    if (eventDate !== undefined && eventDate !== null) {
+        setlistPayload.eventDate = toTimestamp(eventDate, org)
     }
 
     if (cloneBook) setlistPayload.book = cloneBook
-    if (typeof template.templateType === "string") {
-        setlistPayload.templateType = template.templateType
+    if (typeof input.templateType === "string") {
+        setlistPayload.templateType = input.templateType
+        // Setlist memory r2: the stored class follows the templateType written
+        // (a draft's explicit class, in extraSetlistFields, wins below).
+        Object.assign(setlistPayload, storedClassFor({ templateType: input.templateType }))
     }
-    if (copyServiceNotes && typeof template.serviceNotes === "string") {
-        setlistPayload.serviceNotes = template.serviceNotes
+    if (typeof input.serviceNotes === "string") {
+        setlistPayload.serviceNotes = input.serviceNotes
+    }
+    for (const [k, v] of Object.entries(input.extraSetlistFields ?? {})) {
+        if (v !== undefined) setlistPayload[k] = v
     }
 
     const canonicalFileIds = new Set<string>()
@@ -1093,8 +1222,8 @@ export async function cloneSetlistFromTemplate(
     })
 
     await batch.commit()
-    logger.info("[mcp] clone_setlist_from_template committed", {
-        sourceTemplateId: args.templateId,
+    logger.info(`[mcp] ${input.logLabel} committed`, {
+        sourceTemplateId: input.sourceTemplateId,
         newSetlistId,
         trackCount: templateTracks.length,
         copiedFileIds: canonicalFileIds.size,
@@ -1126,7 +1255,7 @@ export async function cloneSetlistFromTemplate(
         bondReviewRows = toBondReviewRows(audit, positionByTrackId)
     } catch (err) {
         logger.warn(
-            "[mcp] clone_setlist_from_template bond audit failed (fail-soft)",
+            `[mcp] ${input.logLabel} bond audit failed (fail-soft)`,
             {
                 newSetlistId,
                 err: err instanceof Error ? err.message : String(err),
@@ -1137,14 +1266,11 @@ export async function cloneSetlistFromTemplate(
     return {
         ok: true,
         setlistId: newSetlistId,
-        sourceTemplateId: args.templateId,
-        trackCount: templateTracks.length,
-        ownerId: uid,
+        trackIds: newTrackIds,
         ownerName,
-        version: 1,
+        book: cloneBook,
         bondReviewCount,
         bondReviewRows,
-        book: cloneBook,
         unresolvedLiturgy: unresolvedSlots.map((u) => {
             const src = templateTracks[u.position] as Record<string, unknown>
             return {

@@ -1,3 +1,4 @@
+import { storedClassFor, storedRabbiSlot } from "@/lib/history/classify"
 import { getDb, subscribeWithDb } from "./firebase";
 import {
     collection,
@@ -232,6 +233,12 @@ export function createSetlistService(userId: string | null, userName?: string | 
                     hydrated: true,
                     ownerId: userId,
                     ownerName: userName || "Anonymous",
+                    // Setlist memory r2: the stored class follows the author's
+                    // templateType / rabbi (an explicit stored value wins).
+                    ...stripUndefined(storedClassFor({
+                        templateType: additionalData.templateType,
+                        rabbi: additionalData.rabbi,
+                    }) as Record<string, unknown>),
                     ...stripUndefined(additionalData as Record<string, unknown>),
                     orgId,
                 });
@@ -513,7 +520,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
                     ownerName: userName || "Anonymous",
                     musicians: source.musicians || [],
                     assignedUids: (source.musicians || []).map(m => m.uid).filter(Boolean),
-                    ...(source.rabbi ? { rabbi: source.rabbi } : {}),
+                    ...(source.rabbi ? { rabbi: source.rabbi, rabbiSlot: storedRabbiSlot((source as { rabbiSlot?: unknown }).rabbiSlot) ?? storedClassFor({ rabbi: source.rabbi }).rabbiSlot ?? null } : {}),
                     // v11-05-05: a clone inherits the SOURCE setlist's tenant
                     // (rowOrg: missing → 'crc', matching the v11-01-03 backfill).
                     orgId: rowOrg(source.orgId),

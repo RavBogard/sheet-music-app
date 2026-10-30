@@ -1,3 +1,4 @@
+import { storedClassFor, storedRabbiSlot } from "@/lib/history/classify"
 import crypto from "crypto"
 import { FieldValue } from "firebase-admin/firestore"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
@@ -292,6 +293,19 @@ export async function cloneSetlist(
     }
     if (typeof sourceData.rabbi === "string") {
         setlistPayload.rabbi = sourceData.rabbi
+    }
+    // Setlist memory r2: the stored class follows the copied entries.
+    Object.assign(
+        setlistPayload,
+        storedClassFor({
+            templateType: typeof sourceData.templateType === "string" ? sourceData.templateType : undefined,
+            rabbi: typeof sourceData.rabbi === "string" ? sourceData.rabbi : undefined,
+        }),
+    )
+    // The rabbi text is copied unchanged, so a slot the author set explicitly on the source
+    // carries over too (e.g. rabbi "Guest" with slot randy).
+    if (typeof sourceData.rabbi === "string" && storedRabbiSlot(sourceData.rabbiSlot)) {
+        setlistPayload.rabbiSlot = storedRabbiSlot(sourceData.rabbiSlot)
     }
     // `book` is the siddur/machzor the service is read from — an attribute of
     // the service kind, exactly like rabbi/templateType. Without it the clone's
