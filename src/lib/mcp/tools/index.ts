@@ -152,6 +152,8 @@ import { listBooksTool, lookupBookPageTool } from "./books"
 import { getSongHistoryTool, exportSetlistsTool } from "./history"
 import { setStandingChoiceTool, clearStandingChoiceTool } from "./standing"
 import { draftServiceTool, createSetlistFromDraftTool } from "./draft-service"
+import { addOpenItemTool, resolveOpenItemTool } from "./open-items"
+import { readBackSetlistTool } from "./read-back-setlist"
 import { seedServiceProfiles, getServiceProfileTool } from "./service-profiles"
 import { richError, liftLegacyErrorEnvelope } from "@/lib/mcp/error-envelopes"
 export { registerTestTokenTools } from "./test-tokens"
@@ -864,7 +866,7 @@ export function registerReadTools(server: McpServer): void {
         "draft_service",
         {
             description:
-                "Draft one service from its living profile, for the author to review before anything is created. A song slot is filled only when it is `standard` (set with set_standing_choice) or `usual` (the same chart on 3 of the last 5 regular weeks); every other song slot is left open with its label and listed in `openIndexes`. It never picks a setting nobody chose. friday_night and shabbat_morning need `rabbiSlot`: ask who is leading, never infer it. `special` defaults to true for holiday services. A profile not yet made is made on first use from past setlists marked with that service and rabbi; with none, it returns `no_profile`: build that week from a recent setlist with the rabbi set, and the next draft learns from it. The draft is kept 30 minutes; create the setlist with create_setlist_from_draft. Admin / band_leader. Tenant-scoped. Returns `{ok, draftId, expiresAt, profile:{key,label,book}, special, rows:[{index, label, type, slotKey, fileId?, chartName?, key?, tier, phrase, promotion?}], openIndexes, truncated}`.",
+                "Draft one service from its living profile, for the author to review before anything is created. A song slot is filled only when it is `standard` (set with set_standing_choice) or `usual` (the same chart on 3 of the last 5 regular weeks); every other song slot is left open with its label and listed in `openIndexes`. It never picks a setting nobody chose. friday_night and shabbat_morning need `rabbiSlot`: ask who is leading, never infer it. `special` defaults to true for holiday services. A profile not yet made is made on first use from past setlists marked with that service and rabbi; with none, it returns `no_profile`: build that week from a recent setlist with the rabbi set, and the next draft learns from it. The draft is kept 30 minutes; create the setlist with create_setlist_from_draft. Say `readback.text` aloud (exceptions first, then one line for everything else) and show `readback.exceptions` as a short list; give the full rows only when asked. Admin / band_leader. Tenant-scoped. Returns `{ok, draftId, expiresAt, profile:{key,label,book}, special, rows:[{index, label, type, slotKey, fileId?, chartName?, key?, tier, phrase, promotion?}], openIndexes, truncated, readback:{headline, exceptions:[{kind, index, text}], rest, text}}`.",
             inputSchema: {
                 date: z.string().describe("Service date, YYYY-MM-DD."),
                 serviceType: z
@@ -916,6 +918,48 @@ export function registerReadTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await createSetlistFromDraftTool(uidFrom(extra), args, orgFrom(extra))),
+    )
+
+    server.registerTool(
+        "add_open_item",
+        {
+            description:
+                "Record something this setlist still needs ('chart still needed', 'new arrangement; swap when it lands'). It is repeated in every readback until resolved. Optionally tie it to one row with `trackId`. Admin / band_leader. Tenant-scoped. Returns `{ok, setlistId, item:{id, text, trackId, createdAt, createdByName}, openItems}`.",
+            inputSchema: {
+                setlistId: z.string().min(1).describe("Setlist id."),
+                text: z.string().describe("What is still needed, 1–300 characters."),
+                trackId: z.string().optional().describe("A track of this setlist the item is about."),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await addOpenItemTool(uidFrom(extra), args, orgFrom(extra))),
+    )
+
+    server.registerTool(
+        "resolve_open_item",
+        {
+            description:
+                "Mark an open item done. It leaves get_setlist and every readback; the setlist keeps it as resolved. Admin / band_leader. Tenant-scoped. Returns `{ok, setlistId, resolved, openItems}`; an unknown or already-resolved item is `open_item_not_found`.",
+            inputSchema: {
+                setlistId: z.string().min(1).describe("Setlist id."),
+                itemId: z.string().min(1).describe("The open item's id, from get_setlist or add_open_item."),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await resolveOpenItemTool(uidFrom(extra), args, orgFrom(extra))),
+    )
+
+    server.registerTool(
+        "read_back_setlist",
+        {
+            description:
+                "Read an existing setlist back the way it should be said aloud: exceptions first, then one line for everything else, plus open items. Use after any change and whenever the author asks 'what's on Saturday?'. When the setlist stores its service type (and rabbi, where that changes the music) and the profile exists, rows are compared with their standard or usual; otherwise it lists only rows with no chart and open items. Say `readback.text`; show `readback.exceptions` as a short list. Read-only. Tenant-scoped. Returns `{ok, setlistId, readback:{headline, exceptions:[{kind, index, text}], rest, text}}`.",
+            inputSchema: {
+                setlistId: z.string().min(1).describe("Setlist id."),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await readBackSetlistTool(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(

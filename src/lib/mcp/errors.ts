@@ -115,6 +115,8 @@ export const ERROR_CODE_MAP: Record<string, number> = {
     profile_not_found: 404,
     no_profile: 404,
     draft_not_found: 404,
+    // Setlist memory release 3: open items.
+    open_item_not_found: 404,
     song_not_found: 404, // v11.2-03 (BUG-2): add_track/update_track/swap_chart/update_song unknown songId
 
     file_not_found: 404,

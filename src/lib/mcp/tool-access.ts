@@ -18,6 +18,7 @@ export const READ_TOOLS: ReadonlySet<string> = new Set([
     "search_setlists",
     "get_song_history",
     "get_service_profile",
+    "read_back_setlist",
     "export_setlists",
     "find_setlists_referencing_chart",
     "find_setlists_from_template",
@@ -111,6 +112,8 @@ export const WRITE_TOOLS: ReadonlySet<string> = new Set([
     "clear_standing_choice",
     "draft_service",
     "create_setlist_from_draft",
+    "add_open_item",
+    "resolve_open_item",
     // congregation, contacts, people
     "update_congregation_services",
     "create_contact",

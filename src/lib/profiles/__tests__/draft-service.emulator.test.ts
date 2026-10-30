@@ -31,6 +31,7 @@ describe("draft a service from its profile (emulator)", () => {
         profile: { key: string; book: string | null }
         rows: Array<{ index: number; label: string; tier: string | null; fileId?: string; key?: string | null }>
         openIndexes: number[]
+        readback: { exceptions: Array<{ kind: string }>; rest: string }
     }
     type Created = { ok: true; setlistId: string; announcements: string[]; oneOffNote?: string; book: string | null }
 
@@ -105,6 +106,8 @@ describe("draft a service from its profile (emulator)", () => {
         expect(draft.rows[1]).toMatchObject({ fileId: "f-barchu", key: "Dm" })
         expect(draft.rows[2].fileId).toBeUndefined()
         expect(draft.openIndexes).toEqual([2])
+        expect(draft.readback.exceptions.map((e) => e.kind)).toEqual(["open_slot"])
+        expect(draft.readback.rest).toMatch(/1 songs?/)
 
         // Standing on the open slot; a one-off key change on the filled one.
         const created = (await createSetlistFromDraftTool(

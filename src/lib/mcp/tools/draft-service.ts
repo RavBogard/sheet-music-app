@@ -7,6 +7,7 @@ import { assertEditor } from "@/lib/mcp/server-tracks-write"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 import { rowOrg } from "@/lib/mcp/org-context"
 import { loadLibraryLite } from "@/lib/history/load"
+import { orgTimeZone } from "@/lib/org/locale"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 import { logger } from "@/lib/logger"
@@ -22,6 +23,7 @@ import {
     type DraftChoice,
     type DraftRow,
 } from "@/lib/profiles/draft"
+import { buildReadback, type Readback } from "@/lib/profiles/readback"
 import { writeStanding } from "@/lib/profiles/standing"
 import type { Promotion, Tier } from "@/lib/profiles/tiers"
 import { findProfileTemplateFor, loadProfileTiers, seedMissingProfile } from "./service-profiles"
@@ -98,6 +100,8 @@ export interface DraftServiceResult {
     rows: DraftServiceRowOut[]
     openIndexes: number[]
     truncated: boolean
+    /** The draft said aloud, exceptions first (release 3). */
+    readback: Readback
 }
 
 interface StoredDraft {
@@ -212,6 +216,29 @@ export async function draftServiceTool(
             expiresAt: Timestamp.fromDate(expiresAt),
         }
         await ref.set(stored)
+        const readback = buildReadback({
+            timeZone: orgTimeZone(org),
+            profileLabel: label,
+            date,
+            book,
+            special,
+            rows: rows.map((r, i) => {
+                const choice = loaded.rows[i]?.standing
+                return {
+                    index: r.index,
+                    label: r.label,
+                    isSong: r.type === "song",
+                    hasChart: !!r.fileId,
+                    tier: r.tier,
+                    phrase: r.phrase,
+                    keyOnRecord: r.key != null,
+                    standing: choice ? { byName: choice.byName, at: choice.at } : null,
+                    promotion: r.promotion,
+                }
+            }),
+            openItems: [],
+            now,
+        })
         return {
             ok: true,
             draftId: ref.id,
@@ -221,6 +248,7 @@ export async function draftServiceTool(
             rows: rows.map(rowOut),
             openIndexes: openIndexesOf(rows),
             truncated: loaded.truncated,
+            readback,
         }
     } catch (error) {
         logger.warn("draft_service failed:", error)
