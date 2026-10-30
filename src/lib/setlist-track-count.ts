@@ -96,7 +96,9 @@ export async function recomputeTrackCount(
             trackCount: actual,
             songCount: actualSongs,
             fileIds: derived.fileIds,
-            updatedAt: new Date(),
+            // No updatedAt: derived fields are not an edit. Bumping it would
+            // invalidate any open editor's pending precondition (the false
+            // "Remote changes detected" dialog) every time a cron heals.
         })
         logger.info(
             `[setlist-track-count] repaired ${setlistId} (tracks ${declared} → ${actual}, songs ${declaredSongs} → ${actualSongs})`,

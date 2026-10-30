@@ -13,8 +13,9 @@ import { useT } from "@/i18n/client"
 
 // v60-08-01: this hook reads only denormalized parent-doc fields
 // (trackCount + fileIds). Order indices for new tracks are computed off
-// trackCount; duplicate detection uses fileIds. Top-level tracks/{id}
-// writes via the engine path remain unchanged.
+// trackCount; duplicate detection uses fileIds. It never WRITES them: each
+// tracks/{id} write the engine commits re-derives the parent's derived
+// fields from the server (reconcileSetlistTrackCount).
 
 /** Clean a filename into a display title (same logic as addSongsFromLibrary).
  *  `untitled` is the translated fallback title (hooks.untitledSong). */
@@ -144,7 +145,6 @@ export function useAddToSetlist() {
     setIsOpen(false)
 
     const baseTrackCount = setlist.trackCount ?? 0
-    const newTrackCount = baseTrackCount + newTracks.length
 
     // v60-07-01: per-track top-level writes via the engine. The toast
     // Undo action below is the user-facing undo UX (composite-undo cascade).
@@ -177,7 +177,6 @@ export function useAddToSetlist() {
     // field — the embedded-array writer is decommissioned.
     const expected = (setlist.updatedAt instanceof Timestamp) ? setlist.updatedAt : null
     await setlistService.updateSetlist(setlistId, {
-      trackCount: newTrackCount,
       hydrated: true,
     }, expected)
 
@@ -217,24 +216,9 @@ export function useAddToSetlist() {
               ),
             ),
           )
-          // Decrement parent-doc trackCount. Read the current setlist
-          // freshly to avoid stale-state arithmetic.
-          const current = await new Promise<Setlist | null>((resolve) => {
-            let unsub: (() => void) | null = null
-            let resolved = false
-            unsub = setlistService.subscribeToSetlist(undoSetlistId, (cur) => {
-              if (resolved) return
-              resolved = true
-              if (unsub) unsub()
-              else queueMicrotask(() => unsub?.())
-              resolve(cur)
-            })
-          })
-          const currentCount = current?.trackCount ?? 0
-          const nextCount = Math.max(0, currentCount - undoTrackIds.length)
-          await setlistService.updateSetlist(undoSetlistId, {
-            trackCount: nextCount,
-          })
+          // No parent-doc count write: each track delete re-derives the
+          // setlist's trackCount / songCount / fileIds from the server when
+          // it commits (reconcileSetlistTrackCount).
         },
       },
       duration: 5000,
@@ -269,7 +253,6 @@ export function useAddToSetlist() {
     }))
 
     const baseTrackCount = setlist.trackCount ?? 0
-    const newTrackCount = baseTrackCount + newTracks.length
 
     // v60-07-01: per-track top-level writes via the engine.
     await Promise.all(
@@ -300,7 +283,6 @@ export function useAddToSetlist() {
     // v60-07-01: parent-doc denormalization-only update. No `tracks` field.
     const expected = (setlist.updatedAt instanceof Timestamp) ? setlist.updatedAt : null
     await setlistService.updateSetlist(setlistId, {
-      trackCount: newTrackCount,
       hydrated: true,
     }, expected)
 

@@ -39,8 +39,9 @@ describe("sameFileIds", () => {
         expect(sameFileIds(undefined, ["a"])).toBe(false)
     })
 
-    it("is order-sensitive so a track-ordered array is rewritten to the canonical order", () => {
-        expect(sameFileIds(["a", "b"], ["a", "b"])).toBe(true)
-        expect(sameFileIds(["b", "a"], ["a", "b"])).toBe(false)
+    it("compares as a set, so an older track-ordered array is not drift", () => {
+        expect(sameFileIds(["b", "a"], ["a", "b"])).toBe(true)
+        expect(sameFileIds(["a"], ["a", "b"])).toBe(false)
+        expect(sameFileIds(["a", "gone"], ["a", "b"])).toBe(false)
     })
 })

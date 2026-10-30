@@ -95,7 +95,8 @@ describe("recomputeTrackCount", () => {
         const patch = updateSpy.mock.calls[0]![0] as Record<string, unknown>
         expect(patch.trackCount).toBe(0)
         expect(patch.songCount).toBe(0)
-        expect(patch.updatedAt).toBeInstanceOf(Date)
+        // A heal is not an edit: no updatedAt bump.
+        expect(patch).not.toHaveProperty("updatedAt")
     })
 
     it("C10I1-002 — heals stale songCount even when trackCount is already correct", async () => {
@@ -180,6 +181,21 @@ describe("recomputeTrackCount", () => {
         const result = await recomputeTrackCount(mockDb(updateSpy), "s-5", {
             trackCount: 1,
             songCount: 0,
+        })
+        expect(result.drifted).toBe(false)
+        expect(updateSpy).not.toHaveBeenCalled()
+    })
+
+    it("does not rewrite a setlist whose fileIds hold the right charts in another order", async () => {
+        vi.mocked(getTracksForSetlist).mockResolvedValue([
+            { id: "t1", fileId: "c-chart" },
+            { id: "t2", fileId: "a-chart" },
+        ] as never)
+        const updateSpy = vi.fn().mockResolvedValue(undefined)
+        const result = await recomputeTrackCount(mockDb(updateSpy), "s-6", {
+            trackCount: 2,
+            songCount: 2,
+            fileIds: ["c-chart", "a-chart"],
         })
         expect(result.drifted).toBe(false)
         expect(updateSpy).not.toHaveBeenCalled()

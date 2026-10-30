@@ -58,13 +58,13 @@ export function deriveSetlistCounts(
     }
 }
 
-/** Does a stored `fileIds` value already equal the canonical one? A missing
+/** Does a stored `fileIds` value hold the same charts as the canonical one?
+ *  Compared as a set: an older writer's track-ordered array is not drift, so
+ *  the heal crons don't rewrite every setlist just to re-sort it. A missing
  *  field counts as empty. */
 export function sameFileIds(a: unknown, b: readonly string[]): boolean {
     if (a === undefined || a === null) return b.length === 0
-    return (
-        Array.isArray(a) &&
-        a.length === b.length &&
-        a.every((id, i) => id === b[i])
-    )
+    if (!Array.isArray(a)) return false
+    const stored = new Set(a)
+    return stored.size === b.length && b.every((id) => stored.has(id))
 }

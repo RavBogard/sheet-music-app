@@ -139,6 +139,8 @@ class ProductionFirestoreAdapter implements FirestoreAdapter {
                             await reconcileSetlistTrackCount(
                                 firestoreDb,
                                 setlistId,
+                                // Stamped from the parent setlist above.
+                                payload.orgId,
                             )
                         }
                     }
@@ -191,7 +193,7 @@ class ProductionFirestoreAdapter implements FirestoreAdapter {
                     })
                     const after = await getDoc(ref)
                     const afterData = after.data() as
-                        | { updatedAt?: Timestamp; setlistId?: unknown }
+                        | { updatedAt?: Timestamp; setlistId?: unknown; orgId?: unknown }
                         | undefined
                     // A track's type decides songCount and its chart decides
                     // fileIds; re-derive the parent's fields when either moves.
@@ -204,6 +206,7 @@ class ProductionFirestoreAdapter implements FirestoreAdapter {
                         await reconcileSetlistTrackCount(
                             firestoreDb,
                             afterData.setlistId,
+                            afterData.orgId,
                         )
                     }
                     const ms = afterData?.updatedAt?.toMillis()
@@ -217,13 +220,15 @@ class ProductionFirestoreAdapter implements FirestoreAdapter {
                     // the doc BEFORE deleting — the delete outbox payload is
                     // empty — then reconcile the count after the delete lands.
                     let trackParentSetlistId: string | undefined
+                    let trackOrgId: unknown
                     if (row.collection === 'tracks') {
                         const snap = await getDoc(ref)
-                        const sid = snap.exists()
-                            ? (snap.data() as { setlistId?: unknown }).setlistId
+                        const data = snap.exists()
+                            ? (snap.data() as { setlistId?: unknown; orgId?: unknown })
                             : undefined
-                        if (typeof sid === 'string' && sid) {
-                            trackParentSetlistId = sid
+                        if (typeof data?.setlistId === 'string' && data.setlistId) {
+                            trackParentSetlistId = data.setlistId
+                            trackOrgId = data.orgId
                         }
                     }
                     await deleteDoc(ref)
@@ -231,6 +236,7 @@ class ProductionFirestoreAdapter implements FirestoreAdapter {
                         await reconcileSetlistTrackCount(
                             firestoreDb,
                             trackParentSetlistId,
+                            trackOrgId,
                         )
                     }
                     return {}
