@@ -8,7 +8,7 @@
 
 **Tech Stack:** Next.js App Router, TypeScript, firebase-admin Firestore, MCP (`server.registerTool` + zod), vitest, Firebase emulator tests.
 
-**Spec:** `docs/planning/2026-10-30-setlist-memory/DESIGN.md` (§5.1–5.5, §5.8). Interface recon: `C:\Users\dsbog\AppData\Local\Temp\claude\C--Users-dsbog-centralreform-live\dae6ca22-ba6e-42aa-858c-bebbd69dfef2\scratchpad\plan2-recon.md`.
+**Spec:** `docs/planning/2026-10-30-setlist-memory/DESIGN.md` (§5.1–5.5, §5.8). Interface recon: the session scratchpad's `plan2-recon.md` (not committed; a Windows path here broke the Tailwind build).
 
 ## Global Constraints
 
