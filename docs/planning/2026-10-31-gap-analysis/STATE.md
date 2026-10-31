@@ -158,3 +158,5 @@ to the rest of the worship-tech family.
 - Bet 4 started. Spec: BET-4-wedge-safety.md. Wording the lead's call, logged in the spec.
 - GATE: the default wedge ceiling is 0.70 (≈ −2 dB by the f*40-30 fader law), not 0.80 (+2 dB). The lead's earlier recommendation mislabelled 0.80 as −2 dB; Daniel chose −2 dB, so 0.70 follows his ruling. Both bet-4 builders were told.
 - #41 (bridge v10.0.8) is merged on green, but the RELEASE is held until B4b (the limits panel) merges, so Drew can adjust the ceiling the moment the bridge starts enforcing it. Release with: gh release create v10.0.8 --target master.
+- Bet 4 shipped: #41 (bridge v10.0.8) and #42 (limits panel, saved mixes, engineer console, MCP tools). Firestore rules deployed (firebase deploy --only firestore:rules). Release v10.0.8 published with its exe, blockmap and latest.yml; the studio PC updates in its idle window. The lead ruled set_monitor_limits needs confirm:true to raise a limit above 0 dB.
+- NOTE: no CI workflow deploys firestore.rules. Every rules change needs a manual deploy after merge. Backlog: RULES-DEPLOY-CI.
