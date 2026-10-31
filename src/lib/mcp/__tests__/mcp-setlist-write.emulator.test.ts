@@ -290,6 +290,39 @@ describe("MCP setlist write tools (emulator)", () => {
         expect(r.setlist.serviceType).toBe("shabbat-morning")
     })
 
+    it("update_setlist book:null clears every row's page and keeps everything else (family booklet)", async () => {
+        const r0 = (await createSetlist(ADMIN, { name: "B'nei Mitzvah", book: "legacy-beit-mitzvah" })) as { setlistId: string }
+        const id = r0.setlistId
+        const rows = [
+            { title: "Bar'chu", type: "prayer", momentId: "barchu", key: "Dm", liturgyRef: { book: "legacy-beit-mitzvah", unitId: "shma.barchu@bm-shacharit", folio: 7 } },
+            { title: "Oseh Shalom", type: "song", key: "C" },
+            { title: "Aleinu", type: "prayer", momentId: "aleinu", liturgyRef: { book: "legacy-beit-mitzvah", folio: 26 } },
+        ]
+        for (const [order, row] of rows.entries()) {
+            await db().collection("tracks").doc(`${id}-r${order}`).set({ ...row, id: `${id}-r${order}`, setlistId: id, order })
+        }
+        const r = (await updateSetlist(ADMIN, { id, book: null })) as { ok: true; rebook?: Record<string, unknown> }
+        expect(r.ok).toBe(true)
+        expect(r.rebook).toEqual({ from: "legacy-beit-mitzvah", to: null, cleared: 2 })
+        expect((await db().collection("setlists").doc(id).get()).data()?.book ?? null).toBeNull()
+        const after = await tracksOf(id)
+        expect(after.every((t) => t.liturgyRef === undefined)).toBe(true)
+        expect(after.map((t) => [t.title, t.order, t.momentId ?? null, t.key ?? null])).toEqual([
+            ["Bar'chu", 0, "barchu", "Dm"],
+            ["Oseh Shalom", 1, null, "C"],
+            ["Aleinu", 2, "aleinu", null],
+        ])
+    })
+
+    it("update_setlist without book leaves every row's page alone", async () => {
+        const r0 = (await createSetlist(ADMIN, { name: "B'nei Mitzvah", book: "legacy-beit-mitzvah" })) as { setlistId: string }
+        const id = r0.setlistId
+        await db().collection("tracks").doc(`${id}-r0`).set({ id: `${id}-r0`, setlistId: id, order: 0, title: "Bar'chu", type: "prayer", liturgyRef: { book: "legacy-beit-mitzvah", unitId: "shma.barchu@bm-shacharit", folio: 7 } })
+        const r = (await updateSetlist(ADMIN, { id, name: "Renamed" })) as { ok: true; rebook?: unknown }
+        expect(r.rebook).toBeUndefined()
+        expect((await tracksOf(id))[0].liturgyRef).toMatchObject({ folio: 7 })
+    })
+
     it("a member account is denied every write tool", async () => {
         const id = await newSetlist(ADMIN)
         const t = (await addTrackToSetlist(ADMIN, { setlistId: id, title: "Row" })) as {

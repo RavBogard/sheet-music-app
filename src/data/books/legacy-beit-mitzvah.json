@@ -1,0 +1,603 @@
+{
+    "slug": "legacy-beit-mitzvah",
+    "title": "CRC Beit Mitzvah Siddur (feed)",
+    "tier": "feed",
+    "pages": 63,
+    "units": [
+        {
+            "id": "frontmatter.welcome@bm-shacharit",
+            "name": "Welcome",
+            "folios": [
+                1
+            ]
+        },
+        {
+            "id": "frontmatter.an-explanation-of-our-siddur-prayer-book@bm-shacharit",
+            "name": "An Explanation of Our Siddur Prayer Book",
+            "folios": [
+                2
+            ]
+        },
+        {
+            "id": "awakening.modeh-ani@bm-shacharit",
+            "name": "Modeh Ani",
+            "folios": [
+                2
+            ]
+        },
+        {
+            "id": "awakening.tallit-blessing@bm-shacharit",
+            "name": "Tallit Blessing",
+            "folios": [
+                2
+            ]
+        },
+        {
+            "id": "awakening.mah-tovu@bm-shacharit",
+            "name": "Mah Tovu",
+            "folios": [
+                3
+            ]
+        },
+        {
+            "id": "awakening.hineih-mah-tov@bm-shacharit",
+            "name": "Hineih Mah Tov",
+            "folios": [
+                3
+            ]
+        },
+        {
+            "id": "awakening.birchot-hashachar@bm-shacharit",
+            "name": "Birchot Hashachar",
+            "folios": [
+                4
+            ]
+        },
+        {
+            "id": "awakening.psukei-dzimrah@bm-shacharit",
+            "name": "P’sukei D’zimrah",
+            "folios": [
+                5
+            ]
+        },
+        {
+            "id": "awakening.readers-kaddish@bm-shacharit",
+            "name": "Reader’s Kaddish",
+            "folios": [
+                6
+            ]
+        },
+        {
+            "id": "shma.barchu@bm-shacharit",
+            "name": "Bar’chu",
+            "folios": [
+                7
+            ]
+        },
+        {
+            "id": "shma.yotzeir-or@bm-shacharit",
+            "name": "Yotzeir or",
+            "folios": [
+                8
+            ]
+        },
+        {
+            "id": "shma.ahavah-rabah-ahavtanu@bm-shacharit",
+            "name": "Ahavah Rabah Ahavtanu",
+            "folios": [
+                9
+            ]
+        },
+        {
+            "id": "shma.the-shma@bm-shacharit",
+            "name": "Sh’ma",
+            "folios": [
+                10
+            ]
+        },
+        {
+            "id": "shma.vahavta@bm-shacharit",
+            "name": "V’ahavta",
+            "folios": [
+                11
+            ]
+        },
+        {
+            "id": "shma.mi-chamochah@bm-shacharit",
+            "name": "Mi Chamochah",
+            "folios": [
+                12
+            ]
+        },
+        {
+            "id": "amidah.tfilah@bm-shacharit",
+            "name": "T’filah",
+            "folios": [
+                13
+            ]
+        },
+        {
+            "id": "amidah.avot-vimahot@bm-shacharit",
+            "name": "Avot V’imahot",
+            "folios": [
+                14
+            ]
+        },
+        {
+            "id": "amidah.gvurot@bm-shacharit",
+            "name": "G’vurot",
+            "folios": [
+                15
+            ]
+        },
+        {
+            "id": "amidah.kdushah@bm-shacharit",
+            "name": "K’dushah",
+            "folios": [
+                16
+            ]
+        },
+        {
+            "id": "amidah.vshamru@bm-shacharit",
+            "name": "V’shamru",
+            "folios": [
+                17
+            ]
+        },
+        {
+            "id": "amidah.avodah@bm-shacharit",
+            "name": "Avodah",
+            "folios": [
+                18
+            ]
+        },
+        {
+            "id": "amidah.hodaah@bm-shacharit",
+            "name": "Hoda-ah",
+            "folios": [
+                19
+            ]
+        },
+        {
+            "id": "amidah.sim-shalom@bm-shacharit",
+            "name": "Sim Shalom",
+            "folios": [
+                20
+            ]
+        },
+        {
+            "id": "amidah.silent-meditation@bm-shacharit",
+            "name": "Silent Meditation",
+            "folios": [
+                20
+            ]
+        },
+        {
+            "id": "amidah.oseh-shalom@bm-shacharit",
+            "name": "Oseh Shalom",
+            "folios": [
+                20
+            ]
+        },
+        {
+            "id": "torah.hakafot@bm-shacharit",
+            "name": "Hakafot",
+            "folios": [
+                21
+            ]
+        },
+        {
+            "id": "torah.blessing-before-the-torah-reading@bm-shacharit",
+            "name": "Blessing Before the Torah Reading",
+            "folios": [
+                22
+            ]
+        },
+        {
+            "id": "torah.reading-of-the-torah@bm-shacharit",
+            "name": "Reading of the Torah",
+            "folios": [
+                22
+            ]
+        },
+        {
+            "id": "torah.blessing-following-the-torah-reading@bm-shacharit",
+            "name": "Blessing Following the Torah Reading",
+            "folios": [
+                22
+            ]
+        },
+        {
+            "id": "torah.mi-shebeirach-healing@bm-shacharit",
+            "name": "Mi Shebeirach",
+            "folios": [
+                23
+            ]
+        },
+        {
+            "id": "torah.blessing-before-the-haftarah-reading@bm-shacharit",
+            "name": "Blessing Before the Haftarah Reading",
+            "folios": [
+                23
+            ]
+        },
+        {
+            "id": "torah.reading-of-the-haftarah@bm-shacharit",
+            "name": "Reading of the Haftarah",
+            "folios": [
+                24
+            ]
+        },
+        {
+            "id": "torah.blessing-following-the-haftarah-reading@bm-shacharit",
+            "name": "Blessing Following the Haftarah Reading",
+            "folios": [
+                24
+            ]
+        },
+        {
+            "id": "torah.commentary@bm-shacharit",
+            "name": "Commentary",
+            "folios": [
+                25
+            ]
+        },
+        {
+            "id": "torah.presentation-from-the-congregation@bm-shacharit",
+            "name": "Presentation from the Congregation",
+            "folios": [
+                25
+            ]
+        },
+        {
+            "id": "torah.eitz-chayim@bm-shacharit",
+            "name": "Eitz Chayim",
+            "folios": [
+                25
+            ]
+        },
+        {
+            "id": "concluding.aleinu@bm-shacharit",
+            "name": "Aleinu",
+            "folios": [
+                26
+            ]
+        },
+        {
+            "id": "concluding.mourners-kaddish@bm-shacharit",
+            "name": "Mourner’s Kaddish",
+            "folios": [
+                28
+            ]
+        },
+        {
+            "id": "concluding.adon-olam@bm-shacharit",
+            "name": "Adon Olam",
+            "folios": [
+                30
+            ]
+        },
+        {
+            "id": "concluding.parents-blessing@bm-shacharit",
+            "name": "Parent’s Blessing",
+            "folios": [
+                31
+            ]
+        },
+        {
+            "id": "concluding.closing-blessing@bm-shacharit",
+            "name": "Closing Blessing",
+            "folios": [
+                31
+            ]
+        },
+        {
+            "id": "frontmatter.welcome@bm-maariv",
+            "name": "Welcome",
+            "folios": [
+                33
+            ]
+        },
+        {
+            "id": "frontmatter.an-explanation-of-our-siddur-prayer-book@bm-maariv",
+            "name": "An Explanation of Our Siddur Prayer Book",
+            "folios": [
+                34
+            ]
+        },
+        {
+            "id": "awakening.tallit-blessing@bm-maariv",
+            "name": "Tallit Blessing",
+            "folios": [
+                34
+            ]
+        },
+        {
+            "id": "awakening.hineih-mah-tov@bm-maariv",
+            "name": "Hineih Mah Tov",
+            "folios": [
+                34
+            ]
+        },
+        {
+            "id": "awakening.readers-kaddish@bm-maariv",
+            "name": "Reader’s Kaddish",
+            "folios": [
+                35
+            ]
+        },
+        {
+            "id": "shma.barchu@bm-maariv",
+            "name": "Bar’chu",
+            "folios": [
+                36
+            ]
+        },
+        {
+            "id": "shma.maariv-aravim@bm-maariv",
+            "name": "Ma-ariv Aravim",
+            "folios": [
+                37
+            ]
+        },
+        {
+            "id": "shma.ahavat-olam@bm-maariv",
+            "name": "Ahavat Olam",
+            "folios": [
+                38
+            ]
+        },
+        {
+            "id": "shma.the-shma@bm-maariv",
+            "name": "Sh’ma",
+            "folios": [
+                39
+            ]
+        },
+        {
+            "id": "shma.vahavta@bm-maariv",
+            "name": "V’ahavta",
+            "folios": [
+                40
+            ]
+        },
+        {
+            "id": "shma.mi-chamochah@bm-maariv",
+            "name": "Mi Chamochah",
+            "folios": [
+                41
+            ]
+        },
+        {
+            "id": "shma.hashkiveinu@bm-maariv",
+            "name": "Hashkiveinu",
+            "folios": [
+                42
+            ]
+        },
+        {
+            "id": "amidah.tfilah@bm-maariv",
+            "name": "T’filah",
+            "folios": [
+                43
+            ]
+        },
+        {
+            "id": "amidah.avot-vimahot@bm-maariv",
+            "name": "Avot V’imahot",
+            "folios": [
+                44
+            ]
+        },
+        {
+            "id": "amidah.gvurot@bm-maariv",
+            "name": "G’vurot",
+            "folios": [
+                45
+            ]
+        },
+        {
+            "id": "amidah.kdushah@bm-maariv",
+            "name": "K’dushah",
+            "folios": [
+                46
+            ]
+        },
+        {
+            "id": "amidah.vshamru@bm-maariv",
+            "name": "V’shamru",
+            "folios": [
+                47
+            ]
+        },
+        {
+            "id": "amidah.avodah@bm-maariv",
+            "name": "Avodah",
+            "folios": [
+                48
+            ]
+        },
+        {
+            "id": "amidah.hodaah@bm-maariv",
+            "name": "Hoda-ah",
+            "folios": [
+                49
+            ]
+        },
+        {
+            "id": "amidah.shalom-rav@bm-maariv",
+            "name": "Shalom Rav",
+            "folios": [
+                50
+            ]
+        },
+        {
+            "id": "amidah.silent-meditation@bm-maariv",
+            "name": "Silent Meditation",
+            "folios": [
+                50
+            ]
+        },
+        {
+            "id": "amidah.oseh-shalom@bm-maariv",
+            "name": "Oseh Shalom",
+            "folios": [
+                50
+            ]
+        },
+        {
+            "id": "torah.hakafot@bm-maariv",
+            "name": "Hakafot",
+            "folios": [
+                51
+            ]
+        },
+        {
+            "id": "torah.blessing-before-the-torah-reading@bm-maariv",
+            "name": "Blessing Before the Torah Reading",
+            "folios": [
+                52
+            ]
+        },
+        {
+            "id": "torah.reading-of-the-torah@bm-maariv",
+            "name": "Reading of the Torah",
+            "folios": [
+                52
+            ]
+        },
+        {
+            "id": "torah.blessing-following-the-torah-reading@bm-maariv",
+            "name": "Blessing Following the Torah Reading",
+            "folios": [
+                52
+            ]
+        },
+        {
+            "id": "torah.mi-shebeirach-healing@bm-maariv",
+            "name": "Mi Shebeirach",
+            "folios": [
+                53
+            ]
+        },
+        {
+            "id": "torah.blessing-before-the-haftarah-reading@bm-maariv",
+            "name": "Blessing Before the Haftarah Reading",
+            "folios": [
+                53
+            ]
+        },
+        {
+            "id": "torah.reading-of-the-haftarah@bm-maariv",
+            "name": "Reading of the Haftarah",
+            "folios": [
+                54
+            ]
+        },
+        {
+            "id": "torah.blessing-following-the-haftarah-reading@bm-maariv",
+            "name": "Blessing Following the Haftarah Reading",
+            "folios": [
+                54
+            ]
+        },
+        {
+            "id": "torah.commentary@bm-maariv",
+            "name": "Commentary",
+            "folios": [
+                55
+            ]
+        },
+        {
+            "id": "torah.presentation-from-the-congregation@bm-maariv",
+            "name": "Presentation from the Congregation",
+            "folios": [
+                55
+            ]
+        },
+        {
+            "id": "torah.eitz-chayim@bm-maariv",
+            "name": "Eitz Chayim",
+            "folios": [
+                55
+            ]
+        },
+        {
+            "id": "concluding.aleinu@bm-maariv",
+            "name": "Aleinu",
+            "folios": [
+                56
+            ]
+        },
+        {
+            "id": "concluding.mourners-kaddish@bm-maariv",
+            "name": "Mourner’s Kaddish",
+            "folios": [
+                58
+            ]
+        },
+        {
+            "id": "havdalah.the-wine@bm-maariv",
+            "name": "The Wine",
+            "folios": [
+                60
+            ]
+        },
+        {
+            "id": "havdalah.the-spices@bm-maariv",
+            "name": "The Spices",
+            "folios": [
+                60
+            ]
+        },
+        {
+            "id": "havdalah.the-light-of-the-fire@bm-maariv",
+            "name": "The Light of the Fire",
+            "folios": [
+                61
+            ]
+        },
+        {
+            "id": "havdalah.the-blessing-of-separation@bm-maariv",
+            "name": "The Blessing of Separation",
+            "folios": [
+                61
+            ]
+        },
+        {
+            "id": "havdalah.eliyahu-hanavi@bm-maariv",
+            "name": "Eliyahu Hanavi",
+            "folios": [
+                62
+            ]
+        },
+        {
+            "id": "havdalah.miryam-hanviah@bm-maariv",
+            "name": "Miryam Hanviah",
+            "folios": [
+                62
+            ]
+        },
+        {
+            "id": "havdalah.shavua-tov@bm-maariv",
+            "name": "Shavua Tov",
+            "folios": [
+                62
+            ]
+        },
+        {
+            "id": "havdalah.parents-blessing@bm-maariv",
+            "name": "Parent’s Blessing",
+            "folios": [
+                63
+            ]
+        },
+        {
+            "id": "havdalah.closing-blessing@bm-maariv",
+            "name": "Closing Blessing",
+            "folios": [
+                63
+            ]
+        }
+    ]
+}

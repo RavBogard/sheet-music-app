@@ -119,6 +119,18 @@ const VOLUMES = [
         pin: null,
         folioSource: "printedFolio",
     },
+    // Setlist memory r4 — the Beit Mitzvah siddur a B'nei Mitzvah prays from.
+    // Same footing as the two booklets above: `printedFolio` is the number in
+    // CRC's printed Beit Mitzvah Siddur 6.0 (folio = PDF page, offset 0), and
+    // the feed's `folios` are the reader edition's (they disagree on 84 of 85
+    // units). Never printed as a Shirei typeset, so no press commit to pin.
+    {
+        slug: "legacy-beit-mitzvah",
+        feed: "legacy-beit-mitzvah-feed.json",
+        title: "CRC Beit Mitzvah Siddur (feed)",
+        pin: null,
+        folioSource: "printedFolio",
+    },
 ]
 
 function flag(name) {

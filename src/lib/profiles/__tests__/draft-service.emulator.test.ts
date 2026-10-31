@@ -4,6 +4,7 @@ import { getFirestore, Timestamp } from "firebase-admin/firestore"
 
 import { createSetlistFromDraftTool, draftServiceTool } from "@/lib/mcp/tools/draft-service"
 import { seedServiceProfiles } from "@/lib/mcp/tools/service-profiles"
+import { writeSetlistFromTemplateRows } from "@/lib/mcp/tools/templates"
 
 /**
  * Setlist memory, release 2 — draft_service → create_setlist_from_draft,
@@ -149,6 +150,85 @@ describe("draft a service from its profile (emulator)", () => {
         // Next week the standing choice fills the slot.
         const next = (await draftServiceTool(ADMIN, { date: "2026-10-31", serviceType: "shabbat_morning", rabbiSlot: "randy" }, CRC)) as Draft
         expect(next.rows[2]).toMatchObject({ tier: "standard", fileId: "f-oseh", key: "D" })
+    })
+
+    const BM = "bnei_mitzvah_saturday"
+    async function seedBneiMitzvah() {
+        for (const [i, date] of ["2026-10-17", "2026-10-10"].entries()) {
+            const id = `sl-bm-${i}`
+            await db().collection("setlists").doc(id).set({
+                orgId: CRC,
+                name: `B'nei Mitzvah ${date}`,
+                serviceType: BM,
+                rabbiSlot: null,
+                special: false,
+                eventDate: Timestamp.fromDate(new Date(`${date}T15:00:00Z`)),
+                date: Timestamp.fromDate(new Date(`${date}T12:00:00Z`)),
+            })
+            const rows = [
+                { type: "song", title: "Barchu", momentId: "barchu", fileId: "f-barchu", key: "Dm", liturgyRef: { book: "legacy-beit-mitzvah", folio: 7, unitId: "shma.barchu@bm-shacharit" } },
+                // A page in another book is never carried into this one.
+                { type: "song", title: "Oseh Shalom", fileId: "f-oseh", key: "C", liturgyRef: { book: "crc-saturday", folio: 60 } },
+            ]
+            for (const [order, row] of rows.entries()) {
+                await db().collection("tracks").doc(`${id}-${order}`).set({ ...row, setlistId: id, orgId: CRC, order })
+            }
+        }
+        await seedServiceProfiles(ADMIN, { profiles: [BM], dryRun: false, force: true }, CRC)
+    }
+
+    it("a B'nei Mitzvah draft binds its rows to the Beit Mitzvah siddur, never another book's page", async () => {
+        await seedBneiMitzvah()
+        const draft = (await draftServiceTool(ADMIN, { date: "2026-10-24", serviceType: BM }, CRC)) as Draft
+        expect(draft.ok).toBe(true)
+        expect(draft.profile).toMatchObject({ key: BM, book: "legacy-beit-mitzvah" })
+        const created = (await createSetlistFromDraftTool(ADMIN, { draftId: draft.draftId }, CRC)) as Created
+        expect(created.ok).toBe(true)
+
+        const setlist = (await db().collection("setlists").doc(created.setlistId).get()).data()!
+        expect(setlist).toMatchObject({ orgId: CRC, serviceType: BM, book: "legacy-beit-mitzvah" })
+        const tracks = (await db().collection("tracks").where("setlistId", "==", created.setlistId).get()).docs
+            .map((d) => d.data())
+            .sort((a, b) => a.order - b.order)
+        expect(tracks.map((t) => t.momentId ?? null)).toEqual(["barchu", null])
+        expect(tracks[0].liturgyRef).toMatchObject({ book: "legacy-beit-mitzvah", folio: 7, unitId: "shma.barchu@bm-shacharit" })
+        expect(tracks[1].liturgyRef?.book).not.toBe("crc-saturday")
+        expect(tracks[1].liturgyRef?.folio ?? null).toBeNull()
+    })
+
+    it("a family's own booklet (book: null) gets no book and no page on any row", async () => {
+        await seedBneiMitzvah()
+        const draft = (await draftServiceTool(ADMIN, { date: "2026-10-24", serviceType: BM }, CRC)) as Draft
+        const created = (await createSetlistFromDraftTool(ADMIN, { draftId: draft.draftId, book: null }, CRC)) as Created
+        expect(created.ok).toBe(true)
+        expect(created.book).toBeNull()
+        const setlist = (await db().collection("setlists").doc(created.setlistId).get()).data()!
+        expect(setlist.book ?? null).toBeNull()
+        const tracks = (await db().collection("tracks").where("setlistId", "==", created.setlistId).get()).docs.map((d) => d.data())
+        expect(tracks).toHaveLength(2)
+        expect(tracks.every((t) => t.liturgyRef == null)).toBe(true)
+    })
+
+    it("an explicit book:null drops a row's literal liturgyRef too; an omitted book copies it", async () => {
+        const rows = [{ type: "prayer", title: "Bar'chu", momentId: "barchu", liturgyRef: { book: "legacy-beit-mitzvah", unitId: "shma.barchu@bm-shacharit", folio: 7 } }]
+        const base = { rows, name: "Rows", sourceTemplateId: "tpl-x", logLabel: "test" }
+        const none = await writeSetlistFromTemplateRows(db(), ADMIN, CRC, { ...base, book: null })
+        const omitted = await writeSetlistFromTemplateRows(db(), ADMIN, CRC, { ...base })
+        if (!none.ok || !omitted.ok) throw new Error("write failed")
+        const rowOf = async (id: string) => (await db().collection("tracks").where("setlistId", "==", id).get()).docs[0].data()
+        const noneRow = await rowOf(none.setlistId)
+        expect(noneRow.liturgyRef).toBeUndefined()
+        expect(noneRow.momentId).toBe("barchu")
+        expect((await rowOf(omitted.setlistId)).liturgyRef).toMatchObject({ folio: 7 })
+    })
+
+    it("refuses an unknown book before creating anything", async () => {
+        await seedBneiMitzvah()
+        const draft = (await draftServiceTool(ADMIN, { date: "2026-10-24", serviceType: BM }, CRC)) as Draft
+        const r = (await createSetlistFromDraftTool(ADMIN, { draftId: draft.draftId, book: "no-such-book" }, CRC)) as unknown as Err
+        expect(r.error.machine_code).toBe("unknown_book")
+        expect((await db().collection("service_drafts").doc(draft.draftId).get()).exists).toBe(true)
+        expect((await db().collection("setlists").where("serviceType", "==", BM).get()).size).toBe(2)
     })
 
     it("Randy's standing choice never shapes Daniel's profile or draft", async () => {

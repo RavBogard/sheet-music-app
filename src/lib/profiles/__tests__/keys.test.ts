@@ -35,7 +35,7 @@ describe("CRC_CORE_PROFILES", () => {
             "shabbat_morning:daniel_karen": "crc-saturday",
             "shabbat_morning:randy": "crc-saturday",
             shir_shabbat: "legacy-shabbat-evening",
-            bnei_mitzvah_saturday: null,
+            bnei_mitzvah_saturday: "legacy-beit-mitzvah",
         })
     })
 

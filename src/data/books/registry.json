@@ -54,5 +54,12 @@
         "tier": "feed",
         "pages": 102,
         "source": "shireishabbat dist-app/legacy-shabbat-morning-feed.json. Audit item (n). FOLIOS ARE `printedFolio` (50-101), the printed CRC Saturday booklet's own numbering, which continues the Friday booklet; the feed's `folios` restart at 1 and run to 63 and disagree on all 95 units carrying both. `pages` is 102 to match the `crc-saturday` pagemap, NOT the feed's `printing.pages` (54), which counts the reader edition. One unit (frontmatter) carries no `printedFolio` and is dropped rather than guessed. Registered ALONGSIDE the `crc-saturday` pagemap: 96 feed units against 62 pagemap entries."
+    },
+    {
+        "slug": "legacy-beit-mitzvah",
+        "title": "CRC Beit Mitzvah Siddur (feed)",
+        "tier": "feed",
+        "pages": 63,
+        "source": "shireishabbat dist-app/legacy-beit-mitzvah-feed.json @7f34b63+dirty-LICENSED (built 2026-09-20T00:11:25Z), trimmed by scripts/ops/sync-books.mjs. FOLIOS ARE `printedFolio` (1-63), the numbers printed in CRC's Beit Mitzvah Siddur 6.0 (shireishabbat research/current-siddurim/Beit-Mitzvah-Siddur-6.0.pdf); the feed's `folios` count the reader edition (1-85) and disagree with `printedFolio` on 84 of 85 units. shireishabbat build/volumes.json records this book's corpus `src: pN` as its printed number at offset 0. `pages` is 63, MEASURED 2026-10-30: the PDF is 63 physical pages and each prints its own folio 1-63 (offset 0); the feed's last unit is on 63, so no units stop short of the book. The 86-page figure in volumes.json is the Shirei typeset of this volume, not the printed book. STALENESS CHECKED: the feed predates shireishabbat 8ba46a1 (2026-09-22); the corpus page markers at HEAD 83cf851 were diffed against every unit's `printedFolio` and agree 85/85 (8ba46a1 changed only presentation fields here), and every unit's name was found on its printed page in the PDF, 85/85. All 85 units carry a `printedFolio`; none dropped. ONE VOLUME, TWO SERVICES: Shabbat morning (41 units, `@bm-shacharit`, pp.1-31) and Shabbat evening with Havdalah (44 units, `@bm-maariv`, pp.33-63), so a name such as Bar'chu prints twice (7 and 36); resolve by unit id. Global book data, not tenant data."
     }
 ]

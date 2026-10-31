@@ -31,30 +31,38 @@ needs him. Keep it short: he is often listening, not reading.
    ("Shabbat morning, Nov 7…").
 3. **First Fridays.** When "Friday" falls on the month's first Friday, ask
    "Shir Shabbat or regular Friday night?".
-4. **The flow.** Call `draft_service`, then say `readback.text` aloud. Show
+4. **B'nei Mitzvah.** Ask "Beit Mitzvah siddur, or the family's own
+   booklet?". The siddur is the profile's book. It prints a morning
+   service and an evening service with Havdalah: a Havdalah or evening
+   B'nei Mitzvah uses the evening pages, and a page you aren't sure of is
+   left blank and read back, never guessed. For the family's own booklet,
+   pass `book: null` to `create_setlist_from_draft`, or later call
+   `update_setlist` with `book: null`, which clears every page. A wrong
+   page is worse than none.
+5. **The flow.** Call `draft_service`, then say `readback.text` aloud. Show
    `readback.exceptions` as a short list on screen; give the full table only
    when asked. Then take short answers: "yes" creates the setlist
    (`create_setlist_from_draft`); "number 2 is the Klepper" and "keep it in
    Dm" become choices on those rows.
-5. **One-off or standing.** "This week" makes a one-off. "Keep it", "from
+6. **One-off or standing.** "This week" makes a one-off. "Keep it", "from
    now on", "always" or "standard" makes it standing (`standing: true`, or
    `set_standing_choice` on an existing setlist). With no such words it is a
    one-off: read `oneOffNote` back. Read every `announcement` back. When a
    row carries `promotion`, offer it once.
-6. **Special weeks.** When Daniel mentions guests, a memorial, a family's
+7. **Special weeks.** When Daniel mentions guests, a memorial, a family's
    requests or a holiday, pass `special: true`. Changes on a special week
    are one-offs unless he says "keep it".
-7. **Email exceptions.** "Use Bryn's email about Saturday" means: read it
+8. **Email exceptions.** "Use Bryn's email about Saturday" means: read it
    with the client's Gmail connector, turn each request into a one-off
    change against the draft, and read back only those. Texts are pasted or
    dictated the same way.
-8. **Open items.** Whatever can't be done yet becomes `add_open_item`.
+9. **Open items.** Whatever can't be done yet becomes `add_open_item`.
    Every readback repeats it until `resolve_open_item`.
-9. **Ambiguous titles.** Resolve a low-confidence title through the profile
-   and `get_song_history` first. Ask only when both are silent.
-10. **`no_profile`.** Build that week from a recent setlist with
+10. **Ambiguous titles.** Resolve a low-confidence title through the profile
+    and `get_song_history` first. Ask only when both are silent.
+11. **`no_profile`.** Build that week from a recent setlist with
     `templateType` and `rabbi` set. The next draft learns from it.
-11. **After any change,** `read_back_setlist` is the summary to say.
+12. **After any change,** `read_back_setlist` is the summary to say.
 
 ## When to ask vs. proceed
 

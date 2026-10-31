@@ -13,6 +13,11 @@
             "pinValue": "HEAD"
         },
         {
+            "book": "legacy-beit-mitzvah",
+            "gitSha": "7f34b63+dirty-LICENSED",
+            "pinValue": "HEAD"
+        },
+        {
             "book": "crc-erev-rh",
             "gitSha": "7f34b63+dirty-LICENSED",
             "pinValue": "HEAD"
@@ -104,6 +109,13 @@
             ],
             "occurrences": [
                 {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "concluding.adon-olam@bm-shacharit",
+                    "folios": [
+                        30
+                    ]
+                },
+                {
                     "book": "legacy-shabbat-evening",
                     "unitId": "concluding.adon-olam@legacy-shabbat-evening",
                     "folios": [
@@ -144,6 +156,26 @@
                     "unitId": "concluding.adon-olam@rh-shacharit",
                     "folios": [
                         141
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "ahavah-rabah-ahavtanu",
+            "display": {
+                "en": "Ahavah Rabah Ahavtanu"
+            },
+            "kind": "prayer",
+            "aliases": [
+                "Ahava Raba",
+                "Ahavah Rabah"
+            ],
+            "occurrences": [
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "shma.ahavah-rabah-ahavtanu@bm-shacharit",
+                    "folios": [
+                        9
                     ]
                 }
             ]
@@ -218,6 +250,13 @@
                     "unitId": "emaariv.ahavat-olam@crc-kol-nidre",
                     "folios": [
                         102
+                    ]
+                },
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "shma.ahavat-olam@bm-maariv",
+                    "folios": [
+                        38
                     ]
                 },
                 {
@@ -316,6 +355,20 @@
                     "unitId": "concluding.aleinu@crc-rh-morning",
                     "folios": [
                         86
+                    ]
+                },
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "concluding.aleinu@bm-shacharit",
+                    "folios": [
+                        26
+                    ]
+                },
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "concluding.aleinu@bm-maariv",
+                    "folios": [
+                        56
                     ]
                 },
                 {
@@ -419,6 +472,30 @@
                     "unitId": "torah.amidah-avinu-malkeinu@crc-yk-morning",
                     "folios": [
                         160
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "an-explanation-of-our-siddur-prayer-book",
+            "display": {
+                "en": "An Explanation of Our Siddur Prayer Book"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "frontmatter.an-explanation-of-our-siddur-prayer-book@bm-shacharit",
+                    "folios": [
+                        2
+                    ]
+                },
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "frontmatter.an-explanation-of-our-siddur-prayer-book@bm-maariv",
+                    "folios": [
+                        34
                     ]
                 }
             ]
@@ -707,6 +784,20 @@
                     ]
                 },
                 {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "amidah.avodah@bm-shacharit",
+                    "folios": [
+                        18
+                    ]
+                },
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "amidah.avodah@bm-maariv",
+                    "folios": [
+                        48
+                    ]
+                },
+                {
                     "book": "legacy-shabbat-evening",
                     "unitId": "amidah.avodah@legacy-shabbat-evening",
                     "folios": [
@@ -813,6 +904,20 @@
                     "unitId": "amidah.avot-vimahot@crc-yk-morning",
                     "folios": [
                         144
+                    ]
+                },
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "amidah.avot-vimahot@bm-shacharit",
+                    "folios": [
+                        14
+                    ]
+                },
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "amidah.avot-vimahot@bm-maariv",
+                    "folios": [
+                        44
                     ]
                 },
                 {
@@ -1084,6 +1189,20 @@
                     ]
                 },
                 {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "shma.barchu@bm-shacharit",
+                    "folios": [
+                        7
+                    ]
+                },
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "shma.barchu@bm-maariv",
+                    "folios": [
+                        36
+                    ]
+                },
+                {
                     "book": "legacy-shabbat-evening",
                     "unitId": "shma.barchu@legacy-shabbat-evening",
                     "folios": [
@@ -1322,6 +1441,13 @@
                     "unitId": "awakening.birchot-hashachar@crc-rh-morning",
                     "folios": [
                         42
+                    ]
+                },
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "awakening.birchot-hashachar@bm-shacharit",
+                    "folios": [
+                        4
                     ]
                 },
                 {
@@ -1594,6 +1720,30 @@
             ]
         },
         {
+            "id": "blessing-before-the-haftarah-reading",
+            "display": {
+                "en": "Blessing Before the Haftarah Reading"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "torah.blessing-before-the-haftarah-reading@bm-shacharit",
+                    "folios": [
+                        23
+                    ]
+                },
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "torah.blessing-before-the-haftarah-reading@bm-maariv",
+                    "folios": [
+                        53
+                    ]
+                }
+            ]
+        },
+        {
             "id": "blessing-before-the-hallel",
             "display": {
                 "en": "Blessing before the Hallel"
@@ -1651,6 +1801,80 @@
                     "unitId": "torah.blessing-before-the-torah@rh-shacharit",
                     "folios": [
                         96
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "blessing-before-the-torah-reading",
+            "display": {
+                "en": "Blessing Before the Torah Reading"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "torah.blessing-before-the-torah-reading@bm-shacharit",
+                    "folios": [
+                        22
+                    ]
+                },
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "torah.blessing-before-the-torah-reading@bm-maariv",
+                    "folios": [
+                        52
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "blessing-following-the-haftarah-reading",
+            "display": {
+                "en": "Blessing Following the Haftarah Reading"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "torah.blessing-following-the-haftarah-reading@bm-shacharit",
+                    "folios": [
+                        24
+                    ]
+                },
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "torah.blessing-following-the-haftarah-reading@bm-maariv",
+                    "folios": [
+                        54
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "blessing-following-the-torah-reading",
+            "display": {
+                "en": "Blessing Following the Torah Reading"
+            },
+            "kind": "prayer",
+            "aliases": [
+                "Asher Natan Lanu Torat Emet"
+            ],
+            "occurrences": [
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "torah.blessing-following-the-torah-reading@bm-shacharit",
+                    "folios": [
+                        22
+                    ]
+                },
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "torah.blessing-following-the-torah-reading@bm-maariv",
+                    "folios": [
+                        52
                     ]
                 }
             ]
@@ -2026,6 +2250,20 @@
                     ]
                 },
                 {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "concluding.closing-blessing@bm-shacharit",
+                    "folios": [
+                        31
+                    ]
+                },
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "havdalah.closing-blessing@bm-maariv",
+                    "folios": [
+                        63
+                    ]
+                },
+                {
                     "book": "legacy-shabbat-evening",
                     "unitId": "concluding.closing-blessing@legacy-shabbat-evening",
                     "folios": [
@@ -2064,6 +2302,30 @@
                     "unitId": "neilah.closing-ritual@crc-neilah",
                     "folios": [
                         205
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "commentary",
+            "display": {
+                "en": "Commentary"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "torah.commentary@bm-shacharit",
+                    "folios": [
+                        25
+                    ]
+                },
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "torah.commentary@bm-maariv",
+                    "folios": [
+                        55
                     ]
                 }
             ]
@@ -2267,6 +2529,20 @@
             ],
             "occurrences": [
                 {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "torah.eitz-chayim@bm-shacharit",
+                    "folios": [
+                        25
+                    ]
+                },
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "torah.eitz-chayim@bm-maariv",
+                    "folios": [
+                        55
+                    ]
+                },
+                {
                     "book": "legacy-shabbat-morning",
                     "unitId": "torah.eitz-chayim@legacy-shabbat-morning",
                     "folios": [
@@ -2361,6 +2637,13 @@
                     "unitId": "havdalah.eliyahu-hanavi@crc-neilah",
                     "folios": [
                         208
+                    ]
+                },
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "havdalah.eliyahu-hanavi@bm-maariv",
+                    "folios": [
+                        62
                     ]
                 }
             ]
@@ -2810,6 +3093,20 @@
                     ]
                 },
                 {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "amidah.gvurot@bm-shacharit",
+                    "folios": [
+                        15
+                    ]
+                },
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "amidah.gvurot@bm-maariv",
+                    "folios": [
+                        45
+                    ]
+                },
+                {
                     "book": "legacy-shabbat-evening",
                     "unitId": "amidah.gvurot@legacy-shabbat-evening",
                     "folios": [
@@ -2989,6 +3286,20 @@
                     ]
                 },
                 {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "torah.hakafot@bm-shacharit",
+                    "folios": [
+                        21
+                    ]
+                },
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "torah.hakafot@bm-maariv",
+                    "folios": [
+                        51
+                    ]
+                },
+                {
                     "book": "legacy-shabbat-morning",
                     "unitId": "torah.hakafot@legacy-shabbat-morning",
                     "folios": [
@@ -3061,6 +3372,13 @@
                 "Rise Up To Life Renewed"
             ],
             "occurrences": [
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "shma.hashkiveinu@bm-maariv",
+                    "folios": [
+                        42
+                    ]
+                },
                 {
                     "book": "legacy-shabbat-evening",
                     "unitId": "shma.hashkiveinu@legacy-shabbat-evening",
@@ -3250,6 +3568,20 @@
                     ]
                 },
                 {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "awakening.hineih-mah-tov@bm-shacharit",
+                    "folios": [
+                        3
+                    ]
+                },
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "awakening.hineih-mah-tov@bm-maariv",
+                    "folios": [
+                        34
+                    ]
+                },
+                {
                     "book": "legacy-shabbat-evening",
                     "unitId": "opening.hineih-mah-tov@legacy-shabbat-evening",
                     "folios": [
@@ -3323,6 +3655,20 @@
                     "unitId": "amidah.hodaah@crc-yk-morning",
                     "folios": [
                         151
+                    ]
+                },
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "amidah.hodaah@bm-shacharit",
+                    "folios": [
+                        19
+                    ]
+                },
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "amidah.hodaah@bm-maariv",
+                    "folios": [
+                        49
                     ]
                 },
                 {
@@ -3529,6 +3875,20 @@
                     "unitId": "amidah.kdushah@crc-yk-morning",
                     "folios": [
                         149
+                    ]
+                },
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "amidah.kdushah@bm-shacharit",
+                    "folios": [
+                        16
+                    ]
+                },
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "amidah.kdushah@bm-maariv",
+                    "folios": [
+                        46
                     ]
                 },
                 {
@@ -3998,6 +4358,13 @@
                     ]
                 },
                 {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "shma.maariv-aravim@bm-maariv",
+                    "folios": [
+                        37
+                    ]
+                },
+                {
                     "book": "legacy-shabbat-evening",
                     "unitId": "shma.maariv-aravim@legacy-shabbat-evening",
                     "folios": [
@@ -4088,6 +4455,13 @@
                     "unitId": "awakening.mah-tovu@crc-rh-morning",
                     "folios": [
                         39
+                    ]
+                },
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "awakening.mah-tovu@bm-shacharit",
+                    "folios": [
+                        3
                     ]
                 },
                 {
@@ -4406,6 +4780,20 @@
             ],
             "occurrences": [
                 {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "shma.mi-chamochah@bm-shacharit",
+                    "folios": [
+                        12
+                    ]
+                },
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "shma.mi-chamochah@bm-maariv",
+                    "folios": [
+                        41
+                    ]
+                },
+                {
                     "book": "legacy-shabbat-evening",
                     "unitId": "shma.mi-chamochah@legacy-shabbat-evening",
                     "folios": [
@@ -4477,6 +4865,20 @@
                     ]
                 },
                 {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "torah.mi-shebeirach-healing@bm-shacharit",
+                    "folios": [
+                        23
+                    ]
+                },
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "torah.mi-shebeirach-healing@bm-maariv",
+                    "folios": [
+                        53
+                    ]
+                },
+                {
                     "book": "legacy-shabbat-evening",
                     "unitId": "rosh-chodesh.mi-shebeirach-healing@legacy-shabbat-evening",
                     "folios": [
@@ -4529,6 +4931,13 @@
                     "folios": [
                         208
                     ]
+                },
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "havdalah.miryam-hanviah@bm-maariv",
+                    "folios": [
+                        62
+                    ]
                 }
             ]
         },
@@ -4567,6 +4976,13 @@
                     "unitId": "awakening.modeh-ani@crc-rh-morning",
                     "folios": [
                         39
+                    ]
+                },
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "awakening.modeh-ani@bm-shacharit",
+                    "folios": [
+                        2
                     ]
                 },
                 {
@@ -4701,6 +5117,20 @@
                     "unitId": "yizkor.mourners-kaddish@crc-yizkor",
                     "folios": [
                         185
+                    ]
+                },
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "concluding.mourners-kaddish@bm-shacharit",
+                    "folios": [
+                        28
+                    ]
+                },
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "concluding.mourners-kaddish@bm-maariv",
+                    "folios": [
+                        58
                     ]
                 },
                 {
@@ -5130,10 +5560,48 @@
             ],
             "occurrences": [
                 {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "amidah.oseh-shalom@bm-shacharit",
+                    "folios": [
+                        20
+                    ]
+                },
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "amidah.oseh-shalom@bm-maariv",
+                    "folios": [
+                        50
+                    ]
+                },
+                {
                     "book": "legacy-shabbat-morning",
                     "unitId": "amidah.oseh-shalom@legacy-shabbat-morning",
                     "folios": [
                         82
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "parents-blessing",
+            "display": {
+                "en": "Parent’s Blessing"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "concluding.parents-blessing@bm-shacharit",
+                    "folios": [
+                        31
+                    ]
+                },
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "havdalah.parents-blessing@bm-maariv",
+                    "folios": [
+                        63
                     ]
                 }
             ]
@@ -5303,6 +5771,30 @@
                     "unitId": "rosh-chodesh.prayer-for-state-of-israel@legacy-shabbat-evening",
                     "folios": [
                         36
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "presentation-from-the-congregation",
+            "display": {
+                "en": "Presentation from the Congregation"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "torah.presentation-from-the-congregation@bm-shacharit",
+                    "folios": [
+                        25
+                    ]
+                },
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "torah.presentation-from-the-congregation@bm-maariv",
+                    "folios": [
+                        55
                     ]
                 }
             ]
@@ -5898,6 +6390,47 @@
             ]
         },
         {
+            "id": "psukei-dzimrah",
+            "display": {
+                "en": "P’sukei D’zimrah"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "awakening.psukei-dzimrah@bm-shacharit",
+                    "folios": [
+                        5
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "readers-kaddish",
+            "display": {
+                "en": "Reader’s Kaddish"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "awakening.readers-kaddish@bm-shacharit",
+                    "folios": [
+                        6
+                    ]
+                },
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "awakening.readers-kaddish@bm-maariv",
+                    "folios": [
+                        35
+                    ]
+                }
+            ]
+        },
+        {
             "id": "reading-1",
             "display": {
                 "en": "Reading 1"
@@ -5932,6 +6465,33 @@
             ]
         },
         {
+            "id": "reading-of-the-haftarah",
+            "display": {
+                "en": "Reading of the Haftarah"
+            },
+            "kind": "prayer",
+            "aliases": [
+                "Haftarah",
+                "Haftorah"
+            ],
+            "occurrences": [
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "torah.reading-of-the-haftarah@bm-shacharit",
+                    "folios": [
+                        24
+                    ]
+                },
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "torah.reading-of-the-haftarah@bm-maariv",
+                    "folios": [
+                        54
+                    ]
+                }
+            ]
+        },
+        {
             "id": "reading-of-the-torah",
             "display": {
                 "en": "Reading of the Torah"
@@ -5943,6 +6503,20 @@
                 "Torah Reading"
             ],
             "occurrences": [
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "torah.reading-of-the-torah@bm-shacharit",
+                    "folios": [
+                        22
+                    ]
+                },
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "torah.reading-of-the-torah@bm-maariv",
+                    "folios": [
+                        52
+                    ]
+                },
                 {
                     "book": "legacy-shabbat-morning",
                     "unitId": "torah.reading-of-the-torah@legacy-shabbat-morning",
@@ -6259,6 +6833,13 @@
                     ]
                 },
                 {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "amidah.shalom-rav@bm-maariv",
+                    "folios": [
+                        50
+                    ]
+                },
+                {
                     "book": "legacy-shabbat-evening",
                     "unitId": "amidah.shalom-rav@legacy-shabbat-evening",
                     "folios": [
@@ -6343,6 +6924,23 @@
                     "unitId": "concluding.shanah-tovah@crc-rh-morning",
                     "folios": [
                         91
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "shavua-tov",
+            "display": {
+                "en": "Shavua Tov"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "havdalah.shavua-tov@bm-maariv",
+                    "folios": [
+                        62
                     ]
                 }
             ]
@@ -6573,6 +7171,20 @@
                     "folios": [
                         154
                     ]
+                },
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "amidah.silent-meditation@bm-shacharit",
+                    "folios": [
+                        20
+                    ]
+                },
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "amidah.silent-meditation@bm-maariv",
+                    "folios": [
+                        50
+                    ]
                 }
             ]
         },
@@ -6619,6 +7231,13 @@
                     "unitId": "amidah.sim-shalom@crc-yk-morning",
                     "folios": [
                         152
+                    ]
+                },
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "amidah.sim-shalom@bm-shacharit",
+                    "folios": [
+                        20
                     ]
                 },
                 {
@@ -6760,6 +7379,54 @@
             ]
         },
         {
+            "id": "tallit-blessing",
+            "display": {
+                "en": "Tallit Blessing"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "awakening.tallit-blessing@bm-shacharit",
+                    "folios": [
+                        2
+                    ]
+                },
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "awakening.tallit-blessing@bm-maariv",
+                    "folios": [
+                        34
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "tfilah",
+            "display": {
+                "en": "T’filah"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "amidah.tfilah@bm-shacharit",
+                    "folios": [
+                        13
+                    ]
+                },
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "amidah.tfilah@bm-maariv",
+                    "folios": [
+                        43
+                    ]
+                }
+            ]
+        },
+        {
             "id": "tfilah-kavannah",
             "display": {
                 "en": "T’filah Kavannah"
@@ -6839,6 +7506,40 @@
             ]
         },
         {
+            "id": "the-blessing-of-separation",
+            "display": {
+                "en": "The Blessing of Separation"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "havdalah.the-blessing-of-separation@bm-maariv",
+                    "folios": [
+                        61
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "the-light-of-the-fire",
+            "display": {
+                "en": "The Light of the Fire"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "havdalah.the-light-of-the-fire@bm-maariv",
+                    "folios": [
+                        61
+                    ]
+                }
+            ]
+        },
+        {
             "id": "the-nineteen-blessings",
             "display": {
                 "en": "The Nineteen Blessings"
@@ -6911,6 +7612,20 @@
                     "unitId": "shma.the-shma@crc-yk-morning",
                     "folios": [
                         140
+                    ]
+                },
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "shma.the-shma@bm-shacharit",
+                    "folios": [
+                        10
+                    ]
+                },
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "shma.the-shma@bm-maariv",
+                    "folios": [
+                        39
                     ]
                 },
                 {
@@ -7008,6 +7723,40 @@
                     "unitId": "mincha.the-silent-amidah@rh1-mincha",
                     "folios": [
                         149
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "the-spices",
+            "display": {
+                "en": "The Spices"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "havdalah.the-spices@bm-maariv",
+                    "folios": [
+                        60
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "the-wine",
+            "display": {
+                "en": "The Wine"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "havdalah.the-wine@bm-maariv",
+                    "folios": [
+                        60
                     ]
                 }
             ]
@@ -7345,6 +8094,20 @@
                     ]
                 },
                 {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "shma.vahavta@bm-shacharit",
+                    "folios": [
+                        11
+                    ]
+                },
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "shma.vahavta@bm-maariv",
+                    "folios": [
+                        40
+                    ]
+                },
+                {
                     "book": "legacy-shabbat-evening",
                     "unitId": "shma.vahavta@legacy-shabbat-evening",
                     "folios": [
@@ -7640,6 +8403,20 @@
                     ]
                 },
                 {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "amidah.vshamru@bm-shacharit",
+                    "folios": [
+                        17
+                    ]
+                },
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "amidah.vshamru@bm-maariv",
+                    "folios": [
+                        47
+                    ]
+                },
+                {
                     "book": "legacy-shabbat-evening",
                     "unitId": "shma.vshamru@legacy-shabbat-evening",
                     "folios": [
@@ -7766,6 +8543,30 @@
                     "unitId": "yizkor.we-remember-them@crc-yizkor",
                     "folios": [
                         183
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "welcome",
+            "display": {
+                "en": "Welcome"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "frontmatter.welcome@bm-shacharit",
+                    "folios": [
+                        1
+                    ]
+                },
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "frontmatter.welcome@bm-maariv",
+                    "folios": [
+                        33
                     ]
                 }
             ]
@@ -7992,6 +8793,27 @@
                     "unitId": "psukei.yishtabach@shabbat-shacharit",
                     "folios": [
                         57
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "yotzeir-or",
+            "display": {
+                "en": "Yotzeir or"
+            },
+            "kind": "prayer",
+            "aliases": [
+                "Light of Creation",
+                "Yotzeir Or Uvorei Choshech",
+                "Yotzer Or"
+            ],
+            "occurrences": [
+                {
+                    "book": "legacy-beit-mitzvah",
+                    "unitId": "shma.yotzeir-or@bm-shacharit",
+                    "folios": [
+                        8
                     ]
                 }
             ]

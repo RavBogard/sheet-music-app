@@ -1082,6 +1082,9 @@ export async function writeSetlistFromTemplateRows(
     }
     // undefined → the row carries no per-book refs, so its legacy `liturgyRef`
     // (if any) copies verbatim. null → it carries refs but none for this book.
+    // An EXPLICIT `book: null` is "no book" (a family's own booklet): no row
+    // keeps any page at all, literal `liturgyRef` included.
+    const noBook = input.book === null
     const resolvedRefs: Array<LiturgyRef | null | undefined> = []
     const unresolvedSlots: Array<{ position: number; booksAvailable: string[] }> = []
     for (let i = 0; i < templateTracks.length; i++) {
@@ -1208,6 +1211,7 @@ export async function writeSetlistFromTemplateRows(
             if (resolved === null) delete payload.liturgyRef
             else payload.liturgyRef = resolved
         }
+        if (noBook) delete payload.liturgyRef
         if (typeof payload.title !== "string") payload.title = ""
         if (typeof payload.type !== "string") payload.type = "song"
         batch.set(db.collection("tracks").doc(newTrackId), payload)
