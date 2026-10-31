@@ -7,12 +7,15 @@ import pagemapSaturday from "@/data/books/crc-saturday.json"
 import pagemapMachzor from "@/data/books/crc-machzor-2008.json"
 import rowsFriday from "@/data/templates/template-rows.friday.json"
 import rowsSaturday from "@/data/templates/template-rows.saturday.json"
+import { getBook } from "@/lib/books/registry"
 import { foldLiturgyName } from "./fold"
 import { bindsToName, confirmedBindings } from "./confirmed"
 import {
     bookServiceFor,
     machzorServices,
     SERVICE_SCOPED_BOOKS,
+    FEED_SCOPED_BOOKS,
+    feedServices,
 } from "@/lib/books/machzor-services"
 
 /**
@@ -177,7 +180,35 @@ function buildServiceTable(book: string, service: string): LiturgyLookupEntry[] 
     return entries
 }
 
+/**
+ * One service of a feed book that prints several (the Beit Mitzvah siddur).
+ * Identity and page both come from the feed's units; a unit printed across
+ * several pages binds to its first, as `lookup_book_page` does. Front matter
+ * is left out: nobody types "Welcome" meaning a page of the siddur.
+ */
+function buildFeedServiceTable(book: string, service: string): LiturgyLookupEntry[] {
+    const entries: LiturgyLookupEntry[] = []
+    for (const u of getBook(book)?.units ?? []) {
+        if (!u.id.endsWith(`@${service}`) || u.id.startsWith("frontmatter.")) continue
+        if (!u.folios.length) continue
+        const entry: LiturgyLookupEntry = {
+            book,
+            label: u.name,
+            folio: u.folios[0],
+            unitId: u.id,
+            aliases: [],
+            source: "pagemap",
+        }
+        addAlias(entry, u.name)
+        entries.push(entry)
+    }
+    return entries
+}
+
 function buildTable(book: string, service?: string | null): LiturgyLookupEntry[] {
+    if (FEED_SCOPED_BOOKS.has(book)) {
+        return service ? buildFeedServiceTable(book, service) : []
+    }
     if (SERVICE_SCOPED_BOOKS.has(book)) {
         return service ? buildServiceTable(book, service) : []
     }
@@ -397,9 +428,11 @@ export function liturgyLookup(
     book: string,
     service?: string | null,
 ): LiturgyLookupEntry[] {
-    const scope = SERVICE_SCOPED_BOOKS.has(book)
-        ? (service ?? bookServiceFor(book, null))
-        : null
+    const scope = FEED_SCOPED_BOOKS.has(book)
+        ? (service ?? null)
+        : SERVICE_SCOPED_BOOKS.has(book)
+          ? (service ?? bookServiceFor(book, null))
+          : null
     const key = scope ? `${book}|${scope}` : book
     if (!TABLES.has(key)) TABLES.set(key, buildTable(book, scope))
     return TABLES.get(key) as LiturgyLookupEntry[]
@@ -407,7 +440,7 @@ export function liturgyLookup(
 
 /** Books this table covers. */
 export function liturgyLookupBooks(): string[] {
-    return [...Object.keys(FIXED), ...SERVICE_SCOPED_BOOKS]
+    return [...Object.keys(FIXED), ...SERVICE_SCOPED_BOOKS, ...FEED_SCOPED_BOOKS]
 }
 
 /** Every (book, service) pair that has a table. */
@@ -416,6 +449,9 @@ export function liturgyLookupScopes(): Array<{ book: string; service: string | n
         ...Object.keys(FIXED).map((book) => ({ book, service: null })),
         ...[...SERVICE_SCOPED_BOOKS].flatMap((book) =>
             machzorServices().map((service) => ({ book, service })),
+        ),
+        ...[...FEED_SCOPED_BOOKS].flatMap((book) =>
+            feedServices(book).map((service) => ({ book, service })),
         ),
     ]
 }

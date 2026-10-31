@@ -264,7 +264,7 @@ export async function proposeLiturgyBindings(
                 ? `No liturgy lookup table exists for '${book}' service '${service}'.`
                 : `No liturgy lookup table exists for '${book}'.`,
             { book, service, templateType },
-            "Tables exist for crc-friday, crc-saturday, shabbat-maariv, shabbat-shacharit, and crc-machzor-2008 per service. A book with no table cannot be bound against; nothing is guessed.",
+            "Tables exist for crc-friday, crc-saturday, shabbat-maariv, shabbat-shacharit, crc-machzor-2008 per service, and legacy-beit-mitzvah for bnei_mitzvah_saturday and havdalah_bnei_mitzvah setlists. A book with no table cannot be bound against; nothing is guessed.",
         )
     }
 

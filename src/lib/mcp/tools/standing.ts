@@ -11,6 +11,7 @@ import type { OrgId } from "@/lib/org/types"
 import { logger } from "@/lib/logger"
 import {
     CRC_CORE_PROFILES,
+    memoryServiceType,
     profileKeyFor,
     rabbiRequired,
     serviceLabelFor,
@@ -35,8 +36,7 @@ import {
 
 type DB = FirebaseFirestore.Firestore
 
-/** The scope a non-CRC tenant's setlist with no stored service type remembers under. */
-export const BARE_GIG_SCOPE = "gig"
+export { BARE_GIG_SCOPE } from "@/lib/profiles/keys"
 
 export interface SetStandingArgs {
     setlistId: string
@@ -162,11 +162,7 @@ async function loadRow(
         rabbiSlot: str(setlist.rabbiSlot),
         special: typeof setlist.special === "boolean" ? setlist.special : null,
     })
-    // CRC classifies every service it profiles. Another tenant's setlists are
-    // not services from the CRC catalog (BrosLaz plays gigs): its choices are
-    // remembered per song under its stored service type, else `gig`.
-    const serviceType =
-        cls.serviceType ?? (org !== DEFAULT_ORG_ID ? (str(setlist.serviceType) ?? BARE_GIG_SCOPE) : null)
+    const serviceType = memoryServiceType(org, cls.serviceType, str(setlist.serviceType))
     if (!serviceType) {
         return richError(
             "service_type_unknown",

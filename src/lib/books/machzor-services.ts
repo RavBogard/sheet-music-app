@@ -75,8 +75,34 @@ export function bookServiceFor(
     book: string | null | undefined,
     templateType: string | null | undefined,
 ): string | null {
-    if (!book || !SERVICE_SCOPED_BOOKS.has(book)) return null
+    if (!book) return null
+    const feed = FEED_SERVICES[book]
+    if (feed) return (templateType && feed[templateType]) || null
+    if (!SERVICE_SCOPED_BOOKS.has(book)) return null
     return machzorServiceFor(templateType) ?? DEFAULT_SERVICE[book] ?? null
+}
+
+/**
+ * Feed books that print more than one service, scoped by the service suffix
+ * of their unit ids (`…@bm-shacharit`). The Beit Mitzvah siddur prints the
+ * morning service on pp. 1–31 and the evening/Havdalah service on pp. 33–63,
+ * and names like Bar'chu print in both. Unlike the machzor there is NO default
+ * service: a setlist whose type names neither gets no lookup, never the
+ * morning's pages by assumption.
+ */
+const FEED_SERVICES: Readonly<Record<string, Readonly<Record<string, string>>>> = Object.freeze({
+    "legacy-beit-mitzvah": Object.freeze({
+        bnei_mitzvah_saturday: "bm-shacharit",
+        havdalah_bnei_mitzvah: "bm-maariv",
+    }),
+})
+
+/** Feed books whose lookup is scoped to one service by unit-id suffix. */
+export const FEED_SCOPED_BOOKS: ReadonlySet<string> = new Set(Object.keys(FEED_SERVICES))
+
+/** Every service a feed-scoped book prints. */
+export function feedServices(book: string): string[] {
+    return [...new Set(Object.values(FEED_SERVICES[book] ?? {}))].sort()
 }
 
 /** Every service slug this table can name. For tests and for error messages. */

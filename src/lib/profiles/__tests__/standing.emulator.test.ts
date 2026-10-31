@@ -4,6 +4,7 @@ import { getFirestore } from "firebase-admin/firestore"
 
 import { clearStandingChoiceTool, setStandingChoiceTool } from "@/lib/mcp/tools/standing"
 import { readStanding, standingDocId, standingMapKey } from "../standing"
+import { profileMatches } from "../profile-match"
 
 /**
  * Setlist memory, release 2 — standing choices store and tools.
@@ -135,6 +136,14 @@ describe("standing choices (emulator)", () => {
         const crossClear = (await clearStandingChoiceTool(DANIEL, { setlistId: "sl-bl", trackId: "t-bl" }, CRC)) as unknown as Err
         expect(crossClear.error.machine_code).toBe("setlist_not_found")
         expect((await readStanding(BL, ["gig"], [bl.slotKey])).size).toBe(1)
+    })
+
+    it("recognises a BrosLaz gig's standing chart on the next gig, and only in its own tenant", async () => {
+        await setStandingChoiceTool(BL_LEAD, { setlistId: "sl-bl", trackId: "t-bl" }, BL)
+        const nextGig = { orgId: BL, name: "Gig at Off Broadway" }
+        const candidate = { position: 0, fileId: "f-bl", partGroup: "pg-f-bl", title: "Mi Chamocha" }
+        expect([...(await profileMatches(BL, nextGig, [candidate]))]).toEqual([0])
+        expect((await profileMatches(CRC, { orgId: CRC, name: "Gig" }, [candidate])).size).toBe(0)
     })
 
     it("keeps the replaced choice as previous and undo restores it, then clears", async () => {
