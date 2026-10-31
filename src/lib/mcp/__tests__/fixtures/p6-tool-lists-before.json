@@ -227,6 +227,7 @@
     "__test_delete_storage_object",
     "accept_enrichment",
     "archive_nonchart_artifacts",
+    "backfill_chart_lineage",
     "backfill_content_hash",
     "backfill_heal_metadata",
     "backfill_library_index",
