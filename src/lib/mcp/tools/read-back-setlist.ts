@@ -10,11 +10,13 @@ import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 import { logger } from "@/lib/logger"
 import { isSongType } from "@/lib/setlist-track-count"
-import { profileKeyFor, rabbiRequired, slotKeyFor } from "@/lib/profiles/keys"
-import { buildReadback, type Readback, type ReadbackRow } from "@/lib/profiles/readback"
-import { buildSlotUses, loadSlotUses } from "@/lib/profiles/slot-uses"
-import { readStanding, standingMapKey } from "@/lib/profiles/standing"
+import { getBook } from "@/lib/books/registry"
+import { legacySlotKeyFor, profileKeyFor, rabbiRequired, slotKeyFor } from "@/lib/profiles/keys"
+import { buildReadback, settingOf, type Readback, type ReadbackRow } from "@/lib/profiles/readback"
+import { buildSlotUses, historyAliases, loadSlotUses } from "@/lib/profiles/slot-uses"
+import { readStandingFor } from "@/lib/profiles/standing"
 import { computeSlotTier, phrase as tierPhrase, type SlotTier } from "@/lib/profiles/tiers"
+import { vsLastOf, type VsLast } from "@/lib/profiles/vs-last"
 import type { TemplateProfile } from "./templates"
 import { readOpenItems } from "./open-items"
 import { findProfileTemplateFor } from "./service-profiles"
@@ -40,6 +42,8 @@ export interface ReadBackSetlistResult {
     ok: true
     setlistId: string
     readback: Readback
+    /** MCP-05: per slot, what the profile's last regular service before this one had. Recall only. */
+    vsLast: VsLast | null
 }
 
 function str(v: unknown): string | null {
@@ -122,10 +126,24 @@ export async function readBackSetlistTool(
 
         let profileLabel: string | null = null
         let readbackRows: ReadbackRow[]
+        let vsLast: VsLast | null = null
+        const notices: Array<{ kind: "book_differs"; text: string }> = []
+        const day = eventDay(data.eventDate, org)
         if (profileDoc && profileKey && serviceType) {
             const profile = profileDoc.data().profile as TemplateProfile | undefined
             profileLabel = str(profile?.label) ?? null
-            readbackRows = await tieredRows(org, setlistId, serviceType, rabbiSlot, profileKey, rows)
+            const tiered = await tieredRows(org, setlistId, serviceType, rabbiSlot, profileKey, rows, day)
+            readbackRows = tiered.rows
+            vsLast = tiered.vsLast
+            // MCP-21: say when this setlist prays from another book than its profile.
+            const own = str(data.book)
+            const profileBook = str(profile?.book)
+            if (own && profileBook && own !== profileBook) {
+                notices.push({
+                    kind: "book_differs",
+                    text: `Book differs from profile: this setlist uses ${getBook(own)?.title ?? own}; the profile uses ${getBook(profileBook)?.title ?? profileBook}`,
+                })
+            }
         } else {
             readbackRows = rows.map((r, index) => ({
                 index,
@@ -142,14 +160,15 @@ export async function readBackSetlistTool(
             timeZone: orgTimeZone(org),
             profileLabel,
             title: profileLabel ? null : str(data.name),
-            date: eventDay(data.eventDate, org),
+            date: day,
+            notices,
             book: str(data.book),
             special: data.special === true,
             rows: readbackRows,
             openItems: readOpenItems(data),
             now: new Date(),
         })
-        return { ok: true, setlistId, readback }
+        return { ok: true, setlistId, readback, vsLast }
     } catch (error) {
         logger.warn("read_back_setlist failed:", error)
         return richError(
@@ -169,8 +188,11 @@ async function tieredRows(
     rabbiSlot: string | null,
     profileKey: string,
     rows: Row[],
-): Promise<ReadbackRow[]> {
-    const filter = { serviceType, rabbiSlot }
+    day: string | null,
+): Promise<{ rows: ReadbackRow[]; vsLast: VsLast | null }> {
+    // Brothers Lazaroff keeps song slots: no title lookup outside CRC.
+    const byTitle = org === DEFAULT_ORG_ID
+    const filter = { serviceType, rabbiSlot, byTitle }
     const loaded = await loadSlotUses(org, filter)
     const own = loaded.setlists.find((s) => s.id === setlistId)
     const library = new Map(loaded.library)
@@ -186,14 +208,24 @@ async function tieredRows(
     // The loader derives a row's moment from its page when momentId is not stored.
     const ownMoment = new Map((own?.tracks ?? []).map((t) => [t.id, t.momentId]))
 
-    const slotKeys = rows.map((r) =>
-        isSongType(r.type)
-            ? slotKeyFor({ momentId: r.momentId ?? ownMoment.get(r.id) ?? null, title: r.title, fileId: r.fileId }, partGroupOf)
-            : null,
-    )
-    const standing = await readStanding(org, [profileKey], slotKeys.filter((k): k is string => !!k))
+    const slots = rows.map((r) => {
+        if (!isSongType(r.type)) return null
+        const t = { momentId: r.momentId ?? ownMoment.get(r.id) ?? null, title: r.title, fileId: r.fileId }
+        const slotKey = slotKeyFor(t, partGroupOf, { byTitle })
+        const legacy = legacySlotKeyFor(t, partGroupOf)
+        const aliases = [...new Set([legacy, ...historyAliases(index, slotKey)])].filter((a) => a !== slotKey)
+        return { slotKey, aliases }
+    })
+    const slotKeys = slots.map((x) => x?.slotKey ?? null)
+    const standing = await readStandingFor(org, profileKey, slots.filter((x): x is { slotKey: string; aliases: string[] } => !!x))
+    const zone = orgTimeZone(org)
+    const dayOf = (iso: string) => {
+        const t = Date.parse(iso)
+        return Number.isNaN(t) ? iso.slice(0, 10) : dayInZone(t, zone)
+    }
+    const vsLast = vsLastOf(index.profileSetlists, library, { before: day, excludeId: setlistId, dayOf, byTitle })
 
-    return rows.map((r, i) => {
+    const out = rows.map((r, i) => {
         const slotKey = slotKeys[i]
         const base: ReadbackRow = {
             index: i,
@@ -205,7 +237,7 @@ async function tieredRows(
             keyOnRecord: r.key !== null,
         }
         if (!slotKey) return base
-        const choice = standing.get(standingMapKey(profileKey, slotKey)) ?? null
+        const choice = standing.get(slotKey) ?? null
         const tier = computeSlotTier({
             standing: choice,
             profileUses: index.profileUses(slotKey),
@@ -213,6 +245,14 @@ async function tieredRows(
         })
         const chartName = r.fileId ? (library.get(r.fileId)?.name ?? r.fileName ?? r.title) : null
         const row: ReadbackRow = { ...base, tier: tier.tier, phrase: tier.phrase }
+        if (!r.fileId && tier.fileId && !tier.dead && (tier.tier === "last_time" || tier.tier === "other_service")) {
+            row.recall = {
+                setting: settingOf(tier.chartName, tier.setting),
+                key: tier.key ?? null,
+                date: tier.lastDate ? dayOf(tier.lastDate) : null,
+                serviceLabel: otherLabel(index, slotKey),
+            }
+        }
         if (choice) row.standing = { byName: choice.byName, at: choice.at }
         if (tier.promotion) row.promotion = tier.promotion
         if (r.fileId && (tier.tier === "standard" || tier.tier === "usual")) {
@@ -230,6 +270,7 @@ async function tieredRows(
         }
         return row
     })
+    return { rows: out, vsLast }
 }
 
 function otherLabel(index: ReturnType<typeof buildSlotUses>, slotKey: string): string | null {

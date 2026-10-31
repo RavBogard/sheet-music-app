@@ -149,8 +149,14 @@ export function classifyService(s: {
     // B'nei Mitzvah is its own service type: its name beats a stored or inferred shabbat_morning,
     // so it never counts toward the regular Shabbat-morning profile.
     // Whatever the stored type: B'nei Mitzvah is its own flow (a Friday-night Bat Mitzvah too).
+    // A Havdalah (evening) B'nei Mitzvah is its own preset: its name says so.
+    const decoded = decodeHtml(name)
     const serviceType =
-        inferred !== "havdalah_bnei_mitzvah" && BNEI_MITZVAH_RE.test(decodeHtml(name)) ? "bnei_mitzvah_saturday" : inferred
+        inferred !== "havdalah_bnei_mitzvah" && BNEI_MITZVAH_RE.test(decoded)
+            ? /\bhavdall?ah\b/i.test(decoded)
+                ? "havdalah_bnei_mitzvah"
+                : "bnei_mitzvah_saturday"
+            : inferred
     const rabbiSlot = storedRabbiSlot(s.rabbiSlot) ?? rabbiSlotFor(s.rabbi)
     const tt = typeof s.templateType === "string" ? s.templateType.trim() : ""
     const special =

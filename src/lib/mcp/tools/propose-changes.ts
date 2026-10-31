@@ -23,7 +23,8 @@ import {
     type ResolvedTrackBond,
 } from "@/lib/mcp/server-songs"
 import { deriveSetlistCounts } from "@/lib/setlist-derived-counts"
-import { profileMatches, type ProfileMatchCandidate } from "@/lib/profiles/profile-match"
+import { profileSlotInfo, type ProfileMatchCandidate, type ProfileSlotInfo } from "@/lib/profiles/profile-match"
+import { compareTitleToFilename } from "./chart-bond-audit"
 import { logger } from "@/lib/logger"
 import {
     WRITE_RECEIPTS_COLLECTION,
@@ -256,7 +257,7 @@ export async function proposeSetlistChanges(
 
     // Build the envelope: confidence + flags + explanation per proposal.
     const envelopes: ProposalEnvelope[] = args.proposals.map((p, i) =>
-        computeProposalEnvelope(p, libraryRows, matched.has(i)),
+        computeProposalEnvelope(p, libraryRows, matched.get(i)),
     )
     const summary = summarize(envelopes)
 
@@ -761,7 +762,7 @@ async function profileMatchPositions(
     setlistId: string,
     proposals: ProposalInput[],
     libraryRows: Map<string, Record<string, unknown> | null>,
-): Promise<Set<number>> {
+): Promise<Map<number, ProfileSlotInfo>> {
     try {
         const candidates: ProfileMatchCandidate[] = []
         for (const [i, p] of proposals.entries()) {
@@ -785,20 +786,20 @@ async function profileMatchPositions(
                 title,
             })
         }
-        return await profileMatches(org, setlistData, candidates)
+        return await profileSlotInfo(org, setlistData, candidates)
     } catch (err) {
         logger.warn("[mcp] propose profile check failed (fail-soft)", {
             setlistId,
             err: err instanceof Error ? err.message : String(err),
         })
-        return new Set()
+        return new Map()
     }
 }
 
-function computeProposalEnvelope(
+export function computeProposalEnvelope(
     p: ProposalInput,
     libraryRows: Map<string, Record<string, unknown> | null>,
-    profileMatch = false,
+    slot?: ProfileSlotInfo,
 ): ProposalEnvelope {
     // Remove and non-bond updates carry no bonding risk → high confidence.
     if (p.action === "remove") {
@@ -835,20 +836,35 @@ function computeProposalEnvelope(
             : 0.5
     const flags: string[] = []
     if (row.status === "orphaned") flags.push("orphan_risk")
-    if (profileMatch) {
+    // MCP-16: confidence also asks whether the chart fits the row, not only how
+    // specific the chart's own title is.
+    const chartName = typeof row.name === "string" ? row.name : ""
+    const titleMismatch = !!p.title && !!chartName && compareTitleToFilename(p.title, chartName).mismatch
+    if (titleMismatch) flags.push("title_mismatch")
+    const keyDiffers =
+        !!p.key && !!slot?.historyKey && p.key.trim().toLowerCase() !== slot.historyKey.trim().toLowerCase()
+    if (keyDiffers) flags.push("key_differs_from_history")
+    if (slot?.match) {
         // The profile already holds this chart for the slot, so a generic
-        // title is no reason to stop and ask.
+        // title is no reason to stop and ask — unless that usual is stale.
         flags.push("profile_match")
+        if (slot.stale) flags.push("stale_usual")
+        const capped = slot.stale || titleMismatch || keyDiffers
         return {
             ...p,
-            confidence: "high",
+            confidence: capped ? "medium" : "high",
             flags,
-            explanation: "the service profile's standard or usual chart for this slot",
+            explanation: slot.stale
+                ? "the service profile's usual chart for this slot, but not played for over 8 weeks; confirm"
+                : "the service profile's standard or usual chart for this slot",
         }
     }
     if (specificity < STOP_AND_ASK_THRESHOLD) flags.push("generic_title")
-    const confidence: ProposalEnvelope["confidence"] =
+    const bySpecificity: ProposalEnvelope["confidence"] =
         specificity >= 0.7 ? "high" : specificity >= 0.5 ? "medium" : "low"
+    // A chart that does not fit the row's title, or a key other than history's, is never high.
+    const confidence: ProposalEnvelope["confidence"] =
+        (titleMismatch || keyDiffers) && bySpecificity === "high" ? "medium" : bySpecificity
     const explanation =
         specificity >= 0.7
             ? `unambiguous title (specificity ${specificity})`

@@ -2,6 +2,7 @@ import type { RabbiSlotKey } from "@/lib/history/classify"
 import { historyStem } from "@/lib/history/song-history"
 import { SERVICE_TYPE_CATALOG } from "@/lib/templates/service-types"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
+import { momentForTitle } from "./moment-key"
 import type { OrgId } from "@/lib/org/types"
 
 /**
@@ -49,6 +50,7 @@ export const CRC_CORE_PROFILES: readonly CoreProfile[] = [
     { key: "shabbat_morning:randy", label: "Randy Shabbat morning", serviceType: "shabbat_morning", rabbiSlot: "randy", book: "crc-saturday" },
     { key: "shir_shabbat", label: "Shir Shabbat", serviceType: "shir_shabbat", rabbiSlot: null, book: "legacy-shabbat-evening" },
     { key: "bnei_mitzvah_saturday", label: "B'nei Mitzvah", serviceType: "bnei_mitzvah_saturday", rabbiSlot: null, book: "legacy-beit-mitzvah" },
+    { key: "havdalah_bnei_mitzvah", label: "Havdalah B'nei Mitzvah", serviceType: "havdalah_bnei_mitzvah", rabbiSlot: null, book: "legacy-beit-mitzvah" },
 ]
 
 const RABBI_REQUIRED = new Set(["friday_night", "shabbat_morning"])
@@ -69,15 +71,49 @@ export function serviceLabelFor(serviceType: string | null): string | null {
     return CATALOG_LABEL.get(serviceType) ?? serviceType
 }
 
+/** A row as slot keys read it. A page never names the slot: only a stored moment or a clear title. */
+export interface SlotTrack {
+    momentId?: string | null
+    title: string
+    fileId?: string | null
+    type?: string | null
+}
+
+export interface SlotKeyOptions {
+    /**
+     * Look the moment up from the title and the page when the row stores none
+     * (MCP-02). Default true. Brothers Lazaroff keeps its song slots, so its
+     * gig memory never changes key.
+     */
+    byTitle?: boolean
+}
+
 /**
- * The slot a row fills: `moment:<momentId>` when the row names a moment,
- * otherwise `song:<partGroup>` (every instrument copy of one arrangement
- * shares it), falling back to the title's stem when the chart has none.
+ * The slot a row fills: `moment:<momentId>` when the row names a moment — a
+ * stored momentId, else the moment its title names on a single clear match
+ * (bind-on-type's matcher; see moment-key.ts) — so every setting of one
+ * prayer is one slot. Otherwise `song:<partGroup>` (every instrument copy of one
+ * arrangement shares it), falling back to the title's stem when the chart has
+ * none.
  */
 export function slotKeyFor(
-    track: { momentId?: string | null; title: string; fileId?: string | null },
+    track: SlotTrack,
     partGroupOf: (fileId: string) => string | null,
+    opts: SlotKeyOptions = {},
 ): string {
+    if (typeof track.momentId === "string" && track.momentId) return `moment:${track.momentId}`
+    if (opts.byTitle !== false) {
+        const moment = momentForTitle(track.title, track.type ?? "song")
+        if (moment) return `moment:${moment}`
+    }
+    return legacySlotKeyFor(track, partGroupOf)
+}
+
+/**
+ * The slot key before MCP-02 (moment only when stored). Standing choices made
+ * then are stored under it, so reads look there when the new key has none.
+ */
+export function legacySlotKeyFor(track: SlotTrack, partGroupOf: (fileId: string) => string | null): string {
     if (typeof track.momentId === "string" && track.momentId) return `moment:${track.momentId}`
     const partGroup = track.fileId ? partGroupOf(track.fileId) : null
     return `song:${partGroup ?? historyStem(track.title ?? "")}`

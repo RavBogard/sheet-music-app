@@ -154,7 +154,7 @@ import { setStandingChoiceTool, clearStandingChoiceTool } from "./standing"
 import { draftServiceTool, createSetlistFromDraftTool } from "./draft-service"
 import { addOpenItemTool, resolveOpenItemTool } from "./open-items"
 import { readBackSetlistTool } from "./read-back-setlist"
-import { seedServiceProfiles, getServiceProfileTool } from "./service-profiles"
+import { seedServiceProfiles, getServiceProfileTool, reseedServiceProfileTool } from "./service-profiles"
 import { richError, liftLegacyErrorEnvelope } from "@/lib/mcp/error-envelopes"
 export { registerTestTokenTools } from "./test-tokens"
 export { registerMintAdminBearerTools } from "./mint-admin-bearer"
@@ -863,10 +863,31 @@ export function registerReadTools(server: McpServer): void {
     )
 
     server.registerTool(
+        "reseed_service_profile",
+        {
+            description:
+                "Re-learn one service profile's running order now, from its last 5 regular services (never a special week or a B'nei Mitzvah), and show it: the order, the services it was learned from, and which slots are open. draft_service re-learns on every draft anyway; use this when the author asks what the order would be, or to refresh the saved profile on purpose. friday_night and shabbat_morning need `rabbiSlot`. Admin / band_leader. F-05: `dryRun` defaults true and writes nothing; a real run needs `dryRun: false, force: true`. Returns `{ok, dryRun, profileKey, label, outcome, learnedFrom:[{setlistId, name, date}], order:[{index, type, title, slotKind, fileId, key}], unsure, rowChanges?, templateId}`.",
+            inputSchema: {
+                serviceType: z
+                    .string()
+                    .describe("Service type key, e.g. 'shabbat_morning', 'friday_night', 'shir_shabbat', 'bnei_mitzvah_saturday'."),
+                rabbiSlot: z
+                    .enum(["daniel_karen", "randy"])
+                    .optional()
+                    .describe("Required for friday_night and shabbat_morning: which rabbi leads. Ask; never infer."),
+                dryRun: z.boolean().optional().describe("When true (default), report without writing."),
+                force: z.boolean().optional().describe("Required with `dryRun: false` to write."),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await reseedServiceProfileTool(uidFrom(extra), args, orgFrom(extra))),
+    )
+
+    server.registerTool(
         "draft_service",
         {
             description:
-                "Draft one service from its living profile, for the author to review before anything is created. A song slot is filled only when it is `standard` (set with set_standing_choice) or `usual` (the same chart on 3 of the last 5 regular weeks); every other song slot is left open with its label and listed in `openIndexes`. It never picks a setting nobody chose. friday_night and shabbat_morning need `rabbiSlot`: ask who is leading, never infer it. `special` defaults to true for holiday services. A profile not yet made is made on first use from past setlists marked with that service and rabbi; with none, it returns `no_profile`: build that week from a recent setlist with the rabbi set, and the next draft learns from it. The draft is kept 30 minutes; create the setlist with create_setlist_from_draft. Say `readback.text` aloud (exceptions first, then one line for everything else) and show `readback.exceptions` as a short list; give the full rows only when asked. Admin / band_leader. Tenant-scoped. Returns `{ok, draftId, expiresAt, profile:{key,label,book}, special, rows:[{index, label, type, slotKey, fileId?, chartName?, key?, tier, phrase, promotion?}], openIndexes, truncated, readback:{headline, exceptions:[{kind, index, text}], rest, text}}`.",
+                "Draft one service from its living profile, for the author to review before anything is created. The running order is re-learned on every draft from the service's last 5 regular weeks (never a special week or a B'nei Mitzvah; `origin` and the headline say what it was learned from); with no history yet it comes from a matching template, every song open. A song slot (one per prayer moment, whatever its setting) is filled only when it is `standard` (set with set_standing_choice) or `usual` (the same chart on 3 of the last 5 regular weeks); every other song slot is left open with its label, listed in `openIndexes`, and carries `recall` (the exact chart it had last time) when there is one. It never picks a setting nobody chose. A filled row that is worth hearing (a usual not played for 8 weeks, a different chart last week, no key on record) is named in the readback. `vsLast` lists what the last regular service had per slot. friday_night and shabbat_morning need `rabbiSlot`: ask who is leading, never infer it. `special` defaults to true for holiday services. With no history and no template it returns `no_profile`: build that week from a recent setlist with the rabbi set, and the next draft learns from it. The draft is kept 30 minutes; create the setlist with create_setlist_from_draft. Say `readback.text` aloud (exceptions first, then one line for everything else) and show `readback.exceptions` as a short list; give the full rows only when asked. Admin / band_leader. Tenant-scoped. Returns `{ok, draftId, expiresAt, profile:{key,label,book}, origin, special, rows:[{index, label, type, slotKey, fileId?, chartName?, key?, tier, phrase, promotion?, recall?, parts?}], openIndexes, truncated, vsLast, readback:{headline, exceptions:[{kind, index, text, voice?}], rest, text}}`.",
             inputSchema: {
                 date: z.string().describe("Service date, YYYY-MM-DD."),
                 serviceType: z
@@ -891,7 +912,7 @@ export function registerReadTools(server: McpServer): void {
         "create_setlist_from_draft",
         {
             description:
-                "Create the setlist from a draft_service draft, after the author has chosen charts for the open slots. Rows keep the draft's order; the profile's book is bound as clone_setlist_from_template does, and the setlist stores its service type, rabbi slot and special flag. Each choice names a song row by its draft `index` and may set `fileId`, `key` and `leadMusician`. Set `standing: true` only when the author says to keep that choice for next time; it is then remembered as the slot's standard and announced. Changes to filled rows without `standing` are one-offs, summed up in `oneOffNote`. An open slot with no choice is created with its label and no chart. Pass `book: null` when the service prays from no registered book (a B'nei Mitzvah family's own booklet): no row gets a page, because a wrong page is worse than none. The draft is deleted. Admin / band_leader. Tenant-scoped. Returns `{ok, setlistId, trackCount, book, announcements, oneOffNote?, unresolvedLiturgy, bondReviewCount}`; read `announcements` and `oneOffNote` back to the author.",
+                "Create the setlist from a draft_service draft, after the author has chosen charts for the open slots. Rows keep the draft's order; the profile's book is bound as clone_setlist_from_template does, and the setlist stores its service type, rabbi slot and special flag. Each choice names a song row by its draft `index` and may set `fileId`, `key` and `leadMusician`; `useRecall: true` takes an open row's `recall` chart (and its key unless `key` is given) for 'same as last time'. Set `standing: true` only when the author says to keep that choice for next time; it is then remembered as the slot's standard and announced. Changes to filled rows without `standing` are one-offs, summed up in `oneOffNote`. An open slot with no choice is created with its label and no chart. Pass `book: null` when the service prays from no registered book (a B'nei Mitzvah family's own booklet): no row gets a page, because a wrong page is worse than none. The draft is deleted. Admin / band_leader. Tenant-scoped. Returns `{ok, setlistId, trackCount, book, announcements, oneOffNote?, unresolvedLiturgy, bondReviewCount}`; read `announcements` and `oneOffNote` back to the author.",
             inputSchema: {
                 draftId: z.string().describe("The draftId from draft_service."),
                 name: z.string().optional().describe("Name for the setlist; overrides the draft's."),
@@ -899,6 +920,10 @@ export function registerReadTools(server: McpServer): void {
                     .array(
                         z.object({
                             index: z.number().int().describe("The draft row's index."),
+                            useRecall: z
+                                .boolean()
+                                .optional()
+                                .describe("Use the open row's `recall` chart (same as last time). Ignored when fileId is given."),
                             fileId: z.string().optional().describe("Chart for the row (a library fileId)."),
                             key: z.string().optional().describe("Key for the row, e.g. 'Dm'."),
                             leadMusician: z.string().optional().describe("Vocal Lead for the row."),
@@ -960,7 +985,7 @@ export function registerReadTools(server: McpServer): void {
         "read_back_setlist",
         {
             description:
-                "Read an existing setlist back the way it should be said aloud: exceptions first, then one line for everything else, plus open items. Use after any change and whenever the author asks 'what's on Saturday?'. When the setlist stores its service type (and rabbi, where that changes the music) and the profile exists, rows are compared with their standard or usual; otherwise it lists only rows with no chart and open items. Say `readback.text`; show `readback.exceptions` as a short list. Read-only. Tenant-scoped. Returns `{ok, setlistId, readback:{headline, exceptions:[{kind, index, text}], rest, text}}`.",
+                "Read an existing setlist back the way it should be said aloud: exceptions first, then one line for everything else, plus open items. Use after any change and whenever the author asks 'what's on Saturday?'. When the setlist stores its service type (and rabbi, where that changes the music) and the profile exists, rows are compared with their standard or usual; otherwise it lists only rows with no chart and open items. A book other than the profile's is said. Say `readback.text`; show `readback.exceptions` as a short list. `vsLast` lists, per slot, what the profile's last regular service before this one had (recall only). Read-only. Tenant-scoped. Returns `{ok, setlistId, readback:{headline, exceptions:[{kind, index, text, voice?}], rest, text}, vsLast}`.",
             inputSchema: {
                 setlistId: z.string().min(1).describe("Setlist id."),
             },
@@ -1217,7 +1242,7 @@ export function registerWriteTools(server: McpServer): void {
         "create_setlist",
         {
             description:
-                "Create a new, empty setlist owned by the user. Use when the user wants to start a new service/gig. Returns the new setlist id, trackCount, and the owner's ownerId + ownerName — follow up with add_track_to_setlist to populate it. eventDate is an ISO date string. Requires an admin or band leader account. Pass `isTest:true` to flag the setlist as test traffic (drops out of /perform public listing) regardless of name/owner heuristics — useful for autonomous cycles whose setlists carry real-looking names like 'test-rehearsal'. For a transport retry, pass the SAME caller-minted `idempotencyKey`: same key + payload returns the original receipt (`replayed:true`) instead of creating a duplicate. Omit/use a new key for an intentional second setlist, even if its fields match.",
+                "Create a new, empty setlist owned by the user. Use when the user wants to start a new service/gig. Returns the new setlist id, trackCount, and the owner's ownerId + ownerName — follow up with add_track_to_setlist to populate it. eventDate is an ISO date string. Requires an admin or band leader account. Pass `isTest:true` to flag the setlist as test traffic (drops out of /perform public listing) regardless of name/owner heuristics — useful for autonomous cycles whose setlists carry real-looking names like 'test-rehearsal'. For a transport retry, pass the SAME caller-minted `idempotencyKey`: same key + payload returns the original receipt (`replayed:true`) instead of creating a duplicate. Omit/use a new key for an intentional second setlist, even if its fields match. Pass `rabbiSlot` and `special` so the service's memory learns from it correctly.",
             inputSchema: {
                 name: z.string().min(1).describe("Setlist name, e.g. 'Shabbat Morning — June 7'"),
                 eventDate: eventDateSchema.describe(
@@ -1228,6 +1253,14 @@ export function registerWriteTools(server: McpServer): void {
                     .optional()
                     .describe("Service/template type, e.g. 'shabbat-morning'"),
                 rabbi: z.string().optional().describe("Rabbi leading the service"),
+                rabbiSlot: z
+                    .enum(["daniel_karen", "randy"])
+                    .optional()
+                    .describe("Which rabbi's music this service follows (friday_night, shabbat_morning). Set it so the next draft_service learns from this setlist; ask, never infer."),
+                special: z
+                    .boolean()
+                    .optional()
+                    .describe("A special week (guests, holiday, memorial, camp). Special weeks never shape the service's usual order or charts."),
                 isTest: z
                     .boolean()
                     .optional()
@@ -1258,7 +1291,7 @@ export function registerWriteTools(server: McpServer): void {
         "clone_setlist",
         {
             description:
-                "For one-off copies; for a weekly service use draft_service, which remembers what the band chose. Clones an existing setlist into a brand-new one owned by the caller; last week's one-off keys and charts are copied verbatim, and rabbiSlot and special are not stored. Reads the source's metadata (name → 'Copy of <source>' unless newName given; templateType, rabbi, serviceNotes travel with the clone) and every track (type, title, key, bpm, leadMusician, referenceLink, notes, songId, fileId, fileName — chart bonds copied verbatim, contiguous `order` from 0). Returns `{setlistId, sourceSetlistId, trackCount, ownerId, ownerName, version: 1}` plus two advisory reports since clones inherit the source's bonds + metadata verbatim: `bondReviewCount` (rows whose song title diverges from the bonded chart filename — if >0, run review_chart_bonds to walk them) with `bondReviewRows` listing each flagged row's `{position, trackId, fileId, chartFileName, overlapScore}` so you can target a swap_chart / review_chart_bonds follow-up directly without re-fetching the clone, and `staleMetadataCandidates` (track titles / clone name / serviceNotes carrying occasion-specific parsha/holiday/date tokens that may belong to the SOURCE's date — double-check them for the new service). Both are hints only; the clone still wrote everything verbatim. eventDate does NOT auto-copy — pass `newEventDate` for the new service day (omit to leave undated; pass null to be explicit). `copyServiceNotes` defaults to true. Admins and band leaders may clone (same gate as create_setlist) — band_leader may clone setlists owned by others. Trusted-leader rate-limit bypass applies.",
+                "For one-off copies; for a weekly service use draft_service, which remembers what the band chose. Clones an existing setlist into a brand-new one owned by the caller; last week's one-off keys and charts are copied verbatim. Pass `rabbiSlot` and `special` for the new service (the source's are not assumed), so the next draft_service learns from it. Reads the source's metadata (name → 'Copy of <source>' unless newName given; templateType, rabbi, serviceNotes travel with the clone) and every track (type, title, key, bpm, leadMusician, referenceLink, notes, songId, fileId, fileName — chart bonds copied verbatim, contiguous `order` from 0). Returns `{setlistId, sourceSetlistId, trackCount, ownerId, ownerName, version: 1}` plus two advisory reports since clones inherit the source's bonds + metadata verbatim: `bondReviewCount` (rows whose song title diverges from the bonded chart filename — if >0, run review_chart_bonds to walk them) with `bondReviewRows` listing each flagged row's `{position, trackId, fileId, chartFileName, overlapScore}` so you can target a swap_chart / review_chart_bonds follow-up directly without re-fetching the clone, and `staleMetadataCandidates` (track titles / clone name / serviceNotes carrying occasion-specific parsha/holiday/date tokens that may belong to the SOURCE's date — double-check them for the new service). Both are hints only; the clone still wrote everything verbatim. eventDate does NOT auto-copy — pass `newEventDate` for the new service day (omit to leave undated; pass null to be explicit). `copyServiceNotes` defaults to true. Admins and band leaders may clone (same gate as create_setlist) — band_leader may clone setlists owned by others. Trusted-leader rate-limit bypass applies.",
             inputSchema: {
                 sourceSetlistId: z
                     .string()
@@ -1282,6 +1315,14 @@ export function registerWriteTools(server: McpServer): void {
                     .describe(
                         "If true (default), copy the source's serviceNotes onto the clone. Pass false to start with a clean notes field.",
                     ),
+                rabbiSlot: z
+                    .enum(["daniel_karen", "randy"])
+                    .optional()
+                    .describe("Which rabbi's music the new service follows. Ask; never infer."),
+                special: z
+                    .boolean()
+                    .optional()
+                    .describe("A special week (guests, holiday, memorial, camp): it never shapes the usual."),
             },
         },
         async (args, extra) => jsonResult(await cloneSetlist(uidFrom(extra), args, orgFrom(extra))),

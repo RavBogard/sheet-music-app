@@ -23,6 +23,8 @@ export interface HistoryTrack {
     momentId: string | null
     /** The row's page in the setlist's book, when it has one. */
     liturgyRef?: { book: string; folio: number; unitId?: string; stale?: boolean } | null
+    /** True when the band swapped in this chart for the service (history read as performed). */
+    performed?: boolean
 }
 
 export interface HistorySetlist {

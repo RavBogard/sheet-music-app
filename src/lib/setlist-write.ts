@@ -8,7 +8,7 @@
 // Firestore SDK or the v6.0 client-side applyEdit outbox; it writes directly
 // via the Admin SDK (the same pattern import/execute already used).
 
-import { storedClassFor } from "@/lib/history/classify"
+import { storedClassFor, storedRabbiSlot } from "@/lib/history/classify"
 import crypto from "crypto"
 
 import { FieldValue } from "firebase-admin/firestore"
@@ -54,6 +54,10 @@ export interface CreateSetlistInput {
      * unaffected.
      */
     book?: string
+    /** MCP-15: the rabbi slot whose music this service follows (stored as given). */
+    rabbiSlot?: string | null
+    /** MCP-15: a special week never shapes the usual. */
+    special?: boolean
     tracks: ServerSetlistTrackInput[]
     /**
      * Cycle-5 C5A-003 — optional explicit `isTest:true` override. When set,
@@ -191,6 +195,9 @@ export async function createSetlistServerSide(
         setlistPayload,
         storedClassFor({ templateType: input.serviceType, rabbi: input.rabbi }),
     )
+    // The author's explicit rabbi slot and special flag win over the inferred ones.
+    if (input.rabbiSlot !== undefined) setlistPayload.rabbiSlot = storedRabbiSlot(input.rabbiSlot)
+    if (typeof input.special === "boolean") setlistPayload.special = input.special
     if (input.book !== undefined) {
         setlistPayload.book = input.book
     }

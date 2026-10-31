@@ -9,7 +9,10 @@ import { visibleTo } from "@/lib/library/visibility"
 import type { OrgId } from "@/lib/org/types"
 import { dayInZone, orgTimeZone } from "@/lib/org/locale"
 import { momentIdForUnit } from "@/lib/books/moments"
+import { DEVIATIONS_COLLECTION, eventDayOf, parseDeviation } from "@/lib/performance/tonight"
+import { logger } from "@/lib/logger"
 import { classifyService } from "./classify"
+import { deviationsBySetlist, overlayPerformed } from "./performed-overlay"
 import type { HistorySetlist, HistoryTrack, LibraryLite } from "./song-history"
 
 /**
@@ -104,7 +107,7 @@ export function inDateWindow(
 
 export async function loadHistorySetlists(
     org: OrgId,
-    opts: { from?: string; to?: string; includeUndated?: boolean } = {},
+    opts: { from?: string; to?: string; includeUndated?: boolean; asPerformed?: boolean } = {},
 ): Promise<{ setlists: HistorySetlist[]; truncated: boolean }> {
     initAdmin()
     const db = getFirestore()
@@ -161,7 +164,35 @@ export async function loadHistorySetlists(
         return hs
     })
 
-    return { setlists, truncated }
+    if (!opts.asPerformed || setlists.length === 0) return { setlists, truncated }
+    return { setlists: await withPerformed(db, org, setlists), truncated }
+}
+
+/**
+ * Lay the band's recorded chart swaps over the loaded setlists (MCP-23). One
+ * collection-group read; only this load's (org-scoped) setlist ids are kept.
+ * A read failure leaves the history as planned.
+ */
+async function withPerformed(
+    db: FirebaseFirestore.Firestore,
+    org: OrgId,
+    setlists: HistorySetlist[],
+): Promise<HistorySetlist[]> {
+    try {
+        const snap = await db.collectionGroup(DEVIATIONS_COLLECTION).get()
+        if (snap.empty) return setlists
+        const grouped = deviationsBySetlist(
+            snap.docs.map((d) => ({ setlistId: d.ref.parent.parent?.id ?? null, deviation: parseDeviation(d.data()) })),
+            new Set(setlists.map((s) => s.id)),
+        )
+        return setlists.map((s) => {
+            const devs = grouped.get(s.id)
+            return devs ? overlayPerformed(s, devs, eventDayOf(s.eventDate, org)) : s
+        })
+    } catch (err) {
+        logger.warn("[history] performed deviations unreadable; history stays as planned", err)
+        return setlists
+    }
 }
 
 export async function loadLibraryLite(

@@ -94,6 +94,10 @@ export interface CloneSetlistArgs {
      * the service template.
      */
     copyServiceNotes?: boolean
+    /** MCP-15: the rabbi slot of the new service, so the next draft learns from it. */
+    rabbiSlot?: "daniel_karen" | "randy" | null
+    /** MCP-15: the new service is a special week (never shapes the usual). */
+    special?: boolean
 }
 
 /** Cloned track row carrying occasion-specific tokens that may be stale. */
@@ -308,6 +312,9 @@ export async function cloneSetlist(
     if (typeof sourceData.rabbi === "string" && storedRabbiSlot(sourceData.rabbiSlot)) {
         setlistPayload.rabbiSlot = storedRabbiSlot(sourceData.rabbiSlot)
     }
+    // The author's own words for the new service win (MCP-15).
+    if (args.rabbiSlot !== undefined) setlistPayload.rabbiSlot = storedRabbiSlot(args.rabbiSlot)
+    if (typeof args.special === "boolean") setlistPayload.special = args.special
     // `book` is the siddur/machzor the service is read from — an attribute of
     // the service kind, exactly like rabbi/templateType. Without it the clone's
     // rows keep their `liturgyRef.folio` page numbers but the setlist has no

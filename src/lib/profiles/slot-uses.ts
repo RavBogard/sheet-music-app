@@ -2,6 +2,7 @@ import { setlistPart } from "@/lib/history/classify"
 import type { HistorySetlist, LibraryLite } from "@/lib/history/song-history"
 import type { OrgId } from "@/lib/org/types"
 import { dayInZone } from "@/lib/org/locale"
+import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import { isSongType } from "@/lib/setlist-track-count"
 import { serviceLabelFor, slotKeyFor } from "./keys"
 import { USUAL_WINDOW, type SlotUse } from "./tiers"
@@ -26,6 +27,8 @@ export interface ProfileFilter {
     serviceType: string
     /** null: any rabbi (a profile not split by rabbi). */
     rabbiSlot: string | null
+    /** Slot keys look the moment up from the title. Default true; Brothers Lazaroff passes false. */
+    byTitle?: boolean
 }
 
 export interface SlotUseIndex {
@@ -38,6 +41,19 @@ export interface SlotUseIndex {
 
 export function partGroupLookup(library: Map<string, LibraryLite>): (fileId: string) => string | null {
     return (fileId) => library.get(fileId)?.partGroup ?? null
+}
+
+/**
+ * MCP-02 left standing choices made earlier under `song:<partGroup>` keys. For
+ * a moment slot, those are the song keys of every chart the slot's history
+ * holds (whichever row that chart was on), so an older "keep it" on Mi Chamocha
+ * is still found whatever setting the row now has.
+ */
+export function historyAliases(index: SlotUseIndex, slotKey: string): string[] {
+    if (!slotKey.startsWith("moment:")) return []
+    const out = new Set<string>()
+    for (const u of index.profileUses(slotKey)) out.add(`song:${u.partGroup}`)
+    return [...out]
 }
 
 /** Dated, non-test, whole-band setlists, newest first. */
@@ -134,7 +150,7 @@ export function buildSlotUses(
         const seen = new Set<string>()
         for (const t of s.tracks) {
             if (!isSongType(t.type) || !t.fileId) continue
-            const slotKey = slotKeyFor(t, partGroupOf)
+            const slotKey = slotKeyFor(t, partGroupOf, { byTitle: f.byTitle !== false })
             if (seen.has(slotKey)) continue
             seen.add(slotKey)
             let lib = library.get(t.fileId)
@@ -153,6 +169,7 @@ export function buildSlotUses(
                 fileId,
                 partGroup: lib?.partGroup ?? fileId,
                 chartName: lib?.name ?? t.fileName ?? t.title,
+                ...(lib?.setting ? { setting: lib.setting } : {}),
                 ...(dead ? { dead: true } : {}),
                 recent: inProfile ? recentDays.has(s.eventDate!.slice(0, 10)) : undefined,
                 key: t.key ?? null,
@@ -173,6 +190,25 @@ export function buildSlotUses(
     }
 }
 
+/**
+ * The org's history as performed (MCP-23) and the library rows it names,
+ * with the canonical twins of archived charts.
+ */
+export async function loadMemoryHistory(org: OrgId): Promise<{
+    setlists: HistorySetlist[]
+    library: Map<string, LibraryLite>
+    truncated: boolean
+}> {
+    const { loadHistorySetlists, loadLibraryLite } = await import("@/lib/history/load")
+    const { setlists, truncated } = await loadHistorySetlists(org, { asPerformed: true })
+    const fileIds = setlists.flatMap((s) => s.tracks.map((t) => t.fileId).filter((x): x is string => !!x))
+    const library = await loadLibraryLite(org, fileIds)
+    // An archived chart with a canonical twin recalls the twin: load those rows too.
+    const canon = [...library.values()].filter(isDeadChart).map((l) => l.canonicalFileId).filter((x): x is string => !!x && !library.has(x))
+    if (canon.length > 0) for (const [id, l] of await loadLibraryLite(org, canon)) library.set(id, l)
+    return { setlists, library, truncated }
+}
+
 /** Load the org's history and library, then index slot uses for one profile. */
 export async function loadSlotUses(
     org: OrgId,
@@ -183,12 +219,8 @@ export async function loadSlotUses(
     library: Map<string, LibraryLite>
     truncated: boolean
 }> {
-    const { loadHistorySetlists, loadLibraryLite } = await import("@/lib/history/load")
-    const { setlists, truncated } = await loadHistorySetlists(org, {})
-    const fileIds = setlists.flatMap((s) => s.tracks.map((t) => t.fileId).filter((x): x is string => !!x))
-    const library = await loadLibraryLite(org, fileIds)
-    // An archived chart with a canonical twin recalls the twin: load those rows too.
-    const canon = [...library.values()].filter(isDeadChart).map((l) => l.canonicalFileId).filter((x): x is string => !!x && !library.has(x))
-    if (canon.length > 0) for (const [id, l] of await loadLibraryLite(org, canon)) library.set(id, l)
-    return { index: buildSlotUses(setlists, library, f), setlists, library, truncated }
+    const { setlists, library, truncated } = await loadMemoryHistory(org)
+    // Brothers Lazaroff keeps song slots: no title lookup outside CRC.
+    const filter = { ...f, byTitle: f.byTitle ?? org === DEFAULT_ORG_ID }
+    return { index: buildSlotUses(setlists, library, filter), setlists, library, truncated }
 }

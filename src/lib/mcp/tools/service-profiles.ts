@@ -8,19 +8,20 @@ import { rowOrg } from "@/lib/mcp/org-context"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 import { logger } from "@/lib/logger"
-import { orgTimeZone } from "@/lib/org/locale"
+import { dayInZone, orgTimeZone } from "@/lib/org/locale"
 import { isSongType } from "@/lib/setlist-track-count"
-import { loadHistorySetlists, loadLibraryLite } from "@/lib/history/load"
+import { classifyService, rabbiSlotOf } from "@/lib/history/classify"
 import {
     CRC_CORE_PROFILES,
     profileKeyFor,
     rabbiRequired,
+    legacySlotKeyFor,
     slotKeyFor,
     type CoreProfile,
 } from "@/lib/profiles/keys"
-import { seedProfile, type SeedUnsure, type SeededTrack } from "@/lib/profiles/seed"
-import { existingOnDate, loadSlotUses } from "@/lib/profiles/slot-uses"
-import { readStanding, standingMapKey, type StandingChoice } from "@/lib/profiles/standing"
+import { seedProfile, type LearnedFrom, type SeedResult, type SeedUnsure, type SeededTrack } from "@/lib/profiles/seed"
+import { buildSlotUses, existingOnDate, historyAliases, loadMemoryHistory, type SlotUseIndex } from "@/lib/profiles/slot-uses"
+import { readStandingFor, type StandingChoice } from "@/lib/profiles/standing"
 import { computeSlotTier, type SlotTier } from "@/lib/profiles/tiers"
 import type { TemplateProfile } from "./templates"
 
@@ -97,6 +98,7 @@ export interface SeededProfileReport {
     key: string
     label: string
     basedOn: { setlistId: string; eventDate: string } | null
+    learnedFrom: LearnedFrom | null
     trackCount: number
     tracks: Array<{ type: string; title: string; slotKind: string | null; fileId: string | null; key: string | null }>
     unsure: SeedUnsure[]
@@ -184,16 +186,17 @@ export async function seedServiceProfiles(
         }
         const defs = CRC_CORE_PROFILES.filter((p) => !wanted || wanted.includes(p.key))
 
-        const { setlists, truncated } = await loadHistorySetlists(org, {})
-        const fileIds = setlists.flatMap((s) => s.tracks.map((t) => t.fileId).filter((f): f is string => !!f))
-        const library = await loadLibraryLite(org, fileIds)
+        const { setlists, library, truncated } = await loadMemoryHistory(org)
         const now = new Date()
-        const seeds = defs.map((def) => ({ def, seed: seedProfile(def, setlists, library, now) }))
+        // Learned from services before today: a setlist already made for next week is not history.
+        const today = dayInZone(now.getTime(), orgTimeZone(org))
+        const seeds = defs.map((def) => ({ def, seed: seedProfile(def, setlists, library, now, { before: today }) }))
 
         const profiles: SeededProfileReport[] = seeds.map(({ def, seed }) => ({
             key: def.key,
             label: def.label,
             basedOn: seed.basedOn,
+            learnedFrom: seed.learnedFrom ?? null,
             trackCount: seed.tracks.length,
             tracks: seed.tracks.map((t) => ({
                 type: t.type,
@@ -330,31 +333,48 @@ export async function seedServiceProfiles(
     }
 }
 
+/** The core profile definition for a key in this org; only CRC has them. */
+export function coreProfileFor(org: OrgId, profileKey: string): CoreProfile | null {
+    if (org !== DEFAULT_ORG_ID) return null
+    return CRC_CORE_PROFILES.find((p) => p.key === profileKey) ?? null
+}
+
+/** True when the stored rows already say what `tracks` says (ignoring `house.seededAt`). */
+export function sameRows(stored: unknown, tracks: SeededTrack[]): boolean {
+    return stable(stored ?? []) === stable(tracks)
+}
+
 /**
- * Seed one missing core profile from its own history, the way a real
- * seed_service_profiles run creates it. draft_service calls this the first
- * time a profile is asked for, so a profile starts as soon as one setlist
- * with that service type and rabbi exists; past setlists without a stored
- * rabbi are never attributed. Returns the profile doc, or null when the
- * profile has no history yet (or the key is not a core profile of this org).
+ * Bet 1 (MCP-03): a profile is a cache of what was learned. Write the learned
+ * rows to the profile doc when they differ from what is stored (or create it).
+ * Best effort: a race or a failed write leaves the doc as it was, and the
+ * draft still uses what it just learned. Returns the doc id.
  */
-export async function seedMissingProfile(
+export async function cacheLearnedProfile(
     uid: string,
     org: OrgId,
-    profileKey: string,
-): Promise<FirebaseFirestore.QueryDocumentSnapshot | null> {
-    if (org !== DEFAULT_ORG_ID) return null
-    const def = CRC_CORE_PROFILES.find((p) => p.key === profileKey)
-    if (!def) return null
+    def: CoreProfile,
+    seed: SeedResult,
+    existing: FirebaseFirestore.QueryDocumentSnapshot | null,
+): Promise<string> {
     initAdmin()
     const db = getFirestore()
-    const { setlists } = await loadHistorySetlists(org, {})
-    const fileIds = setlists.flatMap((s) => s.tracks.map((t) => t.fileId).filter((f): f is string => !!f))
-    const library = await loadLibraryLite(org, fileIds)
-    const seed = seedProfile(def, setlists, library)
-    if (!seed.basedOn) return null
-    const ref = db.collection(TEMPLATES).doc(`profile__${org}__${def.key}`)
+    const ref = existing?.ref ?? db.collection(TEMPLATES).doc(`profile__${org}__${def.key}`)
     try {
+        if (existing) {
+            if (sameRows(existing.data().tracks, seed.tracks)) return existing.id
+            await existing.ref.update(
+                {
+                    tracks: seed.tracks,
+                    learnedFrom: seed.learnedFrom ?? null,
+                    version: FieldValue.increment(1),
+                    updatedAt: FieldValue.serverTimestamp(),
+                },
+                { lastUpdateTime: existing.updateTime },
+            )
+            logger.info("[mcp] profile re-learned", { org, key: def.key, learnedFrom: seed.learnedFrom?.count ?? 0 })
+            return existing.id
+        }
         await ref.create({
             id: ref.id,
             name: def.label,
@@ -365,16 +385,59 @@ export async function seedMissingProfile(
             ownerId: uid,
             ownerName: await ownerNameFor(db, uid),
             tracks: seed.tracks,
+            learnedFrom: seed.learnedFrom ?? null,
             version: 1,
             createdAt: FieldValue.serverTimestamp(),
             updatedAt: FieldValue.serverTimestamp(),
         })
-        logger.info("[mcp] profile seeded on first draft", { org, key: def.key, basedOn: seed.basedOn })
+        logger.info("[mcp] profile learned on first draft", { org, key: def.key, basedOn: seed.basedOn })
     } catch (error) {
-        // A concurrent first draft created it first: use that one.
-        logger.info("[mcp] profile seed raced; reading the existing one", { org, key: def.key, error: String(error) })
+        // A concurrent draft wrote it first: the next draft learns again anyway.
+        logger.info("[mcp] profile cache write skipped", { org, key: def.key, error: String(error) })
     }
-    return findProfileTemplate(db, org, def.key)
+    return ref.id
+}
+
+/**
+ * MCP-15: the newest legacy (non-profile) template of this org for a core
+ * profile — same service type, and the same rabbi where the rabbi splits the
+ * profile ("Randy Shabbat morning"). Its rows give a running order when the
+ * profile has no history yet; it never fills a chart.
+ */
+export async function findLegacyTemplate(
+    org: OrgId,
+    def: CoreProfile,
+): Promise<{ id: string; name: string; tracks: Record<string, unknown>[]; serviceNotes: string | null } | null> {
+    initAdmin()
+    const snap = await getFirestore().collection(TEMPLATES).where("orgId", "==", org).get()
+    const matches = snap.docs
+        .filter((d) => {
+            const t = d.data()
+            if (rowOrg(t.orgId) !== org || t.kind === "profile" || t.profile) return false
+            const name = typeof t.name === "string" ? t.name : ""
+            const cls = classifyService({ name, templateType: str(t.templateType) })
+            if (cls.serviceType !== def.serviceType) return false
+            if (!def.rabbiSlot) return true
+            return (rabbiSlotOf(str(t.rabbi)) ?? rabbiSlotOf(name)) === def.rabbiSlot
+        })
+        .sort((a, b) => millis(b.data().updatedAt) - millis(a.data().updatedAt))
+    const doc = matches[0]
+    if (!doc) return null
+    const d = doc.data()
+    return {
+        id: doc.id,
+        name: typeof d.name === "string" ? d.name : def.label,
+        tracks: Array.isArray(d.tracks) ? (d.tracks as Record<string, unknown>[]) : [],
+        serviceNotes: typeof d.serviceNotes === "string" ? d.serviceNotes : null,
+    }
+}
+
+function millis(v: unknown): number {
+    if (v && typeof v === "object" && typeof (v as { toMillis?: unknown }).toMillis === "function") {
+        return (v as { toMillis: () => number }).toMillis()
+    }
+    if (typeof v === "string") return Date.parse(v) || 0
+    return 0
 }
 
 // ─── get_service_profile ────────────────────────────────────────────────────
@@ -443,10 +506,68 @@ export async function findProfileTemplateFor(
 }
 
 /**
- * Every row of a profile template with its live tier: standing choices for
- * the profile (and, for a song slot, the bare service type) first, then
- * history. Shared by get_service_profile and draft_service.
+ * Every row of a profile with its live tier: the profile's standing choices
+ * first, then history. Shared by get_service_profile and draft_service. A song
+ * row's slot is recomputed (MCP-02 keys a prayer by its moment); the slot key
+ * it was stored under is still read for an older standing choice.
  */
+export async function tierProfileRows(
+    org: OrgId,
+    tracks: Record<string, unknown>[],
+    profileKey: string,
+    index: SlotUseIndex,
+): Promise<LoadedProfileRow[]> {
+    const slots = tracks.map((t) => {
+        if (!isSongType(t.type)) return null
+        const row = {
+            momentId: str(t.momentId),
+            title: typeof t.title === "string" ? t.title : "",
+            fileId: str(t.fileId),
+            type: "song",
+        }
+        // A prayer's moment wins (MCP-02); a song row keeps the slot it was learned under.
+        const viaMoment = slotKeyFor(row, index.partGroupOf)
+        const slotKey = viaMoment.startsWith("moment:") ? viaMoment : (str(t.slotKey) ?? viaMoment)
+        const aliases = [
+            ...new Set(
+                [str(t.slotKey), legacySlotKeyFor(row, index.partGroupOf), ...historyAliases(index, slotKey)].filter(
+                    (a): a is string => !!a && a !== slotKey,
+                ),
+            ),
+        ]
+        return { slotKey, aliases }
+    })
+    // Only the profile's own scope: a choice for another rabbi's profile never shows here.
+    const standing = await readStandingFor(
+        org,
+        profileKey,
+        slots.filter((x): x is { slotKey: string; aliases: string[] } => !!x),
+    )
+    return tracks.map((t, i) => {
+        const slotKey = slots[i]?.slotKey ?? null
+        const row: LoadedProfileRow = {
+            index: i,
+            type: typeof t.type === "string" ? t.type : "song",
+            title: typeof t.title === "string" ? t.title : "",
+            slotKind: str(t.slotKind),
+            slotKey,
+            house: t.house ?? null,
+            track: t,
+        }
+        if (slotKey) {
+            const choice = standing.get(slotKey) ?? null
+            row.tier = computeSlotTier({
+                standing: choice,
+                profileUses: index.profileUses(slotKey),
+                otherUses: index.otherUses(slotKey),
+            })
+            if (choice) row.standing = choice
+        }
+        return row
+    })
+}
+
+/** A profile template with its live tiers (get_service_profile). */
 export async function loadProfileTiers(
     org: OrgId,
     doc: FirebaseFirestore.QueryDocumentSnapshot,
@@ -458,47 +579,10 @@ export async function loadProfileTiers(
     const profile = data.profile as TemplateProfile
     const profileKey = profileKeyFor(serviceType, rabbiSlot)
     const tracks = Array.isArray(data.tracks) ? (data.tracks as Record<string, unknown>[]) : []
-
-    const { index, truncated, setlists } = await loadSlotUses(org, { serviceType, rabbiSlot, before: date })
+    const { setlists, library, truncated } = await loadMemoryHistory(org)
+    const index = buildSlotUses(setlists, library, { serviceType, rabbiSlot, before: date, byTitle: org === DEFAULT_ORG_ID })
     const existing = date ? existingOnDate(setlists, date, serviceType, orgTimeZone(org)) : []
-    const slotKeys = tracks.map((t) =>
-        isSongType(t.type)
-            ? (str(t.slotKey) ??
-              slotKeyFor(
-                  { momentId: str(t.momentId), title: typeof t.title === "string" ? t.title : "", fileId: str(t.fileId) },
-                  index.partGroupOf,
-              ))
-            : null,
-    )
-    // Only the profile's own scope: a choice for another rabbi's profile never shows here.
-    const standing = await readStanding(
-        org,
-        [profileKey],
-        slotKeys.filter((k): k is string => !!k),
-    )
-
-    const rows: LoadedProfileRow[] = tracks.map((t, i) => {
-        const slotKey = slotKeys[i]
-        const row: LoadedProfileRow = {
-            index: i,
-            type: typeof t.type === "string" ? t.type : "song",
-            title: typeof t.title === "string" ? t.title : "",
-            slotKind: str(t.slotKind),
-            slotKey,
-            house: t.house ?? null,
-            track: t,
-        }
-        if (slotKey) {
-            const choice = standing.get(standingMapKey(profileKey, slotKey)) ?? null
-            row.tier = computeSlotTier({
-                standing: choice,
-                profileUses: index.profileUses(slotKey),
-                otherUses: index.otherUses(slotKey),
-            })
-            if (choice) row.standing = choice
-        }
-        return row
-    })
+    const rows = await tierProfileRows(org, tracks, profileKey, index)
     return {
         templateId: doc.id,
         profileKey,
@@ -565,6 +649,164 @@ export async function getServiceProfileTool(
             "Could not read the service profile.",
             { errorCode: 500 },
             "Retry; get_template still shows the stored rows.",
+        )
+    }
+}
+
+// ─── reseed_service_profile ─────────────────────────────────────────────────
+
+export interface ReseedServiceProfileArgs {
+    serviceType: string
+    rabbiSlot?: string | null
+    dryRun?: boolean
+    force?: boolean
+}
+
+export interface ReseedServiceProfileReport {
+    ok: true
+    dryRun: boolean
+    profileKey: string
+    label: string
+    /** created: no profile yet; updated: the order or charts change; unchanged; no_history: nothing to learn from. */
+    outcome: "created" | "updated" | "unchanged" | "no_history"
+    /** The regular services the order is learned from, newest first. */
+    learnedFrom: Array<{ setlistId: string; name: string; date: string }>
+    order: Array<{ index: number; type: string; title: string; slotKind: string | null; fileId: string | null; key: string | null }>
+    unsure: SeedUnsure[]
+    rowChanges?: RowChange[]
+    templateId: string | null
+}
+
+/**
+ * MCP-25 — re-learn one profile's running order now, from its last regular
+ * services, and show it. Admin / band_leader. F-05: `dryRun` defaults true
+ * and returns the full report; a real run needs `dryRun: false, force: true`.
+ * A draft re-learns on its own; this is for looking, and for refreshing the
+ * saved profile on purpose.
+ */
+export async function reseedServiceProfileTool(
+    uid: string,
+    args: ReseedServiceProfileArgs,
+    org: OrgId = DEFAULT_ORG_ID,
+): Promise<ReseedServiceProfileReport | RichErrorEnvelope> {
+    const serviceType = str(args?.serviceType)
+    if (!serviceType) {
+        return richError("invalid_argument", "Pass `serviceType`.", { fields: ["serviceType"] }, "e.g. 'shabbat_morning'.")
+    }
+    const askedRabbi = str(args?.rabbiSlot)
+    if (rabbiRequired(serviceType) && !askedRabbi) {
+        return richError(
+            "rabbi_required",
+            "This service's music depends on the rabbi; say which rabbi leads it.",
+            { serviceType },
+            "Pass rabbiSlot: 'daniel_karen' or 'randy'. Ask; never infer it.",
+        )
+    }
+    const rabbiSlot = rabbiRequired(serviceType) ? askedRabbi : null
+    const profileKey = profileKeyFor(serviceType, rabbiSlot)
+    const dryRun = args?.dryRun !== false
+    const force = args?.force === true
+    try {
+        initAdmin()
+        const db = getFirestore()
+        const editor = await assertEditor(db, uid, org)
+        if (!editor.ok) return editor
+        const def = coreProfileFor(org, profileKey)
+        if (!def) {
+            return richError(
+                "profile_not_found",
+                `'${profileKey}' is not a recurring service profile of this tenant.`,
+                { profileKey, known: org === DEFAULT_ORG_ID ? CRC_CORE_PROFILES.map((p) => p.key) : [] },
+                org === DEFAULT_ORG_ID ? "Use one of the known profile keys." : "This tenant has no service profiles.",
+            )
+        }
+        const now = new Date()
+        const today = dayInZone(now.getTime(), orgTimeZone(org))
+        const { setlists, library } = await loadMemoryHistory(org)
+        const seed = seedProfile(def, setlists, library, now, { before: today })
+        const existing = await findProfileTemplate(db, org, profileKey)
+        const outcome: ReseedServiceProfileReport["outcome"] = !seed.learnedFrom
+            ? "no_history"
+            : !existing
+              ? "created"
+              : sameRows(existing.data().tracks, seed.tracks)
+                ? "unchanged"
+                : "updated"
+        const report: ReseedServiceProfileReport = {
+            ok: true,
+            dryRun,
+            profileKey,
+            label: def.label,
+            outcome,
+            learnedFrom: (seed.learnedFrom?.setlists ?? []).map((s) => ({
+                setlistId: s.setlistId,
+                name: s.name,
+                date: dayInZone(Date.parse(s.eventDate), orgTimeZone(org)),
+            })),
+            order: seed.tracks.map((t, index) => ({
+                index,
+                type: t.type,
+                title: t.title,
+                slotKind: t.slotKind ?? null,
+                fileId: t.fileId ?? null,
+                key: t.key ?? null,
+            })),
+            unsure: seed.unsure,
+            templateId: existing?.id ?? null,
+        }
+        if (outcome === "updated" && existing) {
+            const stored = Array.isArray(existing.data().tracks) ? (existing.data().tracks as Record<string, unknown>[]) : []
+            report.rowChanges = rowChangesOf(stored, seed.tracks as unknown as Record<string, unknown>[])
+        }
+        if (dryRun || outcome === "unchanged" || outcome === "no_history") return report
+        if (!force) {
+            return richError(
+                "force_required",
+                "reseed_service_profile requires force:true to write.",
+                { dryRunPlan: { ...report, dryRun: false } },
+                "Review the dry-run report with the author, then re-call with { dryRun: false, force: true }.",
+            )
+        }
+        if (existing) {
+            await existing.ref.update(
+                {
+                    tracks: seed.tracks,
+                    learnedFrom: seed.learnedFrom ?? null,
+                    profile: profileBlock(def),
+                    kind: "profile",
+                    version: FieldValue.increment(1),
+                    updatedAt: FieldValue.serverTimestamp(),
+                },
+                { lastUpdateTime: existing.updateTime },
+            )
+            logger.info("[mcp] reseed_service_profile updated", { org, key: profileKey })
+            return { ...report, dryRun: false }
+        }
+        const ref = db.collection(TEMPLATES).doc(`profile__${org}__${def.key}`)
+        await ref.create({
+            id: ref.id,
+            name: def.label,
+            templateType: def.serviceType,
+            kind: "profile",
+            profile: profileBlock(def),
+            orgId: org,
+            ownerId: uid,
+            ownerName: await ownerNameFor(db, uid),
+            tracks: seed.tracks,
+            learnedFrom: seed.learnedFrom ?? null,
+            version: 1,
+            createdAt: FieldValue.serverTimestamp(),
+            updatedAt: FieldValue.serverTimestamp(),
+        })
+        logger.info("[mcp] reseed_service_profile created", { org, key: profileKey })
+        return { ...report, dryRun: false, templateId: ref.id }
+    } catch (error) {
+        logger.warn("reseed_service_profile failed:", error)
+        return richError(
+            "internal_error",
+            "Could not re-learn the profile.",
+            { errorCode: 500 },
+            "Retry the dry run; if a real run failed, another write may have landed first.",
         )
     }
 }

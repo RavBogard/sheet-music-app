@@ -31,6 +31,8 @@ export interface SlotUse {
     fileId: string
     partGroup: string
     chartName: string
+    /** The chart's setting ("Moshav"), from the library row; said instead of a file name. */
+    setting?: string | null
     key: string | null
     special: boolean
     serviceLabel: string
@@ -65,7 +67,15 @@ export interface SlotTier {
     phrase: string
     promotion?: Promotion
     /** Usual only: the slot's latest regular use was a different chart (data only). */
-    differsFromLast?: { chartName: string; date: string }
+    differsFromLast?: { chartName: string; date: string; setting?: string | null }
+    /** The setting of the tier's chart, when the library names one. */
+    setting?: string | null
+    /** The date of the use behind the tier (usual: its latest use; last_time / other_service: that use). */
+    lastDate?: string
+    /** Regular services in the window that had this slot at all (any chart). */
+    windowUses?: number
+    /** The chart behind a last_time / other_service tier is orphaned or archived. */
+    dead?: boolean
 }
 
 const FILE_EXT_RE = /\.(pdf|musicxml|mxl|xml|docx?|txt|png|jpe?g)$/i
@@ -142,6 +152,9 @@ function promotionFor(standing: StandingChoice, profileUses: SlotUse[]): Promoti
 
 export function computeSlotTier(input: SlotTierInput): SlotTier {
     const { standing, profileUses, otherUses } = input
+    // The window is the profile's last USUAL_WINDOW regular services (`recent`), not the last uses of
+    // a chart: a chart played three times long ago and since replaced is not the usual.
+    const window = profileUses.filter((u) => !u.special && u.recent !== false).slice(0, USUAL_WINDOW)
 
     if (standing) {
         const key = standing.key ?? null
@@ -152,15 +165,13 @@ export function computeSlotTier(input: SlotTierInput): SlotTier {
             key,
             keyOnRecord: key !== null,
             phrase: phrase("standard", standing.chartName, key),
+            windowUses: window.length,
         }
         const promotion = promotionFor(standing, profileUses)
         if (promotion) out.promotion = promotion
         return out
     }
 
-    // The window is the profile's last USUAL_WINDOW regular services (`recent`), not the last uses of
-    // a chart: a chart played three times long ago and since replaced is not the usual.
-    const window = profileUses.filter((u) => !u.special && u.recent !== false).slice(0, USUAL_WINDOW)
     const groupCounts = new Map<string, number>()
     for (const u of window) groupCounts.set(u.partGroup, (groupCounts.get(u.partGroup) ?? 0) + 1)
     // The most recent live chart in at least USUAL_MIN of the window. When the latest regular
@@ -177,9 +188,12 @@ export function computeSlotTier(input: SlotTierInput): SlotTier {
             key,
             keyOnRecord: key !== null,
             phrase: phrase("usual", latest.chartName, key),
+            lastDate: latest.eventDate,
+            windowUses: window.length,
         }
+        if (latest.setting) out.setting = latest.setting
         if (window[0].partGroup !== usualGroup) {
-            out.differsFromLast = { chartName: window[0].chartName, date: window[0].eventDate }
+            out.differsFromLast = { chartName: window[0].chartName, date: window[0].eventDate, setting: window[0].setting ?? null }
         }
         return out
     }
@@ -194,6 +208,10 @@ export function computeSlotTier(input: SlotTierInput): SlotTier {
             key,
             keyOnRecord: key !== null,
             phrase: phrase("last_time", last.chartName, key),
+            lastDate: last.eventDate,
+            windowUses: window.length,
+            ...(last.setting ? { setting: last.setting } : {}),
+            ...(last.dead ? { dead: true } : {}),
         }
     }
 
@@ -207,6 +225,9 @@ export function computeSlotTier(input: SlotTierInput): SlotTier {
             key,
             keyOnRecord: key !== null,
             phrase: phrase("other_service", other.chartName, key, other.serviceLabel),
+            lastDate: other.eventDate,
+            ...(other.setting ? { setting: other.setting } : {}),
+            ...(other.dead ? { dead: true } : {}),
         }
     }
 

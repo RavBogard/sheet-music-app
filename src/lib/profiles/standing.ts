@@ -144,6 +144,32 @@ export async function readStanding(
 }
 
 /**
+ * Standing choices for each slot of one scope, by slot key. A slot's own key
+ * wins; when it has no choice, its aliases (the slot key it had before
+ * MCP-02 keyed slots by moment) are read, so a choice made then still counts.
+ */
+export async function readStandingFor(
+    org: OrgId,
+    scope: string,
+    slots: Array<{ slotKey: string; aliases?: Array<string | null | undefined> }>,
+): Promise<Map<string, StandingChoice>> {
+    const keys = slots.flatMap((s) => [s.slotKey, ...(s.aliases ?? []).filter((a): a is string => !!a)])
+    const found = await readStanding(org, [scope], keys)
+    const out = new Map<string, StandingChoice>()
+    for (const s of slots) {
+        const own = found.get(standingMapKey(scope, s.slotKey))
+        // Several old keys may hold a choice: the most recent one is the standard.
+        const alias = (s.aliases ?? [])
+            .map((a) => (a ? found.get(standingMapKey(scope, a)) : undefined))
+            .filter((c): c is StandingChoice => !!c)
+            .sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0))[0]
+        const choice = own ?? alias
+        if (choice) out.set(s.slotKey, choice)
+    }
+    return out
+}
+
+/**
  * Set a standing choice. In one transaction: the doc it replaces becomes
  * `previous`. `overrode` is set when that doc was another person's, younger
  * than 28 days.
