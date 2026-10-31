@@ -33,11 +33,51 @@ function momentsOf(unitIds: Array<string | null | undefined>): Set<string> {
     return out
 }
 
+/** Every word (4+ letters) of a book table's spellings, by book: liturgical vocabulary. */
+const vocab = new Map<string, Map<string, Set<string>>>()
+
+function wordsOf(text: string): string[] {
+    return text
+        .toLowerCase()
+        .replace(/['‘’]/g, "")
+        .split(/[^a-z]+/)
+        .filter((w) => w.length >= 4)
+}
+
+/** word -> the moments whose spellings use it, for one book. */
+function vocabularyOf(book: string): Map<string, Set<string>> {
+    let v = vocab.get(book)
+    if (v) return v
+    v = new Map()
+    for (const e of liturgyLookup(book, bookServiceFor(book, null))) {
+        const m = momentIdForUnit(e.unitId ?? null) ?? `label:${e.label}`
+        for (const alias of e.aliases ?? [e.label]) {
+            for (const w of wordsOf(alias)) {
+                const set = v.get(w) ?? new Set<string>()
+                set.add(m)
+                v.set(w, set)
+            }
+        }
+    }
+    vocab.set(book, v)
+    return v
+}
+
+/** The clarifiers of a title: text in parentheses and after a spaced dash. */
+function clarifiersOf(title: string): string[] {
+    const out: string[] = []
+    for (const m of title.matchAll(/\(([^)]*)\)/g)) out.push(m[1])
+    const dash = title.replace(/\([^)]*\)/g, " ").split(/\s+[—–-]\s+/)
+    if (dash.length > 1) out.push(...dash.slice(1))
+    return out
+}
+
 /**
- * The moment a row's title names, or null. A clear match in either weekly
- * table wins; failing that, one moment that is the only plausible reading in
- * both tables ("Mi Chamocha Ana B'Koach" → mi-chamocha). Two different
- * moments are null, never a guess.
+ * The moment a row's title names, or null. Strict (a wrong slot is worse than
+ * a song slot): exactly one moment must be a CLEAR match in the weekly tables,
+ * no table may read the title as any other moment, and a clarifier may not
+ * name other liturgy ("Shema (Torah Service)" is not the Sh'ma). A plausible
+ * reading alone is a guess and is never used.
  */
 export function momentForTitle(title: string | null | undefined, type: string | null | undefined = "song"): string | null {
     if (typeof title !== "string" || !title.trim()) return null
@@ -46,27 +86,22 @@ export function momentForTitle(title: string | null | undefined, type: string | 
     const cached = byTitle.get(cacheKey)
     if (cached !== undefined) return cached
     const clear = new Set<string>()
-    const plausible = new Set<string>()
+    const other = new Set<string>()
     for (const book of TITLE_BOOKS) {
         if (!liturgyLookup(book, bookServiceFor(book, null)).length) continue
         const m = matchLiturgyTitle(book, title, bookServiceFor(book, null))
         for (const id of momentsOf([m.clear?.entry.unitId])) clear.add(id)
-        for (const id of momentsOf(m.plausible.map((p) => p.entry.unitId))) plausible.add(id)
+        for (const id of momentsOf(m.plausible.map((p) => p.entry.unitId))) other.add(id)
     }
-    const pick = clear.size === 1 ? [...clear][0] : clear.size === 0 && plausible.size === 1 ? [...plausible][0] : null
+    let pick: string | null = clear.size === 1 ? [...clear][0] : null
+    if (pick && [...other].some((id) => id !== pick)) pick = null
+    if (pick) {
+        const words = clarifiersOf(title).flatMap(wordsOf)
+        const namesOther = words.some((w) =>
+            TITLE_BOOKS.some((book) => [...(vocabularyOf(book).get(w) ?? [])].some((m) => m !== pick)),
+        )
+        if (namesOther) pick = null
+    }
     byTitle.set(cacheKey, pick)
     return pick
-}
-
-/** The one moment printed on a page of a book's table, or null (none, or several). */
-export function momentForPage(ref: { book?: string | null; folio?: number | null } | null | undefined): string | null {
-    if (!ref || typeof ref.book !== "string" || typeof ref.folio !== "number") return null
-    let entries
-    try {
-        entries = liturgyLookup(ref.book, bookServiceFor(ref.book, null))
-    } catch {
-        return null
-    }
-    const ids = momentsOf(entries.filter((e) => e.folio === ref.folio).map((e) => e.unitId))
-    return ids.size === 1 ? [...ids][0] : null
 }

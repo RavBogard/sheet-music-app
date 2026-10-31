@@ -97,7 +97,7 @@ export async function profileSlotInfo(
     const rabbiSlot = rabbiRequired(serviceType) ? cls.rabbiSlot : null
     const profileKey = profileKeyFor(serviceType, rabbiSlot)
 
-    const { loadSlotUses } = await import("./slot-uses")
+    const { historyAliases, loadSlotUses } = await import("./slot-uses")
     const { readStandingFor } = await import("./standing")
     const { computeSlotTier } = await import("./tiers")
     const { index } = await loadSlotUses(org, { serviceType, rabbiSlot })
@@ -108,7 +108,8 @@ export async function profileSlotInfo(
         const t = { momentId: c.momentId ?? null, title: c.title, fileId: c.fileId }
         const slotKey = slotKeyFor(t, partGroupOf, { byTitle })
         const legacy = legacySlotKeyFor(t, partGroupOf)
-        return { slotKey, aliases: legacy !== slotKey ? [legacy] : [] }
+        const aliases = [...new Set([legacy, ...historyAliases(index, slotKey)])].filter((a) => a !== slotKey)
+        return { slotKey, aliases }
     })
     const standing = await readStandingFor(org, profileKey, slots)
     candidates.forEach((c, i) => {

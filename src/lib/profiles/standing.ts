@@ -158,7 +158,11 @@ export async function readStandingFor(
     const out = new Map<string, StandingChoice>()
     for (const s of slots) {
         const own = found.get(standingMapKey(scope, s.slotKey))
-        const alias = (s.aliases ?? []).map((a) => (a ? found.get(standingMapKey(scope, a)) : undefined)).find((c) => !!c)
+        // Several old keys may hold a choice: the most recent one is the standard.
+        const alias = (s.aliases ?? [])
+            .map((a) => (a ? found.get(standingMapKey(scope, a)) : undefined))
+            .filter((c): c is StandingChoice => !!c)
+            .sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0))[0]
         const choice = own ?? alias
         if (choice) out.set(s.slotKey, choice)
     }

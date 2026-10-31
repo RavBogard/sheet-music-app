@@ -214,9 +214,11 @@ export async function draftServiceTool(
         const now = new Date()
         const def = coreProfileFor(org, profileKey)
         const memory = await loadMemoryHistory(org)
-        const index = buildSlotUses(memory.setlists, memory.library, { serviceType, rabbiSlot, before: date })
+        // Brothers Lazaroff keeps song slots: no title lookup outside CRC.
+        const byTitle = org === DEFAULT_ORG_ID
+        const index = buildSlotUses(memory.setlists, memory.library, { serviceType, rabbiSlot, before: date, byTitle })
         // MCP-03: the running order is re-learned from the last regular services on every draft.
-        const learned = def ? seedProfile(def, memory.setlists, memory.library, now, { before: date }) : null
+        const learned = def ? seedProfile(def, memory.setlists, memory.library, now, { before: date, byTitle }) : null
         const doc = await findProfileTemplateFor(org, profileKey)
         const stored = doc?.data()
         const storedProfile = (stored?.profile ?? null) as TemplateProfile | null
@@ -230,8 +232,9 @@ export async function draftServiceTool(
         let origin: DraftOrigin
         if (def && learned?.learnedFrom) {
             // The profile doc is a cache: refresh it for a current draft, never from a past date's view.
+            // A past date's view never creates or rewrites it.
             const current = date >= dayInZone(now.getTime(), zone)
-            templateId = !doc || current ? await cacheLearnedProfile(uid, org, def, learned, doc) : doc.id
+            templateId = current ? await cacheLearnedProfile(uid, org, def, learned, doc) : (doc?.id ?? `profile__${org}__${def.key}`)
             tracks = learned.tracks as unknown as Record<string, unknown>[]
             const dates = learned.learnedFrom.setlists.map((s) => dayOf(s.eventDate))
             origin = { kind: "history", count: learned.learnedFrom.count, from: dates[dates.length - 1], to: dates[0], setlists: learned.learnedFrom.setlists.map((s) => s.setlistId) }
@@ -264,8 +267,9 @@ export async function draftServiceTool(
                 title: r.title,
                 slotKey: r.slotKey,
                 track: r.track,
-                tier: r.tier,
-                standing: r.standing ?? null,
+                // A legacy template gives the order only: no tier, so nothing is filled.
+                tier: origin.kind === "template" ? undefined : r.tier,
+                standing: origin.kind === "template" ? null : (r.standing ?? null),
                 service: catalogLabel,
                 otherService: r.slotKey ? (index.otherUses(r.slotKey)[0]?.serviceLabel ?? null) : null,
             })),
@@ -280,14 +284,18 @@ export async function draftServiceTool(
         // readback, and a book other than the profile's is said.
         const previous = index.profileSetlists[0] ?? null
         const carried = previous ? await carriedOpenItems(db, org, previous.id, dayOf(previous.eventDate!)) : []
-        const notices: Array<{ kind: "book_differs"; text: string }> = []
+        const notices: Array<{ kind: "book_differs" | "dropped"; text: string }> = []
+        // A row of the latest service the learned order leaves out is said, never silent.
+        for (const d of learned?.learnedFrom ? (learned.dropped ?? []) : []) {
+            notices.push({ kind: "dropped", text: `Dropped: ${d.label} (in ${d.count} of the last ${d.of} services)` })
+        }
         if (previous?.book && book && previous.book !== book) {
             notices.push({
                 kind: "book_differs",
                 text: `Book differs from profile: your last ${label} (${monthDay(dayOf(previous.eventDate!))}) used ${bookName(previous.book)}; the profile uses ${bookName(book)}`,
             })
         }
-        const vsLast = vsLastOf(index.profileSetlists, memory.library, { before: date, dayOf })
+        const vsLast = vsLastOf(index.profileSetlists, memory.library, { before: date, dayOf, byTitle })
 
         const expiresAt = new Date(now.getTime() + DRAFT_TTL_MS)
         const ref = db.collection(DRAFTS_COLLECTION).doc(crypto.randomUUID())
@@ -335,7 +343,7 @@ export async function draftServiceTool(
                     keyMismatch: warnings.find((w) => w.kind === "key_mismatch" && w.index === r.index)?.text,
                 }
                 if (r.filled) {
-                    const note = filledNoteFor(lr?.tier, date, learnedCount)
+                    const note = filledNoteFor(origin.kind === "template" ? undefined : lr?.tier, date, learnedCount, dayOf)
                     if (note) out.filled = note
                 }
                 if (r.recall) {

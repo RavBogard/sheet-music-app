@@ -20,7 +20,7 @@ import {
     type CoreProfile,
 } from "@/lib/profiles/keys"
 import { seedProfile, type LearnedFrom, type SeedResult, type SeedUnsure, type SeededTrack } from "@/lib/profiles/seed"
-import { buildSlotUses, existingOnDate, loadMemoryHistory, type SlotUseIndex } from "@/lib/profiles/slot-uses"
+import { buildSlotUses, existingOnDate, historyAliases, loadMemoryHistory, type SlotUseIndex } from "@/lib/profiles/slot-uses"
 import { readStandingFor, type StandingChoice } from "@/lib/profiles/standing"
 import { computeSlotTier, type SlotTier } from "@/lib/profiles/tiers"
 import type { TemplateProfile } from "./templates"
@@ -524,14 +524,17 @@ export async function tierProfileRows(
             title: typeof t.title === "string" ? t.title : "",
             fileId: str(t.fileId),
             type: "song",
-            liturgyRef: pageRefOf(t),
         }
         // A prayer's moment wins (MCP-02); a song row keeps the slot it was learned under.
         const viaMoment = slotKeyFor(row, index.partGroupOf)
         const slotKey = viaMoment.startsWith("moment:") ? viaMoment : (str(t.slotKey) ?? viaMoment)
-        const aliases = [str(t.slotKey), legacySlotKeyFor(row, index.partGroupOf)].filter(
-            (a): a is string => !!a && a !== slotKey,
-        )
+        const aliases = [
+            ...new Set(
+                [str(t.slotKey), legacySlotKeyFor(row, index.partGroupOf), ...historyAliases(index, slotKey)].filter(
+                    (a): a is string => !!a && a !== slotKey,
+                ),
+            ),
+        ]
         return { slotKey, aliases }
     })
     // Only the profile's own scope: a choice for another rabbi's profile never shows here.
@@ -564,19 +567,6 @@ export async function tierProfileRows(
     })
 }
 
-/** The first page a stored profile row carries (`liturgyRef`, else any of `liturgyRefs`). */
-function pageRefOf(t: Record<string, unknown>): { book: string; folio: number } | null {
-    const one = t.liturgyRef as { book?: unknown; folio?: unknown } | undefined
-    if (one && typeof one.book === "string" && typeof one.folio === "number") return { book: one.book, folio: one.folio }
-    const many = t.liturgyRefs as Record<string, { folio?: unknown }> | undefined
-    if (many && typeof many === "object") {
-        for (const [book, ref] of Object.entries(many)) {
-            if (ref && typeof ref.folio === "number") return { book, folio: ref.folio }
-        }
-    }
-    return null
-}
-
 /** A profile template with its live tiers (get_service_profile). */
 export async function loadProfileTiers(
     org: OrgId,
@@ -590,7 +580,7 @@ export async function loadProfileTiers(
     const profileKey = profileKeyFor(serviceType, rabbiSlot)
     const tracks = Array.isArray(data.tracks) ? (data.tracks as Record<string, unknown>[]) : []
     const { setlists, library, truncated } = await loadMemoryHistory(org)
-    const index = buildSlotUses(setlists, library, { serviceType, rabbiSlot, before: date })
+    const index = buildSlotUses(setlists, library, { serviceType, rabbiSlot, before: date, byTitle: org === DEFAULT_ORG_ID })
     const existing = date ? existingOnDate(setlists, date, serviceType, orgTimeZone(org)) : []
     const rows = await tierProfileRows(org, tracks, profileKey, index)
     return {

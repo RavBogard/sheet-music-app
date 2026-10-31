@@ -77,6 +77,7 @@ export interface ReadbackItem {
     kind:
         | "existing"
         | "book_differs"
+        | "dropped"
         | "open_slot"
         | "filled"
         | "no_chart"
@@ -118,7 +119,7 @@ export interface ReadbackInput {
     /** Draft only: where the running order came from, said after the headline (MCP-03). */
     origin?: string | null
     /** Said first, beside `existing` (e.g. the book differs from the profile's). Never blocks. */
-    notices?: Array<{ kind: "book_differs"; text: string }>
+    notices?: Array<{ kind: "book_differs" | "dropped"; text: string }>
 }
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]

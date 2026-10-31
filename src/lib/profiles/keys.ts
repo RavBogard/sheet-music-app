@@ -2,7 +2,7 @@ import type { RabbiSlotKey } from "@/lib/history/classify"
 import { historyStem } from "@/lib/history/song-history"
 import { SERVICE_TYPE_CATALOG } from "@/lib/templates/service-types"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
-import { momentForPage, momentForTitle } from "./moment-key"
+import { momentForTitle } from "./moment-key"
 import type { OrgId } from "@/lib/org/types"
 
 /**
@@ -71,13 +71,12 @@ export function serviceLabelFor(serviceType: string | null): string | null {
     return CATALOG_LABEL.get(serviceType) ?? serviceType
 }
 
-/** A row as slot keys read it. `liturgyRef` lets a page name the moment when the title does not. */
+/** A row as slot keys read it. A page never names the slot: only a stored moment or a clear title. */
 export interface SlotTrack {
     momentId?: string | null
     title: string
     fileId?: string | null
     type?: string | null
-    liturgyRef?: { book?: string | null; folio?: number | null } | null
 }
 
 export interface SlotKeyOptions {
@@ -91,9 +90,9 @@ export interface SlotKeyOptions {
 
 /**
  * The slot a row fills: `moment:<momentId>` when the row names a moment — a
- * stored momentId, else the moment its title names (bind-on-type's matcher),
- * else the one moment printed on its page — so every setting of one prayer is
- * one slot. Otherwise `song:<partGroup>` (every instrument copy of one
+ * stored momentId, else the moment its title names on a single clear match
+ * (bind-on-type's matcher; see moment-key.ts) — so every setting of one
+ * prayer is one slot. Otherwise `song:<partGroup>` (every instrument copy of one
  * arrangement shares it), falling back to the title's stem when the chart has
  * none.
  */
@@ -104,7 +103,7 @@ export function slotKeyFor(
 ): string {
     if (typeof track.momentId === "string" && track.momentId) return `moment:${track.momentId}`
     if (opts.byTitle !== false) {
-        const moment = momentForTitle(track.title, track.type ?? "song") ?? momentForPage(track.liturgyRef)
+        const moment = momentForTitle(track.title, track.type ?? "song")
         if (moment) return `moment:${moment}`
     }
     return legacySlotKeyFor(track, partGroupOf)

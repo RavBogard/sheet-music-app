@@ -2,7 +2,7 @@ import { getMoment } from "@/lib/books/moments"
 import { validateLiturgyRef } from "@/lib/books/registry"
 import { historyStem, type HistorySetlist, type HistoryTrack, type LibraryLite } from "@/lib/history/song-history"
 import { isSongType } from "@/lib/setlist-track-count"
-import type { CoreProfile } from "./keys"
+import type { CoreProfile, SlotKeyOptions } from "./keys"
 import { slotKeyFor } from "./keys"
 import { buildSlotUses } from "./slot-uses"
 import { cleanLabel, computeSlotTier, USUAL_WINDOW, type Tier } from "./tiers"
@@ -16,8 +16,9 @@ import { cleanLabel, computeSlotTier, USUAL_WINDOW, type Tier } from "./tiers"
  * feeds a regular profile): a row is in the order when it is in at least half
  * of them, and two rows keep the order most of those services gave them.
  *
- * A song's place in the order is its moment, else its title, so a song keeps
- * its place when its arrangement changes; its slot (what tiers read) is still
+ * A song's place in the order is its moment, else its position (the n-th
+ * song after the last moment or non-song row), so a slot whose song changes
+ * every week keeps its place and is drafted open; its slot (what tiers read) is still
  * its moment or chart. Rows of one slot in one service (a moment's piano, lyrics and lead-sheet
  * rows, or the instrument copies of one arrangement) collapse into one row,
  * and the per-part charts are kept as `parts` (MCP-14).
@@ -89,11 +90,18 @@ export interface SeedResult {
     /** The newest of the services the order was learned from. */
     basedOn: { setlistId: string; eventDate: string } | null
     learnedFrom?: LearnedFrom | null
+    /**
+     * Rows of the newest regular service that the learned order leaves out
+     * (in fewer than half of the services). Said in the readback, never silent.
+     */
+    dropped?: Array<{ label: string; count: number; of: number }>
 }
 
 export interface LearnOptions {
     /** Only setlists before this day (YYYY-MM-DD) are history. */
     before?: string
+    /** Slot keys look the moment up from the title (CRC). Default true. */
+    byTitle?: boolean
 }
 
 export function seedProfile(
@@ -103,11 +111,17 @@ export function seedProfile(
     now: Date = new Date(),
     opts: LearnOptions = {},
 ): SeedResult {
-    const index = buildSlotUses(setlists, library, { serviceType: def.serviceType, rabbiSlot: def.rabbiSlot, before: opts.before })
+    const keyOpts: SlotKeyOptions = { byTitle: opts.byTitle !== false }
+    const index = buildSlotUses(setlists, library, {
+        serviceType: def.serviceType,
+        rabbiSlot: def.rabbiSlot,
+        before: opts.before,
+        byTitle: keyOpts.byTitle,
+    })
     const window = regularWindow(index.profileSetlists)
     if (window.length === 0) return { tracks: [], unsure: [], basedOn: null }
 
-    const services = window.map((s) => collapseService(s, index.partGroupOf, library))
+    const services = window.map((s) => collapseService(s, index.partGroupOf, library, keyOpts))
     const order = modalOrder(services.map((items) => items.map((i) => i.key)))
     const seededAt = now.toISOString()
     const tracks: SeededTrack[] = []
@@ -162,8 +176,7 @@ export function seedProfile(
         }
         // An open slot is labelled by its moment ("Mi Chamocha"), never by the one week's song
         // that happened to fill it, or the profile would read as if that song were the usual.
-        const openLabel =
-            getMoment(slotMoment)?.display.en ?? (cleanLabel(title.split(/\s+[—–-]\s+|\s*\(/)[0]) || cleanLabel(title) || title)
+        const openLabel = getMoment(slotMoment)?.display.en ?? positionalLabel(key, services) ?? songLabel(title)
         const row: SeededTrack = { type: "song", title: openLabel, slotKind: "open", slotKey, house: null }
         if (momentId) row.momentId = momentId
         if (refs) row.liturgyRefs = refs
@@ -172,8 +185,17 @@ export function seedProfile(
         unsure.push({ label: openLabel === title ? title : `${openLabel} (last: ${title})`, reason: tier.tier, phrase: tier.phrase })
     }
 
+    const kept = new Set(order)
+    const dropped = services[0]
+        .filter((i) => !kept.has(i.key))
+        .map((i) => ({
+            label: i.slotKey ? songLabel(i.track.title ?? "") : i.track.title ?? "",
+            count: services.filter((items) => items.some((x) => x.key === i.key)).length,
+            of: services.length,
+        }))
     const newest = window[0]
     return {
+        ...(dropped.length > 0 ? { dropped } : {}),
         tracks,
         unsure,
         basedOn: { setlistId: newest.id, eventDate: newest.eventDate! },
@@ -182,6 +204,34 @@ export function seedProfile(
             setlists: window.map((s) => ({ setlistId: s.id, name: s.name, eventDate: s.eventDate! })),
         },
     }
+}
+
+/** A song row's title said as a slot label: before any clarifier, no file extension. */
+function songLabel(title: string): string {
+    return cleanLabel(title.split(/\s+[—–-]\s+|\s*\(/)[0]) || cleanLabel(title) || title
+}
+
+/**
+ * The label of a positional slot whose song changes week to week: never one
+ * week's song ("Opening song", "Song after Bar'chu"). One song every week keeps
+ * its own name.
+ */
+function positionalLabel(key: string, services: ServiceItem[][]): string | null {
+    if (!key.startsWith("pos:")) return null
+    const titles = new Set(
+        services.flatMap((items) => items.filter((i) => i.key === key).map((i) => songLabel(i.track.title ?? "").toLowerCase())),
+    )
+    if (titles.size === 1) return null
+    const m = /^pos:(.*)#(\d+)$/.exec(key)
+    const anchor = m?.[1] ?? "start"
+    const nth = Number(m?.[2] ?? 1)
+    const ordinal = nth === 1 ? "" : `${["", "", "second ", "third ", "fourth "][nth] ?? `${nth}th `}`
+    if (anchor === "start") return nth === 1 ? "Opening song" : `${ordinal[0].toUpperCase()}${ordinal.slice(1)}opening song`
+    const anchorItem = services.flatMap((items) => items).find((i) => i.key === anchor)
+    const anchorLabel = anchor.startsWith("moment:")
+        ? (getMoment(anchor.slice("moment:".length))?.display.en ?? anchor.slice("moment:".length))
+        : (anchorItem?.track.title ?? "the last row")
+    return nth === 1 ? `Song after ${anchorLabel}` : `${ordinal[0].toUpperCase()}${ordinal.slice(1)}song after ${anchorLabel}`
 }
 
 /** The profile's last LEARN_WINDOW regular services, one per day, newest first. */
@@ -200,7 +250,7 @@ export function regularWindow(profileSetlists: HistorySetlist[]): HistorySetlist
 }
 
 interface ServiceItem {
-    /** The order key: the moment, else the title's stem, so a song keeps its place when its arrangement changes. */
+    /** The order key: the moment, else the song's position after its anchor, so a song keeps its place when it changes. */
     key: string
     /** Song rows: the slot the tiers read. */
     slotKey: string | null
@@ -216,34 +266,70 @@ export function collapseService(
     s: HistorySetlist,
     partGroupOf: (fileId: string) => string | null,
     library: Map<string, LibraryLite> = new Map(),
+    opts: SlotKeyOptions = {},
 ): ServiceItem[] {
     const items: ServiceItem[] = []
     const bySlot = new Map<string, ServiceItem>()
     const rowCount = new Map<string, number>()
+    // A song row with no moment holds a place by position: the n-th such song after the last
+    // anchor (a moment row or a non-song row). A rotating opening song is one slot.
+    let anchor = "start"
+    let sinceAnchor = 0
+    let prevSong: ServiceItem | null = null
     for (const t of s.tracks) {
         if (isSongType(t.type)) {
-            const slotKey = slotKeyFor(t, partGroupOf)
-            const key = slotKey.startsWith("moment:") ? slotKey : `title:${historyStem(t.title ?? "") || slotKey}`
+            const slotKey = slotKeyFor(t, partGroupOf, opts)
             const part = t.fileId
                 ? { fileId: t.fileId, chartName: library.get(t.fileId)?.name ?? t.fileName ?? t.title, title: t.title }
                 : null
-            const cur = bySlot.get(key) ?? bySlot.get(slotKey)
+            // Rows of one slot (a moment, or one arrangement's instrument copies), or an adjacent
+            // row of the same song (its lyrics after its piano part), are one item with parts.
+            const cur =
+                bySlot.get(slotKey) ??
+                (prevSong && sameSongLead(prevSong.track.title, t.title) && !slotKey.startsWith("moment:") ? prevSong : undefined)
             if (cur) {
                 if (part && !cur.parts.some((p) => p.fileId === part.fileId)) cur.parts.push(part)
                 continue
             }
+            let key: string
+            if (slotKey.startsWith("moment:")) {
+                key = slotKey
+                anchor = slotKey
+                sinceAnchor = 0
+            } else {
+                sinceAnchor += 1
+                key = `pos:${anchor}#${sinceAnchor}`
+            }
             const item: ServiceItem = { key, slotKey, track: t, parts: part ? [part] : [] }
-            bySlot.set(key, item)
             bySlot.set(slotKey, item)
             items.push(item)
+            prevSong = item
             continue
         }
         const base = `row:${t.type}:${t.momentId ?? (historyStem(t.title ?? "") || (t.title ?? "").trim().toLowerCase())}`
         const n = (rowCount.get(base) ?? 0) + 1
         rowCount.set(base, n)
-        items.push({ key: n === 1 ? base : `${base}#${n}`, slotKey: null, track: t, parts: [] })
+        const key = n === 1 ? base : `${base}#${n}`
+        items.push({ key, slotKey: null, track: t, parts: [] })
+        anchor = key
+        sinceAnchor = 0
+        prevSong = null
     }
     return items
+}
+
+/** True when two row titles start with the same two words (a song's piano and lyrics rows). */
+function sameSongLead(a: string | null | undefined, b: string | null | undefined): boolean {
+    const lead = (x: string | null | undefined) =>
+        (x ?? "")
+            .toLowerCase()
+            .replace(/['‘’]/g, "")
+            .split(/[^a-z0-9]+/)
+            .filter(Boolean)
+            .slice(0, 2)
+            .join(" ")
+    const la = lead(a)
+    return la.split(" ").length === 2 && la === lead(b)
 }
 
 /**

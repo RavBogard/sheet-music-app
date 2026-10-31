@@ -330,19 +330,26 @@ export function applyChoices(
  * played something else; the key is not on record; or the profile was learned
  * from one service only. No reasons: the row stays folded.
  */
-export function filledNoteFor(tier: SlotTier | undefined, serviceDate: string, learnedCount: number | null): FilledNote | undefined {
+export function filledNoteFor(
+    tier: SlotTier | undefined,
+    serviceDate: string,
+    learnedCount: number | null,
+    /** The service day of an ISO date in the tenant's zone; UTC day when absent. */
+    dayOf: (iso: string) => string = (iso) => iso.slice(0, 10),
+): FilledNote | undefined {
     if (!tier || (tier.tier !== "usual" && tier.tier !== "standard") || !tier.fileId) return undefined
     const reasons: FilledReason[] = []
     if (tier.differsFromLast) {
         reasons.push({
             kind: "differs",
-            date: tier.differsFromLast.date.slice(0, 10),
+            date: dayOf(tier.differsFromLast.date),
             setting: settingOf(tier.differsFromLast.chartName, tier.differsFromLast.setting),
         })
     }
     if (tier.tier === "usual" && tier.lastDate) {
-        const age = Date.parse(`${serviceDate}T12:00:00Z`) - Date.parse(tier.lastDate)
-        if (age > STALE_WEEKS * 7 * 86_400_000) reasons.push({ kind: "stale", date: tier.lastDate.slice(0, 10) })
+        const lastDay = dayOf(tier.lastDate)
+        const age = Date.parse(`${serviceDate}T12:00:00Z`) - Date.parse(`${lastDay}T12:00:00Z`)
+        if (age > STALE_WEEKS * 7 * 86_400_000) reasons.push({ kind: "stale", date: lastDay })
     }
     if (!tier.keyOnRecord) reasons.push({ kind: "no_key" })
     if (learnedCount === 1) reasons.push({ kind: "single" })

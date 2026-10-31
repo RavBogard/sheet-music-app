@@ -2,6 +2,7 @@ import { setlistPart } from "@/lib/history/classify"
 import type { HistorySetlist, LibraryLite } from "@/lib/history/song-history"
 import type { OrgId } from "@/lib/org/types"
 import { dayInZone } from "@/lib/org/locale"
+import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import { isSongType } from "@/lib/setlist-track-count"
 import { serviceLabelFor, slotKeyFor } from "./keys"
 import { USUAL_WINDOW, type SlotUse } from "./tiers"
@@ -26,6 +27,8 @@ export interface ProfileFilter {
     serviceType: string
     /** null: any rabbi (a profile not split by rabbi). */
     rabbiSlot: string | null
+    /** Slot keys look the moment up from the title. Default true; Brothers Lazaroff passes false. */
+    byTitle?: boolean
 }
 
 export interface SlotUseIndex {
@@ -38,6 +41,19 @@ export interface SlotUseIndex {
 
 export function partGroupLookup(library: Map<string, LibraryLite>): (fileId: string) => string | null {
     return (fileId) => library.get(fileId)?.partGroup ?? null
+}
+
+/**
+ * MCP-02 left standing choices made earlier under `song:<partGroup>` keys. For
+ * a moment slot, those are the song keys of every chart the slot's history
+ * holds (whichever row that chart was on), so an older "keep it" on Mi Chamocha
+ * is still found whatever setting the row now has.
+ */
+export function historyAliases(index: SlotUseIndex, slotKey: string): string[] {
+    if (!slotKey.startsWith("moment:")) return []
+    const out = new Set<string>()
+    for (const u of index.profileUses(slotKey)) out.add(`song:${u.partGroup}`)
+    return [...out]
 }
 
 /** Dated, non-test, whole-band setlists, newest first. */
@@ -134,7 +150,7 @@ export function buildSlotUses(
         const seen = new Set<string>()
         for (const t of s.tracks) {
             if (!isSongType(t.type) || !t.fileId) continue
-            const slotKey = slotKeyFor(t, partGroupOf)
+            const slotKey = slotKeyFor(t, partGroupOf, { byTitle: f.byTitle !== false })
             if (seen.has(slotKey)) continue
             seen.add(slotKey)
             let lib = library.get(t.fileId)
@@ -204,5 +220,7 @@ export async function loadSlotUses(
     truncated: boolean
 }> {
     const { setlists, library, truncated } = await loadMemoryHistory(org)
-    return { index: buildSlotUses(setlists, library, f), setlists, library, truncated }
+    // Brothers Lazaroff keeps song slots: no title lookup outside CRC.
+    const filter = { ...f, byTitle: f.byTitle ?? org === DEFAULT_ORG_ID }
+    return { index: buildSlotUses(setlists, library, filter), setlists, library, truncated }
 }

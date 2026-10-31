@@ -275,14 +275,45 @@ describe("draft a service from its profile (emulator)", () => {
         expect(open.fileId).toBeUndefined()
     })
 
-    it("seeds a missing profile from its marked history on the first draft", async () => {
+    it("seeds a missing profile from its marked history on the first current draft, never from a past date", async () => {
         const id = `profile__${CRC}__${KEY}`
         await db().collection("setlistTemplates").doc(id).delete()
-        const draft = (await draftServiceTool(ADMIN, { date: "2026-10-24", serviceType: "shabbat_morning", rabbiSlot: "randy" }, CRC)) as Draft
+        const past = (await draftServiceTool(ADMIN, { date: "2026-10-24", serviceType: "shabbat_morning", rabbiSlot: "randy" }, CRC)) as Draft
+        expect(past.rows.map((r) => r.tier)).toEqual([null, "usual", "last_time"])
+        expect((await db().collection("setlistTemplates").doc(id).get()).exists).toBe(false)
+        const draft = (await draftServiceTool(ADMIN, { date: "2099-01-03", serviceType: "shabbat_morning", rabbiSlot: "randy" }, CRC)) as Draft
         expect(draft.ok).toBe(true)
         expect(draft.profile.key).toBe(KEY)
         expect(draft.rows.map((r) => r.tier)).toEqual([null, "usual", "last_time"])
         expect((await db().collection("setlistTemplates").doc(id).get()).exists).toBe(true)
+    })
+
+    it("a standard set on Mi Chamocha before moment slots (song:<partGroup>) still fills the moment slot, after a re-learn", async () => {
+        await db().collection("library_index").doc("f-mi-moshav").set({ orgId: CRC, name: "Mi Chamocha (Moshav)", partGroup: "pg-mi-moshav" })
+        await db().collection("library_index").doc("f-mi-68").set({ orgId: CRC, name: "Mi Chamocha 6-8", partGroup: "pg-mi-68" })
+        for (const [i, [title, fileId]] of [["Mi Chamocha 6-8", "f-mi-68"], ["Mi Chamocha (Moshav)", "f-mi-moshav"], ["Mi Chamocha (Moshav)", "f-mi-moshav"]].entries()) {
+            await db().collection("tracks").doc(`sl-${i}-3`).set({ type: "song", title, fileId, key: "E", setlistId: `sl-${i}`, orgId: CRC, order: 3 })
+        }
+        // The old key: the Moshav chart's song slot, though the latest week played 6-8.
+        await db().collection("standing_choices").doc(`${CRC}__${encodeURIComponent(KEY)}__${encodeURIComponent("song:pg-mi-moshav")}`).set({
+            orgId: CRC,
+            scope: KEY,
+            slotKey: "song:pg-mi-moshav",
+            fileId: "f-mi-moshav",
+            chartName: "Mi Chamocha (Moshav)",
+            key: "F",
+            partGroup: "pg-mi-moshav",
+            leadMusician: null,
+            by: ADMIN,
+            byName: "Daniel",
+            at: "2026-09-01T00:00:00Z",
+            quote: null,
+            previous: null,
+        })
+        await reseedServiceProfileTool(ADMIN, { serviceType: "shabbat_morning", rabbiSlot: "randy", dryRun: false, force: true }, CRC)
+        const draft = (await draftServiceTool(ADMIN, { date: "2099-01-03", serviceType: "shabbat_morning", rabbiSlot: "randy" }, CRC)) as Draft
+        const miRow = draft.rows.find((r) => r.label === "Mi Chamocha")!
+        expect(miRow).toMatchObject({ tier: "standard", fileId: "f-mi-moshav", key: "F" })
     })
 
     it("says no_profile when no setlist is marked with that service and rabbi", async () => {

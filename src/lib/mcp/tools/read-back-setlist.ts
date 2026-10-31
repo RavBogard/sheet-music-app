@@ -13,7 +13,7 @@ import { isSongType } from "@/lib/setlist-track-count"
 import { getBook } from "@/lib/books/registry"
 import { legacySlotKeyFor, profileKeyFor, rabbiRequired, slotKeyFor } from "@/lib/profiles/keys"
 import { buildReadback, settingOf, type Readback, type ReadbackRow } from "@/lib/profiles/readback"
-import { buildSlotUses, loadSlotUses } from "@/lib/profiles/slot-uses"
+import { buildSlotUses, historyAliases, loadSlotUses } from "@/lib/profiles/slot-uses"
 import { readStandingFor } from "@/lib/profiles/standing"
 import { computeSlotTier, phrase as tierPhrase, type SlotTier } from "@/lib/profiles/tiers"
 import { vsLastOf, type VsLast } from "@/lib/profiles/vs-last"
@@ -190,7 +190,9 @@ async function tieredRows(
     rows: Row[],
     day: string | null,
 ): Promise<{ rows: ReadbackRow[]; vsLast: VsLast | null }> {
-    const filter = { serviceType, rabbiSlot }
+    // Brothers Lazaroff keeps song slots: no title lookup outside CRC.
+    const byTitle = org === DEFAULT_ORG_ID
+    const filter = { serviceType, rabbiSlot, byTitle }
     const loaded = await loadSlotUses(org, filter)
     const own = loaded.setlists.find((s) => s.id === setlistId)
     const library = new Map(loaded.library)
@@ -209,9 +211,10 @@ async function tieredRows(
     const slots = rows.map((r) => {
         if (!isSongType(r.type)) return null
         const t = { momentId: r.momentId ?? ownMoment.get(r.id) ?? null, title: r.title, fileId: r.fileId }
-        const slotKey = slotKeyFor(t, partGroupOf)
+        const slotKey = slotKeyFor(t, partGroupOf, { byTitle })
         const legacy = legacySlotKeyFor(t, partGroupOf)
-        return { slotKey, aliases: legacy !== slotKey ? [legacy] : [] }
+        const aliases = [...new Set([legacy, ...historyAliases(index, slotKey)])].filter((a) => a !== slotKey)
+        return { slotKey, aliases }
     })
     const slotKeys = slots.map((x) => x?.slotKey ?? null)
     const standing = await readStandingFor(org, profileKey, slots.filter((x): x is { slotKey: string; aliases: string[] } => !!x))
@@ -220,7 +223,7 @@ async function tieredRows(
         const t = Date.parse(iso)
         return Number.isNaN(t) ? iso.slice(0, 10) : dayInZone(t, zone)
     }
-    const vsLast = vsLastOf(index.profileSetlists, library, { before: day, excludeId: setlistId, dayOf })
+    const vsLast = vsLastOf(index.profileSetlists, library, { before: day, excludeId: setlistId, dayOf, byTitle })
 
     const out = rows.map((r, i) => {
         const slotKey = slotKeys[i]
@@ -242,7 +245,7 @@ async function tieredRows(
         })
         const chartName = r.fileId ? (library.get(r.fileId)?.name ?? r.fileName ?? r.title) : null
         const row: ReadbackRow = { ...base, tier: tier.tier, phrase: tier.phrase }
-        if (!r.fileId && tier.fileId && (tier.tier === "last_time" || tier.tier === "other_service")) {
+        if (!r.fileId && tier.fileId && !tier.dead && (tier.tier === "last_time" || tier.tier === "other_service")) {
             row.recall = {
                 setting: settingOf(tier.chartName, tier.setting),
                 key: tier.key ?? null,

@@ -100,7 +100,7 @@ describe("learned profile (MCP-02, -03, -14)", () => {
             rabbiSlot: null,
             name: "Eliana Bat Mitzvah",
         }),
-        setlist("s1", "2026-10-17", [head(0), barchu(1), mi(2, "mi-ana", "Mi Chamocha Ana B'Koach")]),
+        setlist("s1", "2026-10-17", [head(0), barchu(1), mi(2, "mi-ana", "Mi Chamocha 6-8")]),
         setlist("s2", "2026-10-10", [head(0), barchu(1), mi(2, "mi-moshav", "Mi chamocha (Moshav) morning.pdf")]),
         setlist("s3", "2026-10-03", [head(0), mi(1, "mi-moshav", "Mi Chamocha (Moshav)"), barchu(2)]),
         setlist("s4", "2026-09-26", [head(0), barchu(1), mi(2, "mi-moshav", "Mi Chamocha (Moshav)")]),
@@ -123,7 +123,36 @@ describe("learned profile (MCP-02, -03, -14)", () => {
         expect(tier.differsFromLast?.date.slice(0, 10)).toBe("2026-10-17")
     })
 
-    it("collapses a moment's piano and lyrics rows into one slot with its parts", () => {
+    it("a slot with a different song every week keeps its place and is drafted open (positional slot)", () => {
+        const songs = ["Hinei Ma Tov", "Fiddley Tune", "Oseh Shalom", "Lo Yisa Goy", "Am Yisrael Chai"]
+        const rotating = songs.map((title, i) =>
+            setlist(`r${i}`, `2026-10-${String(17 - i * 7 + 14).padStart(2, "0")}`, [
+                track(0, { title, fileId: `f-${i}` }),
+                head(1),
+                barchu(2),
+            ]),
+        )
+        const s = seedProfile(DANIEL_SAT, rotating, library, new Date("2026-11-01T00:00:00Z"))
+        expect(s.tracks.map((t) => [t.title, t.slotKind ?? null])).toEqual([
+            ["Opening song", "open"],
+            ["Shacharit", null],
+            ["Bar’chu", "moment"], // usual: the same chart every week
+        ])
+        expect(s.tracks[0].fileId).toBeUndefined()
+        expect(s.dropped).toBeUndefined()
+    })
+
+    it("a row of the latest service left out of the order is reported as dropped", () => {
+        const sets = [
+            setlist("d1", "2026-10-17", [head(0), barchu(1), track(2, { title: "Guest song", type: "note" })]),
+            setlist("d2", "2026-10-10", [head(0), barchu(1)]),
+            setlist("d3", "2026-10-03", [head(0), barchu(1)]),
+        ]
+        const s = seedProfile(DANIEL_SAT, sets, library)
+        expect(s.dropped).toEqual([{ label: "Guest song", count: 1, of: 3 }])
+    })
+
+    it("collapses a song's piano and lyrics rows into one slot with its parts", () => {
         const two = [
             setlist("p1", "2026-10-16", [
                 track(0, { title: "Shalom Aleichem - Greg Dallas Piano", fileId: "sa-piano" }),

@@ -32,7 +32,7 @@ export interface VsLast {
 export function vsLastOf(
     profileSetlists: HistorySetlist[],
     library: Map<string, LibraryLite>,
-    opts: { before?: string | null; excludeId?: string | null; dayOf?: (iso: string) => string } = {},
+    opts: { before?: string | null; excludeId?: string | null; dayOf?: (iso: string) => string; byTitle?: boolean } = {},
 ): VsLast | null {
     const dayOf = opts.dayOf ?? ((iso: string) => iso.slice(0, 10))
     const last = profileSetlists.find(
@@ -48,7 +48,7 @@ export function vsLastOf(
     const rows: VsLastRow[] = []
     for (const t of last.tracks) {
         if (!isSongType(t.type) || !t.fileId) continue
-        const slotKey = slotKeyFor(t, partGroupOf)
+        const slotKey = slotKeyFor(t, partGroupOf, { byTitle: opts.byTitle !== false })
         if (seen.has(slotKey)) continue
         seen.add(slotKey)
         const lib = library.get(t.fileId)

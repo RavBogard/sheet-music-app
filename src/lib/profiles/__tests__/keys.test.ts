@@ -90,19 +90,25 @@ describe("slotKeyFor", () => {
         expect(b).toBe(a)
     })
 
-    it("keys every setting of one prayer by its moment, from the title (MCP-02)", () => {
-        const keys = ["Mi Chamocha (Moshav)", "Mi Chamocha 6-8", "Mi Chamocha - Ana B'Koach", "Mi chamocha (Moshav) morning.pdf"].map(
-            (title) => slotKeyFor({ title, fileId: "x" }, pg),
+    it("keys every setting of one prayer by its moment, on a clear title match (MCP-02)", () => {
+        const keys = ["Mi Chamocha (Moshav)", "Mi Chamocha 6-8", "Mi chamocha (Moshav) morning.pdf"].map((title) =>
+            slotKeyFor({ title, fileId: "x" }, pg),
         )
         expect(new Set(keys)).toEqual(new Set(["moment:mi-chamocha"]))
         // The instrument copies of a liturgical arrangement share the moment too.
         expect(slotKeyFor({ title: "Barchu (Walkdown) Bb", fileId: "barchu-bb" }, pg)).toBe("moment:barchu")
     })
 
-    it("a page names the moment when the title does not", () => {
-        expect(slotKeyFor({ title: "Fiddley Tune", fileId: "fiddle", liturgyRef: { book: "crc-saturday", folio: 68 } }, pg)).toBe(
-            "moment:mi-chamocha",
-        )
+    it("never keys by a guess: a plausible-only match or a clarifier naming other liturgy keeps a song slot", () => {
+        for (const title of [
+            "Bayom Hahu",
+            "Shehecheyanu",
+            "Shema (Torah Service)",
+            "Shema Koleinu",
+            "Mi Shebeirach for the Congregation",
+        ]) {
+            expect(slotKeyFor({ title, fileId: "x" }, pg), title).toMatch(/^song:/)
+        }
     })
 
     it("Brothers Lazaroff keeps song slots: no title lookup when byTitle is false", () => {
