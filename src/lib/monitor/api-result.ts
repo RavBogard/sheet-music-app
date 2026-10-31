@@ -16,6 +16,7 @@ const STATUS: Record<string, number> = {
     invalid_argument: 400,
     mix_limit_reached: 409,
     monitor_state_unavailable: 503,
+    recall_failed: 503,
 }
 
 export function monitorResponse(result: unknown): NextResponse {

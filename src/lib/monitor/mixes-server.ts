@@ -11,6 +11,7 @@ import {
 import {
     applyCeilingsPatch,
     ceilingFor,
+    raisedAboveUnity,
     faderToDb,
     normalizeCeilings,
     type CeilingsPatch,
@@ -279,15 +280,36 @@ export async function recallMix(
     let commandCount = 0
     const stepMs = opts.stepMs ?? RECALL_STEP_MS
     for (let i = 0; i < waves.length; i++) {
-        const batch = db.batch()
-        for (const cmd of waves[i]) {
-            batch.set(pending.doc(), { ...cmd, uid, createdAt: Date.now() })
-            commandCount++
+        try {
+            const batch = db.batch()
+            for (const cmd of waves[i]) batch.set(pending.doc(), { ...cmd, uid, createdAt: Date.now() })
+            await batch.commit()
+            commandCount += waves[i].length
+        } catch (err) {
+            // Nothing reached the desk yet: an ordinary failure.
+            if (i === 0) {
+                return richError(
+                    "recall_failed",
+                    "The recall could not be sent. Nothing changed.",
+                    { busIndex: bus, debug: err instanceof Error ? err.message : String(err) },
+                    "Try again.",
+                )
+            }
+            // Some waves landed: say so, so the caller can retry (a retry
+            // re-plans from the desk's levels as they now are).
+            return {
+                ...base,
+                dryRun: false,
+                committed: "partial" as const,
+                commandCount,
+                failedAtWave: i,
+                waveCount: waves.length,
+                hint: "Recall stopped partway: some faders moved. Call recall_mix again with dryRun:false to finish.",
+            }
         }
-        await batch.commit()
         if (i < waves.length - 1 && stepMs > 0) await sleep(stepMs)
     }
-    return { ...base, dryRun: false, committed: true, commandCount }
+    return { ...base, dryRun: false, committed: true as const, commandCount }
 }
 
 // ─── limits ──────────────────────────────────────────────────────────────────
@@ -328,7 +350,11 @@ export async function getMonitorLimits(db: DB, uid: string) {
 
 export interface SetMonitorLimitsArgs extends CeilingsPatch {
     dryRun?: boolean
+    /** Required when the change raises any limit above 0 dB (0.75). */
+    confirm?: boolean
 }
+
+export const RAISE_ABOVE_UNITY_HINT = "Raising a wedge limit above 0 dB risks feedback; resend with confirm:true"
 
 export async function setMonitorLimits(db: DB, uid: string, args: SetMonitorLimitsArgs) {
     const access = await assertMonitorAccess(db, uid)
@@ -352,6 +378,24 @@ export async function setMonitorLimits(db: DB, uid: string, args: SetMonitorLimi
     const buses = validBusIndicesFor(access.config, access.ownedBuses)
     const after = limitsView(merged.ceilings, buses)
     if (args.dryRun === true) return { ok: true as const, dryRun: true, committed: false, ...after }
+    // Lead's ruling (after Daniel's safety ruling): a limit that RISES above
+    // 0 dB is written only with confirm:true; otherwise this is a preview.
+    const raised = raisedAboveUnity(current, merged.ceilings)
+    if (raised.length > 0 && args.confirm !== true) {
+        return {
+            ok: true as const,
+            dryRun: true,
+            committed: false,
+            needsConfirm: true,
+            raised: raised.map((r) => ({
+                field: r.field,
+                from: { level: r.from, db: faderToDb(r.from) },
+                to: { level: r.to, db: faderToDb(r.to) },
+            })),
+            hint: RAISE_ABOVE_UNITY_HINT,
+            ...after,
+        }
+    }
     const value: MonitorCeilings = { ...merged.ceilings, updatedBy: uid }
     await db
         .collection("config")

@@ -164,6 +164,28 @@
         "maxLength": 80,
         "context": "{names} is a list of channel names"
     },
+    "recallPartial": {
+        "where": "Recall sheet: the recall was cut off after some faders had moved",
+        "who": "musicians on the wedge mixer",
+        "maxLength": 70,
+        "context": "fader = a level slider"
+    },
+    "recallRetry": {
+        "where": "Recall sheet: confirm button after a recall stopped partway; finishes the recall",
+        "who": "musicians on the wedge mixer",
+        "maxLength": 16
+    },
+    "limitsAboveUnity": {
+        "where": "Limits panel: inline warning when a limit is raised above 0 dB",
+        "who": "the sound engineer and admins",
+        "maxLength": 80,
+        "context": "feed back = acoustic feedback (howling)"
+    },
+    "limitsConfirm": {
+        "where": "Limits panel: save button while a limit is raised above 0 dB",
+        "who": "the sound engineer and admins",
+        "maxLength": 20
+    },
     "recallSent": {
         "where": "Toast after the recall was sent",
         "who": "musicians on the wedge mixer",

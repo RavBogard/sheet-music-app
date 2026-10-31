@@ -90,13 +90,43 @@ describe("BET-4 recall plan", () => {
             { default: { send: 0.7, master: 0.7 } },
         )
         expect(plan.unchanged).toBe(1) // Kick
-        expect(plan.unmatched).toEqual([{ channelIndex: 12, channelName: "Choir" }])
+        expect(plan.unmatched).toEqual([{ channelIndex: 12, channelName: "Choir", reason: "not_on_desk" }])
         const byName = Object.fromEntries(plan.changes.map((c) => [c.target === "master" ? "master" : c.channelName, c]))
         expect(byName.master).toMatchObject({ toLevel: 0.7, clamped: true, toDb: -2 })
         expect(byName.Bass).toMatchObject({ channelIndex: 2, toLevel: 0.7, clamped: true })
         expect(byName["Rabbi Dan"]).toMatchObject({ channelIndex: 9, matchedBy: "name", fromLevel: 0.2, toLevel: 0.62, clamped: false })
         // channel 5 ("Spare") is untouched: the saved channel 5 was the rabbi's mic.
         expect(plan.changes.find((c) => c.channelIndex === 5)).toBeUndefined()
+    })
+
+    it("a second saved send matching the same desk channel is reported as a duplicate, not applied", () => {
+        const plan = planRecall(
+            snap({
+                sends: [
+                    { channelIndex: 1, channelName: "Kick", level: 0.5, on: true },
+                    { channelIndex: 3, channelName: "kick ", level: 0.1, on: true },
+                ],
+            }),
+            live,
+            channels,
+            undefined,
+        )
+        expect(plan.unmatched).toEqual([{ channelIndex: 3, channelName: "kick ", reason: "duplicate" }])
+        expect(plan.changes.filter((c) => c.channelIndex === 1)).toHaveLength(1)
+    })
+
+    it("a muted send above its target comes down first and opens only after the ramp", () => {
+        const plan = planRecall(
+            snap({ sends: [{ channelIndex: 9, channelName: "Rabbi Dan", level: 0.4, on: true }] }),
+            { ...live, sends: [{ channelIndex: 9, level: 0.95, on: false }] },
+            channels,
+            undefined, // default cap 0.70 is also below the current 0.95
+        )
+        const waves = recallWaves(plan, 3)
+        const levels = waves.slice(0, 3)
+        expect(levels.every((w) => w.every((c) => c.type === "set_send_level"))).toBe(true)
+        expect(levels[2][0].value).toBe(0.4)
+        expect(waves[3]).toEqual([{ type: "set_send_on", busIndex: 2, channelIndex: 9, value: true }])
     })
 
     it("ramps in finite steps that end exactly on the target", () => {

@@ -76,6 +76,8 @@ export function SavedMixControls({ busIndex, compact = false, disabled = false }
     const [preview, setPreview] = useState<RecallPreview | null>(null)
     const [previewing, setPreviewing] = useState(false)
     const [sending, setSending] = useState(false)
+    // BET-4 fix round: the recall stopped partway (some faders moved).
+    const [partial, setPartial] = useState(false)
 
     const openSave = () => {
         const d = defaultName()
@@ -102,6 +104,7 @@ export function SavedMixControls({ busIndex, compact = false, disabled = false }
     const openRecall = () => {
         setPicked(null)
         setPreview(null)
+        setPartial(false)
         setRecallOpen(true)
         void mixes.reload()
     }
@@ -109,6 +112,7 @@ export function SavedMixControls({ busIndex, compact = false, disabled = false }
     const pick = async (mix: SavedMixSummary) => {
         setPicked(mix)
         setPreview(null)
+        setPartial(false)
         setPreviewing(true)
         try {
             setPreview(await mixes.preview(mix.id))
@@ -124,7 +128,13 @@ export function SavedMixControls({ busIndex, compact = false, disabled = false }
         if (!picked) return
         setSending(true)
         try {
-            await mixes.recall(picked.id)
+            if ((await mixes.recall(picked.id)) === "partial") {
+                // Keep the sheet open: say what happened and offer Retry, which
+                // re-plans from where the faders are now.
+                setPartial(true)
+                return
+            }
+            setPartial(false)
             toast.success(t("monitor.recallSent"))
             setRecallOpen(false)
         } catch {
@@ -281,6 +291,11 @@ export function SavedMixControls({ busIndex, compact = false, disabled = false }
                                         })}
                                     </p>
                                 )}
+                                {partial && (
+                                    <p data-testid="recall-partial" role="alert" className="text-sm font-medium text-amber-700 dark:text-amber-400">
+                                        {t("monitor.recallPartial")}
+                                    </p>
+                                )}
                                 <div className="flex justify-end gap-2 pt-1">
                                     <Button variant="outline" onClick={() => setRecallOpen(false)}>
                                         {t("monitor.cancel")}
@@ -290,7 +305,11 @@ export function SavedMixControls({ busIndex, compact = false, disabled = false }
                                         disabled={sending || previewing || !preview || preview.changes.length === 0}
                                         data-testid="recall-confirm"
                                     >
-                                        {sending ? t("monitor.recallSending") : t("monitor.recallConfirm")}
+                                        {sending
+                                            ? t("monitor.recallSending")
+                                            : partial
+                                              ? t("monitor.recallRetry")
+                                              : t("monitor.recallConfirm")}
                                     </Button>
                                 </div>
                             </section>

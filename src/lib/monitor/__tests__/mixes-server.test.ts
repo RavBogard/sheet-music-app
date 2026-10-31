@@ -23,11 +23,16 @@ class Fake {
     collection(path: string) {
         return new Coll(this, path)
     }
+    commits = 0
+    failCommitAt: number | null = null
     batch() {
         const ops: Array<() => void> = []
         return {
             set: (ref: Doc, data: Data) => void ops.push(() => this.docs.set(ref.path, { ...data })),
-            commit: async () => ops.forEach((o) => o()),
+            commit: async () => {
+                if (this.failCommitAt === ++this.commits) throw new Error("network")
+                ops.forEach((o) => o())
+            },
         }
     }
     nextId() {
@@ -203,6 +208,27 @@ describe("recall", () => {
     })
 })
 
+describe("recall failures", () => {
+    it("a failure after some waves landed reports committed:'partial' with the wave", async () => {
+        const { recallMix } = await server()
+        db.failCommitAt = 3
+        const r = (await recallMix(asDb(), "david", { snapshotId: "davidNamed", dryRun: false }, { stepMs: 0 })) as Record<string, unknown>
+        expect(r).toMatchObject({ ok: true, committed: "partial", failedAtWave: 2 })
+        expect(db.under(PENDING).length).toBe(r.commandCount)
+        expect(r.commandCount).toBeGreaterThan(0)
+    })
+
+    it("a failure on the first wave is a plain error and nothing was written", async () => {
+        const { recallMix } = await server()
+        db.failCommitAt = 1
+        expect(await recallMix(asDb(), "david", { snapshotId: "davidNamed", dryRun: false }, { stepMs: 0 })).toMatchObject({
+            ok: false,
+            error: { machine_code: "recall_failed" },
+        })
+        expect(db.under(PENDING)).toHaveLength(0)
+    })
+})
+
 describe("limits", () => {
     it("anyone with monitor access reads them; defaults apply when none are stored", async () => {
         const { getMonitorLimits } = await server()
@@ -227,6 +253,18 @@ describe("limits", () => {
                 updatedBy: uid,
             })
         }
+    })
+
+    it("raising a limit above 0 dB needs confirm:true; without it, a preview that writes nothing", async () => {
+        const { setMonitorLimits } = await server()
+        const preview = (await setMonitorLimits(asDb(), "drew", { perBus: { "2": { send: 0.85 } } })) as Record<string, unknown>
+        expect(preview).toMatchObject({ ok: true, dryRun: true, committed: false, needsConfirm: true })
+        expect(preview.hint).toMatch(/resend with confirm:true/)
+        expect(preview.raised).toEqual([{ field: "perBus.2.send", from: { level: 0.7, db: -2 }, to: { level: 0.85, db: 4 } }])
+        expect((db.docs.get("config/monitor") as Data).ceilings).toBeUndefined()
+        expect(await setMonitorLimits(asDb(), "drew", { perBus: { "2": { send: 0.85 } }, confirm: true })).toMatchObject({ committed: true })
+        // Lowering needs no confirm.
+        expect(await setMonitorLimits(asDb(), "drew", { perBus: { "2": { send: 0.6 } } })).toMatchObject({ committed: true })
     })
 
     it("a bad value is refused and nothing is written", async () => {

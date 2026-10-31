@@ -3523,7 +3523,7 @@ export function registerMonitorTools(server: McpServer): void {
         "set_monitor_limits",
         {
             description:
-                "Change the wedge limits (sound engineer or admin only). Values are fader positions 0-1, NOT dB (0.75 = 0 dB, 0.70 = -2 dB, 0.60 = -6 dB). Merges into what is stored: pass only what changes. `default` sets the send and master limit for every bus; `perBus` overrides one bus (keys '1'-'5'); `perChannel` caps one input channel on every bus (keys '1'-'32'), the place for a mic that rings; pass `null` for a bus or channel to remove its override. The most specific value wins: channel, then bus, then default. Reversible and silent (no one is notified), so `dryRun` defaults to false; pass `dryRun:true` to preview. Returns the resulting limits in the get_monitor_limits shape.",
+                "Change the wedge limits (sound engineer or admin only). Values are fader positions 0-1, NOT dB (0.75 = 0 dB, 0.70 = -2 dB, 0.60 = -6 dB). Merges into what is stored: pass only what changes. `default` sets the send and master limit for every bus; `perBus` overrides one bus (keys '1'-'5'); `perChannel` caps one input channel on every bus (keys '1'-'32'), the place for a mic that rings; pass `null` for a bus or channel to remove its override. The most specific value wins: channel, then bus, then default. Raising any limit above 0 dB (0.75) risks feedback: such a call returns a preview (`needsConfirm:true`, `raised:[...]`) and writes nothing until you read it back to the person and resend with `confirm:true`. Lowering a limit, or keeping it at or below 0 dB, needs no confirm. Reversible and silent (no one is notified), so `dryRun` defaults to false; pass `dryRun:true` to preview. Returns the resulting limits in the get_monitor_limits shape.",
             inputSchema: {
                 default: z.object({ send: levelSchema.optional(), master: levelSchema.optional() }).optional(),
                 perBus: z
@@ -3535,6 +3535,10 @@ export function registerMonitorTools(server: McpServer): void {
                     .optional()
                     .describe("Keyed by channel index '1'-'32'; null removes that channel's cap"),
                 dryRun: z.boolean().optional().describe("true = preview only. Defaults to false."),
+                confirm: z
+                    .boolean()
+                    .optional()
+                    .describe("Required (true) when any limit would RISE above 0.75 (0 dB); without it the call only previews"),
             },
         },
         async (args, extra) => jsonResult(await setMonitorLimits(uidFrom(extra), args)),
@@ -3557,7 +3561,7 @@ export function registerMonitorTools(server: McpServer): void {
         "recall_mix",
         {
             description:
-                "Bring a saved wedge mix back. Musicians may recall onto their own bus only; the sound engineer and admins onto any bus. Channels are matched by NAME first, so a renumbered desk still gets the right levels; a saved channel whose name is no longer on the desk is listed in `unmatched` and left alone. Every level is held to the wedge limits (`heldAtLimit`). `dryRun` defaults to TRUE: the first call returns the plan, every change with `before` and `after` in dB, so you can read it back and confirm. Call again with `dryRun:false` to send it: the move goes through the normal command path as a short ramp (under a second), so the bridge's ownership and limit checks apply to every step. Returns `{busIndex, snapshot, changes:[{target, channelIndex, channelName, before:{level,db,on}, after:{level,db,on}, heldAtLimit}], unmatched, unchanged, dryRun, committed, commandCount}`.",
+                "Bring a saved wedge mix back. Musicians may recall onto their own bus only; the sound engineer and admins onto any bus. Channels are matched by NAME first, so a renumbered desk still gets the right levels; a saved channel whose name is no longer on the desk is listed in `unmatched` and left alone. Every level is held to the wedge limits (`heldAtLimit`). `dryRun` defaults to TRUE: the first call returns the plan, every change with `before` and `after` in dB, so you can read it back and confirm. Call again with `dryRun:false` to send it: the move goes through the normal command path as a short ramp (under a second), so the bridge's ownership and limit checks apply to every step. If sending fails partway the result has `committed:'partial'` and `failedAtWave`: some faders moved; call again with `dryRun:false` to finish (it re-plans from the desk's current levels). Returns `{busIndex, snapshot, changes:[{target, channelIndex, channelName, before:{level,db,on}, after:{level,db,on}, heldAtLimit}], unmatched, unchanged, dryRun, committed, commandCount}`.",
             inputSchema: {
                 snapshotId: z.string().min(1).describe("The id from list_saved_mixes"),
                 busIndex: z.number().int().min(1).max(5).optional().describe("Bus 1-5; omit for your own"),

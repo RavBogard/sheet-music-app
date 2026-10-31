@@ -18,6 +18,7 @@ import {
     CEILING_BUS_MIN,
     formatDb,
     normalizeCeilings,
+    raisedAboveUnity,
     type CeilingLevels,
     type MonitorCeilings,
 } from "@/lib/monitor/limits"
@@ -87,6 +88,10 @@ export function LimitsPanel() {
     useEffect(() => {
         if (!dirty) setDraft(stored)
     }, [stored, dirty])
+
+    // Lead's ruling: a limit raised above 0 dB risks feedback, so it is saved
+    // only after an explicit, inline "Save anyway".
+    const raised = dirty ? raisedAboveUnity(raw, draft) : []
 
     if (!isSoundEngineer && !isAdmin) return null
 
@@ -187,9 +192,14 @@ export function LimitsPanel() {
                 })}
             </ul>
 
+            {raised.length > 0 && (
+                <p data-testid="limits-above-unity" role="alert" className="text-sm font-medium text-amber-700 dark:text-amber-400">
+                    {t("monitor.limitsAboveUnity")}
+                </p>
+            )}
             <div className="flex justify-end">
                 <Button onClick={() => void save()} disabled={saving || !dirty} data-testid="limits-save">
-                    {t("monitor.limitsSave")}
+                    {raised.length > 0 ? t("monitor.limitsConfirm") : t("monitor.limitsSave")}
                 </Button>
             </div>
         </section>

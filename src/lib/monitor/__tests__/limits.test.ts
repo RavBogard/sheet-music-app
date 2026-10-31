@@ -8,6 +8,7 @@ import {
     faderToDb,
     formatDb,
     normalizeCeilings,
+    raisedAboveUnity,
 } from "@/lib/monitor/limits"
 
 describe("BET-4 ceilings: resolution (same order as the bridge)", () => {
@@ -75,6 +76,25 @@ describe("BET-4 ceilings: patching", () => {
         expect(applyCeilingsPatch(undefined, { perBus: { "6": { send: 0.5 } } })).toEqual({ ok: false, field: "perBus.6" })
         expect(applyCeilingsPatch(undefined, { perChannel: { "33": { send: 0.5 } } })).toMatchObject({ ok: false })
         expect(applyCeilingsPatch(undefined, { perBus: { "2": { master: -0.1 } } })).toMatchObject({ ok: false })
+    })
+})
+
+describe("BET-4 raising a limit above 0 dB", () => {
+    const before = { default: { send: 0.7, master: 0.7 }, perBus: { "2": { send: 0.8 } } }
+
+    it("lists only limits that rise above 0.75", () => {
+        const raised = raisedAboveUnity(before, {
+            default: { send: 0.78, master: 0.7 },
+            perBus: { "2": { send: 0.8 }, "3": { master: 0.9 } },
+            perChannel: { "4": { send: 0.76 } },
+        })
+        expect(raised.map((r) => r.field)).toEqual(["default.send", "perBus.3.master", "perChannel.4.send"])
+        expect(raised[1]).toEqual({ field: "perBus.3.master", from: 0.7, to: 0.9 })
+    })
+
+    it("lowering, keeping, or raising up to 0 dB is never listed", () => {
+        expect(raisedAboveUnity(before, { default: { send: 0.75, master: 0.6 }, perBus: { "2": { send: 0.78 } } })).toEqual([])
+        expect(raisedAboveUnity(undefined, { default: { send: 0.7, master: 0.75 } })).toEqual([])
     })
 })
 

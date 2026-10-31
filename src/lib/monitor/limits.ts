@@ -179,6 +179,38 @@ export function applyCeilingsPatch(
     return { ok: true, ceilings: next }
 }
 
+/** 0 dB on the X32 fader law. A limit raised above this needs an explicit confirm. */
+export const UNITY_LEVEL = 0.75
+
+export interface RaisedLimit {
+    field: string
+    from: number
+    to: number
+}
+
+/**
+ * The limits a change RAISES above 0 dB: each new value above 0.75 that is
+ * higher than what applied there before (an override is compared with the
+ * value it replaces, e.g. a new bus override with the default). Lowering, or
+ * keeping a limit at or below 0 dB, is never listed. (Lead's ruling, after
+ * Daniel's safety ruling: raising a wedge limit above 0 dB risks feedback.)
+ */
+export function raisedAboveUnity(before: unknown, after: MonitorCeilings): RaisedLimit[] {
+    const old = normalizeCeilings(before).ceilings
+    const out: RaisedLimit[] = []
+    const check = (field: string, from: number, to: number | undefined) => {
+        if (to !== undefined && to > UNITY_LEVEL && to > from + 1e-9) out.push({ field, from, to })
+    }
+    for (const kind of ["send", "master"] as const) check(`default.${kind}`, old.default[kind], after.default[kind])
+    for (const [k, v] of Object.entries(after.perBus ?? {})) {
+        for (const kind of ["send", "master"] as const) check(`perBus.${k}.${kind}`, ceilingFor(old, kind, Number(k)), v[kind])
+    }
+    for (const [k, v] of Object.entries(after.perChannel ?? {})) {
+        check(`perChannel.${k}.send`, old.perChannel?.[k]?.send ?? old.default.send, v.send)
+    }
+    return out
+}
+
 /**
  * X32 fader position (0..1) to dB, using the desk's own four-segment taper.
  * Returns null at zero (silence). 0.75 is 0 dB, 0.70 is -2 dB, 0.80 is +2 dB, 0.60 is -6 dB,

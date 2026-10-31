@@ -106,15 +106,17 @@ export function useSavedMixes(busIndex: number | null, enabled = true) {
         [busIndex],
     )
 
+    /** Resolves to "partial" when the recall stopped partway (some faders moved). */
     const recall = useCallback(
-        async (snapshotId: string) => {
+        async (snapshotId: string): Promise<"done" | "partial"> => {
             if (busIndex == null) throw new Error("no bus")
-            await json(
+            const body = await json<{ committed?: boolean | "partial" }>(
                 await apiFetch("/api/monitor/mixes/recall", {
                     method: "POST",
                     body: JSON.stringify({ busIndex, snapshotId, dryRun: false }),
                 }),
             )
+            return body.committed === "partial" ? "partial" : "done"
         },
         [busIndex],
     )

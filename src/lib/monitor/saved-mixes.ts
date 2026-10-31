@@ -182,11 +182,17 @@ export interface RecallChange {
     clamped: boolean
 }
 
+export type UnmatchedReason = "not_on_desk" | "no_send" | "duplicate"
+
 export interface RecallPlan {
     busIndex: number
     changes: RecallChange[]
-    /** Saved channels whose name is on no channel of the desk now. */
-    unmatched: Array<{ channelIndex: number; channelName: string }>
+    /**
+     * Saved channels left alone, with why: the name is on no channel of the
+     * desk now, the desk channel has no send on this bus, or another saved
+     * send already matched the same desk channel.
+     */
+    unmatched: Array<{ channelIndex: number; channelName: string; reason: UnmatchedReason }>
     /** Saved channels that already match the desk. */
     unchanged: number
 }
@@ -252,13 +258,17 @@ export function planRecall(
     for (const saved of snapshot.sends) {
         const m = matchChannel(saved, channels)
         if (!m || seen.has(m.index)) {
-            if (!m) unmatched.push({ channelIndex: saved.channelIndex, channelName: saved.channelName })
+            unmatched.push({
+                channelIndex: saved.channelIndex,
+                channelName: saved.channelName,
+                reason: m ? "duplicate" : "not_on_desk",
+            })
             continue
         }
         seen.add(m.index)
         const current = live.sends.find((s) => s.channelIndex === m.index)
         if (!current) {
-            unmatched.push({ channelIndex: saved.channelIndex, channelName: saved.channelName })
+            unmatched.push({ channelIndex: saved.channelIndex, channelName: saved.channelName, reason: "no_send" })
             continue
         }
         const cap = ceilingFor(ceilingsRaw, "send", live.index, m.index)
@@ -301,19 +311,26 @@ export interface RecallCommand {
 }
 
 /**
- * The plan as command waves, in order: unmutes first, then the ramp steps
- * (one wave per step, every moving fader together), then mutes last, so a
- * channel that is coming in rises from where it was and one that is going out
- * falls before it is cut.
+ * The plan as command waves, in order:
+ *   1. unmutes of channels whose level stays or rises (they rise from where they were);
+ *   2. the ramp steps, one wave per step, every moving fader together;
+ *   3. unmutes of channels whose level FALLS — a muted send sitting above its
+ *      target (or above the limit) comes down first and only then opens, so
+ *      it never sounds at the old, louder level;
+ *   4. mutes last, so a channel going out falls before it is cut.
  */
 export function recallWaves(plan: RecallPlan, steps = RECALL_STEPS): RecallCommand[][] {
     const b = plan.busIndex
     const unmute: RecallCommand[] = []
+    const lateUnmute: RecallCommand[] = []
     const mute: RecallCommand[] = []
     const ramps: RecallCommand[][] = Array.from({ length: Math.max(1, steps) }, () => [])
     for (const c of plan.changes) {
         if (c.target === "send" && c.channelIndex != null && c.fromOn !== c.toOn) {
-            ;(c.toOn ? unmute : mute).push({ type: "set_send_on", busIndex: b, channelIndex: c.channelIndex, value: c.toOn })
+            const cmd: RecallCommand = { type: "set_send_on", busIndex: b, channelIndex: c.channelIndex, value: c.toOn }
+            if (!c.toOn) mute.push(cmd)
+            else if (c.toLevel < c.fromLevel - LEVEL_EPSILON) lateUnmute.push(cmd)
+            else unmute.push(cmd)
         }
         if (Math.abs(c.toLevel - c.fromLevel) <= LEVEL_EPSILON) continue
         rampLevels(c.fromLevel, c.toLevel, steps).forEach((v, i) => {
@@ -324,5 +341,5 @@ export function recallWaves(plan: RecallPlan, steps = RECALL_STEPS): RecallComma
             )
         })
     }
-    return [unmute, ...ramps, mute].filter((w) => w.length > 0)
+    return [unmute, ...ramps, lateUnmute, mute].filter((w) => w.length > 0)
 }
