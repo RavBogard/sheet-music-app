@@ -25,13 +25,16 @@
         "exit": "יציאה",
         "exitTitle": "יציאה ממצב נגינה",
         "printingChart": "ההדפסה מתבצעת…",
-        "printChart": "הדפסת התווים"
+        "printChart": "הדפסת התווים",
+        "tapEdges": "הקשה בשולי המסך להעברת עמוד"
     },
     "nav": {
         "previousSong": "השיר הקודם",
         "nextSong": "השיר הבא",
         "noSongSelected": "לא נבחר שיר",
-        "setlistEmpty": "רשימת השירים ריקה"
+        "setlistEmpty": "רשימת השירים ריקה",
+        "nextUp": "הבא: {title} ({key})",
+        "nextUpNoKey": "הבא: {title}"
     },
     "metronome": {
         "startTitle": "הפעלת המטרונום",
@@ -131,5 +134,10 @@
         "partialAria": "{ready} מתוך {total} קובצי תווים נשמרו לשימוש לא מקוון — הקשה לשמירת השאר",
         "idleAria": "שמירת כל התווים לשימוש לא מקוון"
     },
-    "saveLabelPlaybackSpeed": "מהירות ההשמעה"
+    "saveLabelPlaybackSpeed": "מהירות ההשמעה",
+    "noteStrip": {
+        "vocalLead": "שירה ראשית: {name}",
+        "expand": "הצגת ההערה המלאה",
+        "collapse": "הצגת פחות"
+    }
 }

@@ -13,7 +13,10 @@ import { LiveDirectorGesture } from "./LiveDirectorGesture"
 import { resolveViewerKind } from "./resolveViewerKind"
 import { printCurrentChart, currentDisplayedPreferFlats } from "./print-current-chart"
 import { useChartContentDir } from "@/components/i18n/ChartContent"
-import { useI18n } from "@/i18n/client"
+import { useI18n, useReadingDirection } from "@/i18n/client"
+import { ChartNoteStrip } from "./ChartNoteStrip"
+import { useEdgeTapZones } from "./use-edge-tap-zones"
+import { useDeviceTranspositionPrefs } from "@/hooks/use-musician-transposition"
 const PrintModal = dynamic(() => import("@/components/setlist/PrintModal").then(m => m.PrintModal), { ssr: false })
 
 // Dynamically import PDFViewer to avoid SSR worker issues (per RESEARCH.md Pitfall 1)
@@ -127,8 +130,13 @@ export function resolveQueueStart(
 /**
  * Full-screen PDF takeover overlay for the performance view.
  *
- * Uses the full PerformanceToolbar (transpose, annotate, zoom, metronome,
- * monitor) — same experience as opening a chart from the library.
+ * Uses the full PerformanceToolbar (transpose, zoom, metronome, monitor) —
+ * same experience as opening a chart from the library.
+ *
+ * PERF-05: edge tap zones turn pages on the chart scroll container (one
+ * wrapper for every viewer; see `use-edge-tap-zones.ts`). PERF-11: the row's
+ * note and Vocal Lead stay visible in a slim strip above the chart. PERF-14:
+ * a signed-out device remembers its own transposition per chart.
  *
  * Layout: PDF stacked above bottom toolbar on all viewports.
  *
@@ -341,8 +349,33 @@ export function PDFOverlay({
     }, [queueIndex])
 
     // Track menu open state to keep toolbar visible
-    const [, setMenuOpen] = useState(false)
+    const [menuOpen, setMenuOpen] = useState(false)
     const [showPrintModal, setShowPrintModal] = useState(false)
+
+    // PERF-14: signed-out devices keep their own transposition per chart.
+    useDeviceTranspositionPrefs()
+
+    // PERF-05: edge tap zones on the chart scroll container. Suppressed while
+    // a toolbar popover, the print sheet, the leader's action sheet (any open
+    // dialog) or chord editing owns the screen. The leader long-press needs a
+    // 500ms hold; a tap is at most 300ms, so the two never collide.
+    const tapZonesEnabled = useMusicStore(s => s.tapZonesEnabled)
+    const { isRtl: readingRtl } = useReadingDirection()
+    const suppressRef = useRef({ menuOpen, showPrintModal })
+    useEffect(() => { suppressRef.current = { menuOpen, showPrintModal } }, [menuOpen, showPrintModal])
+    const chartScrollRef = useEdgeTapZones({
+        enabled: tapZonesEnabled,
+        isRtl: readingRtl,
+        isZoomedIn: () => useMusicStore.getState().zoom > 1.001,
+        isSuppressed: () =>
+            suppressRef.current.menuOpen ||
+            suppressRef.current.showPrintModal ||
+            useMusicStore.getState().isEditingChords ||
+            (typeof document !== "undefined" &&
+                document.querySelector('[role="dialog"][data-state="open"], [role="alertdialog"][data-state="open"]') !== null),
+        onNextChart: () => { useMusicStore.getState().nextSong() },
+        onPreviousChart: () => { useMusicStore.getState().prevSong() },
+    })
 
     // Escape closes the open child modal first, then the overlay itself.
     // A ref carries the latest onClose so a parent prop-swap isn't lost to a
@@ -452,6 +485,8 @@ export function PDFOverlay({
 
     return (
         <div className="fixed inset-0 z-50 bg-background flex flex-col">
+            {/* PERF-11: the row's note and Vocal Lead, one line, above the chart. */}
+            <ChartNoteStrip notes={track.notes} vocalLead={track.leadMusician} />
             {/* Content area -- branches on file type */}
             {gestureEligible ? (
                 <LiveDirectorGesture
@@ -463,6 +498,7 @@ export function PDFOverlay({
                 >
                     {({ handlers }) => (
                         <div
+                            ref={chartScrollRef}
                             className="flex-1 overflow-auto pb-0 relative"
                             {...chartDir}
                             data-live-director-surface="pdf-overlay"
@@ -482,7 +518,7 @@ export function PDFOverlay({
                     )}
                 </LiveDirectorGesture>
             ) : (
-                <div className="flex-1 overflow-auto pb-0 relative" {...chartDir}>
+                <div ref={chartScrollRef} className="flex-1 overflow-auto pb-0 relative" {...chartDir}>
                     {chartSurface}
                     {showTempoFlash && track.bpm && track.bpm > 0 && (
                         <TempoFlash bpm={track.bpm} onDismiss={() => setShowTempoFlash(false)} />

@@ -15,6 +15,7 @@ import { KeepAwakeToggle } from "@/components/performance/KeepAwakeToggle"
 import type { WakeLockError } from "@/hooks/use-wake-lock"
 import { MetronomeControl } from "./MetronomeControl"
 import { SongNavigation } from "./SongNavigation"
+import { TapZonesToggle } from "./TapZonesToggle"
 import { QuickMonitorPanel } from "@/components/monitor/QuickMonitorPanel"
 import { useMonitorAccess } from "@/hooks/use-monitor-access"
 import { useMonitorConnection } from "@/hooks/use-monitor-connection"
@@ -429,6 +430,8 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint, onPrintC
                     <MetronomeControl />
                     {transposerPopover(transposerOpenMobile, setTransposerOpenMobile, 'transposer', true, 'top')}
                     {mixerOn && monitorPopover('tools', monitorOpenMobile, setMonitorOpenMobile, true)}
+                    {/* PERF-05: per-device "Tap edges to turn pages" switch. */}
+                    <TapZonesToggle />
                     {/* C10I1-003: in-chart "Keep screen on" — reachable on the
                         iPad-portrait two-row toolbar (the header toggle is
                         z-stacked behind this overlay on a deep-linked entry). */}
@@ -555,6 +558,9 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint, onPrintC
                             lastError={wakeLock.lastError}
                         />
                     )}
+
+                    {/* PERF-05: per-device "Tap edges to turn pages" switch. */}
+                    <TapZonesToggle />
 
                     {/* Monitor Mix popover */}
                     {mixerOn && monitorPopover('tools-desktop', monitorOpenDesktop, setMonitorOpenDesktop, false)}

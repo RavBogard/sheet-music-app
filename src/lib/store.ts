@@ -123,6 +123,31 @@ export interface MusicState {
     setCapoSemitones: (n: number) => void
 
     /**
+     * PERF-14: per-device capo per chart, keyed by `fileId`. `setCapoSemitones`
+     * writes through for the chart open in the queue, and queue navigation
+     * restores it. A chart with no entry keeps the capo already set (the
+     * behaviour before this map existed). Persisted (`music-storage`); there is
+     * no Firestore capo preference, so this applies signed in or out.
+     */
+    chartCapo: Record<string, number>
+
+    /**
+     * PERF-14: per-device transposition per chart, keyed by `fileId`, for
+     * SIGNED-OUT devices (a signed-in musician keeps the Firestore song
+     * preference). Written and applied by `useDeviceTranspositionPrefs`;
+     * a leader's per-track transposition always wins. Persisted.
+     */
+    chartTransposition: Record<string, number>
+    setChartTransposition: (fileId: string, semitones: number) => void
+
+    /**
+     * PERF-05: "Tap edges to turn pages" — per-device switch, default ON.
+     * Persisted (`music-storage`).
+     */
+    tapZonesEnabled: boolean
+    setTapZonesEnabled: (enabled: boolean) => void
+
+    /**
      * Native key parsed from MusicXML's first `<key>` signature, written by
      * `SmartScoreViewer` after `osmd.load()` succeeds and cleared on
      * unmount / sourceUrl change. Render-time only: NOT persisted (kept out
@@ -170,6 +195,18 @@ export interface MusicState {
     reset: () => void
 }
 
+/** A real chart fileId — not the synthetic `flow-N` id of a chart-less queue row. */
+function isChartFileId(fileId: string | undefined): fileId is string {
+    return !!fileId && !fileId.startsWith('flow-')
+}
+
+/** PERF-14: the capo to restore for a chart, or nothing (keep the current capo). */
+function capoFor(map: Record<string, number> | undefined, fileId: string | undefined): { capoSemitones?: number } {
+    if (!isChartFileId(fileId)) return {}
+    const capo = map?.[fileId]
+    return typeof capo === 'number' ? { capoSemitones: capo } : {}
+}
+
 export const useMusicStore = create<MusicState>()(
     persist(
         (set, get) => ({
@@ -198,6 +235,9 @@ export const useMusicStore = create<MusicState>()(
             gigModeActive: false,
             capoFret: null,
             capoSemitones: 0,
+            chartCapo: {},
+            chartTransposition: {},
+            tapZonesEnabled: true,
             musicXmlKey: null,
 
             audio: {
@@ -248,6 +288,7 @@ export const useMusicStore = create<MusicState>()(
                     currentSetlistId: setlistId || null,
                     transposition: trackTransposition,
                     zoom: trackZoom,
+                    ...capoFor(get().chartCapo, firstTrack?.fileId),
                     // WAVE1 Bug 3: fitMode deliberately NOT reset here — the
                     // musician's viewing posture survives the whole session.
                     // Clear page data when starting a new queue
@@ -263,6 +304,7 @@ export const useMusicStore = create<MusicState>()(
                         queueIndex: nextIndex,
                         transposition: nextTrack.transposition ?? 0,
                         zoom: nextTrack.fileId ? (get().chartZoom[nextTrack.fileId] ?? 1) : 1,
+                        ...capoFor(get().chartCapo, nextTrack.fileId),
                         // WAVE1 Bug 3: fitMode is NOT reset on navigation.
                         isEditingChords: false,
                         aiState: { ...aiState, pageData: {}, scanningPages: [], error: null }
@@ -280,6 +322,7 @@ export const useMusicStore = create<MusicState>()(
                         queueIndex: prevIndex,
                         transposition: prevTrack.transposition ?? 0,
                         zoom: prevTrack.fileId ? (get().chartZoom[prevTrack.fileId] ?? 1) : 1,
+                        ...capoFor(get().chartCapo, prevTrack.fileId),
                         // WAVE1 Bug 3: fitMode is NOT reset on navigation.
                         isEditingChords: false,
                         aiState: { ...aiState, pageData: {}, scanningPages: [], error: null }
@@ -296,6 +339,7 @@ export const useMusicStore = create<MusicState>()(
                         queueIndex: index,
                         transposition: track.transposition ?? 0,
                         zoom: track.fileId ? (get().chartZoom[track.fileId] ?? 1) : 1,
+                        ...capoFor(get().chartCapo, track.fileId),
                         // WAVE1 Bug 3: fitMode is NOT reset on navigation.
                         isEditingChords: false,
                         aiState: { ...aiState, pageData: {}, scanningPages: [], error: null }
@@ -332,7 +376,18 @@ export const useMusicStore = create<MusicState>()(
             })),
 
             setCapoFret: (fret) => set({ capoFret: fret }),
-            setCapoSemitones: (n) => set({ capoSemitones: Math.max(0, Math.min(11, Math.floor(n))) }),
+            setCapoSemitones: (n) => set((state) => {
+                const capo = Math.max(0, Math.min(11, Math.floor(n)))
+                const fileId = state.playbackQueue[state.queueIndex]?.fileId
+                return isChartFileId(fileId)
+                    ? { capoSemitones: capo, chartCapo: { ...(state.chartCapo ?? {}), [fileId]: capo } }
+                    : { capoSemitones: capo }
+            }),
+            setChartTransposition: (fileId, semitones) => set((state) =>
+                state.chartTransposition?.[fileId] === semitones
+                    ? {}
+                    : { chartTransposition: { ...state.chartTransposition, [fileId]: semitones } }),
+            setTapZonesEnabled: (enabled) => set({ tapZonesEnabled: enabled }),
             setMusicXmlKey: (key) => set({ musicXmlKey: key }),
 
             setEditingChords: (editing) => set({ isEditingChords: editing, ...(editing ? {} : { pendingEditCount: 0 }) }),
@@ -346,6 +401,9 @@ export const useMusicStore = create<MusicState>()(
                 transposition: 0,
                 zoom: 1,
                 chartZoom: {},
+                chartCapo: {},
+                chartTransposition: {},
+                tapZonesEnabled: true,
                 fitMode: 'width',
                 aiXmlContent: null,
                 isEditingChords: false,
@@ -367,6 +425,10 @@ export const useMusicStore = create<MusicState>()(
                 // v11.5-02-04: persist per-chart calibration, NOT the session-global
                 // zoom (superseded — `zoom` is now restored per chart from chartZoom).
                 chartZoom: state.chartZoom,
+                // PERF-14 / PERF-05: per-device chart prefs and the tap-zone switch.
+                chartCapo: state.chartCapo,
+                chartTransposition: state.chartTransposition,
+                tapZonesEnabled: state.tapZonesEnabled,
                 audio: { ...state.audio, isPlaying: false }, // Don't persist playing state
             })
         }

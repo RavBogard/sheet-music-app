@@ -26,13 +26,16 @@
         "exit": "Exit",
         "exitTitle": "Exit Gig Mode",
         "printingChart": "Printing this chart…",
-        "printChart": "Print this chart"
+        "printChart": "Print this chart",
+        "tapEdges": "Tap edges to turn pages"
     },
     "nav": {
         "previousSong": "Previous song",
         "nextSong": "Next song",
         "noSongSelected": "No Song Selected",
-        "setlistEmpty": "Setlist Empty"
+        "setlistEmpty": "Setlist Empty",
+        "nextUp": "Next: {title} ({key})",
+        "nextUpNoKey": "Next: {title}"
     },
     "metronome": {
         "startTitle": "Start Metronome",
@@ -132,5 +135,10 @@
         "partialAria": "{ready} of {total} charts saved offline — tap to save the rest",
         "idleAria": "Save all charts for offline use"
     },
-    "saveLabelPlaybackSpeed": "metronome speed"
+    "saveLabelPlaybackSpeed": "metronome speed",
+    "noteStrip": {
+        "vocalLead": "Vocal Lead: {name}",
+        "expand": "Show the whole note",
+        "collapse": "Show less"
+    }
 }
