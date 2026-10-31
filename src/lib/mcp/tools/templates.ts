@@ -229,6 +229,15 @@ export interface ListTemplatesResult {
     total: number
 }
 
+/**
+ * A service profile is stored beside templates (`kind: "profile"`; older docs carry the `profile`
+ * block and a `profile__` id). It is managed through draft_service and standing choices, never as a
+ * template, so the template tools do not list, edit or delete it.
+ */
+export function isProfileDoc(id: string, data: Record<string, unknown>): boolean {
+    return data.kind === "profile" || (!!data.profile && typeof data.profile === "object") || id.startsWith("profile__")
+}
+
 export async function listTemplates(
     uid: string,
     args: ListTemplatesArgs = {},
@@ -256,7 +265,7 @@ export async function listTemplates(
         query = query.where("ownerId", "==", args.ownerUid.trim())
     }
     const snap = await query.get()
-    const templates: TemplateSummary[] = snap.docs.map((d) => {
+    const templates: TemplateSummary[] = snap.docs.filter((d) => !isProfileDoc(d.id, d.data() as Record<string, unknown>)).map((d) => {
         const data = d.data() as Record<string, unknown>
         const tracks = Array.isArray(data.tracks) ? (data.tracks as unknown[]) : []
         return {
@@ -566,6 +575,15 @@ export function patchHasChange(
     return false
 }
 
+export function profileNotATemplate(templateId: string): RichErrorEnvelope {
+    return richError(
+        "template_not_found",
+        `Template '${templateId}' was not found.`,
+        { templateId },
+        "That id is a service profile, not a template. Change it with draft_service and set_standing_choice.",
+    )
+}
+
 export async function updateTemplate(
     uid: string,
     args: UpdateTemplateArgs,
@@ -614,6 +632,7 @@ export async function updateTemplate(
             "Verify the id via list_templates.",
         )
     }
+    if (isProfileDoc(snap.id, existing)) return profileNotATemplate(args.templateId)
     const existingVersion =
         typeof existing.version === "number" ? existing.version : 1
 
@@ -699,6 +718,7 @@ export async function deleteTemplate(
     if (rowOrg(existing.orgId) !== org) {
         return { ok: true, templateId, deleted: false }
     }
+    if (isProfileDoc(snap.id, existing)) return profileNotATemplate(templateId)
     await ref.delete()
     logger.info("[mcp] delete_template committed", {
         templateId,

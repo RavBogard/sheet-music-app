@@ -34,6 +34,13 @@ export interface SlotUse {
     key: string | null
     special: boolean
     serviceLabel: string
+    /** The chart is orphaned or archived with no live twin: it fills its service's place but is never filled. */
+    dead?: boolean
+    /**
+     * False when this use's service is older than the profile's last
+     * USUAL_WINDOW regular services. Absent: not known, so the use counts.
+     */
+    recent?: boolean
 }
 
 export interface SlotTierInput {
@@ -57,15 +64,25 @@ export interface SlotTier {
     keyOnRecord: boolean
     phrase: string
     promotion?: Promotion
+    /** Usual only: the slot's latest regular use was a different chart (data only). */
+    differsFromLast?: { chartName: string; date: string }
+}
+
+const FILE_EXT_RE = /\.(pdf|musicxml|mxl|xml|docx?|txt|png|jpe?g)$/i
+
+/** A chart or row name said aloud: no file extension, underscores as spaces. */
+export function cleanLabel(name: string | null | undefined): string {
+    return (name ?? "").trim().replace(FILE_EXT_RE, "").replace(/_/g, " ").replace(/\s{2,}/g, " ").trim()
 }
 
 /** The row phrase for a tier, in the exact wording drafts show. */
 export function phrase(
     tier: Tier,
-    chart: string | null | undefined,
+    rawChart: string | null | undefined,
     key: string | null | undefined,
     serviceLabel?: string | null,
 ): string {
+    const chart = rawChart == null ? rawChart : cleanLabel(rawChart)
     const inKey = key ? ` in ${key}` : ", key not on record"
     switch (tier) {
         case "standard":
@@ -141,16 +158,19 @@ export function computeSlotTier(input: SlotTierInput): SlotTier {
         return out
     }
 
-    const window = profileUses.filter((u) => !u.special).slice(0, USUAL_WINDOW)
+    // The window is the profile's last USUAL_WINDOW regular services (`recent`), not the last uses of
+    // a chart: a chart played three times long ago and since replaced is not the usual.
+    const window = profileUses.filter((u) => !u.special && u.recent !== false).slice(0, USUAL_WINDOW)
     const groupCounts = new Map<string, number>()
     for (const u of window) groupCounts.set(u.partGroup, (groupCounts.get(u.partGroup) ?? 0) + 1)
-    // The window is newest first, so the first qualifying use names the most recently used group.
-    const usualGroup = window.find((u) => (groupCounts.get(u.partGroup) ?? 0) >= USUAL_MIN)?.partGroup
+    // The most recent live chart in at least USUAL_MIN of the window. When the latest regular
+    // service used something else, the slot is still usual and filled, and says so.
+    const usualGroup = window.find((u) => !u.dead && (groupCounts.get(u.partGroup) ?? 0) >= USUAL_MIN)?.partGroup
     if (usualGroup !== undefined) {
         const uses = window.filter((u) => u.partGroup === usualGroup)
         const latest = uses[0]
         const key = mostFrequentKey(uses)
-        return {
+        const out: SlotTier = {
             tier: "usual",
             fileId: latest.fileId,
             chartName: latest.chartName,
@@ -158,6 +178,10 @@ export function computeSlotTier(input: SlotTierInput): SlotTier {
             keyOnRecord: key !== null,
             phrase: phrase("usual", latest.chartName, key),
         }
+        if (window[0].partGroup !== usualGroup) {
+            out.differsFromLast = { chartName: window[0].chartName, date: window[0].eventDate }
+        }
+        return out
     }
 
     if (profileUses.length > 0) {

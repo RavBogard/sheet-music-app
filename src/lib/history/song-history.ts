@@ -41,6 +41,8 @@ export interface HistorySetlist {
     book: string | null
     ownerName: string | null
     isTest: boolean
+    /** ISO time of the last write; picks the newest of duplicate setlists. */
+    updatedAt?: string | null
     tracks: HistoryTrack[]
 }
 
@@ -50,6 +52,11 @@ export interface LibraryLite {
     key: string | null
     setting: string | null
     partGroup: string | null
+    /** library_index status ("orphaned" and "archived" are dead). */
+    status?: string | null
+    /** The surviving chart when this one was archived as a duplicate. */
+    canonicalFileId?: string | null
+    mimeType?: string | null
 }
 
 export interface SongHistoryQuery {

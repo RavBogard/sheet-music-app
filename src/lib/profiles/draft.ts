@@ -1,6 +1,7 @@
 import { isSongType } from "@/lib/setlist-track-count"
 import { SERVICE_TYPE_CATALOG } from "@/lib/templates/service-types"
-import type { Promotion, SlotTier, Tier } from "./tiers"
+import type { LibraryLite } from "@/lib/history/song-history"
+import { cleanLabel, type Promotion, type SlotTier, type Tier } from "./tiers"
 
 /**
  * Setlist memory, release 2 — a draft of one service from its profile. Pure.
@@ -47,6 +48,8 @@ export interface DraftRow {
     fileId?: string
     chartName?: string
     key?: string | null
+    /** The key the chart is written in, when known (filled rows). */
+    writtenKey?: string | null
     leadMusician?: string | null
     /** Song rows only; null on headers and other non-song rows. */
     tier: Tier | null
@@ -90,8 +93,10 @@ function str(v: unknown): string | null {
 export function buildDraftRows(rows: DraftProfileRow[]): DraftRow[] {
     return rows.map((r) => {
         const track = pickTrack(r.track)
-        const label = r.title
+        // A stored row may carry a file name for a title ("Sim_shalom.pdf"): say it clean.
+        const label = cleanLabel(r.title) || r.title
         if (typeof track.title !== "string") track.title = label
+        else track.title = cleanLabel(track.title) || track.title
         if (!isSongType(r.type)) {
             return { index: r.index, label, type: r.type, slotKey: r.slotKey, tier: null, phrase: null, filled: false, track }
         }
@@ -127,6 +132,46 @@ export function buildDraftRows(rows: DraftProfileRow[]): DraftRow[] {
         row.leadMusician = str(track.leadMusician)
         return row
     })
+}
+
+export interface DraftWarning {
+    kind: "existing" | "dead_chart" | "key_mismatch"
+    index: number | null
+    text: string
+}
+
+function isMusicXmlChart(lib: LibraryLite): boolean {
+    return /xml/i.test(lib.mimeType ?? "") || /\.(musicxml|mxl|xml)$/i.test(lib.name)
+}
+
+/**
+ * Record each filled row's written key and list the warnings a draft carries:
+ * `dead_chart` for a filled chart that is orphaned or archived, `key_mismatch`
+ * when the played key differs from the key a non-MusicXML chart is written in.
+ * Warnings only: nothing is changed or blocked.
+ */
+export function annotateCharts(rows: DraftRow[], library: Map<string, LibraryLite>): DraftWarning[] {
+    const warnings: DraftWarning[] = []
+    for (const r of rows) {
+        if (!r.fileId) continue
+        const lib = library.get(r.fileId)
+        if (!lib) continue
+        r.writtenKey = lib.key ?? null
+        const name = cleanLabel(r.chartName ?? lib.name)
+        if (lib.status === "orphaned" || lib.status === "archived") {
+            warnings.push({ kind: "dead_chart", index: r.index, text: `${r.label}: ${name} is ${lib.status}, so it may not open. Pick another chart.` })
+        }
+        const played = r.key?.trim()
+        const written = lib.key?.trim()
+        if (played && written && played.toLowerCase() !== written.toLowerCase() && !isMusicXmlChart(lib)) {
+            warnings.push({
+                kind: "key_mismatch",
+                index: r.index,
+                text: `${r.label}: played in ${played}, but the chart is written in ${written}.`,
+            })
+        }
+    }
+    return warnings
 }
 
 export function openIndexesOf(rows: DraftRow[]): number[] {

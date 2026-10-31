@@ -11,7 +11,7 @@ import {
     type AlwaysMergeAdapter,
     type AlwaysMergeNote,
 } from "@/lib/templates/always-rows"
-import { updateTemplate, type TemplateTrack } from "./templates"
+import { isProfileDoc, profileNotATemplate, updateTemplate, type TemplateTrack } from "./templates"
 
 /**
  * A-W3″, second half — `merge_always_rows_into_template`.
@@ -115,6 +115,8 @@ export async function mergeAlwaysRowsIntoTemplate(
             "Verify the id via list_templates.",
         )
     }
+    // Same refusal as the real write, so a dry run never promises what update_template would refuse.
+    if (isProfileDoc(snap.id, snap.data() ?? {})) return profileNotATemplate(templateId)
     const before = (snap.data()?.tracks as TemplateTrack[] | undefined) ?? []
 
     const merged = mergeAlwaysRowsWith(before, family, alwaysAdapter)

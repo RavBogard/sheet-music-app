@@ -81,7 +81,7 @@ describe("seedProfile", () => {
 
     it("takes the running order from the most recent regular week of the profile", () => {
         expect(seed.basedOn).toEqual({ setlistId: "s2", eventDate: "2026-10-17T15:00:00.000Z" })
-        expect(seed.tracks.map((t) => t.title)).toEqual(["Shacharit", "Barchu", "Mi Chamocha", "Oseh Shalom"])
+        expect(seed.tracks.map((t) => t.title)).toEqual(["Shacharit", "Bar’chu", "Mi Chamocha", "Oseh Shalom"])
     })
 
     it("copies header rows", () => {

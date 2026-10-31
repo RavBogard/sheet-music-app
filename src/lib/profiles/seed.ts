@@ -5,7 +5,7 @@ import { isSongType } from "@/lib/setlist-track-count"
 import type { CoreProfile } from "./keys"
 import { slotKeyFor } from "./keys"
 import { buildSlotUses } from "./slot-uses"
-import { computeSlotTier, USUAL_WINDOW, type Tier } from "./tiers"
+import { cleanLabel, computeSlotTier, USUAL_WINDOW, type Tier } from "./tiers"
 
 /**
  * Setlist memory, release 2 — seed a profile from its own past setlists.
@@ -91,11 +91,12 @@ export function seedProfile(
         const profileUses = index.profileUses(slotKey)
         const tier = computeSlotTier({ standing: null, profileUses, otherUses: index.otherUses(slotKey) })
         if (tier.tier === "usual" && tier.fileId) {
-            const window = profileUses.filter((u) => !u.special).slice(0, USUAL_WINDOW)
+            const window = profileUses.filter((u) => !u.special && u.recent !== false).slice(0, USUAL_WINDOW)
             const group = window.find((u) => u.fileId === tier.fileId)?.partGroup
             const row: SeededTrack = {
                 type: "song",
-                title,
+                // Named by its moment, else the week's title without a file extension.
+                title: getMoment(t.momentId)?.display.en ?? (cleanLabel(title) || title),
                 fileId: tier.fileId,
                 slotKind: slotKey.startsWith("moment:") ? "moment" : "song",
                 slotKey,
@@ -116,7 +117,7 @@ export function seedProfile(
         // An open slot is labelled by its moment ("Mi Chamocha"), never by the one week's song
         // that happened to fill it, or the profile would read as if that song were the usual.
         const openLabel =
-            getMoment(t.momentId)?.display.en ?? (title.split(/\s+[—–-]\s+|\s*\(/)[0].trim() || title)
+            getMoment(t.momentId)?.display.en ?? (cleanLabel(title.split(/\s+[—–-]\s+|\s*\(/)[0]) || cleanLabel(title) || title)
         const row: SeededTrack = { type: "song", title: openLabel, slotKind: "open", slotKey, house: null }
         if (t.momentId) row.momentId = t.momentId
         if (refs) row.liturgyRefs = refs

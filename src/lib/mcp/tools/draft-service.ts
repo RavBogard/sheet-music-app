@@ -15,6 +15,7 @@ import { logger } from "@/lib/logger"
 import { profileKeyFor, rabbiRequired } from "@/lib/profiles/keys"
 import {
     applyChoices,
+    annotateCharts,
     buildDraftRows,
     defaultSpecial,
     DRAFT_TTL_MS,
@@ -23,6 +24,7 @@ import {
     type ChartInfo,
     type DraftChoice,
     type DraftRow,
+    type DraftWarning,
 } from "@/lib/profiles/draft"
 import { buildReadback, type Readback } from "@/lib/profiles/readback"
 import { writeStanding } from "@/lib/profiles/standing"
@@ -36,7 +38,7 @@ import { rateLimitGate, writeSetlistFromTemplateRows, type UnresolvedLiturgyRow 
  *
  * draft_service drafts a service from its living profile: a song slot is
  * filled only when it is standard (someone said "keep it") or usual (the same
- * chart on 3 of the last 5 regular weeks); every other slot is drafted open
+ * chart on 3 of the last 5 regular services); every other slot is drafted open
  * and listed. The draft is stored in `service_drafts` for 30 minutes; nothing
  * is on the calendar until create_setlist_from_draft writes the setlist the
  * way clone_setlist_from_template does, remembers each `standing: true`
@@ -87,6 +89,7 @@ export interface DraftServiceRowOut {
     fileId?: string
     chartName?: string
     key?: string | null
+    writtenKey?: string | null
     tier: Tier | null
     phrase: string | null
     promotion?: Promotion
@@ -101,6 +104,10 @@ export interface DraftServiceResult {
     rows: DraftServiceRowOut[]
     openIndexes: number[]
     truncated: boolean
+    /** Setlists already on this date for this service. A warning only: the draft still creates. */
+    existing: { setlistId: string; name: string }[]
+    /** dead_chart and key_mismatch notes on filled rows. Warnings only. */
+    warnings: DraftWarning[]
     /** The draft said aloud, exceptions first (release 3). */
     readback: Readback
 }
@@ -137,6 +144,7 @@ function rowOut(r: DraftRow): DraftServiceRowOut {
     if (r.fileId) out.fileId = r.fileId
     if (r.chartName) out.chartName = r.chartName
     if (r.fileId) out.key = r.key ?? null
+    if (r.fileId && r.writtenKey !== undefined) out.writtenKey = r.writtenKey
     if (r.promotion) out.promotion = r.promotion
     return out
 }
@@ -181,7 +189,7 @@ export async function draftServiceTool(
                 "Build this one from a template or a recent setlist, with templateType and rabbi set. The next draft_service for this service learns from it.",
             )
         }
-        const loaded = await loadProfileTiers(org, doc, serviceType, rabbiSlot)
+        const loaded = await loadProfileTiers(org, doc, serviceType, rabbiSlot, date)
         const rows = buildDraftRows(
             loaded.rows.map((r) => ({
                 index: r.index,
@@ -193,6 +201,8 @@ export async function draftServiceTool(
                 standing: r.standing ?? null,
             })),
         )
+        const filledIds = rows.map((r) => r.fileId).filter((f): f is string => !!f)
+        const warnings = annotateCharts(rows, await loadLibraryLite(org, filledIds))
         const special = typeof args.special === "boolean" ? args.special : defaultSpecial(serviceType)
         const label = loaded.profile?.label ?? profileLabelFor(profileKey, serviceType)
         const book = loaded.profile?.book ?? null
@@ -235,9 +245,12 @@ export async function draftServiceTool(
                     keyOnRecord: r.key != null,
                     standing: choice ? { byName: choice.byName, at: choice.at } : null,
                     promotion: r.promotion,
+                    deadChart: warnings.find((w) => w.kind === "dead_chart" && w.index === r.index)?.text,
+                    keyMismatch: warnings.find((w) => w.kind === "key_mismatch" && w.index === r.index)?.text,
                 }
             }),
             openItems: [],
+            existing: loaded.existing,
             now,
         })
         return {
@@ -249,6 +262,11 @@ export async function draftServiceTool(
             rows: rows.map(rowOut),
             openIndexes: openIndexesOf(rows),
             truncated: loaded.truncated,
+            existing: loaded.existing,
+            warnings: [
+                ...loaded.existing.map((e): DraftWarning => ({ kind: "existing", index: null, text: `There is already a setlist on this date: ${e.name}` })),
+                ...warnings,
+            ],
             readback,
         }
     } catch (error) {
