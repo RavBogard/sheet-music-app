@@ -34,6 +34,10 @@ const SW_URL = new URL(self.location.href)
 const SW_VERSION = SW_URL.searchParams.get('v') || 'unversioned'
 const CACHE_NAME = `perform-shell-v${SW_VERSION}`
 const CACHE_PREFIX = 'perform-shell-v'
+// Generation bookkeeping lives under a name that does NOT start with
+// CACHE_PREFIX so the purge above never deletes it.
+const META_CACHE = 'perform-shell-meta'
+const META_KEY = '/__perform-shell-generations'
 
 self.addEventListener('install', (event) => {
     // Skip waiting so a new SW activates on the next page load instead of
@@ -47,16 +51,31 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
     event.waitUntil(
         (async () => {
-            // Drop every prior perform-shell-v* cache. The current build's
-            // cache (CACHE_NAME) is freshly created — anything else is
-            // from a prior deploy and must go.
+            // Keep the previous generation (N-1) so a device that loaded the
+            // page before a deploy can still reload offline and lazily load
+            // old-hash chunks. Delete only caches older than N-1. Generation
+            // order is the creation order recorded in a small meta cache.
             try {
+                const meta = await caches.open(META_CACHE)
+                let order = []
+                try {
+                    const r = await meta.match(META_KEY)
+                    if (r) order = await r.json()
+                } catch {
+                    order = []
+                }
+                if (!Array.isArray(order)) order = []
+                order = order.filter((n) => n !== CACHE_NAME)
+                order.push(CACHE_NAME)
+                const keep = new Set(order.slice(-2))
                 const names = await caches.keys()
                 await Promise.all(
                     names
-                        .filter((name) => name.startsWith(CACHE_PREFIX) && name !== CACHE_NAME)
+                        .filter((name) => name.startsWith(CACHE_PREFIX) && !keep.has(name))
                         .map((name) => caches.delete(name)),
                 )
+                order = order.filter((n) => keep.has(n))
+                await meta.put(META_KEY, new Response(JSON.stringify(order)))
             } catch {
                 // Cache API can throw in restricted-storage contexts. Failing
                 // to purge old caches is non-fatal; the next deploy will try
@@ -136,8 +155,14 @@ async function networkFirst(request) {
         return networkResponse
     } catch {
         // Network failed (offline, abort, DNS, etc.). Try the cache.
-        const cached = await caches.match(request)
+        const cached = await matchGenerations(request)
         if (cached) return cached
+        // PERF-01: an open chart rewrites the URL with replaceState, so
+        // /perform/setlist/<id>/track/<trackId> is usually not cached. Serve
+        // the cached setlist page instead; its client opens the chart from
+        // the offline store.
+        const fallback = await setlistFallback(request)
+        if (fallback) return fallback
         // No cache fallback — propagate a real network-error response
         // shape. The browser will paint its own error page; no in-app
         // fallback shell. This is intentional — the cycle-9 fix said
@@ -146,6 +171,70 @@ async function networkFirst(request) {
         return Response.error()
     }
 }
+
+// Cache names in lookup order: the current generation first, then the others
+// newest-first. N-1 must never shadow the current cache.
+async function orderedCacheNames() {
+    const names = (await caches.keys()).filter((n) => n.startsWith(CACHE_PREFIX))
+    let order = []
+    try {
+        const meta = await caches.open(META_CACHE)
+        const r = await meta.match(META_KEY)
+        if (r) order = await r.json()
+    } catch {
+        order = []
+    }
+    if (!Array.isArray(order)) order = []
+    const rank = (n) => (n === CACHE_NAME ? Infinity : order.indexOf(n))
+    return names.sort((a, b) => rank(b) - rank(a))
+}
+
+async function matchGenerations(request, options) {
+    try {
+        for (const name of await orderedCacheNames()) {
+            const cache = await caches.open(name)
+            const hit = await cache.match(request, options)
+            if (hit) return hit
+        }
+    } catch {
+        // fall through to a miss
+    }
+    return null
+}
+
+// PERF-01: only the exact track URL (already tried) or the BASE setlist page.
+// Never another track's page. The client opens the track from location.pathname.
+async function setlistFallback(request) {
+    try {
+        const url = new URL(request.url)
+        const m = url.pathname.match(/^\/perform\/setlist\/([^/]+)\/track\/[^/]+/)
+        if (!m) return null
+        return await matchGenerations(new URL(`/perform/setlist/${m[1]}`, url.origin).href, { ignoreSearch: true })
+    } catch {
+        return null
+    }
+}
+
+// PERF-01: the page asks the SW to cache the URL it just rewrote to.
+self.addEventListener('message', (event) => {
+    const data = event.data
+    if (!data || data.type !== 'perform-cache-url' || typeof data.url !== 'string') return
+    event.waitUntil(
+        (async () => {
+            try {
+                const u = new URL(data.url, self.location.origin)
+                if (u.origin !== self.location.origin || !u.pathname.startsWith('/perform')) return
+                const res = await fetch(u.href, { credentials: 'same-origin' })
+                if (res && res.ok) {
+                    const cache = await caches.open(CACHE_NAME)
+                    await cache.put(u.href, res)
+                }
+            } catch {
+                // best-effort
+            }
+        })(),
+    )
+})
 
 async function cacheFirst(request) {
     const cached = await caches.match(request)

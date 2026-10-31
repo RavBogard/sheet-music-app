@@ -34,29 +34,17 @@
         "setlistEmpty": "רשימת השירים ריקה"
     },
     "metronome": {
-        "flashTempoTitle": "הבהוב הקצב ({bpm} BPM)",
         "startTitle": "הפעלת המטרונום",
         "stopTitle": "עצירת המטרונום",
         "startAria": "הפעלת המטרונום",
         "stopAria": "עצירת המטרונום",
         "tempoFlashAria": "קצב: {bpm} BPM. הקשה לסגירה."
     },
-    "intro": {
-        "title": "מצב נגינה",
-        "swipeLeft": "החלקה שמאלה",
-        "swipeRight": "החלקה ימינה",
-        "forNextSong": "לשיר הבא",
-        "forPreviousSong": "לשיר הקודם",
-        "tapCenter": "הקשה במרכז",
-        "toToggleToolbar": "להצגה/הסתרה של סרגל הכלים",
-        "pullDown": "משיכה למטה",
-        "toExit": "ליציאה",
-        "gotIt": "הבנתי"
-    },
     "offline": {
         "offlineChartsReady": "לא מקוון — {ready}/{total} קובצי תווים מוכנים",
         "offlineMode": "מצב לא מקוון",
-        "reconnected": "החיבור חזר"
+        "reconnected": "החיבור חזר",
+        "setlistUpdated": "הרשימה עודכנה — הקשו לרענון"
     },
     "keepAwake": {
         "osWarningTitle": "לא ניתן להשאיר את המסך של ה-iPad הזה דלוק מתוך האפליקציה שבמסך הבית.",
@@ -130,22 +118,6 @@
         "unknownTitle": "עדיין אין אפשרות להציג סוג קובץ זה",
         "unknownBody": "התווים המחוברים ל-{songName} אינם בפורמט מוכר. אפשר לחבר אותם מחדש מהספרייה, או לפתוח ישירות את הקובץ המקורי.",
         "liveSetlist": "רשימת שירים חיה"
-    },
-    "rehearsal": {
-        "openAudio": "פתיחת הקלטת החזרה",
-        "title": "הקלטת חזרה",
-        "speed": "{speed}x",
-        "clearLoopTitle": "ניקוי הלופ",
-        "setLoopEndTitle": "סימון סוף הלופ (B)",
-        "setLoopStartTitle": "סימון תחילת הלופ (A)",
-        "clearLoop": "ניקוי לופ",
-        "setPointB": "סימון נקודה B",
-        "abLoop": "לופ A/B",
-        "muted": "מושתק",
-        "mute": "השתקה",
-        "looping": "לופ: {start} ← {end}",
-        "clear": "ניקוי",
-        "totalPractice": "סה״כ תרגול: {time}"
     },
     "saveOffline": {
         "saving": "בשמירה {progress}/{total}",

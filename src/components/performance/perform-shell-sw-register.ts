@@ -70,3 +70,19 @@ export async function registerPerformShellSW(): Promise<void> {
         logger.warn("[perform-shell-sw] registration failed:", err)
     }
 }
+
+/**
+ * PERF-01: after the page rewrites its URL with `history.replaceState` (open
+ * chart), ask the SW to cache that URL so an offline reload on it is served.
+ * Best-effort; never throws.
+ */
+export function requestPerformCacheUrl(url: string): void {
+    try {
+        if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return
+        const controller = navigator.serviceWorker.controller
+        if (!controller) return
+        controller.postMessage({ type: "perform-cache-url", url })
+    } catch {
+        // best-effort
+    }
+}

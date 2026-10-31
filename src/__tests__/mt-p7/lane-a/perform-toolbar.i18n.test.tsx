@@ -91,18 +91,15 @@ vi.mock("next/dynamic", () => ({
 }))
 
 import { PerformanceToolbar } from "@/components/performance/PerformanceToolbar"
-import { RehearsalToolbar } from "@/components/performance/RehearsalToolbar"
 import { SongNavigation } from "@/components/performance/SongNavigation"
 import { PDFOverlay } from "@/components/performance/PDFOverlay"
-import { PerformanceIntro } from "@/components/performance/PerformanceIntro"
-import { PerformanceStatusStrip } from "@/components/performance/PerformanceStatusStrip"
 
 const wakeLock = { isActive: false, isSupported: true, onRequest: vi.fn(), onRelease: vi.fn() }
 // Data / verbatim units the pseudo check must not flag.
 const ALLOW = ["Test Song A", "Test Song B", "Test Song C", "BPM"]
 
 beforeEach(() => {
-    // jsdom has no media playback; RehearsalToolbar pauses its <audio> on unmount.
+    // jsdom has no media playback; audio elements pause on unmount.
     vi.spyOn(HTMLMediaElement.prototype, "pause").mockImplementation(() => {})
     mockStoreState.queueIndex = 1
     mockStoreState.transposition = 0
@@ -136,26 +133,6 @@ describe("PerformanceToolbar under the pseudo-locale", () => {
         expect(r.getAllByText("Exit").length).toBeGreaterThan(0)
         expect(r.getAllByLabelText("Zoom in").length).toBeGreaterThan(0)
         expect(r.getByTestId("transpose-trigger-desktop").querySelector("[dir]")).toBeNull()
-    })
-})
-
-describe("RehearsalToolbar under the pseudo-locale", () => {
-    it("qps: collapsed and expanded player are fully translated", () => {
-        const r = renderPseudo(<RehearsalToolbar audioUrl="/api/drive/file/test-audio" title="Test Song A" />)
-        expectNoUntranslatedText(r.container, { allow: ALLOW })
-        fireEvent.click(r.container.querySelector("button")!) // open the player
-        const buttons = r.container.querySelectorAll("button")
-        fireEvent.click(buttons[buttons.length - 1]) // expand controls
-        expect(r.container.textContent).toMatch(/0\.5/)
-        expectNoUntranslatedText(r.container, { allow: ALLOW })
-    })
-
-    it("qps-rtl: dir=rtl root, the time axis stays ltr", () => {
-        const r = renderPseudo(<RehearsalToolbar audioUrl="/api/drive/file/test-audio" title="Test Song A" />, { rtl: true })
-        expect(r.container.firstElementChild?.getAttribute("dir")).toBe("rtl")
-        fireEvent.click(r.container.querySelector("button")!)
-        expect(r.container.querySelector(".flex-1.flex.flex-col[dir=ltr]")).not.toBeNull()
-        expectNoUntranslatedText(r.container, { allow: ALLOW })
     })
 })
 
@@ -209,26 +186,5 @@ describe("PDFOverlay: chrome mirrors, chart area stays ltr", () => {
             <PDFOverlay track={tracks[0]} tracks={tracks} currentIndex={0} onClose={vi.fn()} onNavigate={vi.fn()} isPublicView={false} />,
         )
         expect(chartArea(r.container)!.hasAttribute("dir")).toBe(false)
-    })
-})
-
-describe("PerformanceIntro and the status pill", () => {
-    it("qps: intro and status pill are fully translated", () => {
-        mockStoreState.capoFret = 3
-        const a = renderPseudo(<PerformanceIntro onDismiss={vi.fn()} />)
-        expectNoUntranslatedText(a.container, { allow: ALLOW })
-        a.unmount()
-        const b = renderPseudo(<PerformanceStatusStrip />)
-        expectNoUntranslatedText(b.container, { allow: ALLOW })
-    })
-
-    it("qps-rtl: intro arrows mirror and the forward swipe is a swipe right", () => {
-        const r = renderPseudo(<PerformanceIntro onDismiss={vi.fn()} />, { rtl: true })
-        const icons = [...r.container.querySelectorAll("svg")]
-        expect(icons[0].getAttribute("class")).toMatch(/-scale-x-100/)
-        expect(icons[1].getAttribute("class")).toMatch(/-scale-x-100/)
-        const en = renderWithI18n(<PerformanceIntro onDismiss={vi.fn()} />)
-        expect(en.container.textContent).toContain("Swipe left for next song")
-        expect(en.container.textContent).toContain("Swipe right for previous song")
     })
 })

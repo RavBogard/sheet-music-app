@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
+import { usePathname } from "next/navigation"
 import { AuthedQueryProvider } from "@/components/authed-query-provider"
 import { PerformanceOfflineIndicator } from "@/components/performance/PerformanceOfflineIndicator"
 import { registerPerformShellSW } from "@/components/performance/perform-shell-sw-register"
@@ -151,6 +152,17 @@ function PdfWorkerPreload() {
 function PerformShellSWBootstrap() {
     useEffect(() => {
         void registerPerformShellSW()
+        // PERF-18: ask the browser not to evict the offline charts. Once per
+        // session; Safari may decline outside the Home-Screen app. Errors are
+        // swallowed.
+        try {
+            if (sessionStorage.getItem("perform-persist-asked") !== "1") {
+                sessionStorage.setItem("perform-persist-asked", "1")
+                if (navigator.storage?.persist) void navigator.storage.persist().catch(() => {})
+            }
+        } catch {
+            // storage unavailable
+        }
     }, [])
     return null
 }
@@ -181,11 +193,22 @@ export function PerformClientLayout({
                 <main id="main-content" className="min-h-screen">
                     <PdfWorkerPreload />
                     <PerformShellSWBootstrap />
-                    <PerformanceOfflineIndicator />
+                    <LayoutOfflineIndicator />
                     {children}
                     <KeepAwakeBanner />
                 </main>
             </KeepAwakeProvider>
         </AuthedQueryProvider>
     )
+}
+
+/**
+ * PERF-16: the setlist page renders its own indicator (with the "N/M charts
+ * ready" count). Rendering this one there too stacked two pills at the same
+ * fixed position, so the layout's plain pill steps aside on setlist routes.
+ */
+function LayoutOfflineIndicator() {
+    const pathname = usePathname()
+    if (pathname?.startsWith("/perform/setlist/")) return null
+    return <PerformanceOfflineIndicator />
 }

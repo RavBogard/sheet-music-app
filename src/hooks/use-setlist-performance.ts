@@ -12,7 +12,8 @@ import { logger } from "@/lib/logger"
 import { subscribeToMusicianProfile } from "@/lib/musician-profile"
 import { getDb } from "@/lib/local/schema"
 import type { LocalTrack } from "@/lib/local/types"
-import { getTracksForSetlistClient } from "@/lib/client-tracks"
+import { getTracksForSetlistClient, fetchTracksForSetlistClient } from "@/lib/client-tracks"
+import { setlistMovedPast } from "@/lib/performance/setlist-freshness"
 import {
     type SnapshotListenerOpts,
     startSnapshotListener as defaultStartSnapshotListener,
@@ -63,6 +64,11 @@ interface UseSetlistPerformanceReturn {
      *  is a valid, meaningful value — PrintModal's existing `eventDate ? ... :
      *  new Date()` fallback already treats falsy as "use today". */
     eventDate: string | null
+    /** PERF-06: signed out, and the live setlist doc moved past the frame the
+     *  server rendered. Drives the "Setlist updated" strip. */
+    setlistUpdatedSinceLoad: boolean
+    /** Identifies the live version behind the strip (loop guard). */
+    setlistLiveStamp: string | null
 }
 
 interface UseSetlistPerformanceOpts {
@@ -226,8 +232,63 @@ export function useSetlistPerformance(
     // weighed against a guaranteed blank page for every signed-out reader
     // opening a service their device has not cached. On the band's surface,
     // stale-until-reload beats empty.
+    // PERF-07: a signed-out device whose SSR frame came back empty (the Admin
+    // read failed) would otherwise sit on "No tracks yet". Ask the public
+    // endpoint once, and again on `online` / `visibilitychange`, until rows
+    // arrive. Signed-in devices fill Dexie through the snapshot listener.
+    const ssrEmpty = (initial?.tracks?.length ?? 0) === 0
+    const [fetchedTracks, setFetchedTracks] = useState<SetlistTrack[] | null>(null)
+    useEffect(() => {
+        if (!setlistId || user || !ssrEmpty) return
+        let cancelled = false
+        let inFlight = false
+        let done = false
+        const load = async () => {
+            if (cancelled || inFlight || done) return
+            inFlight = true
+            try {
+                const rows = await fetchTracksForSetlistClient(setlistId, null)
+                if (cancelled) return
+                if (rows.length > 0) {
+                    done = true
+                    setFetchedTracks(rows)
+                }
+            } catch (err) {
+                logger.warn(`[useSetlistPerformance] public tracks fetch failed for ${setlistId}`, err)
+            } finally {
+                inFlight = false
+            }
+        }
+        void load()
+        const onVisible = () => {
+            if (document.visibilityState === "visible") void load()
+        }
+        window.addEventListener("online", load)
+        document.addEventListener("visibilitychange", onVisible)
+        return () => {
+            cancelled = true
+            window.removeEventListener("online", load)
+            document.removeEventListener("visibilitychange", onVisible)
+        }
+    }, [setlistId, user, ssrEmpty])
+
     const plannedTracks: SetlistTrack[] =
-        liveTracks.length > 0 ? liveTracks : (initial?.tracks ?? liveTracks)
+        liveTracks.length > 0
+            ? liveTracks
+            : !ssrEmpty
+              ? (initial?.tracks ?? liveTracks)
+              : (fetchedTracks ?? liveTracks)
+
+    // PERF-06: signed-out devices get no realtime rows, but the public setlist
+    // doc is live (`setlistData`). If its version moved past the SSR frame,
+    // say so; the page shows a strip and the musician taps to reload.
+    const setlistUpdatedSinceLoad =
+        !user && setlistMovedPast(initial?.setlist, setlistData)
+    const liveVersion = (setlistData as { version?: unknown } | null)?.version
+    const setlistLiveStamp: string | null =
+        typeof liveVersion === "number"
+            ? `v${liveVersion}`
+            : toISOString(setlistData?.updatedAt as never)
 
     // TONIGHT-ONLY SWAPS (David's ask 4, 2026-09-22). An additive layer over
     // the rows above: the overrides doc can only change the chart fields of
@@ -365,5 +426,7 @@ export function useSetlistPerformance(
         rabbi,
         book,
         eventDate,
+        setlistUpdatedSinceLoad,
+        setlistLiveStamp,
     }
 }

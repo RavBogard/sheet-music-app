@@ -20,13 +20,14 @@
  * ship in the initial setlist-page bundle. It lazy-loads on first song tap.
  */
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import dynamic from "next/dynamic"
 import Link from "next/link"
 import { Loader2, ArrowLeft, Music, Users, Pencil, Printer, ListCollapse, List } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useSetlistPerformance } from "@/hooks/use-setlist-performance"
 import { usePerformEntryPrecache } from "@/hooks/use-perform-entry-precache"
+import { requestPerformCacheUrl } from "@/components/performance/perform-shell-sw-register"
 import { useAuth } from "@/lib/auth-context"
 import { useLibrary } from "@/hooks/use-library"
 import { SetlistView } from "@/components/performance/SetlistView"
@@ -107,6 +108,8 @@ export function SetlistPerformClient({
         rabbi,
         book,
         eventDate,
+        setlistUpdatedSinceLoad,
+        setlistLiveStamp,
         isWakeLockActive,
         isWakeLockSupported,
         wakeLockError,
@@ -117,6 +120,25 @@ export function SetlistPerformClient({
             ? { setlist: initialSetlist, tracks: initialTracks, overrides: initialOverrides }
             : null,
     })
+
+    // PERF-01: the SW may answer an offline /track/<id> reload with the BASE
+    // setlist page (no initialTrackId), leaving the track only in the address
+    // bar. Capture it once (a ref, so SSR and hydration markup agree) and open
+    // it after mount.
+    const bootTrackRef = useRef<string | null>(
+        typeof window === "undefined"
+            ? null
+            : (() => {
+                  const m = window.location.pathname.match(/\/track\/([^/]+)\/?$/)
+                  if (!m) return null
+                  try {
+                      return decodeURIComponent(m[1])
+                  } catch {
+                      return null
+                  }
+              })(),
+    )
+    const bootPendingRef = useRef(!initialTrackId && !!bootTrackRef.current)
 
     const [activeSongIndex, setActiveSongIndex] = useState<number | null>(() => {
         if (!initialTrackId) return null
@@ -171,7 +193,17 @@ export function SetlistPerformClient({
     // the bare `[id]/page.tsx` (no track) — both go through the same SSR
     // fetch and seed `activeSongIndex` accordingly.
     useEffect(() => {
+        if (!bootPendingRef.current || tracks.length === 0) return
+        bootPendingRef.current = false
+        const idx = tracks.findIndex((t) => t.id === bootTrackRef.current)
+        const row = idx >= 0 ? tracks[idx] : null
+        if (row && row.type !== "header" && (row.type as string) !== "section") setActiveSongIndex(idx)
+    }, [tracks])
+
+    useEffect(() => {
         if (typeof window === "undefined") return
+        // Hold the URL rewrite until the boot track has been resolved.
+        if (bootPendingRef.current && tracks.length > 0) return
         const basePath = `/perform/setlist/${setlistId}`
         let desiredPath = basePath
         if (activeSongIndex !== null) {
@@ -183,10 +215,37 @@ export function SetlistPerformClient({
         const currentPath = window.location.pathname
         if (currentPath !== desiredPath) {
             window.history.replaceState(null, "", desiredPath + window.location.search + window.location.hash)
+            // PERF-01: replaceState makes no request, so ask the SW to cache the
+            // new URL; an offline reload on an open chart is then served.
+            if (desiredPath !== basePath) requestPerformCacheUrl(desiredPath)
         }
     }, [activeSongIndex, setlistId, tracks])
 
-    const { isBandLeader, isAdmin, user } = useAuth()
+    const { isBandLeader, isAdmin, user, loading: authLoading } = useAuth()
+    // PERF-06 strip gates: online, auth resolved, and not already refreshed for
+    // this live version (a reload that still shows the same version must not
+    // offer the strip again, so it can never loop).
+    const [online, setOnline] = useState(true)
+    useEffect(() => {
+        setOnline(navigator.onLine !== false)
+        const on = () => setOnline(true)
+        const off = () => setOnline(false)
+        window.addEventListener("online", on)
+        window.addEventListener("offline", off)
+        return () => {
+            window.removeEventListener("online", on)
+            window.removeEventListener("offline", off)
+        }
+    }, [])
+    const refreshKey = `perform-setlist-refreshed:${setlistId}`
+    const alreadyRefreshed = (() => {
+        try {
+            return !!setlistLiveStamp && sessionStorage.getItem(refreshKey) === setlistLiveStamp
+        } catch {
+            return false
+        }
+    })()
+    const showUpdatedStrip = setlistUpdatedSinceLoad && online && !authLoading && !alreadyRefreshed
     const [swapIndex, setSwapIndex] = useState<number | null>(null)
     const [resetBusy, setResetBusy] = useState(false)
     // Printing is NOT a privilege (Daniel, 2026-09-10) — not by role, and not
@@ -207,8 +266,11 @@ export function SetlistPerformClient({
 
     // Song fileIds for the offline indicator's IDB ground-truth count.
     const songFileIds = tracks
-        .filter(t => (!t.type || t.type === "song") && t.fileId)
+        // PERF-03: every openable row (bonded prayers and readings open as
+        // charts too), not song rows only.
+        .filter(t => !!t.fileId)
         .map(t => t.fileId as string)
+        .filter((id, i, all) => all.indexOf(id) === i)
 
     // F1 (perform-entry-precache): warm Dexie with every bonded chart the
     // moment the overlay mounts — `requestIdleCallback` (the SaveOfflineButton
@@ -360,6 +422,27 @@ export function SetlistPerformClient({
 
             {/* Offline indicator — IDB ground truth for N/M charts ready */}
             <PerformanceOfflineIndicator setlistFileIds={songFileIds} />
+
+            {/* PERF-06: signed-out devices get no realtime rows. When the live
+                setlist doc moves past what this page loaded, say so. Tap to
+                reload; never reloads by itself (a chart may be open). */}
+            {showUpdatedStrip && (
+                <button
+                    type="button"
+                    data-testid="setlist-updated-strip"
+                    onClick={() => {
+                        try {
+                            if (setlistLiveStamp) sessionStorage.setItem(refreshKey, setlistLiveStamp)
+                        } catch {
+                            // storage unavailable
+                        }
+                        window.location.reload()
+                    }}
+                    className="w-full h-11 px-4 text-sm font-medium bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-100 border-b border-border/50 cursor-pointer"
+                >
+                    {t("perform.offline.setlistUpdated")}
+                </button>
+            )}
 
 
             {/* Who's playing */}
