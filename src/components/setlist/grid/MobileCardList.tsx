@@ -206,6 +206,7 @@ export function MobileCardList({
                                 track={track}
                                 isEditing={isEditing}
                                 tonightTitle={tonightByRowId?.[track.id]}
+                                position={idx + 1}
                                 onTap={() =>
                                     setEditingTrackId(
                                         isEditing ? null : track.id,

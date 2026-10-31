@@ -19,8 +19,6 @@
     "print.packetSubject": "חוברת להדפסה – {shortName} Books",
     "og.alt": "{name} — ספריית תווים דיגיטלית",
     "page.unauthorizedTitle": "אין הרשאה | {name}",
-    "page.v2TitleTemplate": "%s | {shortName} · v2 בטא",
-    "page.v2TitleDefault": "{shortName} · v2 בטא",
     "profile.scheduleName": "לוח הזמנים שלך ב-{abbreviation}",
     "library.coreSectionLabel": "התווים של {abbreviation}"
 }

@@ -1088,5 +1088,6 @@
         "who": "leaders",
         "maxLength": 100,
         "context": "{id} is the row's internal id"
-    }
+    },
+    "performLink": { "where": "Setlist editor header: link to the band view (Perform) of this setlist.", "who": "leaders", "maxLength": 14 }
 }

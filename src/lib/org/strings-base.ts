@@ -60,8 +60,6 @@ export const STRING_BASE = {
     "og.monogram": "{abbreviation}",
     "og.title": "{name}",
     "page.unauthorizedTitle": "Unauthorized | {name}",
-    "page.v2TitleTemplate": "%s | {shortName} · v2 Beta",
-    "page.v2TitleDefault": "{shortName} · v2 Beta",
     "page.skeletonBrand": "{shortName}",
     "profile.scheduleName": "your {abbreviation} schedule",
 

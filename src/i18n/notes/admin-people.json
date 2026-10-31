@@ -413,5 +413,7 @@
         "where": "Manage > People: empty list after filtering",
         "who": "admins, band leaders",
         "maxLength": 60
-    }
+    },
+    "testAccountsHidden": { "where": "People tab: toggle shown when probe accounts are hidden; click shows them. Plural: count.", "who": "leaders", "maxLength": 44 },
+    "testAccountsHide": { "where": "People tab: toggle that hides probe accounts again.", "who": "leaders", "maxLength": 30 }
 }

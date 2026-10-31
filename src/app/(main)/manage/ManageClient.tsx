@@ -18,7 +18,13 @@ import { useFeature } from "@/lib/org/use-feature"
 import { DirectionalIcon } from "@/components/i18n/DirectionalIcon"
 import { useT } from "@/i18n/client"
 
-export default function ManageClient({ serverIsAdmin }: { serverIsAdmin: boolean }) {
+export default function ManageClient({
+    serverIsAdmin,
+    adminOnlyNotice = false,
+}: {
+    serverIsAdmin: boolean
+    adminOnlyNotice?: boolean
+}) {
     const router = useRouter()
     const t = useT()
     const { refetch } = useLibrary()
@@ -50,6 +56,12 @@ export default function ManageClient({ serverIsAdmin }: { serverIsAdmin: boolean
                         </p>
                     </div>
                 </div>
+
+                {adminOnlyNotice && (
+                    <p role="status" className="rounded-md border border-border bg-muted px-4 py-3 text-sm">
+                        {t("manage.adminOnlyNotice")}
+                    </p>
+                )}
 
                 <Tabs defaultValue="people">
                     <TabsList className="w-full">

@@ -502,5 +502,15 @@
         "where": "Setlists dashboard, matrix view: hover hint on an empty future cell (shown uppercase by CSS)",
         "who": "leaders",
         "maxLength": 10
+    },
+    "variantsShow": {
+        "where": "/setlists past list: button that expands the per-instrument and copy setlists folded under one service. Plural: count.",
+        "who": "leaders",
+        "maxLength": 34
+    },
+    "variantsHide": {
+        "where": "/setlists past list: button that collapses the folded setlists.",
+        "who": "leaders",
+        "maxLength": 30
     }
 }

@@ -1,7 +1,8 @@
 "use client"
 
 import { useEffect } from "react"
-import { registerWebVitals } from "@/lib/web-vitals"
+import { usePathname } from "next/navigation"
+import { registerWebVitals, reportPageView } from "@/lib/web-vitals"
 
 /**
  * Cycle-3.5 P2-017 — Mounts the web-vitals registrar on first client
@@ -12,8 +13,12 @@ import { registerWebVitals } from "@/lib/web-vitals"
  * Lives inside layout.tsx body so every route picks it up.
  */
 export function WebVitalsReporter() {
+    const pathname = usePathname()
     useEffect(() => {
         void registerWebVitals()
     }, [])
+    useEffect(() => {
+        if (pathname) reportPageView(pathname)
+    }, [pathname])
     return null
 }

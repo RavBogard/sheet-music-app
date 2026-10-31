@@ -98,5 +98,9 @@
     "matrixLoadFailed": "טעינת נתוני הטבלה נכשלה",
     "matrixSlotHeader": "מקום בתפילה",
     "matrixStandard": "רגיל",
-    "matrixPlan": "+ תכנון"
+    "matrixPlan": "+ תכנון",
+    "variantsShow_one": "הצג גרסה נוספת אחת",
+    "variantsShow_two": "הצג שתי גרסאות נוספות",
+    "variantsShow_other": "הצג {count} גרסאות נוספות",
+    "variantsHide": "הסתר גרסאות נוספות"
 }

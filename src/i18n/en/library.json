@@ -131,7 +131,7 @@
         "create": "Create",
         "noMatch": "No setlists match “{query}”",
         "noEditable": "No editable setlists found",
-        "songCount_one": "{count} songs",
+        "songCount_one": "{count} song",
         "songCount_other": "{count} songs"
     },
     "overlay": {

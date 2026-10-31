@@ -111,7 +111,7 @@ describe("setlist cards English output is unchanged", () => {
 
     it("renders today's English", async () => {
         render(upcoming())
-        expect(screen.getByText("3 Songs")).toBeDefined()
+        expect(screen.getByText("3 songs")).toBeDefined()
         expect(screen.getByText("Oct 3, 2026")).toBeDefined()
         expect(screen.getByLabelText("Open setlist — Test Setlist A")).toBeDefined()
         expect(screen.getByLabelText("Download setlist for offline — Test Setlist A").getAttribute("title")).toBe("Download for Offline")

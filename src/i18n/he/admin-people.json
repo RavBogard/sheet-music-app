@@ -86,5 +86,9 @@
     "columnAttributes": "מאפיינים",
     "columnRoleManagement": "ניהול תפקידים",
     "emptyNoUsers": "אין עדיין משתמשים רשומים.",
-    "emptyNoMatches": "אין משתמשים שתואמים את הסינון הנוכחי."
+    "emptyNoMatches": "אין משתמשים שתואמים את הסינון הנוכחי.",
+    "testAccountsHidden_one": "חשבון בדיקה אחד מוסתר. הצג",
+    "testAccountsHidden_two": "שני חשבונות בדיקה מוסתרים. הצג",
+    "testAccountsHidden_other": "{count} חשבונות בדיקה מוסתרים. הצג",
+    "testAccountsHide": "הסתר חשבונות בדיקה"
 }

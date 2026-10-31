@@ -182,3 +182,29 @@ describe('rate-limit', () => {
         expect(limited?.error).toContain('Too many requests')
     })
 })
+
+describe('rate-limit: telemetry key ignores unverified Bearer tokens', () => {
+    beforeEach(() => {
+        delete process.env.UPSTASH_REDIS_REST_URL
+        delete process.env.UPSTASH_REDIS_REST_TOKEN
+        delete process.env.KV_REST_API_URL
+        delete process.env.KV_REST_API_TOKEN
+        vi.resetModules()
+    })
+
+    const forged = (sub: string, ip: string) => {
+        const payload = Buffer.from(JSON.stringify({ sub })).toString('base64url')
+        return new NextRequest('http://localhost:3000/api/web-vitals', {
+            headers: { 'x-forwarded-for': ip, Authorization: `Bearer h.${payload}.s` },
+        })
+    }
+
+    it('a forged token cannot get a fresh telemetry bucket per request', async () => {
+        const { checkRateLimit } = await import('./rate-limit')
+        let limited = false
+        for (let i = 0; i < 320; i++) {
+            if (await checkRateLimit(forged(`fake-${i}`, '9.9.9.9'), 'telemetry')) limited = true
+        }
+        expect(limited).toBe(true)
+    })
+})

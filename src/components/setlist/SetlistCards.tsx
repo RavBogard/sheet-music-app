@@ -126,7 +126,7 @@ export function UpcomingSetlistCard({ setlist, onPerform, onEdit, navigatingTo, 
                     </span>
                     <span className="text-xs text-muted-foreground flex items-center gap-1 font-medium">
                         <PlayCircle className="h-3.5 w-3.5" />
-                        {t("setlist.songCount", { count: setlist.trackCount || 0 })}
+                        {t("setlist.songCount", { count: (setlist.songCount ?? setlist.trackCount) || 0 })}
                     </span>
                     {offlineStatus === 'full' && (
                         <span className="text-xs text-green-400 flex items-center gap-1 font-medium">
@@ -310,7 +310,7 @@ export function SetlistCard({ setlist, onPerform, onEdit, navigatingTo, onDuplic
                     </span>
                     <span className="text-xs text-muted-foreground flex items-center gap-1">
                         <PlayCircle className="h-3 w-3" />
-                        {t("setlist.songCount", { count: setlist.trackCount || 0 })}
+                        {t("setlist.songCount", { count: (setlist.songCount ?? setlist.trackCount) || 0 })}
                     </span>
                 </div>
             </div>

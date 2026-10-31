@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react"
+import { rabbiNames, rabbiMatches } from "@/lib/format/rabbi-names"
 import { formatError } from "@/lib/format-error"
 import { useRouter } from "next/navigation"
 import { createSetlistService, Setlist } from "@/lib/setlist-firebase"
@@ -409,7 +410,7 @@ export function useSetlistDashboard({
     const availableRabbis = useMemo(() => {
         const rabbis = new Set<string>()
         setlists.forEach(s => {
-            if (s.rabbi) rabbis.add(s.rabbi)
+            rabbiNames(s.rabbi).forEach(n => rabbis.add(n))
         })
         return Array.from(rabbis).sort()
     }, [setlists])
@@ -439,7 +440,7 @@ export function useSetlistDashboard({
             })
         }
         if (rabbiFilter) {
-            filtered = filtered.filter(s => s.rabbi === rabbiFilter)
+            filtered = filtered.filter(s => rabbiMatches(s.rabbi, rabbiFilter))
         }
         return filtered
     }, [allSetlists, searchQuery, rabbiFilter, user])

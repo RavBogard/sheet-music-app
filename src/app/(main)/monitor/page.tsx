@@ -1,5 +1,6 @@
 import { getServerUser } from "@/lib/server-auth"
 import { redirect } from "next/navigation"
+import { getT } from "@/i18n/server"
 import MonitorClient from "./MonitorClient"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { MonitorConfig } from "@/types/monitor"
@@ -7,6 +8,7 @@ import { hasMonitorPageAccess } from "@/lib/mcp/server-monitor"
 
 export default async function MonitorPage() {
     const user = await getServerUser()
+    const t = await getT()
 
     if (!user) {
         redirect("/login")
@@ -39,7 +41,7 @@ export default async function MonitorPage() {
         // Render a server-side "Unauthorized" message instead of loading the client app
         return (
             <div className="flex flex-col items-center justify-center h-[60vh] gap-4 p-6 text-center">
-                <h2 className="text-xl font-bold">Monitor Access Denied</h2>
+                <h1 className="text-xl font-bold">Monitor Access Denied</h1>
                 <p className="text-muted-foreground">
                     You don't have monitor access. Ask a sound engineer or admin to assign you a bus.
                 </p>
@@ -47,5 +49,10 @@ export default async function MonitorPage() {
         )
     }
 
-    return <MonitorClient />
+    return (
+        <>
+            <h1 className="sr-only">{t("nav.monitor")}</h1>
+            <MonitorClient />
+        </>
+    )
 }

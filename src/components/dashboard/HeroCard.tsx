@@ -94,7 +94,7 @@ export function HeroCard({
     })()
 
     const isImminent = countdown !== null
-    const trackCount = setlist.trackCount ?? 0
+    const trackCount = setlist.songCount ?? setlist.trackCount ?? 0
     const prepData = prep?.prep
     const allCached = offlineStatus && offlineStatus.cached === offlineStatus.total
 

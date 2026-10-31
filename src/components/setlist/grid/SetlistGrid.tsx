@@ -29,6 +29,7 @@ import {
 } from '@tanstack/react-table'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useTonightTitles } from '@/hooks/use-tonight-overrides'
+import { useFeature } from '@/lib/org/use-feature'
 import { Copy, Edit3, Music, Trash2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -965,6 +966,7 @@ export function SetlistGrid({
     const t = useT()
     const fmt = useFormat()
     const router = useRouter()
+    const performOn = useFeature("perform")
     const dialogCtx = useDeleteConfirmOptional()
 
     // Resolves a confirmation request via the precedence:
@@ -1638,6 +1640,7 @@ export function SetlistGrid({
                 eventDateLabel={displayEventDateLabel}
                 onBack={onBack ?? (() => router.back())}
                 onEditMeta={() => setMetaSheetOpen(true)}
+                performHref={performOn ? `/perform/setlist/${setlistId}` : undefined}
             />
 
             <SetlistMetaEditSheet

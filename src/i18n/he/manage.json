@@ -11,5 +11,6 @@
     "sectionSound": "מערכת סאונד",
     "sectionAudit": "ביקורת גישה",
     "libraryToolsTitle": "כלי ספרייה",
-    "libraryToolsHint": "סריקת תווים כפולים או בדיקת קובצי PDF פגומים."
+    "libraryToolsHint": "סריקת תווים כפולים או בדיקת קובצי PDF פגומים.",
+    "adminOnlyNotice": "הדף הזה זמין למנהלי המערכת בלבד."
 }

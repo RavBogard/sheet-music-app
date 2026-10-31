@@ -10,6 +10,7 @@ import { byteRangeResponse } from "@/lib/http/byte-range"
 import { selectUnauthHint } from "@/lib/http/caller-context"
 import { verifyBearer } from "@/lib/mcp/auth"
 import { chartCacheControl, chartLinkGate } from "@/lib/library/open-by-link"
+import { isDriveFolderRow } from "@/lib/library/folder-row"
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -80,6 +81,19 @@ export const GET = createApiHandler(async (ctx) => {
     if (gate.mode === "member") isTrusted = true
 
     try {
+        // TEL-01: a Drive folder indexed as if it were a chart. Say so plainly (400)
+        // instead of asking Drive for the bytes of a folder and answering 403/404.
+        if (await isDriveFolderRow(String(fileId ?? ""))) {
+            return httpError(
+                400,
+                "not_a_chart",
+                "This id is a Drive folder, not a chart.",
+                { fileId },
+                "Open a chart inside the folder instead.",
+                { "Access-Control-Allow-Origin": origin, "Cache-Control": "no-store" },
+            )
+        }
+
         // Cycle-1 F-021: existence check fires BEFORE the auth gate so a
         // bogus fileId returns 404 instead of the misleading "Authentication
         // required" 401 — agents kept treating the 401 as a credentials

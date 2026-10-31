@@ -213,5 +213,6 @@
     "dndNotOver": "Draggable item {id} is no longer over a droppable area.",
     "dndDroppedOver": "Draggable item {id} was dropped over droppable area {overId}",
     "dndDropped": "Draggable item {id} was dropped.",
-    "dndCancelled": "Dragging was cancelled. Draggable item {id} was dropped."
+    "dndCancelled": "Dragging was cancelled. Draggable item {id} was dropped.",
+    "performLink": "Perform"
 }

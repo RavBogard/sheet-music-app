@@ -217,5 +217,6 @@
     "dndNotOver": "הפריט {id} כבר לא נמצא מעל אזור שחרור.",
     "dndDroppedOver": "הפריט {id} שוחרר מעל האזור {overId}",
     "dndDropped": "הפריט {id} שוחרר.",
-    "dndCancelled": "הגרירה בוטלה. הפריט {id} שוחרר."
+    "dndCancelled": "הגרירה בוטלה. הפריט {id} שוחרר.",
+    "performLink": "ביצוע"
 }

@@ -35,6 +35,16 @@ export interface WebVitalReport {
     deviceType: "mobile" | "tablet" | "desktop" | "unknown"
 }
 
+/**
+ * TEL-02: one in-app page view, counted per route and day by /api/web-vitals.
+ * No third-party script; the route stores only daily counters.
+ */
+export interface PageViewReport {
+    kind: "pageview"
+    surface: string
+    deviceType: WebVitalReport["deviceType"]
+}
+
 function detectDeviceType(): WebVitalReport["deviceType"] {
     if (typeof navigator === "undefined") return "unknown"
     const ua = navigator.userAgent
@@ -93,7 +103,7 @@ function getSurface(): string {
     return normalizeSurface(window.location.pathname)
 }
 
-function send(report: WebVitalReport): void {
+function send(report: WebVitalReport | PageViewReport): void {
     const body = JSON.stringify(report)
     try {
         if (
@@ -115,6 +125,17 @@ function send(report: WebVitalReport): void {
     } catch {
         /* Never let metric reporting break the page. */
     }
+}
+
+let lastPageView: string | null = null
+
+/** Count a page view for the route of `pathname`. Fail-open; skips an immediate repeat. */
+export function reportPageView(pathname: string): void {
+    if (typeof window === "undefined") return
+    const surface = normalizeSurface(pathname)
+    if (surface === lastPageView) return
+    lastPageView = surface
+    send({ kind: "pageview", surface, deviceType: detectDeviceType() })
 }
 
 let registered = false

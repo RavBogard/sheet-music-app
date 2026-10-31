@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react"
+import { displayChartTitle } from '@/lib/format/chart-title'
 import { formatError } from "@/lib/format-error"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"

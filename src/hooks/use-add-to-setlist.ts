@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react"
+import { displayChartTitle } from '@/lib/format/chart-title'
 import { Timestamp } from "firebase/firestore"
 import { toast } from "sonner"
 import { useAuth } from "@/lib/auth-context"
