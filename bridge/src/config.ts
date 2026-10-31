@@ -9,6 +9,7 @@
 import * as admin from "firebase-admin"
 import { MonitorConfig } from "./types"
 import type { BridgeDiagnostics } from "./bridge-control"
+import type { LaunchReason } from "./launch-info"
 import { canStealLease, type LeaseIdentity, type LeaseRecord } from "./lease-identity"
 
 const DEFAULT_CONFIG: MonitorConfig = {
@@ -181,6 +182,8 @@ export class ConfigManager {
         clients: number
         localIp: string | null
         diagnostics?: BridgeDiagnostics
+        /** MIXER-12 — why this process started, and whether the watchdog task exists. */
+        launch?: { launchReason: LaunchReason; watchdogInstalled: boolean | null }
     }): Promise<void> {
         try {
             const update: Record<string, unknown> = {
@@ -205,6 +208,10 @@ export class ConfigManager {
                 update["bridge.queueDepth"] = d.queueDepth
                 update["bridge.errCount"] = d.errCount
                 update["bridge.lastError"] = d.lastError
+            }
+            if (data.launch) {
+                update["bridge.launchReason"] = data.launch.launchReason
+                if (typeof data.launch.watchdogInstalled === "boolean") update["bridge.watchdogInstalled"] = data.launch.watchdogInstalled
             }
             // 5s timeout — never let heartbeat block the bridge
             await Promise.race([

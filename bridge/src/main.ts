@@ -12,6 +12,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { main as startBridge, getBridgeStatus, setRestartHandler } from './index';
 import { createTrayIcon as createHealthTrayIcon, pickTrayColor, type TrayHealthColor } from './tray-icon';
+import { readAndClearLaunchMarker, resolveLaunchReason, writeLaunchMarker } from './launch-info';
 
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
@@ -42,6 +43,8 @@ process.on('unhandledRejection', (reason) => {
 // bridgeControl.action === "restart" can relaunch the unattended bridge.
 setRestartHandler(() => {
     console.warn('[Bridge] Remote restart requested — relaunching the process.');
+    // MIXER-12 — tell the next process it was restarted on purpose.
+    writeLaunchMarker(getStateDir(), 'manual');
     (app as any).isQuiting = true;
     app.relaunch();
     app.exit(0);
@@ -71,6 +74,11 @@ function getCredDir(): string | null {
 /** Exe directory (install folder) — legacy / manual-JSON-drop fallback cred location. */
 function getExeDir(): string {
     return app.isPackaged ? path.dirname(process.execPath) : path.join(__dirname, '..');
+}
+
+/** Durable per-install state dir (userData; exe dir off Electron). Holds the launch marker. */
+function getStateDir(): string {
+    return getCredDir() || getExeDir();
 }
 
 // ─── Single Instance Lock ───
@@ -309,6 +317,8 @@ function installPendingUpdate() {
         clearInterval(idleInstallTimer);
         idleInstallTimer = null;
     }
+    // MIXER-12 — the relaunched process reports launchReason "update".
+    writeLaunchMarker(getStateDir(), 'update');
     (app as any).isQuiting = true;
     // isSilent = true, isForceRunAfter = true
     autoUpdater.quitAndInstall(true, true);
@@ -454,6 +464,19 @@ async function startBackgroundBridge() {
             process.env.BRIDGE_VERSION = app.getVersion();
         } catch {
             // Non-Electron / dev context — fall back to the sentinel default.
+        }
+    }
+
+    // MIXER-12 — why did this process start? index.ts publishes it in the
+    // heartbeat as bridge.launchReason.
+    if (!process.env.BRIDGE_LAUNCH_REASON) {
+        try {
+            process.env.BRIDGE_LAUNCH_REASON = resolveLaunchReason({
+                argv: process.argv,
+                marker: readAndClearLaunchMarker(getStateDir()),
+            });
+        } catch {
+            // Leave unset; index.ts falls back to "manual".
         }
     }
 

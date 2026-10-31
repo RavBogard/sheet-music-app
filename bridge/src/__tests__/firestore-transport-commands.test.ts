@@ -24,6 +24,8 @@ const batchUpdates: Array<{ ref: { id: string }; data: Record<string, unknown> }
 
 let commandCb: ((snap: { docChanges: () => unknown[] }) => void) | null = null
 let usersMap: Record<string, { role?: string; soundEngineer?: boolean }> = {}
+// BET-4 — what config/monitor.ceilings holds for the test (undefined = absent → defaults).
+let ceilingsDoc: unknown = undefined
 
 vi.mock("firebase-admin", () => {
     const makeDoc = (path: string) => ({
@@ -101,7 +103,7 @@ function makeX32() {
 function makeConfig(getUserBus: (uid: string) => number | null): ConfigManager {
     return {
         getUserBus,
-        getConfig: () => ({ monitorBuses: [1, 2, 3, 4, 5] }),
+        getConfig: () => ({ monitorBuses: [1, 2, 3, 4, 5], ceilings: ceilingsDoc }),
     } as unknown as ConfigManager
 }
 
@@ -151,6 +153,7 @@ describe("FirestoreTransport — command acks + robustness (Phase 2 B4/B5/B6/B10
         batchUpdates.length = 0
         commandCb = null
         usersMap = {}
+        ceilingsDoc = undefined
         vi.useFakeTimers()
     })
 
@@ -240,11 +243,11 @@ describe("FirestoreTransport — command acks + robustness (Phase 2 B4/B5/B6/B10
         t.stop()
     })
 
-    it("B4: a skewed-OLD client clock does NOT falsely reject when the server createTime is fresh", async () => {
+    it("B4: a skewed-OLD client clock (inside the 30s MIXER-10 tolerance) does NOT falsely reject when the server createTime is fresh", async () => {
         const { x32, t } = start((uid) => (uid === "u-keys" ? 5 : null))
         const now = Date.now()
         await feed([
-            { type: "set_bus_master", busIndex: 5, value: 0.6, uid: "u-keys", id: "c-skew-new", createdAt: now - 60_000, createMs: now },
+            { type: "set_bus_master", busIndex: 5, value: 0.6, uid: "u-keys", id: "c-skew-new", createdAt: now - 20_000, createMs: now },
         ])
         await runBatch()
         // createTime is fresh → applied path, sent to the desk despite the stale client createdAt.
@@ -271,9 +274,9 @@ describe("FirestoreTransport — command acks + robustness (Phase 2 B4/B5/B6/B10
         const setBusFader = (x32 as unknown as { setBusFader: ReturnType<typeof vi.fn> }).setBusFader
         const now = Date.now()
         // Newer command first (server time 200).
-        await feed([{ type: "set_bus_master", busIndex: 5, value: 0.9, uid: "u-keys", id: "c-new", createMs: now + 200 }])
+        await feed([{ type: "set_bus_master", busIndex: 5, value: 0.7, uid: "u-keys", id: "c-new", createMs: now + 200 }])
         await runBatch()
-        expect(setBusFader).toHaveBeenLastCalledWith(5, 0.9)
+        expect(setBusFader).toHaveBeenLastCalledWith(5, 0.7)
 
         // Then an OLDER command (server time 100) for the same target arrives late.
         await feed([{ type: "set_bus_master", busIndex: 5, value: 0.1, uid: "u-keys", id: "c-old", createMs: now + 100 }])
@@ -416,6 +419,120 @@ describe("FirestoreTransport — command acks + robustness (Phase 2 B4/B5/B6/B10
         const ack = ackFor("c-busmute-eng")
         expect(ack?.status).toBe("applied")
         expect(ack?.confirmedValue).toBe(true)
+        t.stop()
+    })
+    // ── BET-4 / MIXER-10: offline-queued replay ──
+
+    it("MIXER-10: a command queued offline (client createdAt > 30s before server createTime) is dropped with a 'queued offline' TIMEOUT ack", async () => {
+        const { x32, t } = start((uid) => (uid === "u-keys" ? 5 : null))
+        const now = Date.now()
+        await feed([
+            { type: "set_send_level", busIndex: 5, channelIndex: 3, value: 0.5, uid: "u-keys", id: "c-offline", createdAt: now - 45_000, createMs: now },
+        ])
+        await runBatch()
+        expect((x32 as unknown as { setSendLevel: ReturnType<typeof vi.fn> }).setSendLevel).not.toHaveBeenCalled()
+        const ack = ackFor("c-offline")
+        expect(ack?.status).toBe("timeout")
+        expect(ack?.reason).toBe("queued offline")
+        expect(ack?.uid).toBe("u-keys")
+        t.stop()
+    })
+
+    it("MIXER-10: a client clock running AHEAD of the server is never treated as offline-queued", async () => {
+        const { x32, t } = start((uid) => (uid === "u-keys" ? 5 : null))
+        const now = Date.now()
+        await feed([
+            { type: "set_bus_master", busIndex: 5, value: 0.5, uid: "u-keys", id: "c-ahead", createdAt: now + 120_000, createMs: now },
+        ])
+        await runBatch()
+        expect((x32 as unknown as { setBusFader: ReturnType<typeof vi.fn> }).setBusFader).toHaveBeenCalledWith(5, 0.5)
+        t.stop()
+    })
+
+    // ── BET-4 / MIXER-03: ceilings ──
+
+    it("MIXER-03: a send above the default ceiling is CLAMPED to 0.70 (about -2 dB) and the applied ack carries clamped {requested, applied, cap}", async () => {
+        const { x32, t } = start((uid) => (uid === "u-keys" ? 5 : null))
+        await feed([{ type: "set_send_level", busIndex: 5, channelIndex: 3, value: 1, uid: "u-keys", id: "c-hot" }])
+        await runBatch()
+        expect((x32 as unknown as { setSendLevel: ReturnType<typeof vi.fn> }).setSendLevel).toHaveBeenCalledWith(3, 5, 0.7)
+        ;(x32 as unknown as EventEmitter).emit("send_level", 5, 3, 0.7)
+        const ack = ackFor("c-hot")
+        expect(ack?.status).toBe("applied")
+        expect(ack?.applied).toBe(true)
+        expect(ack?.clamped).toEqual({ requested: 1, applied: 0.7, cap: 0.7 })
+        t.stop()
+    })
+
+    it("MIXER-03: an ENGINEER's bus master is clamped too (the cap applies to everyone, iPad or MCP)", async () => {
+        usersMap = { drew: { soundEngineer: true } }
+        ceilingsDoc = { default: { send: 0.8, master: 0.8 }, perBus: { "2": { master: 0.7 } } }
+        const { x32, t } = start(() => null)
+        await feed([{ type: "set_bus_master", busIndex: 2, value: 0.95, uid: "drew", id: "c-eng" }])
+        await runBatch()
+        expect((x32 as unknown as { setBusFader: ReturnType<typeof vi.fn> }).setBusFader).toHaveBeenCalledWith(2, 0.7)
+        await vi.advanceTimersByTimeAsync(1500) // no read-back → timeout ack still reports the clamp
+        expect(ackFor("c-eng")?.clamped).toEqual({ requested: 0.95, applied: 0.7, cap: 0.7 })
+        t.stop()
+    })
+
+    it("MIXER-03: a level at or under the cap passes through unchanged with no clamped field", async () => {
+        const { x32, t } = start((uid) => (uid === "u-keys" ? 5 : null))
+        await feed([{ type: "set_send_level", busIndex: 5, channelIndex: 1, value: 0.7, uid: "u-keys", id: "c-ok" }])
+        await runBatch()
+        expect((x32 as unknown as { setSendLevel: ReturnType<typeof vi.fn> }).setSendLevel).toHaveBeenCalledWith(1, 5, 0.7)
+        ;(x32 as unknown as EventEmitter).emit("send_level", 5, 1, 0.7)
+        const ack = ackFor("c-ok")
+        expect(ack?.status).toBe("applied")
+        expect(ack?.clamped).toBeUndefined()
+        t.stop()
+    })
+
+    it("MIXER-03: the ceiling never bypasses ownership (a non-owner's over-cap send is still REJECTED, not clamped)", async () => {
+        const { x32, t } = start(() => null)
+        await feed([{ type: "set_send_level", busIndex: 5, channelIndex: 1, value: 1, uid: "intruder", id: "c-intr" }])
+        await runBatch()
+        expect((x32 as unknown as { setSendLevel: ReturnType<typeof vi.fn> }).setSendLevel).not.toHaveBeenCalled()
+        expect(ackFor("c-intr")?.status).toBe("rejected")
+        t.stop()
+    })
+    // ── S2: level values must be finite numbers in [0,1] ──
+
+    it("S2: a level command with a boolean, NaN, string or out-of-range value is REJECTED and never reaches the desk", async () => {
+        usersMap = { drew: { soundEngineer: true } }
+        const { x32, t } = start(() => null)
+        const bad: unknown[] = [true, Number.NaN, "0.5", -0.1, 1.5, Number.POSITIVE_INFINITY]
+        const cmds: CmdInput[] = []
+        bad.forEach((v, i) => {
+            cmds.push({ type: "set_send_level", busIndex: 2, channelIndex: 1, value: v as number, uid: "drew", id: `c-bad-send-${i}` })
+            cmds.push({ type: "set_bus_master", busIndex: 2, value: v as number, uid: "drew", id: `c-bad-bus-${i}` })
+            cmds.push({ type: "set_matrix_fader", matrixIndex: 1, value: v as number, uid: "drew", id: `c-bad-mtx-${i}` })
+        })
+        await feed(cmds)
+        await runBatch()
+        const spies = x32 as unknown as Record<string, ReturnType<typeof vi.fn>>
+        expect(spies.setSendLevel).not.toHaveBeenCalled()
+        expect(spies.setBusFader).not.toHaveBeenCalled()
+        expect(spies.setMatrixFader).not.toHaveBeenCalled()
+        for (const c of cmds) {
+            const ack = ackFor(c.id)
+            expect(ack?.status).toBe("rejected")
+            expect(String(ack?.reason)).toContain("invalid level")
+        }
+        t.stop()
+    })
+
+    it("S2: the edges 0 and 1 are valid levels (1 is then clamped to the ceiling)", async () => {
+        usersMap = { drew: { soundEngineer: true } }
+        const { x32, t } = start(() => null)
+        await feed([
+            { type: "set_matrix_fader", matrixIndex: 1, value: 0, uid: "drew", id: "c-zero" },
+            { type: "set_bus_master", busIndex: 2, value: 1, uid: "drew", id: "c-one" },
+        ])
+        await runBatch()
+        const spies = x32 as unknown as Record<string, ReturnType<typeof vi.fn>>
+        expect(spies.setMatrixFader).toHaveBeenCalledWith(1, 0)
+        expect(spies.setBusFader).toHaveBeenCalledWith(2, 0.7)
         t.stop()
     })
 })

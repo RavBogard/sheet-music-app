@@ -100,6 +100,11 @@ export class RemoteLogger {
         try {
             if (this.stopped) return
             const text = String(msg ?? "").slice(0, this.maxMsgLen)
+            // MIXER-13 — a blank line (e.g. a bare `console.error()`) carries no
+            // information but used to overwrite `lastError` with `{msg: ""}`,
+            // hiding the last real fault from get_bridge_health. Ignore it
+            // entirely: not in the ring, not counted, lastError untouched.
+            if (!text.trim()) return
             const ts = this.now()
             this.ring.push({ level, msg: text, ts })
             // Trim from the front so the ring holds the most-recent N.

@@ -33,7 +33,7 @@ The only supported install path is the EXE installer.
 
 1. Download the latest **`CentralReform-Bridge-Setup-x.y.z.exe`** from the
    [GitHub releases page](https://github.com/RavBogard/sheet-music-app/releases)
-   and run it — currently **`CentralReform-Bridge-Setup-10.0.7.exe`**. (NSIS
+   and run it — currently **`CentralReform-Bridge-Setup-10.0.8.exe`**. (NSIS
    one-click; installs to per-user `%LOCALAPPDATA%`.) The installer is not
    code-signed, so Windows SmartScreen warns on the first run of each new
    version; choose "More info" → "Run anyway".
@@ -124,11 +124,11 @@ all three attached to it:
 
 The installer's filename is pinned by `build.nsis.artifactName` in
 `package.json`. Do not remove it: electron-builder's default name has spaces in
-it (`CentralReform Bridge Setup 10.0.7.exe`), which does not match the name this
+it (`CentralReform Bridge Setup 10.0.8.exe`), which does not match the name this
 README and the release page use.
 
 **The version lives in exactly one place: `version` in `bridge/package.json`
-(currently `10.0.7`).** Everything downstream derives from it — the installer
+(currently `10.0.8`).** Everything downstream derives from it — the installer
 filename, `latest.yml`, and the version the `get_bridge_health` MCP tool reports
 (Electron reads the packaged `package.json`; `src/main.ts` copies
 `app.getVersion()` into `BRIDGE_VERSION`, and the Firestore heartbeat publishes
