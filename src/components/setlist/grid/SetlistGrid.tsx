@@ -44,8 +44,8 @@ import {
 } from '@/components/ui/context-menu'
 import { useT } from '@/i18n/client'
 import { useFormat } from '@/i18n/format-client'
+import { formatUpdatedWhen } from '@/lib/format/updated-when'
 import type { T } from '@/i18n/core'
-import { toDate } from '@/lib/firestore-helpers'
 import { getDb } from '@/lib/local/schema'
 import type { EditDescriptor, LocalSetlist, LocalTrack } from '@/lib/local/types'
 import {
@@ -956,7 +956,6 @@ export function computeReorderUpdates(
 export function SetlistGrid({
     setlistId,
     name,
-    eventDateLabel,
     onBack,
     onMakeNextWeeks,
     onUseTemplate,
@@ -1031,12 +1030,6 @@ export function SetlistGrid({
         typeof liveSetlist?.name === 'string' && liveSetlist.name
             ? (liveSetlist.name as string)
             : (name ?? t('setlistGrid.newSetlist'))
-    const displayEventDateLabel =
-        fmt.date(toDate(liveSetlist?.eventDate ?? null), {
-            weekday: 'long',
-            month: 'long',
-            day: 'numeric',
-        }) || eventDateLabel
 
     const selection = useGridSelection()
     const allRowIds = useMemo(() => rows.map((r) => r.id), [rows])
@@ -1628,13 +1621,15 @@ export function SetlistGrid({
     const statusParts = useMemo(() => {
         if (isLoading) return []
         const songs = rows.filter((r) => !r.type || r.type === 'song')
-        const parts: string[] = [t('setlist.songCount', { count: songs.length })]
+        const parts: string[] = []
         if (songs.length > 0) {
             const bound = songs.filter((r) => Boolean(r.songId)).length
             parts.push(t('setlistGrid.statusCharts', { bound, total: songs.length }))
+        } else {
+            parts.push(t('setlist.songCount', { count: 0 }))
         }
         const updated = typeof liveSetlist?.updatedAt === 'number' ? liveSetlist.updatedAt : 0
-        if (updated > 0) parts.push(t('setlistGrid.statusUpdated', { when: fmt.relative(updated) }))
+        if (updated > 0) parts.push(t('setlistGrid.statusUpdated', { when: formatUpdatedWhen(fmt, updated) }))
         return parts
     }, [isLoading, rows, liveSetlist?.updatedAt, t, fmt])
 
@@ -1647,7 +1642,6 @@ export function SetlistGrid({
         >
             <SetlistGridTopBar
                 name={displayName}
-                eventDateLabel={displayEventDateLabel}
                 statusParts={statusParts}
                 onBack={onBack ?? (() => router.back())}
                 onEditMeta={() => setMetaSheetOpen(true)}

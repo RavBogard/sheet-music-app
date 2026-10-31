@@ -64,6 +64,8 @@ export interface MobileRowCardProps {
     position?: number
     /** Section header rows: the band's hue and the page range under it. */
     band?: SectionBand
+    /** Library the bonded chart lives in (data: the collection key, e.g. 'nava'). */
+    collection?: string
 }
 
 /**
@@ -94,6 +96,7 @@ export function MobileRowCard({
     tonightTitle,
     position,
     band,
+    collection,
 }: MobileRowCardProps) {
     const t = useT()
     const [title, setTitle] = useState(String(track.title ?? ''))
@@ -120,9 +123,21 @@ export function MobileRowCard({
               ? t('setlistGrid.sectionPage', { page: band.folioFrom })
               : t('setlistGrid.sectionPages', { from: band.folioFrom, to: band.folioTo })
 
-    // The small chart chip under the title: setting · format · Vocal Lead.
+    // The small chart chip under the title: library · setting · format · Vocal Lead.
+    // There is no library-number field, so the chip names the library, as /library does.
     const chipParts: string[] = []
     if (!isSection) {
+        if (hasChart) {
+            chipParts.push(
+                collection === 'supplemental'
+                    // i18n-ignore: collection (book) name, data, not translated
+                    ? 'Shireinu'
+                    : collection === 'nava'
+                      // i18n-ignore: collection (book) name, data, not translated
+                      ? 'Nava Tehilah'
+                      : t('org.library.ownBadge'),
+            )
+        }
         if (typeof track.tune === 'string' && track.tune.trim()) chipParts.push(track.tune.trim())
         const formatKey = hasChart ? chartFormatKey(track) : null
         if (formatKey) chipParts.push(t(formatKey))
@@ -342,7 +357,8 @@ export function MobileRowCard({
                             {/* One line where the width allows: the title, then the
                                 chip inline and muted; wraps to 2 lines before
                                 truncating. */}
-                            <p className={cn(isSection ? 'truncate' : 'line-clamp-2 break-words', 'leading-snug')}>
+                            <div className={cn(!isSection && 'min-[821px]:flex min-[821px]:items-baseline min-[821px]:gap-2')}>
+                            <p className={cn(isSection ? 'truncate' : 'line-clamp-2 break-words min-w-0', 'leading-snug')}>
                                 <span
                                     data-testid={isSection ? `section-running-head-${track.id}` : undefined}
                                     className={cn(
@@ -366,12 +382,20 @@ export function MobileRowCard({
                                         </span>
                                     )}
                                 </span>
-                                {!isSection && chipParts.length > 0 && (
-                                    <span data-testid={`chart-chip-${track.id}`} className="ms-2 text-xs font-medium text-muted-foreground whitespace-nowrap">
-                                        {chipParts.join(' · ')}
-                                    </span>
-                                )}
                             </p>
+                            {!isSection && chipParts.length > 0 && (
+                                // Own line under the title on 820px and narrower;
+                                // inline beside it on desktop.
+                                <p data-testid={`chart-chip-${track.id}`} className="text-xs font-medium text-muted-foreground min-[821px]:whitespace-nowrap min-[821px]:shrink-0">
+                                    {chipParts.join(' · ')}
+                                </p>
+                            )}
+                            </div>
+                            {isSong && !hasChart && (
+                                <p data-testid={`row-no-chart-${track.id}`} className="text-xs font-semibold text-warning-line">
+                                    {t('setlistGrid.rowNoChart')}
+                                </p>
+                            )}
                             {tonightTitle && (
                                 <p data-testid="tonight-edit-note" className="truncate text-xs font-semibold text-warning-line">
                                     {t('setlistGrid.tonightNote', { tonight: tonightTitle, planned: track.title })}

@@ -324,4 +324,13 @@ describe("SetlistRow — open-gate (bonded chart opens regardless of track type)
         expect(row.className).toContain("cursor-pointer")
         expect(row.className).toContain("min-h-11")
     })
+
+    it("flags a chart that isn't saved on this device, and only then", () => {
+        const { rerender } = render(<SetlistRow track={baseSong} {...defaultProps} savedOffline={false} />)
+        expect(screen.getByTestId("row-not-saved-offline")).toBeDefined()
+        rerender(<SetlistRow track={baseSong} {...defaultProps} savedOffline />)
+        expect(screen.queryByTestId("row-not-saved-offline")).toBeNull()
+        rerender(<SetlistRow track={baseSong} {...defaultProps} />)
+        expect(screen.queryByTestId("row-not-saved-offline")).toBeNull()
+    })
 })

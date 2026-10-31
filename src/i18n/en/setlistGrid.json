@@ -223,6 +223,7 @@
     "chipFormatImage": "Image",
     "chipFormatText": "Text",
     "chipVocalLead": "Vocal Lead: {name}",
+    "rowNoChart": "No chart",
     "statusUpdated": "Updated {when}",
     "statusCharts": "{bound}/{total} charts"
 }

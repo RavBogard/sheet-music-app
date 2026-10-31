@@ -125,6 +125,8 @@
         "saved": "Saved {total}/{total}",
         "partial": "Save {ready}/{total}",
         "idle": "Save offline",
+        "save_one": "Save {count} chart offline",
+        "save_other": "Save {count} charts offline",
         "savingAria": "Saving charts for offline use, {progress} of {total}",
         "allSavedAria": "All charts saved for offline use",
         "partialAria": "{ready} of {total} charts saved offline — tap to save the rest",

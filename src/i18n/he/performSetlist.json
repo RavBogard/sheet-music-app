@@ -42,6 +42,7 @@
         "bpm": "{bpm} BPM",
         "openChart": "פתיחת התווים: {songTitle}",
         "tonightPlanned": "הערב · מתוכנן: {plannedTitle}",
+        "notSavedOffline": "לא נשמר לשימוש לא מקוון",
         "swapForTonight": "החלפת {songTitle} להערב",
         "swap": "החלפה"
     },

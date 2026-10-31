@@ -42,6 +42,7 @@
         "bpm": "{bpm} BPM",
         "openChart": "Open chart: {songTitle}",
         "tonightPlanned": "Tonight · planned: {plannedTitle}",
+        "notSavedOffline": "Not saved offline",
         "swapForTonight": "Swap {songTitle} for tonight",
         "swap": "Swap"
     },

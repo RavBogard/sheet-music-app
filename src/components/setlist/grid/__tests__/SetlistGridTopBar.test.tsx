@@ -6,16 +6,16 @@ import { describe, expect, it, vi } from 'vitest'
 import { SetlistGridTopBar } from '../SetlistGridTopBar'
 
 describe('SetlistGridTopBar', () => {
-    it('renders the name and event-date label', () => {
+    it('renders the name and status line without the date', () => {
         render(
             <SetlistGridTopBar
                 name="Shabbat Morning"
-                eventDateLabel="FRI MAY 16"
+                statusParts={["3/4 charts", "Updated Fri 4:12pm"]}
                 onBack={vi.fn()}
             />,
         )
         expect(screen.getByText('Shabbat Morning')).toBeInTheDocument()
-        expect(screen.getByText('FRI MAY 16')).toBeInTheDocument()
+        expect(screen.getByTestId('setlist-status-line')).toHaveTextContent('3/4 charts · Updated Fri 4:12pm')
     })
 
     it('fires onBack when the back button is clicked', async () => {

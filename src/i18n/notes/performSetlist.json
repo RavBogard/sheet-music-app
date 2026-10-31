@@ -33,6 +33,7 @@
     "row.bpm": {"where": "Perform setlist view: tempo on a song row", "who": "musicians", "maxLength": 10, "context": "{bpm} is beats per minute; 'BPM' is the musical unit"},
     "row.openChart": {"where": "Perform setlist view and drawer: screen-reader label of a non-song row that opens a chart", "who": "musicians", "maxLength": 60, "context": "{songTitle} is the row title (data). chart = sheet music"},
     "row.tonightPlanned": {"where": "Perform setlist view: small note under a row that was swapped for tonight's service, naming what was planned", "who": "musicians", "maxLength": 60, "context": "{plannedTitle} is the originally planned song title (data)"},
+    "row.notSavedOffline": {"where": "Perform setlist view: small warning line under a row whose chart is not saved on this device", "who": "musicians", "maxLength": 30},
     "row.swapForTonight": {"where": "Perform setlist view: screen-reader label of the Swap button at the end of a row", "who": "band leaders", "maxLength": 60, "context": "{songTitle} is the row title (data). Swap = replace this chart for tonight's service only"},
     "row.swap": {"where": "Perform setlist view: tiny button label at the end of a row (opens 'swap for tonight')", "who": "band leaders", "maxLength": 6},
     "noTracksYet": {"where": "Perform setlist view: empty state when the setlist has no rows", "who": "everyone", "maxLength": 30},

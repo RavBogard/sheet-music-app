@@ -124,6 +124,8 @@
         "saved": "נשמרו {total}/{total}",
         "partial": "שמירה {ready}/{total}",
         "idle": "שמירה לא מקוונת",
+        "save_one": "שמירת תו אחד לשימוש לא מקוון",
+        "save_other": "שמירת {count} תווים לשימוש לא מקוון",
         "savingAria": "שמירת התווים לשימוש לא מקוון, {progress} מתוך {total}",
         "allSavedAria": "כל התווים נשמרו לשימוש לא מקוון",
         "partialAria": "{ready} מתוך {total} קובצי תווים נשמרו לשימוש לא מקוון — הקשה לשמירת השאר",

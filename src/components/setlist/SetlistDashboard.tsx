@@ -10,7 +10,7 @@ import dynamic from "next/dynamic"
 import { getContextualGreeting } from "@/lib/greeting"
 import { DEFAULT_SHORT_NAME } from "@/lib/constants"
 import { TEMPLATE_LABELS } from "@/lib/liturgical-templates"
-import { UpcomingSetlistCard, SetlistCard, PlaceholderCard } from "./SetlistCards"
+import { UpcomingSetlistCard, SetlistCard, SetlistInfoLine, PlaceholderCard } from "./SetlistCards"
 import { RowDate } from "./RowDate"
 import { DeleteSetlistDialog, DuplicateSetlistDialog, TransferSetlistDialog } from "./SetlistDialogs"
 import { ImporterModal } from "./importer/ImporterModal"
@@ -228,7 +228,10 @@ export function SetlistDashboard({ serverShortName, ...props }: UseSetlistDashbo
                                                                     // column, so the name lines up with every other row.
                                                                     <div data-testid="setlist-group-head" className="flex items-center gap-3 sm:gap-4 px-3 sm:px-4 pt-3 pb-1 bg-card">
                                                                         <RowDate date={toDate(variants[0]?.eventDate)} muted />
-                                                                        <p className="flex-1 min-w-0 text-base font-semibold leading-snug text-foreground line-clamp-2">{baseName}</p>
+                                                                        <div className="flex-1 min-w-0">
+                                                                            <p className="text-base font-semibold leading-snug text-foreground line-clamp-2">{baseName}</p>
+                                                                            {variants[0] ? <SetlistInfoLine setlist={variants[0]} /> : null}
+                                                                        </div>
                                                                     </div>
                                                                 )}
                                                                 {variants.length > 0 && (

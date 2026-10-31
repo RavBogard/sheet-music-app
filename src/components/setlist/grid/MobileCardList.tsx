@@ -25,7 +25,8 @@ import { useUndoStore, type UndoableDoc } from '@/lib/local/undo-store'
 import { getDb } from '@/lib/local/schema'
 
 import { MobileRowCard } from './MobileRowCard'
-import { sectionBands } from './section-bands'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { isSectionRow, sectionBands } from './section-bands'
 import { computeReorderUpdates } from './SetlistGrid'
 
 export interface MobileCardListProps {
@@ -105,6 +106,43 @@ export function MobileCardList({
     const sortableIds = useMemo(() => tracks.map((track) => track.id), [tracks])
     // Web refresh: header rows draw as hue bands with their page range.
     const bands = useMemo(() => sectionBands(tracks), [tracks])
+
+    // Display numbers: songs and other rows count 1, 2, 3 in order; section
+    // bands get none. Never touches the stored order.
+    const positions = useMemo(() => {
+        const out: Record<string, number> = {}
+        let n = 0
+        for (const track of tracks) {
+            if (isSectionRow(track as { type?: unknown })) continue
+            n += 1
+            out[track.id] = n
+        }
+        return out
+    }, [tracks])
+
+    // The library each bonded chart lives in (the song's collection), for the chip.
+    const songIdsKey = useMemo(
+        () => [...new Set(tracks.map((tr) => tr.songId).filter((id): id is string => Boolean(id)))].sort().join('|'),
+        [tracks],
+    )
+    const collections = useLiveQuery(
+        async () => {
+            const ids = songIdsKey ? songIdsKey.split('|') : []
+            if (ids.length === 0) return {} as Record<string, string>
+            try {
+                const rows = await getDb().songs.bulkGet(ids)
+                const out: Record<string, string> = {}
+                rows.forEach((row, i) => {
+                    if (row && typeof row.collection === 'string') out[ids[i]] = row.collection
+                })
+                return out
+            } catch {
+                return {} as Record<string, string>
+            }
+        },
+        [songIdsKey],
+        {} as Record<string, string>,
+    )
 
     // dnd-kit's screen-reader instructions and live announcements (its
     // defaults are English); ids are the rows' machine ids, as before.
@@ -209,7 +247,8 @@ export function MobileCardList({
                                 track={track}
                                 isEditing={isEditing}
                                 tonightTitle={tonightByRowId?.[track.id]}
-                                position={idx + 1}
+                                position={positions[track.id]}
+                                collection={track.songId ? collections?.[track.songId] : undefined}
                                 band={bands[track.id]}
                                 onTap={() =>
                                     setEditingTrackId(

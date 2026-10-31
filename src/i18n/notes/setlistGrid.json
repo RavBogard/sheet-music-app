@@ -1114,6 +1114,11 @@
         "who": "leaders",
         "maxLength": 12
     },
+    "rowNoChart": {
+        "where": "Setlist editor row: small warning line under a song row that has no chart attached",
+        "who": "leaders",
+        "maxLength": 14
+    },
     "chipVocalLead": {
         "where": "Setlist editor row chip: who sings Vocal Lead on this row",
         "who": "leaders",
