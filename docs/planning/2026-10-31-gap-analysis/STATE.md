@@ -109,3 +109,22 @@ to the rest of the worship-tech family.
 - Merged: #29 (Perform), #30 (web trims and the telemetry rate-limit). #28 is waiting on CI after
   the emulator expectation fix (the moment label "Bar’chu").
 - SEC-01 builder launched (verified-token rate-limit keys, shared shul IP safe).
+- Michael Koppelman (6PXdZ6W1MqY6NCO1QqCexfRZj3Q2) is confirmed by Daniel as the studio-PC Michael.
+  He was written to `config/monitor.bridgeAlertRecipients` through Firestore REST with Daniel's CLI
+  login (an updateMask on that one field only). It takes effect when PR #32 merges.
+- FLAKE: src/lib/beit-mitzvah/service.emulator.test.ts 'concurrent joint ceremonies' failed on PR #32 with 'Transaction is invalid or closed' (unrelated change). Fix in a later slice.
+
+## Bet 1 shipped (#33 merged 2026-10-31) and re-seed
+- Re-seeded for real: shir_shabbat (16 rows, learned from 5 Shir Shabbats) and
+  friday_night:daniel_karen (20 rows, learned from the one regular Friday, May 22).
+- NOT re-seeded: shabbat_morning:daniel_karen. The dry run learned from 5 regular services but
+  returned an EMPTY order (a bug). A fix builder has been launched, and it adds a guard so an empty
+  or half-size learned order is never written. RISK until then: a Shabbat-morning draft_service
+  for a future date may re-cache the empty order. Daniel was told to hold Shabbat-morning drafts.
+- #34 merged (empty-setlist shells skipped and the shrink guard). The Aug 29 setlist
+  (JZd5mZhlxalYymMaXJMQ, Noa & Ezra B'nai Mitzvah, with aliyot rows by name) was re-typed to
+  bnei_mitzvah_saturday. GATE: proceeded because of Daniel's ruling that B'nei Mitzvah is its own
+  flow. Then shabbat_morning:daniel_karen was re-seeded from Apr 4 (38 rows, a single service, so
+  drafts will flag it).
+- Follow-up: when fewer than 3 regular services exist, the learner unions the orders (81 rows from
+  2 services). It should take the most recent service's order. Backlog: SEED-UNION.
