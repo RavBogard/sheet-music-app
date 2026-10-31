@@ -43,7 +43,7 @@ function getAllowedOrigin(request: NextRequest): string {
 // hasBrowserFetchMetadata lives in @/lib/drive-file-auth
 
 export const GET = createApiHandler(async (ctx) => {
-    // Chart-byte GETs use their own generous `chart` tier (600/min) instead of
+    // Chart-byte GETs use their own generous `chart` tier (1000/min) instead of
     // the shared `api` tier (60/min). The limiter keys by client IP and CRC's
     // ~6 band iPads sit behind ONE synagogue NAT → on the `api` tier they'd
     // share a single 60/min budget and 429 mid-service while pre-caching a

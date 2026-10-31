@@ -3,6 +3,8 @@ import { Redis } from "@upstash/redis"
 import { logger } from "@/lib/logger"
 import { upstashRestCredentials } from "@/lib/upstash-env"
 import { NextRequest, NextResponse } from "next/server"
+import { createHash } from "node:crypto"
+import { noteRateLimitIdentity, notedRateLimitIdentity } from "@/lib/rate-limit-identity"
 
 // In-memory fallback for development or if Redis is not configured
 class InMemoryRateLimiter {
@@ -78,7 +80,8 @@ const limiterConfigs = {
     sync: { max: 3, window: 60 },
     ai: { max: 20, window: 60 },
     bridgeSetup: { max: 5, window: 60 },
-    chart: { max: 600, window: 60 },
+    chart: { max: 1000, window: 60 },
+    perform: { max: 300, window: 60 },
     telemetry: { max: 300, window: 60 },
     printAnon: { max: 15, window: 60 },
 } as const
@@ -95,7 +98,8 @@ const limiters = {
     /** Bridge setup-code redemption: 5/min — credential-exchange endpoint */
     bridgeSetup: createLimiter(5, 60),
     /**
-     * Chart bytes: 600 req/min — the `/api/drive/file/[fileId]` route only.
+     * Chart bytes: 1000 req/min — `/api/drive/file/[fileId]` and
+     * `/api/library/file/[id]`.
      * The limiter keys by client IP, and CRC's band runs ~6 iPads behind ONE
      * synagogue NAT, so the whole fleet shares a single IP bucket. The shared
      * `api` tier (60/min) starved them mid-service: 6 iPads each prefetching /
@@ -103,10 +107,25 @@ const limiters = {
      * "Failed to load PDF". Chart GETs are public, idempotent, and CDN-cached
      * (`public, s-maxage=604800`), so most repeat fetches never reach origin —
      * this generous ceiling only has to absorb the cold/first-fetch burst when
-     * the fleet pre-caches a new setlist. 600/min covers that comfortably while
-     * staying a real ceiling (not unlimited) so a scraper can't hammer origin.
+     * the fleet pre-caches a new setlist. Raised from 600 (2026-10-31, gap-sec):
+     * the in-app chart fetch sends no Authorization header, so every iPad —
+     * signed in or not — lands on the one shul IP bucket. Sized for ~10 iPads ×
+     * a 40-row setlist × one retry each = 800 cold fetches in a minute, with
+     * headroom, while staying a real ceiling (not unlimited) so a scraper can't
+     * hammer origin.
      */
-    chart: createLimiter(600, 60),
+    chart: createLimiter(1000, 60),
+    /**
+     * Perform reads: 300 req/min — `/api/setlists/[setlistId]/tracks`, the
+     * public endpoint a SIGNED-OUT Perform page reads its rows from. Those
+     * callers are anonymous, so the bucket is the shul's one IP, shared by the
+     * whole iPad fleet and by congregants opening /perform links on the same
+     * WiFi. Kept off the shared `api` tier (60/min) so that other anonymous
+     * traffic cannot starve the band mid-service: ~10 iPads × (an open plus an
+     * `online`/`visibilitychange` retry or two) is ~30/min, and 300 leaves
+     * room for a room full of phones. One Firestore read per call.
+     */
+    perform: createLimiter(300, 60),
     /**
      * Telemetry / public-poll burst: 300 req/min — `/api/auth/qr` (POST create
      * + GET poll + PUT approve) and `/api/web-vitals` (POST beacon). Like the
@@ -154,35 +173,119 @@ function getFallbackLimiter(tier: LimiterName): InMemoryRateLimiter {
 
 export type LimiterName = keyof typeof limiters
 
-/**
- * Extract a per-user rate limit key from the request.
- * Decodes the JWT payload to get the user's `sub` claim (Firebase UID).
- * Falls back to IP for unauthenticated requests.
- *
- * NOTE: The old implementation used the first 16 chars of the Bearer token,
- * which is the JWT header — identical for all Firebase tokens from the same
- * project. That made the rate limit global instead of per-user.
- */
-function getKey(req: NextRequest, tier?: LimiterName): string {
-    const auth = req.headers.get('Authorization')
-    // The `sub` below comes from a token NOBODY has verified here, so a forged
-    // token would get a fresh bucket per request. The telemetry beacon is public
-    // and writes to Firestore, so it is always keyed on the client IP.
-    if (tier !== 'telemetry' && auth?.startsWith('Bearer ')) {
-        try {
-            // JWT = header.payload.signature — decode the payload segment
-            const token = auth.slice(7) // Strip "Bearer "
-            const payload = token.split('.')[1]
-            if (payload) {
-                const decoded = JSON.parse(Buffer.from(payload, 'base64url').toString())
-                const uid = decoded.sub || decoded.user_id
-                if (uid) return `u:${uid}`
-            }
-        } catch { /* malformed token — fall through to IP */ }
-    }
-    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+function clientIp(req: NextRequest): string {
+    return req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
         || req.headers.get('x-real-ip')
         || 'unknown'
+}
+
+// Verified Firebase ID tokens, by SHA-256 of the token → uid (or null for a
+// token that is DEFINITELY invalid: bad signature, malformed, expired). A
+// transient failure (cert fetch, Admin SDK down) is never cached. Only
+// consulted when the route has NOT already verified the caller (see
+// rate-limit-identity.ts). Entries live 60 s, never past the token's own
+// expiry; the map is cleared at its cap so random tokens cannot grow it.
+const ID_TOKEN_CACHE_MS = 60_000
+const ID_TOKEN_CACHE_MAX = 5_000
+const idTokenCache = new Map<string, { uid: string | null; until: number }>()
+
+/**
+ * Verification pre-limit. Verifying a token costs an RSA check (Firebase) or
+ * a Firestore read (MCP bearer), so an IP may only trigger VERIFY_PRELIMIT_X
+ * times the tier's limit of them per window. Past that, its tokens are not
+ * verified at all and its requests key on the IP — so a flood of random
+ * bearers or garbage JWTs from one IP stops costing anything. Cache hits and
+ * routes that already verified the caller never touch this bucket. The shul's
+ * shared IP sends tokens almost only to routes that verify them first.
+ */
+const VERIFY_PRELIMIT_X = 3
+const verifyLimiters: Partial<Record<LimiterName, LimiterLike>> = {}
+const verifyFallbacks: Partial<Record<LimiterName, InMemoryRateLimiter>> = {}
+
+async function mayVerify(tier: LimiterName, ip: string): Promise<boolean> {
+    const cfg = limiterConfigs[tier]
+    const key = `verify:${tier}:ip:${ip}`
+    try {
+        verifyLimiters[tier] ??= createLimiter(cfg.max * VERIFY_PRELIMIT_X, cfg.window)
+        return (await verifyLimiters[tier]!.limit(key)).success
+    } catch {
+        try {
+            verifyFallbacks[tier] ??= new InMemoryRateLimiter(cfg.max * VERIFY_PRELIMIT_X, cfg.window * 1000)
+            return (await verifyFallbacks[tier]!.limit(key)).success
+        } catch {
+            return false
+        }
+    }
+}
+
+/** uid, null (definitely invalid, or not checked), and whether to note it. */
+async function idTokenUid(token: string, tier: LimiterName, ip: string): Promise<{ uid: string | null; definite: boolean }> {
+    const hash = createHash('sha256').update(token).digest('hex')
+    const now = Date.now()
+    const hit = idTokenCache.get(hash)
+    if (hit && hit.until > now) return { uid: hit.uid, definite: true }
+    if (!(await mayVerify(tier, ip))) return { uid: null, definite: false }
+    let verdict: import('@/lib/firebase-admin').IdTokenVerdict
+    try {
+        const { verifyIdTokenVerdict } = await import('@/lib/firebase-admin')
+        verdict = await verifyIdTokenVerdict(token)
+    } catch {
+        verdict = { status: 'error' }
+    }
+    if (verdict.status === 'error') return { uid: null, definite: false }
+    const uid = verdict.status === 'valid' ? verdict.uid : null
+    const until = verdict.status === 'valid'
+        ? Math.min(now + ID_TOKEN_CACHE_MS, verdict.exp * 1000)
+        : now + ID_TOKEN_CACHE_MS
+    if (idTokenCache.size >= ID_TOKEN_CACHE_MAX) idTokenCache.clear()
+    idTokenCache.set(hash, { uid, until })
+    return { uid, definite: true }
+}
+
+/**
+ * The bucket key for a request: `u:{uid}` only for a VERIFIED caller,
+ * otherwise `ip:{client ip}`.
+ *
+ * History: this used to decode the `sub` of the Bearer JWT without verifying
+ * it, so a forged token with a random `sub` got a fresh bucket on every
+ * request. Now:
+ *   1. `telemetry` is always IP-keyed (public beacon / QR poll).
+ *   2. A route that already verified its caller (requireAuth, verifyBearer)
+ *      left the answer on the request; we reuse it — no second verification.
+ *   3. Otherwise a Firebase ID token is verified with the Admin SDK (cached by
+ *      token hash), and an MCP bearer (`crl_…`) through verifyBearer, which is
+ *      memoised per request so the route's own check reuses it. Either only
+ *      while the IP is under the verification pre-limit (`mayVerify`).
+ *   4. Anything unverified, invalid or anonymous falls back to the client IP.
+ *      The band's iPads share one shul IP, so the Perform-path tiers
+ *      (`chart`, `perform`) are sized for the whole fleet on one IP bucket.
+ */
+async function getKey(req: NextRequest, tier?: LimiterName): Promise<string> {
+    if (tier === 'telemetry') return `ip:${clientIp(req)}`
+
+    const noted = notedRateLimitIdentity(req)
+    if (noted) return `u:${noted}`
+
+    const auth = req.headers.get('Authorization')
+    const token = auth?.startsWith('Bearer ') ? auth.slice(7).trim() : ''
+    const ip = clientIp(req)
+    const t: LimiterName = tier ?? 'api'
+    if (token.startsWith('crl_')) {
+        // An MCP bearer. requireAuth may already have noted it as a failed
+        // Firebase token; verifyBearer is the check that applies. It is
+        // memoised per request, so the route's own call reuses this answer.
+        if (await mayVerify(t, ip)) {
+            try {
+                const { verifyBearer } = await import('@/lib/mcp/auth')
+                const verified = await verifyBearer(req)
+                if (!(verified instanceof Response)) return `u:${verified.uid}`
+            } catch { /* transient: fall through to IP */ }
+        }
+    } else if (noted === undefined && token.split('.').length === 3) {
+        const { uid, definite } = await idTokenUid(token, t, ip)
+        if (definite) noteRateLimitIdentity(req, uid)
+        if (uid) return `u:${uid}`
+    }
     return `ip:${ip}`
 }
 
@@ -254,8 +357,8 @@ export async function checkRateLimit(
     req: NextRequest,
     tier: LimiterName = 'api'
 ): Promise<NextResponse | null> {
+    const key = `${tier}:${await getKey(req, tier)}`
     try {
-        const key = `${tier}:${getKey(req, tier)}`
         const result = await limiters[tier].limit(key)
 
         if (!result.success) {
@@ -276,7 +379,6 @@ export async function checkRateLimit(
         // Redis unavailable — fail closed with in-memory fallback
         logger.warn("[RateLimit] Redis failed, using in-memory fallback:", err)
         try {
-            const key = `${tier}:${getKey(req, tier)}`
             const fallback = getFallbackLimiter(tier)
             const result = await fallback.limit(key)
             if (!result.success) {
