@@ -312,22 +312,6 @@ describe('useSetlistDashboard', () => {
     expect(toast.success).toHaveBeenCalledWith('Transfer Successful!')
   })
 
-  it('handleCreateFromCalendar without template creates blank setlist', async () => {
-    const { result } = renderHook(() => useSetlistDashboard({}))
-    const date = new Date('2026-03-15') // Sunday — no template match
-
-    await act(async () => {
-      await result.current.handleCreateFromCalendar(date)
-    })
-
-    expect(mockCreateSetlist).toHaveBeenCalledWith(
-      expect.stringContaining('New Setlist'),
-      [],
-      expect.objectContaining({ eventDate: date.toISOString() })
-    )
-    expect(mockPush).toHaveBeenCalledWith('/setlists/new-id')
-  })
-
   describe('v11.5-05-03 (Q4): junk/test visibility filter', () => {
     it('drops isTest:true and test-uid-owned setlists for an AUTHED viewer', () => {
       const setlists = [

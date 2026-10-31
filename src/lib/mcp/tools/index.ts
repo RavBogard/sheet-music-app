@@ -3100,7 +3100,7 @@ export function registerMonitorTools(server: McpServer): void {
         "list_monitor_buses",
         {
             description:
-                "List the personal-IEM monitor buses, their assignments, the hardware bridge status, and (for admins/sound engineers) the X32 matrix outputs. Always call this first to discover bus and channel indexes before adjusting faders. Response includes `bridge.clients` — the number of WebSocket-attached clients currently connected to the bridge daemon (iPads on /monitor). MCP API callers (this session) go through the HTTP path and are NOT counted in this number; 0 here doesn't mean the bridge is unused, just that no iPads are open. `bridge.x32Connected` is an optimistic hint from the daemon; treat it as best-effort, not a guarantee the X32 hardware applied a write. Each bus carries `active` — true when the bus is configured/in use (has a name OR fader>0 OR any send on); false marks a never-set-up bus, so you can tell a deliberately pulled-down-but-named bus apart from an unused one. `bridge.stateStale` + `bridge.stateAgeSeconds` report whether the live mixer snapshot is fresh: the snapshot (monitor-live/state, where the fader/mute values come from) can FREEZE while `bridge.status`/`bridge.x32Connected` still read green — if `bridge.stateStale` is true the mixer values are NOT live and writes should not be assumed to apply.",
+                "List the personal wedge monitor buses, their assignments, the hardware bridge status, and (for admins/sound engineers) the X32 matrix outputs. Always call this first to discover bus and channel indexes before adjusting faders. Response includes `bridge.clients` — the number of WebSocket-attached clients currently connected to the bridge daemon (iPads on /monitor). MCP API callers (this session) go through the HTTP path and are NOT counted in this number; 0 here doesn't mean the bridge is unused, just that no iPads are open. `bridge.x32Connected` is an optimistic hint from the daemon; treat it as best-effort, not a guarantee the X32 hardware applied a write. Each bus carries `active` — true when the bus is configured/in use (has a name OR fader>0 OR any send on); false marks a never-set-up bus, so you can tell a deliberately pulled-down-but-named bus apart from an unused one. `bridge.stateStale` + `bridge.stateAgeSeconds` report whether the live mixer snapshot is fresh: the snapshot (monitor-live/state, where the fader/mute values come from) can FREEZE while `bridge.status`/`bridge.x32Connected` still read green — if `bridge.stateStale` is true the mixer values are NOT live and writes should not be assumed to apply.",
             inputSchema: {},
         },
         async (_args, extra) =>
@@ -3111,7 +3111,7 @@ export function registerMonitorTools(server: McpServer): void {
         "get_mix",
         {
             description:
-                "Get the current fader, mute, and channel names for one monitor bus. Omit busIndex to default to the caller's first assigned bus — useful for 'show me my mix'. Channel names come from the live X32 state; use them to map a request like 'turn up my guitar' to a channelIndex. Each send carries BOTH `on` (true = unmuted) and `muted` (= !on); pass `muted` straight to set_send_mute without inverting. The response carries `bridge.stateStale` + `bridge.stateAgeSeconds`: if `stateStale` is true the fader/mute values here are NOT live — the bridge stopped refreshing monitor-live/state even though `bridge.status`/`bridge.x32Connected` may read green — so do not trust the values or assume a subsequent write applies.",
+                "Get the current fader, mute, and channel names for one monitor bus. Omit busIndex to default to the caller's first assigned bus — useful for 'show me my mix'. Channel names come from the live X32 state; use them to map a request like 'turn up my guitar' to a channelIndex. Each send carries BOTH `on` (true = unmuted) and `muted` (= !on); pass `muted` straight to set_send_mute without inverting. Each send also carries `audible` (on and level above zero) and `db` (the level in dB, null at silence); pass `onlyActive:true` to list only the audible sends (a 32-channel desk is mostly silent). A privileged caller who owns no bus must pass busIndex. The response carries `bridge.stateStale` + `bridge.stateAgeSeconds`: if `stateStale` is true the fader/mute values here are NOT live — the bridge stopped refreshing monitor-live/state even though `bridge.status`/`bridge.x32Connected` may read green — so do not trust the values or assume a subsequent write applies.",
             inputSchema: {
                 busIndex: z
                     .number()
@@ -3122,6 +3122,10 @@ export function registerMonitorTools(server: McpServer): void {
                     .describe(
                         "Bus index 1-5 from list_monitor_buses (1-based); omit to use the caller's first assigned bus",
                     ),
+                onlyActive: z
+                    .boolean()
+                    .optional()
+                    .describe("Only return sends that are on with level above zero"),
             },
         },
         async (args, extra) => jsonResult(await getMix(uidFrom(extra), args)),
@@ -3206,7 +3210,7 @@ export function registerMonitorTools(server: McpServer): void {
         "set_bus_fader",
         {
             description:
-                "Set the bus master level — the overall in-ear volume for that monitor bus. Use when the user says 'turn up my whole mix' or 'I need more volume in my ears'. Musicians may only adjust their own bus; admins/sound engineers may adjust any bus. Writes are fire-and-forget: the bridge enqueues the command but cannot guarantee the X32 hardware applied it. Always re-read with get_mix immediately after writing to confirm propagation. The bridge's x32Connected flag has been observed to be stale-true when the hardware is actually off — treat it as an optimistic hint, not a guarantee. On success the response carries `confidence:\"queued\"` — the command was accepted into the bridge queue for send, NOT confirmed applied on the X32 (the app side cannot read an OSC ack).",
+                "Set the bus master level — the overall wedge volume for that monitor bus. Use when the user says 'turn up my whole mix' or 'I need more volume in my wedge'. Musicians may only adjust their own bus; admins/sound engineers may adjust any bus. Writes are fire-and-forget: the bridge enqueues the command but cannot guarantee the X32 hardware applied it. Always re-read with get_mix immediately after writing to confirm propagation. The bridge's x32Connected flag has been observed to be stale-true when the hardware is actually off — treat it as an optimistic hint, not a guarantee. On success the response carries `confidence:\"queued\"` — the command was accepted into the bridge queue for send, NOT confirmed applied on the X32 (the app side cannot read an OSC ack).",
             inputSchema: {
                 busIndex: z
                     .number()
@@ -3287,7 +3291,7 @@ export function registerMonitorTools(server: McpServer): void {
         "assign_monitor_bus",
         {
             description:
-                "Assign a band member to a personal-IEM monitor bus so they can control their own in-ear mix (on /monitor and via the monitor MCP tools). Admin / band_leader only. busIndex is 1-5; uid is the member's user id (discover via list_musicians). The member's display name is denormalized onto the bus automatically. Co-ownership is supported — several members can share one bus (e.g. a shared wedge). Idempotent: re-assigning someone already on the bus is a no-op (`changed:false`), except to refresh a changed display name. Unlike assign_musician this fires NO email/SMS/push and is trivially reversible (unassign_monitor_bus), so `dryRun` defaults to FALSE — the call commits by default; pass `dryRun:true` to preview the plan (resolved name, resulting bus roster, alreadyAssigned) without writing. Returns `{ok, busIndex, uid, userName, assignedTo, alreadyAssigned, changed, configuredBus, dryRun, committed, warning?}`. `warning` appears when the bus is valid (1-5) but not yet in config.monitorBuses.",
+                "Assign a band member to a personal wedge monitor bus so they can control their own wedge mix (on /monitor and via the monitor MCP tools). Admin / band_leader only. busIndex is 1-5; uid is the member's user id (discover via list_musicians). The member's display name is denormalized onto the bus automatically. Co-ownership is supported — several members can share one bus (e.g. a shared wedge). Idempotent: re-assigning someone already on the bus is a no-op (`changed:false`), except to refresh a changed display name. Unlike assign_musician this fires NO email/SMS/push and is trivially reversible (unassign_monitor_bus), so `dryRun` defaults to FALSE — the call commits by default; pass `dryRun:true` to preview the plan (resolved name, resulting bus roster, alreadyAssigned) without writing. Returns `{ok, busIndex, uid, userName, assignedTo, alreadyAssigned, changed, configuredBus, dryRun, committed, warning?}`. `warning` appears when the bus is valid (1-5) but not yet in config.monitorBuses.",
             inputSchema: {
                 busIndex: z
                     .number()
@@ -3317,7 +3321,7 @@ export function registerMonitorTools(server: McpServer): void {
         "unassign_monitor_bus",
         {
             description:
-                "Remove a band member from a personal-IEM monitor bus (revokes their control of that bus's mix). Admin / band_leader only. busIndex is 1-5; uid is the member to remove. The member is NOT existence-checked, so you can clean up an assignment for a deleted user. Idempotent: removing someone who isn't on the bus is a safe no-op (`changed:false`). `dryRun` defaults to FALSE (commit); pass `dryRun:true` to preview. When the last user is removed the bus slot is cleared. Returns `{ok, busIndex, uid, assignedTo, previouslyAssigned, changed, dryRun, committed}`.",
+                "Remove a band member from a personal wedge monitor bus (revokes their control of that bus's mix). Admin / band_leader only. busIndex is 1-5; uid is the member to remove. The member is NOT existence-checked, so you can clean up an assignment for a deleted user. Idempotent: removing someone who isn't on the bus is a safe no-op (`changed:false`). `dryRun` defaults to FALSE (commit); pass `dryRun:true` to preview. When the last user is removed the bus slot is cleared. Returns `{ok, busIndex, uid, assignedTo, previouslyAssigned, changed, dryRun, committed}`.",
             inputSchema: {
                 busIndex: z
                     .number()

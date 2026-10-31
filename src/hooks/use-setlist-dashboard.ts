@@ -293,59 +293,6 @@ export function useSetlistDashboard({
         }
     }
 
-    const handleCreateFromCalendar = async (date: Date, type?: 'shabbat_morning') => {
-        if (!setlistService || !user) return
-
-        // Determine template type: explicit type, Saturday → shabbat_morning, Friday → friday_night
-        const templateType = type
-            || (date.getDay() === 6 ? 'shabbat_morning' : undefined)
-            || (date.getDay() === 5 ? 'friday_night' : undefined)
-
-        // If we have a matching template, build a full setlist from it (like "From Template")
-        if (templateType) {
-            const template = getTemplate(templateType, customTemplates)
-            if (template) {
-                let toastId: string | number | undefined
-                try {
-                    toastId = toast.loading(t("hooks.buildingFromTemplate"))
-                    const context = await getFullServiceContext(date, org)
-                    context.type = templateType as ServiceType
-                    const { allFiles } = useLibraryStore.getState()
-                    const tracks = buildSetlistFromTemplate(template, allFiles, context)
-                    const name = generateSetlistName(context)
-
-                    const id = await setlistService.createSetlist(name, tracks, {
-                        eventDate: date.toISOString(),
-                        templateType: templateType as Setlist['templateType'],
-                        isTemplate: false,
-                    })
-
-                    const matched = tracks.filter(tr => tr.fileId).length
-                    const total = tracks.filter(tr => tr.type === 'song').length
-                    toast.success(t("hooks.createdFromTemplate", { setlistName: name, matched, total }), { id: toastId })
-
-                    router.push(`/setlists/${id}`)
-                    return
-                } catch (err: unknown) {
-                    toast.error(t("hooks.createSetlistFailedWithReason", { error: err instanceof Error ? err.message : t("hooks.unknownError") }), { id: toastId })
-                    return
-                }
-            }
-        }
-
-        // Fallback: no matching template, create blank setlist
-        const formattedDate = fmt.date(date, { month: 'long', day: 'numeric' })
-        const name = t("hooks.newSetlistName", { date: formattedDate })
-        try {
-            const id = await setlistService.createSetlist(name, [], {
-                eventDate: date.toISOString(),
-            })
-            router.push(`/setlists/${id}`)
-        } catch {
-            toast.error(t("hooks.createSetlistFailed"))
-        }
-    }
-
     const handleCreateFromTemplate = async (templateType: string) => {
         if (!setlistService || !user) return
 
@@ -493,7 +440,7 @@ export function useSetlistDashboard({
         transferEmail, setTransferEmail,
         handleSelect, handleDeleteClick, confirmDelete,
         handleDuplicateClick, confirmDuplicate, handleCloneNextWeekClick,
-        handleSaveAsTemplateClick, handleSaveAsDefaultClick, handleTransfer, transferring, handleCreateFromCalendar,
+        handleSaveAsTemplateClick, handleSaveAsDefaultClick, handleTransfer, transferring,
         handleCreateFromTemplate, handleDownload,
         availableRabbis, displayedSetlists,
         upcoming, pastOrNoDate, placeholders, hasUpcoming, isDownloading,

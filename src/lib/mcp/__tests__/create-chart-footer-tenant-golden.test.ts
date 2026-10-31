@@ -52,10 +52,9 @@ describe("golden: house chart HTML via create_chart", () => {
         expect(html).toBe(houseChartHtml(CHART))
         expect(html).toContain(GOLDEN_FOOTER)
     })
-    it("golden brotherslazaroff (frozen CRC footer)", async () => {
+    it("brotherslazaroff chart carries BL's own footer", async () => {
         const html = await renderedHtml("brotherslazaroff")
-        expect(html).toBe(houseChartHtml(CHART))
-        expect(html).toContain(GOLDEN_FOOTER)
+        expect(html).toContain('<div class="ft"><span>Brothers Lazaroff</span><span>brotherslazaroff.live</span></div>')
     })
     it("golden explicit chart footer wins", async () => {
         const html = await renderedHtml("brotherslazaroff", { ...CHART, footerLeft: "Left", footerRight: "Right" })

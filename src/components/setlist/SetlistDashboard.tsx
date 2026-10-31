@@ -56,7 +56,7 @@ export function SetlistDashboard({ serverShortName, ...props }: UseSetlistDashbo
         transferEmail, setTransferEmail,
         handleSelect, handleDeleteClick, confirmDelete,
         handleDuplicateClick, confirmDuplicate, handleCloneNextWeekClick,
-        handleSaveAsTemplateClick, handleSaveAsDefaultClick, handleTransfer, transferring, handleCreateFromCalendar,
+        handleSaveAsTemplateClick, handleSaveAsDefaultClick, handleTransfer, transferring,
         handleCreateFromTemplate, handleDownload,
         availableRabbis, displayedSetlists,
         upcoming, pastOrNoDate, placeholders, hasUpcoming, isDownloading,

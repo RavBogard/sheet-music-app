@@ -5,6 +5,8 @@ import { useAuth } from "@/lib/auth-context"
 import { useT } from "@/i18n/client"
 import { useFormat } from "@/i18n/format-client"
 import { Loader2 } from "lucide-react"
+import { useOrg } from "@/lib/org/org-context"
+import { hidesLiturgicalFields } from "@/lib/org/vocab"
 
 interface MatrixColumn {
     id: string
@@ -33,6 +35,8 @@ export function SetlistMatrixView() {
     const { user } = useAuth()
     const t = useT()
     const fmt = useFormat()
+    // TF-07: a band tenant has no parasha, holidays or Friday/Saturday services.
+    const hideLiturgical = hidesLiturgicalFields(useOrg())
     const [matrixData, setMatrixData] = useState<MatrixData | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -67,14 +71,14 @@ export function SetlistMatrixView() {
         <div className="flex flex-col space-y-4">
             <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold tracking-tight">{t("org.matrixTitle")}</h2>
-                <select 
+                {!hideLiturgical && <select 
                     value={type} 
                     onChange={(e) => setType(e.target.value as any)}
                     className="bg-black/20 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand"
                 >
                     <option value="friday_night">{t("setlist.serviceTypeFridayNight")}</option>
                     <option value="shabbat_morning">{t("setlist.serviceTypeShabbatMorning")}</option>
-                </select>
+                </select>}
             </div>
 
             {error && (
@@ -105,11 +109,11 @@ export function SetlistMatrixView() {
                                                     <span className={`text-sm font-bold ${isPast ? 'text-muted-foreground' : 'text-foreground'}`}>
                                                         {fmt.date(d, { month: 'short', day: 'numeric' })}
                                                     </span>
-                                                    {col.context?.holidays?.length ? (
+                                                    {!hideLiturgical && col.context?.holidays?.length ? (
                                                         <span className="text-xs text-brand truncate" title={col.context.holidays.join(', ')}>
                                                             {col.context.holidays[0]}
                                                         </span>
-                                                    ) : col.context?.parasha ? (
+                                                    ) : !hideLiturgical && col.context?.parasha ? (
                                                         <span className="text-xs text-blue-400/80 truncate" title={col.context.parasha}>
                                                             {col.context.parasha}
                                                         </span>

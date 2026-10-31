@@ -163,4 +163,10 @@ describe("a third tenant's service types and books", () => {
         expect(bookSlugsFor("testshul")).toBeNull()
         expect(listBooksTool("testshul").books.map((b) => b.slug)).toEqual(listBooks().map((b) => b.slug))
     })
+
+    it("CRC lists every registered book even when its stored list is stale (TF-15)", () => {
+        primeTestOrg({ id: "crc", liturgy: { ...codeOrgConfig("crc")!.liturgy, books: ["crc-friday"] } })
+        expect(bookSlugsFor("crc")).toBeNull()
+        expect(listBooksTool("crc").books.map((b) => b.slug)).toEqual(listBooks().map((b) => b.slug))
+    })
 })

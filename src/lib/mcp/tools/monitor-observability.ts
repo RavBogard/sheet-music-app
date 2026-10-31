@@ -4,6 +4,7 @@ import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 import { assertEditor } from "@/lib/mcp/server-tracks-write"
 import {
     assertMonitorAccess,
+    isPrivilegedMonitor,
     BRIDGE_ORG,
     coerceCommandAck,
     commandAckRef,
@@ -26,7 +27,7 @@ import type { BusAssignment } from "@/types/monitor"
  *  - get_command_status (MCP-D3): reads the bridge's per-command ack doc.
  *  - assign_monitor_bus / unassign_monitor_bus (MCP-D4): write the
  *    config/monitor.busAssignments array-form the in-app BusAssignmentPanel
- *    writes — so Daniel + David can grant IEM buses via Claude (the ~5/29
+ *    writes — so Daniel + David can grant wedge buses via Claude (the ~5/29
  *    rollout) without opening the /monitor admin UI.
  */
 
@@ -52,7 +53,7 @@ function invalidBusIndexError(busIndex: unknown): RichErrorEnvelope {
             busIndex: typeof busIndex === "number" ? busIndex : null,
             validBusIndices: VALID_MONITOR_BUS_INDICES,
         },
-        "Personal-IEM monitor buses are 1-5; pass one of those.",
+        "Personal wedge monitor buses are 1-5; pass one of those.",
     )
 }
 
@@ -101,9 +102,12 @@ export async function getCommandStatus(
         if (!access.ok) return access
 
         const snap = await commandAckRef(db, args.commandId).get()
-        const ack = coerceCommandAck(
-            snap.exists ? (snap.data() as Record<string, unknown>) : undefined,
-        )
+        const raw = snap.exists ? (snap.data() as Record<string, unknown>) : undefined
+        // MIXER-17: like the iPad rules, a musician reads only the acks of
+        // their own commands; admins and sound engineers read any.
+        const visible =
+            raw && (isPrivilegedMonitor(access.user) || raw.uid === uid) ? raw : undefined
+        const ack = coerceCommandAck(visible)
         return { ok: true, commandId: args.commandId, ...ack }
     } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err)
@@ -145,7 +149,7 @@ export interface AssignMonitorBusResult {
 }
 
 /**
- * Assign a user to a personal-IEM monitor bus — writes
+ * Assign a user to a personal wedge monitor bus — writes
  * `config/monitor.busAssignments` in the array form the in-app
  * BusAssignmentPanel uses (co-ownership supported: a bus may hold several
  * users). Trusted-leader gated (admin + band_leader, via `assertEditor`).
@@ -280,7 +284,7 @@ export interface UnassignMonitorBusResult {
 }
 
 /**
- * Remove a user from a personal-IEM monitor bus. Trusted-leader gated. The
+ * Remove a user from a personal wedge monitor bus. Trusted-leader gated. The
  * assignee is NOT existence-checked (so you can clean up an orphaned
  * assignment for a deleted user). Idempotent: removing a uid that isn't
  * assigned is a safe no-op (`changed:false`). `dryRun:true` previews without

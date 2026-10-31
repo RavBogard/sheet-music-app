@@ -21,24 +21,35 @@ vi.mock("@/lib/mcp/server-tracks-write", () => ({
 
 vi.mock("@/lib/mcp/server-monitor", async (importOriginal) => {
     const actual = await importOriginal<typeof import("@/lib/mcp/server-monitor")>()
-    return { ...actual, loadMonitorConfig: vi.fn(), loadMixerStateMeta: vi.fn() }
+    return { ...actual, loadMonitorConfig: vi.fn(), loadMixerStateMeta: vi.fn(), loadMonitorUser: vi.fn() }
 })
 
 import { getBridgeHealth } from "../bridge-health"
 import { assertEditor } from "@/lib/mcp/server-tracks-write"
-import { loadMonitorConfig, loadMixerStateMeta } from "@/lib/mcp/server-monitor"
+import { loadMonitorConfig, loadMixerStateMeta, loadMonitorUser } from "@/lib/mcp/server-monitor"
 
 const mockGate = assertEditor as unknown as ReturnType<typeof vi.fn>
 const mockConfig = loadMonitorConfig as unknown as ReturnType<typeof vi.fn>
+const mockUser = loadMonitorUser as unknown as ReturnType<typeof vi.fn>
 const mockState = loadMixerStateMeta as unknown as ReturnType<typeof vi.fn>
 
 beforeEach(() => {
     vi.clearAllMocks()
     mockGate.mockResolvedValue({ ok: true })
+    mockUser.mockResolvedValue({ role: undefined, soundEngineer: false })
     mockState.mockResolvedValue({ snapshot: null, updatedAt: Date.now() - 5_000 })
 })
 
 describe("getBridgeHealth (O3)", () => {
+    it("lets a sound engineer read bridge health without the admin or band_leader role (MIXER-11)", async () => {
+        mockUser.mockResolvedValue({ role: "musician", soundEngineer: true })
+        mockGate.mockResolvedValue({ ok: false, machine_code: "forbidden_role" })
+        mockConfig.mockResolvedValue({ bridge: { status: "online", x32Connected: true, lastSeen: Date.now() - 10_000 } })
+        const res = await getBridgeHealth("drew")
+        expect("alive" in res && res.alive).toBe(true)
+        expect(mockGate).not.toHaveBeenCalled()
+    })
+
     it("reports alive when the heartbeat is recent, surfacing v10.0.4 diagnostics", async () => {
         mockConfig.mockResolvedValue({
             bridge: {

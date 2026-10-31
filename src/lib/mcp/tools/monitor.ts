@@ -201,6 +201,20 @@ export async function listMonitorBuses(uid: string): Promise<
 export interface GetMixArgs {
     /** Omit to default to the caller's first assigned bus. */
     busIndex?: number
+    /** MIXER-08: return only the audible sends (on and level > 0). */
+    onlyActive?: boolean
+}
+
+/**
+ * X32 fader float (0..1) to dB, using the desk's own four-segment taper.
+ * Returns null at zero (silence, -inf).
+ */
+export function x32LevelToDb(level: number): number | null {
+    if (typeof level !== "number" || !Number.isFinite(level) || level <= 0) return null
+    const f = Math.min(level, 1)
+    const d =
+        f >= 0.5 ? f * 40 - 30 : f >= 0.25 ? f * 80 - 50 : f >= 0.0625 ? f * 160 - 70 : f * 480 - 90
+    return Math.round(d * 10) / 10
 }
 
 export async function getMix(
@@ -223,6 +237,10 @@ export async function getMix(
               /** F-6: additive convenience inverse of `on` (true = muted) so a
                * caller never has to invert when round-tripping into set_send_mute. */
               muted: boolean
+              /** MIXER-08: on and level > 0, i.e. you can hear it in this wedge. */
+              audible: boolean
+              /** MIXER-08: level in dB on the X32 taper; null at silence. */
+              db: number | null
           }>
           /**
            * Bridge health incl. `stateStale` — get_mix returns LIVE fader/mute
@@ -254,6 +272,20 @@ export async function getMix(
             // machine_code is unchanged; only the HTTP-like code is corrected via
             // the factory's documented errorCode override (errors.ts is hard-rule
             // read-only, and the map defaults unknown codes to 500).
+            if (isPrivilegedMonitor(access.user)) {
+                // MIXER-06: an admin or sound engineer owns no bus of their own
+                // (the account may differ from the assigned uid); name the buses.
+                return richError(
+                    "monitor_no_bus_assigned",
+                    "No bus specified and this account has no bus of its own.",
+                    {
+                        yourAssignedBuses: access.ownedBuses,
+                        validBusIndices: validBusIndicesFor(access.config, access.ownedBuses, []),
+                        errorCode: 400,
+                    },
+                    "Pass busIndex (1-5). Call list_monitor_buses to see who is on which bus.",
+                )
+            }
             return richError(
                 "monitor_no_bus_assigned",
                 "No bus specified and you don't own any bus.",
@@ -326,15 +358,19 @@ export async function getMix(
             busIndex: bus.index,
             name: bus.name,
             fader: bus.fader,
-            sends: safeArray<BusSend>(bus.sends).map((s) => ({
-                channelIndex: s.channelIndex,
-                channelName:
-                    channelNameByIndex.get(s.channelIndex) ??
-                    `Ch ${s.channelIndex}`,
-                level: s.level,
-                on: s.on,
-                muted: !s.on,
-            })),
+            sends: safeArray<BusSend>(bus.sends)
+                .map((s) => ({
+                    channelIndex: s.channelIndex,
+                    channelName:
+                        channelNameByIndex.get(s.channelIndex) ??
+                        `Ch ${s.channelIndex}`,
+                    level: s.level,
+                    on: s.on,
+                    muted: !s.on,
+                    audible: s.on === true && s.level > 0,
+                    db: x32LevelToDb(s.level),
+                }))
+                .filter((s) => !args.onlyActive || s.audible),
             bridge,
         }
     } catch (err: unknown) {

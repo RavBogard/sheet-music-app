@@ -1,5 +1,6 @@
 import "server-only"
 
+import { hidesLiturgicalFields } from "@/lib/org/vocab"
 import crypto from "crypto"
 import { FieldValue, Timestamp } from "firebase-admin/firestore"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
@@ -184,9 +185,13 @@ export async function draftServiceTool(
         if (!doc) {
             return richError(
                 "no_profile",
-                `There is no profile for '${profileKey}' yet: no past setlist is marked with this service and rabbi.`,
+                hidesLiturgicalFields(org)
+                    ? `There is no profile for '${profileKey}' yet: no past set is marked with this kind of gig.`
+                    : `There is no profile for '${profileKey}' yet: no past setlist is marked with this service and rabbi.`,
                 { profileKey },
-                "Build this one from a template or a recent setlist, with templateType and rabbi set. The next draft_service for this service learns from it.",
+                hidesLiturgicalFields(org)
+                    ? "Build this one from a template or a recent set with clone_setlist. The next draft_service for this kind of gig learns from it."
+                    : "Build this one from a template or a recent setlist, with templateType and rabbi set. The next draft_service for this service learns from it.",
             )
         }
         const loaded = await loadProfileTiers(org, doc, serviceType, rabbiSlot, date)
