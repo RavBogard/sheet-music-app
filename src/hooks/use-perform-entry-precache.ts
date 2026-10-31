@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react"
 import { prefetchSetlistPDFs } from "@/lib/prefetch"
 import { logger } from "@/lib/logger"
+import type { ChartVersions } from "@/lib/offline/chart-version"
 
 /**
  * Window event dispatched after the entry-precache pass settles (success OR
@@ -44,13 +45,24 @@ export const PERFORM_PRECACHE_DONE_EVENT = "crc-perform-precache-done"
  * re-fire the precache (same shape that bit ipad-idle-auto-precache-fix
  * F-4; see `SaveOfflineButton.tsx`'s `idleKickedRef` comment).
  */
-export function usePerformEntryPrecache(fileIds: readonly string[]): void {
+export function usePerformEntryPrecache(
+    fileIds: readonly string[],
+    /** PERF-18: server versions; stale cached charts are re-fetched in place. */
+    versions?: ChartVersions | null,
+): void {
     // Drop empty/pseudo (`flow-`) ids before signature so callers don't
     // have to do it; mirrors `SaveOfflineButton`'s `cacheable` guard.
     const cacheable = fileIds.filter((id) => id && !id.startsWith("flow-"))
     const sig = cacheable.join(",")
 
     const triggeredRef = useRef<string | null>(null)
+    // Read at fire time; the version map arrives with the SSR frame and is not
+    // part of the trigger signature (a new object identity must not re-fire).
+    const versionsRef = useRef<ChartVersions | null | undefined>(versions)
+    // Declared before the firing effect, so it has run by the time that fires.
+    useEffect(() => {
+        versionsRef.current = versions
+    }, [versions])
 
     useEffect(() => {
         if (!sig) return
@@ -68,7 +80,7 @@ export function usePerformEntryPrecache(fileIds: readonly string[]): void {
             // Snapshot the cacheable list so a parent re-render mid-flight
             // doesn't smuggle a different array in.
             const ids = sig.split(",")
-            prefetchSetlistPDFs(ids)
+            prefetchSetlistPDFs(ids, undefined, { versions: versionsRef.current })
                 .catch((e) => {
                     // Silent — pre-cache is best-effort; failures must not
                     // surface to React boundaries or user UI.

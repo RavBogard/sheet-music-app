@@ -333,4 +333,16 @@ describe("SetlistRow — open-gate (bonded chart opens regardless of track type)
         rerender(<SetlistRow track={baseSong} {...defaultProps} />)
         expect(screen.queryByTestId("row-not-saved-offline")).toBeNull()
     })
+
+    it("PERF-21: names why a chart didn't save, only alongside the not-saved line", () => {
+        const { rerender } = render(<SetlistRow track={baseSong} {...defaultProps} savedOffline={false} saveFailure="corrupt" />)
+        expect(screen.getByTestId("row-not-saved-reason").getAttribute("data-reason")).toBe("corrupt")
+        rerender(<SetlistRow track={baseSong} {...defaultProps} savedOffline={false} saveFailure="not-found" />)
+        expect(screen.getByTestId("row-not-saved-reason").getAttribute("data-reason")).toBe("not-found")
+        rerender(<SetlistRow track={baseSong} {...defaultProps} savedOffline={false} />)
+        expect(screen.queryByTestId("row-not-saved-reason")).toBeNull()
+        // A saved chart never shows a stale failure reason.
+        rerender(<SetlistRow track={baseSong} {...defaultProps} savedOffline saveFailure="network" />)
+        expect(screen.queryByTestId("row-not-saved-reason")).toBeNull()
+    })
 })

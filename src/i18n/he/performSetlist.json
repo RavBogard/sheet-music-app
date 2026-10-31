@@ -43,6 +43,8 @@
         "openChart": "פתיחת התווים: {songTitle}",
         "tonightPlanned": "הערב · מתוכנן: {plannedTitle}",
         "notSavedOffline": "לא נשמר לשימוש לא מקוון",
+        "saveFailedDownload": "ההורדה נכשלה",
+        "saveFailedDamaged": "הקובץ פגום",
         "swapForTonight": "החלפת {songTitle} להערב",
         "swap": "החלפה"
     },

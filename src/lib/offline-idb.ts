@@ -5,7 +5,15 @@
  * Storage reads that were left behind when v2.5 removed the service worker.
  *
  * Schema: database `crc-offline`, version 1, object store `files` keyed by
- * fileId. Entries are `{ fileId, blob, mime, size, savedAt }`.
+ * fileId. Entries are `{ fileId, data, mime, size, savedAt, version? }`.
+ *
+ * PERF-18: `version` is the library row's content identity at save time
+ * (`h:<contentHash>` or `u:<updatedAt ms>`, see `chart-version.ts`). A chart
+ * is healed in place under the same fileId, so the fileId alone can't say
+ * whether this device holds the current bytes. Entries saved before this
+ * field existed carry no version and read as stale whenever the server knows
+ * one. A refresh is always a single `put` over the old entry: nothing here
+ * deletes a chart in order to replace it.
  *
  * SSR/old-browser safe: every export resolves to the "empty" answer when
  * `indexedDB` is undefined. `putFile` is a no-op in that case.
@@ -31,6 +39,8 @@ export interface OfflineFileEntry {
     mime: string
     size: number
     savedAt: number
+    /** PERF-18: the library row's version when these bytes were saved. */
+    version?: string
 }
 
 function hasIDB(): boolean {
@@ -77,7 +87,7 @@ function reqPromise<T>(req: IDBRequest<T>): Promise<T> {
     })
 }
 
-export async function putFile(fileId: string, blob: Blob): Promise<void> {
+export async function putFile(fileId: string, blob: Blob, version?: string): Promise<void> {
     if (!hasIDB()) return
     // Persist as ArrayBuffer, NOT Blob. WebKit/iOS Safari (the band's iPads)
     // errors the put transaction when the value contains a Blob, so nothing
@@ -89,7 +99,10 @@ export async function putFile(fileId: string, blob: Blob): Promise<void> {
         mime: blob.type || 'application/octet-stream',
         size: blob.size,
         savedAt: Date.now(),
+        ...(version ? { version } : {}),
     }
+    // One `put` replaces the old entry atomically: the previous bytes stay
+    // readable until this transaction commits, and stay put if it fails.
     await withStore('readwrite', async (store) => {
         await reqPromise(store.put(entry))
     })
@@ -108,6 +121,24 @@ export async function getFile(fileId: string): Promise<Blob | null> {
         })
     } catch {
         return null
+    }
+}
+
+/**
+ * PERF-18: the saved version of a cached chart. `undefined` when the file is
+ * not cached; `null` when it is cached without a version (saved before
+ * versioning, or by a viewer that didn't know one).
+ */
+export async function getFileVersion(fileId: string): Promise<string | null | undefined> {
+    if (!hasIDB()) return undefined
+    try {
+        return await withStore('readonly', async (store) => {
+            const entry = await reqPromise<OfflineFileEntry | undefined>(store.get(fileId))
+            if (!entry) return undefined
+            return typeof entry.version === 'string' && entry.version ? entry.version : null
+        })
+    } catch {
+        return undefined
     }
 }
 

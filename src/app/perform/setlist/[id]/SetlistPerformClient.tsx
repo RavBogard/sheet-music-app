@@ -33,6 +33,7 @@ import { useLibrary } from "@/hooks/use-library"
 import { SetlistView } from "@/components/performance/SetlistView"
 import { PerformanceOfflineIndicator } from "@/components/performance/PerformanceOfflineIndicator"
 import { SaveOfflineButton } from "@/components/performance/SaveOfflineButton"
+import type { SaveFailureReason } from "@/lib/prefetch"
 import { KeepAwakeToggle } from "@/components/performance/KeepAwakeToggle"
 import { KeepAwakeAutoArm } from "@/components/performance/keep-awake-context"
 import { bookTitle } from "@/lib/books/titles"
@@ -83,6 +84,8 @@ export interface SetlistPerformClientProps {
      * overlay).
      */
     initialTrackId?: string | null
+    /** PERF-18: the server's current version per bonded fileId. */
+    chartVersions?: Record<string, string>
 }
 
 export function SetlistPerformClient({
@@ -91,6 +94,7 @@ export function SetlistPerformClient({
     initialTracks,
     initialOverrides = null,
     initialTrackId,
+    chartVersions,
 }: SetlistPerformClientProps) {
     const t = useT()
     const fmt = useFormat()
@@ -180,10 +184,18 @@ export function SetlistPerformClient({
     const [deviceReady, setDeviceReady] = useState<number | null>(null)
     const [deviceTotal, setDeviceTotal] = useState(0)
     const [savedFileIds, setSavedFileIds] = useState<ReadonlySet<string> | null>(null)
-    const onDeviceReady = useCallback((ready: number, total: number, savedIds: ReadonlySet<string>) => {
+    // PERF-21: why a chart didn't save, per fileId, from this session's save passes.
+    const [saveFailures, setSaveFailures] = useState<ReadonlyMap<string, SaveFailureReason> | null>(null)
+    const onDeviceReady = useCallback((
+        ready: number,
+        total: number,
+        savedIds: ReadonlySet<string>,
+        failures?: ReadonlyMap<string, SaveFailureReason>,
+    ) => {
         setDeviceReady(ready)
         setDeviceTotal(total)
         setSavedFileIds(savedIds)
+        setSaveFailures(failures ?? null)
     }, [])
     // Per-device (`crc.perform.liturgy-collapsed`), default collapsed. The
     // control only appears when this service actually has fixed-liturgy rows
@@ -295,7 +307,7 @@ export function SetlistPerformClient({
     // the current render tick, idempotent with the rIC + explicit-tap paths
     // via `prefetchSetlistPDFs`'s `hasFile` short-circuit. Best-effort;
     // failures are swallowed.
-    usePerformEntryPrecache(songFileIds)
+    usePerformEntryPrecache(songFileIds, chartVersions)
 
     // Song count for header
     const songCount = tracks.filter((t) => !t.type || t.type === "song").length
@@ -417,7 +429,7 @@ export function SetlistPerformClient({
                     {/* F1: pre-arm the whole setlist for offline use (idle auto-precache
                         runs on mount; this CTA force-caches with progress). Shown to
                         everyone performing — offline resilience isn't role-gated. */}
-                    {songFileIds.length > 0 && <SaveOfflineButton fileIds={songFileIds} onReadyChange={onDeviceReady} />}
+                    {songFileIds.length > 0 && <SaveOfflineButton fileIds={songFileIds} onReadyChange={onDeviceReady} versions={chartVersions} />}
                     {foldableLiturgyRows > 0 && (
                         <Button
                             onClick={() => setLiturgyCollapsed(!liturgyCollapsed)}
@@ -553,6 +565,7 @@ export function SetlistPerformClient({
                 setlistId={setlistId}
                 collapseLiturgy={liturgyCollapsed}
                 savedFileIds={savedFileIds}
+                saveFailures={saveFailures}
                 onSwapTap={isLeader && user && serviceDay ? (index) => setSwapIndex(index) : undefined}
             />
 

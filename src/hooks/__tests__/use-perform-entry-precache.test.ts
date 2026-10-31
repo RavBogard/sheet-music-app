@@ -13,10 +13,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import { renderHook, act, waitFor } from "@testing-library/react"
 
-const mockPrefetch = vi.fn<(ids: string[]) => Promise<number>>()
+const mockPrefetch = vi.fn<(ids: string[], onProgress?: unknown, opts?: { versions?: unknown }) => Promise<number>>()
 
 vi.mock("@/lib/prefetch", () => ({
-    prefetchSetlistPDFs: (ids: string[]) => mockPrefetch(ids),
+    prefetchSetlistPDFs: (ids: string[], onProgress?: unknown, opts?: { versions?: unknown }) =>
+        mockPrefetch(ids, onProgress, opts),
 }))
 
 import {
@@ -50,6 +51,12 @@ describe("usePerformEntryPrecache", () => {
         )
         await waitFor(() => expect(mockPrefetch).toHaveBeenCalledTimes(1))
         expect(mockPrefetch.mock.calls[0][0]).toEqual(["upload-1", "upload-2"])
+    })
+
+    it("PERF-18: hands the server versions to the save pass", async () => {
+        renderHook(() => usePerformEntryPrecache(["upload-1"], { "upload-1": "h:abc" }))
+        await waitFor(() => expect(mockPrefetch).toHaveBeenCalledTimes(1))
+        expect(mockPrefetch.mock.calls[0][2]).toEqual({ versions: { "upload-1": "h:abc" } })
     })
 
     it("never precaches when there are no cacheable charts", async () => {

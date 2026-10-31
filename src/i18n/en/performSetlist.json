@@ -43,6 +43,8 @@
         "openChart": "Open chart: {songTitle}",
         "tonightPlanned": "Tonight · planned: {plannedTitle}",
         "notSavedOffline": "Not saved offline",
+        "saveFailedDownload": "Couldn't download",
+        "saveFailedDamaged": "File damaged",
         "swapForTonight": "Swap {songTitle} for tonight",
         "swap": "Swap"
     },
