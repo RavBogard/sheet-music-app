@@ -19,6 +19,8 @@ export const DOUBLE_TAP_MS = 300
 export const TURN_FRACTION = 0.85
 /** Slack (px) when deciding "already at the top / bottom". */
 export const EDGE_SLACK_PX = 2
+/** A tap this soon (ms) after the chart scrolled is a tap to stop momentum scrolling: ignored. */
+export const SCROLL_QUIET_MS = 150
 
 export type TapZone = "left" | "middle" | "right"
 export type TurnDirection = "forward" | "back"
@@ -35,8 +37,10 @@ export interface TapContext {
     multiTouch: boolean
     /** Furthest the pointer travelled from `down` while it was pressed. */
     maxMovePx: number
-    /** Zoomed in past fit-width (app zoom above 1, or a native pinch zoom). */
+    /** Zoomed in past fit-width: content wider than the viewport, or a native pinch zoom (see `isZoomedPastFit`). */
     zoomedIn: boolean
+    /** Milliseconds between the chart's last scroll event and the press (Infinity when it never scrolled). */
+    msSinceScroll: number
     /** A long-press, popover, sheet or other overlay owns the screen. */
     suppressed: boolean
     /** Right-to-left reading order: the LEFT third is forward. */
@@ -71,6 +75,7 @@ export function classifyTap(
     ctx: TapContext,
 ): TurnDirection | null {
     if (ctx.suppressed || ctx.multiTouch || ctx.zoomedIn) return null
+    if (ctx.msSinceScroll < SCROLL_QUIET_MS) return null
     const moved = Math.max(ctx.maxMovePx, Math.hypot(up.x - down.x, up.y - down.y))
     if (moved > TAP_MAX_MOVE_PX) return null
     if (up.t - down.t > TAP_MAX_MS) return null
@@ -82,10 +87,21 @@ export function isDoubleTap(previousTapUpT: number | null, downT: number): boole
     return previousTapUpT !== null && downT - previousTapUpT <= DOUBLE_TAP_MS
 }
 
+/**
+ * Zoomed in past fit-width: the chart's content is wider than its viewport, or
+ * the page is pinch-zoomed. A saved app zoom alone does NOT count — a chart can
+ * carry zoom > 1 and still fit the width.
+ */
+export function isZoomedPastFit(m: { scrollWidth: number; clientWidth: number }, visualScale: number | undefined): boolean {
+    if (typeof visualScale === "number" && visualScale > 1.01) return true
+    return m.clientWidth > 0 && m.scrollWidth > m.clientWidth + 1
+}
+
 export type TurnPlan =
     | { kind: "scroll"; top: number }
     | { kind: "next-chart" }
     | { kind: "previous-chart" }
+    | { kind: "none" }
 
 export interface ScrollMetrics {
     scrollTop: number
@@ -93,12 +109,24 @@ export interface ScrollMetrics {
     scrollHeight: number
 }
 
+export interface TurnTargetState {
+    /** The viewer has finished rendering the chart (not loading, not an error). */
+    ready: boolean
+}
+
 /**
  * What a turn does from the current scroll position: scroll a screen, or —
  * already at the bottom (forward) / top (back) — move to the next / previous
  * chart.
+ *
+ * A forward tap must never skip a chart the musician hasn't seen: nothing
+ * happens unless the viewer has finished rendering AND its scroller has been
+ * measured (a loading, failed or not-yet-laid-out chart reads as "at the
+ * bottom" and would otherwise jump straight to the next song).
  */
-export function planTurn(direction: TurnDirection, m: ScrollMetrics): TurnPlan {
+export function planTurn(direction: TurnDirection, m: ScrollMetrics, target: TurnTargetState): TurnPlan {
+    if (!target.ready) return { kind: "none" }
+    if (!(m.clientHeight > 0) || !(m.scrollHeight > 0)) return { kind: "none" }
     const maxTop = Math.max(0, m.scrollHeight - m.clientHeight)
     const step = Math.max(1, Math.round(m.clientHeight * TURN_FRACTION))
     if (direction === "forward") {

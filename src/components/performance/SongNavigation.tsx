@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { DirectionalIcon } from "@/components/i18n/DirectionalIcon"
 import { useT } from "@/i18n/client"
+import { playedKey } from "@/lib/performance/played-key"
 
 // Phase 7 ruling: song-to-song previous/next follows the reading direction.
 // The buttons sit in a flex row, so on a right-to-left page "previous" lands
@@ -21,6 +22,8 @@ export function SongNavigation() {
     const currentTrack = playbackQueue[queueIndex]
     // PERF-11: "Next: <title> (<key>)" when there is a next song.
     const nextTrack = queueIndex >= 0 ? playbackQueue[queueIndex + 1] : undefined
+    // The PLAYED key (per-track transposition applied), as the setlist row shows it.
+    const nextKey = nextTrack ? playedKey(nextTrack.key, nextTrack.transposition) : null
 
     const handleNext = () => {
         nextSong() // Updates queueIndex in store; PDFOverlay listens to this
@@ -61,8 +64,8 @@ export function SongNavigation() {
                             className="min-w-0 truncate text-sm sm:text-base text-muted-foreground font-medium"
                         >
                             <span aria-hidden="true">· </span>
-                            {nextTrack.key
-                                ? t("perform.nav.nextUp", { title: nextTrack.name, key: nextTrack.key })
+                            {nextKey
+                                ? t("perform.nav.nextUp", { title: nextTrack.name, key: nextKey })
                                 : t("perform.nav.nextUpNoKey", { title: nextTrack.name })}
                         </span>
                     )}

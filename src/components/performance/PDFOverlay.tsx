@@ -366,7 +366,7 @@ export function PDFOverlay({
     const chartScrollRef = useEdgeTapZones({
         enabled: tapZonesEnabled,
         isRtl: readingRtl,
-        isZoomedIn: () => useMusicStore.getState().zoom > 1.001,
+        viewerKind,
         isSuppressed: () =>
             suppressRef.current.menuOpen ||
             suppressRef.current.showPrintModal ||
@@ -486,7 +486,7 @@ export function PDFOverlay({
     return (
         <div className="fixed inset-0 z-50 bg-background flex flex-col">
             {/* PERF-11: the row's note and Vocal Lead, one line, above the chart. */}
-            <ChartNoteStrip notes={track.notes} vocalLead={track.leadMusician} />
+            <ChartNoteStrip key={track.id ?? track.fileId} notes={track.notes} vocalLead={track.leadMusician} />
             {/* Content area -- branches on file type */}
             {gestureEligible ? (
                 <LiveDirectorGesture

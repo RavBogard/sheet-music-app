@@ -61,6 +61,18 @@ describe("signed-out device transposition", () => {
         expect(useMusicStore.getState().chartTransposition).toEqual({ a: 3 })
     })
 
+    it("an explicit leader 0 ('as written') is a set value that wins; only unset leaves it to the device", () => {
+        useMusicStore.setState({ chartTransposition: { a: 3, b: 3 } })
+        useMusicStore.getState().setQueue([item("a", 0), item("b")], 0)
+        renderHook(() => useDeviceTranspositionPrefs())
+        expect(useMusicStore.getState().transposition).toBe(0)
+        act(() => useMusicStore.getState().setTransposition(2))
+        expect(useMusicStore.getState().chartTransposition.a).toBe(3)
+
+        act(() => { useMusicStore.getState().nextSong() })
+        expect(useMusicStore.getState().transposition).toBe(3)
+    })
+
     it("a queue rebuild on the same chart is not recorded as the musician's choice", () => {
         useMusicStore.getState().setQueue([item("a")], 0)
         renderHook(() => useDeviceTranspositionPrefs())

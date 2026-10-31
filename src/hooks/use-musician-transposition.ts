@@ -185,8 +185,8 @@ export function useMusicianTransposition() {
  * every chart change whether or not the popover is opened.
  *
  * - Signed-in users are untouched: they keep the Firestore preference.
- * - A leader's per-track transposition (non-zero) always wins and is never
- *   recorded as the device's own choice.
+ * - A leader's per-track transposition always wins — an explicit 0 included —
+ *   and is never recorded as the device's own choice.
  * - Nothing runs while auth is still resolving, so a signed-in user's
  *   Firestore preference is never raced by the device map.
  */
@@ -204,7 +204,9 @@ export function useDeviceTranspositionPrefs(): void {
     const appliedForRef = useRef<{ fileId: string; queue: unknown; queueIndex: number } | null>(null)
 
     const eligible = !loading && !user && !!fileId && !fileId.startsWith("flow-")
-    const leaderSet = leaderTransposition !== undefined && leaderTransposition !== 0
+    // An explicit leader value — including 0, "play it as written" — is set
+    // and wins. Only null/undefined means the leader left it to the musician.
+    const leaderSet = leaderTransposition !== undefined && leaderTransposition !== null
 
     useEffect(() => {
         if (!eligible || !fileId) {

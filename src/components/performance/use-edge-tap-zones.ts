@@ -5,54 +5,41 @@
  *
  * One wrapper for every viewer (PDF, MusicXML, text, image): native pointer
  * listeners on the container PDFOverlay already renders, nothing inside the
- * viewers. At turn time it scrolls the nearest scrollable element under the
- * tap (PDFViewer and ImageScoreViewer scroll inside themselves; MusicXML and
- * text scroll the container), found by walking up from the tap target.
+ * viewers. When a turn fires it re-resolves the viewer's own scroller from the
+ * tap point (`chart-scroll-target.ts`) and does nothing unless that viewer has
+ * finished rendering and its scroller is measured — a forward tap must never
+ * skip a chart the musician hasn't seen.
  *
- * A turn runs DOUBLE_TAP_MS after the tap so a double-tap can cancel it.
+ * A turn runs DOUBLE_TAP_MS after the tap so a double-tap can cancel it. A tap
+ * within SCROLL_QUIET_MS of the chart scrolling (stopping momentum) is ignored.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import {
     classifyTap,
     isDoubleTap,
+    isZoomedPastFit,
     planTurn,
     DOUBLE_TAP_MS,
     TAP_ZONE_IGNORE_SELECTOR,
     type TapSample,
     type TurnDirection,
 } from "./edge-tap-zones"
+import { resolveTurnTarget, type TurnViewerKind } from "./chart-scroll-target"
 
 export interface EdgeTapZoneOptions {
     enabled: boolean
     isRtl: boolean
-    /** Read at tap time: zoomed in past fit-width. */
-    isZoomedIn: () => boolean
+    /** The viewer showing the current chart (PDFOverlay's `resolveViewerKind`). */
+    viewerKind: TurnViewerKind
     /** Read at press and at turn time: a long-press, popover or sheet owns the screen. */
     isSuppressed: () => boolean
     onNextChart: () => void
     onPreviousChart: () => void
 }
 
-function isScrollableY(el: Element): boolean {
-    const style = window.getComputedStyle(el)
-    const oy = style.overflowY
-    return (oy === "auto" || oy === "scroll") && el.scrollHeight > el.clientHeight + 1
-}
-
-/** Nearest vertically scrollable element from `from` up to (and including) `container`. */
-export function findScrollTarget(from: Element | null, container: HTMLElement): HTMLElement {
-    let el: Element | null = from
-    while (el && el !== container && container.contains(el)) {
-        if (el instanceof HTMLElement && isScrollableY(el)) return el
-        el = el.parentElement
-    }
-    return container
-}
-
-function nativeZoomedIn(): boolean {
-    const scale = typeof window !== "undefined" ? window.visualViewport?.scale : undefined
-    return typeof scale === "number" && scale > 1.01
+function visualScale(): number | undefined {
+    return typeof window !== "undefined" ? window.visualViewport?.scale : undefined
 }
 
 function prefersReducedMotion(): boolean {
@@ -80,27 +67,33 @@ export function useEdgeTapZones(options: EdgeTapZoneOptions): (el: HTMLElement |
         if (!enabled || !container) return
 
         const pointers = new Set<number>()
-        let down: (TapSample & { id: number; target: Element | null }) | null = null
+        let down: (TapSample & { id: number }) | null = null
         let maxMove = 0
         let multiTouch = false
         let ignoreGesture = false
         let lastTapUpT: number | null = null
         let pending: { timer: ReturnType<typeof setTimeout> } | null = null
+        let lastScrollT = -Infinity
+        let msSinceScrollAtDown = Infinity
 
         const cancelPending = () => {
             if (pending) clearTimeout(pending.timer)
             pending = null
         }
 
-        const runTurn = (direction: TurnDirection, target: Element | null) => {
+        const runTurn = (direction: TurnDirection, point: { x: number; y: number }) => {
             const o = optsRef.current
             if (o.isSuppressed()) return
-            const scroller = findScrollTarget(target, container)
+            // Re-resolve now: the viewer may have re-rendered during the wait.
+            const target = resolveTurnTarget(o.viewerKind, container, point)
+            if (!target) return
+            const { scroller } = target
             const plan = planTurn(direction, {
                 scrollTop: scroller.scrollTop,
                 clientHeight: scroller.clientHeight,
                 scrollHeight: scroller.scrollHeight,
-            })
+            }, { ready: target.ready })
+            if (plan.kind === "none") return
             if (plan.kind === "next-chart") o.onNextChart()
             else if (plan.kind === "previous-chart") o.onPreviousChart()
             else if (typeof scroller.scrollTo === "function") {
@@ -133,7 +126,8 @@ export function useEdgeTapZones(options: EdgeTapZoneOptions): (el: HTMLElement |
             const target = e.target instanceof Element ? e.target : null
             if (target?.closest(TAP_ZONE_IGNORE_SELECTOR)) ignoreGesture = true
             if (optsRef.current.isSuppressed()) ignoreGesture = true
-            down = { x: e.clientX, y: e.clientY, t: now, id: e.pointerId, target }
+            down = { x: e.clientX, y: e.clientY, t: now, id: e.pointerId }
+            msSinceScrollAtDown = now - lastScrollT
         }
 
         const onMove = (e: PointerEvent) => {
@@ -147,22 +141,32 @@ export function useEdgeTapZones(options: EdgeTapZoneOptions): (el: HTMLElement |
             const start = down
             down = null
             if (ignoreGesture) return
+            // The chart scrolled during the press: a drag, not a tap.
+            if (lastScrollT >= start.t) return
             const now = e.timeStamp || performance.now()
             const rect = container.getBoundingClientRect()
             const o = optsRef.current
+            const point = { x: start.x, y: start.y }
+            const target = resolveTurnTarget(o.viewerKind, container, point)
             const direction = classifyTap(start, { x: e.clientX, y: e.clientY, t: now }, rect, {
                 multiTouch,
                 maxMovePx: maxMove,
-                zoomedIn: o.isZoomedIn() || nativeZoomedIn(),
+                // Zoomed only when the content is really wider than its
+                // viewport (or pinch-zoomed) — a saved app zoom alone is not.
+                zoomedIn: isZoomedPastFit(
+                    target ? { scrollWidth: target.scroller.scrollWidth, clientWidth: target.scroller.clientWidth } : { scrollWidth: 0, clientWidth: 0 },
+                    visualScale(),
+                ),
                 suppressed: o.isSuppressed(),
                 isRtl: o.isRtl,
+                msSinceScroll: msSinceScrollAtDown,
             })
             if (!direction) return
             lastTapUpT = now
             cancelPending()
             const timer = setTimeout(() => {
                 pending = null
-                runTurn(direction, start.target)
+                runTurn(direction, point)
             }, DOUBLE_TAP_MS)
             pending = { timer }
         }
@@ -172,12 +176,20 @@ export function useEdgeTapZones(options: EdgeTapZoneOptions): (el: HTMLElement |
             if (down && e.pointerId === down.id) down = null
         }
 
+        // Scroll events don't bubble; a capture listener on the container
+        // also sees the inner PDF / image scrollers.
+        const onScroll = (e: Event) => {
+            lastScrollT = e.timeStamp || performance.now()
+        }
+
+        container.addEventListener("scroll", onScroll, { capture: true, passive: true })
         container.addEventListener("pointerdown", onDown)
         container.addEventListener("pointermove", onMove)
         container.addEventListener("pointerup", onUp)
         container.addEventListener("pointercancel", onCancel)
         return () => {
             cancelPending()
+            container.removeEventListener("scroll", onScroll, { capture: true })
             container.removeEventListener("pointerdown", onDown)
             container.removeEventListener("pointermove", onMove)
             container.removeEventListener("pointerup", onUp)

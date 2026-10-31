@@ -339,7 +339,9 @@ export function TextScoreViewer({ fileId }: TextScoreViewerProps) {
         : fitFontSize({ maxLen: maxLineLength, zoom: zoomLevel, minPx: 11, maxPx: 15 })
 
     return (
-        <div className="min-h-full bg-background text-foreground overflow-auto relative">
+        // `data-text-score` marks the loaded state for Perform's edge tap
+        // zones (PERF-05): only a rendered chart may turn to the next song.
+        <div data-text-score="" className="min-h-full bg-background text-foreground overflow-auto relative">
             {/* Control Bar */}
             <div className="fixed bottom-24 end-4 sm:end-8 z-20 flex gap-2 bg-card border border-border p-1.5 rounded-lg shadow-lg">
                 <Button
