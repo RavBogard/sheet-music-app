@@ -34,6 +34,11 @@ export interface SlotUse {
     key: string | null
     special: boolean
     serviceLabel: string
+    /**
+     * False when this use's service is older than the profile's last
+     * USUAL_WINDOW regular services. Absent: not known, so the use counts.
+     */
+    recent?: boolean
 }
 
 export interface SlotTierInput {
@@ -59,13 +64,21 @@ export interface SlotTier {
     promotion?: Promotion
 }
 
+const FILE_EXT_RE = /\.(pdf|musicxml|mxl|xml|docx?|txt|png|jpe?g)$/i
+
+/** A chart or row name said aloud: no file extension, underscores as spaces. */
+export function cleanLabel(name: string | null | undefined): string {
+    return (name ?? "").trim().replace(FILE_EXT_RE, "").replace(/_/g, " ").replace(/\s{2,}/g, " ").trim()
+}
+
 /** The row phrase for a tier, in the exact wording drafts show. */
 export function phrase(
     tier: Tier,
-    chart: string | null | undefined,
+    rawChart: string | null | undefined,
     key: string | null | undefined,
     serviceLabel?: string | null,
 ): string {
+    const chart = rawChart == null ? rawChart : cleanLabel(rawChart)
     const inKey = key ? ` in ${key}` : ", key not on record"
     switch (tier) {
         case "standard":
@@ -141,11 +154,16 @@ export function computeSlotTier(input: SlotTierInput): SlotTier {
         return out
     }
 
-    const window = profileUses.filter((u) => !u.special).slice(0, USUAL_WINDOW)
+    // The window is the profile's last USUAL_WINDOW regular services (`recent`), not the last uses of
+    // a chart: a chart played three times long ago and since replaced is not the usual.
+    const window = profileUses.filter((u) => !u.special && u.recent !== false).slice(0, USUAL_WINDOW)
     const groupCounts = new Map<string, number>()
     for (const u of window) groupCounts.set(u.partGroup, (groupCounts.get(u.partGroup) ?? 0) + 1)
-    // The window is newest first, so the first qualifying use names the most recently used group.
-    const usualGroup = window.find((u) => (groupCounts.get(u.partGroup) ?? 0) >= USUAL_MIN)?.partGroup
+    // Only the group of the slot's latest regular use can be usual: once something else took the
+    // slot, the earlier chart is history, however often it was played before.
+    const latestGroup = window[0]?.partGroup
+    const usualGroup =
+        latestGroup !== undefined && (groupCounts.get(latestGroup) ?? 0) >= USUAL_MIN ? latestGroup : undefined
     if (usualGroup !== undefined) {
         const uses = window.filter((u) => u.partGroup === usualGroup)
         const latest = uses[0]

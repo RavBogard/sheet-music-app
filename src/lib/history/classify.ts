@@ -71,8 +71,14 @@ function mapTemplateType(templateType: string | null | undefined): string | null
     return null
 }
 
+const BNEI_MITZVAH_RE = /\b(bar|bat|beit|b'?nai|b'?nei|bnei) mitzvah\b/i
+const SHIR_SHABBAT_RE = /shir\s+(\w+\s+)?shabbat/i
+/** A named holiday, camp, celebration or retirement is a special week, whatever its stored type. */
+const SPECIAL_NAME_RE =
+    /\b(sukkot|shavuot|yizkor|simchat|rosh hashana[h]?|yom kippur|pesach|passover|camp|celebration|retirement)\b|shir\s+\w+\s+shabbat/i
+
 function serviceTypeFor(name: string, templateType: string | null | undefined): string | null {
-    if (/shir shabbat/i.test(name)) return "shir_shabbat"
+    if (SHIR_SHABBAT_RE.test(name)) return "shir_shabbat"
     const mapped = mapTemplateType(templateType)
     if (mapped) return mapped
     if (/\b(bar|bat|b'?nai|b'?nei|bnei) mitzvah\b/i.test(name)) return "bnei_mitzvah_saturday"
@@ -137,7 +143,11 @@ export function classifyService(s: {
 }): ServiceClass {
     const name = typeof s.name === "string" ? s.name : ""
     const part = setlistPart(name)
-    const serviceType = mapTemplateType(s.serviceType) ?? serviceTypeFor(name, s.templateType)
+    const inferred = mapTemplateType(s.serviceType) ?? serviceTypeFor(name, s.templateType)
+    // B'nei Mitzvah is its own service type: its name beats a stored or inferred shabbat_morning,
+    // so it never counts toward the regular Shabbat-morning profile.
+    const serviceType =
+        inferred === "shabbat_morning" && BNEI_MITZVAH_RE.test(name) ? "bnei_mitzvah_saturday" : inferred
     const rabbiSlot = storedRabbiSlot(s.rabbiSlot) ?? rabbiSlotFor(s.rabbi)
     const tt = typeof s.templateType === "string" ? s.templateType.trim() : ""
     const special =
@@ -146,6 +156,7 @@ export function classifyService(s: {
             : (serviceType !== null && CATALOG_CATEGORY.get(serviceType) === "holiday") ||
               /\b(with|w\/)\s/i.test(name) ||
               /memorial/i.test(name) ||
+              SPECIAL_NAME_RE.test(name) ||
               SPECIAL_TEMPLATE_TYPES.has(tt) ||
               serviceType === null
     return { serviceType, rabbiSlot, special, part }

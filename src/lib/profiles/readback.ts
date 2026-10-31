@@ -36,6 +36,10 @@ export interface ReadbackRow {
      * (Walkdown) in Dm"). Listed as `differs`.
      */
     differs?: string
+    /** Draft only: the chart is orphaned or archived. */
+    deadChart?: string
+    /** Draft only: played in a key other than the chart's written key. */
+    keyMismatch?: string
 }
 
 export interface OpenItem {
@@ -47,7 +51,7 @@ export interface OpenItem {
 }
 
 export interface ReadbackItem {
-    kind: "open_slot" | "no_chart" | "differs" | "recent_standard" | "promotion" | "open_item"
+    kind: "existing" | "open_slot" | "no_chart" | "differs" | "recent_standard" | "promotion" | "open_item" | "dead_chart" | "key_mismatch"
     index: number | null
     text: string
 }
@@ -71,6 +75,8 @@ export interface ReadbackInput {
     rows: ReadbackRow[]
     openItems: OpenItem[]
     now: Date
+    /** Draft only: setlists already on this date for this service. Said first; never blocks. */
+    existing?: { setlistId: string; name: string }[]
     /** IANA zone for the date a standard was set; UTC when absent. */
     timeZone?: string
 }
@@ -125,6 +131,9 @@ export function buildReadback(input: ReadbackInput): Readback {
 
     const exceptions: ReadbackItem[] = []
     const listed = new Set<number>()
+    for (const e of input.existing ?? []) {
+        exceptions.push({ kind: "existing", index: null, text: `There is already a setlist on this date: ${e.name}` })
+    }
     for (const r of rows) {
         if (!r.isSong) continue
         const before = exceptions.length
@@ -151,6 +160,8 @@ export function buildReadback(input: ReadbackInput): Readback {
                 text: `${r.label}: ${ORDINALS[PROMOTION_WEEKS] ?? `${PROMOTION_WEEKS}th`} week of ${r.promotion.chartName}${inKey}. Make it standard?`,
             })
         }
+        if (r.deadChart) exceptions.push({ kind: "dead_chart", index: r.index, text: r.deadChart })
+        if (r.keyMismatch) exceptions.push({ kind: "key_mismatch", index: r.index, text: r.keyMismatch })
         if (exceptions.length > before) listed.add(r.index)
     }
     const rowExceptions = exceptions.length

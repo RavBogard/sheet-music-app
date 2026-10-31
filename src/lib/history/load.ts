@@ -147,6 +147,7 @@ export async function loadHistorySetlists(
             special: cls.special,
             book: str(r.book),
             ownerName: str(r.ownerName),
+            updatedAt: eventIso(r.updatedAt) ?? eventIso(r.createdAt),
             isTest:
                 r.isTest === true ||
                 isTestSetlist({ name, ownerId: str(r.ownerId) }),
@@ -188,6 +189,9 @@ export async function loadLibraryLite(
                 key: str(d.key),
                 setting: str(d.setting),
                 partGroup: str(d.partGroup),
+                status: str(d.status),
+                canonicalFileId: str(d.canonicalFileId),
+                mimeType: str(d.mimeType),
             })
         }
     }

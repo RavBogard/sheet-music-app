@@ -8,6 +8,7 @@ import { rowOrg } from "@/lib/mcp/org-context"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 import { logger } from "@/lib/logger"
+import { orgTimeZone } from "@/lib/org/locale"
 import { isSongType } from "@/lib/setlist-track-count"
 import { loadHistorySetlists, loadLibraryLite } from "@/lib/history/load"
 import {
@@ -18,7 +19,7 @@ import {
     type CoreProfile,
 } from "@/lib/profiles/keys"
 import { seedProfile, type SeedUnsure, type SeededTrack } from "@/lib/profiles/seed"
-import { loadSlotUses } from "@/lib/profiles/slot-uses"
+import { existingOnDate, loadSlotUses } from "@/lib/profiles/slot-uses"
 import { readStanding, standingMapKey, type StandingChoice } from "@/lib/profiles/standing"
 import { computeSlotTier, type SlotTier } from "@/lib/profiles/tiers"
 import type { TemplateProfile } from "./templates"
@@ -264,6 +265,7 @@ export async function seedServiceProfiles(
                     id: ref.id,
                     name: p.def.label,
                     templateType: p.def.serviceType,
+                    kind: "profile",
                     profile: profileBlock(p.def),
                     orgId: org,
                     ownerId: uid,
@@ -280,6 +282,7 @@ export async function seedServiceProfiles(
                     {
                         name: p.def.label,
                         templateType: p.def.serviceType,
+                        kind: "profile",
                         profile: profileBlock(p.def),
                         tracks: p.tracks,
                         version: FieldValue.increment(1),
@@ -356,6 +359,7 @@ export async function seedMissingProfile(
             id: ref.id,
             name: def.label,
             templateType: def.serviceType,
+            kind: "profile",
             profile: profileBlock(def),
             orgId: org,
             ownerId: uid,
@@ -425,6 +429,8 @@ export interface LoadedProfile {
     serviceNotes: string | null
     rows: LoadedProfileRow[]
     truncated: boolean
+    /** Setlists already on the asked date for this service type (empty without a date). */
+    existing: { setlistId: string; name: string }[]
 }
 
 /** The profile template for a key in this org, or null (a template without `profile` never matches). */
@@ -446,13 +452,15 @@ export async function loadProfileTiers(
     doc: FirebaseFirestore.QueryDocumentSnapshot,
     serviceType: string,
     rabbiSlot: string | null,
+    date?: string,
 ): Promise<LoadedProfile> {
     const data = doc.data()
     const profile = data.profile as TemplateProfile
     const profileKey = profileKeyFor(serviceType, rabbiSlot)
     const tracks = Array.isArray(data.tracks) ? (data.tracks as Record<string, unknown>[]) : []
 
-    const { index, truncated } = await loadSlotUses(org, { serviceType, rabbiSlot })
+    const { index, truncated, setlists } = await loadSlotUses(org, { serviceType, rabbiSlot })
+    const existing = date ? existingOnDate(setlists, date, serviceType, orgTimeZone(org)) : []
     const slotKeys = tracks.map((t) =>
         isSongType(t.type)
             ? (str(t.slotKey) ??
@@ -498,6 +506,7 @@ export async function loadProfileTiers(
         serviceNotes: typeof data.serviceNotes === "string" ? data.serviceNotes : null,
         rows,
         truncated,
+        existing,
     }
 }
 
@@ -531,7 +540,7 @@ export async function getServiceProfileTool(
                 "profile_not_found",
                 `No profile '${profileKey}' in this tenant.`,
                 { profileKey },
-                "Profiles are seeded by an admin with seed_service_profiles.",
+                "Call draft_service once; it creates the profile.",
             )
         }
         const loaded = await loadProfileTiers(org, doc, serviceType, rabbiSlot)
