@@ -154,8 +154,8 @@ export function PeopleSection() {
             <div className="flex items-center justify-between flex-wrap gap-4">
                 <div className="flex items-center gap-2">
                     {pendingCount > 0 && (
-                        <span className="text-[10px] font-bold bg-amber-500/20 text-amber-500 px-1.5 py-0.5 rounded-full flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                        <span className="text-xs font-bold bg-caution/10 text-caution border border-caution/25 px-2 py-0.5 rounded-md flex items-center gap-1.5">
+                            <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-caution" />
                             {t("admin-people.pendingRequests", { count: pendingCount })}
                         </span>
                     )}
@@ -258,7 +258,7 @@ export function PeopleSection() {
                             className={cn(
                                 "text-xs font-medium rounded-md min-h-11",
                                 roleFilter === role
-                                    ? "bg-brand/20 text-brand"
+                                    ? "bg-accent text-foreground font-semibold ring-1 ring-inset ring-brand"
                                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                             )}
                         >
@@ -285,9 +285,9 @@ export function PeopleSection() {
             {usersLoading ? (
                 <div className="flex justify-center p-12"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
             ) : (
-                <div className="bg-card border border-border rounded-xl overflow-hidden divide-y divide-border">
+                <div className="bg-card border border-rule rounded-lg overflow-hidden divide-y divide-rule">
                     {/* Grid Header */}
-                    <div className="flex items-center gap-3 px-4 py-3 bg-muted/30">
+                    <div className="flex items-center gap-3 px-4 py-2 bg-muted">
                         <label className="min-h-11 min-w-11 flex items-center justify-center shrink-0 cursor-pointer">
                             <input
                                 type="checkbox"

@@ -101,13 +101,13 @@ describe("SetlistView", () => {
         expect(prayerEl.className).toContain("text-muted-foreground")
     })
 
-    it("highlights current position row with brand background", () => {
+    it("marks the current position row", () => {
         render(<SetlistView {...defaultProps} currentTrackIndex={2} />)
 
         // The 3rd track (index 2) is the song "Amazing Grace"
         const songRow = screen.getByText("Amazing Grace").closest("[role='button']")
         expect(songRow).toBeDefined()
-        expect(songRow?.className).toContain("bg-brand/20")
+        expect(songRow?.getAttribute("data-current")).toBe("true")
     })
 
     it("shows transposed key when defaultTransposition is non-zero", () => {

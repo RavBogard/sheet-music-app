@@ -77,15 +77,15 @@ export function PerformanceOfflineIndicator({ setlistFileIds }: Props = {}) {
 
     return (
         <div className="fixed top-safe pt-2 inset-x-0 z-splash flex justify-center pointer-events-none">
-            <div className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold tracking-wider transition-all duration-500 shadow-xl
+            <div className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-colors duration-500 shadow-[0_4px_16px_rgb(24_32_46/0.22)]
                 ${!isOnline
-                    ? "glass border-amber-500/30 text-amber-200"
-                    : "glass border-green-500/30 text-green-200"
+                    ? "bg-section-ochre text-section-ochre-foreground"
+                    : "bg-success text-success-foreground"
                 }`}
             >
                 {!isOnline ? (
                     <>
-                        <WifiOff className="h-3.5 w-3.5" />
+                        <WifiOff className="h-4 w-4" />
                         <span>
                             {showFraction
                                 ? t("perform.offline.offlineChartsReady", { ready: readyCount, total })
@@ -94,7 +94,7 @@ export function PerformanceOfflineIndicator({ setlistFileIds }: Props = {}) {
                     </>
                 ) : (
                     <>
-                        <Wifi className="h-3.5 w-3.5" />
+                        <Wifi className="h-4 w-4" />
                         <span>{t("perform.offline.reconnected")}</span>
                     </>
                 )}

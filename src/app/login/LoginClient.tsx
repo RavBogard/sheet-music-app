@@ -88,7 +88,7 @@ export default function LoginClient() {
         <>
             <Button
                 size="lg"
-                className="w-full bg-foreground text-background hover:opacity-90 transition-opacity h-12 text-base font-medium rounded-xl"
+                className="w-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors h-12 text-base font-bold rounded-md"
                 onClick={handleGoogleSignIn}
                 disabled={inFlight}
             >
@@ -109,9 +109,9 @@ export default function LoginClient() {
                 Google popup, no per-device account. */}
             <div className="pt-1">
                 <div className="flex items-center gap-3 pb-1" aria-hidden="true">
-                    <div className="h-px flex-1 bg-border/60" />
-                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60">{t("auth.or")}</span>
-                    <div className="h-px flex-1 bg-border/60" />
+                    <div className="h-px flex-1 bg-rule" />
+                    <span className="text-xs font-semibold text-muted-foreground">{t("auth.or")}</span>
+                    <div className="h-px flex-1 bg-rule" />
                 </div>
 
                 {!showQr ? (
@@ -119,14 +119,14 @@ export default function LoginClient() {
                         type="button"
                         onClick={() => setShowQr(true)}
                         aria-expanded={false}
-                        className="flex w-full items-center justify-center gap-2 rounded-xl border border-border/60 bg-transparent px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-foreground/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        className="flex w-full min-h-12 items-center justify-center gap-2 rounded-md border border-border bg-card px-4 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-accent cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
                         <Smartphone className="h-4 w-4" />
                         {t("auth.setUpDevice")}
                         <ChevronDown className="h-4 w-4 text-muted-foreground" />
                     </button>
                 ) : (
-                    <div className="rounded-xl border border-border/60 p-4">
+                    <div className="rounded-md border border-rule p-4">
                         <QRSignIn />
                         <button
                             type="button"

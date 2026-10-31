@@ -83,6 +83,16 @@ describe("SetlistRow", () => {
         expect(screen.getByText("Morning Service").className).toContain("uppercase")
     })
 
+    it("draws a header as a section band with the pages under it", () => {
+        const header: SetlistTrack = { id: "h1", title: "Torah Service", type: "header" }
+        const { container } = render(
+            <SetlistRow track={header} {...defaultProps} band={{ hue: "oxblood", folioFrom: 84, folioTo: 92 }} />
+        )
+        expect(container.querySelector("[data-section-hue='oxblood']")).not.toBeNull()
+        expect(screen.getByTestId("perform-section-pages").textContent).toContain("84")
+        expect(screen.getByTestId("perform-section-pages").textContent).toContain("92")
+    })
+
     it("renders non-song items de-emphasized via the muted title color", () => {
         // De-emphasis moved from row opacity-60 (composited the title below WCAG
         // AA on the light theme — axe color-contrast) to the muted title color.
@@ -94,13 +104,12 @@ describe("SetlistRow", () => {
         expect(row?.className).not.toContain("opacity-60")
     })
 
-    it("highlights current position with brand background", () => {
+    it("marks the current position", () => {
         render(
             <SetlistRow track={baseSong} {...defaultProps} isCurrentPosition={true} />
         )
         const row = screen.getByText("Amazing Grace").closest("[role='button']")
-        expect(row?.className).toContain("bg-brand/20")
-        expect(row?.className).toContain("border-s-4")
+        expect(row?.getAttribute("data-current")).toBe("true")
     })
 
     it("interactive rows have button role and cursor-pointer", () => {
@@ -173,14 +182,14 @@ describe("SetlistRow", () => {
         expect(screen.getByTestId("key-badge").textContent).toBe("Bb")
     })
 
-    it("cue-notes use full-opacity amber-300 (not /70)", () => {
+    it("cue-notes use the full-strength caution token (not a faded amber)", () => {
         const trackWithNotes: SetlistTrack = {
             ...baseSong,
             notes: "Cue in after Amen",
         }
         render(<SetlistRow track={trackWithNotes} {...defaultProps} />)
         const notes = screen.getByText("Cue in after Amen")
-        expect(notes.className).toContain("text-amber-300")
+        expect(notes.className).toContain("text-caution")
         expect(notes.className).not.toContain("text-amber-400/70")
     })
 

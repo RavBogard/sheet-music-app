@@ -166,6 +166,16 @@ describe('SaveOfflineButton', () => {
         expect(btn().textContent).toContain('Save 1/2')
     })
 
+    // Web refresh: the Perform status line reads this device's count from here.
+    it('reports how many charts are on this device through onReadyChange', async () => {
+        stubNoopIdle()
+        mockListFileIds.mockResolvedValue(['upload-1'])
+        const onReadyChange = vi.fn()
+        render(<SaveOfflineButton fileIds={['upload-1', 'upload-2']} onReadyChange={onReadyChange} />)
+        await waitFor(() => expect(onReadyChange).toHaveBeenLastCalledWith(1, 2))
+        expect(mockPrefetch).not.toHaveBeenCalled()
+    })
+
     // WS-13 (v11.6-03-02): the all-ready state shows the explicit N/N count so a
     // player can confirm EVERY chart is cached before leaving wifi.
     it('all-ready state shows the explicit N/N count', async () => {

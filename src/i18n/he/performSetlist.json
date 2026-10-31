@@ -109,5 +109,9 @@
         "back": "חזרה",
         "library": "ספרייה",
         "loading": "התווים בטעינה..."
+    },
+    "status": {
+        "updated": "עודכן {when}",
+        "chartsOnDevice": "{ready}/{total} תווים באייפד הזה"
     }
 }

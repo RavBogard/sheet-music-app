@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react"
 import Link from "next/link"
-import { Music, Calendar, UserCircle, PlayCircle } from "lucide-react"
+import { Music, UserCircle, Play, ChevronRight } from "lucide-react"
 import { createSetlistService, Setlist } from "@/lib/setlist-firebase"
 import { toDate } from "@/lib/firestore-helpers"
 import { useAuth } from "@/lib/auth-context"
@@ -17,6 +17,8 @@ import { QRSignIn } from "@/components/auth/QRSignIn"
 import { PublicSetlistSkeleton } from "./PublicSetlistSkeleton"
 import { KeepAwakeControl } from "./KeepAwakeControl"
 import { MAX_PUBLIC_SERVICES, splitPublicSetlists } from "./public-setlist-order"
+import { RowDate } from "@/components/setlist/RowDate"
+import { DirectionalIcon } from "@/components/i18n/DirectionalIcon"
 
 interface PublicSetlistListingProps {
     /**
@@ -124,7 +126,11 @@ export function PublicSetlistListing({ initialSetlists }: PublicSetlistListingPr
         return <PublicSetlistSkeleton />
     }
 
-    const renderCard = (setlist: Setlist) => {
+    // Web refresh (blend E): one clean list on the hairline grid, the same
+    // rows as /setlists: a date column, the name large, then date and songs.
+    // Every row is a full-width link, at least 72px tall, for a musician
+    // tapping an iPad on a stand.
+    const renderCard = (setlist: Setlist, muted = false) => {
         const eventDate = toDate(setlist.eventDate)
         const songCount = setlist.songCount ?? 0
 
@@ -132,29 +138,31 @@ export function PublicSetlistListing({ initialSetlists }: PublicSetlistListingPr
             <Link
                 key={setlist.id}
                 href={`/perform/setlist/${setlist.id}`}
-                className="block rounded-2xl border border-border/50 bg-card/50 p-4 hover:bg-muted/50 transition-colors"
+                className="group flex items-center gap-3 sm:gap-4 px-3 sm:px-4 py-3 min-h-[72px] bg-card hover:bg-accent/60 active:bg-accent transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
             >
-                <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0 flex-1">
-                        <h3 className="font-semibold text-base truncate">
-                            {setlist.name}
-                        </h3>
+                <RowDate date={eventDate} muted={muted} />
+                <div className="min-w-0 flex-1">
+                    <h3 className={muted ? "text-base font-semibold leading-snug line-clamp-2" : "text-[17px] font-bold leading-snug line-clamp-2"}>
+                        {setlist.name}
+                    </h3>
+                    <p className="tnum mt-0.5 text-sm font-medium text-muted-foreground">
                         {eventDate && (
-                            <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                                <Calendar className="h-3 w-3" />
-                                {fmt.date(eventDate, {
-                                    weekday: "short",
-                                    month: "short",
-                                    day: "numeric",
-                                    year: "numeric",
-                                })}
-                            </p>
+                            <>
+                                <span>
+                                    {fmt.date(eventDate, {
+                                        weekday: "short",
+                                        month: "short",
+                                        day: "numeric",
+                                        year: "numeric",
+                                    })}
+                                </span>
+                                <span aria-hidden="true"> · </span>
+                            </>
                         )}
-                    </div>
-                    <span className="text-xs text-muted-foreground shrink-0 mt-1">
-                        {t("performSetlist.songCount", { count: songCount })}
-                    </span>
+                        <span data-testid="perform-card-song-count">{t("performSetlist.songCount", { count: songCount })}</span>
+                    </p>
                 </div>
+                <DirectionalIcon icon={ChevronRight} aria-hidden="true" className="h-5 w-5 shrink-0 text-muted-foreground group-hover:text-foreground" />
             </Link>
         )
     }
@@ -163,10 +171,9 @@ export function PublicSetlistListing({ initialSetlists }: PublicSetlistListingPr
         <div className="flex flex-col gap-4 px-4 pt-6 pb-20 max-w-2xl mx-auto w-full">
             {/* Header */}
             <div className="flex items-center gap-3 mb-2">
-                <Music className="h-6 w-6 text-muted-foreground" />
                 <div className="flex-1 min-w-0">
-                    <h1 className="text-xl font-bold">{orgName}</h1>
-                    <p className="text-sm text-muted-foreground">{label(org, 'publicListingSubtitle')}</p>
+                    <h1 className="text-[1.6rem] font-extrabold leading-tight tracking-[-0.015em]">{orgName}</h1>
+                    <p className="text-sm font-medium text-muted-foreground">{label(org, 'publicListingSubtitle')}</p>
                 </div>
                 {/* FU-c12-3 — the wake-lock toggle (and its `useWakeLock` hook)
                     only mount for SIGNED-IN viewers via <KeepAwakeControl/>.
@@ -227,7 +234,7 @@ export function PublicSetlistListing({ initialSetlists }: PublicSetlistListingPr
             {!user && !authLoading ? (
                 <section
                     aria-label={t("performSetlist.signInTo", { orgName })}
-                    className="bg-card rounded-2xl p-5 text-center space-y-4 border border-border"
+                    className="bg-card rounded-lg p-5 text-center space-y-4 border border-rule"
                 >
                     <QRSignIn />
                     <div className="flex items-center gap-3">
@@ -237,7 +244,7 @@ export function PublicSetlistListing({ initialSetlists }: PublicSetlistListingPr
                     </div>
                     <Button
                         onClick={signIn}
-                        className="w-full h-11 rounded-xl font-semibold bg-primary text-primary-foreground hover:opacity-90"
+                        className="w-full h-12 rounded-md text-[15px] font-bold bg-primary text-primary-foreground hover:bg-primary/90"
                     >
                         {t("performSetlist.signInWithGoogle")}
                     </Button>
@@ -246,7 +253,7 @@ export function PublicSetlistListing({ initialSetlists }: PublicSetlistListingPr
                 <div
                     aria-hidden="true"
                     data-testid="signin-reserve"
-                    className="bg-card rounded-2xl p-5 text-center space-y-4 border border-border"
+                    className="bg-card rounded-lg p-5 text-center space-y-4 border border-rule"
                 >
                     {/* QR skeleton — matches QRSignIn's active footprint */}
                     <div className="flex flex-col items-center gap-4">
@@ -261,14 +268,14 @@ export function PublicSetlistListing({ initialSetlists }: PublicSetlistListingPr
                         <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">{t("performSetlist.or")}</span>
                         <div className="h-px flex-1 bg-border" />
                     </div>
-                    <div className="h-11 w-full rounded-xl bg-muted animate-pulse" />
+                    <div className="h-12 w-full rounded-md bg-muted animate-pulse" />
                 </div>
             ) : null}
 
             {isEmpty ? (
-                <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-                    <Music className="h-12 w-12 mb-3 opacity-30" />
-                    <p className="text-lg font-medium">{t("performSetlist.noPublicSetlists")}</p>
+                <div className="flex flex-col items-center justify-center py-20 text-muted-foreground bg-card border border-rule rounded-lg">
+                    <Music className="h-10 w-10 mb-3 text-muted-foreground/60" aria-hidden="true" />
+                    <p className="text-lg font-semibold">{t("performSetlist.noPublicSetlists")}</p>
                 </div>
             ) : (
                 <>
@@ -288,38 +295,37 @@ export function PublicSetlistListing({ initialSetlists }: PublicSetlistListingPr
                             <Link
                                 href={`/perform/setlist/${next.id}`}
                                 aria-label={t("performSetlist.goToNextService", { setlistName: next.name })}
-                                className="group block rounded-2xl bg-primary text-primary-foreground p-5 cursor-pointer transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                                className="group flex items-center gap-3 sm:gap-4 rounded-lg border border-rule bg-card px-3 sm:px-4 py-4 min-h-[88px] cursor-pointer transition-colors hover:bg-accent/60 active:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                             >
-                                <div className="flex items-center gap-4">
-                                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary-foreground/15">
-                                        <PlayCircle className="h-6 w-6" />
-                                    </div>
-                                    <div className="min-w-0 flex-1">
-                                        <p className="text-[11px] font-semibold uppercase tracking-widest text-primary-foreground/80">
-                                            {t("performSetlist.nextService")}
-                                        </p>
-                                        <h2 className="truncate text-lg font-bold leading-tight">{next.name}</h2>
+                                <RowDate date={nextDate} />
+                                <div className="min-w-0 flex-1">
+                                    <h2 className="line-clamp-2 text-[1.35rem] font-extrabold leading-tight tracking-[-0.015em]">{next.name}</h2>
+                                    <p className="tnum mt-0.5 text-sm font-medium text-muted-foreground">
+                                        <span className="font-bold text-brand">{t("performSetlist.nextService")}</span>
                                         {nextDate && (
-                                            <p className="mt-0.5 flex items-center gap-1 text-xs text-primary-foreground/80">
-                                                <Calendar className="h-3 w-3" />
-                                                {fmt.date(nextDate, {
-                                                    weekday: "long",
-                                                    month: "short",
-                                                    day: "numeric",
-                                                })}
-                                            </p>
+                                            <>
+                                                <span aria-hidden="true"> · </span>
+                                                <span>
+                                                    {fmt.date(nextDate, {
+                                                        weekday: "long",
+                                                        month: "short",
+                                                        day: "numeric",
+                                                    })}
+                                                </span>
+                                            </>
                                         )}
-                                    </div>
-                                    <span className="shrink-0 text-sm font-semibold opacity-90 group-hover:opacity-100">
-                                        {t("performSetlist.perform")}
-                                    </span>
+                                    </p>
                                 </div>
+                                <span className="shrink-0 inline-flex items-center gap-2 h-11 rounded-md bg-primary px-4 sm:px-5 text-[15px] font-bold text-primary-foreground group-hover:bg-primary/90 transition-colors">
+                                    <Play aria-hidden="true" className="h-4 w-4 fill-current" />
+                                    <span className="hidden sm:inline">{t("performSetlist.perform")}</span>
+                                </span>
                             </Link>
                         )
                     })()}
                     {upcoming.length > 0 && (
                         <section
-                            className="flex flex-col gap-3"
+                            className="flex flex-col gap-2 mt-2"
                             /* Test landmark only — no behaviour. The hero above
                                renders `upcoming[0]` a SECOND time, so the
                                soonest service is legitimately in the DOM twice
@@ -331,24 +337,24 @@ export function PublicSetlistListing({ initialSetlists }: PublicSetlistListingPr
                                a heading-based lookup would not be stable. */
                             data-testid="upcoming-list"
                         >
-                            <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground px-1">
+                            <h2 className="text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground px-1">
                                 {t("performSetlist.upcoming")}
                             </h2>
-                            <div className="flex flex-col gap-3">
-                                {upcoming.map(renderCard)}
+                            <div className="flex flex-col divide-y divide-rule border border-rule rounded-lg overflow-hidden bg-card">
+                                {upcoming.map((s) => renderCard(s))}
                             </div>
                         </section>
                     )}
                     {past.length > 0 && (
                         <section
-                            className="flex flex-col gap-3 mt-5"
+                            className="flex flex-col gap-2 mt-4"
                             data-testid="past-list"
                         >
-                            <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground px-1">
+                            <h2 className="text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground px-1">
                                 {label(org, 'pastSection')}
                             </h2>
-                            <div className="flex flex-col gap-3">
-                                {past.map(renderCard)}
+                            <div className="flex flex-col divide-y divide-rule border border-rule rounded-lg overflow-hidden bg-card">
+                                {past.map((s) => renderCard(s, true))}
                             </div>
                         </section>
                     )}

@@ -67,9 +67,9 @@ export function LiturgyRunDivider({
             aria-controls={controls}
             className={cn(
                 "flex w-full items-center gap-3 px-4 min-h-11 text-start cursor-pointer",
-                "border-y border-border/40 bg-muted/30",
-                "hover:bg-muted/60 active:bg-muted/80 transition-colors duration-200",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset",
+                "border-b border-rule bg-muted",
+                "hover:bg-accent active:bg-accent transition-colors duration-200",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
             )}
         >
             <ChevronDown
@@ -81,14 +81,14 @@ export function LiturgyRunDivider({
                     expanded ? "rotate-0" : "-rotate-90",
                 )}
             />
-            <span className="text-sm text-muted-foreground truncate min-w-0">
+            <span className="text-sm font-medium text-muted-foreground truncate min-w-0">
                 {expanded ? hideLabel : label}
             </span>
-            <span className="h-px flex-1 bg-border/60" />
+            <span className="flex-1" />
             {pages && (
                 // Same fixed right-hand column the rows use, so a folded run's
                 // pages land under the folios above and below it.
-                <span className="shrink-0 w-16 text-end text-sm tabular-nums text-muted-foreground">
+                <span className="tnum shrink-0 w-20 text-end text-sm font-semibold text-muted-foreground">
                     {pages}
                 </span>
             )}

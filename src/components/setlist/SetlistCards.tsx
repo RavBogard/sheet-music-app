@@ -10,6 +10,7 @@ import { hidesLiturgicalFields } from "@/lib/org/vocab"
 import { useT } from "@/i18n/client"
 import { useFormat } from "@/i18n/format-client"
 import { cn } from "@/lib/utils"
+import { RowDate } from "./RowDate"
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -46,21 +47,6 @@ function inferServiceType(setlist: Setlist): ServiceType | null {
 
 const ROW_CLASS =
     "group relative flex items-center gap-3 sm:gap-4 px-3 sm:px-4 py-3 min-h-[72px] bg-card hover:bg-accent/50 transition-colors"
-
-/** The date column: month over a large tabular day number. */
-function RowDate({ date, muted }: { date: Date | null; muted?: boolean }) {
-    const fmt = useFormat()
-    return (
-        <div aria-hidden className="tnum w-12 shrink-0 flex flex-col items-center justify-center leading-none relative z-10 pointer-events-none">
-            <span className={cn("text-[11px] font-bold uppercase tracking-[0.08em]", muted ? "text-muted-foreground" : "text-brand")}>
-                {date ? fmt.date(date, { month: "short" }) : ""}
-            </span>
-            <span className={cn("mt-1 text-[1.6rem] font-extrabold tracking-[-0.02em]", muted ? "text-muted-foreground" : "text-foreground")}>
-                {date ? date.getDate() : "--"}
-            </span>
-        </div>
-    )
-}
 
 function Dot() {
     return <span aria-hidden="true" className="text-muted-foreground/60">·</span>

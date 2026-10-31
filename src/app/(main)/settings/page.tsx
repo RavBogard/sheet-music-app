@@ -110,25 +110,25 @@ export default function SettingsPage() {
     )
 
     return (
-        <div className="min-h-screen bg-background text-foreground p-6 pb-24">
-            <div className="max-w-3xl mx-auto space-y-8">
+        <div className="min-h-screen bg-background text-foreground px-4 sm:px-6 pt-5 sm:pt-6 pb-24">
+            <div className="max-w-3xl mx-auto space-y-7">
 
                 {/* Header */}
-                <div className="flex items-center gap-4 mb-8">
-                    <Button variant="ghost" size="icon" aria-label={t("settings.back")} onClick={() => router.back()} className="rounded-full hover:bg-accent md:hidden">
+                <div className="flex items-start gap-2 sm:gap-3">
+                    <Button variant="ghost" size="icon" aria-label={t("settings.back")} onClick={() => router.back()} className="h-11 w-11 rounded-md hover:bg-accent md:hidden shrink-0">
                         <DirectionalIcon icon={ArrowLeft} className="w-5 h-5" />
                     </Button>
                     <div>
-                        <h1 className="text-2xl font-semibold">{t("settings.title")}</h1>
-                        <p className="text-muted-foreground text-sm">{t("settings.subtitle")}</p>
+                        <h1 className="text-[1.35rem] sm:text-[1.6rem] font-extrabold leading-tight tracking-[-0.015em]">{t("settings.title")}</h1>
+                        <p className="text-muted-foreground text-sm font-medium mt-0.5">{t("settings.subtitle")}</p>
                     </div>
                 </div>
 
                 {/* Account */}
                 <section className="space-y-4">
-                    <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("settings.account")}</h2>
+                    <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-[0.08em] px-1">{t("settings.account")}</h2>
 
-                    <div className="bg-card border border-border p-5 rounded-2xl flex items-center gap-4">
+                    <div className="bg-card border border-rule p-5 rounded-lg flex items-center gap-4">
                         <Avatar className="h-14 w-14 border border-border">
                             <AvatarImage src={user?.photoURL ?? undefined} alt={t("settings.profilePhotoAlt")} />
                             <AvatarFallback className="bg-muted">
@@ -154,10 +154,10 @@ export default function SettingsPage() {
                                     <Input
                                         value={nameValue}
                                         onChange={(e) => setNameValue(e.target.value)}
-                                        className="h-8 text-sm font-semibold"
+                                        className="h-11 text-base font-semibold"
                                         autoFocus
                                     />
-                                    <Button type="submit" size="icon" variant="ghost" aria-label={t("settings.saveName")} className="h-8 w-8 shrink-0" disabled={savingName}>
+                                    <Button type="submit" size="icon" variant="ghost" aria-label={t("settings.saveName")} className="h-11 w-11 shrink-0" disabled={savingName}>
                                         <Check className="h-4 w-4" />
                                     </Button>
                                 </form>
@@ -169,13 +169,13 @@ export default function SettingsPage() {
                                         setEditingName(true)
                                     }}
                                 >
-                                    <h3 className="font-semibold text-foreground">{profile?.displayName || user?.displayName || t("settings.defaultDisplayName")}</h3>
+                                    <h3 className="text-[17px] font-bold text-foreground">{profile?.displayName || user?.displayName || t("settings.defaultDisplayName")}</h3>
                                     <Pencil className="h-3 w-3 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors" />
                                 </button>
                             )}
                             <p className="text-muted-foreground text-sm">{user?.email}</p>
                         </div>
-                        <div className="text-xs font-mono bg-muted px-2.5 py-1 rounded-lg text-muted-foreground border border-border">
+                        <div className="text-xs font-semibold bg-secondary px-2.5 py-1 rounded-md text-secondary-foreground border border-border">
                             {(() => {
                                 const r = role ?? 'pending'
                                 // Unknown role ids fall through to the raw id (data, as before).
@@ -185,8 +185,8 @@ export default function SettingsPage() {
                     </div>
 
                     {/* Appearance */}
-                    <div className="bg-card border border-border p-5 rounded-2xl">
-                        <h3 className="font-semibold text-foreground mb-3">{t("settings.appearance")}</h3>
+                    <div className="bg-card border border-rule p-5 rounded-lg">
+                        <h3 className="font-bold text-foreground mb-3">{t("settings.appearance")}</h3>
                         <div className="flex gap-2">
                             {[
                                 { value: "light", icon: Sun, label: t("settings.theme.light") },
@@ -196,10 +196,10 @@ export default function SettingsPage() {
                                 <button
                                     key={value}
                                     onClick={() => setTheme(value)}
-                                    className={cn("flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all",
+                                    className={cn("flex items-center gap-2 min-h-11 px-4 rounded-md text-sm font-semibold border transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                                         theme === value
-                                            ? "bg-primary/10 text-primary ring-1 ring-primary/30"
-                                            : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground border border-border"
+                                            ? "bg-accent text-foreground border-brand"
+                                            : "bg-card text-muted-foreground hover:text-foreground border-border"
                                     )}
                                 >
                                     <Icon className="w-4 h-4" />
@@ -216,7 +216,7 @@ export default function SettingsPage() {
                     <LanguageSettings />
 
                     {/* Performance Modes */}
-                    <div className="bg-card border border-border p-5 rounded-2xl">
+                    <div className="bg-card border border-rule p-5 rounded-lg">
                         <div className="flex items-center justify-between mb-3">
                             <div>
                                 <h3 className="font-semibold text-foreground">{t("settings.gigMode.title")}</h3>
@@ -229,13 +229,13 @@ export default function SettingsPage() {
                     </div>
 
                     {/* Push Notifications */}
-                    <div className="bg-card border border-border p-5 rounded-2xl">
+                    <div className="bg-card border border-rule p-5 rounded-lg">
                         <PushNotificationSettings />
                     </div>
 
                     {/* Change Password (email/password users only) */}
                     {isEmailPasswordUser && (
-                        <div className="bg-card border border-border p-5 rounded-2xl">
+                        <div className="bg-card border border-rule p-5 rounded-lg">
                             <h3 className="font-semibold text-foreground mb-1">{t("settings.password.title")}</h3>
                             <p className="text-sm text-muted-foreground mb-4">
                                 {t("settings.password.description")}
@@ -279,12 +279,12 @@ export default function SettingsPage() {
                                 </div>
 
                                 {passwordError && (
-                                    <div className="bg-destructive/10 border border-destructive/20 text-destructive text-sm rounded-xl p-3">
+                                    <div className="bg-destructive/10 border border-destructive/20 text-destructive text-sm rounded-md p-3">
                                         {passwordError}
                                     </div>
                                 )}
                                 {passwordSuccess && (
-                                    <div className="bg-success/10 border border-success/20 text-success text-sm rounded-xl p-3">
+                                    <div className="bg-success/10 border border-success/20 text-success text-sm rounded-md p-3">
                                         {t("settings.password.success")}
                                     </div>
                                 )}
@@ -292,7 +292,7 @@ export default function SettingsPage() {
                                 <Button
                                     type="submit"
                                     disabled={passwordLoading}
-                                    className="gap-2 rounded-xl"
+                                    className="gap-2 rounded-md h-11"
                                 >
                                     {passwordLoading ? (
                                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -308,16 +308,16 @@ export default function SettingsPage() {
 
                 {/* My Instrument */}
                 <section className="space-y-4">
-                    <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("settings.myInstrument")}</h2>
-                    <div className="bg-card border border-border p-5 rounded-2xl">
+                    <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-[0.08em] px-1">{t("settings.myInstrument")}</h2>
+                    <div className="bg-card border border-rule p-5 rounded-lg">
                         <MusicianProfileSettings />
                     </div>
                 </section>
 
                 {/* Integrations */}
                 <section className="space-y-4">
-                    <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("settings.integrations")}</h2>
-                    <div className="bg-card border border-border p-5 rounded-2xl">
+                    <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-[0.08em] px-1">{t("settings.integrations")}</h2>
+                    <div className="bg-card border border-rule p-5 rounded-lg">
                         <McpAccessSettings />
                     </div>
                 </section>
@@ -327,12 +327,12 @@ export default function SettingsPage() {
                     <Button
                         onClick={() => signOut()}
                         variant="ghost"
-                        className="text-destructive hover:text-destructive/80 hover:bg-destructive/10 gap-2 px-8 rounded-xl"
+                        className="text-destructive hover:text-destructive/80 hover:bg-destructive/10 gap-2 px-8 h-11 rounded-md font-semibold"
                     >
                         <LogOut className="w-4 h-4" />
                         {t("settings.logOut")}
                     </Button>
-                    <div className="text-muted-foreground/40 text-xs">
+                    <div className="tnum text-muted-foreground text-xs">
                         {t("settings.version", { version: buildInfo.version, commit: buildInfo.commit?.slice(0, 7) })}
                     </div>
                 </div>

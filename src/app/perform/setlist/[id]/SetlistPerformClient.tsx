@@ -20,7 +20,7 @@
  * ship in the initial setlist-page bundle. It lazy-loads on first song tap.
  */
 
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import dynamic from "next/dynamic"
 import Link from "next/link"
 import { Loader2, ArrowLeft, Music, Users, Pencil, Printer, ListCollapse, List } from "lucide-react"
@@ -46,6 +46,8 @@ import { logger } from "@/lib/logger"
 import { TonightSwapSheet } from "@/components/performance/TonightSwapSheet"
 import { DirectionalIcon } from "@/components/i18n/DirectionalIcon"
 import { useT } from "@/i18n/client"
+import { useFormat } from "@/i18n/format-client"
+import { cn } from "@/lib/utils"
 
 const PrintModal = dynamic(
     () => import("@/components/setlist/PrintModal").then(m => m.PrintModal),
@@ -90,6 +92,7 @@ export function SetlistPerformClient({
     initialTrackId,
 }: SetlistPerformClientProps) {
     const t = useT()
+    const fmt = useFormat()
     const {
         tracks,
         plannedTracks,
@@ -110,6 +113,7 @@ export function SetlistPerformClient({
         eventDate,
         setlistUpdatedSinceLoad,
         setlistLiveStamp,
+        setlistUpdatedAt,
         isWakeLockActive,
         isWakeLockSupported,
         wakeLockError,
@@ -170,6 +174,14 @@ export function SetlistPerformClient({
         return idx
     })
     const [showPrintModal, setShowPrintModal] = useState(false)
+    // Web refresh: "N/M charts on this iPad" in the status line, read from the
+    // Save offline button's own count of this device's offline store.
+    const [deviceReady, setDeviceReady] = useState<number | null>(null)
+    const [deviceTotal, setDeviceTotal] = useState(0)
+    const onDeviceReady = useCallback((ready: number, total: number) => {
+        setDeviceReady(ready)
+        setDeviceTotal(total)
+    }, [])
     // Per-device (`crc.perform.liturgy-collapsed`), default collapsed. The
     // control only appears when this service actually has fixed-liturgy rows
     // to fold — a Camp Sabra setlist of eight songs should not grow a button
@@ -305,7 +317,7 @@ export function SetlistPerformClient({
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-[60vh] md:pt-20">
+            <div className="flex items-center justify-center min-h-[60vh] pt-14">
                 <div className="flex flex-col items-center gap-3">
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                     <p className="text-sm text-muted-foreground font-medium">{t("performSetlist.loadingSetlist")}</p>
@@ -320,7 +332,7 @@ export function SetlistPerformClient({
     // PerformanceOfflineIndicator below signals offline non-blockingly.
     if (shouldShowFatalSetlistError(errorMessage, tracks.length > 0)) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] md:pt-20 gap-4">
+            <div className="flex flex-col items-center justify-center min-h-[60vh] pt-14 gap-4">
                 <p className="text-muted-foreground">{errorMessage}</p>
                 <Button asChild variant="outline">
                     <Link href={backHref}>{isPublicView ? t("performSetlist.backToHome") : t("performSetlist.backToSetlists")}</Link>
@@ -330,7 +342,7 @@ export function SetlistPerformClient({
     }
 
     return (
-        <div className="flex flex-col min-h-[calc(100dvh-5rem)] md:pt-20 bg-background text-foreground overflow-hidden">
+        <div className="flex flex-col min-h-[calc(100dvh-5rem)] pt-14 bg-background text-foreground overflow-hidden">
             {/* 2026-08-31: opening a setlist to perform IS the intent to keep
                 the screen awake — no one should have to remember a toggle
                 before every service. This asks the layout's KeepAwakeProvider
@@ -338,27 +350,50 @@ export function SetlistPerformClient({
                 time); an explicit disarm via the toggle is remembered and is
                 NOT overridden here. Renders nothing. */}
             <KeepAwakeAutoArm />
-            {/* Header — compact for maximum setlist visibility */}
-            <div className="flex items-center gap-2 px-4 py-2 glass border-b-0 z-20 relative">
+            {/* Head row (web refresh, blend E): the title large, the status
+                line under it ("Updated … · N/M charts on this iPad"), and the
+                tools on the right with Edit as the one blue action. */}
+            <div className="z-20 relative bg-background border-b border-rule">
+                <div className="w-full max-w-4xl mx-auto flex items-start gap-2 sm:gap-3 px-2 sm:px-4 py-3">
                 <Link
                     href={backHref}
                     aria-label={isPublicView ? t("performSetlist.backToHomeLabel") : t("performSetlist.backToSetlistsLabel")}
-                    className="h-11 w-11 flex items-center justify-center rounded-xl hover:bg-muted transition-colors shrink-0"
+                    className="h-11 w-11 flex items-center justify-center rounded-md hover:bg-accent transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                    <DirectionalIcon icon={ArrowLeft} className="h-5 w-5 text-muted-foreground" />
+                    <DirectionalIcon icon={ArrowLeft} className="h-5 w-5 text-foreground" />
                 </Link>
-                <div className="flex-1 min-w-0">
-                    <h1 className="text-base font-bold truncate">{name}</h1>
-                    <p className="text-[11px] text-muted-foreground">
-                        {totalCount > songCount
-                            ? t("performSetlist.header.songsAndItems", { count: songCount, totalCount })
-                            : t("performSetlist.songCount", { count: songCount })}
+                <div className="flex-1 min-w-0 pt-1">
+                    <h1 className="line-clamp-2 break-words text-[1.35rem] sm:text-[1.6rem] font-extrabold leading-tight tracking-[-0.015em]">{name}</h1>
+                    <p data-testid="perform-status-line" className="tnum mt-0.5 text-sm font-medium text-muted-foreground">
+                        <span>
+                            {totalCount > songCount
+                                ? t("performSetlist.header.songsAndItems", { count: songCount, totalCount })
+                                : t("performSetlist.songCount", { count: songCount })}
+                        </span>
+                        {setlistUpdatedAt && (
+                            <>
+                                <span aria-hidden="true"> · </span>
+                                <span>{t("performSetlist.status.updated", { when: fmt.relative(setlistUpdatedAt) })}</span>
+                            </>
+                        )}
+                        {deviceReady !== null && deviceTotal > 0 && (
+                            <>
+                                <span aria-hidden="true"> · </span>
+                                <span
+                                    data-testid="perform-status-device"
+                                    data-complete={deviceReady >= deviceTotal ? "true" : "false"}
+                                    className={cn(deviceReady < deviceTotal && "text-caution font-semibold")}
+                                >
+                                    {t("performSetlist.status.chartsOnDevice", { ready: deviceReady, total: deviceTotal })}
+                                </span>
+                            </>
+                        )}
                     </p>
                     {bookName && (
                         <p className="text-sm text-muted-foreground truncate">{bookName}</p>
                     )}
                 </div>
-                <div className="flex items-center gap-1 shrink-0">
+                <div className="flex flex-wrap items-center justify-end gap-1 shrink-0">
                     {/* "Keep screen on" — now a MANUAL OVERRIDE, not the only
                         way in (2026-08-31). <KeepAwakeAutoArm/> above already
                         armed the lock on mount; this toggle exists so a
@@ -379,7 +414,7 @@ export function SetlistPerformClient({
                     {/* F1: pre-arm the whole setlist for offline use (idle auto-precache
                         runs on mount; this CTA force-caches with progress). Shown to
                         everyone performing — offline resilience isn't role-gated. */}
-                    {songFileIds.length > 0 && <SaveOfflineButton fileIds={songFileIds} />}
+                    {songFileIds.length > 0 && <SaveOfflineButton fileIds={songFileIds} onReadyChange={onDeviceReady} />}
                     {foldableLiturgyRows > 0 && (
                         <Button
                             onClick={() => setLiturgyCollapsed(!liturgyCollapsed)}
@@ -391,32 +426,33 @@ export function SetlistPerformClient({
                                     ? t("performSetlist.toolbar.showLiturgyRows", { count: foldableLiturgyRows })
                                     : t("performSetlist.toolbar.hideLiturgyRows", { count: foldableLiturgyRows })
                             }
-                            className="h-11 min-w-11 gap-1.5 text-muted-foreground cursor-pointer"
+                            className="h-11 min-w-11 gap-1.5 text-muted-foreground hover:text-foreground cursor-pointer"
                         >
                             {liturgyCollapsed ? (
                                 <List className="h-4 w-4" />
                             ) : (
                                 <ListCollapse className="h-4 w-4" />
                             )}
-                            <span className="text-xs hidden sm:inline">
+                            <span className="text-xs font-semibold hidden sm:inline">
                                 {liturgyCollapsed ? t("performSetlist.toolbar.liturgy") : t("performSetlist.toolbar.songsOnly")}
                             </span>
                         </Button>
                     )}
                     {canPrint && (
-                        <Button onClick={() => setShowPrintModal(true)} size="sm" variant="ghost" aria-label={t("performSetlist.toolbar.printSetlist")} className="h-11 min-w-11 gap-1.5 text-muted-foreground">
+                        <Button onClick={() => setShowPrintModal(true)} size="sm" variant="ghost" aria-label={t("performSetlist.toolbar.printSetlist")} className="h-11 min-w-11 gap-1.5 text-muted-foreground hover:text-foreground cursor-pointer">
                             <Printer className="h-4 w-4" />
-                            <span className="text-xs hidden sm:inline">{t("performSetlist.toolbar.print")}</span>
+                            <span className="text-xs font-semibold hidden sm:inline">{t("performSetlist.toolbar.print")}</span>
                         </Button>
                     )}
                     {isLeader && (
-                        <Button asChild size="sm" variant="ghost" className="h-11 min-w-11 gap-1.5 text-muted-foreground">
+                        <Button asChild size="sm" className="h-11 min-w-11 gap-1.5 rounded-md px-3 sm:px-4 bg-primary text-primary-foreground hover:bg-primary/90 font-bold">
                             <Link href={`/setlists/${setlistId}`} aria-label={t("performSetlist.toolbar.editSetlist")}>
                                 <Pencil className="h-4 w-4" />
-                                <span className="text-xs hidden sm:inline">{t("performSetlist.toolbar.edit")}</span>
+                                <span className="text-sm hidden sm:inline">{t("performSetlist.toolbar.edit")}</span>
                             </Link>
                         </Button>
                     )}
+                </div>
                 </div>
             </div>
 
@@ -438,7 +474,7 @@ export function SetlistPerformClient({
                         }
                         window.location.reload()
                     }}
-                    className="w-full h-11 px-4 text-sm font-medium bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-100 border-b border-border/50 cursor-pointer"
+                    className="w-full min-h-12 px-4 text-[15px] font-semibold bg-section-ochre text-section-ochre-foreground border-b border-rule cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                 >
                     {t("perform.offline.setlistUpdated")}
                 </button>
@@ -447,12 +483,12 @@ export function SetlistPerformClient({
 
             {/* Who's playing */}
             {musicians.length > 0 && (
-                <div className="flex items-center gap-2 px-4 py-2 border-b border-border/50 overflow-x-auto scrollbar-hide">
+                <div className="flex items-center gap-2 px-4 py-2 border-b border-rule overflow-x-auto scrollbar-hide">
                     <Users className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                     {musicians.map((m, i) => (
                         <span
                             key={m.uid || i}
-                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted text-xs text-muted-foreground whitespace-nowrap shrink-0"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-secondary text-sm text-muted-foreground whitespace-nowrap shrink-0"
                         >
                             <span className="font-medium text-foreground">{(m.name || '').split(' ')[0] || t("performSetlist.unknownMusician")}</span>
                             {m.instrument && (
@@ -468,8 +504,8 @@ export function SetlistPerformClient({
 
             {/* David's ask 4: tonight-only swaps differ from the plan. */}
             {isLeader && user && serviceDay && tonightOverrides && Object.keys(tonightOverrides.rows).length > 0 && (
-                <div className="flex items-center gap-2 px-4 py-2 border-b border-border/50 text-sm">
-                    <span className="flex-1 text-amber-800 dark:text-amber-300">
+                <div className="flex items-center gap-2 px-4 py-2 border-b border-rule text-sm">
+                    <span className="flex-1 font-semibold text-warning-line">
                         {t("performSetlist.tonight.rowsSwapped", { count: Object.keys(tonightOverrides.rows).length })}
                     </span>
                     <Button
