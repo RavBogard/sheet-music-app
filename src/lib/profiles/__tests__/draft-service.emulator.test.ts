@@ -4,6 +4,7 @@ import { getFirestore, Timestamp } from "firebase-admin/firestore"
 
 import { createSetlistFromDraftTool, draftServiceTool } from "@/lib/mcp/tools/draft-service"
 import { seedServiceProfiles } from "@/lib/mcp/tools/service-profiles"
+import { writeSetlistFromTemplateRows } from "@/lib/mcp/tools/templates"
 
 /**
  * Setlist memory, release 2 — draft_service → create_setlist_from_draft,
@@ -206,6 +207,19 @@ describe("draft a service from its profile (emulator)", () => {
         const tracks = (await db().collection("tracks").where("setlistId", "==", created.setlistId).get()).docs.map((d) => d.data())
         expect(tracks).toHaveLength(2)
         expect(tracks.every((t) => t.liturgyRef == null)).toBe(true)
+    })
+
+    it("an explicit book:null drops a row's literal liturgyRef too; an omitted book copies it", async () => {
+        const rows = [{ type: "prayer", title: "Bar'chu", momentId: "barchu", liturgyRef: { book: "legacy-beit-mitzvah", unitId: "shma.barchu@bm-shacharit", folio: 7 } }]
+        const base = { rows, name: "Rows", sourceTemplateId: "tpl-x", logLabel: "test" }
+        const none = await writeSetlistFromTemplateRows(db(), ADMIN, CRC, { ...base, book: null })
+        const omitted = await writeSetlistFromTemplateRows(db(), ADMIN, CRC, { ...base })
+        if (!none.ok || !omitted.ok) throw new Error("write failed")
+        const rowOf = async (id: string) => (await db().collection("tracks").where("setlistId", "==", id).get()).docs[0].data()
+        const noneRow = await rowOf(none.setlistId)
+        expect(noneRow.liturgyRef).toBeUndefined()
+        expect(noneRow.momentId).toBe("barchu")
+        expect((await rowOf(omitted.setlistId)).liturgyRef).toMatchObject({ folio: 7 })
     })
 
     it("refuses an unknown book before creating anything", async () => {

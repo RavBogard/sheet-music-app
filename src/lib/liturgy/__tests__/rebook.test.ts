@@ -28,18 +28,18 @@ describe("rebookLiturgyRef", () => {
     })
 
     it("follows the MOMENT when the unit id is book-local", () => {
-        // Mi Chamocha is a different unit in each book. Only moments.json
+        // Hashkivenu is a different unit in each book. Only moments.json
         // knows they are the same prayer — this is what Part E was for.
         const out = rebookLiturgyRef(
-            { book: "shabbat-maariv", unitId: "shma.mi-chamocha@shabbat-maariv", folio: 29 },
+            { book: "shabbat-maariv", unitId: "shma.hashkivenu@shabbat-maariv", folio: 31 },
             "shirei-tshuvah",
-            "Mi Chamocha",
+            "Hashkivenu",
         )
         expect(out.status).toBe("resolved")
         if (out.status !== "resolved") return
         expect(out.how).toBe("moment")
         expect(out.ref.book).toBe("shirei-tshuvah")
-        expect(out.ref.folio).not.toBe(29)
+        expect(out.ref.folio).not.toBe(31)
     })
 
     it("falls back to the row's own name for a book with no unit ids", () => {
@@ -80,6 +80,35 @@ describe("rebookLiturgyRef", () => {
         const out = rebookLiturgyRef(ref, "crc-friday", "Bar'chu")
         expect(out.status).toBe("resolved")
         if (out.status === "resolved") expect(out.ref).toBe(ref)
+    })
+})
+
+describe("a moment printed on more than one page of the new book", () => {
+    // The Beit Mitzvah siddur prints a morning (pp.1-31) and an evening with
+    // Havdalah (pp.33-63): Bar'chu is on 7 and 36. Taking the first would hand
+    // an evening service the morning page and call it resolved.
+    it("an evening Bar'chu rebooked to the Beit Mitzvah siddur is stale, not page 7", () => {
+        const before = { book: "legacy-shabbat-evening", unitId: "shma.barchu@legacy-shabbat-evening", folio: 10 }
+        const out = rebookLiturgyRef(before, "legacy-beit-mitzvah", "Bar'chu")
+        expect(out.status).toBe("stale")
+        expect(out.ref).toEqual(before)
+    })
+
+    it("holds for every book: Mi Chamocha is on two pages of Shirei Tshuvah (evening and morning)", () => {
+        const before = { book: "shabbat-maariv", unitId: "shma.mi-chamocha@shabbat-maariv", folio: 29 }
+        const out = rebookLiturgyRef(before, "shirei-tshuvah", "Mi Chamocha")
+        expect(out.status).toBe("stale")
+        expect(out.ref).toEqual(before)
+    })
+
+    it("rebookRows reports the row as unresolved and marks it stale", () => {
+        const out = rebookRows(
+            [{ id: "x", title: "Bar'chu", liturgyRef: { book: "legacy-shabbat-evening", unitId: "shma.barchu@legacy-shabbat-evening", folio: 10 } }],
+            "legacy-beit-mitzvah",
+        )
+        expect(out.resolved).toEqual([])
+        expect(out.unresolved.map((r) => r.rowId)).toEqual(["x"])
+        expect(out.writes).toEqual([{ rowId: "x", ref: { book: "legacy-shabbat-evening", unitId: "shma.barchu@legacy-shabbat-evening", folio: 10 }, stale: true }])
     })
 })
 

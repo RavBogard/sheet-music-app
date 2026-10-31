@@ -326,8 +326,14 @@ export interface UpdateSetlistArgs {
      * Task 5 (liturgy outlines Phase 2) — see CreateSetlistArgs.book. Threaded
      * through to updateSetlistServerSide's SetlistMetadataPatch.book so it
      * lands in the same write as the rest of the patch.
+     *
+     * Setlist memory r4 — `null` (explicitly) means no book: a B'nei Mitzvah
+     * family praying from its own booklet. Every row's `liturgyRef` is then
+     * cleared, because the service sheet prints each row's own page whatever
+     * the setlist's book says. Rows, order, `momentId` and every other field
+     * are untouched.
      */
-    book?: string
+    book?: string | null
     /**
      * Wall-clock start for this one service, `HH:mm` tenant-local. Overrides
      * the per-serviceType default in the congregation config; read by
@@ -362,8 +368,11 @@ export async function updateSetlist(
               rabbiSlot: string | null
               special: boolean | null
           }
-          /** Present only when the book changed. See `rebookRows`. */
-          rebook?: RebookReport & { from: string; to: string }
+          /**
+           * Present only when the book changed. See `rebookRows`. With
+           * `book: null` it is `{from, to: null, cleared}`: pages removed.
+           */
+          rebook?: (RebookReport & { from: string; to: string }) | { from: string | null; to: null; cleared: number }
       }
     | RichErrorEnvelope
     | ToolEnvelopeError
@@ -376,7 +385,7 @@ export async function updateSetlist(
 
     // Task 7 (liturgy outlines Phase 3): reject an unknown book slug before
     // any write.
-    const badBook = bookSlugGuard(args.book)
+    const badBook = bookSlugGuard(args.book ?? undefined)
     if (badBook) return badBook
 
     const patch: SetlistMetadataPatch = {}
@@ -438,8 +447,30 @@ export async function updateSetlist(
         )
     }
 
-    let rebook: (RebookReport & { from: string; to: string }) | undefined
-    if (bookChanged && args.book) {
+    let rebook:
+        | (RebookReport & { from: string; to: string })
+        | { from: string | null; to: null; cleared: number }
+        | undefined
+    if (args.book === null) {
+        // No book: no row may print a page. Clear `liturgyRef` on every row
+        // that has one, and nothing else.
+        const tracks = await getTracksForSetlist(db, args.id, loaded.data)
+        let cleared = 0
+        for (const t of tracks) {
+            if ((t as unknown as Record<string, unknown>).liturgyRef == null) continue
+            try {
+                await db.collection("tracks").doc(t.id).update({ liturgyRef: FieldValue.delete() })
+                cleared++
+            } catch (err) {
+                logger.warn("[update_setlist] page clear failed", {
+                    setlistId: args.id,
+                    rowId: t.id,
+                    err: err instanceof Error ? err.message : String(err),
+                })
+            }
+        }
+        rebook = { from: previousBook, to: null, cleared }
+    } else if (bookChanged && args.book) {
         const tracks = await getTracksForSetlist(db, args.id, loaded.data)
         const plan = rebookRows(
             tracks.map((t) => {

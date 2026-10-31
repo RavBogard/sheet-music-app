@@ -173,8 +173,10 @@ export function validateLiturgyRef(
         // id each printed page came from, and that id is the row's only route
         // to a `momentId`. Refusing it would have refused the identity while
         // keeping the page — exactly backwards.
+        // A feed unit is known only ON ITS OWN PAGES: the morning Bar'chu's id
+        // with the evening Bar'chu's page is a wrong page wearing a right name.
         const known =
-            book?.units?.some((u) => u.id === ref.unitId) ||
+            book?.units?.some((u) => u.id === ref.unitId && u.folios.includes(ref.folio)) ||
             book?.entries?.some(
                 (e) =>
                     e.unitId === ref.unitId && (!service || e.service === service),

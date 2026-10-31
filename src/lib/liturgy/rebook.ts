@@ -67,13 +67,27 @@ export function rebookLiturgyRef(
     }
 
     // 2 — the moment behind the unit, printed somewhere in the new book.
+    // Printed on more than one page there (the Beit Mitzvah siddur's morning
+    // and evening Bar'chu, 7 and 36; the machzor's four) is NOT a resolution:
+    // taking the first would hand an evening service the morning page. The
+    // row stays as it was, stale, and is reported — never picked.
     const momentId = momentIdForUnit(current.unitId)
     if (momentId) {
+        const refs: LiturgyRef[] = []
         for (const o of occurrencesForMoment(momentId, toBook)) {
             const folio = o.folios?.[0]
             if (typeof folio !== "number") continue
             const ref = refFor(toBook, folio, o.unitId)
-            if (ref) return { status: "resolved", ref, how: "moment" }
+            if (ref) refs.push(ref)
+        }
+        const pages = [...new Set(refs.map((r) => r.folio))].sort((a, b) => a - b)
+        if (pages.length === 1) return { status: "resolved", ref: refs[0], how: "moment" }
+        if (pages.length > 1) {
+            return {
+                status: "stale",
+                ref: current,
+                reason: `'${title || current.unitId}' prints on pages ${pages.join(", ")} of '${toBook}'; which one is not known, so none was picked.`,
+            }
         }
     }
 

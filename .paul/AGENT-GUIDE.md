@@ -32,9 +32,13 @@ needs him. Keep it short: he is often listening, not reading.
 3. **First Fridays.** When "Friday" falls on the month's first Friday, ask
    "Shir Shabbat or regular Friday night?".
 4. **B'nei Mitzvah.** Ask "Beit Mitzvah siddur, or the family's own
-   booklet?". The siddur is the profile's book. For the family's own
-   booklet, pass `book: null` to `create_setlist_from_draft`, so no page
-   numbers print. A wrong page is worse than none.
+   booklet?". The siddur is the profile's book. It prints a morning
+   service and an evening service with Havdalah: a Havdalah or evening
+   B'nei Mitzvah uses the evening pages, and a page you aren't sure of is
+   left blank and read back, never guessed. For the family's own booklet,
+   pass `book: null` to `create_setlist_from_draft`, or later call
+   `update_setlist` with `book: null`, which clears every page. A wrong
+   page is worse than none.
 5. **The flow.** Call `draft_service`, then say `readback.text` aloud. Show
    `readback.exceptions` as a short list on screen; give the full table only
    when asked. Then take short answers: "yes" creates the setlist

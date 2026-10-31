@@ -311,6 +311,23 @@ describe("legacy-beit-mitzvah", () => {
         ).toEqual({ ok: true })
     })
 
+    it("refuses a unit on a page that is not one of its own", () => {
+        // The evening Bar'chu's page under the morning unit's id.
+        expect(
+            validateLiturgyRef({ book: "legacy-beit-mitzvah", unitId: "shma.barchu@bm-shacharit", folio: 36 }),
+        ).toMatchObject({ ok: false, machineCode: "unknown_unit_id" })
+        expect(
+            validateLiturgyRef({ book: "legacy-beit-mitzvah", unitId: "shma.barchu@bm-maariv", folio: 36 }),
+        ).toEqual({ ok: true })
+    })
+
+    it("accepts any page a multi-page feed unit spans", () => {
+        const unit = (getBook("shabbat-maariv")?.units ?? []).find((u) => u.folios.length > 1)!
+        for (const folio of unit.folios) {
+            expect(validateLiturgyRef({ book: "shabbat-maariv", unitId: unit.id, folio })).toEqual({ ok: true })
+        }
+    })
+
     it("never takes another book's unit", () => {
         expect(
             validateLiturgyRef({ book: "legacy-beit-mitzvah", unitId: "shma.barchu@legacy-shabbat-morning", folio: 7 }),

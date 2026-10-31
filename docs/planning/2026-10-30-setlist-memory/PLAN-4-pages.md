@@ -57,7 +57,7 @@ Steps:
 
 Steps:
 - [ ] **Profile book.** Set the book. Then check that `draft_service` for `bnei_mitzvah_saturday` binds rows to it the way it does for `crc-saturday`; there is an existing emulator test to extend.
-- [ ] **Guide.** In "Building a service", add one rule: for a B'nei Mitzvah, ask "Beit Mitzvah siddur, or the family's own booklet?". For the family's own booklet, set the setlist's `book` to null with `update_setlist` after creating it, so no page numbers print. A wrong page is worse than none.
+- [ ] **Guide.** In "Building a service", add one rule: for a B'nei Mitzvah, ask "Beit Mitzvah siddur, or the family's own booklet?". For the family's own booklet, pass `book: null` to `create_setlist_from_draft`, or later call `update_setlist` with `book: null`, which clears the page on every row (rows, order and `momentId` are kept), so no page numbers print. A wrong page is worse than none. *(Amended in review: the original "set the setlist's book to null" alone left every row's own page printing.)*
 - [ ] **Verify.** Run tsc, eslint and the touched tests.
 - [ ] **Commit,** push, open the PR, and stop.
 

@@ -1728,9 +1728,10 @@ export function registerWriteTools(server: McpServer): void {
                 serviceNotes: z.string().optional().describe("Free-text service notes"),
                 book: z
                     .string()
+                    .nullable()
                     .optional()
                     .describe(
-                        "Liturgy book slug used at this service (one book per service), e.g. 'crc-friday'. Call list_books for valid slugs. Page references on this setlist's rows resolve against it.",
+                        "Liturgy book slug used at this service (one book per service), e.g. 'crc-friday'. Call list_books for valid slugs. Page references on this setlist's rows resolve against it. null = no book (a B'nei Mitzvah family's own booklet): clears the page on every row and returns `rebook: {from, to: null, cleared}`; rows, order and moments are kept.",
                     ),
                 startsAtLocal: z
                     .string()

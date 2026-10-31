@@ -85,8 +85,8 @@ export type SetlistMetadataPatch = Partial<{
     serviceType: Setlist['templateType']
     rabbi: string
     serviceNotes: string
-    /** Task 5 (liturgy outlines Phase 2) — see CreateSetlistInput.book. */
-    book: string
+    /** Task 5 (liturgy outlines Phase 2) — see CreateSetlistInput.book. null = no book. */
+    book: string | null
     /** `HH:mm`, tenant wall clock — see Setlist.startsAtLocal. */
     startsAtLocal: string
     /**
