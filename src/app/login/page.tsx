@@ -117,11 +117,10 @@ export default async function LoginPage() {
 
     return (
         <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 relative overflow-hidden">
-            {/* Subtle brand gradient ambient glow */}
-            <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
-                <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] rounded-full bg-brand/[0.04] blur-3xl" />
-                <div className="absolute bottom-[-15%] right-[-10%] w-[50%] h-[50%] rounded-full bg-brand/[0.03] blur-3xl" />
-            </div>
+            {/* Web refresh (blend E): the book-cloth shell band across the
+                top, the same colour as the app's top bar, and a plain white
+                card on the light ground. No ambient glow. */}
+            <div className="absolute inset-x-0 top-0 h-14 bg-shell" aria-hidden="true" />
 
             {/* C5B-001: `<main id="main-content">` is the target of the root
                 skip-link in `app/layout.tsx`. Without it, unauth visitors on
@@ -129,7 +128,6 @@ export default async function LoginPage() {
             <main id="main-content" className="w-full max-w-sm space-y-8 text-center relative z-10">
                 <div className="flex flex-col items-center gap-4">
                     <div className="relative">
-                        <div className="absolute inset-0 rounded-full bg-brand/15 blur-xl scale-150" aria-hidden="true" />
                         {/* Audit item (i): this is /login's LCP element, and it
                             was a raw <img> pointing at public/logo.jpg — 574 KB
                             of JPEG painted into a 96px circle, with no
@@ -148,22 +146,22 @@ export default async function LoginPage() {
                                 height={96}
                                 priority
                                 sizes="96px"
-                                className="relative h-24 w-24 rounded-full border-2 border-border/60 object-cover shadow-lg shadow-brand/10"
+                                className="relative h-24 w-24 rounded-full border border-rule object-cover shadow-[0_4px_16px_rgb(24_32_46/0.12)]"
                             />
                         ) : (
                             // A tenant with no logo gets the initials monogram.
-                            <OrgLogo logoUrl="" shortName={shortName} sizeClass="relative h-24 w-24 border-2 text-3xl shadow-lg shadow-brand/10" />
+                            <OrgLogo logoUrl="" shortName={shortName} sizeClass="relative h-24 w-24 border text-3xl shadow-[0_4px_16px_rgb(24_32_46/0.12)]" />
                         )}
                     </div>
                     <div>
-                        <h1 className="text-3xl font-semibold text-foreground font-display tracking-tight">{shortName}</h1>
-                        <p className="text-muted-foreground text-sm mt-1.5">
+                        <h1 className="text-[2rem] font-extrabold leading-tight tracking-[-0.02em] text-foreground">{shortName}</h1>
+                        <p className="text-muted-foreground text-[15px] font-medium mt-1">
                             {t("auth.signInSubtitle")}
                         </p>
                     </div>
                 </div>
 
-                <div className="glass-card rounded-2xl p-6 space-y-5">
+                <div className="bg-card border border-rule rounded-lg p-6 space-y-5 shadow-[0_2px_12px_rgb(24_32_46/0.06)]">
                     <LoginClient />
 
                     {/* C5B-008: JS is required to complete sign-in (Firebase

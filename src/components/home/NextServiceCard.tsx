@@ -57,122 +57,70 @@ export function NextServiceCard({
     const musicians = setlist.musicians || []
     const songCount = setlist.songCount ?? 0
 
-    if (isPastSetlist) {
-        return (
-            <div 
-                onClick={onPerform}
-                className="rounded-2xl border border-brand/15 bg-card/80 backdrop-blur-sm p-5 shadow-lg cursor-pointer hover:border-brand/30 transition-colors duration-200 group"
-            >
-                {/* Date label */}
-                <div className="flex items-center gap-2 mb-3">
-                    <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                        {dateLabel}
-                    </span>
-                    <span className="text-xs text-muted-foreground ms-auto">
-                        {t("home.songCount", { count: songCount })}
-                    </span>
-                </div>
+    // Web refresh (blend E): one white card on the hairline. The date and
+    // song count make the status line, the name is large, and the one blue
+    // action is Perform (a quiet outline Practice for a past setlist).
+    const meta = (
+        <p className="tnum flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
+            <Clock aria-hidden="true" className="h-3.5 w-3.5" />
+            <span className={isPastSetlist ? undefined : "font-bold text-brand"}>{dateLabel}</span>
+            <span aria-hidden="true">·</span>
+            <span>{t("home.songCount", { count: songCount })}</span>
+        </p>
+    )
+    const musicianChips = musicians.length > 0 ? (
+        <div className="flex flex-wrap gap-1.5 mt-3">
+            {musicians.map((m, i) => (
+                <span
+                    key={m.uid || `musician-${i}`}
+                    className="inline-flex items-center px-2 py-0.5 rounded-md text-sm font-medium bg-secondary text-secondary-foreground"
+                >
+                    {m.name}
+                </span>
+            ))}
+        </div>
+    ) : null
 
-                {/* Setlist name */}
-                <h2 className="text-xl font-bold leading-snug mb-3 font-display text-foreground group-hover:text-brand transition-colors">
-                    {setlist.name}
-                </h2>
+    return (
+        <div
+            onClick={onPerform}
+            className="rounded-lg border border-rule bg-card p-5 shadow-[0_2px_12px_rgb(24_32_46/0.06)] cursor-pointer hover:border-brand/40 transition-colors duration-200 group"
+        >
+            {meta}
+            <h2 className="mt-1 text-[1.35rem] font-extrabold leading-tight tracking-[-0.015em] text-foreground line-clamp-2">
+                {setlist.name}
+            </h2>
+            {musicianChips}
 
-                {/* Musicians */}
-                {musicians.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mb-4">
-                        {musicians.map((m, i) => (
-                            <span
-                                key={m.uid || `musician-${i}`}
-                                className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-brand/10 text-foreground"
-                            >
-                                {m.name}
-                            </span>
-                        ))}
-                    </div>
-                )}
-
-                {/* Action buttons — muted for past setlists */}
-                <div className="flex items-center gap-2">
+            {/* Primary CTA. Band leaders get an adjacent Edit shortcut;
+                musicians/members see Perform-only. */}
+            <div className="flex items-center gap-2 mt-4">
+                {isPastSetlist ? (
                     <Button
-                        variant="ghost"
-                        className="flex-1 py-3 rounded-xl font-semibold bg-brand/10 group-hover:bg-brand/15 text-foreground transition-colors"
+                        variant="outline"
+                        className="flex-1 h-12 rounded-md font-bold border-border bg-card text-foreground group-hover:bg-accent transition-colors"
                     >
                         <PlayCircle className="h-4 w-4" />
                         {t("home.practice")}
                     </Button>
-                    {isBandLeader && onEdit && (
-                        <Button
-                            variant="ghost"
-                            onClick={(e) => { e.stopPropagation(); onEdit() }}
-                            aria-label={t("home.editSetlistAria")}
-                            className="h-11 px-3 rounded-xl text-muted-foreground hover:text-foreground hover:bg-brand/10"
-                        >
-                            <Pencil className="h-4 w-4" />
-                            <span className="text-xs font-medium">{t("home.edit")}</span>
-                        </Button>
-                    )}
-                </div>
-            </div>
-        )
-    }
-
-    // Upcoming setlist — bold brand gradient hero card
-    return (
-        <div 
-            onClick={onPerform}
-            className="rounded-2xl border border-white/10 bg-gradient-to-br from-brand to-brand/80 p-5 shadow-lg shadow-brand/20 overflow-hidden relative cursor-pointer hover:shadow-brand/40 hover:from-brand hover:to-brand/90 transition-all duration-200 group"
-        >
-            {/* Date label — white badge on gradient */}
-            <div className="flex items-center justify-between mb-3">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-white/15 text-white/90 backdrop-blur-sm">
-                    <Clock className="h-3 w-3" />
-                    {dateLabel}
-                </span>
-                <span className="text-white/50 text-xs font-medium">
-                    {t("home.songCount", { count: songCount })}
-                </span>
-            </div>
-
-            {/* Setlist name — white on gradient */}
-            <h2 className="text-xl font-bold leading-snug mb-4 font-display text-white">
-                {setlist.name}
-            </h2>
-
-            {/* Musicians — translucent white badges */}
-            {musicians.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mb-4">
-                    {musicians.map((m, i) => (
-                        <span
-                            key={m.uid || `musician-${i}`}
-                            className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-white/15 text-white/90"
-                        >
-                            {m.name}
-                        </span>
-                    ))}
-                </div>
-            )}
-
-            {/* Primary CTA — white button on gradient. Band leaders get an
-                adjacent Edit shortcut; musicians/members see Perform-only. */}
-            <div className="flex items-center gap-2">
-                <Button
-                    variant="ghost"
-                    className="flex-1 py-3 rounded-xl font-bold bg-white text-brand group-hover:bg-white/90 transition-colors"
-                >
-                    <PlayCircle className="h-4 w-4" />
-                    {t("home.perform")}
-                </Button>
+                ) : (
+                    <Button
+                        variant="ghost"
+                        className="flex-1 h-12 rounded-md text-[15px] font-bold bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground group-hover:bg-primary/90 transition-colors"
+                    >
+                        <PlayCircle className="h-4 w-4" />
+                        {t("home.perform")}
+                    </Button>
+                )}
                 {isBandLeader && onEdit && (
                     <Button
                         variant="ghost"
                         onClick={(e) => { e.stopPropagation(); onEdit() }}
                         aria-label={t("home.editSetlistAria")}
-                        className="h-11 px-3 rounded-xl bg-white/15 text-white hover:bg-white/25"
+                        className="h-12 px-4 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent"
                     >
                         <Pencil className="h-4 w-4" />
-                        <span className="text-xs font-medium">{t("home.edit")}</span>
+                        <span className="text-sm font-semibold">{t("home.edit")}</span>
                     </Button>
                 )}
             </div>

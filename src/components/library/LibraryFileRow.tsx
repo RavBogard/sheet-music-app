@@ -12,6 +12,7 @@ import { useFormat } from "@/i18n/format-client"
 import type { T } from "@/i18n/core"
 import type { Formatter } from "@/i18n/format"
 import { DirectionalIcon } from "@/components/i18n/DirectionalIcon"
+import { cn } from "@/lib/utils"
 
 interface LibraryFileRowProps {
     item: DriveFile
@@ -42,6 +43,17 @@ interface LibraryFileRowProps {
 function isAudioMime(item: DriveFile) {
     return item.mimeType?.startsWith('audio/') ||
         /\.(mp3|m4a|wav|aac|ogg|flac)$/i.test(item.name)
+}
+
+/** Chart format from the file name / mime type; null when unknown. */
+function libraryFormatKey(item: DriveFile): string | null {
+    const name = item.name?.toLowerCase() ?? ""
+    const mime = item.mimeType?.toLowerCase() ?? ""
+    if (/\.(musicxml|mxl|xml)$/.test(name) || mime.includes("musicxml")) return "setlistGrid.chipFormatMusicXml"
+    if (name.endsWith(".pdf") || mime === "application/pdf") return "setlistGrid.chipFormatPdf"
+    if (mime.startsWith("image/")) return "setlistGrid.chipFormatImage"
+    if (mime.startsWith("text/") || name.endsWith(".txt")) return "setlistGrid.chipFormatText"
+    return null
 }
 
 function getAudioCleanName(name: string) {
@@ -78,6 +90,9 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
     const { title: chartTitle, composer } = isChart
         ? splitChartComposer(displayName)
         : { title: displayName, composer: undefined as string | undefined }
+
+    // Chart format (PDF / MusicXML / image / text), the same words the editor's chip uses.
+    const formatKey = isChart ? libraryFormatKey(item) : null
 
     const handleClick = () => {
         if (selectMode && !isFolder && onToggleSelect) {
@@ -133,146 +148,140 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
                     // exceeds the row width the flex content overflows
                     // EQUALLY on both sides, clipping the leading character
                     // ("Adonai Oz …" → "donai Oz …") at iPad-Mini viewport.
-                    className={`w-full h-auto text-start justify-start rounded-none whitespace-normal group relative active:scale-100 ${isSelected
-                        ? 'bg-brand/10'
-                        : isFolder
-                            ? ''
-                            : isAudio
-                                ? isPlaying
-                                    ? 'bg-brand/10'
-                                    : ''
-                                : isDigitizing
-                                    ? 'bg-brand/10 cursor-wait'
-                                    : ''
-                        }`}
+                    className={cn(
+                        "w-full h-auto text-start justify-start rounded-none whitespace-normal group relative active:scale-100",
+                        "bg-card hover:bg-accent/60 border-b border-rule focus-visible:ring-inset",
+                        (isSelected || (isAudio && isPlaying)) && "bg-accent",
+                        isChart && isDigitizing && "bg-accent cursor-wait",
+                    )}
                 >
-                    <div className="flex items-center gap-2 sm:gap-3 py-1.5 px-2 sm:px-4 min-h-11 list-cell">
+                    {/* Web refresh (blend E): one dense hairline row — the title
+                        with its setting, then a quiet meta line (format ·
+                        library · tempo · topics · recency), and the key tag in
+                        its own column on the right. */}
+                    <div className="flex items-center gap-3 py-2 px-3 sm:px-4 min-h-11 w-full list-cell">
                         {/* Select mode checkbox */}
                         {selectMode && !isFolder && (
                             <div className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${isSelected ? 'bg-brand border-brand' : 'border-muted-foreground/40'
                                 }`}>
-                                {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
+                                {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-brand-foreground" />}
                             </div>
                         )}
 
                         {isFolder ? (
-                            <Folder className="h-6 w-6 sm:h-7 sm:w-7 text-yellow-400 shrink-0 group-hover:scale-110 transition-transform" />
+                            <Folder className="h-5 w-5 text-section-ochre shrink-0" />
                         ) : isAudio ? (
-                            <div className="h-6 w-6 sm:h-7 sm:w-7 shrink-0 rounded-full bg-brand/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <div className="h-8 w-8 shrink-0 rounded-full bg-accent flex items-center justify-center">
                                 {isPlaying ? (
-                                    <Pause className="h-5 w-5 text-brand" />
+                                    <Pause className="h-4 w-4 text-brand" />
                                 ) : (
                                     // Optical centring of the play triangle, a physical icon that
                                     // never mirrors, so the nudge stays physical too.
-                                    <Play className="h-5 w-5 text-brand ml-0.5" />
+                                    <Play className="h-4 w-4 text-brand ml-0.5" />
                                 )}
                             </div>
                         ) : isDigitizing ? (
-                            <div className="relative">
-                                <FileMusic className="h-6 w-6 sm:h-7 sm:w-7 text-brand shrink-0 opacity-50" />
-                                <Loader2 className="h-5 w-5 text-brand/50 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-spin" />
-                            </div>
+                            <Loader2 className="h-5 w-5 text-brand shrink-0 animate-spin" />
                         ) : (
-                            <FileMusic className="h-6 w-6 sm:h-7 sm:w-7 text-brand shrink-0 group-hover:scale-110 transition-transform" />
+                            <FileMusic className="h-5 w-5 text-muted-foreground shrink-0 group-hover:text-brand transition-colors" />
                         )}
 
                         <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                                <div className="font-medium text-base truncate">
+                            <p className="line-clamp-2 break-words leading-snug">
+                                <span className="font-medium text-[16px] text-foreground">
                                     {isChart ? chartTitle : displayName}
-                                </div>
-
-                                {/* v11.7-05: composer/arrangement as a dimmed
-                                    sub-label — subordinate to the title, never
-                                    competing; omitted when absent (text-only). */}
+                                </span>
+                                {/* v11.7-05: composer/arrangement (the setting) as a
+                                    dimmed sub-label — subordinate to the title,
+                                    never competing; omitted when absent (text-only). */}
                                 {composer && (
-                                    <span className="text-xs sm:text-sm text-muted-foreground truncate shrink min-w-0">
+                                    <span className="ms-2 text-sm font-medium text-muted-foreground">
                                         {composer}
                                     </span>
                                 )}
+                            </p>
 
+                            <div className="tnum mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs font-medium text-muted-foreground">
                                 {isAudio && (
-                                    <span className="text-xs bg-brand/10 text-foreground px-2 py-0.5 rounded-md flex items-center gap-1">
-                                        <Headphones className="w-3 h-3" />
+                                    <span className="inline-flex items-center gap-1">
+                                        <Headphones className="w-3 h-3" aria-hidden="true" />
                                         {t("library.row.audio")}
                                     </span>
                                 )}
 
-                                {!isFolder && !isAudio && item.metadata?.key && (
-                                    <span className="text-xs bg-brand/10 text-foreground px-2 py-0.5 rounded-md border border-brand/20 font-mono">
-                                        {item.metadata.key}
-                                    </span>
-                                )}
-                                {!isFolder && !isAudio && item.metadata?.bpm && (
-                                    <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-md border border-border font-mono">
-                                        {t("library.row.bpm", { bpm: item.metadata.bpm })}
-                                    </span>
+                                {isChart && formatKey && (
+                                    <span data-testid="library-row-format">{t(formatKey)}</span>
                                 )}
 
-                                {!isFolder && !isAudio && item.collection === 'supplemental' && (
-                                    <span className="text-xs font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded-md border border-amber-500/20">
+                                {isChart && item.collection === 'supplemental' && (
+                                    <span>
                                         {/* i18n-ignore: collection (book) name, data — not translated */}
                                         Shireinu
                                     </span>
                                 )}
 
-                                {!isFolder && !isAudio && item.collection === 'nava' && (
-                                    <span className="text-xs font-medium bg-violet-500/10 text-violet-600 dark:text-violet-400 px-2 py-0.5 rounded-md border border-violet-500/20">
+                                {isChart && item.collection === 'nava' && (
+                                    <span>
                                         {/* i18n-ignore: collection (book) name, data — not translated */}
                                         Nava Tehilah
                                     </span>
                                 )}
 
-                                {!isFolder && !isAudio && item.collection !== 'supplemental' && item.collection !== 'nava' && (
-                                    <span className="text-xs font-medium bg-blue-500/10 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-md border border-blue-500/20">
-                                        {t("org.library.ownBadge")}
-                                    </span>
+                                {isChart && item.collection !== 'supplemental' && item.collection !== 'nava' && (
+                                    <span>{t("org.library.ownBadge")}</span>
+                                )}
+
+                                {isChart && item.metadata?.bpm && (
+                                    <span>{t("library.row.bpm", { bpm: item.metadata.bpm })}</span>
                                 )}
 
                                 {sharedFrom?.badge && (
                                     <span
                                         data-testid="shared-owner-badge"
                                         title={t("library.shared.readOnly", { owner: sharedFrom.owner })}
-                                        className="text-xs font-medium bg-muted text-muted-foreground px-2 py-0.5 rounded-md border border-border shrink-0"
+                                        className="px-1.5 rounded-sm border border-border"
                                     >
                                         {t("library.shared.fromOwner", { owner: sharedFrom.owner })}
                                     </span>
                                 )}
 
                                 {isCached && !isFolder && (
-                                    <span className="text-[10px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full flex items-center gap-1 border border-emerald-500/20" title={t("library.row.cachedTitle")}>
-                                        <CheckCircle2 className="w-3 h-3" />
+                                    <span className="inline-flex items-center gap-1 text-success" title={t("library.row.cachedTitle")}>
+                                        <CheckCircle2 className="w-3 h-3" aria-hidden="true" />
                                         {t("library.row.cached")}
                                     </span>
                                 )}
 
-                                {!isFolder && !isAudio && item.metadata?.topics && item.metadata.topics.length > 0 && (
-                                    <div className="hidden sm:flex gap-1">
-                                        {item.metadata.topics.slice(0, 2).map(topic => (
-                                            <span key={topic} className="text-xs bg-brand/10 text-foreground px-2 py-0.5 rounded-md">
-                                                {topic}
-                                            </span>
-                                        ))}
-                                    </div>
+                                {isChart && item.metadata?.topics && item.metadata.topics.length > 0 && (
+                                    <span className="hidden sm:inline">
+                                        {item.metadata.topics.slice(0, 2).join(", ")}
+                                    </span>
                                 )}
 
                                 {/* Song Usage Badge — v11.7-05: visible at all
                                     widths (was hidden sm:inline) so recency
                                     reads on iPad portrait too. */}
-                                {!isFolder && !isAudio && usageInfo && (
-                                    <span className="ms-auto shrink-0 text-xs text-muted-foreground tabular-nums" title={t("library.row.lastUsedTitle", { date: usageInfo.lastUsedDate })}>
+                                {isChart && usageInfo && (
+                                    <span title={t("library.row.lastUsedTitle", { date: usageInfo.lastUsedDate })}>
                                         {formatUsageBadge(usageInfo.lastUsedDate, usageInfo.totalUses, t, fmt)}
                                     </span>
                                 )}
 
                                 {isDigitizing && (
-                                    <span className="text-xs bg-brand/20 text-brand px-2 py-1 rounded-full animate-pulse">
+                                    <span className="font-semibold text-brand">
                                         {t("library.row.digitizing")}
                                     </span>
                                 )}
                             </div>
                         </div>
-                        {!isAudio && <DirectionalIcon icon={ChevronRight} className="h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground/60 group-hover:text-foreground" />}
+
+                        {isChart && item.metadata?.key && (
+                            <span className="tnum shrink-0 inline-flex items-center justify-center min-w-[2.5rem] h-7 px-2 rounded-md border border-border bg-secondary text-sm font-bold text-secondary-foreground">
+                                <span className="sr-only">{t("setlistGrid.columnKey")} </span>
+                                {item.metadata.key}
+                            </span>
+                        )}
+                        {!isAudio && <DirectionalIcon icon={ChevronRight} className="h-5 w-5 shrink-0 text-muted-foreground/60 group-hover:text-foreground" />}
                     </div>
                 </Button>
             </ContextMenuTrigger>
@@ -327,7 +336,7 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
                         {isAdmin && onArchive && (
                             <ContextMenuItem
                                 onClick={onArchive}
-                                className="text-red-400 focus:text-red-300 focus:bg-red-900/50"
+                                className="text-destructive focus:text-destructive focus:bg-destructive/10"
                             >
                                 <span className="flex items-center gap-2">
                                     <CloudOff className="h-4 w-4" /> {t("library.row.archive")}

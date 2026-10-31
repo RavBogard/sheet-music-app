@@ -26,15 +26,7 @@ import { KEY_OPTIONS_DATA } from './cells/KeyCell'
 import { RecordingCell } from './cells/RecordingCell'
 import { displayChartTitle } from '@/lib/format/chart-title'
 import { RecordingBindPopover } from './RecordingBindPopover'
-import type { SectionBand, SectionHue } from './section-bands'
-
-/** Full-hue section bands (web refresh, blend E). Each hue carries its own ink. */
-const BAND_CLASS: Record<SectionHue, string> = {
-    green: 'bg-section-green text-section-green-foreground',
-    oxblood: 'bg-section-oxblood text-section-oxblood-foreground',
-    ochre: 'bg-section-ochre text-section-ochre-foreground',
-    blue: 'bg-section-blue text-section-blue-foreground',
-}
+import { SECTION_BAND_CLASS as BAND_CLASS, type SectionBand } from './section-bands'
 
 /** Chart format from the cached file name / mime type; null when unknown. */
 function chartFormatKey(track: LocalTrack): string | null {
