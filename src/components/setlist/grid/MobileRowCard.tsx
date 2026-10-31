@@ -307,12 +307,14 @@ export function MobileRowCard({
                                 : t('setlistGrid.cardUntitledAria')
                         }
                         className={cn(
-                            'group relative flex items-center gap-2 sm:gap-3 cursor-pointer',
+                            'group relative flex items-center gap-1.5 sm:gap-2 cursor-pointer',
                             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
                             'transition-colors duration-150 motion-reduce:transition-none',
+                            // Dense, track-list rows (~48px): the 44px hit areas
+                            // come from the controls themselves, not row height.
                             isSection
-                                ? cn('min-h-12 ps-1 pe-3 sm:pe-4 rounded-sm', BAND_CLASS[band?.hue ?? 'blue'])
-                                : 'min-h-[68px] ps-1 pe-1 sm:pe-2 bg-card hover:bg-accent/50 border-b border-rule',
+                                ? cn('min-h-11 ps-0.5 pe-3 sm:pe-4 rounded-sm', BAND_CLASS[band?.hue ?? 'blue'])
+                                : 'min-h-12 ps-0.5 pe-2 sm:pe-3 bg-card hover:bg-accent/50 border-b border-rule',
                             isDragging && 'shadow-[0_8px_24px_rgb(24_32_46/0.18)] ring-2 ring-ring/60 z-10',
                         )}
                     >
@@ -344,113 +346,95 @@ export function MobileRowCard({
                             </span>
                         )}
 
-                        <div className="min-w-0 flex-1 flex flex-col gap-0.5 py-2">
-                            <span
-                                data-testid={isSection ? `section-running-head-${track.id}` : undefined}
-                                className={cn(
-                                    'truncate',
-                                    isSection ? 'text-[13px] font-extrabold uppercase tracking-[0.08em]'
-                                    // Bonded prayer/reading reads as a full chart-bearing row
-                                    // (foreground, non-italic); only an UNBONDED non-song row
-                                    // keeps the passive dimmed-italic label.
-                                    : !isSong ? (hasChart ? 'text-base font-medium text-foreground' : 'text-sm italic text-muted-foreground/80')
-                                    : 'text-lg font-semibold leading-snug text-foreground',
-                                )}
-                            >
-                                {displayChartTitle(track.title) || (
-                                    <span className={isSection ? 'opacity-80' : 'text-muted-foreground font-medium'}>
-                                        {isSection
-                                            ? t('setlistGrid.untitledSection')
-                                            : isSong
-                                              ? t('setlistGrid.untitledTrack')
-                                              : UNTITLED_BY_TYPE[String(track.type)]
-                                                ? t(UNTITLED_BY_TYPE[String(track.type)])
-                                                : t('setlistGrid.untitledOther', { type: String(track.type) })}
+                        <div className="min-w-0 flex-1 py-1">
+                            {/* One line where the width allows: the title, then the
+                                chip inline and muted; wraps to 2 lines before
+                                truncating. */}
+                            <p className={cn(isSection ? 'truncate' : 'line-clamp-2 break-words', 'leading-snug')}>
+                                <span
+                                    data-testid={isSection ? `section-running-head-${track.id}` : undefined}
+                                    className={cn(
+                                        isSection ? 'text-[13px] font-extrabold uppercase tracking-[0.08em]'
+                                        // Bonded prayer/reading reads as a full chart-bearing row
+                                        // (foreground, non-italic); only an UNBONDED non-song row
+                                        // keeps the passive dimmed-italic label.
+                                        : !isSong ? (hasChart ? 'text-base font-medium text-foreground' : 'text-sm italic text-muted-foreground/80')
+                                        : 'text-lg font-semibold text-foreground',
+                                    )}
+                                >
+                                    {displayChartTitle(track.title) || (
+                                        <span className={isSection ? 'opacity-80' : 'text-muted-foreground font-medium'}>
+                                            {isSection
+                                                ? t('setlistGrid.untitledSection')
+                                                : isSong
+                                                  ? t('setlistGrid.untitledTrack')
+                                                  : UNTITLED_BY_TYPE[String(track.type)]
+                                                    ? t(UNTITLED_BY_TYPE[String(track.type)])
+                                                    : t('setlistGrid.untitledOther', { type: String(track.type) })}
+                                        </span>
+                                    )}
+                                </span>
+                                {!isSection && chipParts.length > 0 && (
+                                    <span data-testid={`chart-chip-${track.id}`} className="ms-2 text-xs font-medium text-muted-foreground whitespace-nowrap">
+                                        {chipParts.join(' · ')}
                                     </span>
                                 )}
-                            </span>
-                            {!isSection && chipParts.length > 0 && (
-                                <span data-testid={`chart-chip-${track.id}`} className="truncate text-xs font-medium text-muted-foreground">
-                                    {chipParts.join(' · ')}
-                                </span>
-                            )}
+                            </p>
                             {tonightTitle && (
-                                <span data-testid="tonight-edit-note" className="truncate text-xs font-semibold text-warning-line">
+                                <p data-testid="tonight-edit-note" className="truncate text-xs font-semibold text-warning-line">
                                     {t('setlistGrid.tonightNote', { tonight: tonightTitle, planned: track.title })}
-                                </span>
+                                </p>
                             )}
                         </div>
 
-                        {isSection ? (
-                            sectionPages ? (
-                                <span data-testid={`section-pages-${track.id}`} className="tnum shrink-0 text-[13px] font-bold tracking-[0.04em]">
-                                    {sectionPages}
-                                </span>
-                            ) : null
-                        ) : (
-                            <>
-                                {isSong && track.key ? (
-                                    <span className="tnum shrink-0 inline-flex items-center justify-center min-w-[2.75rem] h-7 px-2 rounded-md border border-border bg-secondary text-sm font-bold text-secondary-foreground">
-                                        <span className="sr-only">{t('setlistGrid.columnKey')} </span>
-                                        {track.key}
-                                    </span>
-                                ) : null}
+                        {!isSection && isSong && track.key ? (
+                            <span className="tnum shrink-0 inline-flex items-center justify-center min-w-[2.5rem] h-7 px-2 rounded-md border border-border bg-secondary text-sm font-bold text-secondary-foreground">
+                                <span className="sr-only">{t('setlistGrid.columnKey')} </span>
+                                {track.key}
+                            </span>
+                        ) : null}
 
-                                <span
-                                    data-testid={folio !== undefined ? `page-call-${track.id}` : undefined}
-                                    className="tnum shrink-0 w-[4.25rem] sm:w-20 text-end leading-none whitespace-nowrap"
-                                >
-                                    {folio !== undefined ? (
-                                        <>
-                                            <span className="text-xs font-semibold text-muted-foreground me-0.5">{t('setlistGrid.pageCallPrefix')}</span>
-                                            <span className="text-[1.65rem] font-extrabold tracking-[-0.02em] text-foreground">{folio}</span>
-                                        </>
-                                    ) : null}
-                                </span>
-
-                                {track.songId ? (
-                                    // Bound chart → click-through link that opens the
-                                    // chart file in a new tab via the existing
-                                    // Storage-backed serving route. stopPropagation
-                                    // keeps the click from bubbling to the card's
-                                    // tap-to-edit handler.
-                                    <a
-                                        href={
-                                            parseFileId(
-                                                (typeof track.fileId === 'string' &&
-                                                    track.fileId) ||
-                                                    track.songId,
-                                            ).apiUrl
-                                        }
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        aria-label={t('setlistGrid.openChartNewTab')}
-                                        onClick={(e) => e.stopPropagation()}
-                                        className={cn(
-                                            'flex-none inline-flex items-center justify-center rounded-md',
-                                            // 44px hit area (WEB-13).
-                                            'h-11 w-11',
-                                            'cursor-pointer text-brand hover:bg-accent',
-                                            'transition-colors motion-reduce:transition-none',
-                                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                                        )}
-                                    >
-                                        <Music aria-hidden className="h-5 w-5" />
-                                    </a>
-                                ) : (
-                                    <span
-                                        role="img"
-                                        aria-label={t('setlistGrid.noChartBound')}
-                                        className="flex-none inline-flex h-11 w-11 items-center justify-center"
-                                    >
-                                        <FileText
-                                            aria-hidden
-                                            className="h-5 w-5 text-muted-foreground/40"
-                                        />
-                                    </span>
+                        {!isSection && (track.songId ? (
+                            // Bound chart → click-through link that opens the
+                            // chart file in a new tab via the existing
+                            // Storage-backed serving route. stopPropagation
+                            // keeps the click from bubbling to the card's
+                            // tap-to-edit handler.
+                            <a
+                                href={
+                                    parseFileId(
+                                        (typeof track.fileId === 'string' &&
+                                            track.fileId) ||
+                                            track.songId,
+                                    ).apiUrl
+                                }
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                aria-label={t('setlistGrid.openChartNewTab')}
+                                onClick={(e) => e.stopPropagation()}
+                                className={cn(
+                                    'flex-none inline-flex items-center justify-center rounded-md',
+                                    // 44px hit area (WEB-13).
+                                    'h-11 w-11',
+                                    'cursor-pointer text-brand hover:bg-accent',
+                                    'transition-colors motion-reduce:transition-none',
+                                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                                 )}
-                            </>
-                        )}
+                            >
+                                <Music aria-hidden className="h-5 w-5" />
+                            </a>
+                        ) : (
+                            <span
+                                role="img"
+                                aria-label={t('setlistGrid.noChartBound')}
+                                className="flex-none inline-flex h-11 w-11 items-center justify-center"
+                            >
+                                <FileText
+                                    aria-hidden
+                                    className="h-5 w-5 text-muted-foreground/40"
+                                />
+                            </span>
+                        ))}
 
                         {track.songId ? (
                             // Recording affordance — opens RecordingBindPopover.
@@ -470,6 +454,29 @@ export function MobileRowCard({
                             // No song bound → recordings attach to a song, so
                             // the affordance renders disabled (no popover).
                             <RecordingCell disabled />
+                        )}
+
+                        {/* The page call sits in the margin: the far right edge,
+                            after every control, so the numbers line up down
+                            the list. */}
+                        {isSection ? (
+                            sectionPages ? (
+                                <span data-testid={`section-pages-${track.id}`} className="tnum shrink-0 text-[13px] font-bold tracking-[0.04em]">
+                                    {sectionPages}
+                                </span>
+                            ) : null
+                        ) : (
+                            <span
+                                data-testid={folio !== undefined ? `page-call-${track.id}` : undefined}
+                                className="tnum shrink-0 w-14 sm:w-16 text-end leading-none whitespace-nowrap"
+                            >
+                                {folio !== undefined ? (
+                                    <>
+                                        <span className="text-[11px] font-semibold text-muted-foreground me-0.5">{t('setlistGrid.pageCallPrefix')}</span>
+                                        <span className="text-[1.5rem] font-extrabold tracking-[-0.02em] text-foreground">{folio}</span>
+                                    </>
+                                ) : null}
+                            </span>
                         )}
                     </div>
                 </ContextMenuTrigger>

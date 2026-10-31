@@ -1,11 +1,9 @@
 "use client"
-import { useState, useEffect } from "react"
 import { toDate as toDateHelper } from "@/lib/firestore-helpers"
 
 import { Download, Plus, Loader2, MoreVertical, Copy, PlusSquare, BookmarkPlus, Star, Trash2, Pencil } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Setlist } from "@/lib/setlist-firebase"
-import { isFileCached } from "@/lib/cache-utils"
 import { getServiceContext, type ServiceType } from "@/lib/liturgical-calendar"
 import { useOrg } from "@/lib/org/org-context"
 import { hidesLiturgicalFields } from "@/lib/org/vocab"
@@ -68,6 +66,43 @@ function Dot() {
     return <span aria-hidden="true" className="text-muted-foreground/60">·</span>
 }
 
+/**
+ * The row status: how many of the songs have a chart bound (as the editor
+ * says it), then how fresh the setlist is. Neutral when every song has a
+ * chart; amber when some don't. Readiness on this device belongs to Perform.
+ * `fileIds` holds the setlist's distinct bound charts.
+ */
+function RowStatus({ setlist }: { setlist: Setlist }) {
+    const t = useT()
+    const fmt = useFormat()
+    const total = (setlist.songCount ?? setlist.trackCount) || 0
+    const fileIds = Array.isArray(setlist.fileIds) ? setlist.fileIds : null
+    const bound = fileIds ? Math.min(fileIds.length, total) : null
+    const updatedAt = toDateHelper(setlist.updatedAt)
+    return (
+        <>
+            {bound !== null && total > 0 ? (
+                <>
+                    <Dot />
+                    <span
+                        data-testid="setlist-charts-bound"
+                        data-complete={bound >= total ? "true" : "false"}
+                        className={cn(bound < total && "text-caution font-semibold")}
+                    >
+                        {t("setlist.chartsBound", { bound, total })}
+                    </span>
+                </>
+            ) : null}
+            {updatedAt ? (
+                <>
+                    <Dot />
+                    <span>{t("setlist.updatedAgo", { when: fmt.relative(updatedAt) })}</span>
+                </>
+            ) : null}
+        </>
+    )
+}
+
 /* ─── Upcoming Service Card ─── */
 
 export interface UpcomingCardProps {
@@ -95,25 +130,7 @@ export function UpcomingSetlistCard({ setlist, onPerform, onEdit, navigatingTo, 
     const org = useOrg() // v11-05-05: gate the liturgical "Save as Default" affordance for band tenants
     const t = useT()
     const fmt = useFormat()
-    const [offlineStatus, setOfflineStatus] = useState<'checking' | 'full' | 'partial' | 'none'>('checking')
-    // How many of this setlist's charts are ready on this device ("24/24 charts ready").
-    const [cachedCount, setCachedCount] = useState<{ ready: number; total: number } | null>(null)
-
-    useEffect(() => {
-        const fileIds = setlist.fileIds ?? []
-        // i18n-ignore: offline-status enum, not UI text
-        if (fileIds.length === 0) { setOfflineStatus('none'); setCachedCount(null); return }
-        Promise.all(fileIds.map(id => isFileCached(id))).then(results => {
-            const cached = results.filter(Boolean).length
-            setCachedCount({ ready: cached, total: fileIds.length })
-            // i18n-ignore: offline-status enum, not UI text
-            setOfflineStatus(cached === fileIds.length ? 'full' : cached > 0 ? 'partial' : 'none')
-        // i18n-ignore: offline-status enum, not UI text
-        }).catch(() => { setOfflineStatus('none'); setCachedCount(null) })
-    }, [setlist.fileIds])
-
     const eventDate = toDateHelper(setlist.eventDate)
-    const updatedAt = toDateHelper(setlist.updatedAt)
 
     return (
         // C4-003: outer is non-interactive <article>; cover-<button> sibling
@@ -148,23 +165,7 @@ export function UpcomingSetlistCard({ setlist, onPerform, onEdit, navigatingTo, 
                     <span>{fmt.date(eventDate, { month: 'short', day: 'numeric', year: 'numeric' }) || t("setlist.noDate")}</span>
                     <Dot />
                     <span>{t("setlist.songCount", { count: (setlist.songCount ?? setlist.trackCount) || 0 })}</span>
-                    {cachedCount ? (
-                        <>
-                            <Dot />
-                            <span
-                                data-testid="setlist-charts-ready"
-                                data-offline={offlineStatus}
-                                className={cn(offlineStatus === 'full' ? "text-success font-semibold" : "text-warning-line font-semibold")}
-                            >
-                                {t("setlist.chartsReady", { ready: cachedCount.ready, total: cachedCount.total })}
-                            </span>
-                        </>
-                    ) : updatedAt ? (
-                        <>
-                            <Dot />
-                            <span>{t("setlist.updatedAgo", { when: fmt.relative(updatedAt) })}</span>
-                        </>
-                    ) : null}
+                    <RowStatus setlist={setlist} />
                 </div>
             </div>
 
@@ -305,7 +306,6 @@ export function SetlistCard({ setlist, onPerform, onEdit, navigatingTo, onDuplic
     const fmt = useFormat()
 
     const eventDate = toDateHelper(setlist.eventDate)
-    const updatedAt = toDateHelper(setlist.updatedAt)
 
     return (
         // C4-003: see UpcomingSetlistCard above for the rationale; mirror the
@@ -336,12 +336,7 @@ export function SetlistCard({ setlist, onPerform, onEdit, navigatingTo, onDuplic
                     <span>{fmt.date(eventDate, { month: 'short', day: 'numeric', year: 'numeric' }) || t("setlist.noDate")}</span>
                     <Dot />
                     <span>{t("setlist.songCount", { count: (setlist.songCount ?? setlist.trackCount) || 0 })}</span>
-                    {updatedAt ? (
-                        <>
-                            <Dot />
-                            <span>{t("setlist.updatedAgo", { when: fmt.relative(updatedAt) })}</span>
-                        </>
-                    ) : null}
+                    <RowStatus setlist={setlist} />
                 </div>
             </div>
 

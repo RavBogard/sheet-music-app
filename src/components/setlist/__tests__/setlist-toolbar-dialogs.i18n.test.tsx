@@ -165,7 +165,7 @@ describe("toolbar + dialogs English output is unchanged", () => {
 
         dash.value = dashboardValue()
         render(<SetlistDashboard />)
-        expect(screen.getByText("Your stage is ready. 1 upcoming setlists scheduled.")).toBeDefined()
+        expect(screen.getByText("1 upcoming setlists scheduled.")).toBeDefined()
         expect(screen.getByText("Create New Setlist")).toBeDefined()
         expect(screen.getByText("Upcoming Services")).toBeDefined()
         expect(screen.getByText("Library & Past Events")).toBeDefined()

@@ -126,7 +126,7 @@ export function SetlistDashboard({ serverShortName, ...props }: UseSetlistDashbo
                                         {greetingText}
                                     </h2>
                                     <p className="tnum mt-1 text-sm font-medium text-muted-foreground">
-                                        {t("setlist.stageReady")}{" "}{t("setlist.upcomingScheduled", { count: upcoming.length })}
+                                        {t("setlist.upcomingScheduled", { count: upcoming.length })}
                                     </p>
                                 </div>
                                 {isMember && (

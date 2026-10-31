@@ -172,7 +172,7 @@ export function MobileTabBar(props: AppNavigationProps) {
     const tabClass = (active: boolean) => cn(
         "relative flex flex-1 flex-col items-center justify-center gap-0.5 h-full min-w-11 transition-colors",
         "focus-visible:outline-2 focus-visible:-outline-offset-4 focus-visible:outline-ring rounded-sm",
-        "before:absolute before:top-0 before:inset-x-4 before:h-[3px] before:rounded-b-sm",
+        "before:absolute before:top-0 before:left-1/2 before:-translate-x-1/2 before:w-10 before:h-[3px] before:rounded-b-sm",
         active ? "text-brand before:bg-brand" : "text-muted-foreground hover:text-foreground before:bg-transparent",
     )
     const labelClass = (active: boolean) => cn("text-[12px] leading-none", active ? "font-bold" : "font-semibold")

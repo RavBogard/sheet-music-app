@@ -62,8 +62,8 @@ export function SetlistGridTopBar({
                 </button>
 
                 <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1 min-w-0">
-                        <h1 className="truncate text-[1.35rem] sm:text-[1.6rem] font-extrabold leading-tight tracking-[-0.015em] text-foreground">
+                    <div className="flex items-start gap-1 min-w-0">
+                        <h1 className="line-clamp-2 break-words text-[1.35rem] sm:text-[1.6rem] font-extrabold leading-tight tracking-[-0.015em] text-foreground">
                             {name || t('setlistGrid.newSetlist')}
                         </h1>
                         {onEditMeta ? (
@@ -72,7 +72,7 @@ export function SetlistGridTopBar({
                                 onClick={onEditMeta}
                                 aria-label={t('setlistGrid.editSetlistDetails')}
                                 className={cn(
-                                    'inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md flex-shrink-0',
+                                    'inline-flex min-h-[44px] min-w-[44px] -my-1.5 items-center justify-center rounded-md flex-shrink-0',
                                     'text-muted-foreground hover:text-foreground hover:bg-accent',
                                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                                     'transition-colors',

@@ -103,6 +103,6 @@
     "variantsShow_two": "הצג שתי גרסאות נוספות",
     "variantsShow_other": "הצג {count} גרסאות נוספות",
     "variantsHide": "הסתר גרסאות נוספות",
-    "chartsReady": "{ready}/{total} תווים זמינים",
-    "updatedAgo": "עודכן {when}"
+    "updatedAgo": "עודכן {when}",
+    "chartsBound": "{bound}/{total} תווים"
 }

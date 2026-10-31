@@ -68,6 +68,7 @@
   --color-section-blue: var(--section-blue);
   --color-section-blue-foreground: var(--section-blue-foreground);
   --color-warning-line: var(--warning-line);
+  --color-caution: var(--caution);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -162,6 +163,8 @@
 
   /* Warnings on a chart chip (differs from last, not cached). */
   --warning-line: #8E2E3B;
+  /* Amber caution text (some songs have no chart): 5.9:1 on white. */
+  --caution: #8A5A00;
 
   --chart-1: #2563EB;
   --chart-2: #1F7A6E;
@@ -232,6 +235,7 @@
   --section-blue-foreground: #FFFFFF;
 
   --warning-line: #E07A86;
+  --caution: #E2B04A;
 
   --sidebar: #161C2A;
   --sidebar-foreground: #E8ECF4;
