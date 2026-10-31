@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { OpenSheetMusicDisplay, TransposeCalculator } from 'opensheetmusicdisplay'
-import { Loader2, Music2, Check } from 'lucide-react'
+import { Loader2, Music2, Check, RefreshCw } from 'lucide-react'
 import { useMusicStore } from '@/lib/store'
 import { useAuth } from '@/lib/auth-context'
 import { changeTrackKey } from '@/lib/live-director'
@@ -120,6 +120,12 @@ export function SmartScoreViewer({ fileId, trackId, trackKey }: SmartScoreViewer
     const [transposing, setTransposing] = useState(false)
     // Error code (rendered through t() below), null when healthy.
     const [error, setError] = useState<"load_failed" | null>(null)
+    // PERF-08: Retry + bounded watchdog (PDFViewer parity). `retryTick` re-runs
+    // the load effect; the watchdog turns a silent hang into error + Retry.
+    const [retryTick, setRetryTick] = useState(0)
+    const retriesRef = useRef(0)
+    const MAX_RETRIES = 3
+    const LOAD_WATCHDOG_MS = 45_000
 
     const { transposition, zoom, aiXmlContent, setMusicXmlKey, musicXmlKey } = useMusicStore()
     // Match-button feedback state: 'idle' → 'pending' (write in flight) →
@@ -263,6 +269,14 @@ export function SmartScoreViewer({ fileId, trackId, trackKey }: SmartScoreViewer
                         if (cancelled) return
                         if (!res.ok) throw new Error("Failed to fetch score file from URL")
                         buffer = await res.arrayBuffer()
+                        // PERF-08: keep what the network gave us, so this chart
+                        // is readable offline next time. Best-effort.
+                        try {
+                            const { putFile } = await import("@/lib/offline-idb")
+                            if (buffer.byteLength > 0) await putFile(fileId, new Blob([buffer]))
+                        } catch {
+                            // IDB unavailable; viewing is unaffected
+                        }
                     }
 
                     const text = new TextDecoder('utf-8').decode(buffer)
@@ -303,7 +317,11 @@ export function SmartScoreViewer({ fileId, trackId, trackKey }: SmartScoreViewer
                 appliedRef.current = { transposition, zoom }
                 lastWidthRef.current = containerRef.current?.clientWidth ?? 0
                 readyRef.current = true
-                if (!cancelled) setLoading(false)
+                if (!cancelled) {
+                    retriesRef.current = 0
+                    setError(null)
+                    setLoading(false)
+                }
 
                 // Lift the parsed key signature out of OSMD into the store so
                 // TransposerMenu + PerformanceToolbar can light up the "Play
@@ -371,7 +389,21 @@ export function SmartScoreViewer({ fileId, trackId, trackKey }: SmartScoreViewer
         // jank the debounce + `appliedRef` dedup are there to avoid. Mirrors the
         // same `eslint-disable` pattern used by PDFOverlay's queue effects.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [fileId, aiXmlContent, setMusicXmlKey]) // Re-run if the source changes
+    }, [fileId, aiXmlContent, setMusicXmlKey, retryTick]) // Re-run if the source changes or on Retry
+
+    // PERF-08 watchdog: a load that never settles becomes error + Retry.
+    useEffect(() => {
+        if (!loading || error) return
+        const timer = setTimeout(() => setError("load_failed"), LOAD_WATCHDOG_MS)
+        return () => clearTimeout(timer)
+    }, [loading, error, retryTick])
+
+    const handleRetry = () => {
+        if (retriesRef.current >= MAX_RETRIES) return
+        retriesRef.current++
+        setError(null)
+        setRetryTick((n) => n + 1)
+    }
 
     // Transposition + manual-zoom updates — debounced, with a "working" overlay
     // so a live key change never shows a stale frame mid-render. S1 + S4
@@ -609,6 +641,12 @@ export function SmartScoreViewer({ fileId, trackId, trackKey }: SmartScoreViewer
                 <div className="flex flex-col items-center justify-center p-12 text-destructive">
                     <Music2 className="h-10 w-10 mb-4" aria-hidden="true" />
                     <p>{t("music.viewer.musicXmlLoadFailed")}</p>
+                    {retriesRef.current < MAX_RETRIES && (
+                        <Button variant="secondary" className="mt-4 h-11" onClick={handleRetry} data-testid="musicxml-retry">
+                            <RefreshCw className="h-4 w-4" aria-hidden="true" />
+                            {t("music.viewer.retry")}
+                        </Button>
+                    )}
                 </div>
             )}
         </div>

@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
+import { usePathname } from "next/navigation"
 import { AuthedQueryProvider } from "@/components/authed-query-provider"
 import { PerformanceOfflineIndicator } from "@/components/performance/PerformanceOfflineIndicator"
 import { registerPerformShellSW } from "@/components/performance/perform-shell-sw-register"
@@ -181,11 +182,22 @@ export function PerformClientLayout({
                 <main id="main-content" className="min-h-screen">
                     <PdfWorkerPreload />
                     <PerformShellSWBootstrap />
-                    <PerformanceOfflineIndicator />
+                    <LayoutOfflineIndicator />
                     {children}
                     <KeepAwakeBanner />
                 </main>
             </KeepAwakeProvider>
         </AuthedQueryProvider>
     )
+}
+
+/**
+ * PERF-16: the setlist page renders its own indicator (with the "N/M charts
+ * ready" count). Rendering this one there too stacked two pills at the same
+ * fixed position, so the layout's plain pill steps aside on setlist routes.
+ */
+function LayoutOfflineIndicator() {
+    const pathname = usePathname()
+    if (pathname?.startsWith("/perform/setlist/")) return null
+    return <PerformanceOfflineIndicator />
 }

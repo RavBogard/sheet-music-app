@@ -1,10 +1,10 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useMusicStore } from "@/lib/store"
 import { transposeChord, keyUsesFlats } from "@/lib/music-math"
 import { maxRenderedLineLength, fitFontSize } from "./text-score-layout"
-import { Loader2, WrapText, Maximize2, ZoomIn, ZoomOut } from "lucide-react"
+import { Loader2, WrapText, Maximize2, ZoomIn, ZoomOut, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useChartContentDir } from "@/components/i18n/ChartContent"
 import { useT } from "@/i18n/client"
@@ -68,6 +68,11 @@ export function TextScoreViewer({ fileId }: TextScoreViewerProps) {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<LoadError | null>(null)
     const [wrapMode, setWrapMode] = useState(false)
+    // PERF-08: Retry + bounded watchdog (PDFViewer parity).
+    const [retryTick, setRetryTick] = useState(0)
+    const retriesRef = useRef(0)
+    const MAX_RETRIES = 3
+    const LOAD_WATCHDOG_MS = 30_000
 
     // Auto-enable wrap mode on small screens on initial load
     useEffect(() => {
@@ -114,7 +119,15 @@ export function TextScoreViewer({ fileId }: TextScoreViewerProps) {
                     if (!res.ok) throw new TextFileLoadError("Failed to load text file")
                     text = await res.text()
                     if (cancelled) return
+                    // PERF-08: keep the bytes for offline. Best-effort.
+                    try {
+                        const { putFile } = await import("@/lib/offline-idb")
+                        if (text.length > 0) await putFile(fileId, new Blob([text], { type: "text/plain" }))
+                    } catch {
+                        // IDB unavailable; viewing is unaffected
+                    }
                 }
+                retriesRef.current = 0
                 setContent(text)
                 setLoading(false)
             } catch (err: unknown) {
@@ -126,7 +139,23 @@ export function TextScoreViewer({ fileId }: TextScoreViewerProps) {
         }
         loadText()
         return () => { cancelled = true }
-    }, [fileId])
+    }, [fileId, retryTick])
+
+    // PERF-08 watchdog: a load that never settles becomes error + Retry.
+    useEffect(() => {
+        if (!loading) return
+        const timer = setTimeout(() => {
+            setError("chart")
+            setLoading(false)
+        }, LOAD_WATCHDOG_MS)
+        return () => clearTimeout(timer)
+    }, [loading, retryTick])
+
+    const handleRetry = () => {
+        if (retriesRef.current >= MAX_RETRIES) return
+        retriesRef.current++
+        setRetryTick((n) => n + 1)
+    }
 
     if (loading) {
         return (
@@ -138,7 +167,7 @@ export function TextScoreViewer({ fileId }: TextScoreViewerProps) {
 
     if (error || !content) {
         return (
-            <div className="flex h-full items-center justify-center bg-background">
+            <div className="flex h-full flex-col items-center justify-center gap-4 bg-background">
                 <p className="text-muted-foreground">
                     {error === "textFile"
                         ? t("music.viewer.textFileLoadFailed")
@@ -146,6 +175,12 @@ export function TextScoreViewer({ fileId }: TextScoreViewerProps) {
                           ? error.message
                           : t("music.viewer.chartLoadFailed")}
                 </p>
+                {retriesRef.current < MAX_RETRIES && (
+                    <Button variant="secondary" className="h-11" onClick={handleRetry} data-testid="text-score-retry">
+                        <RefreshCw className="h-4 w-4" aria-hidden="true" />
+                        {t("music.viewer.retry")}
+                    </Button>
+                )}
             </div>
         )
     }

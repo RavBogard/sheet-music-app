@@ -1,7 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
 
-import { goOffline, goOnline } from './helpers/gestures'
-
 /**
  * perform-offline-reload — POSITIVE regression for F-C12-R2-009.
  *
@@ -13,12 +11,14 @@ import { goOffline, goOnline } from './helpers/gestures'
  * controlling `/perform/*`, an offline reload of a per-track URL renders the
  * page shell from cache + the cached chart bytes from IDB.
  *
- * ── Going offline in the harness ──
- * Uses `goOffline()` from helpers/gestures.ts (route-abort http(s) + flip
- * `navigator.onLine=false`), NOT Playwright's `context.setOffline(true)`.
- * setOffline blocks in-memory `blob:` URL fetches which a real offline iPad
- * doesn't, yielding false failures on chart-byte assertions. See
- * `perform-ipad-offline.spec.ts` for the empirical verification.
+ * ── Going offline in the harness (PERF-01) ──
+ * Uses `context.setOffline(true)`, NOT `goOffline()` from helpers/gestures.ts.
+ * `goOffline()` aborts requests with `page.route`, and Playwright's page.route
+ * does NOT see requests a service worker makes: the SW's NetworkFirst fetch
+ * went through to the real network, so the old version of this spec passed
+ * even when the SW had nothing cached for the open-chart URL (a false green).
+ * `context.setOffline` cuts the network below the SW, so the SW's cache
+ * fallback is what is actually exercised.
  *
  * ── Default target ──
  * Defaults to the public Shavuot Yizkor setlist `UnjLqKTtS4lNKQfMY6hB`
@@ -95,13 +95,22 @@ test.describe('perform-offline-reload — F-C12-R2-009 page-shell offline recove
         )
     })
 
-    test('offline page-reload of a per-track URL renders shell + cached chart bytes', async ({ page, baseURL }) => {
+    test('offline page-reload of a per-track URL renders shell + cached chart bytes', async ({ page, context, baseURL }) => {
         test.setTimeout(180_000)
         if (!baseURL) throw new Error('PLAYWRIGHT_BASE_URL must be set')
 
         // ── Online phase: setlist shell + chart bytes land in IDB + SW registers ──
         await page.goto(`/perform/setlist/${REPRO_SETLIST_ID}`, { waitUntil: 'domcontentloaded' })
         await awaitSetlistShell(page)
+        // The SW must be controlling the page, or the offline reload proves
+        // nothing. Wait for it to be active, then reload the BARE setlist URL
+        // once online so this document is SW-controlled. The chart is opened
+        // after that, so the per-track URL is reached only by replaceState,
+        // never by a real request: the exact PERF-01 situation.
+        await page.evaluate(() => navigator.serviceWorker.ready.then(() => true))
+        await page.reload({ waitUntil: 'domcontentloaded' })
+        await awaitSetlistShell(page)
+        await page.waitForFunction(() => !!navigator.serviceWorker?.controller, undefined, { timeout: 15_000 })
         await openFirstChart(page)
 
         // URL should have updated to per-track route per `595153b192` (cycle-11
@@ -119,7 +128,7 @@ test.describe('perform-offline-reload — F-C12-R2-009 page-shell offline recove
         await page.waitForTimeout(2_000)
 
         // ── Offline reload ──
-        await goOffline(page)
+        await context.setOffline(true)
         await page.reload({ waitUntil: 'domcontentloaded', timeout: OFFLINE_RELOAD_TIMEOUT })
 
         // ── Post-reload assertions (the contract) ──
@@ -151,6 +160,6 @@ test.describe('perform-offline-reload — F-C12-R2-009 page-shell offline recove
             fullPage: false,
         })
 
-        await goOnline(page)
+        await context.setOffline(false)
     })
 })

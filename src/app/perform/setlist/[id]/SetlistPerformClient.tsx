@@ -27,6 +27,7 @@ import { Loader2, ArrowLeft, Music, Users, Pencil, Printer, ListCollapse, List }
 import { Button } from "@/components/ui/button"
 import { useSetlistPerformance } from "@/hooks/use-setlist-performance"
 import { usePerformEntryPrecache } from "@/hooks/use-perform-entry-precache"
+import { requestPerformCacheUrl } from "@/components/performance/perform-shell-sw-register"
 import { useAuth } from "@/lib/auth-context"
 import { useLibrary } from "@/hooks/use-library"
 import { SetlistView } from "@/components/performance/SetlistView"
@@ -107,6 +108,7 @@ export function SetlistPerformClient({
         rabbi,
         book,
         eventDate,
+        setlistUpdatedSinceLoad,
         isWakeLockActive,
         isWakeLockSupported,
         wakeLockError,
@@ -183,6 +185,9 @@ export function SetlistPerformClient({
         const currentPath = window.location.pathname
         if (currentPath !== desiredPath) {
             window.history.replaceState(null, "", desiredPath + window.location.search + window.location.hash)
+            // PERF-01: replaceState makes no request, so ask the SW to cache the
+            // new URL; an offline reload on an open chart is then served.
+            if (desiredPath !== basePath) requestPerformCacheUrl(desiredPath)
         }
     }, [activeSongIndex, setlistId, tracks])
 
@@ -207,7 +212,9 @@ export function SetlistPerformClient({
 
     // Song fileIds for the offline indicator's IDB ground-truth count.
     const songFileIds = tracks
-        .filter(t => (!t.type || t.type === "song") && t.fileId)
+        // PERF-03: every openable row (bonded prayers and readings open as
+        // charts too), not song rows only.
+        .filter(t => !!t.fileId)
         .map(t => t.fileId as string)
 
     // F1 (perform-entry-precache): warm Dexie with every bonded chart the
@@ -360,6 +367,20 @@ export function SetlistPerformClient({
 
             {/* Offline indicator — IDB ground truth for N/M charts ready */}
             <PerformanceOfflineIndicator setlistFileIds={songFileIds} />
+
+            {/* PERF-06: signed-out devices get no realtime rows. When the live
+                setlist doc moves past what this page loaded, say so. Tap to
+                reload; never reloads by itself (a chart may be open). */}
+            {setlistUpdatedSinceLoad && (
+                <button
+                    type="button"
+                    data-testid="setlist-updated-strip"
+                    onClick={() => window.location.reload()}
+                    className="w-full h-11 px-4 text-sm font-medium bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-100 border-b border-border/50 cursor-pointer"
+                >
+                    {t("perform.offline.setlistUpdated")}
+                </button>
+            )}
 
 
             {/* Who's playing */}

@@ -35,29 +35,17 @@
         "setlistEmpty": "Setlist Empty"
     },
     "metronome": {
-        "flashTempoTitle": "Flash tempo ({bpm} BPM)",
         "startTitle": "Start Metronome",
         "stopTitle": "Stop Metronome",
         "startAria": "Start metronome",
         "stopAria": "Stop metronome",
         "tempoFlashAria": "Tempo: {bpm} BPM. Tap to dismiss."
     },
-    "intro": {
-        "title": "Performance Mode",
-        "swipeLeft": "Swipe left",
-        "swipeRight": "Swipe right",
-        "forNextSong": "for next song",
-        "forPreviousSong": "for previous song",
-        "tapCenter": "Tap center",
-        "toToggleToolbar": "to show/hide toolbar",
-        "pullDown": "Pull down",
-        "toExit": "to exit",
-        "gotIt": "Got it"
-    },
     "offline": {
         "offlineChartsReady": "OFFLINE — {ready}/{total} CHARTS READY",
         "offlineMode": "OFFLINE MODE",
-        "reconnected": "RECONNECTED"
+        "reconnected": "RECONNECTED",
+        "setlistUpdated": "Setlist updated — tap to refresh"
     },
     "keepAwake": {
         "osWarningTitle": "This iPad can't be kept awake from the Home-Screen app.",
@@ -131,22 +119,6 @@
         "unknownTitle": "Can't render this file type yet",
         "unknownBody": "The chart bonded to {songName} isn't a recognized format. Try re-binding it from the library, or open the original file directly.",
         "liveSetlist": "Live Setlist"
-    },
-    "rehearsal": {
-        "openAudio": "Open Rehearsal Audio",
-        "title": "Rehearsal Audio",
-        "speed": "{speed}x",
-        "clearLoopTitle": "Clear loop",
-        "setLoopEndTitle": "Set loop end (B)",
-        "setLoopStartTitle": "Set loop start (A)",
-        "clearLoop": "Clear Loop",
-        "setPointB": "Set Point B",
-        "abLoop": "A/B Loop",
-        "muted": "Muted",
-        "mute": "Mute",
-        "looping": "Looping: {start} → {end}",
-        "clear": "Clear",
-        "totalPractice": "{time} total practice"
     },
     "saveOffline": {
         "saving": "Saving {progress}/{total}",
