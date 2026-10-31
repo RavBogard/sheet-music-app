@@ -296,9 +296,9 @@ describe('MobileRowCard — bonded non-song chart affordance (cowork #6b)', () =
                 track={makeTrack({ type: 'section', songId: 'stray-song', title: 'Evening Service' })}
             />,
         )
-        // Section keeps its uppercase divider styling and gets NO open-chart link.
+        // Section keeps its uppercase band styling and gets NO open-chart link
+        // (web refresh: a band carries no empty chart slot either).
         expect(screen.getByText('Evening Service').className).toContain('uppercase')
         expect(screen.queryByRole('link')).not.toBeInTheDocument()
-        expect(screen.getByLabelText('No chart bound')).toBeInTheDocument()
     })
 })

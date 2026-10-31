@@ -18,7 +18,7 @@ vi.mock("@/lib/firebase-admin", async () => (await import("../../mt-p1-lane2/ten
 vi.mock("next/font/google", () => {
     const font = (name: string) => (o: { variable?: string } = {}) => ({ variable: `__var_${name}${o.variable === "--font-display" && ["rubik", "heebo", "frankRuhlLibre"].includes(name) ? "_display" : ""}`, className: `__cls_${name}`, style: {} })
     return {
-        Poppins: font("poppins"),
+        Assistant: font("assistant"),
         Righteous: font("righteous"),
         Geist_Mono: font("geistMono"),
         Zilla_Slab: font("zillaSlab"),
@@ -76,8 +76,8 @@ describe("phase 7 golden: root layout head, html and body for CRC and BL", () =>
     beforeEach(() => clearPrimedOrgConfigs())
 
     for (const [org, bodyClass] of [
-        ["crc", "__var_poppins __var_geistMono __var_righteous antialiased"],
-        ["brotherslazaroff", "__var_poppins __var_geistMono __var_righteous __var_zillaSlab antialiased"],
+        ["crc", "__var_assistant __var_geistMono __var_righteous antialiased"],
+        ["brotherslazaroff", "__var_assistant __var_geistMono __var_righteous __var_zillaSlab antialiased"],
     ] as const) {
         it(`${org}: <html lang="en">, no dir, four preconnects and nothing else in <head>`, async () => {
             const { html, head, body, skip } = await renderRootLayout(org)
@@ -117,18 +117,18 @@ describe("phase 7: root layout language, direction, fonts and provider for other
         const { html, body } = await renderRootLayout("crc", { "ui-lang": "he" })
         expect(html.props.lang).toBe("en")
         expect("dir" in html.props).toBe(false)
-        expect(body.props.className).toBe("__var_poppins __var_geistMono __var_righteous antialiased")
+        expect(body.props.className).toBe("__var_assistant __var_geistMono __var_righteous antialiased")
         const p = provider(body)
         expect(p.props.lang).toBe("en")
         expect(p.props.timeZone).toBeNull()
     })
 
-    it("a Hebrew tenant: lang=he dir=rtl, Heebo + Rubik, Hebrew messages, Jerusalem zone", async () => {
+    it("a Hebrew tenant: lang=he dir=rtl, Assistant + Rubik, Hebrew messages, Jerusalem zone", async () => {
         const { html, head, body, skip } = await renderRootLayout("testshul")
         expect(html.props.lang).toBe("he")
         expect(html.props.dir).toBe("rtl")
         expect(children(head)).toHaveLength(4)
-        expect(body.props.className).toBe("__var_heebo __var_geistMono __var_rubik_display antialiased")
+        expect(body.props.className).toBe("__var_assistant __var_geistMono __var_rubik_display antialiased")
         expect(skip.props.children).toBe("דילוג לתוכן הראשי")
         const p = provider(body)
         expect(p.props.lang).toBe("he")

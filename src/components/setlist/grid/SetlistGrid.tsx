@@ -1623,6 +1623,21 @@ export function SetlistGrid({
     // David's ask 4: rows swapped for tonight in Perform show it here.
     const tonightTitles = useTonightTitles(setlistId, liveSetlist?.eventDate ?? null)
 
+    // Web refresh: the status line under the title says, at a glance, how big
+    // the service is, how many of its songs have a chart, and how fresh it is.
+    const statusParts = useMemo(() => {
+        if (isLoading) return []
+        const songs = rows.filter((r) => !r.type || r.type === 'song')
+        const parts: string[] = [t('setlist.songCount', { count: songs.length })]
+        if (songs.length > 0) {
+            const bound = songs.filter((r) => Boolean(r.songId)).length
+            parts.push(t('setlistGrid.statusCharts', { bound, total: songs.length }))
+        }
+        const updated = typeof liveSetlist?.updatedAt === 'number' ? liveSetlist.updatedAt : 0
+        if (updated > 0) parts.push(t('setlistGrid.statusUpdated', { when: fmt.relative(updated) }))
+        return parts
+    }, [isLoading, rows, liveSetlist?.updatedAt, t, fmt])
+
     return (
         <div
             data-testid="setlist-grid"
@@ -1630,14 +1645,10 @@ export function SetlistGrid({
             className="flex w-full flex-col min-h-screen relative"
             onKeyDown={handleRootKeyDown}
         >
-            <div className="fixed inset-0 pointer-events-none z-[-1] overflow-hidden">
-                <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-brand/5 rounded-full blur-[120px] -translate-y-1/4 translate-x-1/4" />
-                <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-indigo-600/10 rounded-full blur-[120px] translate-y-1/4 -translate-x-1/4" />
-            </div>
-
             <SetlistGridTopBar
                 name={displayName}
                 eventDateLabel={displayEventDateLabel}
+                statusParts={statusParts}
                 onBack={onBack ?? (() => router.back())}
                 onEditMeta={() => setMetaSheetOpen(true)}
                 performHref={performOn ? `/perform/setlist/${setlistId}` : undefined}
@@ -1659,52 +1670,7 @@ export function SetlistGrid({
                 }}
             />
 
-            <div className="w-full max-w-4xl mx-auto px-4 py-8 flex flex-col gap-6 flex-grow pb-32">
-                <div className="flex justify-between items-end px-2">
-                    <div>
-                        <p className="text-muted-foreground text-xs font-semibold uppercase tracking-widest mb-1">
-                            {t('setlistGrid.upcomingPerformance')}
-                        </p>
-                        <p className="text-2xl sm:text-3xl font-bold text-foreground">
-                            {displayEventDateLabel
-                                ? displayEventDateLabel
-                                : liveSetlist === undefined
-                                  ? // Setlist doc hasn't loaded into Dexie yet (e.g. first
-                                    // open of a freshly-MCP-created setlist) — render a
-                                    // placeholder bar instead of a confident-looking
-                                    // "Date TBD" that contradicts the topbar's real label.
-                                    // Cowork §7.4: the "Date TBD" flash on first nav was
-                                    // misleading even though it self-corrected.
-                                    <span
-                                        aria-hidden
-                                        className="inline-block h-7 w-40 rounded-md bg-muted/60 animate-pulse align-middle"
-                                    />
-                                  : t('setlistGrid.dateTbd')}
-                        </p>
-                    </div>
-                    <div className="flex gap-4 sm:gap-6">
-                        <div className="text-end">
-                            <p className="text-muted-foreground text-xs font-medium uppercase tracking-widest">
-                                {t('setlistGrid.tracksCount')}
-                            </p>
-                            <p className="text-brand text-xl sm:text-2xl font-bold">
-                                {isLoading ? (
-                                    // Tracks Dexie query is still loading — avoid
-                                    // showing "0" which falsely suggests an empty
-                                    // setlist. Cowork §7.4: TRACKS 0 + Date TBD on
-                                    // first nav to a freshly-MCP-created setlist.
-                                    <span
-                                        aria-hidden
-                                        className="inline-block h-6 w-8 rounded bg-muted/60 animate-pulse align-middle"
-                                    />
-                                ) : (
-                                    rows.length
-                                )}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
+            <div className="w-full max-w-4xl mx-auto px-0 sm:px-4 pt-4 sm:pt-6 flex flex-col gap-6 flex-grow pb-40">
                 {/* T1.1 (2026-05-12, Bug 4): BatchActionBar removed —
                     multi-select is no longer a feature. The grip icon on
                     each card is now a real drag handle (drag to reorder),

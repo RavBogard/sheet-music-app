@@ -1089,5 +1089,59 @@
         "maxLength": 100,
         "context": "{id} is the row's internal id"
     },
-    "performLink": { "where": "Setlist editor header: link to the band view (Perform) of this setlist.", "who": "leaders", "maxLength": 14 }
+    "performLink": {
+        "where": "Setlist editor header: link to the band view (Perform) of this setlist.",
+        "who": "leaders",
+        "maxLength": 14
+    },
+    "chipFormatImage": {
+        "where": "Setlist editor row chip: chart format label (image)",
+        "who": "leaders",
+        "maxLength": 12
+    },
+    "chipFormatMusicXml": {
+        "where": "Setlist editor row chip: chart format label (MusicXML)",
+        "who": "leaders",
+        "maxLength": 12
+    },
+    "chipFormatPdf": {
+        "where": "Setlist editor row chip: chart format label (PDF)",
+        "who": "leaders",
+        "maxLength": 12
+    },
+    "chipFormatText": {
+        "where": "Setlist editor row chip: chart format label (text chart)",
+        "who": "leaders",
+        "maxLength": 12
+    },
+    "chipVocalLead": {
+        "where": "Setlist editor row chip: who sings Vocal Lead on this row",
+        "who": "leaders",
+        "maxLength": 32
+    },
+    "pageCallPrefix": {
+        "where": "Setlist editor: small prefix before a row page number, e.g. p.",
+        "who": "leaders",
+        "maxLength": 4
+    },
+    "sectionPage": {
+        "where": "Setlist editor section band: single page for the section, e.g. p. 51",
+        "who": "leaders",
+        "maxLength": 12
+    },
+    "sectionPages": {
+        "where": "Setlist editor section band: page range for the section, e.g. pp. 51-56",
+        "who": "leaders",
+        "maxLength": 16
+    },
+    "statusCharts": {
+        "where": "Setlist editor head status line: charts attached count",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "statusUpdated": {
+        "where": "Setlist editor head status line: last updated time",
+        "who": "leaders",
+        "maxLength": 32
+    }
 }

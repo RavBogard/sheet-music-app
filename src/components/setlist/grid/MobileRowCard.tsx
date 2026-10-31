@@ -26,6 +26,26 @@ import { KEY_OPTIONS_DATA } from './cells/KeyCell'
 import { RecordingCell } from './cells/RecordingCell'
 import { displayChartTitle } from '@/lib/format/chart-title'
 import { RecordingBindPopover } from './RecordingBindPopover'
+import type { SectionBand, SectionHue } from './section-bands'
+
+/** Full-hue section bands (web refresh, blend E). Each hue carries its own ink. */
+const BAND_CLASS: Record<SectionHue, string> = {
+    green: 'bg-section-green text-section-green-foreground',
+    oxblood: 'bg-section-oxblood text-section-oxblood-foreground',
+    ochre: 'bg-section-ochre text-section-ochre-foreground',
+    blue: 'bg-section-blue text-section-blue-foreground',
+}
+
+/** Chart format from the cached file name / mime type; null when unknown. */
+function chartFormatKey(track: LocalTrack): string | null {
+    const name = typeof track.fileName === 'string' ? track.fileName.toLowerCase() : ''
+    const mime = typeof track.mimeType === 'string' ? track.mimeType.toLowerCase() : ''
+    if (/\.(musicxml|mxl|xml)$/.test(name) || mime.includes('musicxml')) return 'setlistGrid.chipFormatMusicXml'
+    if (name.endsWith('.pdf') || mime === 'application/pdf') return 'setlistGrid.chipFormatPdf'
+    if (mime.startsWith('image/')) return 'setlistGrid.chipFormatImage'
+    if (mime.startsWith('text/') || name.endsWith('.txt')) return 'setlistGrid.chipFormatText'
+    return null
+}
 
 /** "Untitled …" placeholder per non-song row type (the type is a stored value). */
 const UNTITLED_BY_TYPE: Record<string, string> = {
@@ -50,6 +70,8 @@ export interface MobileRowCardProps {
     tonightTitle?: string
     /** 1-based position in the list as shown. Display only; the stored order is never rewritten. */
     position?: number
+    /** Section header rows: the band's hue and the page range under it. */
+    band?: SectionBand
 }
 
 /**
@@ -79,6 +101,7 @@ export function MobileRowCard({
     onDeleteRow,
     tonightTitle,
     position,
+    band,
 }: MobileRowCardProps) {
     const t = useT()
     const [title, setTitle] = useState(String(track.title ?? ''))
@@ -94,6 +117,25 @@ export function MobileRowCard({
     // as a real chart-bearing row — full-prominence title, not the passive
     // dimmed-italic label an unbonded prayer/reading still gets. (cowork #6 opt b)
     const hasChart = Boolean(track.songId)
+
+    // Printed page in the service's book (stored at authoring time).
+    const rawFolio = (track.liturgyRef as { folio?: unknown } | undefined)?.folio
+    const folio = typeof rawFolio === 'number' && Number.isFinite(rawFolio) ? rawFolio : undefined
+    const sectionPages =
+        band?.folioFrom === undefined || band.folioTo === undefined
+            ? null
+            : band.folioFrom === band.folioTo
+              ? t('setlistGrid.sectionPage', { page: band.folioFrom })
+              : t('setlistGrid.sectionPages', { from: band.folioFrom, to: band.folioTo })
+
+    // The small chart chip under the title: setting · format · Vocal Lead.
+    const chipParts: string[] = []
+    if (!isSection) {
+        if (typeof track.tune === 'string' && track.tune.trim()) chipParts.push(track.tune.trim())
+        const formatKey = hasChart ? chartFormatKey(track) : null
+        if (formatKey) chipParts.push(t(formatKey))
+        if (isSong && track.leadMusician) chipParts.push(t('setlistGrid.chipVocalLead', { name: String(track.leadMusician) }))
+    }
 
     useEffect(() => {
         setTitle(String(track.title ?? ''))
@@ -230,8 +272,8 @@ export function MobileRowCard({
     }
 
     const inputBase =
-        'w-full h-10 px-3 rounded-md border border-white/10 bg-black/20 text-sm ' +
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ' +
+        'w-full h-11 px-3 rounded-md border border-input bg-background text-sm ' +
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ' +
         'transition-colors duration-150 motion-reduce:transition-none text-foreground'
 
     return (
@@ -241,8 +283,9 @@ export function MobileRowCard({
                 setNodeRef(el)
             }}
             style={dragStyle}
-            className="flex flex-col gap-2 relative"
+            className={cn('flex flex-col relative', isSection && 'pt-3 first:pt-0')}
             data-dragging={isDragging || undefined}
+            data-section-hue={isSection ? band?.hue : undefined}
         >
             <ContextMenu>
                 <ContextMenuTrigger asChild>
@@ -264,13 +307,15 @@ export function MobileRowCard({
                                 : t('setlistGrid.cardUntitledAria')
                         }
                         className={cn(
-                            'group flex items-center gap-4 rounded-2xl border px-4 py-4',
-                            'min-h-[72px] cursor-pointer relative overflow-hidden',
-                            'bg-white/[0.02] backdrop-blur-md border-white/10 hover:bg-white/[0.04]',
-                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
-                            'transition-all duration-200 motion-reduce:transition-none',
-                            isDragging &&
-                                'shadow-lg ring-2 ring-indigo-400/40',
+                            'group relative flex items-center gap-1.5 sm:gap-2 cursor-pointer',
+                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
+                            'transition-colors duration-150 motion-reduce:transition-none',
+                            // Dense, track-list rows (~48px): the 44px hit areas
+                            // come from the controls themselves, not row height.
+                            isSection
+                                ? cn('min-h-11 ps-0.5 pe-3 sm:pe-4 rounded-sm', BAND_CLASS[band?.hue ?? 'blue'])
+                                : 'min-h-12 ps-0.5 pe-2 sm:pe-3 bg-card hover:bg-accent/50 border-b border-rule',
+                            isDragging && 'shadow-[0_8px_24px_rgb(24_32_46/0.18)] ring-2 ring-ring/60 z-10',
                         )}
                     >
                         <button
@@ -285,69 +330,76 @@ export function MobileRowCard({
                             {...attributes}
                             {...listeners}
                             className={cn(
-                                'flex flex-col items-center gap-1 justify-center rounded-md',
-                                'cursor-grab active:cursor-grabbing p-2 -ms-2 touch-none min-h-11 min-w-11',
-                                'text-muted-foreground/50 hover:text-muted-foreground',
-                                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
+                                'flex shrink-0 items-center justify-center rounded-md',
+                                'cursor-grab active:cursor-grabbing touch-none min-h-11 min-w-11',
+                                isSection ? 'text-current opacity-70 hover:opacity-100' : 'text-muted-foreground/60 hover:text-foreground',
+                                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                                 'transition-colors duration-150 motion-reduce:transition-none',
                             )}
                         >
                             <GripVertical aria-hidden className="h-5 w-5" />
-                            <span className="text-[10px] font-bold opacity-40 font-mono tracking-widest">{(position ?? track.order + 1).toString().padStart(2, '0')}</span>
                         </button>
 
-                        <div className="min-w-0 flex-1 flex flex-col gap-1">
-                            <span className={cn(
-                                "truncate transition-colors group-hover:text-brand",
-                                isSection ? "text-xs font-bold uppercase tracking-[0.1em] text-brand/80"
-                                // Bonded prayer/reading reads as a full chart-bearing row
-                                // (foreground, non-italic); only an UNBONDED non-song row
-                                // keeps the passive dimmed-italic label.
-                                : !isSong ? (hasChart ? "text-base font-medium text-foreground" : "text-sm italic text-muted-foreground/80")
-                                : "text-lg font-semibold text-foreground"
-                            )}>
-                                {displayChartTitle(track.title) || (
-                                    <span className="text-muted-foreground/60 font-medium">
-                                        {isSection
-                                            ? t('setlistGrid.untitledSection')
-                                            : isSong
-                                              ? t('setlistGrid.untitledTrack')
-                                              : UNTITLED_BY_TYPE[String(track.type)]
-                                                ? t(UNTITLED_BY_TYPE[String(track.type)])
-                                                : t('setlistGrid.untitledOther', { type: String(track.type) })}
+                        {!isSection && (
+                            <span aria-hidden className="tnum w-6 shrink-0 text-end text-sm font-semibold text-muted-foreground">
+                                {position ?? track.order + 1}
+                            </span>
+                        )}
+
+                        <div className="min-w-0 flex-1 py-1">
+                            {/* One line where the width allows: the title, then the
+                                chip inline and muted; wraps to 2 lines before
+                                truncating. */}
+                            <p className={cn(isSection ? 'truncate' : 'line-clamp-2 break-words', 'leading-snug')}>
+                                <span
+                                    data-testid={isSection ? `section-running-head-${track.id}` : undefined}
+                                    className={cn(
+                                        isSection ? 'text-[13px] font-extrabold uppercase tracking-[0.08em]'
+                                        // Bonded prayer/reading reads as a full chart-bearing row
+                                        // (foreground, non-italic); only an UNBONDED non-song row
+                                        // keeps the passive dimmed-italic label.
+                                        : !isSong ? (hasChart ? 'text-base font-medium text-foreground' : 'text-sm italic text-muted-foreground/80')
+                                        : 'text-lg font-semibold text-foreground',
+                                    )}
+                                >
+                                    {displayChartTitle(track.title) || (
+                                        <span className={isSection ? 'opacity-80' : 'text-muted-foreground font-medium'}>
+                                            {isSection
+                                                ? t('setlistGrid.untitledSection')
+                                                : isSong
+                                                  ? t('setlistGrid.untitledTrack')
+                                                  : UNTITLED_BY_TYPE[String(track.type)]
+                                                    ? t(UNTITLED_BY_TYPE[String(track.type)])
+                                                    : t('setlistGrid.untitledOther', { type: String(track.type) })}
+                                        </span>
+                                    )}
+                                </span>
+                                {!isSection && chipParts.length > 0 && (
+                                    <span data-testid={`chart-chip-${track.id}`} className="ms-2 text-xs font-medium text-muted-foreground whitespace-nowrap">
+                                        {chipParts.join(' · ')}
                                     </span>
                                 )}
-                            </span>
+                            </p>
                             {tonightTitle && (
-                                <span data-testid="tonight-edit-note" className="truncate text-xs font-medium text-amber-800 dark:text-amber-300">
+                                <p data-testid="tonight-edit-note" className="truncate text-xs font-semibold text-warning-line">
                                     {t('setlistGrid.tonightNote', { tonight: tonightTitle, planned: track.title })}
-                                </span>
+                                </p>
                             )}
                         </div>
 
-                        <div className="flex items-center gap-3 shrink-0">
-                            {isSong && track.key ? (
-                                <div className="bg-brand/10 border border-brand/20 rounded-lg px-2.5 py-1 text-center min-w-[3rem]">
-                                    <p className="text-[9px] text-brand/70 uppercase font-bold tracking-tighter leading-none mb-0.5">{t('setlistGrid.columnKey')}</p>
-                                    <p className="text-brand font-bold text-xs leading-none">{track.key}</p>
-                                </div>
-                            ) : null}
+                        {!isSection && isSong && track.key ? (
+                            <span className="tnum shrink-0 inline-flex items-center justify-center min-w-[2.5rem] h-7 px-2 rounded-md border border-border bg-secondary text-sm font-bold text-secondary-foreground">
+                                <span className="sr-only">{t('setlistGrid.columnKey')} </span>
+                                {track.key}
+                            </span>
+                        ) : null}
 
-                            {isSong && track.leadMusician ? (
-                                <div className="bg-white/5 border border-white/10 rounded-lg px-2.5 py-1 text-center max-w-[5rem]">
-                                    <p className="text-[9px] text-muted-foreground/70 uppercase font-bold tracking-tighter leading-none mb-0.5">{t('setlistGrid.columnVocalLead')}</p>
-                                    <p className="text-foreground font-bold text-xs leading-none truncate">{track.leadMusician}</p>
-                                </div>
-                            ) : null}
-                        </div>
-
-                        {!isSection && track.songId ? (
+                        {!isSection && (track.songId ? (
                             // Bound chart → click-through link that opens the
                             // chart file in a new tab via the existing
                             // Storage-backed serving route. stopPropagation
                             // keeps the click from bubbling to the card's
-                            // tap-to-edit handler. Section/header rows never get
-                            // a chart affordance even with a stray songId.
+                            // tap-to-edit handler.
                             <a
                                 href={
                                     parseFileId(
@@ -361,12 +413,12 @@ export function MobileRowCard({
                                 aria-label={t('setlistGrid.openChartNewTab')}
                                 onClick={(e) => e.stopPropagation()}
                                 className={cn(
-                                    'flex-none ms-2 inline-flex items-center justify-center rounded-md',
+                                    'flex-none inline-flex items-center justify-center rounded-md',
                                     // 44px hit area (WEB-13).
                                     'h-11 w-11',
-                                    'cursor-pointer text-brand opacity-80 hover:opacity-100',
-                                    'transition-opacity motion-reduce:transition-none',
-                                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
+                                    'cursor-pointer text-brand hover:bg-accent',
+                                    'transition-colors motion-reduce:transition-none',
+                                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                                 )}
                             >
                                 <Music aria-hidden className="h-5 w-5" />
@@ -375,14 +427,14 @@ export function MobileRowCard({
                             <span
                                 role="img"
                                 aria-label={t('setlistGrid.noChartBound')}
-                                className="flex-none ms-2"
+                                className="flex-none inline-flex h-11 w-11 items-center justify-center"
                             >
                                 <FileText
                                     aria-hidden
-                                    className="h-5 w-5 text-muted-foreground/30"
+                                    className="h-5 w-5 text-muted-foreground/40"
                                 />
                             </span>
-                        )}
+                        ))}
 
                         {track.songId ? (
                             // Recording affordance — opens RecordingBindPopover.
@@ -395,14 +447,36 @@ export function MobileRowCard({
                             >
                                 <RecordingCell
                                     disabled={false}
-                                    className="ms-1"
                                     onClick={(e) => e.stopPropagation()}
                                 />
                             </RecordingBindPopover>
-                        ) : (
+                        ) : isSection ? null : (
                             // No song bound → recordings attach to a song, so
                             // the affordance renders disabled (no popover).
-                            <RecordingCell disabled className="ms-1" />
+                            <RecordingCell disabled />
+                        )}
+
+                        {/* The page call sits in the margin: the far right edge,
+                            after every control, so the numbers line up down
+                            the list. */}
+                        {isSection ? (
+                            sectionPages ? (
+                                <span data-testid={`section-pages-${track.id}`} className="tnum shrink-0 text-[13px] font-bold tracking-[0.04em]">
+                                    {sectionPages}
+                                </span>
+                            ) : null
+                        ) : (
+                            <span
+                                data-testid={folio !== undefined ? `page-call-${track.id}` : undefined}
+                                className="tnum shrink-0 w-14 sm:w-16 text-end leading-none whitespace-nowrap"
+                            >
+                                {folio !== undefined ? (
+                                    <>
+                                        <span className="text-[11px] font-semibold text-muted-foreground me-0.5">{t('setlistGrid.pageCallPrefix')}</span>
+                                        <span className="text-[1.5rem] font-extrabold tracking-[-0.02em] text-foreground">{folio}</span>
+                                    </>
+                                ) : null}
+                            </span>
                         )}
                     </div>
                 </ContextMenuTrigger>
@@ -437,7 +511,7 @@ export function MobileRowCard({
                     <ContextMenuItem
                         onSelect={onContextDelete}
                         data-testid="mobile-card-context-menu-delete"
-                        className="cursor-pointer text-red-300 focus:text-red-200 focus:bg-red-500/15"
+                        className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10"
                     >
                         <Trash2 aria-hidden className="me-2 h-4 w-4" />
                         {t('setlistGrid.menuDeleteRow')}
@@ -447,10 +521,10 @@ export function MobileRowCard({
 
             {/* Inline Editor Panel */}
             {isEditing && (
-                <aside className="bg-white/[0.03] backdrop-blur-xl rounded-2xl p-4 sm:p-6 shadow-[0_0_20px_rgba(67,56,202,0.15)] border border-brand/30 animate-in fade-in slide-in-from-top-2 duration-200 ms-8">
+                <aside className="bg-card rounded-lg p-4 sm:p-6 my-2 ms-8 sm:ms-14 border border-border shadow-[0_8px_24px_rgb(24_32_46/0.10)] animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="flex justify-between items-start mb-4">
                         <div>
-                            <h2 className="text-lg font-bold text-brand mb-1">
+                            <h2 className="text-lg font-bold text-foreground mb-1">
                                 {track.title
                                     ? t('setlistGrid.editHeading', { title: track.title })
                                     : t('setlistGrid.editHeadingUntitled')}
@@ -460,24 +534,24 @@ export function MobileRowCard({
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                         <label className="block sm:col-span-2">
-                            <span className="text-xs text-muted-foreground uppercase tracking-widest font-bold mb-1 block">{t('setlistGrid.columnTitle')}</span>
+                            <span className="text-xs text-muted-foreground uppercase tracking-[0.06em] font-bold mb-1 block">{t('setlistGrid.columnTitle')}</span>
                             <input type="text" value={title} onChange={e => setTitle(e.target.value)} onBlur={commitTitle} className={inputBase} />
                         </label>
                         {isSong && (
                             <>
                                 <label className="block">
-                                    <span className="text-xs text-muted-foreground uppercase tracking-widest font-bold mb-1 block">{t('setlistGrid.columnVocalLead')}</span>
+                                    <span className="text-xs text-muted-foreground uppercase tracking-[0.06em] font-bold mb-1 block">{t('setlistGrid.columnVocalLead')}</span>
                                     <input type="text" value={lead} onChange={e => setLead(e.target.value)} onBlur={commitLead} className={inputBase} />
                                 </label>
                                 <label className="block">
-                                    <span className="text-xs text-muted-foreground uppercase tracking-widest font-bold mb-1 block">{t('setlistGrid.columnKey')}</span>
+                                    <span className="text-xs text-muted-foreground uppercase tracking-[0.06em] font-bold mb-1 block">{t('setlistGrid.columnKey')}</span>
                                     <select value={key} onChange={e => { setKey(e.target.value); commitKey(e.target.value); }} className={inputBase}>
                                         <option value="">{t('setlistGrid.keyNone')}</option>
                                         {KEY_OPTIONS_DATA.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                                     </select>
                                 </label>
                                 <label className="block">
-                                    <span className="text-xs text-muted-foreground uppercase tracking-widest font-bold mb-1 block">{t('setlistGrid.columnBpm')}</span>
+                                    <span className="text-xs text-muted-foreground uppercase tracking-[0.06em] font-bold mb-1 block">{t('setlistGrid.columnBpm')}</span>
                                     <input type="number" inputMode="numeric" value={bpm} onChange={e => setBpm(e.target.value)} onBlur={commitBpm} className={inputBase} />
                                 </label>
                             </>
@@ -485,7 +559,7 @@ export function MobileRowCard({
                     </div>
 
                     <label className="block mb-6">
-                        <span className="text-xs text-muted-foreground uppercase tracking-widest font-bold mb-1 block">{t('setlistGrid.columnNotes')}</span>
+                        <span className="text-xs text-muted-foreground uppercase tracking-[0.06em] font-bold mb-1 block">{t('setlistGrid.columnNotes')}</span>
                         <textarea
                             value={notes}
                             onChange={(e) => setNotes(e.target.value)}
@@ -496,11 +570,11 @@ export function MobileRowCard({
                         />
                     </label>
 
-                    <div className="flex flex-wrap items-center gap-2 pt-4 border-t border-white/5 justify-end">
+                    <div className="flex flex-wrap items-center gap-2 pt-4 border-t border-rule justify-end">
                         <button
                             type="button"
                             onClick={onContextBindChart}
-                            className="h-9 px-3 rounded-lg flex items-center justify-center gap-2 text-sm border border-brand/30 bg-brand/10 text-brand hover:bg-brand/20 transition-colors"
+                            className="h-11 px-4 rounded-md flex items-center justify-center gap-2 text-sm font-semibold border border-border bg-background text-foreground hover:bg-accent transition-colors"
                         >
                             <Music className="h-4 w-4" />
                             {t('setlistGrid.bindChartButton')}
@@ -508,7 +582,8 @@ export function MobileRowCard({
                         <button
                             type="button"
                             onClick={onDeleteRow}
-                            className="h-9 px-3 rounded-lg flex items-center justify-center gap-2 text-sm border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors"
+                            aria-label={t('setlistGrid.menuDeleteRow')}
+                            className="h-11 w-11 rounded-md flex items-center justify-center text-sm border border-border bg-background text-destructive hover:bg-destructive/10 transition-colors"
                         >
                             <Trash2 className="h-4 w-4" />
                         </button>

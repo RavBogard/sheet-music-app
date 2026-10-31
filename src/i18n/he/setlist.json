@@ -102,5 +102,7 @@
     "variantsShow_one": "הצג גרסה נוספת אחת",
     "variantsShow_two": "הצג שתי גרסאות נוספות",
     "variantsShow_other": "הצג {count} גרסאות נוספות",
-    "variantsHide": "הסתר גרסאות נוספות"
+    "variantsHide": "הסתר גרסאות נוספות",
+    "updatedAgo": "עודכן {when}",
+    "chartsBound": "{bound}/{total} תווים"
 }

@@ -12,8 +12,8 @@
       "openSetlistGoesTo": "/perform",
       "performMonitorButtons": 2,
       "tabBar": [
-        "Search songs",
-        "Open setlist"
+        "Open setlist",
+        "Search songs"
       ]
     },
     "musician": {
@@ -42,14 +42,15 @@
         "Push"
       ],
       "tabBar": [
-        "Search songs",
-        "Open setlist"
+        "Open setlist",
+        "Search songs"
       ]
     },
     "admin": {
       "desktopNav": [
         "Setlists -> /setlists",
         "Library -> /library",
+        "Manage -> /manage",
         "Monitor -> /monitor"
       ],
       "drawer": [
@@ -76,8 +77,8 @@
         "Push"
       ],
       "tabBar": [
-        "Search songs",
         "Open setlist",
+        "Search songs",
         "Monitor"
       ]
     }
@@ -95,8 +96,8 @@
       "openSetlistGoesTo": "/perform",
       "performMonitorButtons": 2,
       "tabBar": [
-        "Search songs",
-        "Open setlist"
+        "Open setlist",
+        "Search songs"
       ]
     },
     "musician": {
@@ -125,14 +126,15 @@
         "Push"
       ],
       "tabBar": [
-        "Search songs",
-        "Open setlist"
+        "Open setlist",
+        "Search songs"
       ]
     },
     "admin": {
       "desktopNav": [
         "Setlists -> /setlists",
         "Library -> /library",
+        "Manage -> /manage",
         "Monitor -> /monitor"
       ],
       "drawer": [
@@ -159,8 +161,8 @@
         "Push"
       ],
       "tabBar": [
-        "Search songs",
         "Open setlist",
+        "Search songs",
         "Monitor"
       ]
     }

@@ -113,12 +113,12 @@ describe("U01: touch-target floor (44px) — source-level class assertions", () 
         )
     })
 
-    it("MobileTabBar: outer tab <button> uses h-full inside h-16 sm:h-20 container (≥44px)", () => {
+    it("MobileTabBar: outer tab <button> uses h-full inside an h-16 container (≥44px)", () => {
         const src = readFileSync(
             resolve(repoRoot, "src/components/nav/MobileTabBar.tsx"),
             "utf8"
         )
-        expect(src, "MobileTabBar: container must be ≥44px tall").toMatch(/h-16 sm:h-20/)
+        expect(src, "MobileTabBar: container must be ≥44px tall").toMatch(/\bh-16\b/)
         // Inner pills are visual-only (w-14 h-10) but outer button is h-full — that's OK.
         // Regression guard: no tab <button> should have explicit h-8/h-9/h-10 directly on the button itself.
         const outerTabs = src.match(

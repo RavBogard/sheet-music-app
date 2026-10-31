@@ -28,7 +28,7 @@ export function MobileHeader({
 
     return (
         <>
-            <header className="fixed top-0 inset-x-0 h-14 z-50 flex md:hidden items-center justify-between px-3 material-thick border-b border-brand/10">
+            <header className="fixed top-0 inset-x-0 h-14 z-50 flex lg:hidden items-center justify-between px-3 bg-shell text-shell-foreground">
                 {/* Start: Hamburger */}
                 <Button
                     variant="ghost"
@@ -36,15 +36,15 @@ export function MobileHeader({
                     aria-label={t("nav.openMenu")}
                     onClick={() => setDrawerOpen(true)}
                     className={cn(
-                        "rounded-full transition-colors",
-                        drawerOpen ? "text-brand bg-brand/15" : "text-muted-foreground hover:text-brand hover:bg-brand/5"
+                        "size-11 rounded-full transition-colors text-shell-foreground hover:text-shell-foreground",
+                        drawerOpen ? "bg-white/15" : "hover:bg-white/10"
                     )}
                 >
                     <Menu className={cn("w-6 h-6", drawerOpen && "stroke-[2.5px]")} />
                 </Button>
 
                 {/* Center: Logo + Name (v11.1-05: real wordmark image replaces it when set) */}
-                <Link href="/" className="flex items-center gap-2 group">
+                <Link href="/" className="flex items-center gap-2 group min-h-11 rounded-md focus-visible:outline-2 focus-visible:outline-shell-foreground">
                     {serverWordmarkUrl ? (
 
                         <img
@@ -59,7 +59,7 @@ export function MobileHeader({
                                 shortName={serverOrgShortName ?? congregation.shortName}
                                 sizeClass="w-7 h-7"
                             />
-                            <span className="font-display font-bold text-sm text-foreground">
+                            <span className="font-extrabold text-base tracking-[-0.01em] text-shell-foreground">
                                 {serverOrgShortName ?? congregation.shortName}
                             </span>
                         </>
@@ -67,7 +67,7 @@ export function MobileHeader({
                 </Link>
 
                 {/* End: spacer for symmetry */}
-                <div className="w-10" />
+                <div className="w-11" />
             </header>
 
             <MobileMenuDrawer open={drawerOpen} onOpenChange={setDrawerOpen} />

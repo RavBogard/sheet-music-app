@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Poppins, Righteous, Geist_Mono, Zilla_Slab, Rubik, Heebo, Frank_Ruhl_Libre } from "next/font/google";
+import { Assistant, Righteous, Geist_Mono, Zilla_Slab, Rubik, Heebo, Frank_Ruhl_Libre } from "next/font/google";
 import { cookies, headers } from "next/headers";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider"
@@ -19,10 +19,13 @@ import { baseLanguageOf, type UiLanguage } from "@/i18n/core"
 import { LANG_COOKIE } from "@/i18n/language"
 import { clientI18nProps, i18nStateFor, translatorFor } from "@/i18n/server"
 
-const poppins = Poppins({
-  weight: ["300", "400", "500", "600", "700"],
+// Web refresh (blend E, 2026-10-31): Assistant is the UI face for every
+// tenant. A humanist sans with a Hebrew design, so a Hebrew UI keeps it too.
+// It replaces Poppins; the stored "poppins" key now renders Assistant.
+// Variable font (200–800): one file per subset covers every weight used.
+const assistant = Assistant({
   variable: "--font-sans",
-  subsets: ["latin"],
+  subsets: ["latin", "hebrew"],
 });
 
 const geistMono = Geist_Mono({
@@ -63,15 +66,15 @@ const frankDisplay = Frank_Ruhl_Libre({ weight: ["400", "500", "700"], variable:
 
 /**
  * Multi-tenant phase 1/7: the <body> font variables from the tenant's
- * `branding.fontBody` / `branding.fontDisplay`. English tenants: exactly as
- * before (Poppins body, Righteous display, plus Zilla Slab for a `zillaSlab`
- * display font — Brothers Lazaroff). A Hebrew face as display replaces
- * Righteous. When the UI renders Hebrew, a Latin-only choice (Poppins,
- * Righteous) is swapped for Heebo / Rubik so Hebrew never falls back to a
- * system face.
+ * `branding.fontBody` / `branding.fontDisplay`. Body: Assistant (the
+ * retired "poppins" key is an alias for it). Display: Righteous, plus Zilla
+ * Slab for a `zillaSlab` display font (Brothers Lazaroff). A Hebrew face as
+ * display replaces Righteous. When the UI renders Hebrew, a Latin-only choice
+ * (Righteous) is swapped for Rubik so Hebrew never falls back to a system face.
  */
 const BODY_FONT_VARIABLE: Partial<Record<FontKey, string>> = {
-  poppins: poppins.variable,
+  assistant: assistant.variable,
+  poppins: assistant.variable,
   heebo: heeboSans.variable,
   rubik: rubikSans.variable,
   frankRuhlLibre: frankSans.variable,
@@ -82,11 +85,13 @@ const HEBREW_DISPLAY_VARIABLE: Partial<Record<FontKey, string>> = {
   frankRuhlLibre: frankDisplay.variable,
 };
 const HEBREW_CAPABLE: ReadonlySet<FontKey> = new Set<FontKey>(["heebo", "rubik", "frankRuhlLibre"]);
+// Body faces with Hebrew glyphs: the display set plus Assistant (and its alias).
+const HEBREW_CAPABLE_BODY: ReadonlySet<FontKey> = new Set<FontKey>([...HEBREW_CAPABLE, "assistant", "poppins"]);
 
 function bodyFontClassName(fontBody?: FontKey, fontDisplay?: FontKey, lang: UiLanguage = "en"): string {
   const hebrewUi = baseLanguageOf(lang) === "he";
-  const bodyKey: FontKey | undefined = hebrewUi && !(fontBody && HEBREW_CAPABLE.has(fontBody)) ? "heebo" : fontBody;
-  const body = (bodyKey && BODY_FONT_VARIABLE[bodyKey]) || poppins.variable;
+  const bodyKey: FontKey | undefined = hebrewUi && !(fontBody && HEBREW_CAPABLE_BODY.has(fontBody)) ? "heebo" : fontBody;
+  const body = (bodyKey && BODY_FONT_VARIABLE[bodyKey]) || assistant.variable;
   const displayKey: FontKey | undefined =
     hebrewUi && !(fontDisplay && HEBREW_CAPABLE.has(fontDisplay)) ? "rubik" : fontDisplay;
   const hebrewDisplay = displayKey ? HEBREW_DISPLAY_VARIABLE[displayKey] : undefined;
@@ -138,8 +143,8 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f0f0f8" },
-    { media: "(prefers-color-scheme: dark)", color: "#0F0F23" },
+    { media: "(prefers-color-scheme: light)", color: "#23356B" },
+    { media: "(prefers-color-scheme: dark)", color: "#141B30" },
   ],
   width: "device-width",
   initialScale: 1,

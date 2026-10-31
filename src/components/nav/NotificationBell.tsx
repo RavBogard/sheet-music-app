@@ -90,12 +90,13 @@ export function NotificationBell() {
                 variant="ghost"
                 size="icon"
                 onClick={() => setOpen(!open)}
-                className="relative"
+                // Sits on the shell's book-cloth bar: inherits its ink.
+                className="relative size-11 rounded-full text-current hover:bg-white/10 hover:text-current"
                 aria-label={t("nav.notifications")}
             >
                 <Bell className="w-5 h-5" />
                 {unreadCount > 0 && (
-                    <span className="absolute -top-0.5 -end-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+                    <span className="absolute -top-0.5 -end-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[var(--section-oxblood)] px-1 text-[10px] font-bold text-white ring-2 ring-shell">
                         {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                 )}

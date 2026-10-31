@@ -214,5 +214,15 @@
     "dndDroppedOver": "Draggable item {id} was dropped over droppable area {overId}",
     "dndDropped": "Draggable item {id} was dropped.",
     "dndCancelled": "Dragging was cancelled. Draggable item {id} was dropped.",
-    "performLink": "Perform"
+    "performLink": "Perform",
+    "sectionPages": "pp. {from}–{to}",
+    "sectionPage": "p. {page}",
+    "pageCallPrefix": "p.",
+    "chipFormatPdf": "PDF",
+    "chipFormatMusicXml": "MusicXML",
+    "chipFormatImage": "Image",
+    "chipFormatText": "Text",
+    "chipVocalLead": "Vocal Lead: {name}",
+    "statusUpdated": "Updated {when}",
+    "statusCharts": "{bound}/{total} charts"
 }

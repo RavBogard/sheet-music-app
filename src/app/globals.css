@@ -54,6 +54,21 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-rule: var(--rule);
+  --color-shell: var(--shell);
+  --color-shell-foreground: var(--shell-foreground);
+  --color-shell-muted: var(--shell-muted);
+  --color-shell-active: var(--shell-active);
+  --color-section-green: var(--section-green);
+  --color-section-green-foreground: var(--section-green-foreground);
+  --color-section-oxblood: var(--section-oxblood);
+  --color-section-oxblood-foreground: var(--section-oxblood-foreground);
+  --color-section-ochre: var(--section-ochre);
+  --color-section-ochre-foreground: var(--section-ochre-foreground);
+  --color-section-blue: var(--section-blue);
+  --color-section-blue-foreground: var(--section-blue-foreground);
+  --color-warning-line: var(--warning-line);
+  --color-caution: var(--caution);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -86,113 +101,149 @@
  */
 
 :root {
-  /* Rounded corners */
-  --radius: 1rem;
+  /* ── Web refresh, blend E (docs/design/WEB-REFRESH-BRIEF.md) ──────────
+     Light-first: bright rehearsal rooms and desks. Grounds are white and
+     #F6F7FB, ink #18202E, one blue primary action (#2563EB), a book-cloth
+     blue shell (#23356B) and a 1px hairline rule. */
+  --radius: 0.625rem;
 
-  /* VIBRANT LIGHT MODE — indigo-tinted */
-  --background: oklch(0.965 0.01 275);
-  --foreground: oklch(0.15 0.03 275);
+  --background: #F6F7FB;
+  --foreground: #18202E;
 
-  /* Translucent white cards with subtle indigo tint */
-  --card: oklch(1 0 0 / 0.75);
-  --card-foreground: oklch(0.15 0.03 275);
+  --card: #FFFFFF;
+  --card-foreground: #18202E;
 
-  --popover: oklch(1 0 0 / 0.88);
-  --popover-foreground: oklch(0.15 0.03 275);
+  --popover: #FFFFFF;
+  --popover-foreground: #18202E;
 
-  /* Deep indigo primary (#1E1B4B) */
-  --primary: oklch(0.22 0.06 275);
-  --primary-foreground: oklch(0.985 0.005 275);
+  /* The one blue primary action. */
+  --primary: #2563EB;
+  --primary-foreground: #FFFFFF;
 
-  /* Vivid indigo secondary (#4338CA lighter for light mode) */
-  --secondary: oklch(0.93 0.03 275 / 0.8);
-  --secondary-foreground: oklch(0.35 0.04 275);
+  --secondary: #EEF1F7;
+  --secondary-foreground: #2B3445;
 
-  --muted: oklch(0.93 0.015 275 / 0.5);
-  --muted-foreground: oklch(0.32 0.02 275);
+  --muted: #EEF1F7;
+  /* 5.6:1 on #F6F7FB, 6:1 on white. */
+  --muted-foreground: #556072;
 
-  --accent: oklch(0.93 0.02 275);
-  --accent-foreground: oklch(0.22 0.06 275);
+  --accent: #EAF0FE;
+  --accent-foreground: #18202E;
 
-  --destructive: oklch(0.577 0.245 27.325);
-  --success: oklch(0.623 0.169 150.36);
-  --success-foreground: oklch(0.985 0 0);
+  --destructive: #B4232F;
+  --success: #1F7A4D;
+  --success-foreground: #FFFFFF;
 
-  /* Brand — vivid indigo (#4338CA) */
-  --brand: oklch(0.50 0.20 275);
-  --brand-foreground: oklch(0.985 0 0);
+  /* Brand = the action blue: links, focus, active tab marks. */
+  --brand: #2563EB;
+  --brand-foreground: #FFFFFF;
 
-  /* Indigo-tinted borders */
-  --border: oklch(0.82 0.015 275 / 0.5);
-  --input: oklch(0.82 0.015 275 / 0.5);
-  --ring: oklch(0.50 0.12 275 / 0.35);
+  --border: #E3E6EE;
+  --input: #D5DAE5;
+  --ring: #2563EB;
 
-  --chart-1: oklch(0.50 0.20 275);
-  --chart-2: oklch(0.623 0.169 150.36);
-  --chart-3: oklch(0.55 0.15 290);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
+  /* The hairline row grid. */
+  --rule: #E3E6EE;
 
-  --sidebar: oklch(0.96 0.01 275 / 0.8);
-  --sidebar-foreground: oklch(0.15 0.03 275);
-  --sidebar-primary: oklch(0.22 0.06 275);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.93 0.02 275);
-  --sidebar-accent-foreground: oklch(0.22 0.06 275);
-  --sidebar-border: oklch(0.82 0.02 275 / 0.3);
-  --sidebar-ring: oklch(0.50 0.12 275 / 0.4);
+  /* Shell: the book-cloth top bar. */
+  --shell: #23356B;
+  --shell-foreground: #FFFFFF;
+  --shell-muted: #C9D2EA;
+  --shell-active: #FFFFFF;
+
+  /* Section hues at full strength, each with its own legible ink. */
+  --section-green: #1F7A6E;
+  --section-green-foreground: #FFFFFF;
+  --section-oxblood: #8E2E3B;
+  --section-oxblood-foreground: #FFFFFF;
+  --section-ochre: #C58B1A;
+  --section-ochre-foreground: #18202E;
+  --section-blue: #23356B;
+  --section-blue-foreground: #FFFFFF;
+
+  /* Warnings on a chart chip (differs from last, not cached). */
+  --warning-line: #8E2E3B;
+  /* Amber caution text (some songs have no chart): 5.9:1 on white. */
+  --caution: #8A5A00;
+
+  --chart-1: #2563EB;
+  --chart-2: #1F7A6E;
+  --chart-3: #8E2E3B;
+  --chart-4: #C58B1A;
+  --chart-5: #23356B;
+
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #18202E;
+  --sidebar-primary: #2563EB;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #EAF0FE;
+  --sidebar-accent-foreground: #18202E;
+  --sidebar-border: #E3E6EE;
+  --sidebar-ring: #2563EB;
 }
 
 .dark {
-  /* VIBRANT DARK MODE — deep indigo-black (#0F0F23) */
-  --background: oklch(0.13 0.025 265);
-  --foreground: oklch(0.97 0.005 260);
+  /* Considered dark: a night-blue ground (not black), the same section hues
+     a touch deeper so the bands don't glare on a dim stage, and a lifted
+     action blue that keeps 4.5:1 on the ground. */
+  --background: #0F1420;
+  --foreground: #E8ECF4;
 
-  /* Translucent indigo-tinted cards */
-  --card: oklch(0.18 0.03 270 / 0.50);
-  --card-foreground: oklch(0.97 0.005 260);
+  --card: #161C2A;
+  --card-foreground: #E8ECF4;
 
-  --popover: oklch(0.18 0.03 270 / 0.75);
-  --popover-foreground: oklch(0.97 0.005 260);
+  --popover: #1A2132;
+  --popover-foreground: #E8ECF4;
 
-  /* Primary — near-white for dark mode readability */
-  --primary: oklch(0.97 0.005 260);
-  --primary-foreground: oklch(0.13 0.025 265);
+  --primary: #2563EB;
+  --primary-foreground: #FFFFFF;
 
-  /* Vivid indigo secondary (#4338CA).
-     C5D-015: dark `--secondary-foreground` bumped from L 0.82 → 0.90 for
-     comfortable WCAG AA margin against alpha-composited `--secondary` over
-     the dark background (effective L ≈ 0.258 after 0.4-alpha composite over
-     bg L 0.13). Light mode (~9:1 already) unchanged. */
-  --secondary: oklch(0.45 0.18 275 / 0.4);
-  --secondary-foreground: oklch(0.90 0.01 265);
+  --secondary: #1E2638;
+  --secondary-foreground: #D5DCE8;
 
-  --muted: oklch(0.22 0.03 270 / 0.5);
-  --muted-foreground: oklch(0.72 0.015 265);
+  --muted: #1C2333;
+  --muted-foreground: #9AA5B8;
 
-  --accent: oklch(0.22 0.04 275);
-  --accent-foreground: oklch(0.97 0.005 260);
+  --accent: #1E2A45;
+  --accent-foreground: #E8ECF4;
 
-  --destructive: oklch(0.6 0.25 25);
-  --success: oklch(0.60 0.17 150);
-  --success-foreground: oklch(0.97 0 0);
+  --destructive: #E5636E;
+  --success: #3FB27F;
+  --success-foreground: #0F1420;
 
-  /* Brand — vivid indigo, brighter in dark (#4338CA brightened) */
-  --brand: oklch(0.55 0.22 275);
-  --brand-foreground: oklch(0.97 0 0);
+  --brand: #7AA2FF;
+  --brand-foreground: #0F1420;
 
-  /* Indigo-tinted borders */
-  --border: oklch(0.30 0.03 270 / 0.45);
-  --input: oklch(0.30 0.03 270 / 0.55);
-  --ring: oklch(0.50 0.15 275 / 0.45);
+  --border: #263044;
+  --input: #2E3850;
+  --ring: #7AA2FF;
 
-  --sidebar: oklch(0.15 0.025 265 / 0.85);
-  --sidebar-foreground: oklch(0.97 0.005 260);
-  --sidebar-primary: oklch(0.97 0.005 260);
-  --sidebar-primary-foreground: oklch(0.13 0.025 265);
-  --sidebar-accent: oklch(0.22 0.04 275);
-  --sidebar-accent-foreground: oklch(0.97 0.005 260);
-  --sidebar-border: oklch(0.30 0.03 270 / 0.35);
+  --rule: #232C3E;
+
+  --shell: #141B30;
+  --shell-foreground: #F1F4FA;
+  --shell-muted: #A9B4CF;
+  --shell-active: #FFFFFF;
+
+  --section-green: #1A6A60;
+  --section-green-foreground: #FFFFFF;
+  --section-oxblood: #7E2834;
+  --section-oxblood-foreground: #FFFFFF;
+  --section-ochre: #B57F17;
+  --section-ochre-foreground: #12161F;
+  --section-blue: #2B4080;
+  --section-blue-foreground: #FFFFFF;
+
+  --warning-line: #E07A86;
+  --caution: #E2B04A;
+
+  --sidebar: #161C2A;
+  --sidebar-foreground: #E8ECF4;
+  --sidebar-primary: #7AA2FF;
+  --sidebar-primary-foreground: #0F1420;
+  --sidebar-accent: #1E2A45;
+  --sidebar-accent-foreground: #E8ECF4;
+  --sidebar-border: #263044;
 }
 
 /* ─────────────────────────────────────────────────────────────────
@@ -262,6 +313,14 @@
   --sidebar-accent-foreground: oklch(0.97 0.012 200);
   --sidebar-border: oklch(0.33 0.035 200 / 0.35);
   --sidebar-ring: oklch(0.70 0.11 210 / 0.45);
+
+  /* Web refresh: BL's shell is its own deep teal, not CRC's book-cloth blue,
+     and the hairline follows the teal ground. */
+  --shell: oklch(0.22 0.04 200);
+  --shell-foreground: oklch(0.97 0.012 200);
+  --shell-muted: oklch(0.80 0.03 200);
+  --shell-active: oklch(0.85 0.10 205);
+  --rule: oklch(0.30 0.03 200);
 }
 
 /* v11.1-05: broslaz headings echo the vintage slab wordmark. Zilla Slab is
@@ -282,16 +341,55 @@
 
   body {
     @apply bg-background text-foreground;
+    caret-color: var(--brand);
+  }
+
+  /* Browser surfaces carry the palette too. */
+  ::selection {
+    background: color-mix(in srgb, var(--brand) 22%, transparent);
+    color: var(--foreground);
+  }
+
+  :focus-visible {
+    outline-color: var(--ring);
+  }
+
+  html {
+    scrollbar-color: color-mix(in srgb, var(--muted-foreground) 45%, transparent) transparent;
   }
 }
 
+/* Height of the bottom tab bar, which shows below lg (iPad portrait and
+   phones). Fixed bottom surfaces sit on top of it. */
 :root {
-  --shadow-brand-glow: 0 0 12px oklch(0.50 0.20 275 / 0.3);
-  --shadow-brand-glow-soft: 0 0 14px oklch(0.50 0.20 275 / 0.15);
+  --tabbar-h: 0px;
+}
+
+@media (max-width: 1023.98px) {
+  :root {
+    --tabbar-h: calc(4rem + env(safe-area-inset-bottom));
+  }
+}
+
+/* Tabular numerals: page calls, counts and dates line up down a column. */
+@utility tnum {
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+
+/* The 1px hairline rule between rows. */
+@utility hairline {
+  border-color: var(--rule);
+  border-bottom-width: 1px;
+}
+
+:root {
+  --shadow-brand-glow: 0 0 12px rgb(37 99 235 / 0.25);
+  --shadow-brand-glow-soft: 0 0 14px rgb(37 99 235 / 0.12);
   /* v11.7-07-01: active-nav-link glow. Default = the prior DesktopHeader inline
      literal verbatim (CRC pixels unchanged); overridden to teal under
      [data-org="brotherslazaroff"] so BL stops glowing CRC-indigo. */
-  --nav-active-glow: 0 0 10px oklch(0.50 0.20 275 / 0.2);
+  --nav-active-glow: none;
 }
 
 @utility pt-safe {

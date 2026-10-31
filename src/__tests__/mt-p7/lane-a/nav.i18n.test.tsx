@@ -133,7 +133,7 @@ describe("navigation under the pseudo-locale", () => {
             </>,
         )
         expectNoUntranslatedText(r.container, { allow: DATA })
-        fireEvent.click(r.container.querySelectorAll("nav button")[0])
+        fireEvent.click(r.container.querySelector("nav button[aria-label^='⟦Šéáŕçĥ']")!)
         const input = await screen.findByRole("textbox")
         fireEvent.change(input, { target: { value: "zz" } })
         await waitFor(() => expect(document.body.textContent).toContain("⟦Ñö šöñĝš ƒöûñð"))

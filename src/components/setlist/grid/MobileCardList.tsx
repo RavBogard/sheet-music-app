@@ -25,6 +25,7 @@ import { useUndoStore, type UndoableDoc } from '@/lib/local/undo-store'
 import { getDb } from '@/lib/local/schema'
 
 import { MobileRowCard } from './MobileRowCard'
+import { sectionBands } from './section-bands'
 import { computeReorderUpdates } from './SetlistGrid'
 
 export interface MobileCardListProps {
@@ -102,6 +103,8 @@ export function MobileCardList({
     )
 
     const sortableIds = useMemo(() => tracks.map((track) => track.id), [tracks])
+    // Web refresh: header rows draw as hue bands with their page range.
+    const bands = useMemo(() => sectionBands(tracks), [tracks])
 
     // dnd-kit's screen-reader instructions and live announcements (its
     // defaults are English); ids are the rows' machine ids, as before.
@@ -195,7 +198,7 @@ export function MobileCardList({
                 <ul
                     role="list"
                     data-testid="mobile-card-list"
-                    className="flex flex-col gap-2 p-3"
+                    className="flex flex-col"
                 >
                     {tracks.map((track, idx) => {
                         const isEditing = editingTrackId === track.id
@@ -207,6 +210,7 @@ export function MobileCardList({
                                 isEditing={isEditing}
                                 tonightTitle={tonightByRowId?.[track.id]}
                                 position={idx + 1}
+                                band={bands[track.id]}
                                 onTap={() =>
                                     setEditingTrackId(
                                         isEditing ? null : track.id,

@@ -374,7 +374,8 @@ describe('AddBar v60-10-01: coarse-pointer sticky-bottom variant', () => {
         const wrapper = screen.getByTestId('add-bar')
         // Positioning + offset
         expect(wrapper.className).toMatch(/pointer:coarse\)\]:fixed/)
-        expect(wrapper.className).toMatch(/pointer:coarse\)\]:bottom-0/)
+        // Web refresh: sits on top of the bottom tab bar (0 where there is none).
+        expect(wrapper.className).toMatch(/pointer:coarse\)\]:bottom-\[var\(--tabbar-h,0px\)\]/)
         expect(wrapper.className).toMatch(/pointer:coarse\)\]:left-0/)
         expect(wrapper.className).toMatch(/pointer:coarse\)\]:right-0/)
         // Z-index sits below Radix Dialog (z-50)

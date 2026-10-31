@@ -2,24 +2,32 @@ import { describe, it, expect } from "vitest"
 import { rabbiNames, rabbiMatches } from "../rabbi-names"
 
 describe("rabbiNames", () => {
-    it("decodes entities, drops notes and splits on & and /", () => {
+    it("decodes entities, drops notes, splits on & / , and 'and', and reduces to the person", () => {
         expect(
             rabbiNames("Rabbi Daniel Bogard &amp; Karen Bogard (Rabbi Randy — Torah service)"),
-        ).toEqual(["Rabbi Daniel Bogard", "Karen Bogard"])
-        expect(rabbiNames("Rabbi Randy / Rabbi Daniel")).toEqual(["Rabbi Randy", "Rabbi Daniel"])
+        ).toEqual(["Daniel", "Karen"])
+        expect(rabbiNames("Rabbi Randy / Rabbi Daniel")).toEqual(["Randy", "Daniel"])
+        expect(rabbiNames("Rabbi Daniel and Karen")).toEqual(["Daniel", "Karen"])
     })
 
-    it("collapses a doubled title and trims", () => {
-        expect(rabbiNames("  Rabbi Rabbi Daniel Bogard ")).toEqual(["Rabbi Daniel Bogard"])
+    it("one chip per person whatever the variant (doubled title, surname, none)", () => {
+        const all = ["Rabbi Daniel", "Rabbi Daniel Bogard", "  Rabbi Rabbi Daniel Bogard ", "Daniel"].flatMap(rabbiNames)
+        expect(new Set(all)).toEqual(new Set(["Daniel"]))
+        expect(rabbiNames("Rabbi Rabbi Karen Kriger Bogard")).toEqual(["Karen"])
+        expect(rabbiNames("Rabbi Randy Fleisher")).toEqual(["Randy"])
     })
 
     it("returns nothing for non-strings and blanks", () => {
         expect(rabbiNames(undefined)).toEqual([])
         expect(rabbiNames("  ")).toEqual([])
+        expect(rabbiNames("Rabbi")).toEqual([])
     })
 
-    it("matches a chip against any named person, case-insensitively", () => {
-        expect(rabbiMatches("Rabbi Daniel Bogard &amp; Karen Bogard", "rabbi daniel bogard")).toBe(true)
-        expect(rabbiMatches("Rabbi Randy", "Rabbi Daniel Bogard")).toBe(false)
+    it("a person's chip matches every raw variant of that person", () => {
+        for (const raw of ["Rabbi Daniel Bogard &amp; Karen Bogard", "Rabbi Rabbi Daniel Bogard", "Rabbi Karen / Daniel", "Rabbi Daniel and Karen"]) {
+            expect(rabbiMatches(raw, "Daniel")).toBe(true)
+        }
+        expect(rabbiMatches("Rabbi Randy", "Daniel")).toBe(false)
+        expect(rabbiMatches("Rabbi Karen Kriger Bogard", "karen")).toBe(true)
     })
 })

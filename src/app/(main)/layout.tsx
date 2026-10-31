@@ -37,16 +37,17 @@ export default async function MainLayout({
                 />
                 {/*
                     Padding Handling:
-                    - Mobile: pt-16 to clear top mobile header + pb-24 to clear bottom tab bar
-                    - Desktop: pt-20 to clear top sticky header
+                    - Below lg (phones, iPad portrait): pt-14 clears the top bar,
+                      pb-24 clears the bottom tab bar
+                    - lg and up: pt-14 clears the top bar; no tab bar
                 */}
                 <ViewAsBanner />
-                <main id="main-content" className="flex-1 pt-16 pb-24 md:pt-20 md:pb-0">
+                <main id="main-content" className="flex-1 pt-14 pb-24 lg:pb-0">
                     <PageTransition>
                         {children}
                     </PageTransition>
                 </main>
-                <div className="hidden md:block">
+                <div className="hidden lg:block">
                     <Footer />
                 </div>
                 <LazyClientComponents />

@@ -1,16 +1,15 @@
 "use client"
-import { useState, useEffect } from "react"
 import { toDate as toDateHelper } from "@/lib/firestore-helpers"
 
-import { Calendar, Download, Plus, CloudOff, CheckCircle2, Loader2, MoreVertical, Copy, PlusSquare, BookmarkPlus, Star, Trash2, CalendarPlus, PlayCircle, Pencil } from "lucide-react"
+import { Download, Plus, Loader2, MoreVertical, Copy, PlusSquare, BookmarkPlus, Star, Trash2, Pencil } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Setlist } from "@/lib/setlist-firebase"
-import { isFileCached } from "@/lib/cache-utils"
 import { getServiceContext, type ServiceType } from "@/lib/liturgical-calendar"
 import { useOrg } from "@/lib/org/org-context"
 import { hidesLiturgicalFields } from "@/lib/org/vocab"
 import { useT } from "@/i18n/client"
 import { useFormat } from "@/i18n/format-client"
+import { cn } from "@/lib/utils"
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -43,6 +42,67 @@ function inferServiceType(setlist: Setlist): ServiceType | null {
     return getServiceContext(date).type
 }
 
+/* ─── Shared row pieces (web refresh, blend E: a clean list, not a card per row) ─── */
+
+const ROW_CLASS =
+    "group relative flex items-center gap-3 sm:gap-4 px-3 sm:px-4 py-3 min-h-[72px] bg-card hover:bg-accent/50 transition-colors"
+
+/** The date column: month over a large tabular day number. */
+function RowDate({ date, muted }: { date: Date | null; muted?: boolean }) {
+    const fmt = useFormat()
+    return (
+        <div aria-hidden className="tnum w-12 shrink-0 flex flex-col items-center justify-center leading-none relative z-10 pointer-events-none">
+            <span className={cn("text-[11px] font-bold uppercase tracking-[0.08em]", muted ? "text-muted-foreground" : "text-brand")}>
+                {date ? fmt.date(date, { month: "short" }) : ""}
+            </span>
+            <span className={cn("mt-1 text-[1.6rem] font-extrabold tracking-[-0.02em]", muted ? "text-muted-foreground" : "text-foreground")}>
+                {date ? date.getDate() : "--"}
+            </span>
+        </div>
+    )
+}
+
+function Dot() {
+    return <span aria-hidden="true" className="text-muted-foreground/60">·</span>
+}
+
+/**
+ * The row status: how many of the songs have a chart bound (as the editor
+ * says it), then how fresh the setlist is. Neutral when every song has a
+ * chart; amber when some don't. Readiness on this device belongs to Perform.
+ * `fileIds` holds the setlist's distinct bound charts.
+ */
+function RowStatus({ setlist }: { setlist: Setlist }) {
+    const t = useT()
+    const fmt = useFormat()
+    const total = (setlist.songCount ?? setlist.trackCount) || 0
+    const fileIds = Array.isArray(setlist.fileIds) ? setlist.fileIds : null
+    const bound = fileIds ? Math.min(fileIds.length, total) : null
+    const updatedAt = toDateHelper(setlist.updatedAt)
+    return (
+        <>
+            {bound !== null && total > 0 ? (
+                <>
+                    <Dot />
+                    <span
+                        data-testid="setlist-charts-bound"
+                        data-complete={bound >= total ? "true" : "false"}
+                        className={cn(bound < total && "text-caution font-semibold")}
+                    >
+                        {t("setlist.chartsBound", { bound, total })}
+                    </span>
+                </>
+            ) : null}
+            {updatedAt ? (
+                <>
+                    <Dot />
+                    <span>{t("setlist.updatedAgo", { when: fmt.relative(updatedAt) })}</span>
+                </>
+            ) : null}
+        </>
+    )
+}
+
 /* ─── Upcoming Service Card ─── */
 
 export interface UpcomingCardProps {
@@ -70,19 +130,7 @@ export function UpcomingSetlistCard({ setlist, onPerform, onEdit, navigatingTo, 
     const org = useOrg() // v11-05-05: gate the liturgical "Save as Default" affordance for band tenants
     const t = useT()
     const fmt = useFormat()
-    const [offlineStatus, setOfflineStatus] = useState<'checking' | 'full' | 'partial' | 'none'>('checking')
-
-    useEffect(() => {
-        const fileIds = setlist.fileIds ?? []
-        // i18n-ignore: offline-status enum, not UI text
-        if (fileIds.length === 0) { setOfflineStatus('none'); return }
-        Promise.all(fileIds.map(id => isFileCached(id))).then(results => {
-            const cached = results.filter(Boolean).length
-            // i18n-ignore: offline-status enum, not UI text
-            setOfflineStatus(cached === fileIds.length ? 'full' : cached > 0 ? 'partial' : 'none')
-        // i18n-ignore: offline-status enum, not UI text
-        }).catch(() => setOfflineStatus('none'))
-    }, [setlist.fileIds])
+    const eventDate = toDateHelper(setlist.eventDate)
 
     return (
         // C4-003: outer is non-interactive <article>; cover-<button> sibling
@@ -92,13 +140,13 @@ export function UpcomingSetlistCard({ setlist, onPerform, onEdit, navigatingTo, 
         // through to the cover button beneath them; action region keeps the
         // default pointer-events-auto so its buttons handle their own taps.
         <article
-            className={`glass-card hover:border-brand/50 hover:shadow-[0_0_20px_rgba(67,56,202,0.15)] rounded-xl p-4 flex items-center gap-4 group transition-all relative overflow-hidden ${isLoading ? 'ring-2 ring-brand opacity-80' : ''} ${navigatingTo && !isLoading ? 'opacity-50 pointer-events-none' : ''}`}
+            className={cn(ROW_CLASS, isLoading && 'ring-2 ring-inset ring-ring', navigatingTo && !isLoading && 'opacity-50 pointer-events-none')}
         >
             <button
                 type="button"
                 onClick={onPerform}
                 aria-label={t("setlist.openSetlistAria", { name: setlist.name })}
-                className="absolute inset-0 z-0 rounded-xl bg-transparent border-0 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1"
+                className="absolute inset-0 z-0 bg-transparent border-0 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
             >
                 <span className="sr-only">{t("setlist.openSetlistSr", { name: setlist.name })}</span>
             </button>
@@ -109,30 +157,15 @@ export function UpcomingSetlistCard({ setlist, onPerform, onEdit, navigatingTo, 
                 </div>
             )}
 
-            <div className="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 border border-white/5 shadow-lg bg-gradient-to-br from-brand/20 to-transparent flex items-center justify-center relative z-10 pointer-events-none">
-                <Calendar className="h-8 w-8 text-brand/50 absolute z-0" />
-                <div className="absolute inset-0 bg-noise opacity-20 mix-blend-overlay"></div>
-                <div className="z-10 font-bold text-brand-foreground/80 text-xl tracking-tighter">
-                    {toDateHelper(setlist.eventDate)?.getDate() || '--'}
-                </div>
-            </div>
+            <RowDate date={eventDate} />
 
             <div className="flex-1 min-w-0 relative z-10 pointer-events-none">
-                <h5 title={setlist.name} className="text-xl font-bold text-foreground group-hover:text-brand transition-colors line-clamp-2 tracking-tight">{setlist.name}</h5>
-                <div className="flex items-center gap-3 mt-1 flex-wrap">
-                    <span className="text-xs text-muted-foreground flex items-center gap-1 font-medium">
-                        <Calendar className="h-3.5 w-3.5" />
-                        {fmt.date(toDateHelper(setlist.eventDate), { month: 'short', day: 'numeric', year: 'numeric' }) || t("setlist.noDate")}
-                    </span>
-                    <span className="text-xs text-muted-foreground flex items-center gap-1 font-medium">
-                        <PlayCircle className="h-3.5 w-3.5" />
-                        {t("setlist.songCount", { count: (setlist.songCount ?? setlist.trackCount) || 0 })}
-                    </span>
-                    {offlineStatus === 'full' && (
-                        <span className="text-xs text-green-400 flex items-center gap-1 font-medium">
-                            <CheckCircle2 className="h-3.5 w-3.5" /> {t("setlist.offlineReady")}
-                        </span>
-                    )}
+                <h5 title={setlist.name} className="text-[17px] font-bold leading-snug text-foreground line-clamp-2">{setlist.name}</h5>
+                <div className="tnum flex items-center gap-x-2 gap-y-0.5 mt-0.5 flex-wrap text-sm text-muted-foreground font-medium">
+                    <span>{fmt.date(eventDate, { month: 'short', day: 'numeric', year: 'numeric' }) || t("setlist.noDate")}</span>
+                    <Dot />
+                    <span>{t("setlist.songCount", { count: (setlist.songCount ?? setlist.trackCount) || 0 })}</span>
+                    <RowStatus setlist={setlist} />
                 </div>
             </div>
 
@@ -145,7 +178,7 @@ export function UpcomingSetlistCard({ setlist, onPerform, onEdit, navigatingTo, 
                     <Button
                         variant="outline"
                         onClick={(e) => { e.stopPropagation(); onEdit(e); }}
-                        className="hidden lg:flex border-brand/20 text-foreground hover:bg-brand hover:text-brand-foreground hover:border-brand rounded-full px-4 h-11"
+                        className="hidden lg:flex border-border bg-card text-foreground hover:bg-accent rounded-md px-4 h-11 font-semibold"
                         aria-label={t("setlist.editSetlistAria", { name: setlist.name })}
                     >
                         <Pencil className="h-4 w-4 me-2" />
@@ -160,11 +193,11 @@ export function UpcomingSetlistCard({ setlist, onPerform, onEdit, navigatingTo, 
                             e.stopPropagation()
                             onDownload(setlist)
                         }}
-                        className="hidden lg:flex w-11 h-11 hover:bg-white/10 rounded-full items-center justify-center transition-colors cursor-pointer bg-transparent border-0"
+                        className="hidden lg:flex w-11 h-11 hover:bg-accent rounded-md items-center justify-center transition-colors cursor-pointer bg-transparent border-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         aria-label={t("setlist.downloadOfflineAria", { name: setlist.name })}
                         title={t("setlist.downloadOffline")}
                     >
-                        <Download className={`h-5 w-5 text-muted-foreground hover:text-foreground ${isDownloading ? 'animate-pulse text-brand' : ''}`} />
+                        <Download className={cn("h-5 w-5 text-muted-foreground hover:text-foreground", isDownloading && "animate-pulse text-brand")} />
                     </button>
                 )}
 
@@ -175,12 +208,12 @@ export function UpcomingSetlistCard({ setlist, onPerform, onEdit, navigatingTo, 
                             <button
                                 type="button"
                                 aria-label={t("setlist.menuAria", { name: setlist.name })}
-                                className="w-11 h-11 hover:bg-white/10 rounded-full flex items-center justify-center transition-colors cursor-pointer text-muted-foreground hover:text-foreground bg-transparent border-0"
+                                className="w-11 h-11 hover:bg-accent rounded-md flex items-center justify-center transition-colors cursor-pointer text-muted-foreground hover:text-foreground bg-transparent border-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                             >
                                 <MoreVertical className="h-5 w-5" />
                             </button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-56 glass-card border-brand/20">
+                        <DropdownMenuContent align="end" className="w-56">
                             {canDuplicate && (
                                 <DropdownMenuItem onClick={(e) => onCloneNextWeek(setlist, e)}>
                                     <PlusSquare className="h-4 w-4 me-2" />
@@ -272,46 +305,38 @@ export function SetlistCard({ setlist, onPerform, onEdit, navigatingTo, onDuplic
     const t = useT()
     const fmt = useFormat()
 
+    const eventDate = toDateHelper(setlist.eventDate)
+
     return (
         // C4-003: see UpcomingSetlistCard above for the rationale; mirror the
         // cover-button-as-sibling pattern here.
         <article
-            className={`glass-card hover:border-brand/50 hover:shadow-[0_0_20px_rgba(67,56,202,0.15)] rounded-xl p-4 flex items-center gap-4 group transition-all relative overflow-hidden ${isLoading ? 'ring-2 ring-brand opacity-80' : ''} ${navigatingTo && !isLoading ? 'opacity-50 pointer-events-none' : ''}`}
+            className={cn(ROW_CLASS, isLoading && 'ring-2 ring-inset ring-ring', navigatingTo && !isLoading && 'opacity-50 pointer-events-none')}
         >
             <button
                 type="button"
                 onClick={onPerform}
                 aria-label={t("setlist.openSetlistAria", { name: setlist.name })}
-                className="absolute inset-0 z-0 rounded-xl bg-transparent border-0 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1"
+                className="absolute inset-0 z-0 bg-transparent border-0 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
             >
                 <span className="sr-only">{t("setlist.openSetlistSr", { name: setlist.name })}</span>
             </button>
 
             {isLoading && (
-                <div className="absolute inset-0 flex items-center justify-center bg-background/30 z-20 rounded-xl pointer-events-none">
+                <div className="absolute inset-0 flex items-center justify-center bg-background/30 z-20 pointer-events-none">
                     <Loader2 className="h-5 w-5 animate-spin text-brand" />
                 </div>
             )}
 
-            <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 border border-white/5 shadow-md bg-gradient-to-br from-surface-container to-background flex items-center justify-center relative z-10 pointer-events-none grayscale group-hover:grayscale-0 transition-all">
-                <Calendar className="h-6 w-6 text-muted-foreground absolute z-0" />
-                <div className="absolute inset-0 bg-noise opacity-10 mix-blend-overlay"></div>
-                <div className="z-10 font-bold text-muted-foreground/80 text-sm tracking-tighter">
-                    {toDateHelper(setlist.eventDate)?.getDate() || '--'}
-                </div>
-            </div>
+            <RowDate date={eventDate} muted />
 
             <div className="flex-1 min-w-0 relative z-10 pointer-events-none">
-                <h5 title={setlist.name} className="text-lg font-semibold text-foreground group-hover:text-brand transition-colors line-clamp-2 tracking-tight">{setlist.name}</h5>
-                <div className="flex items-center gap-3 mt-1 flex-wrap">
-                    <span className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        {fmt.date(toDateHelper(setlist.eventDate), { month: 'short', day: 'numeric', year: 'numeric' }) || t("setlist.noDate")}
-                    </span>
-                    <span className="text-xs text-muted-foreground flex items-center gap-1">
-                        <PlayCircle className="h-3 w-3" />
-                        {t("setlist.songCount", { count: (setlist.songCount ?? setlist.trackCount) || 0 })}
-                    </span>
+                <h5 title={setlist.name} className="text-base font-semibold leading-snug text-foreground line-clamp-2">{setlist.name}</h5>
+                <div className="tnum flex items-center gap-x-2 gap-y-0.5 mt-0.5 flex-wrap text-sm text-muted-foreground">
+                    <span>{fmt.date(eventDate, { month: 'short', day: 'numeric', year: 'numeric' }) || t("setlist.noDate")}</span>
+                    <Dot />
+                    <span>{t("setlist.songCount", { count: (setlist.songCount ?? setlist.trackCount) || 0 })}</span>
+                    <RowStatus setlist={setlist} />
                 </div>
             </div>
 
@@ -323,7 +348,7 @@ export function SetlistCard({ setlist, onPerform, onEdit, navigatingTo, onDuplic
                         size="icon"
                         onClick={(e) => { e.stopPropagation(); onEdit(e); }}
                         aria-label={t("setlist.editSetlistAria", { name: setlist.name })}
-                        className="h-11 w-11 hover:bg-white/10 rounded-full text-muted-foreground hover:text-foreground"
+                        className="h-11 w-11 hover:bg-accent rounded-md text-muted-foreground hover:text-foreground"
                     >
                         <Pencil className="h-4 w-4" />
                     </Button>
@@ -335,12 +360,12 @@ export function SetlistCard({ setlist, onPerform, onEdit, navigatingTo, onDuplic
                             <button
                                 type="button"
                                 aria-label={t("setlist.menuAria", { name: setlist.name })}
-                                className="h-11 w-11 hover:bg-white/10 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground cursor-pointer bg-transparent border-0"
+                                className="h-11 w-11 hover:bg-accent rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground cursor-pointer bg-transparent border-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                             >
                                 <MoreVertical className="h-5 w-5" />
                             </button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-56 glass-card border-brand/20">
+                        <DropdownMenuContent align="end" className="w-56">
                             {canDuplicate && (
                                 <>
                                     <DropdownMenuItem onClick={(e) => onDuplicate?.(setlist, e)}>
@@ -407,21 +432,19 @@ export function PlaceholderCard({ date, onCreate }: PlaceholderCardProps) {
             role="button"
             tabIndex={0}
             onClick={() => onCreate(date)}
-            className="glass-card hover:border-brand/30 border-dashed rounded-xl p-4 flex items-center gap-4 group transition-all cursor-pointer relative overflow-hidden active:scale-[0.98] opacity-60 hover:opacity-100"
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onCreate(date) } }}
+            className={cn(ROW_CLASS, "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring")}
         >
-            <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 border-2 border-dashed border-white/20 bg-background/30 flex items-center justify-center group-hover:border-brand/50 group-hover:bg-brand/10 transition-colors">
-                <Plus className="h-6 w-6 text-muted-foreground group-hover:text-brand transition-colors" />
+            <div aria-hidden className="w-12 h-12 shrink-0 rounded-md border border-dashed border-border flex items-center justify-center text-muted-foreground group-hover:text-brand group-hover:border-brand transition-colors">
+                <Plus className="h-5 w-5" />
             </div>
-            
+
             <div className="flex-1 min-w-0">
-                <h5 className="text-lg font-semibold text-muted-foreground group-hover:text-foreground transition-colors truncate tracking-tight">
+                <h5 className="text-base font-semibold text-muted-foreground group-hover:text-foreground transition-colors truncate">
                     {t("org.planPlaceholder")}
                 </h5>
-                <div className="flex items-center gap-3 mt-1 flex-wrap">
-                    <span className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        {fmt.date(date, { weekday: 'long', month: 'short', day: 'numeric' })}
-                    </span>
+                <div className="tnum mt-0.5 text-sm text-muted-foreground">
+                    {fmt.date(date, { weekday: 'long', month: 'short', day: 'numeric' })}
                 </div>
             </div>
         </div>
