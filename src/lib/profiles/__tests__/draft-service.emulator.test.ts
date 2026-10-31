@@ -134,7 +134,7 @@ describe("draft a service from its profile (emulator)", () => {
             .sort((a, b) => a.order - b.order)
         expect(tracks.map((t) => [t.title, t.fileId ?? null, t.key ?? null])).toEqual([
             ["Shacharit", null, null],
-            ["Barchu", "f-barchu", "Em"],
+            ["Bar’chu", "f-barchu", "Em"],
             ["Oseh Shalom", "f-oseh", "D"],
         ])
         expect(tracks.every((t) => t.orgId === CRC)).toBe(true)
