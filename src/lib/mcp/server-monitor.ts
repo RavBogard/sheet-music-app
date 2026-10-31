@@ -227,7 +227,7 @@ export function validBusIndicesFor(
  *
  * `busAssignments` is keyed by bus-index string, NOT by uid — a prior version
  * indexed it by uid (`busAssignments[uid]`) which never matched, denying every
- * non-privileged musician access to their own IEM bus (AUDIT-consumers C-1).
+ * non-privileged musician access to their own wedge bus (AUDIT-consumers C-1).
  */
 export function hasMonitorPageAccess(
     privileged: { isAdmin: boolean; isSoundEngineer: boolean },
@@ -271,7 +271,7 @@ export async function assertMonitorAccess(
             "monitor_access_denied",
             "You don't have monitor access — ask an admin to assign you a bus.",
             { callerRole: user.role ?? null, soundEngineer: user.soundEngineer },
-            "Ask Rabbi Daniel or an admin to assign you a personal IEM bus.",
+            "Ask Rabbi Daniel or an admin to assign you a personal wedge bus.",
         )
     }
     return { ok: true, user, ownedBuses, config }
@@ -346,7 +346,7 @@ export function serializeLastSeen(v: unknown): string | null {
 // ─── P2-B (MCP-D3): command-ack surface for get_command_status ────────────
 
 /**
- * Personal-IEM monitor buses are 1-5 on the X32. Shared by the MCP-D4
+ * Personal wedge monitor buses are 1-5 on the X32. Shared by the MCP-D4
  * assign/unassign tools (bus-range validation) and any caller that needs the
  * canonical bounds without re-deriving them.
  */

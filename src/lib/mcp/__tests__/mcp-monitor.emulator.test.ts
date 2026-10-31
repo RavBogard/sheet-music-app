@@ -264,8 +264,10 @@ describe("MCP monitor-control tools (emulator)", () => {
             error: {
                 machine_code: "monitor_no_bus_assigned",
                 code: 400,
-                message: expect.stringContaining("don't own any bus"),
+                // MIXER-06: a privileged caller is told to pass busIndex.
+                message: expect.stringContaining("no bus of its own"),
             },
+            hint: expect.stringContaining("busIndex"),
         })
     })
 

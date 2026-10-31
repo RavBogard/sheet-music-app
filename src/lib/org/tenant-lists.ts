@@ -43,6 +43,10 @@ export function rabbiSlotsFor(orgId: OrgId): readonly RabbiSlot[] {
  * tenant lists none — what every tenant saw before phase 1).
  */
 export function bookSlugsFor(orgId: OrgId): string[] | null {
+    // CRC sees every registered book. Its stored list was seeded once from the
+    // registry and froze, so a newly registered book (legacy-beit-mitzvah,
+    // 2026-10-30) never appeared in list_books (TF-15).
+    if (orgId === "crc") return null
     const own = cfgFor(orgId).liturgy.books
     return own.length > 0 ? own : null
 }

@@ -50,9 +50,8 @@ change to both tenants, and the emulator tests assert both.
 `src/data/books/*.json` — the book/pagemap registry. A PRINTED volume's registry rows generate
 from its press commit, never HEAD (R-0831-live-pagemap-1); page call runs on the PRINTED
 edition's numbers (R-0901-vision-2). Never hand-edit a derived registry row — regenerate from
-the producer (`shireishabbat/build/tools/emit_live_books.py`). Known standing issue, PARKED by
-Daniel (R-0901-cont-1 §3): the deployed registry has served `shirei-tshuvah` at 248pp against
-the printed 202/204 — a stale deploy.
+the producer (`shireishabbat/build/tools/emit_live_books.py`).
+Shirei Tshuvah's printed edition is 184 pages (Daniel, 2026-10-31), and the registry's 184 is correct. The old note about a stale 248pp deploy against 202/204 is retired.
 
 ## Standing constraints
 

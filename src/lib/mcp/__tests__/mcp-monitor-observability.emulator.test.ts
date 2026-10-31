@@ -133,6 +133,7 @@ describe("MCP monitor observability + assignment tools (emulator)", () => {
             commandId: "cmd-applied",
             status: "applied",
             confirmedValue: 0.66,
+            uid: MUSICIAN,
             at,
         })
         const r = (await getCommandStatus(MUSICIAN, {
@@ -142,6 +143,14 @@ describe("MCP monitor observability + assignment tools (emulator)", () => {
         expect(r.confirmedValue).toBe(0.66)
         expect(r.found).toBe(true)
         expect(r.at).toBe(at.toDate().toISOString())
+    })
+
+    it("hides another user's ack from a musician (MIXER-17)", async () => {
+        await ackDoc("cmd-theirs", { status: "applied", confirmedValue: 0.4, uid: ADMIN })
+        const mine = (await getCommandStatus(MUSICIAN, { commandId: "cmd-theirs" })) as { found: boolean }
+        expect(mine.found).toBe(false)
+        const admin = (await getCommandStatus(ADMIN, { commandId: "cmd-theirs" })) as { found: boolean }
+        expect(admin.found).toBe(true)
     })
 
     it("reads a REJECTED ack with a reason and a TIMEOUT ack", async () => {

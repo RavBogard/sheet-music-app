@@ -80,8 +80,8 @@ describe("golden: gig packet metadata", () => {
     it("golden crc setlist", async () => {
         expect(await packetMeta("crc")).toEqual(GOLDEN)
     })
-    it("golden brotherslazaroff setlist (frozen CRC subject)", async () => {
-        expect(await packetMeta("brotherslazaroff")).toEqual(GOLDEN)
+    it("brotherslazaroff setlist carries BL's own subject", async () => {
+        expect(await packetMeta("brotherslazaroff")).toEqual({ ...GOLDEN, subject: "Brothers Lazaroff gig packet" })
     })
 })
 
