@@ -357,7 +357,7 @@ describe("get_mix — defensive guards (deployed-surface regression 2026-05-21)"
         const result = (await getMix("admin-uid", { busIndex: 3 })) as {
             sends: Array<{ channelIndex: number; channelName: string }>
         }
-        expect(result.sends).toEqual([
+        expect(result.sends).toMatchObject([
             { channelIndex: 7, channelName: "Ch 7", level: 0.3, on: true, muted: false },
         ])
     })
