@@ -2,7 +2,6 @@
 
 import Link from "next/link"
 import buildInfo from "@/build-info.json"
-import { V2BetaOptInLink } from "@/components/v2/v2-beta-toggle"
 import { useT } from "@/i18n/client"
 
 // The author's name is a proper name: it stays as written in every language.
@@ -23,10 +22,6 @@ export function Footer() {
                 <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
                     <span title={t("shell.commitTitle", { commit: buildInfo.commit })}>{t("shell.version", { version: buildInfo.version })}</span>
                     <span aria-hidden="true">•</span>
-                    <Link href="/changelog" className="hover:text-foreground transition-colors">
-                        {t("shell.changelog")}
-                    </Link>
-                    <span aria-hidden="true">•</span>
                     <Link href="/privacy" className="hover:text-foreground transition-colors">
                         {t("shell.privacy")}
                     </Link>
@@ -39,7 +34,6 @@ export function Footer() {
                         {t("shell.accessibility")}
                     </Link>
                 </div>
-                <V2BetaOptInLink className="mt-1" />
             </div>
         </footer>
     )

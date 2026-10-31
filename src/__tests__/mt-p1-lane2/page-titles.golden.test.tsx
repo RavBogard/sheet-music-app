@@ -9,7 +9,7 @@ import { codeOrgConfig } from "@/lib/org/config-code"
 import { makeTestOrgConfig } from "@/lib/org/__tests__/test-org-config"
 
 /**
- * Multi-tenant phase 1 golden — the (v2) layout title, the unauthorized page
+ * Multi-tenant phase 1 golden — the unauthorized page
  * title and the PublicSetlistSkeleton brand. Today all three show CRC text on
  * both hosts; BL is frozen to it.
  */
@@ -25,10 +25,6 @@ async function meta(mod: MetaModule): Promise<Metadata> {
     return mod.generateMetadata ? mod.generateMetadata() : mod.metadata!
 }
 
-async function v2Title(org: string) {
-    tenantState.org = org
-    return (await meta(await import("@/app/(v2)/layout"))).title
-}
 async function unauthorizedTitle(org: string) {
     tenantState.org = org
     return (await meta(await import("@/app/unauthorized/page"))).title
@@ -47,9 +43,6 @@ describe("multi-tenant P1 golden: CRC Music page titles and skeleton brand", () 
     beforeEach(() => clearPrimedOrgConfigs())
 
     for (const org of ["crc", "brotherslazaroff"]) {
-        it(`${org}: (v2) layout title`, async () => {
-            expect(await v2Title(org)).toEqual({ template: "%s | CRC Music · v2 Beta", default: "CRC Music · v2 Beta" })
-        })
         it(`${org}: unauthorized title`, async () => {
             expect(await unauthorizedTitle(org)).toBe("Unauthorized | Central Reform Congregation")
         })
@@ -65,9 +58,6 @@ describe("multi-tenant P1: titles and skeleton brand follow the tenant", () => {
     beforeEach(() => clearPrimedOrgConfigs())
 
     // testshul is a Hebrew tenant (phase 7): titles come from he/org.json.
-    it("testshul: (v2) layout title", async () => {
-        expect(await v2Title("testshul")).toEqual({ template: "%s | Test Shul Music · v2 בטא", default: "Test Shul Music · v2 בטא" })
-    })
     it("testshul: unauthorized title", async () => {
         expect(await unauthorizedTitle("testshul")).toBe("אין הרשאה | Test Shul Tehila")
     })

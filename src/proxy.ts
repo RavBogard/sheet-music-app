@@ -103,19 +103,11 @@ const publicPrefixes = ['/perform', '/qr', '/.well-known', '/invite']
 // src/** links to them, and bouncing unauth probes to /login is misleading.
 //
 // We short-circuit them here BEFORE the auth-redirect so unauth visits
-// don't get sent to /login. Note `/v2` itself has a shipped beta landing
-// (src/app/(v2)/v2/page.tsx) — kept on the auth-gated track so unauth
-// visitors still redirect to /login; only `/v2/<child>` paths are
-// vestigial-until-built. When a future v2-migration phase ships
-// e.g. `/v2/library`, the new page handler exists and the explicit
-// allow-list above (or here) needs to remove that child.
+// don't get sent to /login.
 const vestigialExactRoutes = ['/account', '/manage/users']
 
 function isVestigialPath(pathname: string): boolean {
     if (vestigialExactRoutes.includes(pathname)) return true
-    // `/v2/<child>` — matches `/v2/library` etc. but NOT the bare `/v2`
-    // landing page that's already shipped.
-    if (pathname.startsWith('/v2/')) return true
     return false
 }
 
@@ -299,11 +291,6 @@ export async function proxy(request: NextRequest) {
     if (session && pathname === '/login') {
         // User is logged in but going to the login page -> send to dashboard
         return detectRedirectLoop('/setlists')
-    }
-
-    // Redirect /admin to /manage
-    if (session && pathname === '/admin') {
-        return createNoCacheRedirect(new URL('/manage', request.url))
     }
 
     // Role Verification — prefer the server-signed companion cookie

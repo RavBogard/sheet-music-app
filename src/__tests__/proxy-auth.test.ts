@@ -183,7 +183,7 @@ describe('Edge Middleware (proxy.ts) Auth Routing', () => {
         expect(resAdmin.headers.get('x-middleware-rewrite')).toBe('http://localhost/unauthorized')
     })
 
-    // C5B-004 + C5D-010 — vestigial paths (`/v2/*`, `/account`,
+    // C5B-004 + C5D-010 — vestigial paths (`/account`,
     // `/manage/users`) must short-circuit to a clean 404 BEFORE the
     // unauth-redirect fires. Without this, an unauth probe to `/account`
     // 307s to `/login` and curl-follow lands on a 200 login-shell —
@@ -192,9 +192,6 @@ describe('Edge Middleware (proxy.ts) Auth Routing', () => {
     it.each([
         '/account',
         '/manage/users',
-        '/v2/library',
-        '/v2/setlists',
-        '/v2/random-junk',
     ])('does NOT redirect unauth vestigial path %s to /login', async (path) => {
         const req = makeReq(path)
         const res = await proxy(req)
@@ -207,7 +204,6 @@ describe('Edge Middleware (proxy.ts) Auth Routing', () => {
     it.each([
         '/account',
         '/manage/users',
-        '/v2/library',
     ])('does NOT redirect authed vestigial path %s either', async (path) => {
         const token = createSessionToken({ role: 'member', uid: 'u1' })
         const req = makeReq(path, { __session: token })
@@ -218,17 +214,6 @@ describe('Edge Middleware (proxy.ts) Auth Routing', () => {
         // prefix and would otherwise route through `isLeaderRoute`).
         expect(res.headers.get('location')).toBeNull()
         expect(res.headers.get('x-middleware-rewrite')).toBeNull()
-    })
-
-    // Bare `/v2` is the shipped beta landing — NOT vestigial — and stays
-    // on the standard auth-gated track (unauth → /login). This guards
-    // against the matcher accidentally treating the real page as
-    // vestigial. If the v2 landing is ever made public, this expectation
-    // changes here AND `/v2` needs adding to `publicExactRoutes`.
-    it('does redirect unauth /v2 (real beta landing) to /login', async () => {
-        const req = makeReq('/v2')
-        const res = await proxy(req)
-        expect(res.headers.get('location')).toBe('http://localhost/login')
     })
 
     // Negative: a real `/manage` child (e.g. `/manage/templates`) is

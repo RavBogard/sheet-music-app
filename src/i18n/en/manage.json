@@ -11,5 +11,6 @@
     "sectionSound": "Sound System",
     "sectionAudit": "Access Audit",
     "libraryToolsTitle": "Library Tools",
-    "libraryToolsHint": "Scan for duplicate charts or check PDF files for corruption."
+    "libraryToolsHint": "Scan for duplicate charts or check PDF files for corruption.",
+    "adminOnlyNotice": "That page is for admins only."
 }

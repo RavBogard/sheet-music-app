@@ -13,6 +13,7 @@ import { Loader2, Search, FilterX } from "lucide-react"
 import { Spinner } from "@/components/ui/spinner"
 import { useT } from "@/i18n/client"
 import { useRoleLabel } from "@/components/admin/people/role-labels"
+import { isTestAccount } from "@/lib/people-test-accounts"
 
 type FilterRole = 'all' | 'pending' | 'member' | 'musician' | 'band_leader' | 'admin' | 'denied'
 
@@ -76,12 +77,14 @@ export function PeopleSection() {
         return () => clearInterval(timer)
     }, [canManagePeople, reload, org])
 
-    const pendingCount = users.filter(u => u.role === "pending").length
+    // WEB-15: synthetic test accounts never show in the real people list.
+    const visibleUsers = useMemo(() => users.filter(u => !isTestAccount(u)), [users])
+    const pendingCount = visibleUsers.filter(u => u.role === "pending").length
     const currentUserRole = myRole || 'member'
 
     // Derived filtered users
     const filteredUsers = useMemo(() => {
-        return users.filter(u => {
+        return visibleUsers.filter(u => {
             const matchesSearch = u.displayName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 u.email?.toLowerCase().includes(searchQuery.toLowerCase())
             const matchesRole = roleFilter === 'all' ||
@@ -90,7 +93,7 @@ export function PeopleSection() {
                 (u.role === roleFilter)
             return matchesSearch && matchesRole
         })
-    }, [users, searchQuery, roleFilter])
+    }, [visibleUsers, searchQuery, roleFilter])
 
     if (!canManagePeople) return null
 

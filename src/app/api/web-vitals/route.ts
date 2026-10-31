@@ -7,6 +7,8 @@ import { httpError } from "@/lib/http/error-envelope"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
 import { captureException } from "@/lib/error-reporting"
+import { coerceOrgId } from "@/lib/org/registry"
+import { PAGEVIEW_DEVICES, boundedSurface, counterDocId, utcDay } from "@/lib/usage-counters"
 
 /**
  * Cycle-3.5 P2-017 — Core Web Vitals observation sink.
@@ -41,6 +43,17 @@ const REPORT_SCHEMA = z.object({
     deviceType: z.enum(["mobile", "tablet", "desktop", "unknown"]),
 })
 
+/**
+ * TEL-02: the same beacon also counts in-app page views, `{kind:"pageview", surface,
+ * deviceType}`. Stored as daily counters (`usageCounters/{day}__{org}__{route}`), no
+ * per-visit rows, no third-party script. Same rate limit; route keys are bounded.
+ */
+const PAGEVIEW_SCHEMA = z.object({
+    kind: z.literal("pageview"),
+    surface: z.string().min(1).max(200),
+    deviceType: z.enum(PAGEVIEW_DEVICES),
+})
+
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
 
@@ -58,6 +71,44 @@ export async function POST(req: NextRequest) {
                 "invalid_json",
                 "Request body must be valid JSON.",
             )
+        }
+
+        if (
+            payload &&
+            typeof payload === "object" &&
+            (payload as { kind?: unknown }).kind === "pageview"
+        ) {
+            const pv = PAGEVIEW_SCHEMA.safeParse(payload)
+            if (!pv.success) {
+                return httpError(
+                    400,
+                    "validation_error",
+                    "Page-view payload failed validation.",
+                    { issues: pv.error.issues },
+                    "Expected {kind:\"pageview\", surface, deviceType}.",
+                )
+            }
+            if (!initAdmin()) {
+                return httpError(503, "server_not_ready", "Firebase Admin SDK not initialized.")
+            }
+            const orgId = coerceOrgId(req.headers.get("x-org-id"))
+            const surface = boundedSurface(pv.data.surface)
+            const day = utcDay()
+            await getFirestore()
+                .collection("usageCounters")
+                .doc(counterDocId(day, orgId, surface))
+                .set(
+                    {
+                        day,
+                        orgId,
+                        surface,
+                        count: FieldValue.increment(1),
+                        devices: { [pv.data.deviceType]: FieldValue.increment(1) },
+                        updatedAt: FieldValue.serverTimestamp(),
+                    },
+                    { merge: true },
+                )
+            return new NextResponse(null, { status: 204 })
         }
 
         const parsed = REPORT_SCHEMA.safeParse(payload)

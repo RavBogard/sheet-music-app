@@ -24,6 +24,7 @@ import type { LocalTrack } from '@/lib/local/types'
 import { cn, parseFileId } from '@/lib/utils'
 import { KEY_OPTIONS_DATA } from './cells/KeyCell'
 import { RecordingCell } from './cells/RecordingCell'
+import { displayChartTitle } from '@/lib/format/chart-title'
 import { RecordingBindPopover } from './RecordingBindPopover'
 
 /** "Untitled …" placeholder per non-song row type (the type is a stored value). */
@@ -47,6 +48,8 @@ export interface MobileRowCardProps {
     onDeleteRow?: () => void
     /** David's ask 4: the chart swapped in for tonight, when one applies. */
     tonightTitle?: string
+    /** 1-based position in the list as shown. Display only; the stored order is never rewritten. */
+    position?: number
 }
 
 /**
@@ -75,6 +78,7 @@ export function MobileRowCard({
     onCommit,
     onDeleteRow,
     tonightTitle,
+    position,
 }: MobileRowCardProps) {
     const t = useT()
     const [title, setTitle] = useState(String(track.title ?? ''))
@@ -282,14 +286,14 @@ export function MobileRowCard({
                             {...listeners}
                             className={cn(
                                 'flex flex-col items-center gap-1 justify-center rounded-md',
-                                'cursor-grab active:cursor-grabbing p-2 -ms-2 touch-none',
+                                'cursor-grab active:cursor-grabbing p-2 -ms-2 touch-none min-h-11 min-w-11',
                                 'text-muted-foreground/50 hover:text-muted-foreground',
                                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
                                 'transition-colors duration-150 motion-reduce:transition-none',
                             )}
                         >
                             <GripVertical aria-hidden className="h-5 w-5" />
-                            <span className="text-[10px] font-bold opacity-40 font-mono tracking-widest">{(track.order + 1).toString().padStart(2, '0')}</span>
+                            <span className="text-[10px] font-bold opacity-40 font-mono tracking-widest">{(position ?? track.order + 1).toString().padStart(2, '0')}</span>
                         </button>
 
                         <div className="min-w-0 flex-1 flex flex-col gap-1">
@@ -302,7 +306,7 @@ export function MobileRowCard({
                                 : !isSong ? (hasChart ? "text-base font-medium text-foreground" : "text-sm italic text-muted-foreground/80")
                                 : "text-lg font-semibold text-foreground"
                             )}>
-                                {track.title || (
+                                {displayChartTitle(track.title) || (
                                     <span className="text-muted-foreground/60 font-medium">
                                         {isSection
                                             ? t('setlistGrid.untitledSection')
@@ -358,9 +362,8 @@ export function MobileRowCard({
                                 onClick={(e) => e.stopPropagation()}
                                 className={cn(
                                     'flex-none ms-2 inline-flex items-center justify-center rounded-md',
-                                    // 40px baseline hit area, 44px on touch.
-                                    'h-10 w-10',
-                                    '[@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11',
+                                    // 44px hit area (WEB-13).
+                                    'h-11 w-11',
                                     'cursor-pointer text-brand opacity-80 hover:opacity-100',
                                     'transition-opacity motion-reduce:transition-none',
                                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',

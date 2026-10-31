@@ -54,8 +54,8 @@
     "openSetlistAria": "Open setlist — {name}",
     "openSetlistSr": "Open setlist {name}",
     "noDate": "No Date",
-    "songCount_one": "{count} Songs",
-    "songCount_other": "{count} Songs",
+    "songCount_one": "{count} song",
+    "songCount_other": "{count} songs",
     "offlineReady": "Offline ready",
     "editSetlistAria": "Edit setlist — {name}",
     "edit": "Edit",
@@ -96,5 +96,8 @@
     "matrixLoadFailed": "Failed to load matrix data",
     "matrixSlotHeader": "Liturgical Slot",
     "matrixStandard": "Standard",
-    "matrixPlan": "+ Plan"
+    "matrixPlan": "+ Plan",
+    "variantsShow_one": "Show {count} other version",
+    "variantsShow_other": "Show {count} other versions",
+    "variantsHide": "Hide other versions"
 }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { isFolderMime } from "@/lib/library/folder-row"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { createApiHandler } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
@@ -103,6 +104,9 @@ export const GET = createApiHandler(
                 // opted into All-sites. Mirrors the MCP rowOrg filter pattern.
                 if (!allSites && !includedFor(data, hostOrg, includeShared)) return false
                 if (collectionIdFilter && collectionIdOf(data) !== collectionIdFilter) return false
+
+                // TEL-01: Drive folders are never charts.
+                if (isFolderMime(data.mimeType)) return false
 
                 const status = data.status
                 if (statusFilter === 'archived' && status !== 'archived') return false

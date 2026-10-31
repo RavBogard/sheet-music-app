@@ -174,17 +174,6 @@
         "who": "anyone",
         "maxLength": 60
     },
-    "page.v2TitleTemplate": {
-        "where": "Browser tab title template in the v2 beta; %s is the page title.",
-        "who": "beta users",
-        "maxLength": 40,
-        "context": "Keep %s."
-    },
-    "page.v2TitleDefault": {
-        "where": "Browser tab title in the v2 beta.",
-        "who": "beta users",
-        "maxLength": 30
-    },
     "page.skeletonBrand": {
         "where": "Brand shown while the public setlist loads.",
         "who": "anyone",

@@ -180,7 +180,7 @@ export function AddToSetlistSheet({
                     <p className="text-xs text-muted-foreground">
                       {formatDate(setlist.updatedAt || setlist.date, fmt)}
                       {setlist.trackCount > 0 && (
-                        <span className="ms-2">{t("library.addSheet.songCount", { count: setlist.trackCount })}</span>
+                        <span className="ms-2">{t("library.addSheet.songCount", { count: (setlist.songCount ?? setlist.trackCount) })}</span>
                       )}
                     </p>
                   </div>

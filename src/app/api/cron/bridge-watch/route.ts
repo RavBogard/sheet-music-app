@@ -188,7 +188,7 @@ export async function GET(req: Request) {
                 const result = await sendPushToUsers(adminUids, {
                     title: "Monitor bridge needs attention",
                     body,
-                    link: "/admin",
+                    link: "/manage",
                 })
                 pushed = result.sent
             } catch (e) {
@@ -203,7 +203,7 @@ export async function GET(req: Request) {
                         type: "bridge_health",
                         title: "Monitor bridge needs attention",
                         body,
-                        link: "/admin",
+                        link: "/manage",
                         read: false,
                         createdAt: new Date(now),
                     })

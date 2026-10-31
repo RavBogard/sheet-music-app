@@ -1,6 +1,7 @@
 'use client'
 
 import { QueryClientContext } from '@tanstack/react-query'
+import { displayChartTitle } from '@/lib/format/chart-title'
 import {
     Command,
     CommandEmpty,
@@ -153,7 +154,7 @@ function useOtherSites(enabled: boolean, hostOrg: OrgId): OtherSitesState {
                     .filter((f) => f.orgId && f.orgId !== hostOrg && !isHiddenStatus(f.status))
                     .map((f) => ({
                         id: f.id,
-                        title: f.displayName ?? f.name ?? f.id,
+                        title: displayChartTitle(f.displayName ?? f.name ?? f.id),
                         orgId: f.orgId as OrgId,
                         mimeType: f.mimeType,
                     }))

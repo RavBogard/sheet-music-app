@@ -4,7 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
     Home, Library, ListMusic, Radio, Settings,
-    ShieldAlert, FileText, LogOut, User, CalendarDays, Building2,
+    ShieldAlert, FileText, LogOut, User, Building2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
@@ -42,7 +42,6 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
     const performOn = useFeature("perform")
 
     // Tenant role from useAuth (multi-tenant phase 2)
-    const isMusician = role === 'musician' || role === 'band_leader' || role === 'admin'
 
     // UNAUTH-004: route Setlists → /perform on unauth (matches DesktopHeader
     // behavior). The drawer is hidden until the user taps the hamburger,
@@ -65,7 +64,6 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
     const primaryItems: MenuItem[] = [
         { label: t("nav.dashboard"), href: "/", icon: Home, show: true },
         { label: t("nav.setlists"), href: setlistsHref, icon: ListMusic, show: true },
-        { label: t("nav.schedule"), href: "/schedule", icon: CalendarDays, show: isMusician },
         { label: t("nav.library"), href: "/library", icon: Library, show: isMember },
         { label: t("nav.monitor"), href: "/monitor", icon: Radio, show: mixerOn && hasMonitorAccess },
     ]

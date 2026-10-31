@@ -25,7 +25,7 @@ export default async function LibraryReviewPage() {
     }
     if (!user.isAdmin) {
         // Admin-only — band_leader doesn't see the review surface (per A4 spec).
-        redirect("/manage")
+        redirect("/manage?notice=admin-only")
     }
 
     const t = await getT()

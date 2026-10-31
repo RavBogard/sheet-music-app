@@ -48,8 +48,6 @@ const CRC_LITERALS: Record<StringKey, string> = {
     "og.monogram": "CRC",
     "og.title": "Central Reform Congregation",
     "page.unauthorizedTitle": "Unauthorized | Central Reform Congregation",
-    "page.v2TitleTemplate": "%s | CRC Music · v2 Beta",
-    "page.v2TitleDefault": "CRC Music · v2 Beta",
     "page.skeletonBrand": "CRC Music",
     "profile.scheduleName": "your CRC schedule",
     "library.ownBadge": "CRC",

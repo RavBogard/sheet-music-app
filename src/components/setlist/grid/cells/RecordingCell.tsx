@@ -39,9 +39,8 @@ export const RecordingCell = forwardRef<HTMLButtonElement, RecordingCellProps>(
                 {...rest}
                 className={cn(
                     'flex-none inline-flex items-center justify-center rounded-md',
-                    // 40px baseline hit area, 44px on touch.
-                    'h-10 w-10',
-                    '[@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11',
+                    // 44px hit area (WEB-13).
+                    'h-11 w-11',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
                     disabled
                         ? 'cursor-not-allowed text-muted-foreground/20'

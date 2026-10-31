@@ -11,5 +11,6 @@
     "sectionSound": { "where": "/manage Sound tab: section name shown in the error message if the section fails to load.", "who": "leaders and admins", "maxLength": 30, "context": "The sound system = the mixer / monitor (wedge) setup." },
     "sectionAudit": { "where": "/manage Audit tab: section name shown in the error message if the section fails to load.", "who": "admins", "maxLength": 30 },
     "libraryToolsTitle": { "where": "/manage Library tab: heading of the box with the duplicate and PDF-health scanner buttons.", "who": "leaders and admins", "maxLength": 30 },
-    "libraryToolsHint": { "where": "/manage Library tab: small grey line under the scanner buttons.", "who": "leaders and admins", "maxLength": 90, "context": "'charts' = sheet music files." }
+    "libraryToolsHint": { "where": "/manage Library tab: small grey line under the scanner buttons.", "who": "leaders and admins", "maxLength": 90, "context": "'charts' = sheet music files." },
+    "adminOnlyNotice": { "where": "C:/Program Files/Git/manage banner after a non-admin is sent away from the library review page.", "who": "leaders", "maxLength": 60 }
 }

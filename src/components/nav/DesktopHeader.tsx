@@ -68,7 +68,6 @@ export function DesktopHeader(props: AppNavigationProps) {
     const searchRef = useRef<HTMLDivElement>(null)
 
     // Tenant role from useAuth (multi-tenant phase 2); server roles as fallback
-    const isMusician = role === 'musician' || role === 'band_leader' || role === 'admin' || isBandLeader || !!props.serverIsAdmin
 
     // UNAUTH-004: on unauth state the Setlists link points at /perform
     // (public gig-discovery surface) instead of /setlists (authed-only,
@@ -80,7 +79,6 @@ export function DesktopHeader(props: AppNavigationProps) {
 
     const navLinks = [
         { label: t("nav.setlists"), href: setlistsHref, show: true },
-        { label: t("nav.schedule"), href: "/schedule", show: isMusician },
         { label: t("nav.library"), href: "/library", show: isMember },
         { label: t("nav.monitor"), href: "/monitor", show: mixerOn && hasMonitorAccess },
     ]

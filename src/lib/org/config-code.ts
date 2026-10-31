@@ -105,8 +105,6 @@ export const BL_FROZEN_CRC_KEYS: StringKey[] = [
     "og.monogram",
     "og.title",
     "page.unauthorizedTitle",
-    "page.v2TitleTemplate",
-    "page.v2TitleDefault",
     "page.skeletonBrand",
     "profile.scheduleName",
     "library.ownBadge",

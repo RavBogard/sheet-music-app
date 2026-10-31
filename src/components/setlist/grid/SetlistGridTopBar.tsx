@@ -1,6 +1,7 @@
 'use client'
 
-import { ChevronLeft, Pencil } from 'lucide-react'
+import Link from 'next/link'
+import { ChevronLeft, Pencil, Play } from 'lucide-react'
 
 import { DirectionalIcon } from '@/components/i18n/DirectionalIcon'
 import { useT } from '@/i18n/client'
@@ -17,6 +18,8 @@ export interface SetlistGridTopBarProps {
      *  that opens the setlist metadata editor. Omitted by callers (e.g. the
      *  perform view) that don't offer metadata editing. */
     onEditMeta?: () => void
+    /** WEB-12: link to the band view of this setlist (Perform). Omitted when Perform is off. */
+    performHref?: string
 }
 
 export function SetlistGridTopBar({
@@ -25,6 +28,7 @@ export function SetlistGridTopBar({
     onBack,
     syncProps,
     onEditMeta,
+    performHref,
 }: SetlistGridTopBarProps) {
     const t = useT()
     return (
@@ -43,7 +47,7 @@ export function SetlistGridTopBar({
                     onClick={onBack}
                     aria-label={t('setlistGrid.back')}
                     className={cn(
-                        'inline-flex p-2 items-center justify-center rounded-full',
+                        'inline-flex min-h-11 min-w-11 p-2 items-center justify-center rounded-full',
                         'text-foreground hover:bg-white/5 active:bg-white/10',
                         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2',
                         'transition-colors',
@@ -82,6 +86,20 @@ export function SetlistGridTopBar({
             </div>
 
             <div className="flex items-center gap-3 sm:gap-4 flex-shrink-0 ps-4">
+                {performHref ? (
+                    <Link
+                        href={performHref}
+                        data-testid="setlist-grid-perform-link"
+                        className={cn(
+                            'inline-flex min-h-[44px] items-center gap-1.5 rounded-full px-3',
+                            'text-sm font-medium text-foreground hover:bg-white/5 active:bg-white/10',
+                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
+                        )}
+                    >
+                        <Play aria-hidden className="h-4 w-4" />
+                        {t('setlistGrid.performLink')}
+                    </Link>
+                ) : null}
                 <SyncIndicator {...syncProps} />
             </div>
         </header>

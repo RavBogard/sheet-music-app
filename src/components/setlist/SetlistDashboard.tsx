@@ -20,6 +20,8 @@ import { useI18n } from "@/i18n/client"
 import { useSetlistDashboard, type UseSetlistDashboardProps } from "@/hooks/use-setlist-dashboard"
 import { canEditSetlist } from "@/lib/setlist-permissions"
 import { CreationWizard } from "./wizard/CreationWizard"
+import { foldSetlistVariants } from "@/lib/setlist-variant-fold"
+import { toDate } from "@/lib/firestore-helpers"
 import { SetlistMatrixView } from "./SetlistMatrixView"
 
 // Lazy-load UnifiedCalendar
@@ -61,6 +63,24 @@ export function SetlistDashboard({ serverShortName, ...props }: UseSetlistDashbo
         nextCursor, loadMore, loadingMore,
     } = useSetlistDashboard(props)
 
+    // WEB-05: per-instrument and (Copy) setlists fold under their parent service.
+    const pastGroups = useMemo(
+        () => foldSetlistVariants(pastOrNoDate, (x) => {
+            const d = x.eventDate ? toDate(x.eventDate) : null
+            return d ? d.toISOString().slice(0, 10) : null
+        }),
+        [pastOrNoDate],
+    )
+    const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
+    const toggleGroup = useCallback((id: string) => {
+        setExpandedGroups(prev => {
+            const next = new Set(prev)
+            if (next.has(id)) next.delete(id)
+            else next.add(id)
+            return next
+        })
+    }, [])
+
     const greetingText = useMemo(() => {
         const firstName = user?.displayName?.split(' ')[0] || null
         return getContextualGreeting(
@@ -71,12 +91,32 @@ export function SetlistDashboard({ serverShortName, ...props }: UseSetlistDashbo
         ).text
     }, [user?.displayName, serverShortName, congregation.shortName, t, lang])
 
+const renderPastCard = (setlist: (typeof pastOrNoDate)[number]) => (
+        <SetlistCard
+                                                            key={setlist.id}
+                                                            setlist={setlist}
+                                                            onEdit={(e) => { e.stopPropagation(); handleSelect(setlist) }}
+                                                            onPerform={() => router.push(`/perform/setlist/${setlist.id}`)}
+                                                            navigatingTo={navigatingTo}
+                                                            onDuplicate={handleDuplicateClick}
+                                                            onCloneNextWeek={handleCloneNextWeekClick}
+                                                            onSaveAsTemplate={handleSaveAsTemplateClick}
+                                                            onSaveAsDefault={handleSaveAsDefaultClick}
+                                                            onDelete={handleDeleteClick}
+                                                            canDuplicate={!!user}
+                                                            canDelete={canEditSetlist(setlist, { uid: user?.uid, isBandLeader, isAdmin })}
+                                                            canEdit={!!user}
+                                                            isAdmin={isAdmin}
+                                                        />
+    )
+
     return (
         <div className="flex min-h-[100dvh] bg-background text-foreground relative overflow-hidden">
             {/* Main Content Area */}
             <div className="flex-1 flex flex-col w-full">
                 <main className="flex-1 p-4 md:p-8 pb-32">
                     <div className="max-w-5xl mx-auto space-y-8">
+                        <h1 className="sr-only">{t("nav.setlists")}</h1>
                         {/* Welcome Section */}
                         {user && (
                             <section className="mb-8 mt-2">
@@ -182,9 +222,9 @@ export function SetlistDashboard({ serverShortName, ...props }: UseSetlistDashbo
                                                 <div className="text-muted-foreground italic py-10 text-center bg-card rounded-2xl border border-border">{t("setlist.noOtherSetlists")}</div>
                                             ) : (
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                    {pastOrNoDate.map(setlist => (
-                                                        <SetlistCard
-                                                            key={setlist.id}
+                                                    {pastGroups.map(({ parent: setlist, variants }) => (
+                                                        <div key={setlist.id} className="space-y-2">
+<SetlistCard
                                                             setlist={setlist}
                                                             onEdit={(e) => { e.stopPropagation(); handleSelect(setlist) }}
                                                             onPerform={() => router.push(`/perform/setlist/${setlist.id}`)}
@@ -199,6 +239,27 @@ export function SetlistDashboard({ serverShortName, ...props }: UseSetlistDashbo
                                                             canEdit={!!user}
                                                             isAdmin={isAdmin}
                                                         />
+                                                            {variants.length > 0 && (
+                                                                <div className="ps-3 border-s border-border">
+                                                                    <button
+                                                                        type="button"
+                                                                        data-testid="setlist-variants-toggle"
+                                                                        aria-expanded={expandedGroups.has(setlist.id)}
+                                                                        onClick={() => toggleGroup(setlist.id)}
+                                                                        className="min-h-11 px-2 text-sm text-muted-foreground hover:text-foreground"
+                                                                    >
+                                                                        {expandedGroups.has(setlist.id)
+                                                                            ? t("setlist.variantsHide")
+                                                                            : t("setlist.variantsShow", { count: variants.length })}
+                                                                    </button>
+                                                                    {expandedGroups.has(setlist.id) && (
+                                                                        <div className="mt-2 space-y-2">
+                                                                            {variants.map(v => renderPastCard(v))}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                     ))}
                                                 </div>
                                             )}
