@@ -42,6 +42,7 @@ import { computeSettingPartFields } from "@/lib/library/setting-part"
 // not this module.
 import { applySongMetadata } from "@/lib/mcp/tools/song-metadata"
 import type { OrgId } from "@/lib/org/types"
+import { rowOrg } from "@/lib/org/membership"
 import { stampNewChartIfShared } from "@/lib/library/visibility-job"
 
 /**
@@ -56,6 +57,14 @@ import { stampNewChartIfShared } from "@/lib/library/visibility-job"
  * codepath — no risk of the two paths drifting on dedup, conversion, or
  * indexing semantics.
  */
+
+/**
+ * Bet 2: the dedupe queries read this many rows and keep the caller's org's
+ * first 5 (exact) / 20 (similar). No composite index is needed, and another
+ * tenant's rows cannot crowd the caller's out of the window.
+ */
+export const DEDUPE_EXACT_SCAN = 50
+export const DEDUPE_FUZZY_SCAN = 200
 
 export const MAX_CHART_UPLOAD_BYTES = 25 * 1024 * 1024 // 25 MB — matches HTTP route
 
@@ -179,6 +188,11 @@ export interface ProcessChartUploadError {
     matchedFileId?: string
     matchedTitle?: string
     score?: number
+    /**
+     * Bet 2 (MCP-19): every active chart in the uploader's org that tripped
+     * the check, best first, so the refusal can offer `revisionOf` for each.
+     */
+    matches?: Array<{ fileId: string; title: string; score: number }>
 }
 
 export type ProcessChartUploadResult =
@@ -485,12 +499,18 @@ export async function processChartUpload(
         const exactMatch = await db
             .collection("library_index")
             .where("nameLower", "==", nameLower)
-            .limit(5)
+            .limit(DEDUPE_EXACT_SCAN)
             .get()
         stage("dedup-exact:done", { matches: exactMatch.size })
-        const activeExactMatch = exactMatch.docs.find(
-            (d) => d.data().status === "active",
-        )
+        // Bet 2: the check is the uploader's org only. Another tenant's chart
+        // of the same name is not a duplicate here, and its name and id must
+        // not reach this caller. The org filter runs BEFORE the window is cut,
+        // so other tenants' rows cannot use it up.
+        const activeExact = exactMatch.docs
+            .filter((d) => rowOrg(d.data().orgId) === input.orgId)
+            .slice(0, 5)
+            .filter((d) => d.data().status === "active")
+        const activeExactMatch = activeExact[0]
         if (activeExactMatch) {
             const existingName = activeExactMatch.data().name
             return {
@@ -502,6 +522,11 @@ export async function processChartUpload(
                 matchedFileId: activeExactMatch.id,
                 matchedTitle: existingName,
                 score: 1,
+                matches: activeExact.map((d) => ({
+                    fileId: d.id,
+                    title: String(d.data().name ?? d.id),
+                    score: 1,
+                })),
             }
         }
     } else {
@@ -518,12 +543,14 @@ export async function processChartUpload(
             .collection("library_index")
             .where("normalizedName", ">=", prefix)
             .where("normalizedName", "<", prefixEnd)
-            .select("name", "normalizedName", "status")
-            .limit(20)
+            .select("name", "normalizedName", "status", "orgId")
+            .limit(DEDUPE_FUZZY_SCAN)
             .get()
         stage("dedup-fuzzy:done", { candidates: similarSnap.size })
 
-        for (const doc of similarSnap.docs) {
+        const similar: Array<{ fileId: string; title: string; score: number }> = []
+        const inOrg = similarSnap.docs.filter((d) => rowOrg(d.data().orgId) === input.orgId).slice(0, 20)
+        for (const doc of inOrg) {
             if (doc.data().status !== "active") continue
             const existingName = doc.data().name as string
             const normalizedExisting =
@@ -538,17 +565,22 @@ export async function processChartUpload(
                 normalizedExisting.length,
             )
             const similarity = 1 - distance / maxLength
-            if (similarity > 0.85) {
-                return {
-                    ok: false,
-                    status: 409,
-                    code: "duplicate_similar",
-                    error: `A chart with a similar name ("${existingName}") already exists in the library. Pass force: true to override if this is a legitimate variant.`,
-                    i18n: { key: "api-library.uploadDuplicateSimilar", vars: { existingName } },
-                    matchedFileId: doc.id,
-                    matchedTitle: existingName,
-                    score: similarity,
-                }
+            if (similarity > 0.85) similar.push({ fileId: doc.id, title: existingName, score: similarity })
+        }
+        if (similar.length > 0) {
+            similar.sort((a, b) => b.score - a.score)
+            const best = similar[0]
+            const existingName = best.title
+            return {
+                ok: false,
+                status: 409,
+                code: "duplicate_similar",
+                error: `A chart with a similar name ("${existingName}") already exists in the library. Pass force: true to override if this is a legitimate variant.`,
+                i18n: { key: "api-library.uploadDuplicateSimilar", vars: { existingName } },
+                matchedFileId: best.fileId,
+                matchedTitle: existingName,
+                score: best.score,
+                matches: similar,
             }
         }
     }

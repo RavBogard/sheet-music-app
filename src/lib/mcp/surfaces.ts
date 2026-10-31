@@ -62,6 +62,7 @@ export const OPS_TOOLS: ReadonlySet<string> = new Set([
     "backfill_heal_metadata",
     "backfill_track_mimetype",
     "backfill_library_setting_parts",
+    "backfill_chart_lineage",
     "backfill_library_keys",
     "backfill_library_index",
     "backfill_setlist_test_flag",

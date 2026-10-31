@@ -59,6 +59,10 @@ export interface LibraryLite {
     /** The surviving chart when this one was archived as a duplicate. */
     canonicalFileId?: string | null
     mimeType?: string | null
+    /** Bet 2: the newer version of this chart, when one was filed as its revision. */
+    supersededBy?: string | null
+    /** Bet 2: the first version's fileId, shared by every version of one chart. */
+    lineageId?: string | null
 }
 
 export interface SongHistoryQuery {

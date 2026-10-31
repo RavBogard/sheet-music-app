@@ -2,6 +2,8 @@ import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { checkUserRateLimit } from "@/lib/rate-limit"
 import {
     processChartUpload,
+    DEDUPE_EXACT_SCAN,
+    DEDUPE_FUZZY_SCAN,
     type LibraryCollection,
     type ProcessChartUploadError,
 } from "@/lib/library-upload"
@@ -43,6 +45,12 @@ import { upcomingForeignUses } from "@/lib/library/shared-usage"
 import { notOwnerError } from "@/lib/mcp/not-owner"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
+import {
+    applyRevision,
+    loadRevisionTarget,
+    type RevisionReport,
+    type RevisionTarget,
+} from "@/lib/library/lineage"
 
 /**
  * v11.2-03 (BUG-2): map a `processChartUpload` failure to the right HTTP
@@ -56,19 +64,33 @@ import type { OrgId } from "@/lib/org/types"
  * ids); errorCode flows from the upload result's own status.
  */
 export function uploadFailureEnvelope(
-    result: Pick<ProcessChartUploadError, "code" | "status" | "error">,
+    result: Pick<ProcessChartUploadError, "code" | "status" | "error"> &
+        Partial<Pick<ProcessChartUploadError, "matches" | "matchedFileId" | "matchedTitle" | "score">>,
     extras: Record<string, unknown>,
 ): RichErrorEnvelope {
     if (result.code === "duplicate_exact" || result.code === "duplicate_similar") {
+        // Bet 2 (MCP-19): a near-name is most often a new version of the
+        // same chart. Offer revisionOf first; force stays for a real sibling.
+        const matches =
+            result.matches && result.matches.length > 0
+                ? result.matches
+                : result.matchedFileId
+                  ? [{ fileId: result.matchedFileId, title: result.matchedTitle ?? result.matchedFileId, score: result.score ?? 1 }]
+                  : []
+        const first = matches[0]?.fileId
         return richError(
             "duplicate_detected_in_library",
-            result.error,
+            // The pipeline's sentence ends on force; here the hint leads with revisionOf.
+            result.error.replace(/\s*Pass force: true to override if this is a legitimate variant\.?$/, ""),
             {
                 ...extras,
                 matchKind: result.code === "duplicate_exact" ? "exact" : "similar",
+                matches,
                 errorCode: 409,
             },
-            "If this is a legitimate variant (different key, arrangement, composer suffix), retry with force: true. Otherwise rename before re-uploading.",
+            first
+                ? `Pass \`revisionOf:<fileId>\` if this is a new version of one of \`matches\` (e.g. revisionOf:'${first}'): upcoming setlists move to it, past setlists keep the old one, and the old one is archived. Use force: true only for a genuinely different chart (another arrangement, key or composer).`
+                : "Pass `revisionOf:<fileId>` if this is a new version of an existing chart. Use force: true only for a genuinely different chart (another arrangement, key or composer).",
         )
     }
     return richError(
@@ -77,6 +99,24 @@ export function uploadFailureEnvelope(
         { ...extras, errorCode: result.status ?? 500 },
         "Inspect the message; if dedup-related, retry with force: true.",
     )
+}
+
+/** Bet 2: the revision target when `revisionOf` is given; null when it is not. */
+export async function revisionTargetFor(
+    db: FirebaseFirestore.Firestore,
+    revisionOf: string | undefined,
+    org: OrgId,
+    uid: string,
+    roles: UploaderRoles,
+): Promise<RevisionTarget | RichErrorEnvelope | null> {
+    if (typeof revisionOf !== "string" || !revisionOf.trim()) return null
+    return loadRevisionTarget(db, revisionOf, org, uid, roles)
+}
+
+/** A new version files under its predecessor's collection unless told otherwise. */
+export function previousCollection(previous: RevisionTarget | null): LibraryCollection | undefined {
+    const c = previous?.data.collection
+    return typeof c === "string" ? (c as LibraryCollection) : undefined
 }
 
 /**
@@ -142,6 +182,14 @@ export interface UploadChartArgs {
     tags?: string[]
     /** Bypass dedup (exact + fuzzy). H-3 override for legitimate variants. */
     force?: boolean
+    /**
+     * Bet 2: the fileId of the chart this file is a new version of. The new
+     * chart takes its lineage and partGroup; setlists dated today or later
+     * move to it (keeping played keys and titles), past setlists keep the old
+     * one, standing choices follow, and the old one is archived. Skips the
+     * name dedupe, since a new version is meant to share the name.
+     */
+    revisionOf?: string
 }
 
 export async function uploadChart(
@@ -149,7 +197,7 @@ export async function uploadChart(
     args: UploadChartArgs,
     org: OrgId = DEFAULT_ORG_ID,
 ): Promise<
-    | { ok: true; fileId: string; title: string; collection: LibraryCollection }
+    | { ok: true; fileId: string; title: string; collection: LibraryCollection; revision?: RevisionReport }
     | RichErrorEnvelope
 > {
     initAdmin()
@@ -165,6 +213,9 @@ export async function uploadChart(
         bypass: isTrustedLeader(roles),
     })
     if (limited) return rateLimitEnvelope(limited.error)
+
+    const previous = await revisionTargetFor(db, args.revisionOf, org, uid, roles)
+    if (previous && "error" in previous) return previous
 
     // G-8: Buffer.from(s, "base64") never throws — it just silently produces
     // a short/empty buffer for non-base64 input — so we need to format-check
@@ -207,7 +258,7 @@ export async function uploadChart(
         originalFileName: fileName,
         mimeType: args.mimeType,
         title: args.title,
-        collection: args.collection,
+        collection: args.collection ?? previousCollection(previous),
         key: args.key,
         bpm: args.bpm,
         // F-016 — also mirror key/bpm onto `songs/{id}.defaults` (not just
@@ -223,7 +274,7 @@ export async function uploadChart(
         tags: args.tags,
         uploaderUid: uid,
         uploaderEmail: roles.email,
-        force: args.force,
+        force: args.force || !!previous,
     })
 
     if (!result.ok)
@@ -232,11 +283,17 @@ export async function uploadChart(
     // tools isolate it. Confined to the MCP wrapper (processChartUpload stays
     // default-crc for the HTTP route + Drive-sync cron).
     await stampOrg(db, result.fileId, org)
+    const revision = previous
+        ? await applyRevision(uid, org, previous, result.fileId, { tool: "upload_chart" })
+        : undefined
+    // The chart is filed; a refused link is said, with its new fileId, and nothing else moved.
+    if (revision && "error" in revision) return revision
     return {
         ok: true,
         fileId: result.fileId,
         title: result.title,
         collection: result.collection,
+        ...(revision ? { revision } : {}),
     }
 }
 
@@ -253,6 +310,14 @@ export interface ImportChartFromDriveArgs {
     tags?: string[]
     /** Bypass dedup (exact + fuzzy). H-3 override for legitimate variants. */
     force?: boolean
+    /**
+     * Bet 2: the fileId of the chart this file is a new version of. The new
+     * chart takes its lineage and partGroup; setlists dated today or later
+     * move to it (keeping played keys and titles), past setlists keep the old
+     * one, standing choices follow, and the old one is archived. Skips the
+     * name dedupe, since a new version is meant to share the name.
+     */
+    revisionOf?: string
     /**
      * Cycle-5 C5C-008 — F-05 dryRun. When true, run all gates + Drive
      * metadata fetch + dedup probe but DO NOT download bytes or write to
@@ -271,6 +336,8 @@ export interface ImportChartFromDriveDryRunResult {
     wouldCommit: false
     dryRun: true
     driveFileId: string
+    /** Bet 2: the chart this import would supersede, when revisionOf was given. */
+    revisionOf?: string
     driveName: string
     /** Title after the same `normalizeChartTitle` pass processChartUpload
      *  would apply (trim + collapse whitespace + NBSP). */
@@ -411,6 +478,7 @@ interface DedupProbeResult {
 async function probeDedup(
     db: FirebaseFirestore.Firestore,
     title: string,
+    org: OrgId,
 ): Promise<DedupProbeResult> {
     const nameLower = title.toLowerCase()
     const normalizedName = nameLower.replace(/[^a-z0-9]/g, "")
@@ -418,10 +486,13 @@ async function probeDedup(
     const exactSnap = await db
         .collection("library_index")
         .where("nameLower", "==", nameLower)
-        .limit(5)
+        .limit(DEDUPE_EXACT_SCAN)
         .get()
-    const exactHit = exactSnap.docs.find(
-        (d) => (d.data() as Record<string, unknown>).status === "active",
+    // Bet 2: the caller's org only, like processChartUpload's own check.
+    const exactHit = exactSnap.docs.filter((d) => rowOrg((d.data() as Record<string, unknown>).orgId) === org).slice(0, 5).find(
+        (d) =>
+            (d.data() as Record<string, unknown>).status === "active" &&
+            rowOrg((d.data() as Record<string, unknown>).orgId) === org,
     )
     if (exactHit) {
         const data = exactHit.data() as Record<string, unknown>
@@ -445,15 +516,17 @@ async function probeDedup(
         .collection("library_index")
         .where("normalizedName", ">=", prefix)
         .where("normalizedName", "<", prefixEnd)
-        .select("name", "normalizedName", "status")
-        .limit(20)
+        .select("name", "normalizedName", "status", "orgId")
+        .limit(DEDUPE_FUZZY_SCAN)
         .get()
 
     let bestScore = 0
     let bestRow: DedupProbeResult["matchedRow"] = null
-    for (const doc of similarSnap.docs) {
+    // The org filter runs before the 20-row window is cut.
+    for (const doc of similarSnap.docs.filter((d) => rowOrg((d.data() as Record<string, unknown>).orgId) === org).slice(0, 20)) {
         const data = doc.data() as Record<string, unknown>
         if (data.status !== "active") continue
+        if (rowOrg(data.orgId) !== org) continue
         const existingName = typeof data.name === "string" ? data.name : doc.id
         const normalizedExisting =
             (typeof data.normalizedName === "string"
@@ -506,8 +579,13 @@ export async function importChartFromDrive(
     uid: string,
     args: ImportChartFromDriveArgs,
     org: OrgId = DEFAULT_ORG_ID,
+    /**
+     * Internal (sync_chart_inbox revisions): stamp the Drive file id on the
+     * new row, so the inbox importer sees the file as already imported.
+     */
+    opts: { driveProvenance?: boolean } = {},
 ): Promise<
-    | { ok: true; fileId: string; title: string; collection: LibraryCollection }
+    | { ok: true; fileId: string; title: string; collection: LibraryCollection; revision?: RevisionReport }
     | ImportChartFromDriveDryRunResult
     | RichErrorEnvelope
 > {
@@ -531,6 +609,9 @@ export async function importChartFromDrive(
         bypass: isTrustedLeader(roles),
     })
     if (limited) return rateLimitEnvelope(limited.error)
+
+    const previous = await revisionTargetFor(db, args.revisionOf, org, uid, roles)
+    if (previous && "error" in previous) return previous
 
     const driveFileId = args.driveFileId.trim()
     const drive = new DriveClient()
@@ -596,7 +677,7 @@ export async function importChartFromDrive(
 
     // ─── C5C-008 dryRun branch: probe, don't write ──────────────────────────
     if (args.dryRun === true) {
-        const dedup = await probeDedup(db, title)
+        const dedup = await probeDedup(db, title, org)
         const ext = predictedExtensionFor(mimeType, originalFileName)
         const targetStoragePath = `library/upload-<new-uuid>${ext}`
         const wouldRunAi = !!process.env.GEMINI_API_KEY
@@ -610,8 +691,9 @@ export async function importChartFromDrive(
             predictedMimeType: mimeType,
             predictedCollection,
             targetStoragePath,
-            dedupScore: dedup.score,
-            dedupMatchedRow: dedup.matchedRow,
+            dedupScore: previous ? null : dedup.score,
+            dedupMatchedRow: previous ? null : dedup.matchedRow,
+            ...(previous ? { revisionOf: previous.id } : {}),
             aiEnrichmentPlan: {
                 wouldRun: wouldRunAi,
                 reason: wouldRunAi
@@ -661,7 +743,7 @@ export async function importChartFromDrive(
         originalFileName,
         mimeType,
         title,
-        collection: args.collection,
+        collection: args.collection ?? previousCollection(previous),
         key: args.key,
         bpm: args.bpm,
         // F-016 — mirror key/bpm onto `songs/{id}.defaults` too (see upload_chart).
@@ -672,7 +754,8 @@ export async function importChartFromDrive(
         tags: args.tags,
         uploaderUid: uid,
         uploaderEmail: roles.email,
-        force: args.force,
+        force: args.force || !!previous,
+        ...(opts.driveProvenance ? { driveMetadata: { driveFileId } } : {}),
     })
 
     if (!result.ok) {
@@ -688,11 +771,17 @@ export async function importChartFromDrive(
     // v11-02-03: tag the new chart with the caller's org (MCP-confined; the
     // dryRun branch above writes nothing, so no stamp there).
     await stampOrg(db, result.fileId, org)
+    const revision = previous
+        ? await applyRevision(uid, org, previous, result.fileId, { tool: "import_chart_from_drive" })
+        : undefined
+    // The chart is filed; a refused link is said, with its new fileId, and nothing else moved.
+    if (revision && "error" in revision) return revision
     return {
         ok: true,
         fileId: result.fileId,
         title: result.title,
         collection: result.collection,
+        ...(revision ? { revision } : {}),
     }
 }
 
@@ -1109,6 +1198,14 @@ export interface SaveScrapedChartArgs {
     bpm?: number
     /** Vocal lead for the chart. */
     leadMusician?: string
+    /**
+     * Bet 2: the fileId of the chart this file is a new version of. The new
+     * chart takes its lineage and partGroup; setlists dated today or later
+     * move to it (keeping played keys and titles), past setlists keep the old
+     * one, standing choices follow, and the old one is archived. Skips the
+     * name dedupe, since a new version is meant to share the name.
+     */
+    revisionOf?: string
 }
 
 export async function saveScrapedChart(
@@ -1116,7 +1213,7 @@ export async function saveScrapedChart(
     args: SaveScrapedChartArgs,
     org: OrgId = DEFAULT_ORG_ID,
 ): Promise<
-    | { ok: true; fileId: string; title: string; collection: LibraryCollection }
+    | { ok: true; fileId: string; title: string; collection: LibraryCollection; revision?: RevisionReport }
     | RichErrorEnvelope
 > {
     if (!args.title?.trim())
@@ -1141,6 +1238,9 @@ export async function saveScrapedChart(
     })
     if (limited) return rateLimitEnvelope(limited.error)
 
+    const previous = await revisionTargetFor(db, args.revisionOf, org, uid, roles)
+    if (previous && "error" in previous) return previous
+
     // Match the ScraperModal payload shape: title + artist + blank line + content.
     const textContent = `${args.title}\n${args.artist ?? ""}\n\n${args.content}`
     const buffer = Buffer.from(textContent, "utf-8")
@@ -1153,7 +1253,7 @@ export async function saveScrapedChart(
         originalFileName: fileName,
         mimeType: "text/plain",
         title: args.title,
-        collection: args.collection,
+        collection: args.collection ?? previousCollection(previous),
         // Cowork #3 — key/bpm flow through the upload pipeline (→ library_index),
         // same as upload_chart. leadMusician + the songs.defaults coherence are
         // handled by the applySongMetadata post-step below.
@@ -1161,7 +1261,7 @@ export async function saveScrapedChart(
         bpm: args.bpm,
         uploaderUid: uid,
         uploaderEmail: roles.email,
-        force: args.force,
+        force: args.force || !!previous,
     })
 
     if (!result.ok)
@@ -1198,10 +1298,16 @@ export async function saveScrapedChart(
         }
     }
 
+    const revision = previous
+        ? await applyRevision(uid, org, previous, result.fileId, { tool: "save_scraped_chart" })
+        : undefined
+    // The chart is filed; a refused link is said, with its new fileId, and nothing else moved.
+    if (revision && "error" in revision) return revision
     return {
         ok: true,
         fileId: result.fileId,
         title: result.title,
         collection: result.collection,
+        ...(revision ? { revision } : {}),
     }
 }
