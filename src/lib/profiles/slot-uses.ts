@@ -21,6 +21,8 @@ import { USUAL_WINDOW, type SlotUse } from "./tiers"
  */
 
 export interface ProfileFilter {
+    /** Only setlists before this day (YYYY-MM-DD) count: the draft's own date and later are not history. */
+    before?: string
     serviceType: string
     /** null: any rabbi (a profile not split by rabbi). */
     rabbiSlot: string | null
@@ -39,27 +41,46 @@ export function partGroupLookup(library: Map<string, LibraryLite>): (fileId: str
 }
 
 /** Dated, non-test, whole-band setlists, newest first. */
-export function eligibleSetlists(setlists: HistorySetlist[]): HistorySetlist[] {
+export function eligibleSetlists(setlists: HistorySetlist[], before?: string): HistorySetlist[] {
     return setlists
         .filter((s) => !s.isTest && !!s.eventDate && !setlistPart(s.name))
+        .filter((s) => !before || s.eventDate!.slice(0, 10) < before)
         .sort((a, b) => (a.eventDate! < b.eventDate! ? 1 : a.eventDate! > b.eventDate! ? -1 : 0))
 }
 
+const MONTH_RE = /\b(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?/g
+
+/** A setlist name with case, punctuation, month names and numbers removed. */
+export function normalizedName(name: string): string {
+    return name
+        .toLowerCase()
+        .replace(/['’]/g, "")
+        .replace(MONTH_RE, " ")
+        .replace(/[^a-z\s]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+}
+
+function serviceKey(s: HistorySetlist): string {
+    return `${s.eventDate!.slice(0, 10)}|${s.serviceType}|${s.rabbiSlot ?? ""}|${normalizedName(s.name)}`
+}
+
 /**
- * One setlist per (eventDate day, serviceType, rabbiSlot): duplicates of one service must not
+ * One setlist per (eventDate day, serviceType, rabbiSlot, normalised name): duplicates of one service must not
  * count twice toward "usual". The newest version (`updatedAt`) wins; with no timestamps the
- * first in the input order does. A setlist with no service type is never collapsed.
+ * first in the input order does. The name keeps two different services of one day (a morning and a
+ * Havdalah B'nei Mitzvah) apart. A setlist with no service type is never collapsed.
  */
 export function dedupeServices(setlists: HistorySetlist[]): HistorySetlist[] {
     const winner = new Map<string, HistorySetlist>()
     const stamp = (s: HistorySetlist) => Date.parse(s.updatedAt ?? "") || 0
     for (const s of setlists) {
         if (s.serviceType === null) continue
-        const key = `${s.eventDate!.slice(0, 10)}|${s.serviceType}|${s.rabbiSlot ?? ""}`
+        const key = serviceKey(s)
         const cur = winner.get(key)
         if (!cur || stamp(s) > stamp(cur)) winner.set(key, s)
     }
-    return setlists.filter((s) => s.serviceType === null || winner.get(`${s.eventDate!.slice(0, 10)}|${s.serviceType}|${s.rabbiSlot ?? ""}`) === s)
+    return setlists.filter((s) => s.serviceType === null || winner.get(serviceKey(s)) === s)
 }
 
 /** Setlists already on `date` (YYYY-MM-DD in `timeZone`) of this service type. */
@@ -95,7 +116,7 @@ export function buildSlotUses(
     const other = new Map<string, SlotUse[]>()
     const profileSetlists: HistorySetlist[] = []
 
-    const eligible = dedupeServices(eligibleSetlists(setlists))
+    const eligible = dedupeServices(eligibleSetlists(setlists, f.before))
     // The profile's last USUAL_WINDOW regular services: one entry per day.
     const recentDays = new Set<string>()
     for (const s of eligible) {
@@ -118,18 +139,21 @@ export function buildSlotUses(
             seen.add(slotKey)
             let lib = library.get(t.fileId)
             let fileId = t.fileId
+            let dead = false
             if (isDeadChart(lib)) {
                 // Recall the canonical chart when there is one; otherwise the dead chart is never filled.
                 const canon = lib!.canonicalFileId ? library.get(lib!.canonicalFileId) : undefined
-                if (!canon || isDeadChart(canon)) continue
-                lib = canon
-                fileId = canon.fileId
+                if (canon && !isDeadChart(canon)) {
+                    lib = canon
+                    fileId = canon.fileId
+                } else dead = true
             }
             const use: SlotUse = {
                 eventDate: s.eventDate!,
                 fileId,
                 partGroup: lib?.partGroup ?? fileId,
                 chartName: lib?.name ?? t.fileName ?? t.title,
+                ...(dead ? { dead: true } : {}),
                 recent: inProfile ? recentDays.has(s.eventDate!.slice(0, 10)) : undefined,
                 key: t.key ?? null,
                 special: s.special,

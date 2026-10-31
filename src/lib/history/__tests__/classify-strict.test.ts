@@ -27,4 +27,23 @@ describe("classifyService strictness (MCP-12)", () => {
         expect(c.serviceType).toBe("bnei_mitzvah_saturday")
         expect(classifyService({ name: "Shabbat Morning — Parashat Noach", serviceType: "shabbat_morning" }).serviceType).toBe("shabbat_morning")
     })
+
+    it.each([
+        "Ami Chesed B&#39;nei Mitzvah — Oct 24",
+        "Ami Chesed B’nai Mitzvah",
+        "Sam Bnei Mitzvah",
+        "Dana B'not Mitzvah",
+        "Eli Bat-Mitzvah",
+        "Mitzvah of Sam",
+    ])("%s is a B'nei Mitzvah service", (name) => {
+        expect(classifyService({ name }).serviceType).toBe("bnei_mitzvah_saturday")
+    })
+
+    it("applies whatever the stored type (a Friday-night Bat Mitzvah)", () => {
+        expect(classifyService({ name: "Maya Bat Mitzvah", serviceType: "friday_night", templateType: "friday_night" }).serviceType).toBe("bnei_mitzvah_saturday")
+    })
+
+    it("leaves a Havdalah B'nei Mitzvah as its own type", () => {
+        expect(classifyService({ name: "Bar Mitzvah — Chase", templateType: "bnei_mitzvah_havdallah" }).serviceType).toBe("havdalah_bnei_mitzvah")
+    })
 })

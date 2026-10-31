@@ -14,20 +14,30 @@ const u = (n: number, partGroup: string, extra: Partial<SlotUse> = {}): SlotUse 
 })
 
 describe("usual is over the last regular services (MCP-01)", () => {
-    it("history A,A,A then B,B: A is not usual", () => {
-        const newestFirst = [u(25, "b"), u(18, "b"), u(11, "a"), u(4, "a"), u(1, "a")]
-        const t = computeSlotTier({ standing: null, profileUses: newestFirst, otherUses: [] })
-        expect(t.tier).toBe("last_time")
-        expect(t.fileId).toBe("b")
+    const tier = (...newestFirst: SlotUse[]) => computeSlotTier({ standing: null, profileUses: newestFirst, otherUses: [] })
+
+    it("history A,A,A then B,B: A is usual and filled, and says the latest was B", () => {
+        const t = tier(u(25, "b"), u(18, "b"), u(11, "a"), u(4, "a"), u(1, "a"))
+        expect(t).toMatchObject({ tier: "usual", fileId: "a", differsFromLast: { chartName: "b", date: d(25) } })
     })
 
-    it("a chart still in the latest service and in 3 of the window is usual", () => {
-        const t = computeSlotTier({
-            standing: null,
-            profileUses: [u(25, "a"), u(18, "b"), u(11, "a"), u(4, "a")],
-            otherUses: [],
-        })
+    it("B,A,A,A,A: A is usual with differsFromLast", () => {
+        const t = tier(u(25, "b"), u(18, "a"), u(11, "a"), u(4, "a"), u(1, "a"))
+        expect(t).toMatchObject({ tier: "usual", fileId: "a" })
+        expect(t.differsFromLast?.chartName).toBe("b")
+    })
+
+    it("A,B,A,B,A (A latest): usual with no flag", () => {
+        const t = tier(u(25, "a"), u(18, "b"), u(11, "a"), u(4, "b"), u(1, "a"))
         expect(t.tier).toBe("usual")
+        expect(t.differsFromLast).toBeUndefined()
+    })
+
+    it("a dead chart in the latest service takes its place but is never filled", () => {
+        const t = tier(u(25, "b", { dead: true }), u(18, "a"), u(11, "a"), u(4, "a"))
+        expect(t).toMatchObject({ tier: "usual", fileId: "a", differsFromLast: { chartName: "b" } })
+        const allDead = tier(u(25, "b", { dead: true }), u(18, "b", { dead: true }), u(11, "b", { dead: true }))
+        expect(allDead.tier).not.toBe("usual")
     })
 
     it("uses older than the profile's last 5 services (recent:false) do not count", () => {

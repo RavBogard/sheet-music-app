@@ -34,6 +34,8 @@ export interface SlotUse {
     key: string | null
     special: boolean
     serviceLabel: string
+    /** The chart is orphaned or archived with no live twin: it fills its service's place but is never filled. */
+    dead?: boolean
     /**
      * False when this use's service is older than the profile's last
      * USUAL_WINDOW regular services. Absent: not known, so the use counts.
@@ -62,6 +64,8 @@ export interface SlotTier {
     keyOnRecord: boolean
     phrase: string
     promotion?: Promotion
+    /** Usual only: the slot's latest regular use was a different chart (data only). */
+    differsFromLast?: { chartName: string; date: string }
 }
 
 const FILE_EXT_RE = /\.(pdf|musicxml|mxl|xml|docx?|txt|png|jpe?g)$/i
@@ -159,16 +163,14 @@ export function computeSlotTier(input: SlotTierInput): SlotTier {
     const window = profileUses.filter((u) => !u.special && u.recent !== false).slice(0, USUAL_WINDOW)
     const groupCounts = new Map<string, number>()
     for (const u of window) groupCounts.set(u.partGroup, (groupCounts.get(u.partGroup) ?? 0) + 1)
-    // Only the group of the slot's latest regular use can be usual: once something else took the
-    // slot, the earlier chart is history, however often it was played before.
-    const latestGroup = window[0]?.partGroup
-    const usualGroup =
-        latestGroup !== undefined && (groupCounts.get(latestGroup) ?? 0) >= USUAL_MIN ? latestGroup : undefined
+    // The most recent live chart in at least USUAL_MIN of the window. When the latest regular
+    // service used something else, the slot is still usual and filled, and says so.
+    const usualGroup = window.find((u) => !u.dead && (groupCounts.get(u.partGroup) ?? 0) >= USUAL_MIN)?.partGroup
     if (usualGroup !== undefined) {
         const uses = window.filter((u) => u.partGroup === usualGroup)
         const latest = uses[0]
         const key = mostFrequentKey(uses)
-        return {
+        const out: SlotTier = {
             tier: "usual",
             fileId: latest.fileId,
             chartName: latest.chartName,
@@ -176,6 +178,10 @@ export function computeSlotTier(input: SlotTierInput): SlotTier {
             keyOnRecord: key !== null,
             phrase: phrase("usual", latest.chartName, key),
         }
+        if (window[0].partGroup !== usualGroup) {
+            out.differsFromLast = { chartName: window[0].chartName, date: window[0].eventDate }
+        }
+        return out
     }
 
     if (profileUses.length > 0) {

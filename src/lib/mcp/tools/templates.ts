@@ -575,7 +575,7 @@ export function patchHasChange(
     return false
 }
 
-function profileNotATemplate(templateId: string): RichErrorEnvelope {
+export function profileNotATemplate(templateId: string): RichErrorEnvelope {
     return richError(
         "template_not_found",
         `Template '${templateId}' was not found.`,

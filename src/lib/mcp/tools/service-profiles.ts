@@ -459,7 +459,7 @@ export async function loadProfileTiers(
     const profileKey = profileKeyFor(serviceType, rabbiSlot)
     const tracks = Array.isArray(data.tracks) ? (data.tracks as Record<string, unknown>[]) : []
 
-    const { index, truncated, setlists } = await loadSlotUses(org, { serviceType, rabbiSlot })
+    const { index, truncated, setlists } = await loadSlotUses(org, { serviceType, rabbiSlot, before: date })
     const existing = date ? existingOnDate(setlists, date, serviceType, orgTimeZone(org)) : []
     const slotKeys = tracks.map((t) =>
         isSongType(t.type)

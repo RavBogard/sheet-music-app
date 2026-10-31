@@ -71,13 +71,15 @@ function mapTemplateType(templateType: string | null | undefined): string | null
     return null
 }
 
-const BNEI_MITZVAH_RE = /\b(bar|bat|beit|b'?nai|b'?nei|bnei) mitzvah\b/i
+const BNEI_MITZVAH_RE =
+    /\b(?:b['’‘]?(?:nai|nei|not)|bar|bat|beit)[\s-]+mitzvah\b|\bmitzvah of\b/i
 const SHIR_SHABBAT_RE = /shir\s+(\w+\s+)?shabbat/i
 /** A named holiday, camp, celebration or retirement is a special week, whatever its stored type. */
 const SPECIAL_NAME_RE =
     /\b(sukkot|shavuot|yizkor|simchat|rosh hashana[h]?|yom kippur|pesach|passover|camp|celebration|retirement)\b|shir\s+\w+\s+shabbat/i
 
-function serviceTypeFor(name: string, templateType: string | null | undefined): string | null {
+function serviceTypeFor(rawName: string, templateType: string | null | undefined): string | null {
+    const name = decodeHtml(rawName)
     if (SHIR_SHABBAT_RE.test(name)) return "shir_shabbat"
     const mapped = mapTemplateType(templateType)
     if (mapped) return mapped
@@ -146,8 +148,9 @@ export function classifyService(s: {
     const inferred = mapTemplateType(s.serviceType) ?? serviceTypeFor(name, s.templateType)
     // B'nei Mitzvah is its own service type: its name beats a stored or inferred shabbat_morning,
     // so it never counts toward the regular Shabbat-morning profile.
+    // Whatever the stored type: B'nei Mitzvah is its own flow (a Friday-night Bat Mitzvah too).
     const serviceType =
-        inferred === "shabbat_morning" && BNEI_MITZVAH_RE.test(name) ? "bnei_mitzvah_saturday" : inferred
+        inferred !== "havdalah_bnei_mitzvah" && BNEI_MITZVAH_RE.test(decodeHtml(name)) ? "bnei_mitzvah_saturday" : inferred
     const rabbiSlot = storedRabbiSlot(s.rabbiSlot) ?? rabbiSlotFor(s.rabbi)
     const tt = typeof s.templateType === "string" ? s.templateType.trim() : ""
     const special =
