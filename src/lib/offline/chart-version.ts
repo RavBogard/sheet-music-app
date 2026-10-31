@@ -51,19 +51,26 @@ export function chartVersionOf(row: Record<string, unknown> | undefined | null):
 }
 
 /**
- * Whether a cached entry should be re-fetched.
+ * What to do about a chart that IS cached, given its saved version and the
+ * server's current one:
  *
- * - `cached === undefined`: not cached at all. That is a plain save, not a
- *   refresh, so this returns false.
- * - No server version known: nothing to compare against, never stale.
- * - Cached without a version (saved before PERF-18): stale, fetched once.
- * - Otherwise: stale when the two differ.
+ * - `none`: nothing to compare against (no server version), or already current.
+ * - `hash-check`: the server knows a content hash. Hash the bytes on the
+ *   device first (idle time); a match only stamps the version, a mismatch
+ *   leads to one verified refresh.
+ * - `refresh`: an `updatedAt` version that differs from the saved one.
+ *   Re-fetch, type-checked, and replace in place.
+ *
+ * An unversioned (legacy) entry against an `updatedAt` version can't be
+ * compared, so it is left alone rather than assumed stale.
  */
-export function isCachedChartStale(
-    cached: string | null | undefined,
+export type CachedChartPlan = "none" | "hash-check" | "refresh"
+
+export function planForCachedChart(
+    cached: string | null,
     server: string | null | undefined,
-): boolean {
-    if (cached === undefined) return false
-    if (!server) return false
-    return cached !== server
+): CachedChartPlan {
+    if (!server || cached === server) return "none"
+    if (server.startsWith("h:")) return "hash-check"
+    return cached === null ? "none" : "refresh"
 }

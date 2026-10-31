@@ -142,6 +142,53 @@ export async function getFileVersion(fileId: string): Promise<string | null | un
     }
 }
 
+/** What the save pass needs to know about a cached entry, without its bytes. */
+export interface OfflineFileMeta {
+    version: string | null
+    mime: string
+    size: number
+    savedAt: number
+}
+
+/** PERF-18: metadata of a cached chart, or `undefined` when not cached. */
+export async function getFileMeta(fileId: string): Promise<OfflineFileMeta | undefined> {
+    if (!hasIDB()) return undefined
+    try {
+        return await withStore('readonly', async (store) => {
+            const entry = await reqPromise<OfflineFileEntry | undefined>(store.get(fileId))
+            if (!entry) return undefined
+            return {
+                version: typeof entry.version === 'string' && entry.version ? entry.version : null,
+                mime: entry.mime || entry.blob?.type || 'application/octet-stream',
+                size: entry.size || 0,
+                savedAt: entry.savedAt || 0,
+            }
+        })
+    } catch {
+        return undefined
+    }
+}
+
+/**
+ * PERF-18: record the version of bytes already on the device (their hash was
+ * checked against the server's). Read and write in one transaction, and only
+ * when the entry is still the one that was checked (`savedAt` unchanged), so
+ * a newer save is never mislabelled. Never deletes; returns whether it stamped.
+ */
+export async function stampFileVersion(fileId: string, version: string, expectedSavedAt: number): Promise<boolean> {
+    if (!hasIDB()) return false
+    try {
+        return await withStore('readwrite', async (store) => {
+            const entry = await reqPromise<OfflineFileEntry | undefined>(store.get(fileId))
+            if (!entry || entry.savedAt !== expectedSavedAt) return false
+            await reqPromise(store.put({ ...entry, version }))
+            return true
+        })
+    } catch {
+        return false
+    }
+}
+
 export async function hasFile(fileId: string): Promise<boolean> {
     if (!hasIDB()) return false
     try {

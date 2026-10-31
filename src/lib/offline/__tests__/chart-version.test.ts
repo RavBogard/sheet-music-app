@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { chartVersionOf, isCachedChartStale } from "../chart-version"
+import { chartVersionOf, planForCachedChart } from "../chart-version"
 
 describe("chartVersionOf", () => {
     it("prefers the content hash (object or string form)", () => {
@@ -21,20 +21,21 @@ describe("chartVersionOf", () => {
     })
 })
 
-describe("isCachedChartStale", () => {
-    it("is never stale when the chart isn't cached (that is a plain save)", () => {
-        expect(isCachedChartStale(undefined, "h:a")).toBe(false)
+describe("planForCachedChart", () => {
+    it("does nothing without a server version, or when already current", () => {
+        expect(planForCachedChart("h:a", undefined)).toBe("none")
+        expect(planForCachedChart(null, null)).toBe("none")
+        expect(planForCachedChart("h:a", "h:a")).toBe("none")
+        expect(planForCachedChart("u:1", "u:1")).toBe("none")
     })
-    it("is never stale without a server version", () => {
-        expect(isCachedChartStale("h:a", undefined)).toBe(false)
-        expect(isCachedChartStale(null, null)).toBe(false)
+    it("checks the bytes on the device first whenever the server knows a hash", () => {
+        expect(planForCachedChart(null, "h:a")).toBe("hash-check")
+        expect(planForCachedChart("h:a", "h:b")).toBe("hash-check")
+        expect(planForCachedChart("u:1", "h:a")).toBe("hash-check")
     })
-    it("treats an unversioned cached entry as stale once the server knows a version", () => {
-        expect(isCachedChartStale(null, "h:a")).toBe(true)
-    })
-    it("compares versions", () => {
-        expect(isCachedChartStale("h:a", "h:a")).toBe(false)
-        expect(isCachedChartStale("h:a", "h:b")).toBe(true)
-        expect(isCachedChartStale("u:1", "h:a")).toBe(true)
+    it("refreshes a versioned entry whose updatedAt differs, but never assumes a legacy entry stale", () => {
+        expect(planForCachedChart("u:1", "u:2")).toBe("refresh")
+        expect(planForCachedChart("h:a", "u:2")).toBe("refresh")
+        expect(planForCachedChart(null, "u:2")).toBe("none")
     })
 })

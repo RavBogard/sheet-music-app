@@ -33,7 +33,7 @@ import { useLibrary } from "@/hooks/use-library"
 import { SetlistView } from "@/components/performance/SetlistView"
 import { PerformanceOfflineIndicator } from "@/components/performance/PerformanceOfflineIndicator"
 import { SaveOfflineButton } from "@/components/performance/SaveOfflineButton"
-import type { SaveFailureReason } from "@/lib/prefetch"
+import { setChartOpen, type SaveFailureReason } from "@/lib/prefetch"
 import { KeepAwakeToggle } from "@/components/performance/KeepAwakeToggle"
 import { KeepAwakeAutoArm } from "@/components/performance/keep-awake-context"
 import { bookTitle } from "@/lib/books/titles"
@@ -308,6 +308,14 @@ export function SetlistPerformClient({
     // via `prefetchSetlistPDFs`'s `hasFile` short-circuit. Best-effort;
     // failures are swallowed.
     usePerformEntryPrecache(songFileIds, chartVersions)
+
+    // PERF-18: background chart refreshes wait while a chart is open, so they
+    // never compete with the one being read. Saves of missing charts still run.
+    const chartIsOpen = activeSongIndex !== null
+    useEffect(() => {
+        setChartOpen(chartIsOpen)
+    }, [chartIsOpen])
+    useEffect(() => () => setChartOpen(false), [])
 
     // Song count for header
     const songCount = tracks.filter((t) => !t.type || t.type === "song").length
