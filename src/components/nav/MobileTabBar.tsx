@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { usePathname, useRouter } from "next/navigation"
-import { Search, ListMusic, Radio } from "lucide-react"
+import Link from "next/link"
+import { Search, ListMusic, Radio, Library, ShieldAlert } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useMonitorAccess } from "@/hooks/use-monitor-access"
 import { useMonitorConnection } from "@/hooks/use-monitor-connection"
@@ -27,7 +28,10 @@ export function MobileTabBar(props: AppNavigationProps) {
     const t = useT()
     const pathname = usePathname()
     const router = useRouter()
-    const { user, isMember } = useAuth()
+    const { user, isMember: authIsMember, isBandLeader: authIsBandLeader } = useAuth()
+    // Server flags first, so the tabs don't flash in after hydration.
+    const isMember = !!authIsMember || !!props.serverIsMember
+    const isBandLeader = !!authIsBandLeader || !!props.serverIsBandLeader
     const org = useOrg()
     const { hasAccess: hasMonitorAccess } = useMonitorAccess({
         serverIsAdmin: props.serverIsAdmin,
@@ -158,44 +162,62 @@ export function MobileTabBar(props: AppNavigationProps) {
 
     if (isPdfView) return null
 
-    return (
-        <nav className={cn("fixed bottom-0 inset-x-0 z-50 md:hidden pb-safe", keyboardOpen && "hidden")}>
-            <div className="absolute inset-0 material-thick border-t border-brand/10" />
+    // Web refresh (blend E): below lg (iPad portrait and phones) the top bar's
+    // tabs live here. The Setlist tab keeps its smart target (tonight's setlist
+    // in Perform); Search and the wedge mixer stay where they were.
+    const setlistActive = pathname.startsWith("/setlists") || pathname.startsWith("/perform/setlist")
+    const libraryActive = pathname.startsWith("/library")
+    const manageActive = pathname.startsWith("/manage")
 
-            <div className="relative flex items-center justify-around h-16 sm:h-20 px-2">
-                {/* Search button */}
+    const tabClass = (active: boolean) => cn(
+        "relative flex flex-1 flex-col items-center justify-center gap-0.5 h-full min-w-11 transition-colors",
+        "focus-visible:outline-2 focus-visible:-outline-offset-4 focus-visible:outline-ring rounded-sm",
+        "before:absolute before:top-0 before:inset-x-4 before:h-[3px] before:rounded-b-sm",
+        active ? "text-brand before:bg-brand" : "text-muted-foreground hover:text-foreground before:bg-transparent",
+    )
+    const labelClass = (active: boolean) => cn("text-[12px] leading-none", active ? "font-bold" : "font-semibold")
+
+    return (
+        <nav className={cn("fixed bottom-0 inset-x-0 z-50 lg:hidden pb-safe bg-card border-t border-rule", keyboardOpen && "hidden")}>
+            <div className="flex items-stretch justify-around h-16 px-1 max-w-3xl mx-auto">
+                {/* Setlist (tonight's setlist in Perform, else the list) */}
+                <button
+                    type="button"
+                    aria-label={t("nav.openSetlist")}
+                    aria-current={setlistActive ? "page" : undefined}
+                    onClick={handleSetlistTap}
+                    className={tabClass(setlistActive)}
+                >
+                    <ListMusic aria-hidden className="w-6 h-6" strokeWidth={setlistActive ? 2.4 : 2} />
+                    <span className={labelClass(setlistActive)}>{t("nav.setlistTab")}</span>
+                </button>
+
+                {isMember && (
+                    <Link href="/library" aria-current={libraryActive ? "page" : undefined} className={tabClass(libraryActive)}>
+                        <Library aria-hidden className="w-6 h-6" strokeWidth={libraryActive ? 2.4 : 2} />
+                        <span className={labelClass(libraryActive)}>{t("nav.library")}</span>
+                    </Link>
+                )}
+
+                {isBandLeader && (
+                    <Link href="/manage" aria-current={manageActive ? "page" : undefined} className={tabClass(manageActive)}>
+                        <ShieldAlert aria-hidden className="w-6 h-6" strokeWidth={manageActive ? 2.4 : 2} />
+                        <span className={labelClass(manageActive)}>{t("nav.manage")}</span>
+                    </Link>
+                )}
+
+                {/* Search */}
                 <Popover open={searchOpen} onOpenChange={setSearchOpen}>
                     <PopoverTrigger asChild>
-                        <button
-                            aria-label={t("nav.searchSongs")}
-                            className={cn(
-                                "flex flex-1 flex-col items-center justify-center gap-1 h-full py-2 fluid-interaction group",
-                                searchOpen ? "text-brand" : "text-muted-foreground hover:text-brand/70"
-                            )}
-                        >
-                            <div className={cn(
-                                "relative flex items-center justify-center w-14 h-10 rounded-2xl transition-all duration-300",
-                                searchOpen
-                                    ? "bg-brand/15 shadow-[var(--shadow-brand-glow)] scale-100"
-                                    : "bg-transparent scale-90"
-                            )} style={{ transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)" }}>
-                                <Search className={cn(
-                                    "w-6 h-6 transition-all duration-300",
-                                    searchOpen ? "text-brand stroke-[2.5px]" : "stroke-2"
-                                )} />
-                            </div>
-                            <span className={cn(
-                                "text-[11px] font-medium transition-colors",
-                                searchOpen ? "text-brand font-bold" : "text-muted-foreground"
-                            )}>
-                                {t("nav.searchTab")}
-                            </span>
+                        <button type="button" aria-label={t("nav.searchSongs")} className={tabClass(searchOpen)}>
+                            <Search aria-hidden className="w-6 h-6" strokeWidth={searchOpen ? 2.4 : 2} />
+                            <span className={labelClass(searchOpen)}>{t("nav.searchTab")}</span>
                         </button>
                     </PopoverTrigger>
                     <PopoverContent
                         side="top"
-                        align="start"
-                        className="w-[min(360px,calc(100vw-2rem))] p-0 bg-popover border-border mb-2"
+                        align="center"
+                        className="w-[min(360px,calc(100vw-2rem))] p-2 bg-popover border-border mb-2"
                     >
                         <Input
                             ref={inputRef}
@@ -203,17 +225,18 @@ export function MobileTabBar(props: AppNavigationProps) {
                             aria-label={t("nav.searchSongs")}
                             value={searchQuery}
                             onChange={e => setSearchQuery(e.target.value)}
-                            className="mb-2"
+                            className="mb-2 h-11"
                         />
                         {searchQuery.length >= 2 && searchResults.length === 0 && (
                             <p className="text-sm text-muted-foreground px-1 py-2">{t("nav.noSongsFound")}</p>
                         )}
                         {searchResults.length > 0 && (
-                            <ul className="max-h-60 overflow-y-auto space-y-0.5">
+                            <ul className="max-h-60 overflow-y-auto">
                                 {searchResults.map(file => (
-                                    <li key={file.id}>
+                                    <li key={file.id} className="border-b border-rule last:border-b-0">
                                         <button
-                                            className="w-full text-start px-2 py-2 rounded-md text-sm hover:bg-accent transition-colors truncate"
+                                            type="button"
+                                            className="w-full text-start px-2 min-h-11 rounded-md text-sm hover:bg-accent transition-colors truncate"
                                             onClick={() => handleSearchSelect(file)}
                                         >
                                             {file.displayName || file.name}
@@ -225,51 +248,13 @@ export function MobileTabBar(props: AppNavigationProps) {
                     </PopoverContent>
                 </Popover>
 
-                {/* Setlist button (center, primary) */}
-                <button
-                    aria-label={t("nav.openSetlist")}
-                    onClick={handleSetlistTap}
-                    className="flex flex-1 flex-col items-center justify-center gap-1 h-full py-2 fluid-interaction group text-muted-foreground hover:text-brand/70"
-                >
-                    <div
-                        className="relative flex items-center justify-center w-16 h-11 rounded-2xl transition-all duration-300 bg-brand/10 shadow-[var(--shadow-brand-glow-soft)] scale-100"
-                        style={{ transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)" }}
-                    >
-                        <ListMusic className="w-7 h-7 text-brand stroke-[2.25px] transition-all duration-300" />
-                    </div>
-                    <span className="text-[11px] font-bold text-brand transition-colors">
-                        {t("nav.setlistTab")}
-                    </span>
-                </button>
-
-                {/* Monitor button */}
-                {showMonitor ? (
+                {/* Wedge mixer */}
+                {showMonitor && (
                     <Popover open={monitorOpen} onOpenChange={setMonitorOpen}>
                         <PopoverTrigger asChild>
-                            <button
-                                aria-label={t("nav.monitor")}
-                                className={cn(
-                                    "flex flex-1 flex-col items-center justify-center gap-1 h-full py-2 fluid-interaction group",
-                                    monitorOpen ? "text-brand" : "text-muted-foreground hover:text-brand/70"
-                                )}
-                            >
-                                <div className={cn(
-                                    "relative flex items-center justify-center w-14 h-10 rounded-2xl transition-all duration-300",
-                                    monitorOpen
-                                        ? "bg-brand/15 shadow-[var(--shadow-brand-glow)] scale-100"
-                                        : "bg-transparent scale-90"
-                                )} style={{ transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)" }}>
-                                    <Radio className={cn(
-                                        "w-6 h-6 transition-all duration-300",
-                                        monitorOpen ? "text-brand stroke-[2.5px]" : "stroke-2"
-                                    )} />
-                                </div>
-                                <span className={cn(
-                                    "text-[11px] font-medium transition-colors",
-                                    monitorOpen ? "text-brand font-bold" : "text-muted-foreground"
-                                )}>
-                                    {t("nav.monitor")}
-                                </span>
+                            <button type="button" aria-label={t("nav.monitor")} className={tabClass(monitorOpen)}>
+                                <Radio aria-hidden className="w-6 h-6" strokeWidth={monitorOpen ? 2.4 : 2} />
+                                <span className={labelClass(monitorOpen)}>{t("nav.monitor")}</span>
                             </button>
                         </PopoverTrigger>
                         <PopoverContent
@@ -280,12 +265,6 @@ export function MobileTabBar(props: AppNavigationProps) {
                             <QuickMonitorPanel />
                         </PopoverContent>
                     </Popover>
-                ) : (
-                    /* Placeholder for balanced layout when no monitor */
-                    <div className="flex flex-1 flex-col items-center justify-center gap-1 h-full py-2 opacity-0 pointer-events-none">
-                        <div className="w-14 h-10" />
-                        <span className="text-[11px]">{" "}</span>
-                    </div>
                 )}
             </div>
         </nav>

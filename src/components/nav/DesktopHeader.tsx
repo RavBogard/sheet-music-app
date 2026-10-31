@@ -77,9 +77,12 @@ export function DesktopHeader(props: AppNavigationProps) {
     // With Perform off there is no public listing; /setlists sends a visitor to sign in.
     const setlistsHref = isAuthed || !performOn ? "/setlists" : "/perform"
 
+    // Web refresh (blend E): Setlists / Library / Manage tabs in the top bar.
+    // Manage stays in the user menu too; Monitor keeps its tab where it shows.
     const navLinks = [
         { label: t("nav.setlists"), href: setlistsHref, show: true },
         { label: t("nav.library"), href: "/library", show: isMember },
+        { label: t("nav.manage"), href: "/manage", show: isBandLeader },
         { label: t("nav.monitor"), href: "/monitor", show: mixerOn && hasMonitorAccess },
     ]
 
@@ -122,10 +125,10 @@ export function DesktopHeader(props: AppNavigationProps) {
     }, [])
 
     return (
-        <header className="fixed top-0 inset-x-0 h-16 z-50 hidden md:flex items-center justify-between px-4 lg:px-6 material-thick border-b border-brand/10 overflow-x-clip">
-            {/* Logo + Nav */}
-            <div className="flex items-center gap-8">
-                <Link href="/" className="flex items-center gap-3 group min-h-11">
+        <header className="fixed top-0 inset-x-0 h-14 z-50 hidden lg:flex items-center justify-between px-6 bg-shell text-shell-foreground overflow-x-clip">
+            {/* Brand + tabs */}
+            <div className="flex items-center gap-8 h-full">
+                <Link href="/" className="flex items-center gap-2.5 group min-h-11 rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-shell-foreground">
                     {/* v11.1-01: server-resolved host-org branding first (flash-free); congregation store is the live-update fallback.
                         v11.1-05: a real wordmark image (broslaz) replaces the monogram+text lockup. */}
                     {props.serverWordmarkUrl ? (
@@ -138,22 +141,24 @@ export function DesktopHeader(props: AppNavigationProps) {
                     ) : (
                         <>
                             <OrgLogo logoUrl={props.serverLogoUrl ?? congregation.logoUrl} shortName={props.serverOrgShortName ?? congregation.shortName} sizeClass="w-8 h-8" />
-                            <span className="font-display font-bold text-lg text-foreground group-hover:text-brand transition-colors">{props.serverOrgShortName ?? congregation.shortName}</span>
+                            <span className="font-extrabold text-[17px] tracking-[-0.01em] text-shell-foreground">{props.serverOrgShortName ?? congregation.shortName}</span>
                         </>
                     )}
                 </Link>
 
-                <nav className="flex items-center gap-1">
+                <nav className="flex items-stretch gap-1 h-full">
                     {navLinks.filter(l => l.show).map(link => {
                         const isActive = pathname === link.href || (link.href !== "/" && pathname.startsWith(link.href))
                         return (
                             <Link key={link.href} href={link.href}
+                                aria-current={isActive ? "page" : undefined}
                                 className={cn(
-                                    // C10I1-004: inline-flex + min-h-11 raises the
-                                    // nav anchors from 32px to the ≥44px HIG floor
-                                    // for thumb-friendly iPad taps (was px-4 py-1.5).
-                                    "inline-flex items-center min-h-11 px-4 rounded-full text-sm font-medium transition-all fluid-interaction",
-                                    isActive ? "bg-brand/15 text-foreground shadow-[var(--nav-active-glow)] border border-brand/20" : "text-muted-foreground hover:text-brand hover:bg-brand/5"
+                                    // C10I1-004: ≥44px hit area. The active tab is
+                                    // marked by a 3px rule on the bar's bottom edge.
+                                    "relative inline-flex items-center min-h-11 px-3.5 text-[15px] font-semibold transition-colors",
+                                    "focus-visible:outline-2 focus-visible:-outline-offset-4 focus-visible:outline-shell-foreground rounded-sm",
+                                    "after:absolute after:inset-x-3 after:bottom-0 after:h-[3px] after:rounded-t-sm after:transition-colors",
+                                    isActive ? "text-shell-active after:bg-shell-active" : "text-shell-muted hover:text-shell-foreground after:bg-transparent"
                                 )}>
                                 {link.label}
                             </Link>
@@ -181,28 +186,28 @@ export function DesktopHeader(props: AppNavigationProps) {
                 {isAuthed ? (
                     <>
                         {!isOnline && (
-                            <div className="hidden lg:flex items-center gap-2 px-3 py-1 bg-red-500/10 text-red-500 rounded-full text-xs font-medium border border-red-500/20">
+                            <div className="hidden lg:flex items-center gap-2 px-3 py-1 bg-white/10 text-shell-foreground rounded-full text-xs font-semibold border border-white/25">
                                 <CloudOff className="h-3 w-3" /> {t("nav.offline")}
                             </div>
                         )}
 
                         {/* Search */}
                         <div className="relative group" ref={searchRef}>
-                            <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-brand transition-colors" />
+                            <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-shell-muted group-focus-within:text-foreground transition-colors" />
                             <Input
                                 placeholder={t("nav.searchSongsPlaceholder")}
                                 aria-label={t("nav.searchSongs")}
                                 value={searchQuery}
                                 onChange={(e) => { setSearchQuery(e.target.value); setShowResults(true) }}
                                 onFocus={() => setShowResults(true)}
-                                className="w-48 lg:w-64 bg-brand/5 border-border/50 rounded-full ps-9 h-11 text-sm focus:ring-brand/10 focus:bg-background focus:border-brand/30 transition-all fluid-interaction shadow-inner"
+                                className="w-48 xl:w-64 bg-white/10 border-white/15 text-shell-foreground placeholder:text-shell-muted rounded-md ps-9 h-10 text-sm focus:bg-background focus:text-foreground focus:placeholder:text-muted-foreground focus:border-transparent transition-colors"
                             />
                             {showResults && searchResults.length > 0 && (
-                                <div className="absolute top-full mt-2 inset-x-0 material-thin rounded-xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200 border border-brand/10">
+                                <div className="absolute top-full mt-2 inset-x-0 bg-popover text-popover-foreground rounded-lg overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-150 border border-border shadow-[0_8px_24px_rgb(24_32_46/0.14)]">
                                     <div className="p-2 space-y-1">
                                         {searchResults.map(file => (
                                             <button key={file.id} onClick={() => handleSelectSong(file)}
-                                                className="w-full text-start px-3 py-2 rounded-lg hover:bg-brand/10 transition-colors group">
+                                                className="w-full text-start px-3 min-h-11 rounded-md hover:bg-accent transition-colors group">
                                                 <div className="text-sm font-medium text-foreground group-hover:text-foreground truncate">
                                                     {file.name.replace(/\.[^/.]+$/, "")}
                                                 </div>
@@ -213,7 +218,7 @@ export function DesktopHeader(props: AppNavigationProps) {
                             )}
                         </div>
 
-                        <div className="w-px h-6 bg-brand/10" />
+                        <div className="w-px h-6 bg-white/20" />
 
                         {/* Notifications */}
                         <NotificationBell />
@@ -222,9 +227,9 @@ export function DesktopHeader(props: AppNavigationProps) {
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="icon"
-                                    className={cn("text-muted-foreground hover:text-foreground rounded-full overflow-hidden transition-all", !isOnline && "ring-2 ring-red-500")}
+                                    className={cn("size-11 text-shell-foreground hover:bg-white/10 hover:text-shell-foreground rounded-full overflow-hidden transition-colors", !isOnline && "ring-2 ring-[var(--warning-line)]")}
                                     aria-label={t("nav.userMenu")}>
-                                    <Avatar className="h-8 w-8 border border-border">
+                                    <Avatar className="h-8 w-8 border border-white/30">
                                         <AvatarImage src={user?.photoURL ?? undefined} alt={t("nav.profilePhotoAlt")} />
                                         <AvatarFallback><UserCircle className="w-5 h-5" /></AvatarFallback>
                                     </Avatar>
@@ -235,7 +240,7 @@ export function DesktopHeader(props: AppNavigationProps) {
                                     <div className="flex flex-col space-y-1">
                                         <p className="text-sm font-medium leading-none">{user?.displayName || t("nav.musicianFallback")}</p>
                                         <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
-                                        <p className="text-[10px] uppercase font-bold text-brand mt-1">{roleText}</p>
+                                        <p className="text-[11px] uppercase font-bold tracking-[0.06em] text-brand mt-1">{roleText}</p>
                                     </div>
                                 </DropdownMenuLabel>
                                 <DropdownMenuSeparator className="bg-border" />
@@ -269,7 +274,7 @@ export function DesktopHeader(props: AppNavigationProps) {
                         </DropdownMenu>
                     </>
                 ) : (
-                    <Button onClick={async () => { try { await signIn() } catch { } }} variant="outline" className="border-border hover:bg-accent hover:text-foreground">
+                    <Button onClick={async () => { try { await signIn() } catch { } }} variant="outline" className="h-10 border-white/40 bg-transparent text-shell-foreground hover:bg-white/10 hover:text-shell-foreground">
                         {t("nav.signIn")}
                     </Button>
                 )}

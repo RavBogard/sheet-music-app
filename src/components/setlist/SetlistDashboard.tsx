@@ -114,18 +114,32 @@ export function SetlistDashboard({ serverShortName, ...props }: UseSetlistDashbo
         <div className="flex min-h-[100dvh] bg-background text-foreground relative overflow-hidden">
             {/* Main Content Area */}
             <div className="flex-1 flex flex-col w-full">
-                <main className="flex-1 p-4 md:p-8 pb-32">
-                    <div className="max-w-5xl mx-auto space-y-8">
+                <main className="flex-1 px-4 py-4 md:px-8 md:py-6 pb-32">
+                    <div className="max-w-4xl mx-auto space-y-6">
                         <h1 className="sr-only">{t("nav.setlists")}</h1>
                         {/* Welcome Section */}
+                        {/* Head row (web refresh): title, status line, one blue primary action. */}
                         {user && (
-                            <section className="mb-8 mt-2">
-                                <h2 className="text-4xl font-bold tracking-tighter text-foreground mb-2">
-                                    {greetingText}
-                                </h2>
-                                <p className="text-lg text-muted-foreground">
-                                    {t("setlist.stageReady")}{" "}{t("setlist.upcomingScheduled", { count: upcoming.length })}
-                                </p>
+                            <section className="flex flex-wrap items-end justify-between gap-4 pt-2">
+                                <div className="min-w-0">
+                                    <h2 className="text-[1.6rem] font-extrabold leading-tight tracking-[-0.015em] text-foreground">
+                                        {greetingText}
+                                    </h2>
+                                    <p className="tnum mt-1 text-sm font-medium text-muted-foreground">
+                                        {t("setlist.stageReady")}{" "}{t("setlist.upcomingScheduled", { count: upcoming.length })}
+                                    </p>
+                                </div>
+                                {isMember && (
+                                    <Button
+                                        type="button"
+                                        onClick={() => setShowWizard(true)}
+                                        data-testid="setlists-new-setlist"
+                                        className="h-11 px-5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 font-bold text-[15px]"
+                                    >
+                                        <Plus aria-hidden className="h-5 w-5 me-1.5" />
+                                        {t("org.createNewSetlistHeading")}
+                                    </Button>
+                                )}
                             </section>
                         )}
 
@@ -144,7 +158,7 @@ export function SetlistDashboard({ serverShortName, ...props }: UseSetlistDashbo
                                 <SetlistMatrixView />
                             </div>
                         ) : view === 'calendar' ? (
-                            <div className="mt-4 border border-border rounded-2xl overflow-hidden bg-card">
+                            <div className="mt-4 border border-rule rounded-lg overflow-hidden bg-card">
                                 <UnifiedCalendar
                                     mode={isBandLeader ? 'planning' : 'viewer'}
                                     setlists={displayedSetlists}
@@ -159,34 +173,17 @@ export function SetlistDashboard({ serverShortName, ...props }: UseSetlistDashbo
                                 )}
 
                                 {loading && (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        {[1, 2, 3].map(i => <Skeleton key={i} className="h-48 rounded-xl bg-muted/50 border border-border" />)}
+                                    <div className="flex flex-col divide-y divide-rule border border-rule rounded-lg overflow-hidden bg-card">
+                                        {[1, 2, 3].map(i => <Skeleton key={i} className="h-[72px] rounded-none bg-muted/60" />)}
                                     </div>
                                 )}
 
                                 {!loading && !error && (
                                     <>
-                                        {/* Create Action Card */}
-                                        {user && isMember && (
-                                            <section className="group cursor-pointer" onClick={() => setShowWizard(true)}>
-                                                <div className="bg-card hover:bg-muted/50 rounded-2xl p-8 flex flex-col items-center justify-center text-center space-y-4 border-dashed border-2 border-border hover:border-brand/60 transition-all relative overflow-hidden h-48">
-                                                    <div className="w-16 h-16 rounded-full bg-brand flex items-center justify-center shadow-lg transition-transform group-hover:scale-110 group-hover:-translate-y-1">
-                                                        <Plus className="w-8 h-8 text-white" />
-                                                    </div>
-                                                    <div className="z-10 mt-2">
-                                                        <h3 className="text-xl font-bold text-foreground">{t("org.createNewSetlistHeading")}</h3>
-                                                        <p className="text-sm text-muted-foreground mt-1">{t("setlist.createCardHint")}</p>
-                                                    </div>
-                                                </div>
-                                            </section>
-                                        )}
-
                                         {hasUpcoming && (
                                             <section>
-                                                <div className="flex justify-between items-center px-2 mb-4">
-                                                    <h4 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{t("org.upcomingSection")}</h4>
-                                                </div>
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <h4 className="text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground px-1 mb-2">{t("org.upcomingSection")}</h4>
+                                                <div className="flex flex-col divide-y divide-rule border border-rule rounded-lg overflow-hidden bg-card">
                                                     {upcoming.map(setlist => (
                                                         <UpcomingSetlistCard
                                                             key={setlist.id}
@@ -214,37 +211,35 @@ export function SetlistDashboard({ serverShortName, ...props }: UseSetlistDashbo
                                             </section>
                                         )}
 
-                                        <section className="mt-8">
-                                            <div className="flex justify-between items-center px-2 mb-4">
-                                                <h4 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{t("setlist.pastEventsSection")}</h4>
-                                            </div>
+                                        <section>
+                                            <h4 className="text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground px-1 mb-2">{t("setlist.pastEventsSection")}</h4>
                                             {pastOrNoDate.length === 0 ? (
-                                                <div className="text-muted-foreground italic py-10 text-center bg-card rounded-2xl border border-border">{t("setlist.noOtherSetlists")}</div>
+                                                <div className="text-muted-foreground py-10 text-center bg-card rounded-lg border border-rule">{t("setlist.noOtherSetlists")}</div>
                                             ) : (
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div className="flex flex-col divide-y divide-rule border border-rule rounded-lg overflow-hidden bg-card">
                                                     {pastGroups.map(({ parent, baseName, variants }, gi) => {
                                                         const groupId = parent ? parent.id : `group-${gi}-${variants[0]?.id ?? ""}`
                                                         const open = expandedGroups.has(groupId)
                                                         return (
-                                                            <div key={groupId} className="space-y-2">
+                                                            <div key={groupId}>
                                                                 {parent ? renderPastCard(parent) : (
-                                                                    <p className="px-2 pt-2 text-base font-semibold text-foreground">{baseName}</p>
+                                                                    <p className="px-4 pt-3 text-base font-semibold text-foreground">{baseName}</p>
                                                                 )}
                                                                 {variants.length > 0 && (
-                                                                    <div className="ps-3 border-s border-border">
+                                                                    <div className="ps-[4.75rem] pe-3 pb-1 bg-card">
                                                                         <button
                                                                             type="button"
                                                                             data-testid="setlist-variants-toggle"
                                                                             aria-expanded={open}
                                                                             onClick={() => toggleGroup(groupId)}
-                                                                            className="min-h-11 px-2 text-sm text-muted-foreground hover:text-foreground"
+                                                                            className="min-h-11 px-1 text-sm font-semibold text-brand hover:underline underline-offset-4"
                                                                         >
                                                                             {open
                                                                                 ? t("setlist.variantsHide")
                                                                                 : t("setlist.variantsShow", { count: variants.length })}
                                                                         </button>
                                                                         {open && (
-                                                                            <div className="mt-2 space-y-2">
+                                                                            <div className="flex flex-col divide-y divide-rule border-t border-rule -ms-[4.75rem] -me-3">
                                                                                 {variants.map(v => renderPastCard(v))}
                                                                             </div>
                                                                         )}

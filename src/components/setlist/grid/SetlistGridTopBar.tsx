@@ -12,6 +12,9 @@ import { SyncIndicator, type SyncIndicatorProps } from './SyncIndicator'
 export interface SetlistGridTopBarProps {
     name: string
     eventDateLabel?: string
+    /** Web refresh: the rest of the status line after the date
+     *  ("24 songs", "24/24 charts", "Updated 3 hours ago"). */
+    statusParts?: string[]
     onBack: () => void
     syncProps?: SyncIndicatorProps
     /** v70-09: when provided, renders a pencil edit button beside the name
@@ -22,34 +25,36 @@ export interface SetlistGridTopBarProps {
     performHref?: string
 }
 
+/**
+ * The setlist editor's head row (web refresh, blend E): the title large, the
+ * status line under it, and the one blue Perform button on the right. It
+ * sticks just under the shell's top bar so Perform is always one tap away.
+ */
 export function SetlistGridTopBar({
     name,
     eventDateLabel,
+    statusParts = [],
     onBack,
     syncProps,
     onEditMeta,
     performHref,
 }: SetlistGridTopBarProps) {
     const t = useT()
+    const status = [eventDateLabel, ...statusParts].filter((p): p is string => Boolean(p))
     return (
         <header
             data-testid="setlist-grid-top-bar"
-            className={cn(
-                'sticky top-0 z-20 w-full',
-                'flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4',
-                'bg-background/60 backdrop-blur-xl supports-[backdrop-filter]:bg-background/40',
-                'border-b border-white/10 shadow-lg shadow-brand/5',
-            )}
+            className="sticky top-14 z-20 w-full bg-background/95 supports-[backdrop-filter]:bg-background/85 backdrop-blur-md border-b border-rule"
         >
-            <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
+            <div className="max-w-4xl mx-auto flex items-center gap-2 sm:gap-3 px-2 sm:px-4 py-3">
                 <button
                     type="button"
                     onClick={onBack}
                     aria-label={t('setlistGrid.back')}
                     className={cn(
-                        'inline-flex min-h-11 min-w-11 p-2 items-center justify-center rounded-full',
-                        'text-foreground hover:bg-white/5 active:bg-white/10',
-                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2',
+                        'inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-md',
+                        'text-foreground hover:bg-accent',
+                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                         'transition-colors',
                     )}
                 >
@@ -57,8 +62,8 @@ export function SetlistGridTopBar({
                 </button>
 
                 <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                        <h1 className="truncate text-lg sm:text-xl font-bold tracking-tight text-foreground">
+                    <div className="flex items-center gap-1 min-w-0">
+                        <h1 className="truncate text-[1.35rem] sm:text-[1.6rem] font-extrabold leading-tight tracking-[-0.015em] text-foreground">
                             {name || t('setlistGrid.newSetlist')}
                         </h1>
                         {onEditMeta ? (
@@ -67,9 +72,9 @@ export function SetlistGridTopBar({
                                 onClick={onEditMeta}
                                 aria-label={t('setlistGrid.editSetlistDetails')}
                                 className={cn(
-                                    'inline-flex min-h-[44px] min-w-[44px] p-2 items-center justify-center rounded-full flex-shrink-0',
-                                    'text-muted-foreground hover:text-foreground hover:bg-white/5 active:bg-white/10',
-                                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2',
+                                    'inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md flex-shrink-0',
+                                    'text-muted-foreground hover:text-foreground hover:bg-accent',
+                                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                                     'transition-colors',
                                 )}
                             >
@@ -77,30 +82,39 @@ export function SetlistGridTopBar({
                             </button>
                         ) : null}
                     </div>
-                    {eventDateLabel ? (
-                        <p className="truncate text-xs sm:text-sm text-muted-foreground font-medium uppercase tracking-wider mt-0.5">
-                            {eventDateLabel}
+                    {status.length > 0 ? (
+                        <p
+                            data-testid="setlist-status-line"
+                            className="tnum truncate text-sm font-medium text-muted-foreground"
+                        >
+                            {status.map((part, i) => (
+                                <span key={i}>
+                                    {i > 0 ? <span aria-hidden="true"> · </span> : null}
+                                    <span>{part}</span>
+                                </span>
+                            ))}
                         </p>
                     ) : null}
                 </div>
-            </div>
 
-            <div className="flex items-center gap-3 sm:gap-4 flex-shrink-0 ps-4">
-                {performHref ? (
-                    <Link
-                        href={performHref}
-                        data-testid="setlist-grid-perform-link"
-                        className={cn(
-                            'inline-flex min-h-[44px] items-center gap-1.5 rounded-full px-3',
-                            'text-sm font-medium text-foreground hover:bg-white/5 active:bg-white/10',
-                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
-                        )}
-                    >
-                        <Play aria-hidden className="h-4 w-4" />
-                        {t('setlistGrid.performLink')}
-                    </Link>
-                ) : null}
-                <SyncIndicator {...syncProps} />
+                <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                    <SyncIndicator {...syncProps} />
+                    {performHref ? (
+                        <Link
+                            href={performHref}
+                            data-testid="setlist-grid-perform-link"
+                            className={cn(
+                                'inline-flex min-h-11 items-center gap-2 rounded-md px-4 sm:px-5',
+                                'bg-primary text-primary-foreground text-[15px] font-bold',
+                                'hover:bg-primary/90 active:bg-primary/85 transition-colors',
+                                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+                            )}
+                        >
+                            <Play aria-hidden className="h-4 w-4 fill-current" />
+                            {t('setlistGrid.performLink')}
+                        </Link>
+                    ) : null}
+                </div>
             </div>
         </header>
     )

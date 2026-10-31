@@ -218,5 +218,15 @@
     "dndDroppedOver": "הפריט {id} שוחרר מעל האזור {overId}",
     "dndDropped": "הפריט {id} שוחרר.",
     "dndCancelled": "הגרירה בוטלה. הפריט {id} שוחרר.",
-    "performLink": "ביצוע"
+    "performLink": "ביצוע",
+    "sectionPages": "עמ׳ {from}–{to}",
+    "sectionPage": "עמ׳ {page}",
+    "pageCallPrefix": "עמ׳",
+    "chipFormatPdf": "PDF",
+    "chipFormatMusicXml": "MusicXML",
+    "chipFormatImage": "תמונה",
+    "chipFormatText": "טקסט",
+    "chipVocalLead": "שירה ראשית: {name}",
+    "statusUpdated": "עודכן {when}",
+    "statusCharts": "{bound}/{total} תווים"
 }

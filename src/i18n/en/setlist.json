@@ -99,5 +99,7 @@
     "matrixPlan": "+ Plan",
     "variantsShow_one": "Show {count} other version",
     "variantsShow_other": "Show {count} other versions",
-    "variantsHide": "Hide other versions"
+    "variantsHide": "Hide other versions",
+    "chartsReady": "{ready}/{total} charts ready",
+    "updatedAgo": "Updated {when}"
 }

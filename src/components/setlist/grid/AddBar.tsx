@@ -138,8 +138,8 @@ export function AddBar({
         <div
             data-testid="add-bar"
             className={cn(
-                'flex w-full items-stretch border-t border-white/10',
-                'hover:bg-white/[0.03]',
+                'flex w-full items-stretch border-t border-rule bg-card',
+                'hover:bg-accent/40',
                 // v60-10-01: coarse-pointer sticky-bottom variant. Pinned
                 // to the viewport bottom on iPad + phone so the AddBar
                 // stays in reach regardless of scroll position (resolves
@@ -150,8 +150,10 @@ export function AddBar({
                 // Desktop fine-pointer surfaces keep the in-flow v53-03
                 // layout byte-for-byte — Tailwind only emits the rule
                 // inside @media (pointer: coarse) so fine pointers see
-                // none of these properties.
-                '[@media(pointer:coarse)]:fixed [@media(pointer:coarse)]:bottom-0 [@media(pointer:coarse)]:left-0 [@media(pointer:coarse)]:right-0 [@media(pointer:coarse)]:z-40 [@media(pointer:coarse)]:bg-background [@media(pointer:coarse)]:pb-[env(safe-area-inset-bottom)] [@media(pointer:coarse)]:shadow-[0_-4px_12px_rgba(0,0,0,0.18)]',
+                // none of these properties. Web refresh: below lg the band's
+                // bottom tab bar is showing, so the bar sits on top of it
+                // (--tabbar-h, set in globals.css) instead of under it.
+                '[@media(pointer:coarse)]:fixed [@media(pointer:coarse)]:bottom-[var(--tabbar-h,0px)] [@media(pointer:coarse)]:left-0 [@media(pointer:coarse)]:right-0 [@media(pointer:coarse)]:z-40 [@media(pointer:coarse)]:bg-background [@media(pointer:coarse)]:pb-[env(safe-area-inset-bottom)] [@media(pointer:coarse)]:shadow-[0_-4px_12px_rgba(0,0,0,0.18)]',
                 // v60-10-01: hide when the on-screen keyboard is open on
                 // a coarse pointer. `hidden` (display:none) removes the
                 // bar from the a11y tree so it cannot steal focus behind

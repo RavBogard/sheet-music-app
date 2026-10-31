@@ -23,7 +23,7 @@ export const OrgIdSchema = z
  * Fonts are a fixed menu because next/font resolves at build time. The key is
  * what a tenant stores; src/app/layout.tsx maps it to a loaded font.
  */
-export const FONT_KEYS = ["poppins", "righteous", "zillaSlab", "rubik", "heebo", "frankRuhlLibre"] as const
+export const FONT_KEYS = ["assistant", "poppins", "righteous", "zillaSlab", "rubik", "heebo", "frankRuhlLibre"] as const
 export const FontKeySchema = z.enum(FONT_KEYS)
 export type FontKey = z.infer<typeof FontKeySchema>
 
@@ -54,7 +54,7 @@ export const BrandingSchema = z.object({
     /** Canonical origin for absolute URLs (metadataBase, email links). */
     baseUrl: z.string().url(),
     fontDisplay: FontKeySchema.default("righteous"),
-    fontBody: FontKeySchema.default("poppins"),
+    fontBody: FontKeySchema.default("assistant"),
     /** CSS custom-property overrides for generated tenant themes. Empty = app defaults. */
     colors: z
         .object({

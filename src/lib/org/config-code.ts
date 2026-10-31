@@ -127,7 +127,7 @@ const CRC: OrgConfigInput = {
         abbreviation: "CRC",
         location: "St. Louis, MO",
         fontDisplay: "righteous",
-        fontBody: "poppins",
+        fontBody: "assistant",
         colors: { light: {}, dark: {} },
         legacyCssTheme: null,
     },
@@ -186,7 +186,7 @@ const BL: OrgConfigInput = {
         // The BL login hero has always shown this location.
         location: "St. Louis, MO",
         fontDisplay: "zillaSlab",
-        fontBody: "poppins",
+        fontBody: "assistant",
         colors: { light: {}, dark: {} },
         legacyCssTheme: "brotherslazaroff",
     },

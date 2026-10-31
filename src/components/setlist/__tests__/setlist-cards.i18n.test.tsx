@@ -78,7 +78,7 @@ describe.each([false, true])("setlist cards i18n (rtl=%s)", (rtl) => {
     it("UpcomingSetlistCard: card text, offline badge, and the open menu", async () => {
         const r = renderPseudo(upcoming(), { rtl })
         if (rtl) expect(r.container.querySelector('[dir="rtl"]')).not.toBeNull()
-        await waitFor(() => expect(document.querySelector(".text-green-400")).not.toBeNull()) // offline-ready badge
+        await waitFor(() => expect(screen.getByTestId("setlist-charts-ready").getAttribute("data-offline")).toBe("full")) // charts-ready status
         expectNoUntranslatedText(document.body, { allow: DATA })
         await openMenu()
         expect(screen.getByTestId("setlist-card-save-as-default")).toBeDefined()
@@ -115,7 +115,8 @@ describe("setlist cards English output is unchanged", () => {
         expect(screen.getByText("Oct 3, 2026")).toBeDefined()
         expect(screen.getByLabelText("Open setlist — Test Setlist A")).toBeDefined()
         expect(screen.getByLabelText("Download setlist for offline — Test Setlist A").getAttribute("title")).toBe("Download for Offline")
-        await waitFor(() => expect(screen.getByText("Offline ready")).toBeDefined())
+        // Web refresh: the readiness status counts the charts on this device.
+        await waitFor(() => expect(screen.getByText("1/1 charts ready")).toBeDefined())
         await openMenu()
         expect(screen.getByText("Save as Default for Shabbat Morning")).toBeDefined()
         expect(screen.getByText("Clone for Next Week")).toBeDefined()

@@ -21,7 +21,7 @@ vi.mock("next/font/google", () => {
         style: {},
     })
     return {
-        Poppins: font("poppins"),
+        Assistant: font("assistant"),
         Righteous: font("righteous"),
         Geist_Mono: font("geistMono"),
         Zilla_Slab: font("zillaSlab"),
@@ -65,14 +65,14 @@ async function renderLayout(org: string) {
 describe("multi-tenant P1 golden: root layout html/body", () => {
     beforeEach(() => clearPrimedOrgConfigs())
 
-    it("crc: lang=en, no dir, Poppins + Geist Mono + Righteous", async () => {
+    it("crc: lang=en, no dir, Assistant + Geist Mono + Righteous", async () => {
         const { html, body } = await renderLayout("crc")
         expect(html.type).toBe("html")
         expect(html.props.lang).toBe("en")
         expect(html.props.dir).toBeUndefined()
         expect("dir" in html.props).toBe(false)
         expect(html.props["data-org"]).toBe("crc")
-        expect(body.props.className).toBe("__var_poppins __var_geistMono __var_righteous antialiased")
+        expect(body.props.className).toBe("__var_assistant __var_geistMono __var_righteous antialiased")
     })
 
     it("brotherslazaroff: lang=en, no dir, adds the Zilla Slab variable", async () => {
@@ -81,14 +81,14 @@ describe("multi-tenant P1 golden: root layout html/body", () => {
         expect(html.props.dir).toBeUndefined()
         expect("dir" in html.props).toBe(false)
         expect(html.props["data-org"]).toBe("brotherslazaroff")
-        expect(body.props.className).toBe("__var_poppins __var_geistMono __var_righteous __var_zillaSlab antialiased")
+        expect(body.props.className).toBe("__var_assistant __var_geistMono __var_righteous __var_zillaSlab antialiased")
     })
 
     it("an unknown host org renders as crc", async () => {
         const { html, body } = await renderLayout("nava-tehila")
         expect(html.props.lang).toBe("en")
         expect("dir" in html.props).toBe(false)
-        expect(body.props.className).toBe("__var_poppins __var_geistMono __var_righteous antialiased")
+        expect(body.props.className).toBe("__var_assistant __var_geistMono __var_righteous antialiased")
     })
 })
 
@@ -100,8 +100,8 @@ describe("multi-tenant P1: root layout reads the tenant's locale and fonts", () 
         expect(html.props.lang).toBe("he")
         expect(html.props.dir).toBe("rtl")
         expect(html.props["data-org"]).toBe("testshul")
-        // Phase 7: the Hebrew faces arrived; a Latin-only choice (Poppins,
-        // Righteous) renders Hebrew in Heebo (body) and Rubik (display).
-        expect(body.props.className).toBe("__var_heebo __var_geistMono __var_rubik_display antialiased")
+        // Web refresh: the default body face, Assistant, has Hebrew glyphs and
+        // stays; a Latin-only display (Righteous) renders in Rubik.
+        expect(body.props.className).toBe("__var_assistant __var_geistMono __var_rubik_display antialiased")
     })
 })
