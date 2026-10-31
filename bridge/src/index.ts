@@ -245,25 +245,13 @@ async function main() {
     const transport = new FirestoreTransport(x32, config, () => leaseHeld)
     transport.start()
 
-    // BET-4 — auto snapshots of each owned bus at service end (or nightly at
-    // 23:00). Ticked from the 60s heartbeat loop, ACTIVE bridge only.
-    const snapshotWriter = new AutoSnapshotWriter({
-        db,
-        isConnected: () => x32.isConnected(),
-        getState: () => ({ channels: x32.channels, buses: x32.buses }),
-        getBusAssignments: () => config.getConfig().busAssignments,
-        fetchToday: () => fetchTodayServices(),
-    })
-
-    // MIXER-12 — launch reason (decided by main.ts before startup) and whether
-    // the watchdog scheduled task exists, both published in the heartbeat.
+    // MIXER-12 — launch reason (decided by main.ts before startup). Whether the
+    // watchdog task exists is detected LATER, detached, after the heartbeat and
+    // lease intervals are running (S3); until then the heartbeat omits it.
     const envReason = process.env.BRIDGE_LAUNCH_REASON
     const launchReason: LaunchReason = isLaunchReason(envReason) ? envReason : "manual"
-    let watchdogInstalled = await detectWatchdogInstalled()
-    const watchdogCheckInterval = setInterval(async () => {
-        watchdogInstalled = await detectWatchdogInstalled()
-    }, 60 * 60_000)
-    console.log(`[Bridge] Launch reason: ${launchReason} | watchdog installed: ${watchdogInstalled}`)
+    let watchdogInstalled: boolean | null = null
+    console.log(`[Bridge] Launch reason: ${launchReason}`)
 
     // 4b. Sync full mixer state, then publish it. The first full-state `.set()`
     //     also HEALS any corrupted (array→map) live state left by the old delta writer.
@@ -376,9 +364,6 @@ async function main() {
                 launch: { launchReason, watchdogInstalled },
             })
 
-            // BET-4 — service-end / nightly auto snapshots (fail-open).
-            await snapshotWriter.tick()
-
             // Clean up stale commands (safety net) + TTL-sweep acks.
             await transport.cleanupStaleCommands()
         } else {
@@ -422,6 +407,40 @@ async function main() {
         }
         leaseHeld = held
     }, LEASE_RENEW_MS)
+
+    // ── Optional work, started only AFTER the heartbeat and lease intervals are
+    // running (S3). Every piece is detached with its own catch, so a slow
+    // schtasks call, a hung today.json fetch or a slow Firestore snapshot write
+    // can never delay or block the heartbeat, the lease or command handling.
+
+    // MIXER-12 — whether the watchdog scheduled task exists (hourly re-check).
+    const refreshWatchdog = () => {
+        detectWatchdogInstalled()
+            .then((v) => {
+                if (v !== watchdogInstalled) console.log(`[Bridge] Watchdog installed: ${v}`)
+                watchdogInstalled = v
+            })
+            .catch(() => { /* stays as it was */ })
+    }
+    refreshWatchdog()
+    const watchdogCheckInterval = setInterval(refreshWatchdog, 60 * 60_000)
+
+    // BET-4 — auto snapshots of each owned bus at service end (or nightly at
+    // 23:00). ACTIVE bridge only; the writer never overlaps its own ticks and
+    // caps every Firestore call at 5s.
+    const snapshotWriter = new AutoSnapshotWriter({
+        db,
+        isConnected: () => x32.isConnected(),
+        getState: () => ({ channels: x32.channels, buses: x32.buses }),
+        getBusAssignments: () => config.getConfig().busAssignments,
+        fetchToday: () => fetchTodayServices(),
+    })
+    const snapshotInterval = setInterval(() => {
+        if (!leaseHeld) return
+        void snapshotWriter.tick().catch((err) =>
+            console.warn("[Snapshots] tick failed:", (err as Error)?.message ?? String(err)),
+        )
+    }, 60_000)
 
     // O4 (passive cadence) — periodic selftest write so the most recent forensic
     // snapshot at monitor-live/selftest is never older than SELFTEST_CADENCE_MS
@@ -526,6 +545,7 @@ async function main() {
         clearInterval(leaseInterval)
         clearInterval(selftestInterval)
         clearInterval(watchdogCheckInterval)
+        clearInterval(snapshotInterval)
         transport.stop()
         remoteLogger.stop()
         // R1 — `writeOffline` stamps bridge.status AND bridge.lastSeen, which are

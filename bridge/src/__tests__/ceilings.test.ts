@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest"
 import { ceilingFor, clampToCeiling, DEFAULT_MASTER_CEILING, DEFAULT_SEND_CEILING } from "../ceilings"
 
 describe("ceilings (BET-4 / MIXER-03)", () => {
-    it("absent or malformed doc → the 0.80 defaults (fail safe)", () => {
+    it("absent or malformed doc → the 0.70 defaults (fail safe)", () => {
         for (const raw of [undefined, null, "x", 42, [], { default: "nope" }]) {
             expect(ceilingFor(raw, "send", 5, 3)).toBe(DEFAULT_SEND_CEILING)
             expect(ceilingFor(raw, "master", 5)).toBe(DEFAULT_MASTER_CEILING)
@@ -30,10 +30,10 @@ describe("ceilings (BET-4 / MIXER-03)", () => {
 
     it("clamp math: over the cap → cap with {requested, applied, cap}; at or under → unchanged", () => {
         expect(clampToCeiling(undefined, "send", 1, 5, 3)).toEqual({
-            value: 0.8,
-            clamped: { requested: 1, applied: 0.8, cap: 0.8 },
+            value: 0.7,
+            clamped: { requested: 1, applied: 0.7, cap: 0.7 },
         })
-        expect(clampToCeiling(undefined, "master", 0.8, 5)).toEqual({ value: 0.8 })
+        expect(clampToCeiling(undefined, "master", 0.7, 5)).toEqual({ value: 0.7 })
         expect(clampToCeiling(undefined, "master", 0.2, 5)).toEqual({ value: 0.2 })
         expect(clampToCeiling({ default: { send: 0.5, master: 0.5 } }, "master", 0.51, 1).clamped?.cap).toBe(0.5)
     })

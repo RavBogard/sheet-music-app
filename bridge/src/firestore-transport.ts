@@ -26,6 +26,9 @@ import { clampToCeiling } from "./ceilings"
 /** monitor-live/state schema version (C4). Bump on any shape change. */
 const STATE_SCHEMA_VERSION = 1
 
+/** Commands whose `value` is a fader level (0..1). */
+const LEVEL_COMMANDS = new Set(["set_send_level", "set_bus_master", "set_matrix_fader"])
+
 interface PendingCommand {
     type: string
     busIndex?: number
@@ -442,11 +445,27 @@ export class FirestoreTransport {
                 return
             }
 
+            // S2 — a level command (send level, bus master, matrix fader) must
+            // carry a finite number in [0,1]. A boolean, NaN, string or
+            // out-of-range value is refused here and never reaches x32-client.
+            if (
+                LEVEL_COMMANDS.has(cmd.type) &&
+                !(typeof cmd.value === "number" && Number.isFinite(cmd.value) && cmd.value >= 0 && cmd.value <= 1)
+            ) {
+                console.warn(`[Transport] Invalid level for ${cmd.type}: ${String(cmd.value)}`)
+                void this.ackWriter.write(commandId, "rejected", {
+                    reason: "invalid level: expected a number from 0 to 1",
+                    uid: cmd.uid,
+                })
+                batch.delete(ref)
+                return
+            }
+
             // MIXER-03 — enforce the sound engineer's ceilings on every send level
             // and bus master, whoever sent it (iPad, MCP, engineer). Over the cap
             // is CLAMPED to the cap, never refused; the ack carries `clamped`.
             // `ceilings` rides the cached config/monitor listener (ConfigManager);
-            // absent or malformed → the 0.80 defaults (fail safe).
+            // absent or malformed → the 0.70 defaults (fail safe).
             let clamped: ClampInfo | undefined
             if (
                 (cmd.type === "set_bus_master" || cmd.type === "set_send_level") &&

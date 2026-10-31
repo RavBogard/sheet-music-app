@@ -3,7 +3,7 @@
 Evidence: `research/mixer.md` (MIXER ids).
 
 Daniel's rulings (2026-10-31):
-- **Ceilings:** YES. Drew sets them, starting at about -2 dB (fader 0.80) for sends and bus
+- **Ceilings:** YES. Drew sets them, starting at about -2 dB (fader 0.70) for sends and bus
   master, and the bridge enforces them.
 - **Planned:** saved mixes and an engineer console. NOT now: the change log or undo, and the
   one-call `adjust_my_mix`.
@@ -14,11 +14,12 @@ Monitors are "wedges", never IEM.
 ## Shared data model (both PRs build against this)
 - `config/monitor.ceilings`:
   ```
-  { default: { send: 0.80, master: 0.80 }, perBus?: { "<busIndex>": { send?, master? } },
+  { default: { send: 0.70, master: 0.70 }, perBus?: { "<busIndex>": { send?, master? } },
     perChannel?: { "<channelIndex>": { send? } }, updatedBy, updatedAt }
   ```
   - Values are fader positions from 0 to 1.
-  - When the doc is absent, the defaults (0.80/0.80) apply.
+  - When the doc is absent, the defaults (0.70/0.70, ≈ −2 dB by the X32 fader law `f*40-30` above 0.5) apply.
+    (Corrected 2026-10-31 in B4a from 0.80, which is about +2 dB.)
   - Only sound-engineer or admin callers may write it.
 - `monitor-live/snapshots/buses/{busIndex}/items/{snapshotId}`:
   ```

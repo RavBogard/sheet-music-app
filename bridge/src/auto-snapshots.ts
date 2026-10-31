@@ -34,6 +34,20 @@ export const SLOT_GRACE_MS = 2 * 60 * 60_000
 export const AUTO_KEEP = 10
 export const TODAY_REFRESH_MS = 15 * 60_000
 export const DEFAULT_TODAY_URL = "https://www.centralreform.live/today.json"
+/** S3 — every Firestore call made for snapshots is capped so it can never hang the bridge. */
+export const SNAPSHOT_FIRESTORE_TIMEOUT_MS = 5_000
+
+function withTimeout<T>(p: Promise<T>, ms: number = SNAPSHOT_FIRESTORE_TIMEOUT_MS): Promise<T> {
+    let timer: ReturnType<typeof setTimeout> | undefined
+    return Promise.race([
+        p,
+        new Promise<never>((_, reject) => {
+            timer = setTimeout(() => reject(new Error(`snapshot firestore call timed out after ${ms}ms`)), ms)
+        }),
+    ]).finally(() => {
+        if (timer) clearTimeout(timer)
+    })
+}
 
 export interface TodayServiceLite {
     setlistId: string
@@ -167,30 +181,50 @@ export class AutoSnapshotWriter {
     private readonly deps: AutoSnapshotDeps
     private readonly now: () => number
     private done = new Set<string>()
-    private todayCache: { at: number; services: TodayServiceLite[] | null } | null = null
+    private todayFetchedAt = 0
+    private inFlight = false
+    /**
+     * S4 — every service seen in the feed, kept until its snapshot window has
+     * passed. `today.json` rolls over at midnight, so a service starting after
+     * 22:00 (snapshot due after midnight) would otherwise vanish from the feed
+     * before its slot fell due. Keyed by setlistId + startsAt.
+     */
+    private known = new Map<string, TodayServiceLite>()
 
     constructor(deps: AutoSnapshotDeps) {
         this.deps = deps
         this.now = deps.now ?? Date.now
     }
 
-    private async services(now: number): Promise<TodayServiceLite[] | null> {
-        if (this.todayCache && now - this.todayCache.at < TODAY_REFRESH_MS) return this.todayCache.services
-        let services: TodayServiceLite[] | null = null
-        try {
-            services = await this.deps.fetchToday()
-        } catch {
-            services = null
+    private async services(now: number): Promise<TodayServiceLite[]> {
+        if (this.todayFetchedAt === 0 || now - this.todayFetchedAt >= TODAY_REFRESH_MS) {
+            this.todayFetchedAt = now
+            let fetched: TodayServiceLite[] | null = null
+            try {
+                fetched = await this.deps.fetchToday()
+            } catch {
+                fetched = null
+            }
+            for (const s of fetched ?? []) {
+                if (s && typeof s.setlistId === "string" && typeof s.startsAt === "string") {
+                    this.known.set(`${s.setlistId}@${s.startsAt}`, s)
+                }
+            }
         }
-        // Keep the last good list if this read failed.
-        if (services === null && this.todayCache?.services) services = this.todayCache.services
-        this.todayCache = { at: now, services }
-        return services
+        // Forget services whose snapshot window is over.
+        for (const [k, s] of this.known) {
+            const start = Date.parse(s.startsAt as string)
+            if (!Number.isFinite(start) || start + SERVICE_END_OFFSET_MS + SLOT_GRACE_MS < now) this.known.delete(k)
+        }
+        return [...this.known.values()]
     }
 
     /** Call about once a minute from the ACTIVE bridge. Returns the ids written. */
     async tick(): Promise<string[]> {
         const written: string[] = []
+        // Never overlap: a slow tick (timeouts) must not stack up behind the next one.
+        if (this.inFlight) return written
+        this.inFlight = true
         try {
             const now = this.now()
             const due = dueSlots(now, slotsAt(now, await this.services(now)))
@@ -215,6 +249,8 @@ export class AutoSnapshotWriter {
             if (this.done.size > 500) this.done.clear()
         } catch (err) {
             console.warn("[Snapshots] auto snapshot tick failed:", (err as Error)?.message ?? String(err))
+        } finally {
+            this.inFlight = false
         }
         return written
     }
@@ -225,7 +261,7 @@ export class AutoSnapshotWriter {
         doc: AutoSnapshotDoc,
     ): Promise<"created" | "exists" | "failed"> {
         try {
-            await this.deps.db.collection(snapshotItemsPath(bus)).doc(id).create(doc)
+            await withTimeout(this.deps.db.collection(snapshotItemsPath(bus)).doc(id).create(doc))
             console.log(`[Snapshots] Saved ${id} for bus ${bus}`)
             return "created"
         } catch (err) {
@@ -239,7 +275,9 @@ export class AutoSnapshotWriter {
     /** Keep only the newest AUTO_KEEP auto snapshots on a bus. Named ones are never touched. */
     async prune(bus: number): Promise<number> {
         try {
-            const snap = await this.deps.db.collection(snapshotItemsPath(bus)).where("kind", "==", "auto").get()
+            const snap = await withTimeout(
+                this.deps.db.collection(snapshotItemsPath(bus)).where("kind", "==", "auto").get(),
+            )
             const rows = snap.docs
                 .map((d) => {
                     const c = d.data()?.createdAt as { toMillis?: () => number } | undefined
@@ -250,7 +288,7 @@ export class AutoSnapshotWriter {
             if (extra.length === 0) return 0
             const batch = this.deps.db.batch()
             for (const r of extra) batch.delete(r.ref)
-            await batch.commit()
+            await withTimeout(batch.commit())
             return extra.length
         } catch {
             return 0

@@ -10,7 +10,7 @@
  *
  * Shape (shared with the web, see docs/planning/2026-10-31-gap-analysis/BET-4-wedge-safety.md):
  *
- *   { default: { send: 0.80, master: 0.80 },
+ *   { default: { send: 0.70, master: 0.70 },
  *     perBus?: { "<busIndex>": { send?, master? } },
  *     perChannel?: { "<channelIndex>": { send? } },
  *     updatedBy, updatedAt }
@@ -19,12 +19,13 @@
  * perChannel → perBus → default; for a bus master, perBus → default.
  *
  * Fail safe: when the field is absent, unreadable or malformed, the defaults
- * (0.80 / 0.80, about -2 dB) apply. A single bad value falls through to the next
+ * (0.70 / 0.70) apply. By the X32 fader law (dB = f*40-30 above 0.5) 0.70 is
+ * -2 dB, the level Daniel ruled; 0.80 would be +2 dB. A single bad value falls through to the next
  * less specific one; it never lifts the cap to 1.0.
  */
 
-export const DEFAULT_SEND_CEILING = 0.8
-export const DEFAULT_MASTER_CEILING = 0.8
+export const DEFAULT_SEND_CEILING = 0.7
+export const DEFAULT_MASTER_CEILING = 0.7
 
 export interface ClampResult {
     /** The level to send to the desk. */

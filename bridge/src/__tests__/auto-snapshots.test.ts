@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest"
+import { describe, it, expect, vi, afterEach } from "vitest"
 
 vi.mock("firebase-admin", () => ({
     firestore: {
@@ -18,6 +18,8 @@ import {
     slotsAt,
     snapshotItemsPath,
     SERVICE_END_OFFSET_MS,
+    SNAPSHOT_FIRESTORE_TIMEOUT_MS,
+    TODAY_REFRESH_MS,
     type TodayServiceLite,
 } from "../auto-snapshots"
 
@@ -164,5 +166,67 @@ describe("auto snapshots (BET-4)", () => {
         expect(store.has(`${coll}/a2`)).toBe(false)
         expect(store.has(`${coll}/a3`)).toBe(true)
         expect(store.has(`${coll}/mine`)).toBe(true)
+    })
+    afterEach(() => {
+        vi.useRealTimers()
+    })
+
+    it("S4: a service starting after 22:00 is snapshotted after midnight even though today.json has rolled over", async () => {
+        const { db, store } = fakeDb()
+        const start = at(22, 30, 30)
+        let now = at(21, 0, 30)
+        let feed: TodayServiceLite[] = [
+            { setlistId: "late", serviceType: "friday_night", startsAt: new Date(start).toISOString() },
+        ]
+        const w = new AutoSnapshotWriter({
+            db,
+            isConnected: () => true,
+            getState: () => state,
+            getBusAssignments: () => assignments,
+            fetchToday: async () => feed,
+            now: () => now,
+        })
+        expect(await w.tick()).toEqual([]) // seen, not due
+        now = at(23, 0, 30)
+        expect(await w.tick()).toEqual([]) // a service day: no 23:00 nightly
+        // Midnight passes; the feed now only lists the new day's services.
+        feed = []
+        now = at(0, 31, 31)
+        expect(now - start).toBeGreaterThan(TODAY_REFRESH_MS) // the feed is re-read and is empty
+        const written = await w.tick()
+        expect(written.sort()).toEqual([`auto-${localDateKey(start)}-late:2`, `auto-${localDateKey(start)}-late:5`])
+        const doc = store.get(`${snapshotItemsPath(2)}/auto-${localDateKey(start)}-late`)
+        expect(doc?.serviceType).toBe("friday_night")
+    })
+
+    it("S3: a hung Firestore write times out after 5s, never overlaps the next tick, and frees the writer", async () => {
+        vi.useFakeTimers()
+        vi.setSystemTime(at(23, 5))
+        let creates = 0
+        const hung = {
+            collection: () => ({
+                doc: () => ({ create: () => { creates++; return new Promise(() => {}) } }),
+                where: () => ({ get: () => new Promise(() => {}) }),
+            }),
+            batch: () => ({ delete: () => {}, commit: () => new Promise(() => {}) }),
+        } as unknown as import("firebase-admin").firestore.Firestore
+        const w = new AutoSnapshotWriter({
+            db: hung,
+            isConnected: () => true,
+            getState: () => state,
+            getBusAssignments: () => ({ "5": { userId: "daniel", userName: "Daniel" } }),
+            fetchToday: async () => [],
+        })
+        const first = w.tick()
+        // A second tick while the first is stuck returns at once without touching Firestore.
+        expect(await w.tick()).toEqual([])
+        await vi.advanceTimersByTimeAsync(SNAPSHOT_FIRESTORE_TIMEOUT_MS + 10)
+        expect(await first).toEqual([])
+        expect(creates).toBe(1)
+        // The writer is free again and retries the slot (it was not marked done).
+        const again = w.tick()
+        await vi.advanceTimersByTimeAsync(SNAPSHOT_FIRESTORE_TIMEOUT_MS + 10)
+        await again
+        expect(creates).toBe(2)
     })
 })

@@ -451,16 +451,16 @@ describe("FirestoreTransport — command acks + robustness (Phase 2 B4/B5/B6/B10
 
     // ── BET-4 / MIXER-03: ceilings ──
 
-    it("MIXER-03: a send above the default ceiling is CLAMPED to 0.80 and the applied ack carries clamped {requested, applied, cap}", async () => {
+    it("MIXER-03: a send above the default ceiling is CLAMPED to 0.70 (about -2 dB) and the applied ack carries clamped {requested, applied, cap}", async () => {
         const { x32, t } = start((uid) => (uid === "u-keys" ? 5 : null))
         await feed([{ type: "set_send_level", busIndex: 5, channelIndex: 3, value: 1, uid: "u-keys", id: "c-hot" }])
         await runBatch()
-        expect((x32 as unknown as { setSendLevel: ReturnType<typeof vi.fn> }).setSendLevel).toHaveBeenCalledWith(3, 5, 0.8)
-        ;(x32 as unknown as EventEmitter).emit("send_level", 5, 3, 0.8)
+        expect((x32 as unknown as { setSendLevel: ReturnType<typeof vi.fn> }).setSendLevel).toHaveBeenCalledWith(3, 5, 0.7)
+        ;(x32 as unknown as EventEmitter).emit("send_level", 5, 3, 0.7)
         const ack = ackFor("c-hot")
         expect(ack?.status).toBe("applied")
         expect(ack?.applied).toBe(true)
-        expect(ack?.clamped).toEqual({ requested: 1, applied: 0.8, cap: 0.8 })
+        expect(ack?.clamped).toEqual({ requested: 1, applied: 0.7, cap: 0.7 })
         t.stop()
     })
 
@@ -478,10 +478,10 @@ describe("FirestoreTransport — command acks + robustness (Phase 2 B4/B5/B6/B10
 
     it("MIXER-03: a level at or under the cap passes through unchanged with no clamped field", async () => {
         const { x32, t } = start((uid) => (uid === "u-keys" ? 5 : null))
-        await feed([{ type: "set_send_level", busIndex: 5, channelIndex: 1, value: 0.8, uid: "u-keys", id: "c-ok" }])
+        await feed([{ type: "set_send_level", busIndex: 5, channelIndex: 1, value: 0.7, uid: "u-keys", id: "c-ok" }])
         await runBatch()
-        expect((x32 as unknown as { setSendLevel: ReturnType<typeof vi.fn> }).setSendLevel).toHaveBeenCalledWith(1, 5, 0.8)
-        ;(x32 as unknown as EventEmitter).emit("send_level", 5, 1, 0.8)
+        expect((x32 as unknown as { setSendLevel: ReturnType<typeof vi.fn> }).setSendLevel).toHaveBeenCalledWith(1, 5, 0.7)
+        ;(x32 as unknown as EventEmitter).emit("send_level", 5, 1, 0.7)
         const ack = ackFor("c-ok")
         expect(ack?.status).toBe("applied")
         expect(ack?.clamped).toBeUndefined()
@@ -494,6 +494,45 @@ describe("FirestoreTransport — command acks + robustness (Phase 2 B4/B5/B6/B10
         await runBatch()
         expect((x32 as unknown as { setSendLevel: ReturnType<typeof vi.fn> }).setSendLevel).not.toHaveBeenCalled()
         expect(ackFor("c-intr")?.status).toBe("rejected")
+        t.stop()
+    })
+    // ── S2: level values must be finite numbers in [0,1] ──
+
+    it("S2: a level command with a boolean, NaN, string or out-of-range value is REJECTED and never reaches the desk", async () => {
+        usersMap = { drew: { soundEngineer: true } }
+        const { x32, t } = start(() => null)
+        const bad: unknown[] = [true, Number.NaN, "0.5", -0.1, 1.5, Number.POSITIVE_INFINITY]
+        const cmds: CmdInput[] = []
+        bad.forEach((v, i) => {
+            cmds.push({ type: "set_send_level", busIndex: 2, channelIndex: 1, value: v as number, uid: "drew", id: `c-bad-send-${i}` })
+            cmds.push({ type: "set_bus_master", busIndex: 2, value: v as number, uid: "drew", id: `c-bad-bus-${i}` })
+            cmds.push({ type: "set_matrix_fader", matrixIndex: 1, value: v as number, uid: "drew", id: `c-bad-mtx-${i}` })
+        })
+        await feed(cmds)
+        await runBatch()
+        const spies = x32 as unknown as Record<string, ReturnType<typeof vi.fn>>
+        expect(spies.setSendLevel).not.toHaveBeenCalled()
+        expect(spies.setBusFader).not.toHaveBeenCalled()
+        expect(spies.setMatrixFader).not.toHaveBeenCalled()
+        for (const c of cmds) {
+            const ack = ackFor(c.id)
+            expect(ack?.status).toBe("rejected")
+            expect(String(ack?.reason)).toContain("invalid level")
+        }
+        t.stop()
+    })
+
+    it("S2: the edges 0 and 1 are valid levels (1 is then clamped to the ceiling)", async () => {
+        usersMap = { drew: { soundEngineer: true } }
+        const { x32, t } = start(() => null)
+        await feed([
+            { type: "set_matrix_fader", matrixIndex: 1, value: 0, uid: "drew", id: "c-zero" },
+            { type: "set_bus_master", busIndex: 2, value: 1, uid: "drew", id: "c-one" },
+        ])
+        await runBatch()
+        const spies = x32 as unknown as Record<string, ReturnType<typeof vi.fn>>
+        expect(spies.setMatrixFader).toHaveBeenCalledWith(1, 0)
+        expect(spies.setBusFader).toHaveBeenCalledWith(2, 0.7)
         t.stop()
     })
 })

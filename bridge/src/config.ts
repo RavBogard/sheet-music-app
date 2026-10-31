@@ -183,7 +183,7 @@ export class ConfigManager {
         localIp: string | null
         diagnostics?: BridgeDiagnostics
         /** MIXER-12 — why this process started, and whether the watchdog task exists. */
-        launch?: { launchReason: LaunchReason; watchdogInstalled: boolean }
+        launch?: { launchReason: LaunchReason; watchdogInstalled: boolean | null }
     }): Promise<void> {
         try {
             const update: Record<string, unknown> = {
@@ -211,7 +211,7 @@ export class ConfigManager {
             }
             if (data.launch) {
                 update["bridge.launchReason"] = data.launch.launchReason
-                update["bridge.watchdogInstalled"] = data.launch.watchdogInstalled
+                if (typeof data.launch.watchdogInstalled === "boolean") update["bridge.watchdogInstalled"] = data.launch.watchdogInstalled
             }
             // 5s timeout — never let heartbeat block the bridge
             await Promise.race([
