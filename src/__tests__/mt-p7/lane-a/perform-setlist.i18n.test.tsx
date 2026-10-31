@@ -53,7 +53,6 @@ vi.mock("@/lib/firestore-helpers", () => ({
 import { SetlistView } from "@/components/performance/SetlistView"
 import { SetlistRow } from "@/components/performance/SetlistRow"
 import { QueueRow } from "@/components/performance/SetlistDrawer"
-import { ServiceFlowCard } from "@/components/performance/ServiceFlowCard"
 import { PublicSetlistListing } from "@/components/performance/PublicSetlistListing"
 import { PublicSetlistSkeleton } from "@/components/performance/PublicSetlistSkeleton"
 
@@ -135,13 +134,6 @@ describe("Perform setlist view — pseudo-locale (qps)", () => {
         const item = { name: "Test Song A", fileId: "file-a", type: "pdf", trackType: "prayer" } as QueueItem
         const r = renderPseudo(<QueueRow track={item} globalIndex={1} isCurrent={false} onOpen={vi.fn()} />)
         expectNoUntranslatedText(r.container, { allow: ["Test Song A"] })
-    })
-
-    it("ServiceFlowCard: type label, minutes and Up Next are translated", () => {
-        const item = { name: "Test Item One", fileId: "x", type: "pdf", trackType: "reading", estimatedMinutes: 4 } as QueueItem
-        const next = { name: "Test Song B", fileId: "y", type: "pdf", trackType: "song" } as QueueItem
-        const r = renderPseudo(<ServiceFlowCard item={item} index={0} total={2} upNext={[next]} />)
-        expectNoUntranslatedText(r.container, { allow: ["Test Item One", "Test Song B"] })
     })
 
     it("PublicSetlistListing (signed out) and its skeleton", () => {

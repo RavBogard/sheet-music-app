@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { DirectionalIcon } from "@/components/i18n/DirectionalIcon"
 import { useT } from "@/i18n/client"
+import { playedKey } from "@/lib/performance/played-key"
 
 // Phase 7 ruling: song-to-song previous/next follows the reading direction.
 // The buttons sit in a flex row, so on a right-to-left page "previous" lands
@@ -19,6 +20,10 @@ export function SongNavigation() {
     } = useMusicStore()
 
     const currentTrack = playbackQueue[queueIndex]
+    // PERF-11: "Next: <title> (<key>)" when there is a next song.
+    const nextTrack = queueIndex >= 0 ? playbackQueue[queueIndex + 1] : undefined
+    // The PLAYED key (per-track transposition applied), as the setlist row shows it.
+    const nextKey = nextTrack ? playedKey(nextTrack.key, nextTrack.transposition) : null
 
     const handleNext = () => {
         nextSong() // Updates queueIndex in store; PDFOverlay listens to this
@@ -45,11 +50,26 @@ export function SongNavigation() {
                 <span className="text-xl sm:text-3xl font-bold truncate text-center w-full leading-tight text-foreground drop-shadow-md">
                     {currentTrack?.name || t("perform.nav.noSongSelected")}
                 </span>
-                <span className="text-sm sm:text-base text-muted-foreground font-medium tracking-wide uppercase mt-0.5">
-                    {playbackQueue.length > 0
-                        ? t("perform.songPosition", { position: queueIndex + 1, total: playbackQueue.length })
-                        : t("perform.nav.setlistEmpty")}
-                </span>
+                {/* PERF-11: the next song shares the position line (the toolbar
+                    row is 56px tall — a third line would not fit on the iPad). */}
+                <div className="flex items-baseline justify-center gap-2 w-full min-w-0 mt-0.5">
+                    <span className="shrink-0 text-sm sm:text-base text-muted-foreground font-medium tracking-wide uppercase">
+                        {playbackQueue.length > 0
+                            ? t("perform.songPosition", { position: queueIndex + 1, total: playbackQueue.length })
+                            : t("perform.nav.setlistEmpty")}
+                    </span>
+                    {nextTrack && (
+                        <span
+                            data-testid="song-nav-next"
+                            className="min-w-0 truncate text-sm sm:text-base text-muted-foreground font-medium"
+                        >
+                            <span aria-hidden="true">· </span>
+                            {nextKey
+                                ? t("perform.nav.nextUp", { title: nextTrack.name, key: nextKey })
+                                : t("perform.nav.nextUpNoKey", { title: nextTrack.name })}
+                        </span>
+                    )}
+                </div>
             </div>
 
             <Button

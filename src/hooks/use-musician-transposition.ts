@@ -173,3 +173,60 @@ export function useMusicianTransposition() {
             : null,
     }
 }
+
+/**
+ * PERF-14: per-device transposition for SIGNED-OUT devices.
+ *
+ * A signed-out horn or guitar player used to re-transpose every chart every
+ * week: `useMusicianTransposition` saves to Firestore and needs a user. This
+ * hook keeps `{fileId → semitones}` in `music-storage` instead, as `chartZoom`
+ * already does. It is mounted by PDFOverlay (always present while a chart is
+ * open), not by the transposer popover, so the saved value is applied on
+ * every chart change whether or not the popover is opened.
+ *
+ * - Signed-in users are untouched: they keep the Firestore preference.
+ * - A leader's per-track transposition always wins — an explicit 0 included —
+ *   and is never recorded as the device's own choice.
+ * - Nothing runs while auth is still resolving, so a signed-in user's
+ *   Firestore preference is never raced by the device map.
+ */
+export function useDeviceTranspositionPrefs(): void {
+    const { user, loading } = useAuth()
+    const fileId = useMusicStore((s) => s.playbackQueue[s.queueIndex]?.fileId ?? null)
+    const leaderTransposition = useMusicStore((s) => s.playbackQueue[s.queueIndex]?.transposition)
+    const transposition = useMusicStore((s) => s.transposition)
+    // The queue array and position identify one "arrival" on a chart. A queue
+    // rebuild (live-director edit) resets `transposition` to the track value
+    // even when the fileId is unchanged, so it must count as a new arrival —
+    // otherwise that reset would be recorded as the musician's choice.
+    const queue = useMusicStore((s) => s.playbackQueue)
+    const queueIndex = useMusicStore((s) => s.queueIndex)
+    const appliedForRef = useRef<{ fileId: string; queue: unknown; queueIndex: number } | null>(null)
+
+    const eligible = !loading && !user && !!fileId && !fileId.startsWith("flow-")
+    // An explicit leader value — including 0, "play it as written" — is set
+    // and wins. Only null/undefined means the leader left it to the musician.
+    const leaderSet = leaderTransposition !== undefined && leaderTransposition !== null
+
+    useEffect(() => {
+        if (!eligible || !fileId) {
+            appliedForRef.current = null
+            return
+        }
+        const store = useMusicStore.getState()
+        const applied = appliedForRef.current
+        if (!applied || applied.fileId !== fileId || applied.queue !== queue || applied.queueIndex !== queueIndex) {
+            // Arrived on this chart: apply the device's saved choice.
+            appliedForRef.current = { fileId, queue, queueIndex }
+            if (leaderSet) return
+            const saved = store.chartTransposition?.[fileId]
+            if (typeof saved === "number" && saved !== transposition) store.setTransposition(saved)
+            return
+        }
+        // Same chart, transposition changed: the musician adjusted it.
+        if (leaderSet) return
+        if (store.chartTransposition?.[fileId] !== transposition) {
+            store.setChartTransposition(fileId, transposition)
+        }
+    }, [eligible, fileId, transposition, leaderSet, queue, queueIndex])
+}

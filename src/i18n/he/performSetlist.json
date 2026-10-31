@@ -12,15 +12,6 @@
     "perform": "נגינה",
     "upcoming": "התפילות הקרובות",
     "publicSetlists": "רשימות שירים ציבוריות",
-    "upNext": "הבא בתור",
-    "estimatedMinutes": "~{minutes} דק׳",
-    "trackType": {
-        "reading": "קריאה",
-        "prayer": "תפילה",
-        "transition": "מעבר",
-        "note": "הערה",
-        "section": "חלק"
-    },
     "queueTrackType": {
         "header": "כותרת",
         "reading": "קריאה",

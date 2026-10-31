@@ -2,7 +2,7 @@
 
 import { FileMusic, ChevronRight, User, Replace } from "lucide-react"
 import { SetlistTrack } from "@/types/models"
-import { getTransposedKeyName } from "@/lib/music-math"
+import { playedKey } from "@/lib/performance/played-key"
 import { displayChartTitle } from "@/lib/format/chart-title"
 import { cn } from "@/lib/utils"
 import type { UseLongPressBag } from "@/hooks/use-long-press"
@@ -80,14 +80,7 @@ export function SetlistRow({
     const displayKey = (() => {
         if (!isSong || !track.key) return null
         if (isPublicView) return track.key
-        const override = track.transposition
-        const effective = override !== undefined && override !== 0
-            ? override
-            : defaultTransposition
-        if (effective === 0) return track.key
-        const fullName = getTransposedKeyName(track.key, effective)
-        const parenIdx = fullName.indexOf(" (")
-        return parenIdx > -1 ? fullName.substring(0, parenIdx) : fullName
+        return playedKey(track.key, track.transposition, defaultTransposition)
     })()
 
     // A bonded chart is openable for ANY non-header track (song, prayer,

@@ -12,15 +12,6 @@
     "perform": "Perform",
     "upcoming": "Upcoming",
     "publicSetlists": "Public setlists",
-    "upNext": "Up Next",
-    "estimatedMinutes": "~{minutes} min",
-    "trackType": {
-        "reading": "Reading",
-        "prayer": "Prayer",
-        "transition": "Transition",
-        "note": "Note",
-        "section": "Section"
-    },
     "queueTrackType": {
         "header": "header",
         "reading": "reading",
