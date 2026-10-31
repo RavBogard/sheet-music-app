@@ -163,9 +163,12 @@ export type LimiterName = keyof typeof limiters
  * which is the JWT header — identical for all Firebase tokens from the same
  * project. That made the rate limit global instead of per-user.
  */
-function getKey(req: NextRequest): string {
+function getKey(req: NextRequest, tier?: LimiterName): string {
     const auth = req.headers.get('Authorization')
-    if (auth?.startsWith('Bearer ')) {
+    // The `sub` below comes from a token NOBODY has verified here, so a forged
+    // token would get a fresh bucket per request. The telemetry beacon is public
+    // and writes to Firestore, so it is always keyed on the client IP.
+    if (tier !== 'telemetry' && auth?.startsWith('Bearer ')) {
         try {
             // JWT = header.payload.signature — decode the payload segment
             const token = auth.slice(7) // Strip "Bearer "
@@ -252,7 +255,7 @@ export async function checkRateLimit(
     tier: LimiterName = 'api'
 ): Promise<NextResponse | null> {
     try {
-        const key = `${tier}:${getKey(req)}`
+        const key = `${tier}:${getKey(req, tier)}`
         const result = await limiters[tier].limit(key)
 
         if (!result.success) {
@@ -273,7 +276,7 @@ export async function checkRateLimit(
         // Redis unavailable — fail closed with in-memory fallback
         logger.warn("[RateLimit] Redis failed, using in-memory fallback:", err)
         try {
-            const key = `${tier}:${getKey(req)}`
+            const key = `${tier}:${getKey(req, tier)}`
             const fallback = getFallbackLimiter(tier)
             const result = await fallback.limit(key)
             if (!result.success) {

@@ -78,5 +78,8 @@
     "columnAttributes": "Attributes",
     "columnRoleManagement": "Role Management",
     "emptyNoUsers": "No registered users yet.",
-    "emptyNoMatches": "No users match your current filters."
+    "emptyNoMatches": "No users match your current filters.",
+    "testAccountsHidden_one": "{count} test account hidden. Show",
+    "testAccountsHidden_other": "{count} test accounts hidden. Show",
+    "testAccountsHide": "Hide test accounts"
 }

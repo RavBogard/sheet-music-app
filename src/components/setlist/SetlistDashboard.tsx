@@ -91,7 +91,7 @@ export function SetlistDashboard({ serverShortName, ...props }: UseSetlistDashbo
         ).text
     }, [user?.displayName, serverShortName, congregation.shortName, t, lang])
 
-const renderPastCard = (setlist: (typeof pastOrNoDate)[number]) => (
+    const renderPastCard = (setlist: (typeof pastOrNoDate)[number]) => (
         <SetlistCard
                                                             key={setlist.id}
                                                             setlist={setlist}
@@ -222,45 +222,37 @@ const renderPastCard = (setlist: (typeof pastOrNoDate)[number]) => (
                                                 <div className="text-muted-foreground italic py-10 text-center bg-card rounded-2xl border border-border">{t("setlist.noOtherSetlists")}</div>
                                             ) : (
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                    {pastGroups.map(({ parent: setlist, variants }) => (
-                                                        <div key={setlist.id} className="space-y-2">
-<SetlistCard
-                                                            setlist={setlist}
-                                                            onEdit={(e) => { e.stopPropagation(); handleSelect(setlist) }}
-                                                            onPerform={() => router.push(`/perform/setlist/${setlist.id}`)}
-                                                            navigatingTo={navigatingTo}
-                                                            onDuplicate={handleDuplicateClick}
-                                                            onCloneNextWeek={handleCloneNextWeekClick}
-                                                            onSaveAsTemplate={handleSaveAsTemplateClick}
-                                                            onSaveAsDefault={handleSaveAsDefaultClick}
-                                                            onDelete={handleDeleteClick}
-                                                            canDuplicate={!!user}
-                                                            canDelete={canEditSetlist(setlist, { uid: user?.uid, isBandLeader, isAdmin })}
-                                                            canEdit={!!user}
-                                                            isAdmin={isAdmin}
-                                                        />
-                                                            {variants.length > 0 && (
-                                                                <div className="ps-3 border-s border-border">
-                                                                    <button
-                                                                        type="button"
-                                                                        data-testid="setlist-variants-toggle"
-                                                                        aria-expanded={expandedGroups.has(setlist.id)}
-                                                                        onClick={() => toggleGroup(setlist.id)}
-                                                                        className="min-h-11 px-2 text-sm text-muted-foreground hover:text-foreground"
-                                                                    >
-                                                                        {expandedGroups.has(setlist.id)
-                                                                            ? t("setlist.variantsHide")
-                                                                            : t("setlist.variantsShow", { count: variants.length })}
-                                                                    </button>
-                                                                    {expandedGroups.has(setlist.id) && (
-                                                                        <div className="mt-2 space-y-2">
-                                                                            {variants.map(v => renderPastCard(v))}
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    ))}
+                                                    {pastGroups.map(({ parent, baseName, variants }, gi) => {
+                                                        const groupId = parent ? parent.id : `group-${gi}-${variants[0]?.id ?? ""}`
+                                                        const open = expandedGroups.has(groupId)
+                                                        return (
+                                                            <div key={groupId} className="space-y-2">
+                                                                {parent ? renderPastCard(parent) : (
+                                                                    <p className="px-2 pt-2 text-base font-semibold text-foreground">{baseName}</p>
+                                                                )}
+                                                                {variants.length > 0 && (
+                                                                    <div className="ps-3 border-s border-border">
+                                                                        <button
+                                                                            type="button"
+                                                                            data-testid="setlist-variants-toggle"
+                                                                            aria-expanded={open}
+                                                                            onClick={() => toggleGroup(groupId)}
+                                                                            className="min-h-11 px-2 text-sm text-muted-foreground hover:text-foreground"
+                                                                        >
+                                                                            {open
+                                                                                ? t("setlist.variantsHide")
+                                                                                : t("setlist.variantsShow", { count: variants.length })}
+                                                                        </button>
+                                                                        {open && (
+                                                                            <div className="mt-2 space-y-2">
+                                                                                {variants.map(v => renderPastCard(v))}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )
+                                                    })}
                                                 </div>
                                             )}
                                             {nextCursor && (

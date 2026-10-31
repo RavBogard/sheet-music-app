@@ -34,9 +34,9 @@ describe("POST /api/web-vitals page views (TEL-02)", () => {
         expect(res.status).toBe(204)
         expect(collection).toHaveBeenCalledWith("usageCounters")
         const id = (doc.mock.calls[0] as unknown as [string])[0]
-        expect(id).toContain("__brotherslazaroff__~perform~setlist~[id]")
+        expect(id).toContain("__brotherslazaroff__~perform~[id]")
         const written = (set.mock.calls[0] as unknown as [Record<string, unknown>])[0]
-        expect(written.surface).toBe("/perform/setlist/[id]")
+        expect(written.surface).toBe("/perform/[id]")
         expect(written.orgId).toBe("brotherslazaroff")
     })
 

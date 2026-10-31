@@ -78,7 +78,12 @@ export function PeopleSection() {
     }, [canManagePeople, reload, org])
 
     // WEB-15: synthetic test accounts never show in the real people list.
-    const visibleUsers = useMemo(() => users.filter(u => !isTestAccount(u)), [users])
+    const [showTestAccounts, setShowTestAccounts] = useState(false)
+    const testAccountCount = useMemo(() => users.filter(isTestAccount).length, [users])
+    const visibleUsers = useMemo(
+        () => (showTestAccounts ? users : users.filter(u => !isTestAccount(u))),
+        [users, showTestAccounts],
+    )
     const pendingCount = visibleUsers.filter(u => u.role === "pending").length
     const currentUserRole = myRole || 'member'
 
@@ -215,6 +220,20 @@ export function PeopleSection() {
                     </div>
                 )}
             </div>
+
+            {testAccountCount > 0 && (
+                <button
+                    type="button"
+                    data-testid="people-test-accounts-toggle"
+                    aria-pressed={showTestAccounts}
+                    onClick={() => setShowTestAccounts(v => !v)}
+                    className="min-h-11 px-1 text-xs text-muted-foreground hover:text-foreground underline underline-offset-4"
+                >
+                    {showTestAccounts
+                        ? t("admin-people.testAccountsHide")
+                        : t("admin-people.testAccountsHidden", { count: testAccountCount })}
+                </button>
+            )}
 
             {/* Filters Toolbar */}
             <div className="flex items-center gap-3 p-1">
