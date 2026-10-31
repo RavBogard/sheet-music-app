@@ -20,7 +20,8 @@
 import * as admin from "firebase-admin"
 import { X32Client } from "./x32-client"
 import { ConfigManager } from "./config"
-import { AckWriter } from "./ack-writer"
+import { AckWriter, type ClampInfo } from "./ack-writer"
+import { clampToCeiling } from "./ceilings"
 
 /** monitor-live/state schema version (C4). Bump on any shape change. */
 const STATE_SCHEMA_VERSION = 1
@@ -78,6 +79,12 @@ export class FirestoreTransport {
     private commandBatchTimer: ReturnType<typeof setTimeout> | null = null;
     private readonly COMMAND_BATCH_WINDOW = 20; // ms to accumulate commands before processing
     private readonly STALE_COMMAND_MS = 10_000; // discard commands older than this (B4, server-relative)
+    // MIXER-10 — a command the iPad wrote while offline (Firestore persistent
+    // cache) is flushed on reconnect with a FRESH server createTime, so the B4
+    // check above can't see its age. Compare the server createTime with the
+    // client's own `createdAt`: a gap larger than this means it sat in an
+    // offline queue. 30s also absorbs ordinary clock skew.
+    private readonly OFFLINE_QUEUE_MS = 30_000;
 
     // B5 — idempotency. CommandIds already given a verdict, with the time they
     // were processed. A re-delivered command (listener re-establish, etc.) is
@@ -89,7 +96,10 @@ export class FirestoreTransport {
     // the X32 confirm key ("bus_fader:5", "send_level:2:5"). On the matching
     // change event we write an `applied` ack with the confirmed value; if none
     // arrives within ACK_CONFIRM_TIMEOUT_MS we write a `timeout` ack.
-    private pendingAcks: Map<string, { commandId: string; timer: ReturnType<typeof setTimeout>; uid?: string }> = new Map();
+    private pendingAcks: Map<
+        string,
+        { commandId: string; timer: ReturnType<typeof setTimeout>; uid?: string; clamped?: ClampInfo }
+    > = new Map();
     private readonly ACK_CONFIRM_TIMEOUT_MS = 1_500;
 
     // B13 — real connected-client count. With the Firestore transport there is no
@@ -380,6 +390,22 @@ export class FirestoreTransport {
                 return
             }
 
+            // MIXER-10 — drop a command that was queued offline and replayed late
+            // (see OFFLINE_QUEUE_MS). A client clock running AHEAD (negative gap)
+            // is never dropped; a missing createdAt skips the check.
+            if (
+                typeof cmd.createdAt === "number" &&
+                Number.isFinite(cmd.createdAt) &&
+                serverCreateMs - cmd.createdAt > this.OFFLINE_QUEUE_MS
+            ) {
+                void this.ackWriter.write(commandId, "timeout", {
+                    reason: "queued offline",
+                    uid: cmd.uid,
+                })
+                batch.update(ref, { error: "Timeout", processedAt: Date.now() })
+                return
+            }
+
             // Generate a target key to track command freshness
             let targetKey = cmd.type;
             if (cmd.busIndex !== undefined) targetKey += `:${cmd.busIndex}`;
@@ -416,6 +442,36 @@ export class FirestoreTransport {
                 return
             }
 
+            // MIXER-03 — enforce the sound engineer's ceilings on every send level
+            // and bus master, whoever sent it (iPad, MCP, engineer). Over the cap
+            // is CLAMPED to the cap, never refused; the ack carries `clamped`.
+            // `ceilings` rides the cached config/monitor listener (ConfigManager);
+            // absent or malformed → the 0.80 defaults (fail safe).
+            let clamped: ClampInfo | undefined
+            if (
+                (cmd.type === "set_bus_master" || cmd.type === "set_send_level") &&
+                typeof cmd.value === "number"
+            ) {
+                const ceilings = (this.config.getConfig() as unknown as { ceilings?: unknown } | undefined)
+                    ?.ceilings
+                const r = clampToCeiling(
+                    ceilings,
+                    cmd.type === "set_bus_master" ? "master" : "send",
+                    cmd.value,
+                    cmd.busIndex!,
+                    cmd.type === "set_send_level" ? cmd.channelIndex : undefined,
+                )
+                if (r.clamped) {
+                    console.log(
+                        `[Transport] Clamped ${cmd.type} bus ${cmd.busIndex}` +
+                            (cmd.channelIndex !== undefined ? ` ch ${cmd.channelIndex}` : "") +
+                            `: ${r.clamped.requested} -> ${r.clamped.cap}`,
+                    )
+                    clamped = r.clamped
+                    cmd = { ...cmd, value: r.value }
+                }
+            }
+
             // Execute the command on the X32
             switch (cmd.type) {
                 case "set_bus_master":
@@ -441,7 +497,7 @@ export class FirestoreTransport {
             // B6 — await the C2 read-back: an `applied` ack (with the confirmed
             // value) on the matching change event, or a `timeout` ack if none
             // arrives within the window.
-            this.registerPendingAck(confirmKey, commandId, cmd.uid)
+            this.registerPendingAck(confirmKey, commandId, cmd.uid, clamped)
 
             // Mark for deletion after successful execution
             batch.delete(ref)
@@ -496,7 +552,12 @@ export class FirestoreTransport {
      * the newer command's read-back carries the authoritative value. If no
      * confirmation arrives within ACK_CONFIRM_TIMEOUT_MS we write a `timeout`.
      */
-    private registerPendingAck(confirmKey: string, commandId: string, uid?: string): void {
+    private registerPendingAck(
+        confirmKey: string,
+        commandId: string,
+        uid?: string,
+        clamped?: ClampInfo,
+    ): void {
         const existing = this.pendingAcks.get(confirmKey)
         if (existing) {
             clearTimeout(existing.timer)
@@ -507,6 +568,7 @@ export class FirestoreTransport {
                 // bus a musician also owns), and an ack must stay readable only
                 // by whoever issued that command.
                 uid: existing.uid,
+                clamped: existing.clamped,
             })
         }
         const timer = setTimeout(() => {
@@ -514,9 +576,10 @@ export class FirestoreTransport {
             void this.ackWriter.write(commandId, "timeout", {
                 reason: `no read-back confirmation within ${this.ACK_CONFIRM_TIMEOUT_MS}ms`,
                 uid,
+                clamped,
             })
         }, this.ACK_CONFIRM_TIMEOUT_MS)
-        this.pendingAcks.set(confirmKey, { commandId, timer, uid })
+        this.pendingAcks.set(confirmKey, { commandId, timer, uid, clamped })
     }
 
     /**
@@ -530,7 +593,11 @@ export class FirestoreTransport {
         if (!pending) return
         clearTimeout(pending.timer)
         this.pendingAcks.delete(confirmKey)
-        void this.ackWriter.write(pending.commandId, "applied", { confirmedValue, uid: pending.uid })
+        void this.ackWriter.write(pending.commandId, "applied", {
+            confirmedValue,
+            uid: pending.uid,
+            clamped: pending.clamped,
+        })
     }
 
     /** B13 — record that a client is active (sent a command). */

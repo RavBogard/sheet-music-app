@@ -20,11 +20,16 @@ Monitors are "wedges", never IEM.
   - Values are fader positions from 0 to 1.
   - When the doc is absent, the defaults (0.80/0.80) apply.
   - Only sound-engineer or admin callers may write it.
-- `monitor-live/snapshots/{busIndex}/items/{snapshotId}`:
+- `monitor-live/snapshots/buses/{busIndex}/items/{snapshotId}`:
   ```
   { busIndex, kind: "auto"|"named", name?, serviceType?, ownerUid?,
     createdAt, sends:[{channelIndex, channelName, level, on}], master }
   ```
+  - **Path changed by B4a (2026-10-31):** the original `monitor-live/snapshots/{busIndex}/items/{snapshotId}`
+    has 5 segments, which is a collection path, not a document. The extra `buses` segment makes it
+    valid. `busIndex` is the doc id as a string ("5"); `createdAt` is a Firestore Timestamp.
+  - Auto snapshot ids are `auto-<YYYY-MM-DD>-<setlistId>` or `auto-<YYYY-MM-DD>-nightly`. The
+    bridge reads today's services from the public `today.json` (`startsAt`, already resolved).
   - Channel name and index are stored so a recall can match by name when the desk is renumbered.
   - Auto snapshots: the bridge writes one per owned bus at service end. That is 2 hours after
     `startsAtLocal` of today's setlist, or nightly at 23:00 local when there is no setlist. Keep

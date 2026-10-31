@@ -28,6 +28,13 @@
 
 import * as admin from "firebase-admin"
 
+/** A level the bridge lowered to the ceiling: what was asked, what was sent, the cap. */
+export interface ClampInfo {
+    requested: number
+    applied: number
+    cap: number
+}
+
 /** Terminal outcome of a monitor command. */
 export type AckStatus = "applied" | "rejected" | "timeout"
 
@@ -51,6 +58,16 @@ export interface CommandAck {
      * only where the originating uid is genuinely unknown.
      */
     uid?: string
+    /**
+     * BET-4 / MIXER-03 — `true` on every `applied` ack (mirrors `status`, so a
+     * reader can test one boolean). Absent on rejected and timeout acks.
+     */
+    applied?: true
+    /**
+     * BET-4 / MIXER-03 — present only when the bridge lowered the requested level
+     * to the sound engineer's ceiling. Fader positions 0..1.
+     */
+    clamped?: ClampInfo
     at: admin.firestore.FieldValue
     createdAtMs: number
 }
@@ -79,7 +96,12 @@ export class AckWriter {
     async write(
         commandId: string,
         status: AckStatus,
-        opts: { confirmedValue?: number | boolean; reason?: string; uid?: string } = {},
+        opts: {
+            confirmedValue?: number | boolean
+            reason?: string
+            uid?: string
+            clamped?: ClampInfo
+        } = {},
     ): Promise<void> {
         if (!commandId) return
         const doc: CommandAck = {
@@ -91,6 +113,8 @@ export class AckWriter {
         if (opts.confirmedValue !== undefined) doc.confirmedValue = opts.confirmedValue
         if (opts.reason !== undefined) doc.reason = opts.reason
         if (opts.uid !== undefined) doc.uid = opts.uid
+        if (status === "applied") doc.applied = true
+        if (opts.clamped !== undefined) doc.clamped = opts.clamped
         try {
             await this.db.doc(`${ACKS_COLLECTION}/${commandId}`).set(doc)
         } catch (err) {

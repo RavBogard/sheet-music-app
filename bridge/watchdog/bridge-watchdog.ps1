@@ -128,7 +128,7 @@ try {
     # `--hidden` matches the login-item arguments main.ts registers, so a
     # watchdog start behaves exactly like a normal boot start: tray only, no
     # window popping up on the projector during a service.
-    Start-Process -FilePath $ExePath -ArgumentList '--hidden' -WindowStyle Hidden
+    Start-Process -FilePath $ExePath -ArgumentList '--hidden', '--launched-by=watchdog' -WindowStyle Hidden
 } catch {
     Write-Log "START FAILED: $($_.Exception.Message)"
     exit 1

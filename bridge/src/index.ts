@@ -29,6 +29,8 @@ import { BridgeControlDispatcher, collectDiagnostics } from "./bridge-control"
 import { pickLocalIp } from "./get-local-ip"
 import { getMachineId, type LeaseIdentity } from "./lease-identity"
 import type { BridgeControl, MonitorConfig } from "./types"
+import { AutoSnapshotWriter, fetchTodayServices } from "./auto-snapshots"
+import { detectWatchdogInstalled, isLaunchReason, type LaunchReason } from "./launch-info"
 
 /**
  * R4 — process-restart hook. main.ts (Electron) injects
@@ -243,6 +245,26 @@ async function main() {
     const transport = new FirestoreTransport(x32, config, () => leaseHeld)
     transport.start()
 
+    // BET-4 — auto snapshots of each owned bus at service end (or nightly at
+    // 23:00). Ticked from the 60s heartbeat loop, ACTIVE bridge only.
+    const snapshotWriter = new AutoSnapshotWriter({
+        db,
+        isConnected: () => x32.isConnected(),
+        getState: () => ({ channels: x32.channels, buses: x32.buses }),
+        getBusAssignments: () => config.getConfig().busAssignments,
+        fetchToday: () => fetchTodayServices(),
+    })
+
+    // MIXER-12 — launch reason (decided by main.ts before startup) and whether
+    // the watchdog scheduled task exists, both published in the heartbeat.
+    const envReason = process.env.BRIDGE_LAUNCH_REASON
+    const launchReason: LaunchReason = isLaunchReason(envReason) ? envReason : "manual"
+    let watchdogInstalled = await detectWatchdogInstalled()
+    const watchdogCheckInterval = setInterval(async () => {
+        watchdogInstalled = await detectWatchdogInstalled()
+    }, 60 * 60_000)
+    console.log(`[Bridge] Launch reason: ${launchReason} | watchdog installed: ${watchdogInstalled}`)
+
     // 4b. Sync full mixer state, then publish it. The first full-state `.set()`
     //     also HEALS any corrupted (array→map) live state left by the old delta writer.
     if (x32.isConnected()) {
@@ -351,7 +373,11 @@ async function main() {
                 clients,
                 localIp: currentIp,
                 diagnostics,
+                launch: { launchReason, watchdogInstalled },
             })
+
+            // BET-4 — service-end / nightly auto snapshots (fail-open).
+            await snapshotWriter.tick()
 
             // Clean up stale commands (safety net) + TTL-sweep acks.
             await transport.cleanupStaleCommands()
@@ -499,6 +525,7 @@ async function main() {
         clearInterval(heartbeatInterval)
         clearInterval(leaseInterval)
         clearInterval(selftestInterval)
+        clearInterval(watchdogCheckInterval)
         transport.stop()
         remoteLogger.stop()
         // R1 — `writeOffline` stamps bridge.status AND bridge.lastSeen, which are

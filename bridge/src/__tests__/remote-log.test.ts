@@ -81,6 +81,17 @@ describe("RemoteLogger (O1)", () => {
         logger.stop()
     })
 
+    it("MIXER-13: blank error lines are ignored and lastError keeps the last NON-empty error", () => {
+        const logger = new RemoteLogger(db)
+        logger.record("error", "X32 socket disconnected")
+        logger.record("error", "")
+        logger.record("error", "   ")
+        logger.record("warn", undefined as unknown as string)
+        expect(logger.getErrCount()).toBe(1)
+        expect(logger.getLastError()?.msg).toBe("X32 socket disconnected")
+        logger.stop()
+    })
+
     it("truncates oversized messages", async () => {
         const logger = new RemoteLogger(db, { maxMsgLen: 10, flushDebounceMs: 100 })
         logger.record("error", "x".repeat(500))
