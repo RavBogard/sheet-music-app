@@ -219,6 +219,28 @@ already has one had it put there by an author. **A page is never guessed** —
 when the match is merely plausible, the tool says so and waits. A wrong number
 on the rabbi's sheet is read aloud from the lectern with nothing to catch it.
 
+## Wedge monitor mixes
+
+The monitors are wedges, never "IEM" or "in-ears"; say "wedge" and "your mix".
+Each musician has a bus (1-5) on the X32. "Turn my vocal up" is a short loop:
+
+1. `list_monitor_buses` for the bus indexes and who is on each. The account you
+   are connected as may not be the one a bus is assigned to; an admin or sound
+   engineer with no bus of their own must pass `busIndex`, so ask which bus.
+2. `get_mix` with `onlyActive: true`. Each send carries `audible` and `db`; a
+   32-channel desk is mostly silent channels you should not read out. Match the
+   spoken name ("my vocal") to `channelName`; when two channels fit (Daniel has
+   two vocal channels), ask rather than guess.
+3. `set_send_level` (one channel) or `set_bus_fader` (the whole wedge). Levels
+   are 0..1 on a non-linear taper: +0.05 is roughly 1 to 3 dB, so nudge in
+   small steps and read the `db` back from `get_mix`.
+4. Writes are queued, not confirmed. Close the loop with `get_command_status`
+   (a musician sees only their own commands) or re-read `get_mix`. If
+   `bridge.stateStale` is true the values are not live: say so.
+5. Never touch matrix outputs or another person's bus unless you are an admin or
+   sound engineer. Nothing here can be fixed mid-service, so for a pre-service
+   check use `get_bridge_health` (sound engineers can read it).
+
 ## Tool inventory cheat-sheet
 
 - Stage: `propose_setlist_changes`, `commit_staged_changes`

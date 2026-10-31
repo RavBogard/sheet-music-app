@@ -1,5 +1,6 @@
 import "server-only"
 
+import { hidesLiturgicalFields } from "@/lib/org/vocab"
 import crypto from "crypto"
 import { FieldValue, Timestamp } from "firebase-admin/firestore"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
@@ -248,9 +249,13 @@ export async function draftServiceTool(
             if (!legacy) {
                 return richError(
                     "no_profile",
-                    `There is no profile for '${profileKey}' yet: no past setlist is marked with this service and rabbi, and no template matches it.`,
+                    hidesLiturgicalFields(org)
+                        ? `There is no profile for '${profileKey}' yet: no past set is marked with this kind of gig, and no template matches it.`
+                        : `There is no profile for '${profileKey}' yet: no past setlist is marked with this service and rabbi, and no template matches it.`,
                     { profileKey },
-                    "Build this one from a template or a recent setlist (clone_setlist or create_setlist with serviceType and rabbiSlot set). The next draft_service for this service learns from it.",
+                    hidesLiturgicalFields(org)
+                        ? "Build this one from a template or a recent set with clone_setlist. The next draft_service for this kind of gig learns from it."
+                        : "Build this one from a template or a recent setlist (clone_setlist or create_setlist with serviceType and rabbiSlot set). The next draft_service for this service learns from it.",
                 )
             }
             tracks = legacy.tracks.map(openTemplateRow)

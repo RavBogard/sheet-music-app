@@ -56,7 +56,7 @@ function dashboardValue(over: Record<string, unknown> = {}) {
         handleSelect: noop, handleDeleteClick: noop, confirmDelete: noop,
         handleDuplicateClick: noop, confirmDuplicate: noop, handleCloneNextWeekClick: noop,
         handleSaveAsTemplateClick: noop, handleSaveAsDefaultClick: noop, handleTransfer: noop, transferring: false,
-        handleCreateFromCalendar: noop, handleCreateFromTemplate: noop, handleDownload: noop,
+        handleCreateFromTemplate: noop, handleDownload: noop,
         availableRabbis: [], displayedSetlists: [upcomingSetlist, pastSetlist],
         upcoming: [upcomingSetlist], pastOrNoDate: [pastSetlist], placeholders: [{ date: new Date(2026, 9, 16) }],
         hasUpcoming: true, isDownloading: false,

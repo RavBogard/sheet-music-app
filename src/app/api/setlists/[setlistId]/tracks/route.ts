@@ -49,7 +49,7 @@ export async function GET(
     ctx: { params: Promise<{ setlistId: string }> },
 ) {
     try {
-        const limited = await checkRateLimit(req, "api")
+        const limited = await checkRateLimit(req, "perform")
         if (limited) return limited
 
         const { setlistId } = await ctx.params

@@ -32,6 +32,35 @@ export function initAdmin(): boolean {
     return true;
 }
 
+/**
+ * Like verifyIdToken, but says WHY a token did not verify: `invalid` is a
+ * definite verdict (bad signature, malformed, expired, revoked, wrong
+ * project); `error` is transient (cert fetch failed, Admin SDK unavailable)
+ * and must not be cached as a verdict. Used by the rate limiter.
+ */
+export type IdTokenVerdict =
+    | { status: 'valid'; uid: string; exp: number }
+    | { status: 'invalid' }
+    | { status: 'error' }
+
+export async function verifyIdTokenVerdict(token: string): Promise<IdTokenVerdict> {
+    if (!token) return { status: 'invalid' };
+    if (!initAdmin()) return { status: 'error' };
+    try {
+        const decoded = await getAuth().verifyIdToken(token);
+        return { status: 'valid', uid: decoded.uid, exp: decoded.exp };
+    } catch (error) {
+        const code = (error as { code?: unknown })?.code
+        // FirebaseAuthError codes are `auth/…`; `auth/internal-error` is the
+        // SDK's own wrapper for a failed public-key fetch and other transients.
+        if (typeof code === 'string' && code.startsWith('auth/') && code !== 'auth/internal-error') {
+            return { status: 'invalid' };
+        }
+        logger.warn("[verifyIdTokenVerdict] transient verification failure:", error);
+        return { status: 'error' };
+    }
+}
+
 export async function verifyIdToken(token: string) {
     if (!token) return null;
     initAdmin();

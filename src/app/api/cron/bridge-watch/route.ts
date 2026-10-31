@@ -8,6 +8,7 @@ import { sendPushToUsers } from "@/lib/push-send"
 import { captureException } from "@/lib/error-reporting"
 import { env } from "@/env.mjs"
 import { evaluateBridge, toMillis, type BridgeHeartbeat, type BridgeVerdict } from "./evaluate"
+import { bridgeAlertRecipients } from "./recipients"
 import { bridgeConfigOrg, mixerOn, MIXER_ORG_ID } from "@/lib/org/mixer"
 
 /**
@@ -46,11 +47,13 @@ import { bridgeConfigOrg, mixerOn, MIXER_ORG_ID } from "@/lib/org/mixer"
  * `config/bridgeWatch`). An alert that fires every Friday regardless is an alert
  * that gets muted by the third week — and then the one that matters is muted too.
  *
- * ## Schedule (vercel.json — three entries, all pointing here)
+ * ## Schedule (vercel.json — four entries, all pointing here)
  *
  *   `0 14 * * *`   daily light check       09:00 America/Chicago
  *   `0 19 * * 5`   Friday, early           14:00 America/Chicago
  *   `30 21 * * 5`  Friday, last chance     16:30 America/Chicago — before soundcheck
+ *   `0 15 * * 6`   Saturday morning        10:00 America/Chicago — a bridge that died
+ *                                          overnight is found before the service, not by it
  *
  * Vercel crons are UTC-only and do NOT follow DST, so those local times are
  * given for CDT (UTC−5) and land an hour EARLIER in local terms during CST.
@@ -170,16 +173,18 @@ export async function GET(req: Request) {
         const headline = verdict.problems[0]
         const body = `${headline} ${verdict.remedy}`.slice(0, 480)
 
-        // Recipients: admins. Band leaders are deliberately NOT paged — only the
-        // person who can physically reach the venue PC can act on this.
+        // Recipients: admins, sound-engineer flag holders, and the extra uids in
+        // config/monitor.bridgeAlertRecipients (Michael). Band leaders are
+        // deliberately NOT paged — only people who can act on the bridge are.
         let adminUids: string[] = []
         try {
             // Multi-tenant P2: the admins of the BRIDGE tenant (crc), from
             // memberships (legacy users-doc role for anyone not yet migrated).
-            const admins = await listTenantMembers("crc", { roles: ["admin"], db })
-            adminUids = admins.map(m => m.uid)
+            const members = await listTenantMembers("crc", { db })
+            adminUids = bridgeAlertRecipients(members, monitor)
         } catch (e) {
             logger.warn("[Cron/BridgeWatch] Admin lookup failed:", e)
+            adminUids = bridgeAlertRecipients([], monitor)
         }
 
         let pushed = 0

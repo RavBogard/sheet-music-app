@@ -368,7 +368,7 @@ export async function generateGigPacket(
     const mergedPdf = await PDFDocument.create()
     mergedPdf.setTitle(packetTitle)
     // Multi-tenant phase 1: the setlist's tenant (crc and brotherslazaroff:
-    // "CRC Music Books gig packet").
+    // "CRC Music Books gig packet"; BL now has its own).
     mergedPdf.setSubject(orgString(rowOrg(setlistData.orgId), "print.packetSubject"))
     // Multi-tenant phase 7: the packet's PDF labels in the setlist tenant's
     // language (the MCP response stays English). CRC/BL: English, unchanged.

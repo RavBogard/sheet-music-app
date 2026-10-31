@@ -135,4 +135,29 @@ describe("verifyBearer", () => {
         )
         expect(hashArg).not.toContain("secret")
     })
+
+    it("verifies once per request: a second call on the same request reuses the answer", async () => {
+        mockGet.mockResolvedValue(snapshotOf([{ uid: "u-once", revokedAt: null }]))
+        const req = makeReq("crl_live_once")
+        const a = await verifyBearer(req)
+        const b = await verifyBearer(req)
+        expect((a as { uid: string }).uid).toBe("u-once")
+        expect((b as { uid: string }).uid).toBe("u-once")
+        expect(mockGet).toHaveBeenCalledTimes(1)
+        const { notedRateLimitIdentity } = await import("@/lib/rate-limit-identity")
+        expect(notedRateLimitIdentity(req)).toBe("u-once")
+    })
+
+    it("a rejected bearer replays as a fresh 401 on the same request", async () => {
+        mockGet.mockResolvedValue(snapshotOf([]))
+        const req = makeReq("crl_live_bad")
+        const a = (await verifyBearer(req)) as Response
+        await a.text()
+        const b = (await verifyBearer(req)) as Response
+        expect(b.status).toBe(401)
+        expect(await b.text()).toBe("Unauthorized")
+        expect(mockGet).toHaveBeenCalledTimes(1)
+        const { notedRateLimitIdentity } = await import("@/lib/rate-limit-identity")
+        expect(notedRateLimitIdentity(req)).toBeNull()
+    })
 })

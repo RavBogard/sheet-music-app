@@ -81,18 +81,18 @@ describe('rate-limit', () => {
         }
     })
 
-    it('chart tier ceiling is a real 600/min (not unlimited)', async () => {
+    it('chart tier ceiling is a real 1000/min (not unlimited)', async () => {
         // Generous but bounded so a scraper can't hammer origin past the CDN.
         const { checkRateLimit } = await import('./rate-limit')
         const ip = '10.0.0.43'
-        for (let i = 0; i < 600; i++) {
+        for (let i = 0; i < 1000; i++) {
             const ok = await checkRateLimit(mockReq(ip), 'chart')
             expect(ok).toBeNull()
         }
         const result = await checkRateLimit(mockReq(ip), 'chart')
         expect(result).not.toBeNull()
         expect(result?.status).toBe(429)
-        expect(result?.headers.get('X-RateLimit-Limit')).toBe('600')
+        expect(result?.headers.get('X-RateLimit-Limit')).toBe('1000')
     })
 
     // F-6 (run-2 §F-6) — `/api/auth/qr` (POST/GET/PUT) + `/api/web-vitals` moved
@@ -183,28 +183,190 @@ describe('rate-limit', () => {
     })
 })
 
-describe('rate-limit: telemetry key ignores unverified Bearer tokens', () => {
+
+// ── Keying: only a VERIFIED identity gets its own bucket ──
+//
+// The Admin SDK and the MCP bearer check are mocked: a token verifies iff it
+// is in `validIdTokens` / `validBearers`.
+const h = vi.hoisted(() => {
+    const validIdTokens = new Map<string, { uid: string; exp: number }>()
+    const validBearers = new Map<string, string>()
+    return {
+        validIdTokens,
+        validBearers,
+        verifyIdToken: vi.fn(async (t: string): Promise<
+            { status: 'valid'; uid: string; exp: number } | { status: 'invalid' } | { status: 'error' }
+        > => {
+            const hit = validIdTokens.get(t)
+            return hit ? { status: 'valid', ...hit } : { status: 'invalid' }
+        }),
+        verifyBearer: vi.fn(async (req: Request) => {
+            const uid = validBearers.get(req.headers.get('authorization')?.slice(7) ?? '')
+            return uid
+                ? { uid, tokenId: 't', parentTokenId: null, orgId: 'crc', kind: null, allowedTools: null }
+                : new Response('Unauthorized', { status: 401 })
+        }),
+    }
+})
+vi.mock('@/lib/firebase-admin', () => ({ verifyIdTokenVerdict: h.verifyIdToken }))
+vi.mock('@/lib/mcp/auth', () => ({ verifyBearer: h.verifyBearer }))
+
+describe('rate-limit: keyed on verified identity only', () => {
     beforeEach(() => {
         delete process.env.UPSTASH_REDIS_REST_URL
         delete process.env.UPSTASH_REDIS_REST_TOKEN
         delete process.env.KV_REST_API_URL
         delete process.env.KV_REST_API_TOKEN
         vi.resetModules()
+        h.validIdTokens.clear()
+        h.validBearers.clear()
+        h.verifyIdToken.mockClear()
+        h.verifyBearer.mockClear()
     })
 
-    const forged = (sub: string, ip: string) => {
-        const payload = Buffer.from(JSON.stringify({ sub })).toString('base64url')
-        return new NextRequest('http://localhost:3000/api/web-vitals', {
-            headers: { 'x-forwarded-for': ip, Authorization: `Bearer h.${payload}.s` },
+    const inAnHour = () => Math.floor(Date.now() / 1000) + 3600
+    const jwtWithSub = (sub: string) =>
+        `h.${Buffer.from(JSON.stringify({ sub })).toString('base64url')}.s`
+    const req = (ip: string, bearer?: string, path = '/api/test') =>
+        new NextRequest(`http://localhost:3000${path}`, {
+            headers: bearer
+                ? { 'x-forwarded-for': ip, Authorization: `Bearer ${bearer}` }
+                : { 'x-forwarded-for': ip },
+        })
+    const TIERS = {
+        api: 60, upload: 10, sync: 3, ai: 20, bridgeSetup: 5,
+        chart: 1000, telemetry: 300, printAnon: 15, perform: 300,
+    } as const
+
+    for (const [tier, max] of Object.entries(TIERS)) {
+        it(`a forged token cannot get a fresh ${tier} bucket per request`, async () => {
+            const { checkRateLimit } = await import('./rate-limit')
+            const ip = `9.9.${tier.length}.${max % 250}`
+            let limited = false
+            for (let i = 0; i <= max; i++) {
+                const r = await checkRateLimit(req(ip, jwtWithSub(`fake-${i}`)), tier as never)
+                if (r) limited = true
+            }
+            expect(limited).toBe(true)
         })
     }
 
-    it('a forged token cannot get a fresh telemetry bucket per request', async () => {
+    it('a forged MCP bearer cannot get a fresh bucket per request', async () => {
         const { checkRateLimit } = await import('./rate-limit')
         let limited = false
-        for (let i = 0; i < 320; i++) {
-            if (await checkRateLimit(forged(`fake-${i}`, '9.9.9.9'), 'telemetry')) limited = true
+        for (let i = 0; i <= 60; i++) {
+            if (await checkRateLimit(req('9.8.7.6', `crl_live_forged${i}`), 'api')) limited = true
         }
         expect(limited).toBe(true)
+    })
+
+    it('a verified Firebase user is keyed by uid, not by the shared IP', async () => {
+        const { checkRateLimit } = await import('./rate-limit')
+        const ip = '10.1.1.1'
+        for (let i = 0; i < 60; i++) await checkRateLimit(req(ip), 'api')
+        expect((await checkRateLimit(req(ip), 'api'))?.status).toBe(429)
+        // A verified user on the same IP has their own bucket...
+        h.validIdTokens.set('a.b.c', { uid: 'musician-1', exp: inAnHour() })
+        expect(await checkRateLimit(req(ip, 'a.b.c'), 'api')).toBeNull()
+        // ...and it follows the uid across IPs.
+        for (let i = 0; i < 59; i++) await checkRateLimit(req(`10.2.0.${i}`, 'a.b.c'), 'api')
+        expect((await checkRateLimit(req('10.3.3.3', 'a.b.c'), 'api'))?.status).toBe(429)
+        // Verified once, then cached by token hash.
+        expect(h.verifyIdToken).toHaveBeenCalledTimes(1)
+    })
+
+    it('reuses the uid a route already verified, with no second verification', async () => {
+        const { checkRateLimit } = await import('./rate-limit')
+        const { noteRateLimitIdentity } = await import('./rate-limit-identity')
+        const r = req('10.4.4.4', 'x.y.z')
+        noteRateLimitIdentity(r, 'leader-1')
+        for (let i = 0; i < 10; i++) await checkRateLimit(r, 'upload')
+        expect((await checkRateLimit(r, 'upload'))?.status).toBe(429)
+        // Another caller on the same IP is unaffected.
+        expect(await checkRateLimit(req('10.4.4.4'), 'upload')).toBeNull()
+        expect(h.verifyIdToken).not.toHaveBeenCalled()
+    })
+
+    it('a token the route found invalid falls back to the IP key', async () => {
+        const { checkRateLimit } = await import('./rate-limit')
+        const { noteRateLimitIdentity } = await import('./rate-limit-identity')
+        const ip = '10.5.5.5'
+        for (let i = 0; i < 5; i++) {
+            const r = req(ip, jwtWithSub(`fake-${i}`))
+            noteRateLimitIdentity(r, null)
+            expect(await checkRateLimit(r, 'bridgeSetup')).toBeNull()
+        }
+        expect((await checkRateLimit(req(ip), 'bridgeSetup'))?.status).toBe(429)
+        expect(h.verifyIdToken).not.toHaveBeenCalled()
+    })
+
+    it('a verified MCP bearer is keyed by its uid', async () => {
+        const { checkRateLimit } = await import('./rate-limit')
+        h.validBearers.set('crl_live_good', 'daniel')
+        const ip = '10.6.6.6'
+        for (let i = 0; i < 60; i++) await checkRateLimit(req(ip), 'api')
+        expect(await checkRateLimit(req(ip, 'crl_live_good'), 'api')).toBeNull()
+    })
+
+    it('telemetry stays IP-keyed even for a verified user', async () => {
+        const { checkRateLimit } = await import('./rate-limit')
+        h.validIdTokens.set('t.o.k', { uid: 'u-tel', exp: inAnHour() })
+        const ip = '10.7.7.7'
+        for (let i = 0; i < 300; i++) await checkRateLimit(req(ip), 'telemetry')
+        expect((await checkRateLimit(req(ip, 't.o.k'), 'telemetry'))?.status).toBe(429)
+        expect(h.verifyIdToken).not.toHaveBeenCalled()
+    })
+
+    it('a flood of garbage JWTs from one IP stops being verified after the pre-limit (3x tier)', async () => {
+        const { checkRateLimit } = await import('./rate-limit')
+        for (let i = 0; i < 400; i++) await checkRateLimit(req('9.7.7.7', jwtWithSub(`junk-${i}`)), 'api')
+        expect(h.verifyIdToken).toHaveBeenCalledTimes(180)
+        // Another IP is unaffected.
+        await checkRateLimit(req('9.7.7.8', jwtWithSub('other')), 'api')
+        expect(h.verifyIdToken).toHaveBeenCalledTimes(181)
+    })
+
+    it('a flood of random MCP bearers from one IP stops costing lookups after the pre-limit', async () => {
+        const { checkRateLimit } = await import('./rate-limit')
+        for (let i = 0; i < 100; i++) await checkRateLimit(req('9.6.6.6', `crl_live_rand${i}`), 'upload')
+        expect(h.verifyBearer).toHaveBeenCalledTimes(30)
+    })
+
+    it('a transient verification error is not cached; the request keys on IP', async () => {
+        const { checkRateLimit } = await import('./rate-limit')
+        h.validIdTokens.set('g.o.d', { uid: 'flaky-user', exp: inAnHour() })
+        h.verifyIdToken.mockResolvedValueOnce({ status: 'error' })
+        const ip = '10.9.9.9'
+        for (let i = 0; i < 59; i++) await checkRateLimit(req(ip), 'api')
+        // Transient failure: counted on the IP bucket (60th).
+        expect(await checkRateLimit(req(ip, 'g.o.d'), 'api')).toBeNull()
+        expect((await checkRateLimit(req(ip), 'api'))?.status).toBe(429)
+        // Next request verifies again (not cached as invalid) and gets the uid bucket.
+        expect(await checkRateLimit(req(ip, 'g.o.d'), 'api')).toBeNull()
+        expect(h.verifyIdToken).toHaveBeenCalledTimes(2)
+    })
+
+    it('anonymous callers are keyed by IP', async () => {
+        const { checkRateLimit } = await import('./rate-limit')
+        for (let i = 0; i < 60; i++) await checkRateLimit(req('10.8.8.8'), 'api')
+        expect((await checkRateLimit(req('10.8.8.8'), 'api'))?.status).toBe(429)
+        expect(await checkRateLimit(req('10.8.8.9'), 'api')).toBeNull()
+    })
+
+    it('a service on one shul IP: 10 anonymous iPads stay under the Perform tiers', async () => {
+        // Worst minute modelled: every iPad opens Perform at once (one tracks
+        // read), then a WiFi blip fires `online` + `visibilitychange` retries
+        // (two more each), while pre-caching a 40-row setlist with one retry
+        // per chart. One IP bucket, all anonymous.
+        const { checkRateLimit } = await import('./rate-limit')
+        const ip = '203.0.113.10'
+        for (let pad = 0; pad < 10; pad++) {
+            for (let k = 0; k < 3; k++) {
+                expect(await checkRateLimit(req(ip, undefined, '/api/setlists/s1/tracks'), 'perform')).toBeNull()
+            }
+            for (let c = 0; c < 40 * 2; c++) {
+                expect(await checkRateLimit(req(ip, undefined, `/api/drive/file/f${c}`), 'chart')).toBeNull()
+            }
+        }
     })
 })

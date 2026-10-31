@@ -26,6 +26,7 @@ import { primeTenantConfig } from "@/lib/org/org-exists"
 import type { OrgId } from "@/lib/org/types"
 import { getTenantAccess, type TenantAccess } from "@/lib/org/access"
 import { asTenantRole, tenantRoleFromClaims } from "@/lib/org/membership-types"
+import { noteRateLimitIdentity } from "@/lib/rate-limit-identity"
 
 export type AuthRole = 'admin' | 'band_leader' | 'musician' | 'member'
 
@@ -122,6 +123,9 @@ export async function requireAuth(
         )
     }
     const decoded = await verifyIdToken(rawToken)
+    // The rate limiter keys this request on the uid we just verified (or on
+    // the client IP when the token failed) instead of verifying it again.
+    noteRateLimitIdentity(req, decoded ? decoded.uid : null)
 
     if (!decoded) {
         if (optional) return null;
