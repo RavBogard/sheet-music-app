@@ -223,6 +223,8 @@ export async function loadLibraryLite(
                 status: str(d.status),
                 canonicalFileId: str(d.canonicalFileId),
                 mimeType: str(d.mimeType),
+                supersededBy: str(d.supersededBy),
+                lineageId: str(d.lineageId),
             })
         }
     }

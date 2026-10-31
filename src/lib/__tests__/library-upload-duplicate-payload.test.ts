@@ -72,6 +72,23 @@ describe("processChartUpload duplicate payload", () => {
             matchedFileId: "existing-1",
             matchedTitle: "Hashkivenu",
             score: 1,
+            matches: [{ fileId: "existing-1", title: "Hashkivenu", score: 1 }],
         })
+    })
+
+    it("bet 2: another tenant's chart of the same name is not a duplicate, and is never named", async () => {
+        // The mocked row has no orgId, so it belongs to crc.
+        const result = await processChartUpload({
+            orgId: "brotherslazaroff",
+            buffer: Buffer.from("x"),
+            originalFileName: "Hashkivenu.txt",
+            mimeType: "text/plain",
+            title: "Hashkivenu",
+            uploaderUid: "u1",
+        }).catch((e: unknown) => ({ ok: false as const, code: "threw", error: String(e) }))
+
+        expect(result).not.toMatchObject({ code: "duplicate_exact" })
+        expect(result).not.toMatchObject({ code: "duplicate_similar" })
+        expect(JSON.stringify(result)).not.toContain("existing-1")
     })
 })

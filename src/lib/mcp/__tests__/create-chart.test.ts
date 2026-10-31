@@ -8,7 +8,8 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
  * chat. These tests pin what a regression would silently break:
  *   - preview renders a PNG and writes NOTHING
  *   - commit renders a PDF, files it, stores the source, bonds when asked
- *   - a revision mints a new id, moves every bond, archives the old row
+ *   - a revision mints a new id and hands the old row to applyRevision
+ *     (its effects are pinned in chart-lineage.emulator.test.ts)
  *   - permission / rate-limit / validation refusals come back as envelopes
  */
 
@@ -19,6 +20,7 @@ const m = vi.hoisted(() => ({
     swapChart: vi.fn(),
     findRefs: vi.fn(),
     markStatus: vi.fn(),
+    applyRevision: vi.fn(),
     applySongMetadata: vi.fn(async () => ({ found: true })),
     stampOrg: vi.fn(async () => undefined),
     docs: new Map<string, Record<string, unknown>>(),
@@ -56,6 +58,10 @@ vi.mock("@/lib/mcp/tools/song-metadata", () => ({ applySongMetadata: (...a: unkn
 vi.mock("@/lib/mcp/tools/setlist-write", () => ({ swapChart: (...a: unknown[]) => m.swapChart(...(a as [])) }))
 vi.mock("@/lib/mcp/tools/setlists", () => ({ findSetlistsReferencingChart: (...a: unknown[]) => m.findRefs(...(a as [])) }))
 vi.mock("@/lib/mcp/tools/mark-chart-status", () => ({ markChartStatus: (...a: unknown[]) => m.markStatus(...(a as [])) }))
+vi.mock("@/lib/library/lineage", async (orig) => {
+    const real = await orig<typeof import("@/lib/library/lineage")>()
+    return { ...real, applyRevision: (...a: unknown[]) => m.applyRevision(...(a as [])) }
+})
 vi.mock("@/lib/mcp/org-context", async (orig) => {
     const real = await orig<typeof import("@/lib/mcp/org-context")>()
     return { ...real, stampOrg: (...a: unknown[]) => m.stampOrg(...(a as [])) }
@@ -183,22 +189,41 @@ describe("create_chart revisions", () => {
                 { setlistId: "s2", trackId: "t9", name: "RH Day 2" },
             ],
         })
+        m.applyRevision.mockResolvedValue({
+            revisionOf: "upload-old",
+            lineageId: "upload-old",
+            repointed: [
+                { setlistId: "s1", trackId: "t1", name: "RH Day 1", day: null },
+                { setlistId: "s2", trackId: "t9", name: "RH Day 2", day: null },
+            ],
+            keptPast: [],
+            standingMoved: 0,
+            profileRowsMoved: 0,
+            previousArchived: true,
+            warnings: [],
+        })
     })
-    it("mints a new id, forces past dedupe, moves every bond, archives the old row", async () => {
+    it("mints a new id, forces past dedupe, and hands the old row to applyRevision", async () => {
         const r = await createChart("u1", chartArgs({ mode: "commit", revisionOf: "upload-old" }), "crc", { render: renderOk() })
         expect(r).toMatchObject({ ok: true, fileId: "upload-new", revisionOf: "upload-old", rebondedFromPrevious: 2, previousArchived: true })
         const upload = m.processChartUpload.mock.calls[0][0] as Record<string, unknown>
         expect(upload.force).toBe(true)
         expect(upload.collection).toBe("supplemental") // inherited from the previous row
-        expect(m.swapChart).toHaveBeenCalledTimes(2)
-        expect(m.markStatus).toHaveBeenCalledWith("u1", expect.objectContaining({ fileId: "upload-old", toStatus: "archived", canonicalFileId: "upload-new", force: true }), "crc")
+        expect(m.applyRevision).toHaveBeenCalledWith("u1", "crc", expect.objectContaining({ id: "upload-old" }), "upload-new", { tool: "create_chart" })
+        expect(m.markStatus).not.toHaveBeenCalled()
         const src = m.sets.find((s) => s.path === "library_index/upload-new")
         expect(src?.data).toMatchObject({ revisionOf: "upload-old" })
     })
     it("does not bond twice when bondTo is one of the rows already moved", async () => {
         const r = await createChart("u1", chartArgs({ mode: "commit", revisionOf: "upload-old", bondTo: { setlistId: "s1", trackId: "t1" } }), "crc", { render: renderOk() })
-        expect(m.swapChart).toHaveBeenCalledTimes(2)
+        expect(m.swapChart).not.toHaveBeenCalled()
         expect((r as { bonded: unknown[] }).bonded).toHaveLength(2)
+    })
+    it("refuses a revision of a chart that already has a newer version", async () => {
+        m.docs.set("library_index/upload-old", { orgId: "crc", authoredBy: "u1", supersededBy: "upload-mid" })
+        const r = await createChart("u1", chartArgs({ mode: "commit", revisionOf: "upload-old" }), "crc", { render: renderOk() })
+        expect(r).toMatchObject({ ok: false, error: { machine_code: "already_superseded" }, supersededBy: "upload-mid" })
+        expect(m.processChartUpload).not.toHaveBeenCalled()
     })
     it("refuses a revision of a chart in another org, or by a non-author musician", async () => {
         m.docs.set("library_index/upload-old", { orgId: "broslaz", authoredBy: "u1" })

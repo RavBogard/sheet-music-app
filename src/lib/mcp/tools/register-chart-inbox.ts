@@ -14,6 +14,7 @@ import {
 } from "@/lib/drive-sync/inbox"
 import { tenantInboxFolder, type TenantInbox } from "@/lib/drive-sync/tenant-inbox"
 import { isErrorEnvelope } from "./result-iserror"
+import { applyInboxRevisions, type InboxRevisionInput } from "./inbox-revisions"
 import {
     isTrustedLeader,
     isUploadAllowed,
@@ -127,7 +128,7 @@ export function registerChartInboxTools(server: McpServer): void {
         {
             title: "Import new files from the Chart Inbox now",
             description:
-                `Import whatever is new in the Chart Inbox Drive folder right now, instead of waiting up to ${INBOX_POLL_INTERVAL_MINUTES} minutes for the scheduled run. Call it right after the user says they have dropped files in the folder. Returns counts (imported / renamed / replaced / skipped / queued) and per-file error notes. Imports up to ${MCP_SYNC_FILE_CAP} files per call; when capReached is true call it again for the rest. Idempotent — running it twice never double-imports. Requires upload permission (admin, band leader, musician, or an account with canUpload).` +
+                `Import whatever is new in the Chart Inbox Drive folder right now, instead of waiting up to ${INBOX_POLL_INTERVAL_MINUTES} minutes for the scheduled run. Call it right after the user says they have dropped files in the folder. Returns counts (imported / renamed / replaced / skipped / queued) and per-file error notes. Imports up to ${MCP_SYNC_FILE_CAP} files per call; when capReached is true call it again for the rest. Idempotent — running it twice never double-imports. When the user says a file is a new version of a library chart, pass it in revisions with that chart's fileId. Requires upload permission (admin, band leader, musician, or an account with canUpload).` +
                 HOW_IT_WORKS,
             inputSchema: {
                 maxFiles: z
@@ -138,6 +139,18 @@ export function registerChartInboxTools(server: McpServer): void {
                     .optional()
                     .describe(
                         `Files to import in this call (default ${MCP_SYNC_FILE_CAP}; keep it small — each file costs a few seconds and the call must finish inside the MCP time limit).`,
+                    ),
+                revisions: z
+                    .array(
+                        z.object({
+                            driveFileId: z.string().min(1).describe("The Drive id of the file in the inbox."),
+                            revisionOf: z.string().min(1).describe("The fileId of the library chart it is a new version of."),
+                        }),
+                    )
+                    .max(10)
+                    .optional()
+                    .describe(
+                        "Files in the inbox that are NEW VERSIONS of charts already in the library. Each becomes the next version of its revisionOf chart (whether or not the scheduled import already filed it): setlists dated today or later move to it with their played key and title kept, past setlists keep the old chart, standing choices follow, and the old one is archived. Handled before the rest of the folder is imported.",
                     ),
             },
         },
@@ -156,11 +169,16 @@ export function registerChartInboxTools(server: McpServer): void {
             })
             if (limited) return jsonResult(rateLimitEnvelope(limited.error))
 
+            const declared = (args as { revisions?: InboxRevisionInput[] }).revisions ?? []
+            const revisions = declared.length
+                ? await applyInboxRevisions(store, uid, org, roles, declared)
+                : undefined
+
             const deps = await buildProdDriveSyncDeps(store, org)
             const result = await syncChartInboxNow(folderId, deps, {
                 fileCap: (args as { maxFiles?: number }).maxFiles,
             })
-            return jsonResult({ ok: true, ...result })
+            return jsonResult({ ok: true, ...result, ...(revisions ? { revisions } : {}) })
         },
     )
 }

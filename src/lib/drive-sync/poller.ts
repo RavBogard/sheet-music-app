@@ -253,7 +253,7 @@ async function enqueueFailure(
     )
 }
 
-async function clearQueue(db: Firestore, driveFileId: string): Promise<void> {
+export async function clearQueue(db: Firestore, driveFileId: string): Promise<void> {
     try {
         await db.collection("chartImportQueue").doc(driveFileId).delete()
     } catch {
@@ -261,7 +261,7 @@ async function clearQueue(db: Firestore, driveFileId: string): Promise<void> {
     }
 }
 
-async function findRowByDriveFileId(
+export async function findRowByDriveFileId(
     db: Firestore,
     driveFileId: string,
 ): Promise<

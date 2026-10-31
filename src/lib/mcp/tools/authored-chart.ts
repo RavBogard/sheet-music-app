@@ -10,8 +10,6 @@ import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import { orgString } from "@/lib/org/strings"
 import type { OrgId } from "@/lib/org/types"
 import { stampOrg } from "@/lib/mcp/org-context"
-import { writeAccess } from "@/lib/library/visibility-server"
-import { notOwnerError } from "@/lib/mcp/not-owner"
 import { houseChartHtml, type HouseChart } from "@/lib/chart-render/house-chart-html"
 import {
     isRenderFailure,
@@ -31,8 +29,7 @@ import {
 import { uploadFailureEnvelope } from "./library-upload"
 import { applySongMetadata } from "./song-metadata"
 import { swapChart } from "./setlist-write"
-import { findSetlistsReferencingChart } from "./setlists"
-import { markChartStatus } from "./mark-chart-status"
+import { applyRevision, loadRevisionTarget, type RevisionReport, type RevisionTarget } from "@/lib/library/lineage"
 
 /**
  * create_chart — Claude writes a chart, the server renders, files, and bonds it.
@@ -45,8 +42,10 @@ import { markChartStatus } from "./mark-chart-status"
  *   commit  → render, file through processChartUpload, store the source on the
  *             row, bond to a setlist row, or supersede an earlier version
  *
- * Revisions ("revisionOf") mint a NEW fileId, re-bond every live setlist row
- * that referenced the old one, and archive the old row. Same-id byte overwrite
+ * Revisions ("revisionOf") mint a NEW fileId, move the rows of setlists dated
+ * today or later (keeping their played key and title), leave past setlists on
+ * the exact chart they had, move standing choices and profile rows, and
+ * archive the old row (still readable) — see src/lib/library/lineage.ts. Same-id byte overwrite
  * was rejected: chart bytes sit behind a 7-day CDN cache, a 1-day browser
  * cache, and an offline IndexedDB keyed by fileId — an overwrite would show
  * stale on iPads. A new id defeats every layer; to the user it is still "the
@@ -107,6 +106,8 @@ export interface CommitResult {
     /** Rows moved from the superseded chart to this one. */
     rebondedFromPrevious: number
     previousArchived: boolean
+    /** Bet 2: what the revision moved (upcoming rows, standing choices, profile rows) and what it left (past rows). */
+    revision: RevisionReport | null
     warnings: string[]
 }
 
@@ -295,38 +296,11 @@ export async function createChart(
     const warnings: string[] = []
 
     // Revision guard: the previous row must exist, be ours, and be revisable by this caller.
-    let previous: { id: string; data: Record<string, unknown> } | null = null
+    let previous: RevisionTarget | null = null
     if (args.revisionOf?.trim()) {
-        const prevSnap = await db.collection("library_index").doc(args.revisionOf.trim()).get()
-        if (!prevSnap.exists) {
-            return richError(
-                "row_not_found",
-                `revisionOf ${args.revisionOf} does not exist.`,
-                { revisionOf: args.revisionOf, errorCode: 404 },
-                "Pass the fileId returned by the earlier create_chart commit, or drop revisionOf to file a new chart.",
-            )
-        }
-        const data = prevSnap.data() ?? {}
-        // Phase 5: revising is a WRITE (OWNS). A chart shared with the caller
-        // gets the clear not_owner refusal; any other foreign row as before.
-        const access = await writeAccess(data, org, args.revisionOf.trim(), db)
-        if (access.kind === "not_owner") return notOwnerError(access, args.revisionOf.trim())
-        if (access.kind !== "owned") {
-            return richError(
-                "row_not_found",
-                `revisionOf ${args.revisionOf} is not in your organization.`,
-                { revisionOf: args.revisionOf, errorCode: 404 },
-            )
-        }
-        const authoredBy = typeof data.authoredBy === "string" ? data.authoredBy : null
-        if (!isTrustedLeader(roles) && authoredBy !== uid) {
-            return richError(
-                "forbidden",
-                "Only the chart's author, an admin, or a band leader may revise it.",
-                { revisionOf: args.revisionOf, errorCode: 403 },
-            )
-        }
-        previous = { id: prevSnap.id, data }
+        const target = await loadRevisionTarget(db, args.revisionOf, org, uid, roles)
+        if ("error" in target) return target
+        previous = target
     }
 
     // Bytes to file.
@@ -406,39 +380,14 @@ export async function createChart(
         }
     }
 
-    // Revision: move every live bond from the previous chart to this one, then archive it.
+    // Revision (bet 2): upcoming setlists follow, past ones keep their chart,
+    // standing choices and profiles move, and the old row is archived.
     const bonded: Array<{ setlistId: string; trackId: string }> = []
-    let rebonded = 0
-    let previousArchived = false
+    let revision: RevisionReport | null = null
     if (previous) {
-        const refs = await findSetlistsReferencingChart(uid, { fileId: previous.id }, org)
-        if ("ok" in refs && refs.ok) {
-            for (const ref of refs.setlists) {
-                const swapped = await swapChart(uid, { setlistId: ref.setlistId, trackId: ref.trackId, newSongId: fileId }, org)
-                if ("ok" in swapped && swapped.ok) {
-                    rebonded++
-                    bonded.push({ setlistId: ref.setlistId, trackId: ref.trackId })
-                } else {
-                    warnings.push(`could not re-bond ${ref.setlistId}/${ref.trackId} from ${previous.id}`)
-                }
-            }
-            if (refs.truncated) warnings.push("referencing-setlist list was truncated; some rows may still point at the previous version")
-        } else {
-            warnings.push(`could not enumerate rows bonded to ${previous.id}; they were not moved`)
-        }
-        const archived = await markChartStatus(
-            uid,
-            {
-                fileId: previous.id,
-                toStatus: "archived",
-                canonicalFileId: fileId,
-                reason: `Superseded by revision ${fileId} via create_chart`,
-                force: true,
-            },
-            org,
-        )
-        previousArchived = "toStatus" in archived
-        if (!previousArchived) warnings.push(`previous version ${previous.id} was not archived`)
+        revision = await applyRevision(uid, org, previous, fileId, { tool: "create_chart" })
+        for (const r of revision.repointed) bonded.push({ setlistId: r.setlistId, trackId: r.trackId })
+        warnings.push(...revision.warnings)
     }
 
     if (args.bondTo) {
@@ -474,8 +423,9 @@ export async function createChart(
         kind: args.source.kind,
         bonded,
         revisionOf: previous?.id ?? null,
-        rebondedFromPrevious: rebonded,
-        previousArchived,
+        rebondedFromPrevious: revision?.repointed.length ?? 0,
+        previousArchived: revision?.previousArchived ?? false,
+        revision,
         warnings,
     }
 }

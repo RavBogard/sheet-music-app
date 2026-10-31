@@ -2095,7 +2095,7 @@ describe("MCP setlist write tools (emulator)", () => {
     })
 
     describe("swap_chart (S-004)", () => {
-        it("swap_chart force-syncs title + key + fileId + fileName from the new song", async () => {
+        it("swap_chart force-syncs title + fileId + fileName, and a chart-given key follows the new chart", async () => {
             // 2026-05-16 Bar Mitzvah session S-004: swapping with bare
             // update_track({songId}) left the operator manually cleaning
             // up title and key. swap_chart bundles it.
@@ -2114,15 +2114,16 @@ describe("MCP setlist write tools (emulator)", () => {
                 setlistId: id,
                 songId: "song-oseh",
                 title: "My Custom Lead-In",
-                key: "Em",
             })) as { trackId: string }
 
             const swap = (await swapChart(ADMIN, {
                 setlistId: id,
                 trackId: r.trackId,
                 newSongId: "song-other",
-            })) as { ok: true; track: Record<string, unknown> }
+            })) as { ok: true; track: Record<string, unknown>; keyChanged: unknown }
             expect(swap.ok).toBe(true)
+            // MCP-18: the row's key came from the old chart (G), so it takes the new one's.
+            expect(swap.keyChanged).toEqual({ from: "G", to: "C" })
 
             const persisted = (
                 await db().collection("tracks").doc(r.trackId).get()
@@ -2131,6 +2132,36 @@ describe("MCP setlist write tools (emulator)", () => {
             expect(persisted.fileName).toBe("Hinei Ma Tov.pdf")
             expect(persisted.title).toBe("Hinei Ma Tov")
             expect(persisted.key).toBe("C") // song-other defaults.key
+        })
+
+        it("swap_chart and update_track keep a played key the author gave (MCP-18)", async () => {
+            await db()
+                .collection("songs")
+                .doc("song-other")
+                .set({ title: "Hinei Ma Tov.pdf", defaults: { key: "C" } })
+            const id = await newSetlist()
+            const a = (await addTrackToSetlist(ADMIN, { setlistId: id, songId: "song-oseh", key: "Em" })) as { trackId: string }
+            const b = (await addTrackToSetlist(ADMIN, { setlistId: id, songId: "song-oseh", key: "Em" })) as { trackId: string }
+
+            const swap = (await swapChart(ADMIN, { setlistId: id, trackId: a.trackId, newSongId: "song-other" })) as { keyChanged: unknown }
+            expect(swap.keyChanged).toBeNull()
+            expect((await db().collection("tracks").doc(a.trackId).get()).data()!.key).toBe("Em")
+
+            const upd = (await updateSetlistTrack(ADMIN, { setlistId: id, trackId: b.trackId, patch: { songId: "song-other" } })) as { keyChanged: unknown }
+            expect(upd.keyChanged).toBeNull()
+            expect((await db().collection("tracks").doc(b.trackId).get()).data()!.key).toBe("Em")
+        })
+
+        it("update_track on a chart change takes the written key when the row's key was the chart's (MCP-18)", async () => {
+            await db()
+                .collection("songs")
+                .doc("song-other")
+                .set({ title: "Hinei Ma Tov.pdf", defaults: { key: "C" } })
+            const id = await newSetlist()
+            const r = (await addTrackToSetlist(ADMIN, { setlistId: id, songId: "song-oseh", key: "G" })) as { trackId: string }
+            const upd = (await updateSetlistTrack(ADMIN, { setlistId: id, trackId: r.trackId, patch: { songId: "song-other" } })) as { keyChanged: unknown }
+            expect(upd.keyChanged).toEqual({ from: "G", to: "C" })
+            expect((await db().collection("tracks").doc(r.trackId).get()).data()!.key).toBe("C")
         })
 
         it("syncMetadata: false leaves title (NOTE-1 fallback) and key untouched", async () => {
