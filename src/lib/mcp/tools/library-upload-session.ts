@@ -539,6 +539,8 @@ export async function finalizeChartUpload(
     const revision = previous
         ? await applyRevision(uid, org, previous, result.fileId, { tool: "finalize_chart_upload" })
         : undefined
+    // The chart is filed; a refused link is said, with its new fileId, and nothing else moved.
+    if (revision && "error" in revision) return revision
 
     return {
         ok: true,

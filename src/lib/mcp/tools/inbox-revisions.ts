@@ -69,7 +69,13 @@ export async function applyInboxRevisions(
                 out.push({ driveFileId, ok: false, error: target })
                 continue
             }
+            // applyRevision refuses (in its transaction) a row that is not active,
+            // is already in a version chain, or would close a cycle or merge lineages.
             const revision = await applyRevision(uid, org, target, existing.docId, { tool: "sync_chart_inbox" })
+            if ("error" in revision) {
+                out.push({ driveFileId, ok: false, error: revision })
+                continue
+            }
             out.push({ driveFileId, ok: true, outcome: "linked", fileId: existing.docId, revision })
             continue
         }

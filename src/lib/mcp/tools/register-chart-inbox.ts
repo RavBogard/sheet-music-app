@@ -150,7 +150,7 @@ export function registerChartInboxTools(server: McpServer): void {
                     .max(10)
                     .optional()
                     .describe(
-                        "Files in the inbox that are NEW VERSIONS of charts already in the library. Each becomes the next version of its revisionOf chart (whether or not the scheduled import already filed it): setlists dated today or later move to it with their played key and title kept, past setlists keep the old chart, standing choices follow, and the old one is archived. Handled before the rest of the folder is imported.",
+                        "Files in the inbox that are NEW VERSIONS of charts already in the library. Each becomes the next version of its revisionOf chart (whether or not the scheduled import already filed it): setlists dated today or later move to it with their played key and title kept, past setlists keep the old chart, standing choices follow, and the old one is archived. Admins and band leaders only. Handled before the rest of the folder is imported.",
                     ),
             },
         },

@@ -3529,7 +3529,7 @@ const collectionSchema = z
 
 /** Bet 2: one wording for `revisionOf` on every intake path. */
 const REVISION_OF_DESCRIPTION =
-    "The fileId of the library chart this file is a NEW VERSION of (a revised PDF, 'v2', 'updated'). The new chart joins that chart's lineage and partGroup; setlists dated today or later move to it with their played key and title kept, past setlists keep the old chart, standing choices and profiles follow, and the old chart is archived (still readable). Skips the name duplicate check. When a duplicate refusal lists `matches`, pass the right one here rather than force:true."
+    "The fileId of the library chart this file is a NEW VERSION of (a revised PDF, 'v2', 'updated'). The new chart joins that chart's lineage and partGroup; setlists dated today or later move to it with their played key and title kept, past setlists keep the old chart, standing choices and profiles follow, and the old chart is archived (still readable). Skips the name duplicate check. When a duplicate refusal lists `matches`, pass the right one here rather than force:true. Admins and band leaders only; anyone else gets revision_needs_leader."
 
 export function registerChartUploadTools(server: McpServer): void {
     server.registerTool(

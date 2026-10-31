@@ -2,6 +2,8 @@ import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { checkUserRateLimit } from "@/lib/rate-limit"
 import {
     processChartUpload,
+    DEDUPE_EXACT_SCAN,
+    DEDUPE_FUZZY_SCAN,
     type LibraryCollection,
     type ProcessChartUploadError,
 } from "@/lib/library-upload"
@@ -284,6 +286,8 @@ export async function uploadChart(
     const revision = previous
         ? await applyRevision(uid, org, previous, result.fileId, { tool: "upload_chart" })
         : undefined
+    // The chart is filed; a refused link is said, with its new fileId, and nothing else moved.
+    if (revision && "error" in revision) return revision
     return {
         ok: true,
         fileId: result.fileId,
@@ -482,10 +486,10 @@ async function probeDedup(
     const exactSnap = await db
         .collection("library_index")
         .where("nameLower", "==", nameLower)
-        .limit(5)
+        .limit(DEDUPE_EXACT_SCAN)
         .get()
     // Bet 2: the caller's org only, like processChartUpload's own check.
-    const exactHit = exactSnap.docs.find(
+    const exactHit = exactSnap.docs.filter((d) => rowOrg((d.data() as Record<string, unknown>).orgId) === org).slice(0, 5).find(
         (d) =>
             (d.data() as Record<string, unknown>).status === "active" &&
             rowOrg((d.data() as Record<string, unknown>).orgId) === org,
@@ -513,12 +517,13 @@ async function probeDedup(
         .where("normalizedName", ">=", prefix)
         .where("normalizedName", "<", prefixEnd)
         .select("name", "normalizedName", "status", "orgId")
-        .limit(20)
+        .limit(DEDUPE_FUZZY_SCAN)
         .get()
 
     let bestScore = 0
     let bestRow: DedupProbeResult["matchedRow"] = null
-    for (const doc of similarSnap.docs) {
+    // The org filter runs before the 20-row window is cut.
+    for (const doc of similarSnap.docs.filter((d) => rowOrg((d.data() as Record<string, unknown>).orgId) === org).slice(0, 20)) {
         const data = doc.data() as Record<string, unknown>
         if (data.status !== "active") continue
         if (rowOrg(data.orgId) !== org) continue
@@ -769,6 +774,8 @@ export async function importChartFromDrive(
     const revision = previous
         ? await applyRevision(uid, org, previous, result.fileId, { tool: "import_chart_from_drive" })
         : undefined
+    // The chart is filed; a refused link is said, with its new fileId, and nothing else moved.
+    if (revision && "error" in revision) return revision
     return {
         ok: true,
         fileId: result.fileId,
@@ -1294,6 +1301,8 @@ export async function saveScrapedChart(
     const revision = previous
         ? await applyRevision(uid, org, previous, result.fileId, { tool: "save_scraped_chart" })
         : undefined
+    // The chart is filed; a refused link is said, with its new fileId, and nothing else moved.
+    if (revision && "error" in revision) return revision
     return {
         ok: true,
         fileId: result.fileId,

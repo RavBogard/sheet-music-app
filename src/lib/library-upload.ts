@@ -58,6 +58,14 @@ import { stampNewChartIfShared } from "@/lib/library/visibility-job"
  * indexing semantics.
  */
 
+/**
+ * Bet 2: the dedupe queries read this many rows and keep the caller's org's
+ * first 5 (exact) / 20 (similar). No composite index is needed, and another
+ * tenant's rows cannot crowd the caller's out of the window.
+ */
+export const DEDUPE_EXACT_SCAN = 50
+export const DEDUPE_FUZZY_SCAN = 200
+
 export const MAX_CHART_UPLOAD_BYTES = 25 * 1024 * 1024 // 25 MB — matches HTTP route
 
 /** One list, src/lib/library/collections.ts (multi-tenant phase 1). */
@@ -491,15 +499,17 @@ export async function processChartUpload(
         const exactMatch = await db
             .collection("library_index")
             .where("nameLower", "==", nameLower)
-            .limit(5)
+            .limit(DEDUPE_EXACT_SCAN)
             .get()
         stage("dedup-exact:done", { matches: exactMatch.size })
         // Bet 2: the check is the uploader's org only. Another tenant's chart
         // of the same name is not a duplicate here, and its name and id must
-        // not reach this caller.
-        const activeExact = exactMatch.docs.filter(
-            (d) => d.data().status === "active" && rowOrg(d.data().orgId) === input.orgId,
-        )
+        // not reach this caller. The org filter runs BEFORE the window is cut,
+        // so other tenants' rows cannot use it up.
+        const activeExact = exactMatch.docs
+            .filter((d) => rowOrg(d.data().orgId) === input.orgId)
+            .slice(0, 5)
+            .filter((d) => d.data().status === "active")
         const activeExactMatch = activeExact[0]
         if (activeExactMatch) {
             const existingName = activeExactMatch.data().name
@@ -534,14 +544,14 @@ export async function processChartUpload(
             .where("normalizedName", ">=", prefix)
             .where("normalizedName", "<", prefixEnd)
             .select("name", "normalizedName", "status", "orgId")
-            .limit(20)
+            .limit(DEDUPE_FUZZY_SCAN)
             .get()
         stage("dedup-fuzzy:done", { candidates: similarSnap.size })
 
         const similar: Array<{ fileId: string; title: string; score: number }> = []
-        for (const doc of similarSnap.docs) {
+        const inOrg = similarSnap.docs.filter((d) => rowOrg(d.data().orgId) === input.orgId).slice(0, 20)
+        for (const doc of inOrg) {
             if (doc.data().status !== "active") continue
-            if (rowOrg(doc.data().orgId) !== input.orgId) continue
             const existingName = doc.data().name as string
             const normalizedExisting =
                 (doc.data().normalizedName as string | undefined) ??

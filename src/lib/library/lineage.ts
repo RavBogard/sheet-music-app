@@ -8,6 +8,8 @@ import { writeAccess } from "@/lib/library/visibility-server"
 import { notOwnerError } from "@/lib/mcp/not-owner"
 import { eventDayOf, orgDay } from "@/lib/performance/tonight"
 import { STANDING_COLLECTION } from "@/lib/profiles/standing"
+import { upcomingForeignUses } from "@/lib/library/shared-usage"
+import { linkRefusal } from "@/lib/library/lineage-pure"
 import { logger } from "@/lib/logger"
 import type { OrgId } from "@/lib/org/types"
 import { isTrustedLeader, type UploaderRoles } from "@/lib/mcp/tools/uploader-roles"
@@ -40,9 +42,9 @@ function str(v: unknown): string | null {
 }
 
 /**
- * The row a revision supersedes: it must exist, be owned by the caller's org,
- * not already have a newer version, and be revisable by the caller (an admin
- * or band leader, or the person who filed it).
+ * The row a revision supersedes: it must exist, be owned by the caller's org
+ * and not already have a newer version. Only an admin or band leader may file
+ * a version: a revision moves setlists, standing choices and profiles.
  */
 export async function loadRevisionTarget(
     db: FirebaseFirestore.Firestore,
@@ -68,24 +70,28 @@ export async function loadRevisionTarget(
     const access = await writeAccess(data, org, id, db)
     if (access.kind === "not_owner") return notOwnerError(access, id)
     if (access.kind !== "owned") return notFound()
-    const filedBy = str(data.authoredBy) ?? str(data.uploadedBy)
-    if (!isTrustedLeader(roles) && filedBy !== uid) {
+    if (!isTrustedLeader(roles)) {
         return richError(
-            "forbidden",
-            "Only the person who filed this chart, an admin, or a band leader may file a new version of it.",
-            { revisionOf: id, errorCode: 403 },
+            "revision_needs_leader",
+            "Only an admin or a band leader may file a new version of a chart: a new version moves upcoming setlists, standing choices and profiles.",
+            { revisionOf: id, callerRole: roles.role ?? null, requiredRoles: ["admin", "band_leader"], errorCode: 403 },
+            "File it without revisionOf, then ask a band leader to mark it as a new version.",
         )
     }
+    void uid
     const newer = str(data.supersededBy)
-    if (newer) {
-        return richError(
-            "already_superseded",
-            `${id} already has a newer version (${newer}).`,
-            { revisionOf: id, supersededBy: newer, errorCode: 409 },
-            `Pass revisionOf:'${newer}' to file a version after the current one.`,
-        )
-    }
+    if (newer) return alreadySuperseded(id, newer)
     return { id: snap.id, data }
+}
+
+function alreadySuperseded(id: string, newer: string, filedAs?: string): RichErrorEnvelope {
+    return richError(
+        "already_superseded",
+        `${id} already has a newer version (${newer}).` +
+            (filedAs ? ` Your file was saved as ${filedAs}, with no version link.` : ""),
+        { revisionOf: id, supersededBy: newer, ...(filedAs ? { filedAs } : {}), errorCode: 409 },
+        `Pass revisionOf:'${newer}' to file a version after the current one.`,
+    )
 }
 
 export interface RevisionRowRef {
@@ -99,10 +105,17 @@ export interface RevisionRowRef {
 export interface RevisionReport {
     revisionOf: string
     lineageId: string
-    /** Rows of setlists dated today or later (or undated) now on the new version. */
+    /** Rows of setlists dated today or later, now on the new version. */
     repointed: RevisionRowRef[]
     /** Rows of past setlists, left on the exact chart they had. */
     keptPast: RevisionRowRef[]
+    /** Rows of setlists with no date, left on the chart they had (Daniel: only "dated today or later" move). */
+    keptUndated: RevisionRowRef[]
+    /**
+     * Rows of OTHER organizations' upcoming setlists that use this chart (a
+     * shared chart). They stay on the archived version; counted, never named.
+     */
+    otherOrgUpcomingRows: number
     standingMoved: number
     profileRowsMoved: number
     previousArchived: boolean
@@ -112,11 +125,14 @@ export interface RevisionReport {
 /**
  * Make `newFileId` the next version of `previous`:
  *   1. lineage fields on both rows; the new row takes the old row's partGroup
- *   2. rows of setlists dated today or later (or undated) move to the new
- *      version, keeping their played key and title; past setlists are untouched
+ *   2. rows of setlists dated today or later move to the new version, keeping
+ *      their played key and title; past and undated setlists are untouched
  *   3. standing choices and profile rows on the old fileId move to the new one
  *   4. the old row is archived (still readable) with `supersededBy`
- * Each step is best effort: a failure is a warning and the rest still runs.
+ * Step 1 is one transaction: it re-reads both rows and refuses (nothing else
+ * is written) when the old row gained a newer version meanwhile, or when the
+ * link would merge two lineages or close a cycle. Steps 2-4 are best effort:
+ * a failure is a warning and the rest still runs.
  */
 export async function applyRevision(
     uid: string,
@@ -124,7 +140,7 @@ export async function applyRevision(
     previous: RevisionTarget,
     newFileId: string,
     opts: { tool: string; nowMs?: number } = { tool: "revision" },
-): Promise<RevisionReport> {
+): Promise<RevisionReport | RichErrorEnvelope> {
     initAdmin()
     const db = getFirestore()
     const warnings: string[] = []
@@ -132,34 +148,73 @@ export async function applyRevision(
     const partGroup = str(previous.data.partGroup)
     const today = orgDay(opts.nowMs ?? Date.now(), org)
 
-    // 1. Lineage fields.
+    // 1. Lineage fields, in one transaction with the checks.
+    const prevRef = db.collection(LIBRARY).doc(previous.id)
+    const newRef = db.collection(LIBRARY).doc(newFileId)
+    let refusal: RichErrorEnvelope | null = null
     try {
-        const batch = db.batch()
-        batch.update(db.collection(LIBRARY).doc(newFileId), {
-            lineageId,
-            supersedes: previous.id,
-            revisionOf: previous.id,
-            ...(partGroup ? { partGroup } : {}),
+        await db.runTransaction(async (tx) => {
+            refusal = null
+            const [prevSnap, newSnap] = await Promise.all([tx.get(prevRef), tx.get(newRef)])
+            const prev = prevSnap.data() ?? {}
+            if (!prevSnap.exists || rowOrg(prev.orgId) !== org) {
+                refusal = richError("row_not_found", `revisionOf ${previous.id} is not a chart in your library.`, {
+                    revisionOf: previous.id,
+                    filedAs: newFileId,
+                    errorCode: 404,
+                })
+                return
+            }
+            const newer = str(prev.supersededBy)
+            if (newer) {
+                refusal = alreadySuperseded(previous.id, newer, newFileId)
+                return
+            }
+            const why = newSnap.exists
+                ? linkRefusal({ id: newFileId, ...(newSnap.data() ?? {}) }, { id: previous.id, ...prev })
+                : "it does not exist"
+            if (why) {
+                refusal = richError(
+                    "lineage_conflict",
+                    `${newFileId} cannot become the next version of ${previous.id}: ${why}.`,
+                    { revisionOf: previous.id, fileId: newFileId, reason: why, errorCode: 409 },
+                    "Only an active chart that is not yet part of any version chain can be linked as a new version.",
+                )
+                return
+            }
+            tx.update(newRef, {
+                lineageId,
+                supersedes: previous.id,
+                revisionOf: previous.id,
+                ...(partGroup ? { partGroup } : {}),
+            })
+            tx.update(prevRef, { lineageId, supersededBy: newFileId })
         })
-        batch.update(db.collection(LIBRARY).doc(previous.id), {
-            lineageId,
-            supersededBy: newFileId,
-        })
-        await batch.commit()
     } catch (err) {
-        warnings.push(`lineage fields not written: ${err instanceof Error ? err.message : String(err)}`)
         logger.warn(`[${opts.tool}] lineage write failed`, { previous: previous.id, newFileId, err })
+        return richError(
+            "revision_failed",
+            `The version link was not written: ${err instanceof Error ? err.message : String(err)}. Your file was saved as ${newFileId}.`,
+            { revisionOf: previous.id, filedAs: newFileId, errorCode: 500 },
+            "Nothing else was moved. Retry the link with sync_chart_inbox revisions, or ask a band leader to link it.",
+        )
     }
+    if (refusal) return refusal
 
     // 2. Upcoming setlists follow; past ones keep their exact chart.
     const repointed: RevisionRowRef[] = []
     const keptPast: RevisionRowRef[] = []
+    const keptUndated: RevisionRowRef[] = []
     const refs = await findSetlistsReferencingChart(uid, { fileId: previous.id }, org)
     if ("ok" in refs && refs.ok) {
         for (const ref of refs.setlists) {
             const day = eventDayOf(ref.eventDate ?? ref.date, org)
             const row: RevisionRowRef = { setlistId: ref.setlistId, trackId: ref.trackId, name: ref.name, day }
-            if (day !== null && day < today) {
+            if (day === null) {
+                keptUndated.push(row)
+                continue
+            }
+            if (day < today) {
                 keptPast.push(row)
                 continue
             }
@@ -174,6 +229,20 @@ export async function applyRevision(
         if (refs.truncated) warnings.push("referencing-setlist list was truncated; some upcoming rows may still point at the previous version")
     } else {
         warnings.push(`could not list the setlists using ${previous.id}; none were moved`)
+    }
+
+    // A shared chart: other organizations' upcoming rows stay on the archived
+    // version. Counted only; their setlists are never named here.
+    let otherOrgUpcomingRows = 0
+    try {
+        otherOrgUpcomingRows = (await upcomingForeignUses(db, previous.id, org, opts.nowMs ?? Date.now())).length
+        if (otherOrgUpcomingRows > 0) {
+            warnings.push(
+                `${otherOrgUpcomingRows} row(s) in another organization's upcoming setlists use this shared chart and stay on the archived version.`,
+            )
+        }
+    } catch {
+        /* the count is advisory */
     }
 
     // 3. Standing choices and profile rows.
@@ -272,6 +341,8 @@ export async function applyRevision(
         lineageId,
         repointed,
         keptPast,
+        keptUndated,
+        otherOrgUpcomingRows,
         standingMoved,
         profileRowsMoved,
         previousArchived,

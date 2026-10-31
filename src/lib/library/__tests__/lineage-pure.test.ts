@@ -6,6 +6,7 @@ import {
     chartChangeKey,
     currentVersionOf,
     hasVersionMarker,
+    linkRefusal,
     proposeLineagePairs,
     stripVersionMarkers,
     type LineageCandidateRow,
@@ -179,5 +180,22 @@ describe("memory follows lineage (goal 6)", () => {
         const sets = [setlist("a", 26, "old")]
         buildSlotUses(sets, library, F)
         expect(sets[0].tracks[0].fileId).toBe("old")
+    })
+})
+
+describe("linkRefusal", () => {
+    const fresh = { id: "b", status: "active" }
+    it("allows an active chart in no lineage", () => {
+        expect(linkRefusal(fresh, { id: "a" })).toBeNull()
+    })
+    it("refuses itself, an inactive chart, and a chart already in a chain", () => {
+        expect(linkRefusal({ id: "a", status: "active" }, { id: "a" })).not.toBeNull()
+        expect(linkRefusal({ ...fresh, status: "archived" }, { id: "a" })).not.toBeNull()
+        expect(linkRefusal({ ...fresh, lineageId: "z" }, { id: "a" })).not.toBeNull()
+        expect(linkRefusal({ ...fresh, supersedes: "z" }, { id: "a" })).not.toBeNull()
+        expect(linkRefusal({ ...fresh, supersededBy: "z" }, { id: "a" })).not.toBeNull()
+    })
+    it("refuses A -> B -> A: the root of the target's lineage", () => {
+        expect(linkRefusal({ id: "a", status: "active" }, { id: "b", lineageId: "a" })).not.toBeNull()
     })
 })

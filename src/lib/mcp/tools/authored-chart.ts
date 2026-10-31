@@ -385,7 +385,9 @@ export async function createChart(
     const bonded: Array<{ setlistId: string; trackId: string }> = []
     let revision: RevisionReport | null = null
     if (previous) {
-        revision = await applyRevision(uid, org, previous, fileId, { tool: "create_chart" })
+        const applied = await applyRevision(uid, org, previous, fileId, { tool: "create_chart" })
+        if ("error" in applied) return applied
+        revision = applied
         for (const r of revision.repointed) bonded.push({ setlistId: r.setlistId, trackId: r.trackId })
         warnings.push(...revision.warnings)
     }

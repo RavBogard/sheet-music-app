@@ -2,8 +2,10 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 import { initializeApp, deleteApp, getApps, type App } from "firebase-admin/app"
 import { getFirestore } from "firebase-admin/firestore"
 
-import { applyRevision, loadRevisionTarget, type RevisionTarget } from "../lineage"
+import { applyRevision, loadRevisionTarget, type RevisionReport, type RevisionTarget } from "../lineage"
 import { backfillChartLineage } from "@/lib/mcp/tools/backfill-chart-lineage"
+import { applyInboxRevisions } from "@/lib/mcp/tools/inbox-revisions"
+import { uploadChart } from "@/lib/mcp/tools/library-upload"
 
 /**
  * Bet 2 — chart lineage against the Firestore emulator. Daniel's ruling
@@ -63,6 +65,9 @@ describe("chart lineage (emulator)", () => {
         // A Brothers Lazaroff gig using the CRC chart (a shared chart).
         await setlist("s-bl", BL, "2026-11-08T01:00:00.000Z")
         await track("t-bl", "s-bl", BL, "Adon Olam")
+        // A setlist with no date: Daniel's ruling moves only "dated today or later".
+        await db().collection("setlists").doc("s-undated").set({ name: "Working draft", orgId: CRC, ownerId: ADMIN, version: 1, trackCount: 1, songCount: 1, fileIds: ["old"] })
+        await track("t-undated", "s-undated", CRC, "Adon Olam")
 
         const standing = (org: string) =>
             db().collection("standing_choices").doc(`${org}__friday_night__moment%3Aadon-olam`).set({
@@ -84,17 +89,30 @@ describe("chart lineage (emulator)", () => {
         await profile(BL)
     })
 
+    async function revise(prevId: string, newId: string): Promise<RevisionReport> {
+        const t = await loadRevisionTarget(db(), prevId, CRC, ADMIN, LEADER)
+        if ("error" in t) throw new Error(`no target: ${JSON.stringify(t)}`)
+        const r = await applyRevision(ADMIN, CRC, t, newId, { tool: "test", nowMs: NOW })
+        if ("error" in r) throw new Error(`refused: ${JSON.stringify(r)}`)
+        return r
+    }
+
     async function target(org = CRC): Promise<RevisionTarget> {
         const t = await loadRevisionTarget(db(), "old", org, ADMIN, LEADER)
         if ("error" in t) throw new Error(`no target: ${JSON.stringify(t)}`)
         return t
     }
 
-    it("moves upcoming rows only, keeping their played key and title; past setlists keep the exact chart", async () => {
-        const report = await applyRevision(ADMIN, CRC, await target(), "new", { tool: "test", nowMs: NOW })
+    it("moves upcoming rows only, keeping their played key and title; past and undated setlists keep the exact chart", async () => {
+        const report = await revise("old", "new")
 
         expect(report.repointed.map((r) => r.setlistId)).toEqual(["s-next"])
         expect(report.keptPast.map((r) => r.setlistId)).toEqual(["s-past"])
+        expect(report.keptUndated.map((r) => r.setlistId)).toEqual(["s-undated"])
+        expect((await db().collection("tracks").doc("t-undated").get()).data()!.fileId).toBe("old")
+        // The Brothers Lazaroff gig on this shared chart is counted, never named.
+        expect(report.otherOrgUpcomingRows).toBe(1)
+        expect(JSON.stringify(report)).not.toContain("s-bl")
 
         const next = (await db().collection("tracks").doc("t-next").get()).data()!
         expect(next).toMatchObject({ fileId: "new", songId: "new", key: "E", title: "Adon Olam (closing)" })
@@ -103,7 +121,7 @@ describe("chart lineage (emulator)", () => {
     })
 
     it("writes the lineage on both rows, gives the new row the old partGroup, and archives the old row", async () => {
-        const report = await applyRevision(ADMIN, CRC, await target(), "new", { tool: "test", nowMs: NOW })
+        const report = await revise("old", "new")
         expect(report).toMatchObject({ revisionOf: "old", lineageId: "old", previousArchived: true })
 
         const oldRow = (await db().collection("library_index").doc("old").get()).data()!
@@ -117,7 +135,7 @@ describe("chart lineage (emulator)", () => {
     })
 
     it("moves this org's standing choices and profile rows, nothing of the other tenant's", async () => {
-        const report = await applyRevision(ADMIN, CRC, await target(), "new", { tool: "test", nowMs: NOW })
+        const report = await revise("old", "new")
         expect(report.standingMoved).toBe(1)
         expect(report.profileRowsMoved).toBe(2)
 
@@ -144,11 +162,68 @@ describe("chart lineage (emulator)", () => {
         expect(JSON.stringify(r)).not.toContain("Adon Olam")
     })
 
-    it("a musician may revise only a chart they filed", async () => {
+    it("a musician cannot file a new version, even of a chart they filed; nothing is written", async () => {
+        await db().collection("users").doc("mus").set({ role: "musician", email: "m@crc.test" })
+        await db().collection("library_index").doc("old").update({ uploadedBy: "mus" })
         const musician = { role: "musician", canUpload: true, email: "m@crc.test" }
-        expect(code(await loadRevisionTarget(db(), "old", CRC, "someone-else", musician))).toBe("forbidden")
-        const own = await loadRevisionTarget(db(), "old", CRC, ADMIN, musician)
-        expect(code(own)).toBeUndefined()
+        const direct = await loadRevisionTarget(db(), "old", CRC, "mus", musician)
+        expect(code(direct)).toBe("revision_needs_leader")
+        expect((direct as unknown as { hint: string }).hint).toContain("ask a band leader to mark it as a new version")
+
+        const before = (await db().collection("library_index").get()).size
+        const viaUpload = await uploadChart(
+            "mus",
+            { title: "Adon Olam band chart v3", fileBase64: Buffer.from("%PDF-1.4 v3").toString("base64"), mimeType: "application/pdf", revisionOf: "old" },
+            CRC,
+        )
+        expect(code(viaUpload)).toBe("revision_needs_leader")
+        expect((await db().collection("library_index").get()).size).toBe(before)
+        expect((await db().collection("library_index").doc("old").get()).data()!.supersededBy).toBeUndefined()
+        expect((await db().collection("tracks").doc("t-next").get()).data()!.fileId).toBe("old")
+    })
+
+    it("two concurrent revisions of one chart cannot fork the lineage: the loser gets already_superseded", async () => {
+        await db().collection("library_index").doc("new2").set({ name: "Adon Olam band chart v3", orgId: CRC, status: "active", uploadedBy: ADMIN })
+        const [a, b] = await Promise.all([target(), target()])
+        const results = await Promise.all([
+            applyRevision(ADMIN, CRC, a, "new", { tool: "test", nowMs: NOW }),
+            applyRevision(ADMIN, CRC, b, "new2", { tool: "test", nowMs: NOW }),
+        ])
+        const codes = results.map(code)
+        expect(codes.filter((c) => c === undefined)).toHaveLength(1)
+        expect(codes.filter((c) => c === "already_superseded")).toHaveLength(1)
+        const winner = codes[0] === undefined ? "new" : "new2"
+        const loser = winner === "new" ? "new2" : "new"
+        expect((await db().collection("library_index").doc("old").get()).data()!.supersededBy).toBe(winner)
+        expect((await db().collection("library_index").doc(loser).get()).data()!.supersedes).toBeUndefined()
+    })
+
+    it("a link that would close a cycle (A -> B -> A) is refused", async () => {
+        await revise("old", "new")
+        await db().collection("library_index").doc("old").update({ driveFileId: "drive-old" })
+        const [r] = await applyInboxRevisions(db(), ADMIN, CRC, LEADER, [{ driveFileId: "drive-old", revisionOf: "new" }])
+        expect(r.ok).toBe(false)
+        expect(code((r as { error: unknown }).error)).toBe("lineage_conflict")
+        expect((await db().collection("library_index").doc("new").get()).data()!.supersededBy).toBeUndefined()
+        expect((await db().collection("library_index").doc("old").get()).data()!.supersedes).toBeUndefined()
+    })
+
+    it("a link that would merge two lineages is refused", async () => {
+        // x1 -> x2 is another chart's version chain.
+        await db().collection("library_index").doc("x1").set({ name: "Shalom Rav", orgId: CRC, status: "archived", lineageId: "x1", supersededBy: "x2" })
+        await db().collection("library_index").doc("x2").set({ name: "Shalom Rav v2", orgId: CRC, status: "active", lineageId: "x1", supersedes: "x1", driveFileId: "drive-x2" })
+        const [r] = await applyInboxRevisions(db(), ADMIN, CRC, LEADER, [{ driveFileId: "drive-x2", revisionOf: "old" }])
+        expect(code((r as { error: unknown }).error)).toBe("lineage_conflict")
+        expect((await db().collection("library_index").doc("old").get()).data()!.supersededBy).toBeUndefined()
+        expect((await db().collection("library_index").doc("x2").get()).data()!.lineageId).toBe("x1")
+        expect((await db().collection("tracks").doc("t-next").get()).data()!.fileId).toBe("old")
+    })
+
+    it("the inbox links an already-imported active file as the next version", async () => {
+        await db().collection("library_index").doc("new").update({ driveFileId: "drive-new" })
+        const [r] = await applyInboxRevisions(db(), ADMIN, CRC, LEADER, [{ driveFileId: "drive-new", revisionOf: "old" }])
+        expect(r).toMatchObject({ ok: true, outcome: "linked", fileId: "new" })
+        expect((await db().collection("library_index").doc("old").get()).data()!.supersededBy).toBe("new")
     })
 
     it("backfill_chart_lineage: dry run lists the pair, a real run needs force and links this org only", async () => {

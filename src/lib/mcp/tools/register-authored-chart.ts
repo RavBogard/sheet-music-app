@@ -129,7 +129,7 @@ export function registerAuthoredChartTools(server: McpServer): void {
                     .string()
                     .min(1)
                     .optional()
-                    .describe("Commit only: the fileId of the earlier version this replaces. Rows of setlists dated today or later move to the new chart (played key and title kept), past setlists keep the old one, standing choices follow, and it is archived."),
+                    .describe("Commit only: the fileId of the earlier version this replaces. Rows of setlists dated today or later move to the new chart (played key and title kept), past setlists keep the old one, standing choices follow, and it is archived. Admins and band leaders only."),
                 previewScale: z.number().min(1).max(3).optional().describe("Preview only: image scale (default 2)."),
             },
         },

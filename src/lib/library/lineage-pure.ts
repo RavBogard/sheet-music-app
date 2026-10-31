@@ -47,6 +47,32 @@ export function currentVersionOf(
     return path[path.length - 1]
 }
 
+export interface LinkRow {
+    id: string
+    status?: unknown
+    lineageId?: unknown
+    supersedes?: unknown
+    supersededBy?: unknown
+}
+
+function has(v: unknown): boolean {
+    return typeof v === "string" && v.trim().length > 0
+}
+
+/**
+ * Why `next` may not become the next version of `prev`, or null when it may.
+ * `next` must be an active chart in no lineage yet, and not `prev` itself or
+ * `prev`'s lineage root: that keeps every lineage a single chain, with no
+ * cycle (A -> B -> A) and no merge of two lineages.
+ */
+export function linkRefusal(next: LinkRow, prev: LinkRow): string | null {
+    if (next.id === prev.id) return "a chart cannot be a new version of itself"
+    if (next.status !== "active") return "it is not an active chart"
+    if (has(next.lineageId) || has(next.supersedes) || has(next.supersededBy)) return "it is already part of a version chain"
+    if (prev.lineageId === next.id) return "it is an earlier version of that chart"
+    return null
+}
+
 // ─── one key rule on a chart change (MCP-18) ───────────────────────────────
 
 export interface ChartChangeKeyInput {

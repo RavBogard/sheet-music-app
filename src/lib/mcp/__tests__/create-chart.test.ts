@@ -225,7 +225,7 @@ describe("create_chart revisions", () => {
         expect(r).toMatchObject({ ok: false, error: { machine_code: "already_superseded" }, supersededBy: "upload-mid" })
         expect(m.processChartUpload).not.toHaveBeenCalled()
     })
-    it("refuses a revision of a chart in another org, or by a non-author musician", async () => {
+    it("refuses a revision of a chart in another org, or by a musician", async () => {
         m.docs.set("library_index/upload-old", { orgId: "broslaz", authoredBy: "u1" })
         const other = await createChart("u1", chartArgs({ mode: "commit", revisionOf: "upload-old" }), "crc", { render: renderOk() })
         expect(other).toMatchObject({ ok: false, error: { machine_code: "row_not_found" } })
@@ -233,7 +233,7 @@ describe("create_chart revisions", () => {
         m.docs.set("library_index/upload-old", { orgId: "crc", authoredBy: "someone-else" })
         m.roles = { role: "musician", canUpload: true, email: "m@x" }
         const notMine = await createChart("u2", chartArgs({ mode: "commit", revisionOf: "upload-old" }), "crc", { render: renderOk() })
-        expect(notMine).toMatchObject({ ok: false, error: { machine_code: "forbidden" } })
+        expect(notMine).toMatchObject({ ok: false, error: { machine_code: "revision_needs_leader" } })
         expect(m.processChartUpload).not.toHaveBeenCalled()
     })
     it("unknown revisionOf → row_not_found before anything is rendered", async () => {
