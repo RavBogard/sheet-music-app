@@ -46,7 +46,7 @@ import { vsLastOf, type VsLast } from "@/lib/profiles/vs-last"
 import { writeStanding } from "@/lib/profiles/standing"
 import type { Promotion, Tier } from "@/lib/profiles/tiers"
 import { readOpenItems } from "./open-items"
-import { cacheLearnedProfile, coreProfileFor, findLegacyTemplate, findProfileTemplateFor, tierProfileRows } from "./service-profiles"
+import { cacheLearnedProfile, coreProfileFor, findLegacyTemplate, findProfileTemplateFor, learnedOrderGuard, tierProfileRows } from "./service-profiles"
 import { profileLabelFor, setAnnouncement } from "./standing"
 import { rateLimitGate, writeSetlistFromTemplateRows, type TemplateProfile, type UnresolvedLiturgyRow } from "./templates"
 
@@ -231,7 +231,10 @@ export async function draftServiceTool(
         let templateId: string
         let serviceNotes: string | null = typeof stored?.serviceNotes === "string" ? stored.serviceNotes : null
         let origin: DraftOrigin
-        if (def && learned?.learnedFrom) {
+        // A learned order that is empty or under half the saved one is a learning fault: draft from the saved profile.
+        const storedCount = Array.isArray(stored?.tracks) ? (stored!.tracks as unknown[]).length : 0
+        const shrunk = !!doc && !!learned?.learnedFrom && learnedOrderGuard(learned.tracks.length, storedCount) !== null
+        if (def && learned?.learnedFrom && !shrunk) {
             // The profile doc is a cache: refresh it for a current draft, never from a past date's view.
             // A past date's view never creates or rewrites it.
             const current = date >= dayInZone(now.getTime(), zone)
