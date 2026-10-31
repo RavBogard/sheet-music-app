@@ -180,34 +180,66 @@ function clientIp(req: NextRequest): string {
 }
 
 // Verified Firebase ID tokens, by SHA-256 of the token → uid (or null for a
-// token that failed). Only consulted when the route has NOT already verified
-// the caller (see rate-limit-identity.ts). Entries live 60 s, never past the
-// token's own expiry; the map is cleared when it grows past its cap so a flood
-// of random tokens cannot grow it without bound.
+// token that is DEFINITELY invalid: bad signature, malformed, expired). A
+// transient failure (cert fetch, Admin SDK down) is never cached. Only
+// consulted when the route has NOT already verified the caller (see
+// rate-limit-identity.ts). Entries live 60 s, never past the token's own
+// expiry; the map is cleared at its cap so random tokens cannot grow it.
 const ID_TOKEN_CACHE_MS = 60_000
 const ID_TOKEN_CACHE_MAX = 5_000
 const idTokenCache = new Map<string, { uid: string | null; until: number }>()
 
-async function verifiedIdTokenUid(token: string): Promise<string | null> {
+/**
+ * Verification pre-limit. Verifying a token costs an RSA check (Firebase) or
+ * a Firestore read (MCP bearer), so an IP may only trigger VERIFY_PRELIMIT_X
+ * times the tier's limit of them per window. Past that, its tokens are not
+ * verified at all and its requests key on the IP — so a flood of random
+ * bearers or garbage JWTs from one IP stops costing anything. Cache hits and
+ * routes that already verified the caller never touch this bucket. The shul's
+ * shared IP sends tokens almost only to routes that verify them first.
+ */
+const VERIFY_PRELIMIT_X = 3
+const verifyLimiters: Partial<Record<LimiterName, LimiterLike>> = {}
+const verifyFallbacks: Partial<Record<LimiterName, InMemoryRateLimiter>> = {}
+
+async function mayVerify(tier: LimiterName, ip: string): Promise<boolean> {
+    const cfg = limiterConfigs[tier]
+    const key = `verify:${tier}:ip:${ip}`
+    try {
+        verifyLimiters[tier] ??= createLimiter(cfg.max * VERIFY_PRELIMIT_X, cfg.window)
+        return (await verifyLimiters[tier]!.limit(key)).success
+    } catch {
+        try {
+            verifyFallbacks[tier] ??= new InMemoryRateLimiter(cfg.max * VERIFY_PRELIMIT_X, cfg.window * 1000)
+            return (await verifyFallbacks[tier]!.limit(key)).success
+        } catch {
+            return false
+        }
+    }
+}
+
+/** uid, null (definitely invalid, or not checked), and whether to note it. */
+async function idTokenUid(token: string, tier: LimiterName, ip: string): Promise<{ uid: string | null; definite: boolean }> {
     const hash = createHash('sha256').update(token).digest('hex')
     const now = Date.now()
     const hit = idTokenCache.get(hash)
-    if (hit && hit.until > now) return hit.uid
-    let uid: string | null = null
-    let until = now + ID_TOKEN_CACHE_MS
+    if (hit && hit.until > now) return { uid: hit.uid, definite: true }
+    if (!(await mayVerify(tier, ip))) return { uid: null, definite: false }
+    let verdict: import('@/lib/firebase-admin').IdTokenVerdict
     try {
-        const { verifyIdToken } = await import('@/lib/firebase-admin')
-        const decoded = await verifyIdToken(token)
-        if (decoded?.uid) {
-            uid = decoded.uid
-            if (typeof decoded.exp === 'number') until = Math.min(until, decoded.exp * 1000)
-        }
+        const { verifyIdTokenVerdict } = await import('@/lib/firebase-admin')
+        verdict = await verifyIdTokenVerdict(token)
     } catch {
-        uid = null
+        verdict = { status: 'error' }
     }
+    if (verdict.status === 'error') return { uid: null, definite: false }
+    const uid = verdict.status === 'valid' ? verdict.uid : null
+    const until = verdict.status === 'valid'
+        ? Math.min(now + ID_TOKEN_CACHE_MS, verdict.exp * 1000)
+        : now + ID_TOKEN_CACHE_MS
     if (idTokenCache.size >= ID_TOKEN_CACHE_MAX) idTokenCache.clear()
     idTokenCache.set(hash, { uid, until })
-    return uid
+    return { uid, definite: true }
 }
 
 /**
@@ -222,7 +254,8 @@ async function verifiedIdTokenUid(token: string): Promise<string | null> {
  *      left the answer on the request; we reuse it — no second verification.
  *   3. Otherwise a Firebase ID token is verified with the Admin SDK (cached by
  *      token hash), and an MCP bearer (`crl_…`) through verifyBearer, which is
- *      memoised per request so the route's own check reuses it.
+ *      memoised per request so the route's own check reuses it. Either only
+ *      while the IP is under the verification pre-limit (`mayVerify`).
  *   4. Anything unverified, invalid or anonymous falls back to the client IP.
  *      The band's iPads share one shul IP, so the Perform-path tiers
  *      (`chart`, `perform`) are sized for the whole fleet on one IP bucket.
@@ -235,21 +268,25 @@ async function getKey(req: NextRequest, tier?: LimiterName): Promise<string> {
 
     const auth = req.headers.get('Authorization')
     const token = auth?.startsWith('Bearer ') ? auth.slice(7).trim() : ''
+    const ip = clientIp(req)
+    const t: LimiterName = tier ?? 'api'
     if (token.startsWith('crl_')) {
         // An MCP bearer. requireAuth may already have noted it as a failed
         // Firebase token; verifyBearer is the check that applies. It is
         // memoised per request, so the route's own call reuses this answer.
-        try {
-            const { verifyBearer } = await import('@/lib/mcp/auth')
-            const verified = await verifyBearer(req)
-            if (!(verified instanceof Response)) return `u:${verified.uid}`
-        } catch { /* fall through to IP */ }
+        if (await mayVerify(t, ip)) {
+            try {
+                const { verifyBearer } = await import('@/lib/mcp/auth')
+                const verified = await verifyBearer(req)
+                if (!(verified instanceof Response)) return `u:${verified.uid}`
+            } catch { /* transient: fall through to IP */ }
+        }
     } else if (noted === undefined && token.split('.').length === 3) {
-        const uid = await verifiedIdTokenUid(token)
-        noteRateLimitIdentity(req, uid)
+        const { uid, definite } = await idTokenUid(token, t, ip)
+        if (definite) noteRateLimitIdentity(req, uid)
         if (uid) return `u:${uid}`
     }
-    return `ip:${clientIp(req)}`
+    return `ip:${ip}`
 }
 
 /**

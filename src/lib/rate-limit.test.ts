@@ -194,7 +194,12 @@ const h = vi.hoisted(() => {
     return {
         validIdTokens,
         validBearers,
-        verifyIdToken: vi.fn(async (t: string) => validIdTokens.get(t) ?? null),
+        verifyIdToken: vi.fn(async (t: string): Promise<
+            { status: 'valid'; uid: string; exp: number } | { status: 'invalid' } | { status: 'error' }
+        > => {
+            const hit = validIdTokens.get(t)
+            return hit ? { status: 'valid', ...hit } : { status: 'invalid' }
+        }),
         verifyBearer: vi.fn(async (req: Request) => {
             const uid = validBearers.get(req.headers.get('authorization')?.slice(7) ?? '')
             return uid
@@ -203,7 +208,7 @@ const h = vi.hoisted(() => {
         }),
     }
 })
-vi.mock('@/lib/firebase-admin', () => ({ verifyIdToken: h.verifyIdToken }))
+vi.mock('@/lib/firebase-admin', () => ({ verifyIdTokenVerdict: h.verifyIdToken }))
 vi.mock('@/lib/mcp/auth', () => ({ verifyBearer: h.verifyBearer }))
 
 describe('rate-limit: keyed on verified identity only', () => {
@@ -310,6 +315,35 @@ describe('rate-limit: keyed on verified identity only', () => {
         for (let i = 0; i < 300; i++) await checkRateLimit(req(ip), 'telemetry')
         expect((await checkRateLimit(req(ip, 't.o.k'), 'telemetry'))?.status).toBe(429)
         expect(h.verifyIdToken).not.toHaveBeenCalled()
+    })
+
+    it('a flood of garbage JWTs from one IP stops being verified after the pre-limit (3x tier)', async () => {
+        const { checkRateLimit } = await import('./rate-limit')
+        for (let i = 0; i < 400; i++) await checkRateLimit(req('9.7.7.7', jwtWithSub(`junk-${i}`)), 'api')
+        expect(h.verifyIdToken).toHaveBeenCalledTimes(180)
+        // Another IP is unaffected.
+        await checkRateLimit(req('9.7.7.8', jwtWithSub('other')), 'api')
+        expect(h.verifyIdToken).toHaveBeenCalledTimes(181)
+    })
+
+    it('a flood of random MCP bearers from one IP stops costing lookups after the pre-limit', async () => {
+        const { checkRateLimit } = await import('./rate-limit')
+        for (let i = 0; i < 100; i++) await checkRateLimit(req('9.6.6.6', `crl_live_rand${i}`), 'upload')
+        expect(h.verifyBearer).toHaveBeenCalledTimes(30)
+    })
+
+    it('a transient verification error is not cached; the request keys on IP', async () => {
+        const { checkRateLimit } = await import('./rate-limit')
+        h.validIdTokens.set('g.o.d', { uid: 'flaky-user', exp: inAnHour() })
+        h.verifyIdToken.mockResolvedValueOnce({ status: 'error' })
+        const ip = '10.9.9.9'
+        for (let i = 0; i < 59; i++) await checkRateLimit(req(ip), 'api')
+        // Transient failure: counted on the IP bucket (60th).
+        expect(await checkRateLimit(req(ip, 'g.o.d'), 'api')).toBeNull()
+        expect((await checkRateLimit(req(ip), 'api'))?.status).toBe(429)
+        // Next request verifies again (not cached as invalid) and gets the uid bucket.
+        expect(await checkRateLimit(req(ip, 'g.o.d'), 'api')).toBeNull()
+        expect(h.verifyIdToken).toHaveBeenCalledTimes(2)
     })
 
     it('anonymous callers are keyed by IP', async () => {
