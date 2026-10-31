@@ -227,6 +227,7 @@
     "chipFormatImage": "תמונה",
     "chipFormatText": "טקסט",
     "chipVocalLead": "שירה ראשית: {name}",
+    "rowNoChart": "אין תווים",
     "statusUpdated": "עודכן {when}",
     "statusCharts": "{bound}/{total} תווים"
 }

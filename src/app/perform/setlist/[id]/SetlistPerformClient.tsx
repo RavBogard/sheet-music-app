@@ -47,6 +47,7 @@ import { TonightSwapSheet } from "@/components/performance/TonightSwapSheet"
 import { DirectionalIcon } from "@/components/i18n/DirectionalIcon"
 import { useT } from "@/i18n/client"
 import { useFormat } from "@/i18n/format-client"
+import { formatUpdatedWhen } from "@/lib/format/updated-when"
 import { cn } from "@/lib/utils"
 
 const PrintModal = dynamic(
@@ -178,9 +179,11 @@ export function SetlistPerformClient({
     // Save offline button's own count of this device's offline store.
     const [deviceReady, setDeviceReady] = useState<number | null>(null)
     const [deviceTotal, setDeviceTotal] = useState(0)
-    const onDeviceReady = useCallback((ready: number, total: number) => {
+    const [savedFileIds, setSavedFileIds] = useState<ReadonlySet<string> | null>(null)
+    const onDeviceReady = useCallback((ready: number, total: number, savedIds: ReadonlySet<string>) => {
         setDeviceReady(ready)
         setDeviceTotal(total)
+        setSavedFileIds(savedIds)
     }, [])
     // Per-device (`crc.perform.liturgy-collapsed`), default collapsed. The
     // control only appears when this service actually has fixed-liturgy rows
@@ -373,7 +376,7 @@ export function SetlistPerformClient({
                         {setlistUpdatedAt && (
                             <>
                                 <span aria-hidden="true"> · </span>
-                                <span>{t("performSetlist.status.updated", { when: fmt.relative(setlistUpdatedAt) })}</span>
+                                <span>{t("performSetlist.status.updated", { when: formatUpdatedWhen(fmt, setlistUpdatedAt) })}</span>
                             </>
                         )}
                         {deviceReady !== null && deviceTotal > 0 && (
@@ -549,6 +552,7 @@ export function SetlistPerformClient({
                 serviceNotes={serviceNotes}
                 setlistId={setlistId}
                 collapseLiturgy={liturgyCollapsed}
+                savedFileIds={savedFileIds}
                 onSwapTap={isLeader && user && serviceDay ? (index) => setSwapIndex(index) : undefined}
             />
 

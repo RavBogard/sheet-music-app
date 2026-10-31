@@ -15,7 +15,7 @@ interface Props {
     /** Web refresh: reports how many of this setlist's charts are on this
      *  device, so the head row's status line can say "N/M charts on this
      *  iPad". Read-only; it changes nothing about caching. */
-    onReadyChange?: (ready: number, total: number) => void
+    onReadyChange?: (ready: number, total: number, savedIds: ReadonlySet<string>) => void
 }
 
 type Phase = "idle" | "saving"
@@ -56,6 +56,7 @@ export function SaveOfflineButton({ fileIds, onReadyChange }: Props) {
 
     const [phase, setPhase] = useState<Phase>("idle")
     const [readyCount, setReadyCount] = useState(0)
+    const [savedIds, setSavedIds] = useState<ReadonlySet<string>>(() => new Set())
     const [progress, setProgress] = useState(0)
 
     // How many cacheable charts are already in the offline store.
@@ -64,8 +65,10 @@ export function SaveOfflineButton({ fileIds, onReadyChange }: Props) {
             const ids = await listFileIds()
             const have = new Set(ids)
             let n = 0
-            for (const id of cacheable) if (have.has(id)) n++
+            const mine = new Set<string>()
+            for (const id of cacheable) if (have.has(id)) { n++; mine.add(id) }
             setReadyCount(n)
+            setSavedIds(mine)
             return n
         } catch (e) {
             logger.warn("[SaveOfflineButton] listFileIds failed:", e)
@@ -74,8 +77,8 @@ export function SaveOfflineButton({ fileIds, onReadyChange }: Props) {
     }, [cacheable])
 
     useEffect(() => {
-        onReadyChange?.(readyCount, total)
-    }, [onReadyChange, readyCount, total])
+        onReadyChange?.(readyCount, total, savedIds)
+    }, [onReadyChange, readyCount, total, savedIds])
 
     // Idle-time auto-precache on entry. Online-only, best-effort, non-blocking.
     // Re-runs only when the setlist's cacheable set changes (sig), guarded by a
@@ -223,6 +226,12 @@ export function SaveOfflineButton({ fileIds, onReadyChange }: Props) {
             ? t("perform.saveOffline.partial", { ready: readyCount, total })
             : t("perform.saveOffline.idle")
 
+    // Charts still missing from this device: the one blue primary action,
+    // worded with the count it will save. Everything saved stays quiet.
+    const needsSave = !saving && !allReady
+    const missing = total - readyCount
+    const visibleLabel = needsSave ? t("perform.saveOffline.save", { count: missing }) : label
+
     const ariaLabel = saving
         ? t("perform.saveOffline.savingAria", { progress, total })
         : allReady
@@ -236,11 +245,11 @@ export function SaveOfflineButton({ fileIds, onReadyChange }: Props) {
             onClick={saveOffline}
             disabled={saving}
             size="sm"
-            variant="ghost"
+            variant={needsSave ? "default" : "ghost"}
             aria-label={ariaLabel}
             data-testid="save-offline"
             data-state={saving ? "saving" : allReady ? "saved" : partial ? "partial" : "idle"}
-            className={`h-11 min-w-11 gap-1.5 transition-colors duration-200 ${accent}`}
+            className={`h-11 min-w-11 gap-1.5 transition-colors duration-200 ${needsSave ? "" : accent}`}
         >
             {saving ? (
                 <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" />
@@ -249,8 +258,8 @@ export function SaveOfflineButton({ fileIds, onReadyChange }: Props) {
             ) : (
                 <Download className="h-4 w-4" />
             )}
-            <span className="tnum text-xs font-semibold hidden sm:inline" aria-live="polite">
-                {label}
+            <span className={needsSave ? "tnum text-sm font-bold" : "tnum text-xs font-semibold hidden sm:inline"} aria-live="polite">
+                {visibleLabel}
             </span>
         </Button>
     )

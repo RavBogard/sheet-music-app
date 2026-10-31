@@ -11,6 +11,7 @@ import { useT } from "@/i18n/client"
 import { useFormat } from "@/i18n/format-client"
 import { cn } from "@/lib/utils"
 import { RowDate } from "./RowDate"
+import { formatUpdatedWhen } from "@/lib/format/updated-when"
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -82,10 +83,25 @@ function RowStatus({ setlist }: { setlist: Setlist }) {
             {updatedAt ? (
                 <>
                     <Dot />
-                    <span>{t("setlist.updatedAgo", { when: fmt.relative(updatedAt) })}</span>
+                    <span>{t("setlist.updatedAgo", { when: formatUpdatedWhen(fmt, updatedAt) })}</span>
                 </>
             ) : null}
         </>
+    )
+}
+
+/** The past-row info line: date, song count, charts and freshness. */
+export function SetlistInfoLine({ setlist }: { setlist: Setlist }) {
+    const t = useT()
+    const fmt = useFormat()
+    const eventDate = toDateHelper(setlist.eventDate)
+    return (
+        <div className="tnum flex items-center gap-x-2 gap-y-0.5 mt-0.5 flex-wrap text-sm text-muted-foreground">
+            <span>{fmt.date(eventDate, { month: 'short', day: 'numeric', year: 'numeric' }) || t("setlist.noDate")}</span>
+            <Dot />
+            <span>{t("setlist.songCount", { count: (setlist.songCount ?? setlist.trackCount) || 0 })}</span>
+            <RowStatus setlist={setlist} />
+        </div>
     )
 }
 
@@ -318,12 +334,7 @@ export function SetlistCard({ setlist, onPerform, onEdit, navigatingTo, onDuplic
 
             <div className="flex-1 min-w-0 relative z-10 pointer-events-none">
                 <h5 title={setlist.name} className="text-base font-semibold leading-snug text-foreground line-clamp-2">{setlist.name}</h5>
-                <div className="tnum flex items-center gap-x-2 gap-y-0.5 mt-0.5 flex-wrap text-sm text-muted-foreground">
-                    <span>{fmt.date(eventDate, { month: 'short', day: 'numeric', year: 'numeric' }) || t("setlist.noDate")}</span>
-                    <Dot />
-                    <span>{t("setlist.songCount", { count: (setlist.songCount ?? setlist.trackCount) || 0 })}</span>
-                    <RowStatus setlist={setlist} />
-                </div>
+                <SetlistInfoLine setlist={setlist} />
             </div>
 
             {/* Action Menu */}

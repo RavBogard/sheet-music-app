@@ -38,6 +38,11 @@ export interface SetlistRowProps {
     onSwapTap?: () => void
     /** Web refresh: a header row's band (hue + the pages under it). */
     band?: SectionBand
+    /**
+     * Whether this row's chart is saved on this device. `undefined` means the
+     * device store hasn't been read yet, so nothing is claimed either way.
+     */
+    savedOffline?: boolean
 }
 
 export function SetlistRow({
@@ -51,6 +56,7 @@ export function SetlistRow({
     gestureHandlers,
     onSwapTap,
     band,
+    savedOffline,
 }: SetlistRowProps) {
     const t = useT()
     const isSong = !track.type || track.type === "song"
@@ -88,6 +94,13 @@ export function SetlistRow({
     // song row's striped/bold treatment.
     const openableNonSong = hasFile && !isSong
     const hasSecondLine = !!(track.leadMusician || track.performer)
+    // A chart-bearing row whose chart isn't on this device gets a quiet
+    // oxblood line, so the gap is visible before the wifi goes.
+    const notSavedLine = hasFile && savedOffline === false ? (
+        <p data-testid="row-not-saved-offline" className="text-xs font-semibold text-warning-line mt-0.5">
+            {t("performSetlist.row.notSavedOffline")}
+        </p>
+    ) : null
 
     // Outline fields — rendered for every row type. `folio` is stored at
     // authoring time (never resolved at render), so this is a pure read.
@@ -182,7 +195,7 @@ export function SetlistRow({
                   ? t("setlistGrid.sectionPage", { page: band.folioFrom })
                   : t("setlistGrid.sectionPages", { from: band.folioFrom, to: band.folioTo })
         const bandClass = cn(
-            "flex items-center gap-3 px-4 py-2.5 min-h-11 w-full text-start mt-4 first:mt-0",
+            "flex items-center gap-3 px-4 py-2.5 min-h-11 w-full text-start mt-4 first:mt-0 rounded-sm",
             SECTION_BAND_CLASS[band?.hue ?? "blue"],
         )
         const headerInner = (
@@ -229,7 +242,7 @@ export function SetlistRow({
     const songContent = isSong ? (
         <div className="flex-1 min-w-0">
             <div className="flex items-baseline gap-2">
-                <span className="font-bold text-[1.2rem] leading-snug text-foreground truncate shrink min-w-0">
+                <span className="flex-1 min-w-0 break-words font-bold text-[1.2rem] leading-snug text-foreground">
                     {title}
                 </span>
                 {displayKey && (
@@ -244,15 +257,6 @@ export function SetlistRow({
                         {displayKey}
                     </span>
                 )}
-                {track.notes && (
-                    // text-amber-800 in light mode (text-amber-300 fails WCAG AA
-                    // contrast on the light-theme row backgrounds — axe color-
-                    // contrast, ~1.1:1); dark mode keeps the vivid amber-300.
-                    <span className="text-sm font-medium text-caution truncate max-w-[200px] md:max-w-[300px] shrink">
-                        {track.notes}
-                    </span>
-                )}
-                <span className="flex-1" />
                 {track.bpm && (
                     <span className="tnum text-xs text-muted-foreground shrink-0">
                         {t("performSetlist.row.bpm", { bpm: track.bpm })}
@@ -263,6 +267,15 @@ export function SetlistRow({
                     if every row type's folio lands at the same right edge. */}
                 {folioBadge}
             </div>
+            {track.notes && (
+                // Notes sit on their own line under the title, two lines at most.
+                // text-amber-800 in light mode (text-amber-300 fails WCAG AA
+                // contrast on the light-theme row backgrounds); dark mode keeps
+                // the vivid amber-300.
+                <p className="text-sm font-medium text-caution line-clamp-2 break-words mt-0.5">
+                    {track.notes}
+                </p>
+            )}
             {hasSecondLine && (
                 // text-blue-700 in light mode (text-blue-400 fails WCAG AA
                 // contrast on the light-theme row backgrounds — axe color-
@@ -275,6 +288,7 @@ export function SetlistRow({
                 honors; deliberately NOT track.description — songs already
                 surface that role via track.notes on the first line. */}
             {honorsList}
+            {notSavedLine}
         </div>
     ) : openableNonSong ? (
         // Prayer/reading WITH a bonded chart: must read as tappable, not as a
@@ -283,7 +297,7 @@ export function SetlistRow({
         <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2.5 min-w-0">
                 <FileMusic className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
-                <span className="text-[1.05rem] font-semibold text-foreground truncate min-w-0">{title}</span>
+                <span className="text-[1.05rem] font-semibold text-foreground break-words min-w-0">{title}</span>
                 <span className="flex-1" />
                 {/* P4-5: the chevron draws BEFORE the folio, so the badge is the
                     last element on every row type's line and its fixed w-16
@@ -297,6 +311,7 @@ export function SetlistRow({
                 {folioBadge}
             </div>
             {outlineDetail}
+            {notSavedLine}
         </div>
     ) : (
         // Passive outline row. Title stays muted to preserve the song/non-song
@@ -305,7 +320,7 @@ export function SetlistRow({
         // never re-introduce opacity here (see the rowClasses comment).
         <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-                <span className="text-base text-muted-foreground truncate min-w-0">{title}</span>
+                <span className="text-base text-muted-foreground break-words min-w-0">{title}</span>
                 <span className="flex-1" />
                 {folioBadge}
             </div>

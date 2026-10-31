@@ -106,7 +106,7 @@ describe('SaveOfflineButton', () => {
         render(<SaveOfflineButton fileIds={['upload-1', 'upload-2']} />)
         const btn = () => screen.getByTestId('save-offline')
         await waitFor(() => expect(btn().getAttribute('data-state')).toBe('idle'))
-        expect(btn().textContent).toContain('Save offline')
+        expect(btn().textContent).toContain('Save 2 charts offline')
 
         fireEvent.click(btn())
 
@@ -163,7 +163,7 @@ describe('SaveOfflineButton', () => {
         render(<SaveOfflineButton fileIds={['upload-1', 'upload-2']} />)
         const btn = () => screen.getByTestId('save-offline')
         await waitFor(() => expect(btn().getAttribute('data-state')).toBe('partial'))
-        expect(btn().textContent).toContain('Save 1/2')
+        expect(btn().textContent).toContain('Save 1 chart offline')
     })
 
     // Web refresh: the Perform status line reads this device's count from here.
@@ -172,7 +172,7 @@ describe('SaveOfflineButton', () => {
         mockListFileIds.mockResolvedValue(['upload-1'])
         const onReadyChange = vi.fn()
         render(<SaveOfflineButton fileIds={['upload-1', 'upload-2']} onReadyChange={onReadyChange} />)
-        await waitFor(() => expect(onReadyChange).toHaveBeenLastCalledWith(1, 2))
+        await waitFor(() => expect(onReadyChange).toHaveBeenLastCalledWith(1, 2, new Set(['upload-1'])))
         expect(mockPrefetch).not.toHaveBeenCalled()
     })
 

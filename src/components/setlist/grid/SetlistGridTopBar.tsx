@@ -11,6 +11,7 @@ import { SyncIndicator, type SyncIndicatorProps } from './SyncIndicator'
 
 export interface SetlistGridTopBarProps {
     name: string
+    /** Not shown: the title carries the date. Kept so callers need no change. */
     eventDateLabel?: string
     /** Web refresh: the rest of the status line after the date
      *  ("24 songs", "24/24 charts", "Updated 3 hours ago"). */
@@ -32,7 +33,6 @@ export interface SetlistGridTopBarProps {
  */
 export function SetlistGridTopBar({
     name,
-    eventDateLabel,
     statusParts = [],
     onBack,
     syncProps,
@@ -40,7 +40,7 @@ export function SetlistGridTopBar({
     performHref,
 }: SetlistGridTopBarProps) {
     const t = useT()
-    const status = [eventDateLabel, ...statusParts].filter((p): p is string => Boolean(p))
+    const status = statusParts.filter((p): p is string => Boolean(p))
     return (
         <header
             data-testid="setlist-grid-top-bar"
@@ -85,7 +85,7 @@ export function SetlistGridTopBar({
                     {status.length > 0 ? (
                         <p
                             data-testid="setlist-status-line"
-                            className="tnum truncate text-sm font-medium text-muted-foreground"
+                            className="tnum line-clamp-2 break-words text-sm font-medium text-muted-foreground"
                         >
                             {status.map((part, i) => (
                                 <span key={i}>
