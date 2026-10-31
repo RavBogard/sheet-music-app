@@ -8,7 +8,7 @@ previous release has landed, because each builds on the one before. One PR per r
 | 1 | History and metadata: `get_song_history`, `export_setlists`, chart setting and instrument-part grouping, written-key back-fill | `PLAN-1-history-and-metadata.md` | shipped 2026-10-30 (`RETURN-1.md`) |
 | 2 | Profiles and remembered corrections: profiles on `templates`, moment slots plus per-song memory, standing vs one-off changes, the confidence ladder computed server-side, seeding from history with a one-time review, the rabbi always given by the author, special flag | `PLAN-2-profiles-and-corrections.md` | shipped 2026-10-30 (PRs 20–22; profiles seed on first draft) |
 | 3 | Readback and agent guide: exceptions-first summary returned by the server, the rewritten `agent-guide.ts` flow, email exceptions and open items | `PLAN-3-readback.md` | shipped 2026-10-30 (PR 23) |
-| 4 | Pages: emit `legacy-beit-mitzvah` from shireishabbat, set each profile's book, automatic page binding at build time | to write after 2 (can run beside 3) | — |
+| 4 | Pages: register `legacy-beit-mitzvah` (feed tier, printed pages 1-63), B'nei Mitzvah profile book, family-booklet path | `PLAN-4-pages.md` | shipped 2026-10-30 (PR 26) |
 
 Coordination:
 - The Beit Mitzvah portal reads B'nei Mitzvah service music through `src/lib/beit-mitzvah/` (PRs
