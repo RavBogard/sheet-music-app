@@ -1,0 +1,737 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-31T22:12:26.552Z",
+  "title": "Design System: CentralReform.live",
+  "extensions": {
+    "colorMeta": {
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#18202E",
+        "tonalRamp": [
+          "#1A2332",
+          "#2D3D57",
+          "#41567C",
+          "#5470A1",
+          "#768DB7",
+          "#9AACCB",
+          "#C3CDE0",
+          "#EEF1F6"
+        ]
+      },
+      "ground": {
+        "role": "neutral",
+        "displayName": "Ground",
+        "canonical": "#F6F7FB",
+        "tonalRamp": [
+          "#181D35",
+          "#29335C",
+          "#3A4983",
+          "#4B5EA9",
+          "#6E7EBF",
+          "#95A1D0",
+          "#BFC7E3",
+          "#EDEFF7"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Paper",
+        "canonical": "#FFFFFF",
+        "tonalRamp": [
+          "#262626",
+          "#424242",
+          "#5E5E5E",
+          "#7A7A7A",
+          "#969696",
+          "#B3B3B3",
+          "#D1D1D1",
+          "#F2F2F2"
+        ]
+      },
+      "primary": {
+        "role": "primary",
+        "displayName": "Action Blue",
+        "canonical": "#2563EB",
+        "tonalRamp": [
+          "#061A46",
+          "#0B2E79",
+          "#1041AD",
+          "#1554E0",
+          "#3F76ED",
+          "#739BF2",
+          "#ABC3F7",
+          "#E8EEFD"
+        ]
+      },
+      "book-cloth": {
+        "role": "secondary",
+        "displayName": "Book-Cloth Blue",
+        "canonical": "#23356B",
+        "tonalRamp": [
+          "#131D3A",
+          "#213164",
+          "#2F468E",
+          "#3C5BB8",
+          "#617CCB",
+          "#8C9FD9",
+          "#BAC5E8",
+          "#ECEFF9"
+        ]
+      },
+      "book-cloth-muted": {
+        "role": "secondary",
+        "displayName": "Book-Cloth Muted",
+        "canonical": "#C9D2EA",
+        "tonalRamp": [
+          "#151F37",
+          "#25355F",
+          "#354B88",
+          "#4562B0",
+          "#6882C4",
+          "#91A3D4",
+          "#BDC8E5",
+          "#EDF0F8"
+        ]
+      },
+      "section-green": {
+        "role": "tertiary",
+        "displayName": "Section Green",
+        "canonical": "#1F7A6E",
+        "tonalRamp": [
+          "#0F3D37",
+          "#1B6A5F",
+          "#269688",
+          "#32C3B0",
+          "#58D5C4",
+          "#85E0D4",
+          "#B6ECE5",
+          "#EBFAF8"
+        ]
+      },
+      "section-oxblood": {
+        "role": "tertiary",
+        "displayName": "Section Oxblood",
+        "canonical": "#8E2E3B",
+        "tonalRamp": [
+          "#3A1318",
+          "#64202A",
+          "#8F2E3B",
+          "#B93C4D",
+          "#CC6170",
+          "#DA8B96",
+          "#E9BAC0",
+          "#F9ECEE"
+        ]
+      },
+      "section-ochre": {
+        "role": "tertiary",
+        "displayName": "Section Ochre",
+        "canonical": "#C58B1A",
+        "tonalRamp": [
+          "#443009",
+          "#75530F",
+          "#A77616",
+          "#D8991D",
+          "#E7B046",
+          "#EDC578",
+          "#F4DCAE",
+          "#FCF5E8"
+        ]
+      },
+      "section-blue": {
+        "role": "tertiary",
+        "displayName": "Section Blue",
+        "canonical": "#23356B",
+        "tonalRamp": [
+          "#131D3A",
+          "#213164",
+          "#2F468E",
+          "#3C5BB8",
+          "#617CCB",
+          "#8C9FD9",
+          "#BAC5E8",
+          "#ECEFF9"
+        ]
+      },
+      "tag-ground": {
+        "role": "neutral",
+        "displayName": "Tag Ground",
+        "canonical": "#EEF1F7",
+        "tonalRamp": [
+          "#182234",
+          "#2A3A5A",
+          "#3C5380",
+          "#4E6CA6",
+          "#718ABC",
+          "#97A9CE",
+          "#C1CCE2",
+          "#EEF1F7"
+        ]
+      },
+      "tag-ink": {
+        "role": "neutral",
+        "displayName": "Tag Ink",
+        "canonical": "#2B3445",
+        "tonalRamp": [
+          "#1D242F",
+          "#333E52",
+          "#485874",
+          "#5E7297",
+          "#7E8FAF",
+          "#A1ADC4",
+          "#C6CEDC",
+          "#EFF1F5"
+        ]
+      },
+      "quiet-ink": {
+        "role": "neutral",
+        "displayName": "Quiet Ink",
+        "canonical": "#556072",
+        "tonalRamp": [
+          "#21252C",
+          "#39404C",
+          "#515B6C",
+          "#69768C",
+          "#8793A6",
+          "#A7B0BE",
+          "#CACFD8",
+          "#F0F2F4"
+        ]
+      },
+      "wash": {
+        "role": "neutral",
+        "displayName": "Wash",
+        "canonical": "#EAF0FE",
+        "tonalRamp": [
+          "#031849",
+          "#062A7F",
+          "#093CB4",
+          "#0B4EEA",
+          "#3770F5",
+          "#6D97F8",
+          "#A7C0FB",
+          "#E7EEFE"
+        ]
+      },
+      "hairline": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "#E3E6EE",
+        "tonalRamp": [
+          "#1D2230",
+          "#323B53",
+          "#475475",
+          "#5C6D98",
+          "#7D8BB0",
+          "#A0AAC5",
+          "#C6CCDC",
+          "#EFF1F5"
+        ]
+      },
+      "field-stroke": {
+        "role": "neutral",
+        "displayName": "Field Stroke",
+        "canonical": "#D5DAE5",
+        "tonalRamp": [
+          "#1D232F",
+          "#333C52",
+          "#485675",
+          "#5E7097",
+          "#7E8DAF",
+          "#A1ACC4",
+          "#C6CDDC",
+          "#EFF1F5"
+        ]
+      },
+      "warning-line": {
+        "role": "status",
+        "displayName": "Warning Line",
+        "canonical": "#8E2E3B",
+        "tonalRamp": [
+          "#3A1318",
+          "#64202A",
+          "#8F2E3B",
+          "#B93C4D",
+          "#CC6170",
+          "#DA8B96",
+          "#E9BAC0",
+          "#F9ECEE"
+        ]
+      },
+      "caution": {
+        "role": "status",
+        "displayName": "Caution",
+        "canonical": "#8A5A00",
+        "tonalRamp": [
+          "#4D3200",
+          "#855600",
+          "#BD7B00",
+          "#F5A000",
+          "#FFB62E",
+          "#FFCA66",
+          "#FFDFA3",
+          "#FFF6E5"
+        ]
+      },
+      "destructive": {
+        "role": "status",
+        "displayName": "Destructive",
+        "canonical": "#B4232F",
+        "tonalRamp": [
+          "#400C11",
+          "#6F161D",
+          "#9E1F29",
+          "#CD2836",
+          "#DD505C",
+          "#E67F87",
+          "#F0B2B7",
+          "#FBEAEB"
+        ]
+      },
+      "success": {
+        "role": "status",
+        "displayName": "Success",
+        "canonical": "#1F7A4D",
+        "tonalRamp": [
+          "#0F3D27",
+          "#1B6A43",
+          "#26965F",
+          "#32C37B",
+          "#58D597",
+          "#85E0B3",
+          "#B6ECD1",
+          "#EBFAF2"
+        ]
+      },
+      "night-ground": {
+        "role": "neutral",
+        "displayName": "Night Ground",
+        "canonical": "#0F1420",
+        "tonalRamp": [
+          "#182134",
+          "#2A385A",
+          "#3C5080",
+          "#4E68A7",
+          "#7187BC",
+          "#97A7CE",
+          "#C0CAE2",
+          "#EEF0F7"
+        ]
+      },
+      "night-paper": {
+        "role": "neutral",
+        "displayName": "Night Paper",
+        "canonical": "#161C2A",
+        "tonalRamp": [
+          "#1A2132",
+          "#2E3A57",
+          "#41537C",
+          "#546BA1",
+          "#7689B7",
+          "#9BA9CA",
+          "#C3CBDF",
+          "#EEF1F6"
+        ]
+      },
+      "night-ink": {
+        "role": "neutral",
+        "displayName": "Night Ink",
+        "canonical": "#E8ECF4",
+        "tonalRamp": [
+          "#192234",
+          "#2B3B5A",
+          "#3D5380",
+          "#4F6CA6",
+          "#728ABB",
+          "#97AACE",
+          "#C1CCE1",
+          "#EEF1F7"
+        ]
+      },
+      "night-quiet-ink": {
+        "role": "neutral",
+        "displayName": "Night Quiet Ink",
+        "canonical": "#9AA5B8",
+        "tonalRamp": [
+          "#20242D",
+          "#373F4E",
+          "#4E5A6F",
+          "#657590",
+          "#8492A9",
+          "#A5AFC0",
+          "#C9CFD9",
+          "#F0F2F4"
+        ]
+      },
+      "night-shell": {
+        "role": "secondary",
+        "displayName": "Night Shell",
+        "canonical": "#141B30",
+        "tonalRamp": [
+          "#161E36",
+          "#27355E",
+          "#384B85",
+          "#4861AD",
+          "#6B81C2",
+          "#93A3D2",
+          "#BEC8E4",
+          "#EDF0F8"
+        ]
+      },
+      "night-hairline": {
+        "role": "neutral",
+        "displayName": "Night Hairline",
+        "canonical": "#232C3E",
+        "tonalRamp": [
+          "#1C2331",
+          "#303C55",
+          "#445679",
+          "#586F9C",
+          "#798DB4",
+          "#9DABC8",
+          "#C4CDDE",
+          "#EFF1F6"
+        ]
+      },
+      "night-brand": {
+        "role": "primary",
+        "displayName": "Night Brand Blue",
+        "canonical": "#7AA2FF",
+        "tonalRamp": [
+          "#00174D",
+          "#002885",
+          "#0039BD",
+          "#004AF5",
+          "#2E6DFF",
+          "#6694FF",
+          "#A3BFFF",
+          "#E5EDFF"
+        ]
+      },
+      "night-warning-line": {
+        "role": "status",
+        "displayName": "Night Warning Line",
+        "canonical": "#E07A86",
+        "tonalRamp": [
+          "#3E0E14",
+          "#6C1923",
+          "#992431",
+          "#C72E40",
+          "#D75565",
+          "#E2838E",
+          "#EEB5BB",
+          "#FAEAEC"
+        ]
+      },
+      "night-caution": {
+        "role": "status",
+        "displayName": "Night Caution",
+        "canonical": "#E2B04A",
+        "tonalRamp": [
+          "#42300B",
+          "#725312",
+          "#A3761A",
+          "#D39922",
+          "#E2B04B",
+          "#EAC57B",
+          "#F2DCB0",
+          "#FBF5E9"
+        ]
+      },
+      "bl-ground": {
+        "role": "neutral",
+        "displayName": "Lazaroff Teal Ground",
+        "canonical": "oklch(0.16 0.028 198)",
+        "tonalRamp": [
+          "oklch(0.15 0.028 198)",
+          "oklch(0.26 0.028 198)",
+          "oklch(0.37 0.028 198)",
+          "oklch(0.48 0.028 198)",
+          "oklch(0.59 0.028 198)",
+          "oklch(0.70 0.028 198)",
+          "oklch(0.82 0.028 198)",
+          "oklch(0.95 0.028 198)"
+        ]
+      },
+      "bl-shell": {
+        "role": "secondary",
+        "displayName": "Lazaroff Teal Shell",
+        "canonical": "oklch(0.22 0.04 200)",
+        "tonalRamp": [
+          "oklch(0.15 0.04 200)",
+          "oklch(0.26 0.04 200)",
+          "oklch(0.37 0.04 200)",
+          "oklch(0.48 0.04 200)",
+          "oklch(0.59 0.04 200)",
+          "oklch(0.70 0.04 200)",
+          "oklch(0.82 0.04 200)",
+          "oklch(0.95 0.04 200)"
+        ]
+      },
+      "bl-shell-active": {
+        "role": "secondary",
+        "displayName": "Lazaroff Active Tab",
+        "canonical": "oklch(0.85 0.10 205)",
+        "tonalRamp": [
+          "oklch(0.15 0.10 205)",
+          "oklch(0.26 0.10 205)",
+          "oklch(0.37 0.10 205)",
+          "oklch(0.48 0.10 205)",
+          "oklch(0.59 0.10 205)",
+          "oklch(0.70 0.10 205)",
+          "oklch(0.82 0.10 205)",
+          "oklch(0.95 0.10 205)"
+        ]
+      },
+      "bl-brand": {
+        "role": "primary",
+        "displayName": "Lazaroff Wordmark Teal",
+        "canonical": "oklch(0.72 0.115 210)",
+        "tonalRamp": [
+          "oklch(0.15 0.115 210)",
+          "oklch(0.26 0.115 210)",
+          "oklch(0.37 0.115 210)",
+          "oklch(0.48 0.115 210)",
+          "oklch(0.59 0.115 210)",
+          "oklch(0.70 0.115 210)",
+          "oklch(0.82 0.115 210)",
+          "oklch(0.95 0.115 210)"
+        ]
+      },
+      "bl-primary": {
+        "role": "primary",
+        "displayName": "Lazaroff Pale Action",
+        "canonical": "oklch(0.97 0.012 200)",
+        "tonalRamp": [
+          "oklch(0.15 0.012 200)",
+          "oklch(0.26 0.012 200)",
+          "oklch(0.37 0.012 200)",
+          "oklch(0.48 0.012 200)",
+          "oklch(0.59 0.012 200)",
+          "oklch(0.70 0.012 200)",
+          "oklch(0.82 0.012 200)",
+          "oklch(0.95 0.012 200)"
+        ]
+      },
+      "bl-hairline": {
+        "role": "neutral",
+        "displayName": "Lazaroff Hairline",
+        "canonical": "oklch(0.30 0.03 200)",
+        "tonalRamp": [
+          "oklch(0.15 0.03 200)",
+          "oklch(0.26 0.03 200)",
+          "oklch(0.37 0.03 200)",
+          "oklch(0.48 0.03 200)",
+          "oklch(0.59 0.03 200)",
+          "oklch(0.70 0.03 200)",
+          "oklch(0.82 0.03 200)",
+          "oklch(0.95 0.03 200)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Setlist title in the head row; 1.35rem below 640px."
+      },
+      "page-call": {
+        "displayName": "Page Call",
+        "purpose": "Printed page at the end of a row; 1.35rem in Perform."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Song row title in Perform."
+      },
+      "list-title": {
+        "displayName": "List Title",
+        "purpose": "Setlist name in the setlists list."
+      },
+      "tab": {
+        "displayName": "Tab",
+        "purpose": "Top-bar tabs."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Status line and row metadata, tabular."
+      },
+      "running-head": {
+        "displayName": "Running Head",
+        "purpose": "Section band title, uppercase; 13px in the editor."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Chart chip under a title."
+      }
+    },
+    "shadows": [
+      {
+        "name": "float",
+        "value": "0 8px 24px rgb(24 32 46 / 0.14)",
+        "purpose": "Search results and popovers under the top bar."
+      },
+      {
+        "name": "panel",
+        "value": "0 8px 24px rgb(24 32 46 / 0.10)",
+        "purpose": "The expanded row editor panel."
+      },
+      {
+        "name": "rest-card",
+        "value": "0 2px 12px rgb(24 32 46 / 0.06)",
+        "purpose": "The dashboard's next-service card."
+      }
+    ],
+    "motion": [
+      {
+        "name": "state-colors",
+        "value": "color/background 150ms ease",
+        "purpose": "Hover and active changes on rows, tabs and buttons."
+      },
+      {
+        "name": "panel-open",
+        "value": "fade-in + slide-in-from-top 8px, 200ms",
+        "purpose": "The row editor panel opening."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "chip-inline",
+        "value": "821px"
+      },
+      {
+        "name": "lg-shell",
+        "value": "1024px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Top Bar",
+      "kind": "nav",
+      "refersTo": "top-bar",
+      "description": "Book-cloth bar with brand and tabs, 1024px and up. Teal under Brothers Lazaroff via --shell.",
+      "html": "<header class=\"ds-topbar\"><a class=\"ds-brand\" href=\"#\">CRC</a><nav><a class=\"ds-tab ds-tab-active\" href=\"#\">Setlists</a><a class=\"ds-tab\" href=\"#\">Library</a><a class=\"ds-tab\" href=\"#\">Manage</a></nav></header>",
+      "css": ".ds-topbar{display:flex;align-items:center;gap:32px;height:56px;padding:0 24px;background:var(--shell,#23356B);color:var(--shell-foreground,#fff);font-family:Assistant,sans-serif;}.ds-brand{font-weight:800;font-size:17px;letter-spacing:-0.01em;color:inherit;text-decoration:none}.ds-topbar nav{display:flex;align-self:stretch;gap:4px}.ds-tab{position:relative;display:inline-flex;align-items:center;min-height:44px;padding:0 14px;font-size:15px;font-weight:600;color:var(--shell-muted,#C9D2EA);text-decoration:none;transition:color .15s}.ds-tab:hover{color:var(--shell-foreground,#fff)}.ds-tab:focus-visible{outline:2px solid var(--shell-foreground,#fff);outline-offset:-4px}.ds-tab-active{color:var(--shell-active,#fff)}.ds-tab-active::after{content:\"\";position:absolute;left:12px;right:12px;bottom:0;height:3px;border-radius:2px 2px 0 0;background:var(--shell-active,#fff)}"
+    },
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one blue action per view (Perform, Edit, sign in).",
+      "html": "<button class=\"ds-btn-primary\">Perform</button>",
+      "css": ".ds-btn-primary{display:inline-flex;align-items:center;min-height:44px;padding:0 20px;border:0;border-radius:8px;background:var(--primary,#2563EB);color:var(--primary-foreground,#fff);font-family:Assistant,sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:background .15s}.ds-btn-primary:hover{background:color-mix(in srgb,var(--primary,#2563EB) 90%,transparent)}.ds-btn-primary:focus-visible{outline:2px solid var(--ring,#2563EB);outline-offset:2px}"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Secondary actions such as Edit in the setlists list.",
+      "html": "<button class=\"ds-btn-outline\">Edit</button>",
+      "css": ".ds-btn-outline{display:inline-flex;align-items:center;min-height:44px;padding:0 16px;border:1px solid var(--border,#E3E6EE);border-radius:8px;background:var(--card,#fff);color:var(--foreground,#18202E);font-family:Assistant,sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s}.ds-btn-outline:hover{background:var(--accent,#EAF0FE)}.ds-btn-outline:focus-visible{outline:2px solid var(--ring,#2563EB);outline-offset:2px}"
+    },
+    {
+      "name": "Section Band",
+      "kind": "custom",
+      "refersTo": "section-band-green",
+      "description": "Full-hue section header with running head and page range.",
+      "html": "<div class=\"ds-bands\"><div class=\"ds-band ds-band-green\"><span>Kabbalat Shabbat</span><span class=\"ds-band-pages\">pp. 12–19</span></div><div class=\"ds-band ds-band-oxblood\"><span>Torah Service</span><span class=\"ds-band-pages\">pp. 30–34</span></div><div class=\"ds-band ds-band-ochre\"><span>Shacharit</span><span class=\"ds-band-pages\">pp. 40–52</span></div><div class=\"ds-band ds-band-blue\"><span>Maariv</span><span class=\"ds-band-pages\">p. 60</span></div></div>",
+      "css": ".ds-band{display:flex;align-items:center;gap:12px;min-height:44px;padding:10px 16px;margin-top:16px;border-radius:6px;font-family:Assistant,sans-serif;font-size:14px;font-weight:800;text-transform:uppercase;letter-spacing:.08em}.ds-band:first-child{margin-top:0}.ds-band span:first-child{flex:1}.ds-band-pages{font-weight:700;letter-spacing:.04em;font-variant-numeric:tabular-nums lining-nums}.ds-band-green{background:var(--section-green,#1F7A6E);color:var(--section-green-foreground,#fff)}.ds-band-oxblood{background:var(--section-oxblood,#8E2E3B);color:var(--section-oxblood-foreground,#fff)}.ds-band-ochre{background:var(--section-ochre,#C58B1A);color:var(--section-ochre-foreground,#18202E)}.ds-band-blue{background:var(--section-blue,#23356B);color:var(--section-blue-foreground,#fff)}"
+    },
+    {
+      "name": "Song Row",
+      "kind": "custom",
+      "refersTo": "song-row",
+      "description": "White row on the hairline: title, key tag, page call, chip and a written warning.",
+      "html": "<div class=\"ds-row\"><div class=\"ds-row-main\"><span class=\"ds-row-title\">Lecha Dodi</span><span class=\"ds-key\">Dm</span><span class=\"ds-folio\">p. 14</span></div><p class=\"ds-chip\">Main · PDF · Vocal Lead: Randy</p><p class=\"ds-warn\">Not saved offline</p></div>",
+      "css": ".ds-row{padding:14px 16px;background:var(--card,#fff);border-bottom:1px solid var(--rule,#E3E6EE);font-family:Assistant,sans-serif;color:var(--foreground,#18202E);transition:background .15s}.ds-row:hover{background:var(--accent,#EAF0FE)}.ds-row-main{display:flex;align-items:baseline;gap:8px}.ds-row-title{flex:1;font-weight:700;font-size:1.2rem;line-height:1.375}.ds-key{display:inline-flex;align-items:center;justify-content:center;align-self:center;min-width:44px;height:32px;padding:0 8px;border:1px solid var(--border,#E3E6EE);border-radius:8px;background:var(--secondary,#EEF1F7);color:var(--secondary-foreground,#2B3445);font-weight:700;font-variant-numeric:tabular-nums}.ds-folio{width:80px;text-align:end;font-size:1.35rem;font-weight:800;line-height:1;letter-spacing:-0.02em;font-variant-numeric:tabular-nums lining-nums}.ds-chip{margin:2px 0 0;font-size:12px;font-weight:500;color:var(--muted-foreground,#556072)}.ds-warn{margin:2px 0 0;font-size:12px;font-weight:600;color:var(--warning-line,#8E2E3B)}"
+    },
+    {
+      "name": "Setlist List Group",
+      "kind": "card",
+      "refersTo": "list-group",
+      "description": "Paper block of setlist rows with hairline dividers under a group heading.",
+      "html": "<section><h4 class=\"ds-group-h\">Upcoming</h4><div class=\"ds-group\"><div class=\"ds-lrow\"><b>Shabbat Morning</b><span>Sat Nov 7 · 24 songs · <em>22/24 charts ready</em></span></div><div class=\"ds-lrow\"><b>Friday Night</b><span>Fri Nov 6 · 18 songs</span></div></div></section>",
+      "css": ".ds-group-h{margin:0 0 8px;padding:0 4px;font-family:Assistant,sans-serif;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted-foreground,#556072)}.ds-group{border:1px solid var(--rule,#E3E6EE);border-radius:10px;overflow:hidden;background:var(--card,#fff)}.ds-lrow{display:flex;flex-direction:column;justify-content:center;min-height:72px;padding:12px 16px;border-bottom:1px solid var(--rule,#E3E6EE);font-family:Assistant,sans-serif;cursor:pointer;transition:background .15s}.ds-lrow:last-child{border-bottom:0}.ds-lrow:hover{background:color-mix(in srgb,var(--accent,#EAF0FE) 50%,transparent)}.ds-lrow b{font-size:17px;font-weight:700;color:var(--foreground,#18202E)}.ds-lrow span{font-size:14px;font-weight:500;color:var(--muted-foreground,#556072);font-variant-numeric:tabular-nums}.ds-lrow em{font-style:normal;font-weight:600;color:var(--caution,#8A5A00)}"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Paper field with a field-stroke border, 44px.",
+      "html": "<input class=\"ds-input\" placeholder=\"Search songs\">",
+      "css": ".ds-input{height:44px;padding:0 12px;border:1px solid var(--input,#D5DAE5);border-radius:8px;background:var(--card,#fff);color:var(--foreground,#18202E);font-family:Assistant,sans-serif;font-size:14px;transition:border-color .15s}.ds-input:focus-visible{outline:none;border-color:var(--ring,#2563EB);box-shadow:0 0 0 3px color-mix(in srgb,var(--ring,#2563EB) 30%,transparent)}"
+    },
+    {
+      "name": "Bottom Tab Bar",
+      "kind": "nav",
+      "refersTo": "bottom-tab-bar",
+      "description": "Paper tab bar below 1024px; the active tab carries a 3px top mark.",
+      "html": "<nav class=\"ds-tabbar\"><a class=\"ds-btab ds-btab-active\" href=\"#\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\"><path d=\"M3 6h12M3 12h12M3 18h8\"/><circle cx=\"19\" cy=\"17\" r=\"2\"/><path d=\"M21 17V5\"/></svg><span>Setlist</span></a><a class=\"ds-btab\" href=\"#\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"M4 4v16M9 4v16M14 4l5 16\"/></svg><span>Library</span></a></nav>",
+      "css": ".ds-tabbar{display:flex;justify-content:space-around;height:64px;background:var(--card,#fff);border-top:1px solid var(--rule,#E3E6EE);font-family:Assistant,sans-serif;}.ds-btab{position:relative;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:44px;color:var(--muted-foreground,#556072);text-decoration:none;font-size:12px;font-weight:600;transition:color .15s}.ds-btab:hover{color:var(--foreground,#18202E)}.ds-btab:focus-visible{outline:2px solid var(--ring,#2563EB);outline-offset:-4px}.ds-btab-active{color:var(--brand,#2563EB);font-weight:700}.ds-btab-active::before{content:\"\";position:absolute;top:0;left:50%;transform:translateX(-50%);width:40px;height:3px;border-radius:0 0 2px 2px;background:var(--brand,#2563EB)}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Siddur Section Rails",
+    "overview": "The service reads like the book it follows. A setlist is set as a printed order: each section opens on a full-hue band carrying its running head and its page range, and every row carries its page call in large tabular numerals at the margin. Above it sits a slim book-cloth top bar with the tabs; below it, clean white paper on a cool ground, a 1px hairline grid, and one blue action. Freshness and readiness are always stated in a status line under the title.\n\nDensity is the product rule: text-first rows, no cover art, no card per row. Hierarchy comes from scale contrast, not decoration: the title and the page calls are large and heavy, the metadata is small and quiet. The world is light-first for bright rooms and desks; dark is a considered night-blue, not black, with the section hues a step deeper so the bands do not glare on a dim stage.\n\nBrothers Lazaroff runs the same world under its own cloth: forced dark, a deep teal ground and a deep teal top bar, a teal brand accent, a pale primary action, and Zilla Slab on its headings. The section bands, hairline grid, page calls and type ramp are shared. The chart viewer inside Perform is outside this system.",
+    "keyCharacteristics": [
+      "A book-cloth top bar (56px) with tabs at desktop; a white bottom tab bar (64px) below 1024px.",
+      "Section header rows as full-hue bands: uppercase tracked running head left, \"pp. N–M\" right.",
+      "Page calls right-aligned in a fixed column, 800 weight, tabular numerals.",
+      "White rows on a 1px hairline, never a card per row, never zebra.",
+      "One blue primary action per view.",
+      "Assistant everywhere, Latin and Hebrew."
+    ],
+    "rules": [
+      {
+        "name": "The One Blue Rule",
+        "body": "One filled primary button per view, in Action Blue. Every other action is outline, ghost or an icon button.",
+        "section": "colors"
+      },
+      {
+        "name": "The Bands Only Rule",
+        "body": "The four section hues fill section bands and nothing else that carries meaning. A hue is a section's identity; reusing it for status or decoration breaks the reading.",
+        "section": "colors"
+      },
+      {
+        "name": "The Stated Warning Rule",
+        "body": "A warning is a line of words in Warning Line or Caution, never a hue on its own and never a badge.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tabular Rule",
+        "body": "Every number that can sit in a column (page calls, counts, dates, keys, BPM) uses tabular lining numerals (`tnum`).",
+        "section": "typography"
+      },
+      {
+        "name": "The Scale Contrast Rule",
+        "body": "Hierarchy is weight 800 against 500 and 1.5rem against 0.75rem. No second display face for CRC, no color-coded headings.",
+        "section": "typography"
+      },
+      {
+        "name": "The Hairline Rule",
+        "body": "Rows are separated by a 1px Hairline and nothing else: no zebra, no gap, no per-row border box.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** open every setlist view with the title, a status line that states freshness and readiness, and the one blue action.",
+      "**Do** head each section with a full-hue band carrying its running head and page range.",
+      "**Do** put the page call last on the row in a fixed column at 800 weight and full ink.",
+      "**Do** use `tnum` on every number in a column.",
+      "**Do** keep every target at 44px or more.",
+      "**Do** use the shared tokens (`--shell`, `--rule`, `--brand`, `--primary`) so Brothers Lazaroff re-skins without component edits."
+    ],
+    "donts": [
+      "**Don't** put a card or a shadow on each row, and don't zebra-stripe; the hairline is the grid.",
+      "**Don't** use a section hue for anything but a section band.",
+      "**Don't** put a second filled primary button on a view.",
+      "**Don't** carry a warning by color alone; write it.",
+      "**Don't** use glass, glow, gradients or noise on refreshed surfaces.",
+      "**Don't** let a CRC color, name or wordmark into the Brothers Lazaroff theme."
+    ]
+  }
+}
