@@ -67,6 +67,8 @@ interface UseSetlistPerformanceReturn {
     /** PERF-06: signed out, and the live setlist doc moved past the frame the
      *  server rendered. Drives the "Setlist updated" strip. */
     setlistUpdatedSinceLoad: boolean
+    /** Identifies the live version behind the strip (loop guard). */
+    setlistLiveStamp: string | null
 }
 
 interface UseSetlistPerformanceOpts {
@@ -282,6 +284,11 @@ export function useSetlistPerformance(
     // say so; the page shows a strip and the musician taps to reload.
     const setlistUpdatedSinceLoad =
         !user && setlistMovedPast(initial?.setlist, setlistData)
+    const liveVersion = (setlistData as { version?: unknown } | null)?.version
+    const setlistLiveStamp: string | null =
+        typeof liveVersion === "number"
+            ? `v${liveVersion}`
+            : toISOString(setlistData?.updatedAt as never)
 
     // TONIGHT-ONLY SWAPS (David's ask 4, 2026-09-22). An additive layer over
     // the rows above: the overrides doc can only change the chart fields of
@@ -420,5 +427,6 @@ export function useSetlistPerformance(
         book,
         eventDate,
         setlistUpdatedSinceLoad,
+        setlistLiveStamp,
     }
 }

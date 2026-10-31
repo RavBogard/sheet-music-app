@@ -152,6 +152,17 @@ function PdfWorkerPreload() {
 function PerformShellSWBootstrap() {
     useEffect(() => {
         void registerPerformShellSW()
+        // PERF-18: ask the browser not to evict the offline charts. Once per
+        // session; Safari may decline outside the Home-Screen app. Errors are
+        // swallowed.
+        try {
+            if (sessionStorage.getItem("perform-persist-asked") !== "1") {
+                sessionStorage.setItem("perform-persist-asked", "1")
+                if (navigator.storage?.persist) void navigator.storage.persist().catch(() => {})
+            }
+        } catch {
+            // storage unavailable
+        }
     }, [])
     return null
 }

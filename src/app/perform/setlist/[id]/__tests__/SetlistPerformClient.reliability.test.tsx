@@ -82,4 +82,24 @@ describe('Perform reliability (signed out)', () => {
         render(<SetlistPerformClient setlistId={ID} initialSetlist={ssr} initialTracks={rows} />)
         expect(fetchTracks).not.toHaveBeenCalled()
     })
+
+    it('hides the strip while offline, and after a refresh for the same live version', () => {
+        live.data = { ...base, version: 4 }
+        const onLine = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
+        const { unmount } = render(<SetlistPerformClient setlistId={ID} initialSetlist={ssr} initialTracks={rows} />)
+        expect(screen.queryByTestId('setlist-updated-strip')).toBeNull()
+        unmount()
+        onLine.mockRestore()
+
+        sessionStorage.setItem(`perform-setlist-refreshed:${ID}`, 'v4')
+        render(<SetlistPerformClient setlistId={ID} initialSetlist={ssr} initialTracks={rows} />)
+        expect(screen.queryByTestId('setlist-updated-strip')).toBeNull()
+        sessionStorage.clear()
+    })
+
+    it('keeps a /track/<id> URL that arrives without initialTrackId (SW base-page fallback)', () => {
+        window.history.replaceState(null, '', `/perform/setlist/${ID}/track/t1`)
+        render(<SetlistPerformClient setlistId={ID} initialSetlist={ssr} initialTracks={rows} />)
+        expect(window.location.pathname).toBe(`/perform/setlist/${ID}/track/t1`)
+    })
 })

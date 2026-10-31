@@ -124,6 +124,7 @@ export function SmartScoreViewer({ fileId, trackId, trackKey }: SmartScoreViewer
     // the load effect; the watchdog turns a silent hang into error + Retry.
     const [retryTick, setRetryTick] = useState(0)
     const retriesRef = useRef(0)
+    const genRef = useRef(0)
     const MAX_RETRIES = 3
     const LOAD_WATCHDOG_MS = 45_000
 
@@ -203,6 +204,9 @@ export function SmartScoreViewer({ fileId, trackId, trackKey }: SmartScoreViewer
     // Load + initial render + fit. Re-runs only when the source changes.
     useEffect(() => {
         let cancelled = false
+        const myGen = ++genRef.current
+        // The watchdog bumps genRef: a stale load never overwrites error + Retry.
+        const stale = () => cancelled || genRef.current !== myGen
 
         const loadScore = async () => {
             if (!osmdRef.current) {
@@ -255,18 +259,18 @@ export function SmartScoreViewer({ fileId, trackId, trackKey }: SmartScoreViewer
                     try {
                         const { getFile } = await import("@/lib/offline-idb")
                         const blob = await getFile(fileId)
-                        if (cancelled) return
+                        if (stale()) return
                         if (blob) buffer = await blob.arrayBuffer()
                     } catch (idbErr) {
                         // offline-idb failure must never strand the viewer — fall
                         // through to the network fetch below.
                         logger.warn("offline-idb read failed; falling back to network", idbErr)
                     }
-                    if (cancelled) return
+                    if (stale()) return
 
                     if (!buffer) {
                         const res = await fetch(`/api/drive/file/${fileId}`)
-                        if (cancelled) return
+                        if (stale()) return
                         if (!res.ok) throw new Error("Failed to fetch score file from URL")
                         buffer = await res.arrayBuffer()
                         // PERF-08: keep what the network gave us, so this chart
@@ -291,9 +295,9 @@ export function SmartScoreViewer({ fileId, trackId, trackKey }: SmartScoreViewer
                     finalContent = aiXmlContent as string
                 }
 
-                if (cancelled) return
+                if (stale()) return
                 await osmd.load(finalContent)
-                if (cancelled) return
+                if (stale()) return
 
                 // Yield again before the heavy render loop.
                 await sleep(50)
@@ -317,9 +321,8 @@ export function SmartScoreViewer({ fileId, trackId, trackKey }: SmartScoreViewer
                 appliedRef.current = { transposition, zoom }
                 lastWidthRef.current = containerRef.current?.clientWidth ?? 0
                 readyRef.current = true
-                if (!cancelled) {
+                if (!stale()) {
                     retriesRef.current = 0
-                    setError(null)
                     setLoading(false)
                 }
 
@@ -343,7 +346,7 @@ export function SmartScoreViewer({ fileId, trackId, trackKey }: SmartScoreViewer
                     const firstMeasure = sheet?.getFirstSourceMeasure?.() ?? null
                     const keyInst = firstMeasure?.getKeyInstruction?.(0) ?? null
                     const canonical = canonicalKeyFromOsmdInstruction(keyInst)
-                    if (!cancelled) {
+                    if (!stale()) {
                         setMusicXmlKey(canonical)
 
                         // Q-DETECT-1=C silent heal (band_leader / admin only):
@@ -363,11 +366,11 @@ export function SmartScoreViewer({ fileId, trackId, trackKey }: SmartScoreViewer
                     }
                 } catch (keyErr) {
                     logger.warn("MusicXML key read failed", keyErr)
-                    if (!cancelled) setMusicXmlKey(null)
+                    if (!stale()) setMusicXmlKey(null)
                 }
             } catch (err) {
                 logger.error("OSMD Load Error", err)
-                if (!cancelled) {
+                if (!stale()) {
                     setError("load_failed")
                     setLoading(false)
                 }
@@ -394,7 +397,10 @@ export function SmartScoreViewer({ fileId, trackId, trackKey }: SmartScoreViewer
     // PERF-08 watchdog: a load that never settles becomes error + Retry.
     useEffect(() => {
         if (!loading || error) return
-        const timer = setTimeout(() => setError("load_failed"), LOAD_WATCHDOG_MS)
+        const timer = setTimeout(() => {
+            genRef.current++
+            setError("load_failed")
+        }, LOAD_WATCHDOG_MS)
         return () => clearTimeout(timer)
     }, [loading, error, retryTick])
 

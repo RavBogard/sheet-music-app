@@ -71,6 +71,7 @@ export function TextScoreViewer({ fileId }: TextScoreViewerProps) {
     // PERF-08: Retry + bounded watchdog (PDFViewer parity).
     const [retryTick, setRetryTick] = useState(0)
     const retriesRef = useRef(0)
+    const genRef = useRef(0)
     const MAX_RETRIES = 3
     const LOAD_WATCHDOG_MS = 30_000
 
@@ -83,11 +84,15 @@ export function TextScoreViewer({ fileId }: TextScoreViewerProps) {
 
     useEffect(() => {
         let cancelled = false
+        const myGen = ++genRef.current
+        // The watchdog bumps genRef, which makes this load stale: a late success can
+        // never overwrite the error + Retry state.
+        const stale = () => cancelled || genRef.current !== myGen
         async function loadText() {
             setLoading(true)
             setError(null)
             if (!fileId) {
-                if (!cancelled) {
+                if (!stale()) {
                     setError("chart")
                     setLoading(false)
                 }
@@ -104,7 +109,7 @@ export function TextScoreViewer({ fileId }: TextScoreViewerProps) {
                 try {
                     const { getFile } = await import("@/lib/offline-idb")
                     const blob = await getFile(fileId)
-                    if (cancelled) return
+                    if (stale()) return
                     if (blob) {
                         text = await blob.text()
                     }
@@ -112,13 +117,13 @@ export function TextScoreViewer({ fileId }: TextScoreViewerProps) {
                     // IDB unavailable (Private-mode Safari, etc.) — fall
                     // through to the network path. Don't surface to UI.
                 }
-                if (cancelled) return
+                if (stale()) return
                 if (text === null) {
                     const res = await fetch(`/api/drive/file/${fileId}`)
-                    if (cancelled) return
+                    if (stale()) return
                     if (!res.ok) throw new TextFileLoadError("Failed to load text file")
                     text = await res.text()
-                    if (cancelled) return
+                    if (stale()) return
                     // PERF-08: keep the bytes for offline. Best-effort.
                     try {
                         const { putFile } = await import("@/lib/offline-idb")
@@ -131,7 +136,7 @@ export function TextScoreViewer({ fileId }: TextScoreViewerProps) {
                 setContent(text)
                 setLoading(false)
             } catch (err: unknown) {
-                if (!cancelled) {
+                if (!stale()) {
                     setError(err instanceof TextFileLoadError ? "textFile" : err instanceof Error ? { message: err.message } : "chart")
                     setLoading(false)
                 }
@@ -145,6 +150,7 @@ export function TextScoreViewer({ fileId }: TextScoreViewerProps) {
     useEffect(() => {
         if (!loading) return
         const timer = setTimeout(() => {
+            genRef.current++
             setError("chart")
             setLoading(false)
         }, LOAD_WATCHDOG_MS)

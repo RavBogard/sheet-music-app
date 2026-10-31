@@ -155,7 +155,7 @@ async function networkFirst(request) {
         return networkResponse
     } catch {
         // Network failed (offline, abort, DNS, etc.). Try the cache.
-        const cached = await caches.match(request)
+        const cached = await matchGenerations(request)
         if (cached) return cached
         // PERF-01: an open chart rewrites the URL with replaceState, so
         // /perform/setlist/<id>/track/<trackId> is usually not cached. Serve
@@ -172,30 +172,47 @@ async function networkFirst(request) {
     }
 }
 
+// Cache names in lookup order: the current generation first, then the others
+// newest-first. N-1 must never shadow the current cache.
+async function orderedCacheNames() {
+    const names = (await caches.keys()).filter((n) => n.startsWith(CACHE_PREFIX))
+    let order = []
+    try {
+        const meta = await caches.open(META_CACHE)
+        const r = await meta.match(META_KEY)
+        if (r) order = await r.json()
+    } catch {
+        order = []
+    }
+    if (!Array.isArray(order)) order = []
+    const rank = (n) => (n === CACHE_NAME ? Infinity : order.indexOf(n))
+    return names.sort((a, b) => rank(b) - rank(a))
+}
+
+async function matchGenerations(request, options) {
+    try {
+        for (const name of await orderedCacheNames()) {
+            const cache = await caches.open(name)
+            const hit = await cache.match(request, options)
+            if (hit) return hit
+        }
+    } catch {
+        // fall through to a miss
+    }
+    return null
+}
+
+// PERF-01: only the exact track URL (already tried) or the BASE setlist page.
+// Never another track's page. The client opens the track from location.pathname.
 async function setlistFallback(request) {
     try {
         const url = new URL(request.url)
         const m = url.pathname.match(/^\/perform\/setlist\/([^/]+)\/track\/[^/]+/)
         if (!m) return null
-        const base = `/perform/setlist/${m[1]}`
-        const direct = await caches.match(new URL(base, url.origin).href, { ignoreSearch: true })
-        if (direct) return direct
-        const names = await caches.keys()
-        for (const name of names.filter((n) => n.startsWith(CACHE_PREFIX))) {
-            const cache = await caches.open(name)
-            const keys = await cache.keys()
-            for (const k of keys) {
-                const p = new URL(k.url).pathname
-                if (p === base || p.startsWith(base + '/')) {
-                    const hit = await cache.match(k)
-                    if (hit) return hit
-                }
-            }
-        }
+        return await matchGenerations(new URL(`/perform/setlist/${m[1]}`, url.origin).href, { ignoreSearch: true })
     } catch {
-        // fall through to the plain network error
+        return null
     }
-    return null
 }
 
 // PERF-01: the page asks the SW to cache the URL it just rewrote to.
