@@ -56,10 +56,16 @@ export function historyAliases(index: SlotUseIndex, slotKey: string): string[] {
     return [...out]
 }
 
-/** Dated, non-test, whole-band setlists, newest first. */
+/**
+ * Dated, non-test, whole-band setlists that hold at least one song row, newest first.
+ * A setlist with no song rows (an empty shell made for a date and never filled) is not a
+ * service anyone played: counted, it takes a place in the learning window and starves the
+ * running order (three empty Shabbat mornings of five left no row in three of five).
+ */
 export function eligibleSetlists(setlists: HistorySetlist[], before?: string): HistorySetlist[] {
     return setlists
         .filter((s) => !s.isTest && !!s.eventDate && !setlistPart(s.name))
+        .filter((s) => s.tracks.some((t) => isSongType(t.type)))
         .filter((s) => !before || s.eventDate!.slice(0, 10) < before)
         .sort((a, b) => (a.eventDate! < b.eventDate! ? 1 : a.eventDate! > b.eventDate! ? -1 : 0))
 }

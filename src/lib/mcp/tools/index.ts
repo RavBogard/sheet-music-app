@@ -866,7 +866,7 @@ export function registerReadTools(server: McpServer): void {
         "reseed_service_profile",
         {
             description:
-                "Re-learn one service profile's running order now, from its last 5 regular services (never a special week or a B'nei Mitzvah), and show it: the order, the services it was learned from, and which slots are open. draft_service re-learns on every draft anyway; use this when the author asks what the order would be, or to refresh the saved profile on purpose. friday_night and shabbat_morning need `rabbiSlot`. Admin / band_leader. F-05: `dryRun` defaults true and writes nothing; a real run needs `dryRun: false, force: true`. Returns `{ok, dryRun, profileKey, label, outcome, learnedFrom:[{setlistId, name, date}], order:[{index, type, title, slotKind, fileId, key}], unsure, rowChanges?, templateId}`.",
+                "Re-learn one service profile's running order now, from its last 5 regular services (never a special week or a B'nei Mitzvah), and show it: the order, the services it was learned from, and which slots are open. draft_service re-learns on every draft anyway; use this when the author asks what the order would be, or to refresh the saved profile on purpose. friday_night and shabbat_morning need `rabbiSlot`. Admin / band_leader. F-05: `dryRun` defaults true and writes nothing; a real run needs `dryRun: false, force: true`. A learned order that is empty or under half the saved one is refused (`shrinkGuard` in the dry run says why) unless `allowShrink: true`. Returns `{ok, dryRun, profileKey, label, outcome, learnedFrom:[{setlistId, name, date}], order:[{index, type, title, slotKind, fileId, key}], unsure, rowChanges?, shrinkGuard?, templateId}`.",
             inputSchema: {
                 serviceType: z
                     .string()
@@ -877,6 +877,10 @@ export function registerReadTools(server: McpServer): void {
                     .describe("Required for friday_night and shabbat_morning: which rabbi leads. Ask; never infer."),
                 dryRun: z.boolean().optional().describe("When true (default), report without writing."),
                 force: z.boolean().optional().describe("Required with `dryRun: false` to write."),
+                allowShrink: z
+                    .boolean()
+                    .optional()
+                    .describe("Write even when the learned order is empty or under half the saved one. Only after the author has seen the dry run."),
             },
         },
         async (args, extra) =>

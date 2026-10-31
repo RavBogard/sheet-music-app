@@ -344,6 +344,29 @@ export function sameRows(stored: unknown, tracks: SeededTrack[]): boolean {
     return stable(stored ?? []) === stable(tracks)
 }
 
+/** Why a learned order may not replace the stored one without an explicit override. */
+export interface ShrinkGuard {
+    reason: "empty_order" | "shrinks_by_half"
+    learned: number
+    stored: number
+}
+
+/**
+ * A learned running order never silently replaces a profile with nothing, or
+ * with less than half of what is stored: that is a learning fault (empty
+ * history, a starved window), not a change of liturgy. Null when the write is fine.
+ */
+export function learnedOrderGuard(learned: number, stored: number): ShrinkGuard | null {
+    if (learned === 0) return { reason: "empty_order", learned, stored }
+    if (stored > 0 && learned * 2 < stored) return { reason: "shrinks_by_half", learned, stored }
+    return null
+}
+
+function storedRowCount(existing: FirebaseFirestore.QueryDocumentSnapshot | null): number {
+    const t = existing?.data().tracks
+    return Array.isArray(t) ? t.length : 0
+}
+
 /**
  * Bet 1 (MCP-03): a profile is a cache of what was learned. Write the learned
  * rows to the profile doc when they differ from what is stored (or create it).
@@ -360,6 +383,12 @@ export async function cacheLearnedProfile(
     initAdmin()
     const db = getFirestore()
     const ref = existing?.ref ?? db.collection(TEMPLATES).doc(`profile__${org}__${def.key}`)
+    const guard = learnedOrderGuard(seed.tracks.length, storedRowCount(existing))
+    if (guard) {
+        // Never cache an empty or halved order on a draft; reseed_service_profile with allowShrink can.
+        logger.warn("[mcp] profile cache write refused", { org, key: def.key, ...guard })
+        return existing?.id ?? ref.id
+    }
     try {
         if (existing) {
             if (sameRows(existing.data().tracks, seed.tracks)) return existing.id
@@ -660,6 +689,8 @@ export interface ReseedServiceProfileArgs {
     rabbiSlot?: string | null
     dryRun?: boolean
     force?: boolean
+    /** Write even when the learned order is empty or under half the stored one. */
+    allowShrink?: boolean
 }
 
 export interface ReseedServiceProfileReport {
@@ -674,6 +705,8 @@ export interface ReseedServiceProfileReport {
     order: Array<{ index: number; type: string; title: string; slotKind: string | null; fileId: string | null; key: string | null }>
     unsure: SeedUnsure[]
     rowChanges?: RowChange[]
+    /** Set when a real run would be refused: the learned order is empty or under half the stored one. */
+    shrinkGuard?: ShrinkGuard & { overridden: boolean }
     templateId: string | null
 }
 
@@ -706,6 +739,7 @@ export async function reseedServiceProfileTool(
     const profileKey = profileKeyFor(serviceType, rabbiSlot)
     const dryRun = args?.dryRun !== false
     const force = args?.force === true
+    const allowShrink = args?.allowShrink === true
     try {
         initAdmin()
         const db = getFirestore()
@@ -758,7 +792,19 @@ export async function reseedServiceProfileTool(
             const stored = Array.isArray(existing.data().tracks) ? (existing.data().tracks as Record<string, unknown>[]) : []
             report.rowChanges = rowChangesOf(stored, seed.tracks as unknown as Record<string, unknown>[])
         }
+        const guard = outcome === "created" || outcome === "updated" ? learnedOrderGuard(seed.tracks.length, storedRowCount(existing)) : null
+        if (guard) report.shrinkGuard = { ...guard, overridden: allowShrink }
         if (dryRun || outcome === "unchanged" || outcome === "no_history") return report
+        if (guard && !allowShrink) {
+            return richError(
+                "shrink_refused",
+                guard.reason === "empty_order"
+                    ? "The learned order is empty; the saved profile was not changed."
+                    : `The learned order has ${guard.learned} rows, under half of the ${guard.stored} saved; the saved profile was not changed.`,
+                { shrinkGuard: guard, dryRunPlan: { ...report, dryRun: false } },
+                "Check learnedFrom in the dry run. To write it anyway, re-call with allowShrink: true.",
+            )
+        }
         if (!force) {
             return richError(
                 "force_required",

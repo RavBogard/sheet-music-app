@@ -469,4 +469,34 @@ describe("draft a service from its profile (emulator)", () => {
         expect(bl.error.machine_code).toBe("profile_not_found")
         expect((await db().collection("setlistTemplates").where("orgId", "==", BL).get()).size).toBe(0)
     })
+
+    it("never writes a learned order under half the saved one without allowShrink, from reseed or a draft", async () => {
+        const id = `profile__${CRC}__${KEY}`
+        const saved = Array.from({ length: 10 }, (_, i) => ({ type: "header", title: `saved ${i}` }))
+        await db().collection("setlistTemplates").doc(id).update({ tracks: saved })
+        type Report = { ok: true; outcome: string; shrinkGuard?: { reason: string; learned: number; stored: number; overridden: boolean } }
+
+        const dry = (await reseedServiceProfileTool(ADMIN, { serviceType: "shabbat_morning", rabbiSlot: "randy" }, CRC)) as Report
+        expect(dry.shrinkGuard).toMatchObject({ reason: "shrinks_by_half", learned: 3, stored: 10, overridden: false })
+        const refused = (await reseedServiceProfileTool(
+            ADMIN,
+            { serviceType: "shabbat_morning", rabbiSlot: "randy", dryRun: false, force: true },
+            CRC,
+        )) as unknown as Err
+        expect(refused.error.machine_code).toBe("shrink_refused")
+        expect((await db().collection("setlistTemplates").doc(id).get()).data()!.tracks).toHaveLength(10)
+
+        // A current draft neither caches the halved order nor drafts from it.
+        const draft = (await draftServiceTool(ADMIN, { date: "2099-01-03", serviceType: "shabbat_morning", rabbiSlot: "randy" }, CRC)) as Draft
+        expect(draft.origin.kind).toBe("saved_profile")
+        expect((await db().collection("setlistTemplates").doc(id).get()).data()!.tracks).toHaveLength(10)
+
+        const forced = (await reseedServiceProfileTool(
+            ADMIN,
+            { serviceType: "shabbat_morning", rabbiSlot: "randy", dryRun: false, force: true, allowShrink: true },
+            CRC,
+        )) as Report
+        expect(forced.shrinkGuard?.overridden).toBe(true)
+        expect((await db().collection("setlistTemplates").doc(id).get()).data()!.tracks).toHaveLength(3)
+    })
 })
