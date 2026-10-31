@@ -1,0 +1,97 @@
+name: Nightly Perform WebKit
+
+# PERF-20: the iPad (WebKit) Perform specs against production, once a night.
+# Not per-PR: these hit the live site and take minutes. Only the bearer-free
+# specs run here (public setlists, no MCP_BEARER), so the workflow needs no
+# secrets beyond the default GITHUB_TOKEN.
+#
+# On failure it opens, or comments on, ONE issue titled
+# "Nightly Perform WebKit failing". No emails, no other notifications.
+
+on:
+  schedule:
+    - cron: '0 9 * * *' # 09:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: nightly-perform-webkit
+  cancel-in-progress: false
+
+jobs:
+  perform-webkit:
+    name: Perform WebKit (prod)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      CI: 'true'
+      PLAYWRIGHT_USE_REMOTE: '1'
+      PLAYWRIGHT_BASE_URL: https://www.centralreform.live
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Install Playwright WebKit
+        run: npx playwright install --with-deps webkit
+
+      # Each spec skips itself outside its own project, so each runs under the
+      # project it was written for.
+      - name: Offline reload of an open chart (iPad landscape)
+        id: offline_reload
+        if: always()
+        run: npx playwright test e2e/perform-offline-reload.spec.ts --project=ipad-webkit-landscape
+
+      - name: Fresh install, first chart (iPad portrait)
+        id: fresh_install
+        if: always()
+        run: npx playwright test e2e/perform-ipad-pwa-fresh-install.spec.ts --project=ipad-webkit
+
+      - name: Stuck-spinner probe, walk every chart (iPad portrait)
+        id: stuck_spinner
+        if: always()
+        run: npx playwright test e2e/ipad-stuck-spinner-probe.spec.ts --project=ipad-webkit
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: failure()
+        with:
+          name: nightly-perform-webkit-results
+          path: test-results/
+          retention-days: 14
+
+      - name: Open or update the failure issue
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          OFFLINE_RELOAD: ${{ steps.offline_reload.outcome }}
+          FRESH_INSTALL: ${{ steps.fresh_install.outcome }}
+          STUCK_SPINNER: ${{ steps.stuck_spinner.outcome }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TITLE="Nightly Perform WebKit failing"
+          BODY=$(printf '%s\n' \
+            "The nightly WebKit Perform run against production failed on $(date -u +%Y-%m-%d)." \
+            "" \
+            "- perform-offline-reload (ipad-webkit-landscape): ${OFFLINE_RELOAD}" \
+            "- perform-ipad-pwa-fresh-install (ipad-webkit): ${FRESH_INSTALL}" \
+            "- ipad-stuck-spinner-probe (ipad-webkit): ${STUCK_SPINNER}" \
+            "" \
+            "Run and artifacts: ${RUN_URL}")
+          NUMBER=$(gh issue list --state open --search "\"${TITLE}\" in:title" --json number,title \
+            --jq ".[] | select(.title == \"${TITLE}\") | .number" | head -n 1)
+          if [ -n "${NUMBER}" ]; then
+            gh issue comment "${NUMBER}" --body "${BODY}"
+          else
+            gh issue create --title "${TITLE}" --body "${BODY}"
+          fi

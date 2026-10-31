@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils"
 import type { UseLongPressBag } from "@/hooks/use-long-press"
 import type { WithTonight } from "@/lib/performance/tonight"
 import { useT } from "@/i18n/client"
+import type { SaveFailureReason } from "@/lib/prefetch"
 import { DirectionalIcon } from "@/components/i18n/DirectionalIcon"
 import { SECTION_BAND_CLASS, type SectionBand } from "@/components/setlist/grid/section-bands"
 
@@ -43,6 +44,11 @@ export interface SetlistRowProps {
      * device store hasn't been read yet, so nothing is claimed either way.
      */
     savedOffline?: boolean
+    /**
+     * PERF-21: why this row's chart didn't save on the last save pass, when
+     * known. Shown after the not-saved line; retrying is the Save button.
+     */
+    saveFailure?: SaveFailureReason
 }
 
 export function SetlistRow({
@@ -57,6 +63,7 @@ export function SetlistRow({
     onSwapTap,
     band,
     savedOffline,
+    saveFailure,
 }: SetlistRowProps) {
     const t = useT()
     const isSong = !track.type || track.type === "song"
@@ -99,6 +106,14 @@ export function SetlistRow({
     const notSavedLine = hasFile && savedOffline === false ? (
         <p data-testid="row-not-saved-offline" className="text-xs font-semibold text-warning-line mt-0.5">
             {t("performSetlist.row.notSavedOffline")}
+            {saveFailure ? (
+                <span data-testid="row-not-saved-reason" data-reason={saveFailure}>
+                    {" · "}
+                    {saveFailure === "corrupt"
+                        ? t("performSetlist.row.saveFailedDamaged")
+                        : t("performSetlist.row.saveFailedDownload")}
+                </span>
+            ) : null}
         </p>
     ) : null
 

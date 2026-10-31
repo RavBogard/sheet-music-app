@@ -13,11 +13,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, cleanup, fireEvent, waitFor, act } from '@testing-library/react'
 
-const mockPrefetch = vi.fn<(ids: string[], onProgress?: (n: number) => void) => Promise<number>>()
+const mockPrefetch = vi.fn<(ids: string[], onProgress?: (n: number) => void, opts?: { versions?: unknown }) => Promise<number>>()
 const mockListFileIds = vi.fn<() => Promise<string[]>>()
+const mockFailures = new Map<string, { reason: string; at: number }>()
 
 vi.mock('@/lib/prefetch', () => ({
-    prefetchSetlistPDFs: (ids: string[], onProgress?: (n: number) => void) => mockPrefetch(ids, onProgress),
+    prefetchSetlistPDFs: (ids: string[], onProgress?: (n: number) => void, opts?: { versions?: unknown }) =>
+        mockPrefetch(ids, onProgress, opts),
+    getSaveFailures: () => mockFailures,
+    SAVE_FAILURES_CHANGED_EVENT: 'crc-offline-save-failures-changed',
 }))
 vi.mock('@/lib/offline-idb', () => ({
     listFileIds: () => mockListFileIds(),
@@ -48,6 +52,7 @@ describe('SaveOfflineButton', () => {
     beforeEach(() => {
         mockPrefetch.mockReset().mockResolvedValue(0)
         mockListFileIds.mockReset().mockResolvedValue([])
+        mockFailures.clear()
         setOnline(true)
     })
 
@@ -112,7 +117,7 @@ describe('SaveOfflineButton', () => {
 
         await waitFor(() => expect(btn().getAttribute('data-state')).toBe('saving'))
         expect((btn() as HTMLButtonElement).disabled).toBe(true)
-        expect(mockPrefetch).toHaveBeenCalledWith(['upload-1', 'upload-2'], expect.any(Function))
+        expect(mockPrefetch).toHaveBeenCalledWith(['upload-1', 'upload-2'], expect.any(Function), { versions: undefined })
 
         // Live progress tick surfaces N/M.
         act(() => onProgressCb?.(1))
@@ -172,8 +177,42 @@ describe('SaveOfflineButton', () => {
         mockListFileIds.mockResolvedValue(['upload-1'])
         const onReadyChange = vi.fn()
         render(<SaveOfflineButton fileIds={['upload-1', 'upload-2']} onReadyChange={onReadyChange} />)
-        await waitFor(() => expect(onReadyChange).toHaveBeenLastCalledWith(1, 2, new Set(['upload-1'])))
+        await waitFor(() => expect(onReadyChange).toHaveBeenLastCalledWith(1, 2, new Set(['upload-1']), new Map()))
         expect(mockPrefetch).not.toHaveBeenCalled()
+    })
+
+    it('reports why a missing chart failed to save, and drops failures for charts still on the device', async () => {
+        stubNoopIdle()
+        mockListFileIds.mockResolvedValue(['upload-1'])
+        mockFailures.set('upload-1', { reason: 'network', at: 1 }) // older copy still saved
+        mockFailures.set('upload-2', { reason: 'corrupt', at: 1 })
+        mockFailures.set('other-setlist', { reason: 'not-found', at: 1 })
+        const onReadyChange = vi.fn()
+        render(<SaveOfflineButton fileIds={['upload-1', 'upload-2']} onReadyChange={onReadyChange} />)
+        await waitFor(() =>
+            expect(onReadyChange).toHaveBeenLastCalledWith(1, 2, new Set(['upload-1']), new Map([['upload-2', 'corrupt']])),
+        )
+    })
+
+    it('recounts when the save pass records a failure', async () => {
+        stubNoopIdle()
+        const onReadyChange = vi.fn()
+        render(<SaveOfflineButton fileIds={['upload-1']} onReadyChange={onReadyChange} />)
+        await waitFor(() => expect(onReadyChange).toHaveBeenLastCalledWith(0, 1, new Set(), new Map()))
+        mockFailures.set('upload-1', { reason: 'not-found', at: 1 })
+        await act(async () => {
+            window.dispatchEvent(new Event('crc-offline-save-failures-changed'))
+        })
+        await waitFor(() =>
+            expect(onReadyChange).toHaveBeenLastCalledWith(0, 1, new Set(), new Map([['upload-1', 'not-found']])),
+        )
+    })
+
+    it('passes the server versions to the save pass', async () => {
+        stubSyncIdle()
+        render(<SaveOfflineButton fileIds={['upload-1']} versions={{ 'upload-1': 'h:abc' }} />)
+        await waitFor(() => expect(mockPrefetch).toHaveBeenCalled())
+        expect(mockPrefetch.mock.calls[0][2]).toEqual({ versions: { 'upload-1': 'h:abc' } })
     })
 
     // WS-13 (v11.6-03-02): the all-ready state shows the explicit N/N count so a

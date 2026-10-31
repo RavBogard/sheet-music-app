@@ -168,9 +168,14 @@ describe('offline: shared rows cache like own rows', () => {
     it('Save offline caches a shared chart’s bytes by fileId like an own chart', async () => {
         // Stay in jsdom's browser Blob realm. Node 22's native Response and
         // jsdom's FileReader Blob polyfill are not interchangeable.
+        // Realistic bytes: a %PDF header and a plausible size. The save pass
+        // refuses PDF-typed bodies under 64 bytes (a portal stub or a cut-off
+        // download is never a chart).
+        const sharedPdf = `%PDF-1.7 shared${' '.repeat(240)}%%EOF`
         const fetchSpy = vi.fn(async () => ({
             ok: true,
-            blob: async () => new Blob(['%PDF-shared'], { type: 'application/pdf' }),
+            headers: new Headers({ 'content-type': 'application/pdf' }),
+            blob: async () => new Blob([sharedPdf], { type: 'application/pdf' }),
         } as Response))
         vi.stubGlobal('fetch', fetchSpy)
         const n = await prefetchSetlistPDFs(['own-1', 'n1'])
@@ -179,6 +184,6 @@ describe('offline: shared rows cache like own rows', () => {
             '/api/drive/file/own-1',
             '/api/drive/file/n1',
         ])
-        expect(await (await getFile('n1'))?.text()).toBe('%PDF-shared')
+        expect(await (await getFile('n1'))?.text()).toBe(sharedPdf)
     })
 })

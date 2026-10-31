@@ -24,7 +24,7 @@ export default async function SetlistPerformTrackPage({
     params: Promise<{ id: string; trackId: string }>
 }) {
     const { id, trackId } = await params
-    const { setlist, tracks, overrides } = await fetchInitialFrame(id)
+    const { setlist, tracks, overrides, chartVersions } = await fetchInitialFrame(id)
 
     return (
         <SetlistPerformClient
@@ -32,6 +32,7 @@ export default async function SetlistPerformTrackPage({
             initialSetlist={setlist}
             initialTracks={tracks}
             initialOverrides={overrides ?? null}
+            chartVersions={chartVersions}
             initialTrackId={trackId}
         />
     )

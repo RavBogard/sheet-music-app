@@ -13,12 +13,15 @@ import { logger } from "@/lib/logger"
 import { readTonightOverrides } from "@/lib/performance/tonight-server"
 import type { OverridesDoc } from "@/lib/performance/tonight"
 import type { Setlist, SetlistTrack } from "@/types/models"
+import { fetchChartVersions } from "@/lib/offline/chart-versions-server"
 
 export async function fetchInitialFrame(setlistId: string): Promise<{
     setlist: Setlist | null
     tracks: SetlistTrack[]
     /** Tonight's swaps (David's ask 4). Null when absent or unreadable. */
     overrides?: OverridesDoc | null
+    /** PERF-18: current version per bonded fileId, for the offline store's staleness check. */
+    chartVersions?: Record<string, string>
 }> {
     try {
         const adminAvailable = initAdmin()
@@ -34,8 +37,15 @@ export async function fetchInitialFrame(setlistId: string): Promise<{
         const serialized = serializeSetlist(snap.id, data) as unknown as Setlist
         const tracksRaw = await getTracksForSetlist(db, setlistId, serialized as unknown as Record<string, unknown>)
         const tracks = tracksRaw as unknown as SetlistTrack[]
-        const overrides = await readTonightOverrides(db, setlistId)
-        return { setlist: serialized, tracks, overrides }
+        const [overrides, chartVersions] = await Promise.all([
+            readTonightOverrides(db, setlistId),
+            fetchChartVersions(
+                db,
+                tracks.map((t) => t.fileId ?? "").filter(Boolean),
+                data.orgId,
+            ),
+        ])
+        return { setlist: serialized, tracks, overrides, chartVersions }
     } catch (err) {
         logger.warn(`[/perform/setlist/${setlistId}] SSR fetch failed; falling back to client-only:`, err)
         return { setlist: null, tracks: [] }

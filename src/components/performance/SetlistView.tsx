@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState } from "react"
 import { SetlistTrack } from "@/types/models"
+import type { SaveFailureReason } from "@/lib/prefetch"
 import { SetlistRow } from "./SetlistRow"
 import { LiveDirectorGesture } from "./LiveDirectorGesture"
 import { LiturgyRunDivider } from "./LiturgyRunDivider"
@@ -36,6 +37,8 @@ export interface SetlistViewProps {
     onSwapTap?: (index: number) => void
     /** File ids saved on this device, or null while the device store is unread. */
     savedFileIds?: ReadonlySet<string> | null
+    /** PERF-21: why a chart didn't save, per fileId (this session's save passes). */
+    saveFailures?: ReadonlyMap<string, SaveFailureReason> | null
 }
 
 export function SetlistView({
@@ -51,6 +54,7 @@ export function SetlistView({
     collapseLiturgy = false,
     onSwapTap,
     savedFileIds,
+    saveFailures,
 }: SetlistViewProps) {
     const t = useT()
     // Memoize transposed keys computation (pure function, keyed on tracks + transposition)
@@ -83,6 +87,8 @@ export function SetlistView({
 
     const savedOfflineFor = (track: SetlistTrack): boolean | undefined =>
         savedFileIds && track.fileId ? savedFileIds.has(track.fileId) : undefined
+    const saveFailureFor = (track: SetlistTrack): SaveFailureReason | undefined =>
+        saveFailures && track.fileId ? saveFailures.get(track.fileId) : undefined
 
     const renderRow = (track: SetlistTrack, index: number) => {
         // Long-press → live-director sheet wires per-row when the viewer is a
@@ -111,6 +117,7 @@ export function SetlistView({
                     onSwapTap={swapTap}
                     band={track.id ? bands[track.id] : undefined}
                     savedOffline={savedOfflineFor(track)}
+                    saveFailure={saveFailureFor(track)}
                 />
             )
         }
@@ -137,6 +144,7 @@ export function SetlistView({
                         onSwapTap={swapTap}
                         band={bands[track.id]}
                         savedOffline={savedOfflineFor(track)}
+                        saveFailure={saveFailureFor(track)}
                     />
                 )}
             </LiveDirectorGesture>

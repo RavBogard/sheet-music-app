@@ -3,7 +3,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Download, Check, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { prefetchSetlistPDFs } from "@/lib/prefetch"
+import {
+    getSaveFailures,
+    prefetchSetlistPDFs,
+    SAVE_FAILURES_CHANGED_EVENT,
+    type SaveFailureReason,
+} from "@/lib/prefetch"
+import type { ChartVersions } from "@/lib/offline/chart-version"
 import { listFileIds } from "@/lib/offline-idb"
 import { logger } from "@/lib/logger"
 import { PERFORM_PRECACHE_DONE_EVENT } from "@/hooks/use-perform-entry-precache"
@@ -15,7 +21,15 @@ interface Props {
     /** Web refresh: reports how many of this setlist's charts are on this
      *  device, so the head row's status line can say "N/M charts on this
      *  iPad". Read-only; it changes nothing about caching. */
-    onReadyChange?: (ready: number, total: number, savedIds: ReadonlySet<string>) => void
+    onReadyChange?: (
+        ready: number,
+        total: number,
+        savedIds: ReadonlySet<string>,
+        /** PERF-21: this setlist's charts that failed to save, with why. */
+        failures: ReadonlyMap<string, SaveFailureReason>,
+    ) => void
+    /** PERF-18: server versions per fileId; stale cached charts re-fetch in place. */
+    versions?: ChartVersions | null
 }
 
 type Phase = "idle" | "saving"
@@ -43,7 +57,7 @@ type Phase = "idle" | "saving"
  * amber = attention (partially cached — tap to finish). Color is never the
  * only signal — the icon (Download → spinner → Check) changes too.
  */
-export function SaveOfflineButton({ fileIds, onReadyChange }: Props) {
+export function SaveOfflineButton({ fileIds, onReadyChange, versions }: Props) {
     const t = useT()
     // Dedupe + drop pseudo (`flow-`) items and falsy ids; `prefetchSetlistPDFs`
     // guards these too, but the count/fraction must reflect only real charts.
@@ -58,6 +72,25 @@ export function SaveOfflineButton({ fileIds, onReadyChange }: Props) {
     const [readyCount, setReadyCount] = useState(0)
     const [savedIds, setSavedIds] = useState<ReadonlySet<string>>(() => new Set())
     const [progress, setProgress] = useState(0)
+    const [failures, setFailures] = useState<ReadonlyMap<string, SaveFailureReason>>(() => new Map())
+    // Read at call time; the map is not part of any effect's trigger.
+    const versionsRef = useRef<ChartVersions | null | undefined>(versions)
+    useEffect(() => {
+        versionsRef.current = versions
+    }, [versions])
+
+    // PERF-21: this setlist's failed fileIds from the save passes. Only ids
+    // still missing from the device are kept: a chart that failed a refresh
+    // but still has its older copy is saved, not failed.
+    const readFailures = useCallback((have: ReadonlySet<string>) => {
+        const all = getSaveFailures()
+        const mine = new Map<string, SaveFailureReason>()
+        for (const id of cacheable) {
+            const f = all.get(id)
+            if (f && !have.has(id)) mine.set(id, f.reason)
+        }
+        setFailures(mine)
+    }, [cacheable])
 
     // How many cacheable charts are already in the offline store.
     const recount = useCallback(async () => {
@@ -69,16 +102,17 @@ export function SaveOfflineButton({ fileIds, onReadyChange }: Props) {
             for (const id of cacheable) if (have.has(id)) { n++; mine.add(id) }
             setReadyCount(n)
             setSavedIds(mine)
+            readFailures(mine)
             return n
         } catch (e) {
             logger.warn("[SaveOfflineButton] listFileIds failed:", e)
             return 0
         }
-    }, [cacheable])
+    }, [cacheable, readFailures])
 
     useEffect(() => {
-        onReadyChange?.(readyCount, total, savedIds)
-    }, [onReadyChange, readyCount, total, savedIds])
+        onReadyChange?.(readyCount, total, savedIds, failures)
+    }, [onReadyChange, readyCount, total, savedIds, failures])
 
     // Idle-time auto-precache on entry. Online-only, best-effort, non-blocking.
     // Re-runs only when the setlist's cacheable set changes (sig), guarded by a
@@ -118,7 +152,7 @@ export function SaveOfflineButton({ fileIds, onReadyChange }: Props) {
             idleKickedRef.current = sig
             // Silent path — no progress UI for the passive precache; the button
             // simply flips to "Saved" via recount once it finishes.
-            prefetchSetlistPDFs(cacheable)
+            prefetchSetlistPDFs(cacheable, undefined, { versions: versionsRef.current })
                 .then(() => {
                     if (!cancelled) recount()
                 })
@@ -175,8 +209,10 @@ export function SaveOfflineButton({ fileIds, onReadyChange }: Props) {
             void recount()
         }
         window.addEventListener(PERFORM_PRECACHE_DONE_EVENT, handler)
+        window.addEventListener(SAVE_FAILURES_CHANGED_EVENT, handler)
         return () => {
             window.removeEventListener(PERFORM_PRECACHE_DONE_EVENT, handler)
+            window.removeEventListener(SAVE_FAILURES_CHANGED_EVENT, handler)
         }
     }, [recount])
 
@@ -187,9 +223,13 @@ export function SaveOfflineButton({ fileIds, onReadyChange }: Props) {
         const start = await recount()
         setProgress(start)
         try {
-            await prefetchSetlistPDFs(cacheable, (processed) => {
-                setProgress(processed)
-            })
+            await prefetchSetlistPDFs(
+                cacheable,
+                (processed) => {
+                    setProgress(processed)
+                },
+                { versions: versionsRef.current },
+            )
         } catch (e) {
             logger.warn("[SaveOfflineButton] save offline failed:", e)
         } finally {
