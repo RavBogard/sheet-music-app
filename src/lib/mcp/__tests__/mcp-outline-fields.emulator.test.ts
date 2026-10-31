@@ -456,7 +456,7 @@ describe("outline fields survive the MCP write path (emulator)", () => {
         // Positive control: a valid feed-tier ref with a REAL unitId must
         // NOT be rejected. `emaariv.barchu@rh1-maariv` is a genuine unit id
         // read directly from src/data/books/shirei-tshuvah.json (Bar'chu,
-        // folio 2) — not invented. Erring restrictive on a valid reference
+        // folio 3) — not invented. Erring restrictive on a valid reference
         // is worse than erring permissive here (it would block real
         // authoring), so this matters as much as the reject-path tests.
         it("accepts a valid liturgyRef with a real feed-tier unitId and it survives get_setlist", async () => {
@@ -468,7 +468,7 @@ describe("outline fields survive the MCP write path (emulator)", () => {
                 liturgyRef: {
                     book: "shirei-tshuvah",
                     unitId: "emaariv.barchu@rh1-maariv",
-                    folio: 2,
+                    folio: 3,
                 },
             })
             expect(res).toMatchObject({ ok: true })
@@ -479,7 +479,7 @@ describe("outline fields survive the MCP write path (emulator)", () => {
                 liturgyRef: {
                     book: "shirei-tshuvah",
                     unitId: "emaariv.barchu@rh1-maariv",
-                    folio: 2,
+                    folio: 3,
                 },
             })
         })
