@@ -36,8 +36,8 @@ Shipped 2026-10-30. PRs 20–26 are all merged and deployed.
 
 ## Open
 
-- Bind-on-type and `propose_liturgy_bindings` have no lookup table for `legacy-beit-mitzvah` yet, and `readerBookFor` has no entry for it.
-- BrosLaz `profile_match` does not read standing choices.
+- Closed 2026-10-31 (PR 27): bind-on-type and `propose_liturgy_bindings` look up `legacy-beit-mitzvah` per service (`bnei_mitzvah_saturday` → morning, `havdalah_bnei_mitzvah` → evening; any other type gets no lookup). `readerBookFor` stays null for it on purpose: the reader has no Beit Mitzvah volume, and null is its normal answer.
+- Closed 2026-10-31 (PR 27): BrosLaz `profile_match` now reads standing choices from the same scope `set_standing_choice` writes (`memoryServiceType` in `src/lib/profiles/keys.ts`).
 - Monitoring:
   - Buses are assigned (David 2, Daniel 5).
   - The bridge starts with the studio PC, which Michael powers on.

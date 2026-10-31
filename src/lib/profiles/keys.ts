@@ -1,6 +1,8 @@
 import type { RabbiSlotKey } from "@/lib/history/classify"
 import { historyStem } from "@/lib/history/song-history"
 import { SERVICE_TYPE_CATALOG } from "@/lib/templates/service-types"
+import { DEFAULT_ORG_ID } from "@/lib/org/registry"
+import type { OrgId } from "@/lib/org/types"
 
 /**
  * Setlist memory, release 2 — profile keys and slot keys. Pure: no Firestore.
@@ -16,6 +18,24 @@ export interface CoreProfile {
     serviceType: string
     rabbiSlot: RabbiSlotKey | null
     book: string | null
+}
+
+/** The scope a non-CRC tenant's setlist with no stored service type remembers under. */
+export const BARE_GIG_SCOPE = "gig"
+
+/**
+ * The service type a setlist's memory lives under. CRC classifies every
+ * service it profiles; another tenant's setlists are not services from the
+ * CRC catalog (BrosLaz plays gigs), so its choices live under its stored
+ * service type, else `gig`. One function, so remembering a choice and
+ * recognising it later can never look in two different places.
+ */
+export function memoryServiceType(
+    org: OrgId,
+    classified: string | null,
+    stored: string | null,
+): string | null {
+    return classified ?? (org !== DEFAULT_ORG_ID ? (stored ?? BARE_GIG_SCOPE) : null)
 }
 
 export function profileKeyFor(serviceType: string, rabbiSlot: string | null): string {

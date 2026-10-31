@@ -1,6 +1,6 @@
 import { classifyService } from "@/lib/history/classify"
 import type { OrgId } from "@/lib/org/types"
-import { profileKeyFor, rabbiRequired, slotKeyFor } from "./keys"
+import { memoryServiceType, profileKeyFor, rabbiRequired, slotKeyFor } from "./keys"
 import type { SlotTier, StandingChoice } from "./tiers"
 
 /**
@@ -64,7 +64,9 @@ export async function profileMatches(
         rabbiSlot: str(setlist.rabbiSlot),
         special: typeof setlist.special === "boolean" ? setlist.special : null,
     })
-    const serviceType = cls.serviceType
+    // The same scope `set_standing_choice` remembers under, so a BrosLaz gig's
+    // "keep it" is recognised on the next gig.
+    const serviceType = memoryServiceType(org, cls.serviceType, str(setlist.serviceType))
     if (!serviceType) return out
     if (rabbiRequired(serviceType) && !cls.rabbiSlot) return out
     const rabbiSlot = rabbiRequired(serviceType) ? cls.rabbiSlot : null

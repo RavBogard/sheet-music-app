@@ -142,3 +142,24 @@ describe("writableLiturgyRef", () => {
         ).toEqual({ book: "crc-saturday", folio: 51 })
     })
 })
+
+describe("autoBindLiturgyRef — Beit Mitzvah siddur", () => {
+    const BOOK = "legacy-beit-mitzvah"
+
+    it("binds a morning B'nei Mitzvah row to the morning service's page", () => {
+        const auto = autoBindLiturgyRef(BOOK, "Mi Chamocha", "song", "bnei_mitzvah_saturday")
+        expect(auto.ref).toMatchObject({ book: BOOK, folio: 12 })
+        expect(auto.ref?.unitId).toMatch(/@bm-shacharit$/)
+    })
+
+    it("binds the same name on a Havdalah setlist to the evening service's page", () => {
+        const auto = autoBindLiturgyRef(BOOK, "Mi Chamocha", "song", "havdalah_bnei_mitzvah")
+        expect(auto.ref).toMatchObject({ book: BOOK, folio: 41 })
+        expect(auto.ref?.unitId).toMatch(/@bm-maariv$/)
+    })
+
+    it("binds nothing when the setlist type names neither service", () => {
+        expect(autoBindLiturgyRef(BOOK, "Mi Chamocha", "song", null).ref).toBeUndefined()
+        expect(autoBindLiturgyRef(BOOK, "Mi Chamocha", "song", "shabbat_morning").ref).toBeUndefined()
+    })
+})

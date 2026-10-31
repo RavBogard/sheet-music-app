@@ -34,11 +34,12 @@ describe("foldLiturgyName", () => {
 })
 
 describe("the lookup table", () => {
-    it("covers the four confirmed books, and the machzor per service", () => {
+    it("covers the four confirmed books, the machzor and the Beit Mitzvah siddur per service", () => {
         expect(liturgyLookupBooks().sort()).toEqual([
             "crc-friday",
             "crc-machzor-2008",
             "crc-saturday",
+            "legacy-beit-mitzvah",
             "shabbat-maariv",
             "shabbat-shacharit",
         ])
