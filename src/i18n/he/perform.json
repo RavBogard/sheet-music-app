@@ -33,7 +33,7 @@
         "nextSong": "השיר הבא",
         "noSongSelected": "לא נבחר שיר",
         "setlistEmpty": "רשימת השירים ריקה",
-        "nextUp": "הבא: {title} ({key})",
+        "nextUp": "הבא: {title} · {key}",
         "nextUpNoKey": "הבא: {title}"
     },
     "metronome": {

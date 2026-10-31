@@ -34,7 +34,7 @@
         "nextSong": "Next song",
         "noSongSelected": "No Song Selected",
         "setlistEmpty": "Setlist Empty",
-        "nextUp": "Next: {title} ({key})",
+        "nextUp": "Next: {title} · {key}",
         "nextUpNoKey": "Next: {title}"
     },
     "metronome": {

@@ -76,7 +76,7 @@ describe("SongNavigation: Next", () => {
             queueIndex: 0,
         })
         render(<SongNavigation />)
-        expect(screen.getByTestId("song-nav-next").textContent).toContain("(E)")
+        expect(screen.getByTestId("song-nav-next").textContent).toContain("· E")
     })
 
     it("shows the title alone when the next song has no key, and nothing on the last song", () => {
