@@ -57,9 +57,48 @@ function findUserBus(busAssignments: Record<string, BusAssignment | BusAssignmen
  * source of `myBusIndex` — never the bridge-embedded `snapshot.config`, which
  * P1-A is removing and which could disagree with `config/monitor`.
  */
-function deriveMyBusIndex(config: MonitorConfig | null, userId: string | null): number | null {
+function deriveMyBusIndex(
+    config: MonitorConfig | null,
+    userId: string | null,
+    preferred: number | null = null,
+): number | null {
     if (!config?.busAssignments || !userId) return null
+    // MIXER-15: a person on two buses picks one with the bus switcher; the pick
+    // holds only while they still own that bus, else the first one wins.
+    if (preferred != null && findUserBuses(config.busAssignments, userId).includes(preferred)) return preferred
     return findUserBus(config.busAssignments, userId)
+}
+
+/** Every bus the user is on, ascending (MIXER-15). */
+function findUserBuses(busAssignments: Record<string, BusAssignment | BusAssignment[] | null>, userId: string): number[] {
+    const out: number[] = []
+    for (const [busStr, assignment] of Object.entries(busAssignments)) {
+        if (!assignment) continue
+        const list = Array.isArray(assignment) ? assignment : [assignment]
+        if (list.some(a => a.userId === userId)) {
+            const n = parseInt(busStr)
+            if (!Number.isNaN(n)) out.push(n)
+        }
+    }
+    return out.sort((a, b) => a - b)
+}
+
+function deriveMyBusIndices(config: MonitorConfig | null, userId: string | null): number[] {
+    if (!config?.busAssignments || !userId) return []
+    return findUserBuses(config.busAssignments, userId)
+}
+
+/** BET-4: a clamped ack — the bridge held this move to the sound engineer's limit. */
+export interface ClampNotice {
+    applied: number
+    cap: number
+    seq: number
+}
+
+/** BET-4: the newest saved levels for one bus (double-tap resets to these). */
+export interface HomeLevels {
+    master: number | null
+    sends: Record<number, number>
 }
 
 /**
@@ -109,7 +148,15 @@ interface MonitorState {
 
     // User's assigned bus
     myBusIndex: number | null
+    /** MIXER-15: every bus the user is on (a bus switcher shows when > 1). */
+    myBusIndices: number[]
+    /** MIXER-15: the bus the user picked in the switcher. */
+    preferredBusIndex: number | null
     userId: string | null
+    /** BET-4: the latest clamped ack per target key (`seq` re-fires the cue). */
+    clamps: Record<string, ClampNotice>
+    /** BET-4: last saved levels per bus, for the double-tap reset. */
+    homeLevels: Record<number, HomeLevels>
 
     // Channel visibility
     starredChannels: number[]
@@ -147,6 +194,11 @@ interface MonitorState {
     rejectCommand: (targetKey: string, reason: string) => void
     /** Clear a surfaced rejection once its cue has been shown. */
     clearRejection: (targetKey: string) => void
+    /** BET-4: the bridge applied the command for `targetKey` but held it to the limit. */
+    clampCommand: (targetKey: string, info: { applied: number; cap: number }) => void
+    /** MIXER-15: switch to another of the user's buses. */
+    selectBus: (busIndex: number) => void
+    setHomeLevels: (busIndex: number, home: HomeLevels) => void
     reset: () => void
 }
 
@@ -178,7 +230,11 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
     rejections: {},
     rollbacks: {},
     myBusIndex: null,
+    myBusIndices: [],
+    preferredBusIndex: null,
     userId: null,
+    clamps: {},
+    homeLevels: {},
     starredChannels: [],
     defaultChannels: [],
     lastSnapshotAt: 0,
@@ -219,7 +275,8 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
 
         // C-7: derive the user's bus from the authoritative config/monitor copy
         // in the store, NEVER from the bridge-embedded snapshot.config.
-        const myBusIndex = deriveMyBusIndex(state.config, userId)
+        const myBusIndex = deriveMyBusIndex(state.config, userId, state.preferredBusIndex)
+        const myBusIndices = deriveMyBusIndices(state.config, userId)
 
         const matrices = snapshot.matrices || []
         // R5: the B11 "we could not read this" list, carried through coercion.
@@ -248,6 +305,7 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
             matrices,
             unconfirmed,
             myBusIndex,
+            myBusIndices,
             userId,
             ...healthUpdate,
         })
@@ -357,12 +415,13 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
     setDefaultChannels: (channels) => set({ defaultChannels: channels }),
 
     setConfig: (config) => {
-        const { userId } = get()
-        const myBusIndex = deriveMyBusIndex(config, userId)
+        const { userId, preferredBusIndex } = get()
+        const myBusIndex = deriveMyBusIndex(config, userId, preferredBusIndex)
+        const myBusIndices = deriveMyBusIndices(config, userId)
         // Only update defaultChannels if the config actually has the field;
         // otherwise preserve current value (bridge config lacks this field)
         const { defaultChannels: current } = get()
-        set({ config, myBusIndex, defaultChannels: config.defaultChannels ?? current })
+        set({ config, myBusIndex, myBusIndices, defaultChannels: config.defaultChannels ?? current })
     },
 
     /**
@@ -446,6 +505,25 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
         set({ rejections: next })
     },
 
+    clampCommand: (targetKey, info) => {
+        const { clamps } = get()
+        set({
+            clamps: {
+                ...clamps,
+                [targetKey]: { applied: info.applied, cap: info.cap, seq: (clamps[targetKey]?.seq ?? 0) + 1 },
+            },
+        })
+    },
+
+    selectBus: (busIndex) => {
+        const { config, userId } = get()
+        set({ preferredBusIndex: busIndex, myBusIndex: deriveMyBusIndex(config, userId, busIndex) })
+    },
+
+    setHomeLevels: (busIndex, home) => {
+        set({ homeLevels: { ...get().homeLevels, [busIndex]: home } })
+    },
+
     reset: () => set({
         status: "disconnected",
         error: null,
@@ -457,7 +535,11 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
         rejections: {},
         rollbacks: {},
         myBusIndex: null,
+        myBusIndices: [],
+        preferredBusIndex: null,
         userId: null,
+        clamps: {},
+        homeLevels: {},
         starredChannels: [],
         defaultChannels: [],
         lastSnapshotAt: 0,

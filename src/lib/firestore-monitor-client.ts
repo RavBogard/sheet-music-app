@@ -52,6 +52,30 @@ export interface FirestoreMonitorClientOptions {
      * no ack listener is ever attached.
      */
     onCommandRejected?: (rejection: CommandRejection) => void
+    /**
+     * BET-4 — the bridge applied one of THIS user's commands but held it to the
+     * sound engineer's limit (`clamped` on an applied ack). Bridges before the
+     * BET-4 release send no `clamped` field, so this simply never fires there.
+     */
+    onCommandClamped?: (clamp: CommandClamp) => void
+}
+
+/** BET-4 — a command the bridge held to the wedge limit. */
+export interface CommandClamp {
+    targetKey: string
+    requested: number
+    applied: number
+    cap: number
+    commandId: string
+}
+
+/** Read a `clamped` block off an ack, or null when absent or malformed. */
+export function readClamp(raw: unknown): { requested: number; applied: number; cap: number } | null {
+    if (!raw || typeof raw !== "object") return null
+    const c = raw as { requested?: unknown; applied?: unknown; cap?: unknown }
+    const ok = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v)
+    if (!ok(c.applied) || !ok(c.cap)) return null
+    return { requested: ok(c.requested) ? c.requested : c.applied, applied: c.applied, cap: c.cap }
 }
 
 // Command throttle: batch rapid fader changes (e.g., dragging)
@@ -387,7 +411,7 @@ export class FirestoreMonitorClient {
      * attach rather than adding a second listener.
      */
     private scheduleAckWatch(commandId: string, data: Record<string, unknown>): void {
-        if (!this.options.onCommandRejected || this._disconnected) return
+        if ((!this.options.onCommandRejected && !this.options.onCommandClamped) || this._disconnected) return
         const targetKey = commandTargetKey(data)
         if (!targetKey) return // malformed shape — the bridge will reject it, but we can't key it
 
@@ -414,7 +438,7 @@ export class FirestoreMonitorClient {
             doc(db, "monitor-live", "commands", "acks", watch.commandId),
             (snap) => {
                 if (!snap.exists() || this._disconnected) return
-                const ack = snap.data() as { status?: string; reason?: string }
+                const ack = snap.data() as { status?: string; reason?: string; applied?: boolean; clamped?: unknown }
 
                 if (ack.status === "rejected") {
                     this.clearAckWatch(targetKey)
@@ -432,7 +456,12 @@ export class FirestoreMonitorClient {
                 // the bridge may well have applied it and merely missed the
                 // read-back, so the existing confirmation machine's gentle ease-back
                 // stays the honest response.
-                if (ack.status === "applied") this.clearAckWatch(targetKey)
+                if (ack.status === "applied" || ack.applied === true) {
+                    this.clearAckWatch(targetKey)
+                    // BET-4: applied, but held to the limit — tell the fader.
+                    const clamp = readClamp(ack.clamped)
+                    if (clamp) this.options.onCommandClamped?.({ targetKey, ...clamp, commandId: watch.commandId })
+                }
             },
             (err) => {
                 // A denied or failed ack read must never break command sending —

@@ -96,6 +96,10 @@ function ensureConnected(userId: string): void {
         onCommandRejected: ({ targetKey, reason }) => {
             useMonitorStore.getState().rejectCommand(targetKey, reason)
         },
+        // BET-4: applied but held to the sound engineer's limit — the fader says so.
+        onCommandClamped: ({ targetKey, applied, cap }) => {
+            useMonitorStore.getState().clampCommand(targetKey, { applied, cap })
+        },
     })
 
     activeClient = client

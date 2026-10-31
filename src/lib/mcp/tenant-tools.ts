@@ -12,7 +12,7 @@ import type { OrgId } from "@/lib/org/types"
  * Tools not named here are always listed (charts, setlists, templates, roster
  * and the rest are always on).
  *
- *   mixer            — the 19 monitor and bridge tools (12 authoring, 7 ops);
+ *   mixer            — the 23 monitor and bridge tools (16 authoring, 7 ops);
  *                      CRC-only whatever the flag says (effectiveFeatures)
  *   driveInbox       — the shared-Drive chart inbox
  *   notifyBand       — the "setlist updated" message to the band
@@ -48,6 +48,10 @@ export const FEATURE_TOOLS: Readonly<Record<keyof OrgFeatures, readonly string[]
         "bridge_clear_acks",
         "bridge_clear_pending_commands",
         "bridge_get_log",
+        "get_monitor_limits",
+        "set_monitor_limits",
+        "list_saved_mixes",
+        "recall_mix",
     ],
     driveInbox: ["get_chart_inbox", "sync_chart_inbox"],
     notifyBand: ["notify_band", "preview_notify_band"],

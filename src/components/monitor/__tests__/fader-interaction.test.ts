@@ -38,17 +38,8 @@ describe("VerticalFaderStrip interaction logic", () => {
         expect(Math.round(1.0 * 100)).toBe(100)
     })
 
-    it("double-tap reset: value > 0.1 resets to 0", () => {
-        const currentValue = 0.5
-        const resetVal = currentValue > 0.1 ? 0.0 : 0.75
-        expect(resetVal).toBe(0.0)
-    })
-
-    it("double-tap reset: value at 0 resets to 0.75 (unity)", () => {
-        const currentValue = 0.0
-        const resetVal = currentValue > 0.1 ? 0.0 : 0.75
-        expect(resetVal).toBe(0.75)
-    })
+    // BET-4: double-tap no longer toggles 0 / 0.75; it returns to the last saved
+    // level (or 0.6) under the limit. Behaviour is covered in fader-limits.test.tsx.
 })
 
 describe("VerticalFaderStrip component rendering", () => {

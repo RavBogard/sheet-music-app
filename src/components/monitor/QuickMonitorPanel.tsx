@@ -14,6 +14,10 @@ import { Loader2, Wifi, WifiOff, Server, ServerOff, Clock, X } from "lucide-reac
 import { ScrollFade } from "@/components/ui/scroll-fade"
 import { getBridgeStatusMessage, isMixerOffline, isStateSyncing, DisconnectedOverlay } from "@/components/monitor/ConnectionIndicator"
 import { busFaderKey, sendLevelKey } from "@/lib/monitor/target-key"
+import { useT } from "@/i18n/client"
+import { useFaderLimits } from "@/lib/monitor/use-fader-limits"
+import { SavedMixControls } from "@/components/monitor/SavedMixControls"
+import { BusSwitcher } from "@/components/monitor/BusSwitcher"
 
 /**
  * Compact monitor mixer panel for the performance toolbar.
@@ -63,6 +67,9 @@ export function QuickMonitorPanel({ onClose }: QuickMonitorPanelProps = {}) {
     const updateSendOn = useMonitorStore(s => s.updateSendOn)
     // C-6: honest staleness on this perform-toolbar surface too (not just /monitor).
     const { stale } = useMonitorStaleness()
+    const t = useT()
+    // BET-4: limit tick, double-tap home level and clamp notice per fader.
+    const limits = useFaderLimits(myBusIndex)
 
     // Load starred channels from Firestore (backward compat: pinnedChannels field)
     useEffect(() => {
@@ -134,19 +141,21 @@ export function QuickMonitorPanel({ onClose }: QuickMonitorPanelProps = {}) {
     // Not ready states
     if (!hasAccess) return null
 
-    // Bridge heartbeat status
+    // Bridge heartbeat status. MIXER-09: when the bridge (or the desk behind it)
+    // is down, say plainly that the wedge is unchanged and who can fix it, and
+    // keep the last known levels on screen under the overlay when we have them.
     const bridgeMessage = getBridgeStatusMessage(config?.bridge)
-    if (bridgeMessage) {
-        const isMixerOnly = bridgeMessage.includes("mixer disconnected")
+    const bridgeDown = !!bridgeMessage
+    if (bridgeDown && (!hasAssignedBus(myBusIndex) || !myBus)) {
         return (
-            <div className="flex h-full items-center justify-center gap-2 text-muted-foreground">
-                {isMixerOnly ? <ServerOff className="w-4 h-4 text-yellow-600" /> : <ServerOff className="w-4 h-4" />}
-                <span className="text-xs">{bridgeMessage}</span>
+            <div data-testid="monitor-paused" className="flex h-full items-center justify-center gap-2 px-6 text-muted-foreground">
+                <ServerOff aria-hidden className="w-4 h-4 shrink-0" />
+                <span className="text-sm">{t("monitor.pausedLine")}</span>
             </div>
         )
     }
 
-    if (status === "connecting") {
+    if (!bridgeDown && status === "connecting") {
         return (
             <div className="flex h-full items-center justify-center gap-2 text-muted-foreground">
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -155,7 +164,7 @@ export function QuickMonitorPanel({ onClose }: QuickMonitorPanelProps = {}) {
         )
     }
 
-    if (status === "error" || status === "disconnected") {
+    if (!bridgeDown && (status === "error" || status === "disconnected")) {
         return (
             <div className="flex h-full items-center justify-center gap-2 text-muted-foreground">
                 <WifiOff className="w-4 h-4" />
@@ -173,7 +182,7 @@ export function QuickMonitorPanel({ onClose }: QuickMonitorPanelProps = {}) {
         )
     }
 
-    const mixerOffline = isMixerOffline(status, config?.bridge)
+    const mixerOffline = bridgeDown || isMixerOffline(status, config?.bridge)
     // R7: bridge + desk healthy, state pipeline behind. Faders stay interactive;
     // optimistic writes still queue and still reach the desk.
     const syncing = isStateSyncing(config?.bridge)
@@ -181,7 +190,7 @@ export function QuickMonitorPanel({ onClose }: QuickMonitorPanelProps = {}) {
     return (
         <div className="w-full h-full flex flex-col">
             {/* Header — px-6 py-3 + border divider; close button (44×44 touch target) right-side */}
-            <div className="flex items-center justify-between px-6 py-3 border-b border-border/40 shrink-0">
+            <div className="flex flex-wrap items-center justify-between gap-2 px-6 py-3 border-b border-border/40 shrink-0">
                 <div>
                     <div className="text-sm font-semibold text-foreground truncate pr-2 max-w-[180px]">
                         {myBus.name && myBus.name !== `Bus ${myBusIndex}` ? myBus.name : "My Monitor"}
@@ -190,7 +199,9 @@ export function QuickMonitorPanel({ onClose }: QuickMonitorPanelProps = {}) {
                         Bus {myBusIndex}
                     </div>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
+                    <BusSwitcher compact />
+                    <SavedMixControls busIndex={myBusIndex} compact disabled={mixerOffline} />
                     {/* R7: a wedged state pipeline is a QUIET hint, not "No mixer" and
                         certainly not a reason to disable anything — the desk is still
                         taking commands. Only a genuinely unreachable mixer says so. */}
@@ -226,6 +237,11 @@ export function QuickMonitorPanel({ onClose }: QuickMonitorPanelProps = {}) {
 
             {/* Vertical faders in horizontal row — gap-6 + px-6 py-4 spread; flex-1 fills remaining height.
                 C-6: HARD-offline → overlay (last known levels). */}
+            {bridgeDown && (
+                <p data-testid="monitor-paused" role="status" className="px-6 pt-3 text-sm text-amber-700 dark:text-amber-400">
+                    {t("monitor.pausedLine")}
+                </p>
+            )}
             <div className="flex-1 min-h-0">
             <DisconnectedOverlay active={mixerOffline}>
                 <ScrollFade snap className="h-full" scrollClassName="flex flex-row gap-6 px-6 py-4 min-h-[280px]">
@@ -241,6 +257,9 @@ export function QuickMonitorPanel({ onClose }: QuickMonitorPanelProps = {}) {
                         snapshotSeq={snapshotSeq}
                         unconfirmed={unconfirmed.includes(busFaderKey(myBusIndex))}
                         rejection={rejections[busFaderKey(myBusIndex)] ?? null}
+                        cap={limits.masterCap}
+                        homeLevel={limits.masterHome}
+                        clamp={limits.masterClamp}
                         onChange={handleBusMaster}
                         onMuteToggle={() => handleBusOn(!(myBus.on ?? true))}
                     />
@@ -269,6 +288,9 @@ export function QuickMonitorPanel({ onClose }: QuickMonitorPanelProps = {}) {
                                     snapshotSeq={snapshotSeq}
                                     unconfirmed={unconfirmed.includes(sendLevelKey(send.channelIndex, myBusIndex))}
                                     rejection={rejections[sendLevelKey(send.channelIndex, myBusIndex)] ?? null}
+                                    cap={limits.sendCap(send.channelIndex)}
+                                    homeLevel={limits.sendHome(send.channelIndex)}
+                                    clamp={limits.sendClamp(send.channelIndex)}
                                     onChange={(val) => handleSendLevel(send.channelIndex, val)}
                                     onMuteToggle={() => handleSendOn(send.channelIndex, !send.on)}
                                 />

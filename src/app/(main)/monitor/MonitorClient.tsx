@@ -11,6 +11,9 @@ import { MonitorTabs } from "@/components/monitor/MonitorTabs"
 import { MatrixPanel } from "@/components/monitor/MatrixPanel"
 import { BusAssignmentPanel } from "@/components/monitor/BusAssignmentPanel"
 import { DefaultChannelPicker } from "@/components/monitor/DefaultChannelPicker"
+import { LimitsPanel } from "@/components/monitor/LimitsPanel"
+import Link from "next/link"
+import { useT } from "@/i18n/client"
 import { doc, getDoc, setDoc } from "firebase/firestore"
 import { getDb } from "@/lib/firebase"
 import { Loader2, Radio } from "lucide-react"
@@ -20,6 +23,7 @@ import { toast } from "sonner"
 export default function MonitorClient() {
     const { user, loading: authLoading, isAdmin } = useAuth()
     const { hasAccess, isSoundEngineer, loading: accessLoading } = useMonitorAccess()
+    const t = useT()
 
     // Persistent connection -- shared with QuickMonitorPanel
     const { client } = useMonitorConnection()
@@ -195,7 +199,16 @@ export default function MonitorClient() {
             <div className="max-w-lg mx-auto p-4 space-y-6">
                 <div className="flex items-center justify-between mb-2">
                     <h1 className="text-2xl font-bold">Sound Engineer</h1>
-                    <ConnectionIndicator status={status} bridgeStatus={bridge} error={error} />
+                    <div className="flex items-center gap-2">
+                        <Link
+                            href="/monitor/engineer"
+                            data-testid="engineer-console-link"
+                            className="inline-flex items-center min-h-[44px] px-3 rounded-lg border border-border text-sm font-semibold hover:bg-muted/60 transition-colors duration-150"
+                        >
+                            {t("monitor.engineerLink")}
+                        </Link>
+                        <ConnectionIndicator status={status} bridgeStatus={bridge} error={error} />
+                    </div>
                 </div>
 
                 <p className="text-sm text-muted-foreground">
@@ -204,6 +217,7 @@ export default function MonitorClient() {
                 </p>
 
                 <BusAssignmentPanel config={config} />
+                <LimitsPanel />
                 <DefaultChannelPicker />
 
                 {matrices.length > 0 && (

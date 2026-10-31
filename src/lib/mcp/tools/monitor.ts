@@ -1,4 +1,5 @@
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
+import { faderToDb } from "@/lib/monitor/limits"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 import {
     assertMonitorAccess,
@@ -210,11 +211,8 @@ export interface GetMixArgs {
  * Returns null at zero (silence, -inf).
  */
 export function x32LevelToDb(level: number): number | null {
-    if (typeof level !== "number" || !Number.isFinite(level) || level <= 0) return null
-    const f = Math.min(level, 1)
-    const d =
-        f >= 0.5 ? f * 40 - 30 : f >= 0.25 ? f * 80 - 50 : f >= 0.0625 ? f * 160 - 70 : f * 480 - 90
-    return Math.round(d * 10) / 10
+    // BET-4: one fader law for every dB readout (web faders, limits, recall, MCP).
+    return faderToDb(level)
 }
 
 export async function getMix(
