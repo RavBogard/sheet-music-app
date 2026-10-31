@@ -128,3 +128,29 @@ to the rest of the worship-tech family.
   drafts will flag it).
 - Follow-up: when fewer than 3 regular services exist, the learner unions the orders (81 rows from
   2 services). It should take the most recent service's order. Backlog: SEED-UNION.
+- SECURITY (found while building PR #37): the upload duplicate-name check (processChartUpload, and
+  the import_chart_from_drive dry run) looked across BOTH tenants. A CRC upload could be refused
+  over a Brothers Lazaroff chart, and the refusal named that chart and its fileId (a cross-tenant
+  metadata leak). Fixed in #37 (org-scoped). Daniel informed. #37 is under adversarial review.
+
+## Wave status at end of 2026-10-31 session
+- Merged and live:
+  - #28 draft correctness
+  - #29 Perform reliability
+  - #30 web trims
+  - #31 rate-limit verification (security)
+  - #32 MCP and tenant mechanics
+  - #33 service memory rebuild (bet 1)
+  - #34 empty-setlist and shrink guard
+  - #35, #36, #38 visual refresh (blend E)
+  - #37 chart lineage (bet 2), which also fixes the cross-tenant dedupe leak
+- DESIGN.md recorded at docs/design/DESIGN.md (commit 10d1a65e).
+- backfill_chart_lineage dry run: scanned 906 CRC rows, 0 pairs, 0 ambiguous. Correct: the "v2" and
+  "updated" names have no clean original to link to. The real issue is exact duplicate actives
+  (e.g. two "Nigun 2 (DG Mando)"). That is dedupe work; backlog DEDUPE-ACTIVE.
+- Note: 235 library_index rows carry no `status`. Lineage treats them as inactive. Check whether
+  they are legacy-active (backlog STATUS-NULL).
+- Remaining bets: bet 3 (Perform trust pack, partly delivered by the refresh: freshness line, Save
+  button, not-saved marks), bet 4 (wedge safety), bet 5 (BL band mode), bet 6 (family spine).
+  Backlog extras: SEED-UNION, the BM emulator flake, DEDUPE-ACTIVE, STATUS-NULL, the leftover
+  glass/indigo CSS noted in DESIGN.md.
