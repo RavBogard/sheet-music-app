@@ -1,0 +1,357 @@
+<title>CentralReform.live Gap Analysis</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,650&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column (~72ch) for the narrative, widening to a full-width explorer table; a five-line staff rule divides the major movements. */
+:root{
+  --bg:#f5f6f4; --surface:#ffffff; --ink:#1b2326; --muted:#5b676b; --rule:#d6dbd9;
+  --accent:#0e6b66; --accent-soft:#e1efed;
+  --s1:#b3261e; --s2:#b25e09; --s3:#5f6b2b; --s4:#6b7280;
+  --s1-bg:#fbe9e7; --s2-bg:#fdf0e1; --s3-bg:#eef1e2; --s4-bg:#eef0f2;
+  --display:"Newsreader", Georgia, "Times New Roman", serif;
+  --body:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111618; --surface:#182023; --ink:#e6ecea; --muted:#9aa7a8; --rule:#2c3638;
+  --accent:#5cc4bb; --accent-soft:#16312f;
+  --s1:#ff8a80; --s2:#f5b062; --s3:#c4d07c; --s4:#a9b0ba;
+  --s1-bg:#3a1a18; --s2-bg:#38270f; --s3-bg:#272c15; --s4-bg:#23282e; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111618; --surface:#182023; --ink:#e6ecea; --muted:#9aa7a8; --rule:#2c3638;
+  --accent:#5cc4bb; --accent-soft:#16312f;
+  --s1:#ff8a80; --s2:#f5b062; --s3:#c4d07c; --s4:#a9b0ba;
+  --s1-bg:#3a1a18; --s2-bg:#38270f; --s3-bg:#272c15; --s4-bg:#23282e; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15.5px;line-height:1.6;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:40px 80px}
+.wrap{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:56px}
+.col{max-width:72ch}
+h1,h2,h3{font-family:var(--display);font-weight:650;text-wrap:balance;line-height:1.15;margin:0}
+h1{font-size:clamp(2rem,5vw,3.1rem);letter-spacing:-.01em}
+h2{font-size:1.75rem}
+h3{font-size:1.18rem}
+p{margin:0}
+a{color:var(--accent)}
+.eyebrow{font-family:var(--mono);font-size:.74rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.lede{font-size:1.12rem;color:var(--ink);max-width:66ch}
+.stack{display:flex;flex-direction:column;gap:14px}
+.meta{display:flex;flex-wrap:wrap;gap:8px 22px;font-family:var(--mono);font-size:.8rem;color:var(--muted)}
+.meta b{color:var(--ink);font-weight:500}
+.staff{height:17px;background:repeating-linear-gradient(to bottom,var(--rule) 0 1px,transparent 1px 4px);opacity:.9}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px}
+.pain{background:var(--surface);border:1px solid var(--rule);border-radius:6px;padding:18px 20px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.pain p{color:var(--muted);font-size:.95rem}
+.pain .ids{font-family:var(--mono);font-size:.76rem;color:var(--accent)}
+.sev{display:inline-block;font-family:var(--mono);font-size:.72rem;font-weight:500;padding:1px 7px;border-radius:3px;white-space:nowrap}
+.sev.S1{color:var(--s1);background:var(--s1-bg)}.sev.S2{color:var(--s2);background:var(--s2-bg)}
+.sev.S3{color:var(--s3);background:var(--s3-bg)}.sev.S4{color:var(--s4);background:var(--s4-bg)}
+table{border-collapse:collapse;width:100%;font-size:.92rem}
+th,td{text-align:left;vertical-align:top;padding:9px 10px;border-bottom:1px solid var(--rule)}
+th{font-family:var(--mono);font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:500}
+.scroll{overflow-x:auto;background:var(--surface);border:1px solid var(--rule);border-radius:6px}
+td.id{font-family:var(--mono);font-size:.8rem;white-space:nowrap;font-variant-numeric:tabular-nums}
+td.eff{font-family:var(--mono);font-size:.8rem;color:var(--muted)}
+.status{font-family:var(--mono);font-size:.72rem;padding:1px 7px;border-radius:3px;white-space:nowrap;border:1px solid var(--rule);color:var(--muted)}
+.status.now{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.status.next{border-color:var(--accent);color:var(--accent)}
+.rec{color:var(--muted);font-size:.88rem;margin-top:3px}
+.qw{font-family:var(--mono);font-size:.68rem;color:var(--accent);margin-left:6px}
+.plan{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+.lane{border-top:3px solid var(--accent);background:var(--surface);border-radius:0 0 6px 6px;padding:14px 16px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.lane.later{border-top-color:var(--rule)}
+.lane ul{margin:0;padding-left:18px;color:var(--muted);font-size:.9rem}
+.bets{counter-reset:bet;display:flex;flex-direction:column;gap:12px;padding:0;margin:0;list-style:none}
+.bets li{counter-increment:bet;display:grid;grid-template-columns:2.4rem 1fr;gap:12px;background:var(--surface);border:1px solid var(--rule);border-radius:6px;padding:14px 16px}
+.bets li::before{content:counter(bet);font-family:var(--display);font-size:1.7rem;line-height:1;color:var(--accent)}
+.bets p{color:var(--muted);font-size:.93rem}
+.persona{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:18px}
+.persona section{min-width:0}
+.persona ul{margin:6px 0 0;padding-left:18px;font-size:.93rem;color:var(--muted)}
+.persona li b{color:var(--ink);font-weight:500}
+.filters{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.filters label{font-family:var(--mono);font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:flex;gap:6px;align-items:center}
+select,input[type=search]{font:inherit;font-size:.9rem;padding:6px 9px;border:1px solid var(--rule);border-radius:4px;background:var(--surface);color:var(--ink)}
+input[type=search]{min-width:0;width:220px;max-width:100%}
+select:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.count{font-family:var(--mono);font-size:.8rem;color:var(--muted)}
+.shots{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px}
+figure{margin:0;display:flex;flex-direction:column;gap:6px;min-width:0}
+figure img{border:1px solid var(--rule);border-radius:4px;background:var(--surface);width:100%;height:220px;object-fit:cover;object-position:top}
+figcaption{font-size:.86rem;color:var(--muted)}
+.decisions td:first-child{font-weight:500;width:34%}
+.note{font-size:.88rem;color:var(--muted)}
+details summary{cursor:pointer;font-weight:500}
+@media (max-width:640px){.hide-sm{display:none}}
+@media (prefers-reduced-motion:no-preference){.pain,.bets li{transition:border-color .15s}.pain:hover,.bets li:hover{border-color:var(--accent)}}
+</style>
+
+<div class="wrap">
+
+<header class="stack col">
+  <div class="eyebrow">centralreform.live · band app · MCP server · Brothers Lazaroff · mixer · family seams</div>
+  <h1>CentralReform.live Gap Analysis</h1>
+  <p class="lede">Where the weekly service flow guesses wrong, where the iPads lose the band's trust, and what to build next. Five researchers read the code and docs, walked production at iPad and desktop size, and called the live MCP. Your two rounds of answers shape the plan below.</p>
+  <div class="meta"><span>Date <b>31 Oct 2026</b></span><span>Findings <b id="nFind">0</b></span><span>Quick safe wins <b id="nQw">0</b></span><span>Service-breaking (S1) <b id="nS1">0</b></span><span>Building now <b>3 PRs</b></span></div>
+</header>
+
+<div class="staff" aria-hidden="true"></div>
+
+<section class="stack">
+  <div class="eyebrow">What hurts most</div>
+  <h2>Six headlines</h2>
+  <div class="grid2">
+    <article class="pain"><span class="sev S1">S1 · weekly flow</span><h3>"Usual" isn't usual</h3><p>A chart counts as usual if it was played three or more times <em>ever</em>. Next Shabbat morning's draft fills the Moshav Mi Chamocha although 26 Sep used Ana B'Koach. Profiles were copied once from a Bat Mitzvah and a Camp Sabra service and never re-learn.</p><span class="ids">MCP-01 · MCP-02 · MCP-03</span></article>
+    <article class="pain"><span class="sev S1">S1 · weekly flow</span><h3>You say yes to rows you never heard</h3><p>Every filled row is folded into "everything else is your usual". The readback never names the chart or key it filled, never compares with last week, and never warns that a setlist already exists for that date.</p><span class="ids">MCP-04 · MCP-05 · MCP-08 · MCP-11</span></article>
+    <article class="pain"><span class="sev S2">S2 · wrong chart version</span><h3>Versions become siblings</h3><p>A v2 upload trips the duplicate check, so the agent forces it in as a separate chart. A real revision then re-points every past setlist and overwrites the keys they were played in. Two different charts are both named "Shema (major).pdf".</p><span class="ids">MCP-06 · MCP-10 · MCP-19 · WEB-03</span></article>
+    <article class="pain"><span class="sev S1">S1 · Perform trust</span><h3>Offline reload, stale lists, no page turns</h3><p>Reloading offline with a chart open likely shows Safari's "no internet" page, and the test that claims otherwise doesn't really go offline. Signed-out iPads never notice setlist edits. Pages don't turn on a tap, and nothing says when the setlist was last updated.</p><span class="ids">PERF-01 · PERF-06 · PERF-05 · PERF-10</span></article>
+    <article class="pain"><span class="sev S1">S1 · wedges</span><h3>Nothing caps a wedge</h3><p>A double-tap jumps a fader to 0 dB, and Claude can set a send to +10 dB, so a wedge can ring with feedback. No mix is ever saved, so a desk reset wipes everyone's levels. Bridge alerts reach admins but not Drew or Michael.</p><span class="ids">MIXER-03 · MIXER-01 · MIXER-11</span></article>
+    <article class="pain"><span class="sev S2">S2 · second tenant</span><h3>Brothers Lazaroff wears CRC's clothes</h3><p>Their gig packets print "CRC Music Books", there is no venue, set-length or load-in field, <code>draft_service</code> is dead for band tenants, and the calendar still shows parashot.</p><span class="ids">TF-01 · TF-02 · TF-05 · TF-06</span></article>
+  </div>
+</section>
+
+<section class="stack">
+  <div class="eyebrow">What happens next</div>
+  <h2>The plan</h2>
+  <div class="plan">
+    <div class="lane"><span class="status now">Building now</span><h3>A · Draft correctness</h3><ul><li>"Usual" counted over services, not uses</li><li>B'nei Mitzvah becomes its own profile</li><li>Warnings for an existing setlist, a dead chart or a key mismatch</li><li>Labels without ".pdf"</li></ul></div>
+    <div class="lane"><span class="status now">Building now</span><h3>B · Perform reliability</h3><ul><li>Offline reload on an open chart</li><li>Every openable chart is cached</li><li>"Setlist updated, tap to refresh"</li><li>Retry for MusicXML</li><li>Persistent storage</li></ul></div>
+    <div class="lane"><span class="status now">Building now</span><h3>C · Web app trims</h3><ul><li>v2, Schedule and Changelog removed</li><li>Row numbers and counts fixed</li><li>Instrument copies fold under their service</li><li>Folders out of the library</li><li>In-app page counter</li></ul></div>
+    <div class="lane later"><span class="status next">Next wave</span><h3>D · MCP and tenant mechanics</h3><ul><li>"IEM" becomes "wedge"</li><li>A mixer section in the guide</li><li>Bridge alerts reach Drew and Michael</li><li>Brothers Lazaroff branding</li><li>Contract tests</li><li>Shorter voice readback</li></ul></div>
+  </div>
+  <h3 style="margin-top:10px">Big bets, in the order you set</h3>
+  <ol class="bets">
+    <li><div><h3>Service memory rebuild</h3><p>Slots keyed by prayer moment, re-learned every week from regular services only, and a readback that names stale or risky rows and compares with last service. B'nei Mitzvah gets its own preset. Re-seeds the three profiles created during research. <b>M–L</b></p></div></li>
+    <li><div><h3>Chart lineage</h3><p>A new upload can be a new version of a chart, not a sibling. Memory follows the newest version and past setlists keep their exact chart. Adds a chart chip in the editor and a song page with grouped variants. <b>M–L</b></p></div></li>
+    <li><div><h3>Perform trust pack</h3><p>Edge tap zones (with a per-device off switch), the note, Vocal Lead and "Next: title (key)" over the open chart, the freshness line, a preflight that names failed charts, and nightly WebKit CI. <b>M</b></p></div></li>
+    <li><div><h3>Wedge safety and memory</h3><p>Ceilings set by Drew and enforced in the bridge, saved mixes per musician and service type, and an engineer console showing all five buses. Needs a bridge release. <b>M–L</b></p></div></li>
+    <li><div><h3>Brothers Lazaroff band mode</h3><p>A gig block (venue, times, set lengths with a running total), a draft from a named past gig, a Brothers Lazaroff agent guide, segues and per-singer keys. <b>L</b></p></div></li>
+    <li><div><h3>Family spine</h3><p>An advisory week key on every setlist, emitted in today.json, so the setlist, Haftarah and Overlays join on one week. A Beit Mitzvah card on its setlist. <b>M–L</b></p></div></li>
+  </ol>
+</section>
+
+<div class="staff" aria-hidden="true"></div>
+
+<section class="stack">
+  <div class="eyebrow">By role</div>
+  <h2>Who feels it</h2>
+  <div class="persona">
+    <section><h3>Daniel (author, via Claude)</h3><ul>
+      <li><b>Confidently wrong drafts</b>: a stale usual, profiles seeded from a Bat Mitzvah or a camp service.</li>
+      <li><b>No "vs last week"</b> in the readback, and file names spoken aloud.</li>
+      <li><b>Mixer:</b> "show me my mix" fails because Claude's account owns no bus.</li>
+      <li><b>Three tools</b> describe the weekly flow three different ways.</li></ul></section>
+    <section><h3>Band musicians (iPads)</h3><ul>
+      <li><b>Trust:</b> no "last updated" and no per-chart cached mark.</li>
+      <li><b>Notes and "what's next"</b> vanish once a chart opens.</li>
+      <li><b>No tap or pedal page turns</b>, no night mode and no pencil marks, which are paper's strengths.</li>
+      <li><b>Bb/Eb transposition</b> is forgotten every week when signed out.</li></ul></section>
+    <section><h3>David (2nd band leader)</h3><ul>
+      <li><b>Builds 4–7 instrument copies</b> per service by hand.</li>
+      <li><b>Stale usuals</b> are hard to replace in one sentence.</li>
+      <li><b>Bus 2 is the first bus only</b>; a co-owned bus is changed silently.</li></ul></section>
+    <section><h3>Randy (leads some weeks)</h3><ul>
+      <li><b>Shabbat morning with Randy returns <code>no_profile</code></b>, although a "Randy Shabbat morning" template exists.</li>
+      <li><b>Recovery costs 3–4 calls</b> because cloning drops the rabbi slot.</li></ul></section>
+    <section><h3>Drew (sound)</h3><ul>
+      <li><b>No ceilings to set</b>, so feedback risk sits with whoever moves a fader.</li>
+      <li><b>Can't ride another musician's bus</b> from the iPad.</li>
+      <li><b>Not alerted</b> when the bridge is down, and his access request has been pending a month.</li></ul></section>
+    <section><h3>Michael (studio PC)</h3><ul>
+      <li><b>Not alerted</b> when the bridge is down.</li>
+      <li><b>The watchdog install is unconfirmed</b>, and the bridge's last error is blank.</li></ul></section>
+    <section><h3>Brothers Lazaroff</h3><ul>
+      <li><b>No show sheet</b>: no venue, load-in or set lengths.</li>
+      <li><b>CRC wording</b> on packets and footers, and parashot in the calendar.</li>
+      <li><b>No weekly draft flow</b>; cloning is the only route.</li></ul></section>
+  </div>
+</section>
+
+<section class="stack">
+  <div class="eyebrow">Every finding</div>
+  <h2>Findings explorer</h2>
+  <div class="filters">
+    <label for="fArea">Area <select id="fArea"><option value="">All</option></select></label>
+    <label for="fSev">Severity <select id="fSev"><option value="">All</option><option>S1</option><option>S2</option><option>S3</option><option>S4</option></select></label>
+    <label for="fStatus">Status <select id="fStatus"><option value="">All</option></select></label>
+    <label for="fQw">Quick wins <select id="fQw"><option value="">All</option><option value="1">Quick wins only</option></select></label>
+    <input type="search" id="fText" placeholder="Search findings" aria-label="Search findings">
+    <span class="count" id="fCount"></span>
+  </div>
+  <div class="scroll"><table>
+    <thead><tr><th>Id</th><th>Sev</th><th>Finding and recommendation</th><th class="hide-sm">Effort</th><th>Status</th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table></div>
+  <p class="note">Full evidence, with file:line anchors, is in <code>docs/planning/2026-10-31-gap-analysis/research/</code>. Severity runs from S1 (service-breaking) and S2 (weekly pain) to S3 (annoyance) and S4 (polish). Effort runs from XS (under an hour) and S (under a day) to M (a few days) and L (a week or more).</p>
+</section>
+
+<section class="stack">
+  <div class="eyebrow">From the live walk</div>
+  <h2>What it looks like today</h2>
+  <div class="shots">
+    <figure><img src="shots/i-setlists-detail.png" alt="Setlist editor at iPad width"><figcaption>Editor at iPad width: rows show file names as titles and give no sign of which chart or format is bound (WEB-01, WEB-03).</figcaption></figure>
+    <figure><img src="shots/d-library-search.png" alt="Library search for Adonai S'fatai"><figcaption>One prayer shows as eight library entries, with no grouping and no "used in" (WEB-04).</figcaption></figure>
+    <figure><img src="shots/i-perform-chart1.png" alt="MusicXML chart in Perform"><figcaption>MusicXML renders well in Perform, but the leader's note and what's next are gone (PERF-11).</figcaption></figure>
+    <figure><img src="shots/d-v2.png" alt="The v2 showcase page"><figcaption>v2: one demo page with hard-coded rows, linked from every footer. It is being deleted (WEB-08).</figcaption></figure>
+  </div>
+</section>
+
+<section class="stack col">
+  <div class="eyebrow">Your answers</div>
+  <h2>Decisions on record</h2>
+  <div class="scroll"><table class="decisions"><tbody>
+    <tr><td>Stale usual</td><td>Fill it, but say it in the readback</td></tr>
+    <tr><td>B'nei Mitzvah</td><td>Its own flow with its own preset. Camp, holiday and guest services also stay out of the regular profiles.</td></tr>
+    <tr><td>Chart revisions</td><td>Apply to future setlists only; played keys are kept</td></tr>
+    <tr><td>Pre-commit checks</td><td>Existing setlist, dead chart and key mismatch: warn, never block</td></tr>
+    <tr><td>Signed-out iPads</td><td>Show "Setlist updated, tap to refresh"</td></tr>
+    <tr><td>Fleet logins</td><td>Personal logins</td></tr>
+    <tr><td>Page turns</td><td>Edge tap zones, with a per-device off switch</td></tr>
+    <tr><td>v2, Schedule, Changelog, /admin</td><td>Remove</td></tr>
+    <tr><td>Instrument copies</td><td>Fold under the parent service and keep the copies</td></tr>
+    <tr><td>Wedges</td><td>Ceilings set by Drew, saved mixes, an engineer console; alerts to Drew and Michael; bus 5 also assigned to Claude's account</td></tr>
+    <tr><td>Brothers Lazaroff</td><td>Its own branding; CRC stays the legal operator for now</td></tr>
+    <tr><td>Family</td><td>The week-key spine, and a Beit Mitzvah card on its setlist (names are fine)</td></tr>
+    <tr><td>Usage data</td><td>An in-app counter only; no Vercel Analytics</td></tr>
+    <tr><td>Shirei Tshuvah</td><td>184 printed pages</td></tr>
+  </tbody></table></div>
+  <details><summary>Things only you can do</summary><ul class="note">
+    <li>One airplane-mode reload on a real iPad with a chart open (confirms PERF-01).</li>
+    <li>The keep-awake acceptance protocol on one fleet iPad (PERF-19).</li>
+    <li>The pending request from Meir Bargeron (templecav.org) is still undecided.</li>
+  </ul></details>
+</section>
+
+</div>
+
+<script>
+const F=[
+["MCP-01","MCP","S1","\"Usual\" counts the last 5 uses of a chart, not the last 5 services. Any chart played 3+ times ever is usual.","Count over the profile's last 5 regular services; regression test A,A,A,B,B.","S",1,"A"],
+["MCP-02","MCP","S1","A slot's identity is the chart file, so one prayer moment splits into many slots.","Key slots by moment; use partGroup only for non-liturgical songs.","M",0,"Bet 1"],
+["MCP-03","MCP","S1","Profiles were seeded from a Bat Mitzvah and a Camp Sabra service, then frozen.","Seed only from regular weeks, re-learn the order, and give B'nei Mitzvah its own preset.","M",0,"Bet 1"],
+["MCP-04","MCP","S1","The readback folds every filled row into \"everything else is your usual\".","Name filled rows that are stale, differ from last service, have no key, or come from a one-service seed.","S",1,"Bet 1"],
+["MCP-05","MCP","S2","No comparison with last week in the draft or the readback.","Add vsLast: per moment, what last service used and in what key.","S",1,"Bet 1"],
+["MCP-06","MCP","S2","Open rows don't carry the exact chart used last time, and two different charts share the name \"Shema (major).pdf\".","Return recall {fileId, key, date} on open rows; let a choice say useRecall.","XS",1,"Bet 1"],
+["MCP-07","MCP","S2","Duplicate setlists on one date count twice toward \"usual\".","Collapse to one setlist per date, type and rabbi slot.","XS",1,"A"],
+["MCP-08","MCP","S2","The draft doesn't warn that a setlist already exists for that date.","Return existing setlists and say so first. Warn, never block.","XS",1,"A"],
+["MCP-09","MCP","S2","An archived or orphaned chart can be filled.","Exclude it from fill, recall the canonical version, and warn.","S",1,"A"],
+["MCP-10","MCP","S2","A chart revision rewrites past setlists and their played keys, and leaves standing choices on the old version.","Revisions move future setlists only, keep played keys, and migrate standing choices.","M",0,"Bet 2"],
+["MCP-11","MCP","S2","The played key is never shown next to the chart's written key.","Add writtenKey and a key_mismatch warning for PDFs.","XS",1,"A"],
+["MCP-12","MCP","S2","Holidays, camp, retirements and Shir Keter count as regular weeks.","Classify specials more strictly; B'nei Mitzvah is its own type.","XS",1,"A"],
+["MCP-13","MCP","S2","Profile labels are file names (\"Barchu (Siegel).pdf\").","Strip extensions and underscores; label by moment.","XS",1,"A"],
+["MCP-14","MCP","S2","The Shir Shabbat profile lists one moment 3–4 times, once per instrument part.","Collapse part rows into one slot at seed time.","S",1,"Bet 1"],
+["MCP-15","MCP","S2","Randy's Shabbat morning returns no_profile, although his template exists.","Seed the order from the legacy template; clone_setlist takes the rabbi slot.","S",1,"Bet 1"],
+["MCP-16","MCP","S3","Bond confidence grades how specific the chart's title is, not whether it fits the row.","Add title_mismatch and key flags; cap stale profile matches at medium.","S",1,"Bet 1"],
+["MCP-17","MCP","S2","Five ways to create a setlist; clone_setlist still calls cloning \"the weekly flow\"; profiles leak into list_templates.","Rewrite the clone description and hide profile docs from template tools.","XS",1,"A"],
+["MCP-18","MCP","S3","update_track and swap_chart change charts with opposite key rules.","One documented key rule, returning keyChanged.","XS",1,"Bet 2"],
+["MCP-19","MCP","S3","18 intake tools, and none asks \"is this a new version of X?\".","The dedupe refusal offers revisionOf before force.","M",0,"Bet 2"],
+["MCP-20","MCP","S3","The voice readback speaks long file names and then \"4 more on screen\".","\"Nine open slots. First three… Want the rest?\" Speak settings, with dates.","XS",1,"Wave 2"],
+["MCP-21","MCP","S3","The draft ignores open items, and the Shir Shabbat book differs from the profile.","Carry open items forward and flag a book mismatch.","S",1,"Bet 1"],
+["MCP-22","MCP","S4","The profile-not-found hint points to an ops-only tool.","Say \"call draft_service once\".","XS",1,"A"],
+["MCP-23","MCP","S3","History ignores what was actually played (reconcile deviations).","Overlay performed deviations onto history.","S",1,"Bet 1"],
+["MCP-24","MCP","S3","The roadmap reads \"all shipped\", but per-instrument Perform and the old bond loop are still open.","Add them as Release 5.","XS",1,"Bet 1"],
+["MCP-25","MCP","S3","The first draft silently and permanently creates a profile.","Say \"profile created from <setlist>\" and expose a guarded re-seed.","S",1,"Bet 1"],
+["PERF-01","Perform","S1","Reloading offline with a chart open likely shows Safari's \"no internet\" page, and its test gives a false green.","Fall back to the cached setlist page, cache track URLs, and fix the test.","S",1,"B"],
+["PERF-02","Perform","S2","Each deploy wipes the iPads' offline shell cache.","Keep the previous cache generation.","S",1,"B"],
+["PERF-03","Perform","S2","Prayer and reading charts are never cached, so \"Saved N/N\" can lie.","Precache every row that has a chart.","XS",1,"B"],
+["PERF-04","Perform","S2","Bluetooth page-turner pedals do nothing.","Handle PageDown, Space and arrow keys.","S",1,"Backlog"],
+["PERF-05","Perform","S2","No tap or swipe page turns; the intro screen promises swipes that don't exist.","Edge tap zones with a per-device off switch.","M",0,"Bet 3"],
+["PERF-06","Perform","S2","Signed-out iPads never notice setlist edits or swaps.","Show \"Setlist updated, tap to refresh\".","S",0,"B"],
+["PERF-07","Perform","S2","If the server's first read fails, a signed-out iPad shows \"No tracks yet\".","Fetch the tracks on the client once, and again on reconnect.","XS",1,"B"],
+["PERF-08","Perform","S3","MusicXML and text charts have no Retry button and no watchdog.","Add Retry and a watchdog, and cache bytes on fetch.","S",1,"B"],
+["PERF-09","Perform","S3","Older rows with no mime type may open MusicXML as a broken PDF for musicians.","Attach the mime type from the library on the server.","S",1,"B"],
+["PERF-10","Perform","S2","Nothing shows when the setlist was last updated or which charts are on this iPad.","Freshness line plus a per-row cached dot.","S",0,"Bet 3"],
+["PERF-11","Perform","S2","The leader's note, the Vocal Lead and what's next disappear on an open chart.","A slim note line and \"Next: title (key)\".","S",0,"Bet 3"],
+["PERF-12","Perform","S3","No dark mode for chart pages on a dim stage.","A per-device night-charts toggle.","S",1,"Backlog"],
+["PERF-13","Perform","S3","No pencil annotations; the code still advertises them.","A personal annotation layer (L).","L",0,"Backlog"],
+["PERF-14","Perform","S3","Signed-out transposition and capo are forgotten every week.","Persist them per device.","S",1,"Bet 3"],
+["PERF-15","Perform","S3","MusicXML renders every part, with no part picker.","A per-device part picker.","M",0,"Backlog"],
+["PERF-16","Perform","S4","Two offline pills stack in the same spot.","Render one.","XS",1,"B"],
+["PERF-17","Perform","S4","Five dead Perform components and dead live-stepping props.","Delete them.","S",1,"B"],
+["PERF-18","Perform","S3","Storage is never made persistent, and cached charts never see in-place updates.","storage.persist() now; a versioned cache later.","S",1,"B"],
+["PERF-19","Perform","S2","The keep-awake fix has never been checked on a real iPad.","Run the acceptance protocol on one fleet iPad.","S",0,"Ops"],
+["PERF-20","Perform","S3","No iPad/WebKit Perform test runs in CI.","A nightly WebKit run against prod.","S",1,"Bet 3"],
+["PERF-21","Perform","S3","A chart that fails to cache is found only when tapped mid-service.","Record and mark failed charts.","S",0,"Bet 3"],
+["WEB-01","Web app","S2","Editor numbers skip 20 and repeat 27; it shows the stored order rather than the position.","Display the position. Never re-sort.","S",1,"C"],
+["WEB-02","Web app","S3","One setlist reads 27 Songs, 22 items and 15 songs on different screens.","\"N songs\" means rows with a chart, everywhere.","XS",1,"C"],
+["WEB-03","Web app","S2","Rows never show which chart, format or version is bound; some titles are file names.","Strip extensions now; a chart chip in bet 2.","M",1,"C"],
+["WEB-04","Web app","S2","No song page; one prayer shows as 8 library entries.","A song page with grouped variants and \"used in\".","M",0,"Bet 2"],
+["WEB-05","Web app","S3","The setlists list is about 4000px tall; Oct 2 has 9 instrument copies.","Fold the copies under the parent service.","M",0,"C"],
+["WEB-06","Web app","S3","12 rabbi chips, including \"Rabbi Rabbi\" and a literal \"&amp;\" entity.","Normalise them for the filter.","S",1,"C"],
+["WEB-07","Web app","S3","Schedule is in the top nav and only says \"No musicians assigned yet\".","Remove it from the nav.","S",1,"C"],
+["WEB-08","Web app","S3","v2 is one demo page, linked from every footer.","Delete it.","S",1,"C"],
+["WEB-09","Web app","S4","The changelog stops at v1.7.","Remove the link.","XS",1,"C"],
+["WEB-10","Web app","S3","React hydration error #418 on every setlists load.","Reproduce with a dev build.","S",0,"Backlog"],
+["WEB-11","Web app","S2","A tracks-subscription permission error for a band_leader test account.","Confirm with a real musician account.","S",0,"Backlog"],
+["WEB-12","Web app","S3","The editor has no \"see what the band sees\" link.","Add a Perform link.","XS",1,"C"],
+["WEB-13","Web app","S3","78 of 87 editor controls are under 44px on an iPad.","44px hit areas.","S",1,"C"],
+["WEB-14","Web app","S3","Rows are about 97px tall, so review means scrolling about 2.6k px.","A compact review density.","M",0,"Backlog"],
+["WEB-15","Web app","S3","Test accounts appear among real people.","Hide them; Drew approved.","XS",1,"C"],
+["WEB-16","Web app","S4","/admin is a spinner that redirects; library-review redirects silently.","Delete /admin and say \"admin only\".","XS",1,"C"],
+["WEB-17","Web app","S4","No h1 on /setlists or /monitor.","Add them.","XS",1,"C"],
+["WEB-18","Web app","S4","Two homes: / and /setlists.","One home.","S",0,"Backlog"],
+["WEB-19","Web app","S4","The viewer footer title is large and truncated.","Smaller, on two lines.","XS",1,"C"],
+["MIXER-01","Mixer","S2","No mix is ever saved; a desk reset wipes everyone.","Snapshots plus named presets per musician.","M",0,"Bet 4"],
+["MIXER-02","Mixer","S2","No undo on the iPad.","An undo chip for about 10 s.","S",1,"Backlog"],
+["MIXER-03","Mixer","S1","No ceiling; a double-tap jumps to 0 dB, and +10 dB is possible.","Ceilings set by Drew, enforced in the bridge.","M",0,"Bet 4"],
+["MIXER-04","Mixer","S2","No record of who moved a shared bus.","A change log.","M",0,"Backlog"],
+["MIXER-05","Mixer","S2","Drew can't ride another bus from the iPad.","Engineer console.","M",0,"Bet 4"],
+["MIXER-06","Mixer","S2","\"My mix\" fails: Claude's account owns no bus.","Better error text, and bus 5 assigned to that account.","XS",1,"Wave 2"],
+["MIXER-07","Mixer","S2","\"Turn my vocal up\" takes 4 calls with raw floats; the guide has no mixer section.","Mixer section in the guide now.","XS",1,"Wave 2"],
+["MIXER-08","Mixer","S3","get_mix returns 32 raw floats, including spare channels.","Add audible, dB and onlyActive.","S",1,"Wave 2"],
+["MIXER-09","Mixer","S2","The bridge-down popover doesn't say your wedge still sounds the same.","Calm wording, plus who to ask.","S",0,"Bet 4"],
+["MIXER-10","Mixer","S2","Moves made offline may replay late.","Drop stale offline-queued commands in the bridge.","S",0,"Bet 4"],
+["MIXER-11","Mixer","S2","Bridge alerts skip Drew and Michael.","Push to both (approved).","S",0,"Wave 2"],
+["MIXER-12","Mixer","S2","The watchdog install is unconfirmed; there was an unexplained restart.","Report the launch reason in the heartbeat.","S",0,"Bet 4"],
+["MIXER-13","Mixer","S3","The bridge's lastError is blank.","Keep the last non-empty error.","XS",1,"Bet 4"],
+["MIXER-14","Mixer","S3","Only 2 of 5 buses are assigned.","\"Request a bus\".","S",0,"Backlog"],
+["MIXER-15","Mixer","S3","A two-bus owner sees only the first.","Plural buses.","M",0,"Bet 4"],
+["MIXER-16","Mixer","S3","The online check trusts the iPad's clock.","Use server time.","S",0,"Backlog"],
+["MIXER-17","Mixer","S4","get_command_status doesn't check the ack's owner.","Filter by uid.","XS",1,"Wave 2"],
+["MIXER-18","Mixer","S3","MCP strings say \"IEM\" and \"in-ear\".","Change them to \"wedge\".","XS",1,"Wave 2"],
+["MIXER-19","Mixer","S4","No MCP tool to mute a bus master.","Only if Drew wants it.","XS",0,"Backlog"],
+["MIXER-20","Mixer","S3","There is no Saturday-morning bridge check.","Add a Saturday cron.","XS",1,"Wave 2"],
+["TF-01","Tenant & family","S2","Brothers Lazaroff has no venue, load-in or set-time fields.","Gig block.","M",0,"Bet 5"],
+["TF-02","Tenant & family","S2","No set length or running total.","Song durations plus a set total.","M",0,"Bet 5"],
+["TF-03","Tenant & family","S3","No segue marker.","A segue flag on a track.","S",1,"Bet 5"],
+["TF-04","Tenant & family","S2","One key per song, not per singer.","Keys per singer.","M",0,"Bet 5"],
+["TF-05","Tenant & family","S2","draft_service is dead for band tenants, and its errors mention rabbis.","Fix the message now; seed from a named gig later.","M",1,"Wave 2"],
+["TF-06","Tenant & family","S2","Brothers Lazaroff packets and footers say \"CRC Music Books\".","Brothers Lazaroff branding (approved).","S",0,"Wave 2"],
+["TF-07","Tenant & family","S3","Parashot and the Friday/Saturday toggle show on Brothers Lazaroff's calendar.","Hide them for band tenants and delete dead code.","S",1,"Wave 2"],
+["TF-08","Tenant & family","S3","Brothers Lazaroff's agent guide says nothing about gigs.","A short Brothers Lazaroff guide.","XS",0,"Bet 5"],
+["TF-09","Tenant & family","S2","Subs can't get a Bb or Eb part without an account.","Contacts with instrument and transposition.","M",0,"Bet 5"],
+["TF-10","Tenant & family","S3","Every Brothers Lazaroff member is also a CRC member.","Test with one Brothers Lazaroff-only account before onboarding more.","S",0,"Backlog"],
+["TF-11","Tenant & family","S2","Overlays has never imported a real service.","A smoke test plus a contract test.","S",1,"Wave 2"],
+["TF-12","Tenant & family","S2","The week is named by hand in three products.","An advisory week key on the setlist.","M",0,"Bet 6"],
+["TF-13","Tenant & family","S2","The Beit Mitzvah bridge is unproven in production; the setlists are hand-named.","Verify it, and add a ceremony card on the setlist.","M",0,"Bet 6"],
+["TF-14","Tenant & family","S3","The Shirei Tshuvah page-count note is stale.","184 pages; fix the note.","XS",1,"Wave 2"],
+["TF-15","Tenant & family","S3","Live list_books shows 8 books, not 9.","Default to every registered book.","XS",1,"Wave 2"],
+["TF-16","Tenant & family","S3","today.json carries no occasion or ceremony.","Add occasion and ceremony id.","S",0,"Bet 6"],
+["TF-17","Tenant & family","S3","No failing guard on two family seams.","Contract tests.","S",1,"Wave 2"],
+["TEL-01","Telemetry","S2","Drive folders are indexed as charts, so 16 errors this week were 403s.","Exclude folders and return a clear error.","S",1,"C"],
+["TEL-02","Telemetry","S3","There is no usage data at all.","An in-app page counter.","XS",1,"C"]
+];
+const statusLabel=s=>({A:"Building now · A",B:"Building now · B",C:"Building now · C"}[s]||s);
+const statusClass=s=>(["A","B","C"].includes(s)?"now":s==="Wave 2"?"next":"");
+const $=id=>document.getElementById(id);
+const areas=[...new Set(F.map(f=>f[1]))], statuses=[...new Set(F.map(f=>statusLabel(f[7])))];
+areas.forEach(a=>$("fArea").add(new Option(a,a)));
+statuses.forEach(s=>$("fStatus").add(new Option(s,s)));
+$("nFind").textContent=F.length;
+$("nQw").textContent=F.filter(f=>f[6]).length;
+$("nS1").textContent=F.filter(f=>f[2]==="S1").length;
+const esc=s=>s.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+function render(){
+  const a=$("fArea").value,sv=$("fSev").value,st=$("fStatus").value,q=$("fQw").value,t=$("fText").value.trim().toLowerCase();
+  const rows=F.filter(f=>(!a||f[1]===a)&&(!sv||f[2]===sv)&&(!st||statusLabel(f[7])===st)&&(!q||f[6])&&(!t||(f.join(" ").toLowerCase().includes(t))));
+  $("rows").innerHTML=rows.map(f=>`<tr><td class="id">${f[0]}</td><td><span class="sev ${f[2]}">${f[2]}</span></td><td>${esc(f[3])}${f[6]?'<span class="qw">quick win</span>':''}<div class="rec">${esc(f[4])}</div></td><td class="eff hide-sm">${f[5]}</td><td><span class="status ${statusClass(f[7])}">${statusLabel(f[7])}</span></td></tr>`).join("");
+  $("fCount").textContent=rows.length+" of "+F.length;
+  try{localStorage.setItem("gapFilters",JSON.stringify({a,sv,st,q,t}))}catch(e){}
+}
+try{const s=JSON.parse(localStorage.getItem("gapFilters")||"null");if(s){$("fArea").value=s.a||"";$("fSev").value=s.sv||"";$("fStatus").value=s.st||"";$("fQw").value=s.q||"";$("fText").value=s.t||""}}catch(e){}
+["fArea","fSev","fStatus","fQw"].forEach(id=>$(id).addEventListener("change",render));
+$("fText").addEventListener("input",render);
+render();
+</script>

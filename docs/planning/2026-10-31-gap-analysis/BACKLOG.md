@@ -99,8 +99,7 @@ Logic fixes only. No new readback phrasing apart from the warnings below.
 - **TF-17/TF-11:** contract tests (the Overlays field list against a built `get_setlist`; the BM
   `contract.ts` against a golden pair).
 - **TF-14:** fix the CLAUDE.md note: Shirei Tshuvah is printed at 184pp (Daniel).
-- **MCP-20:** voice readback: "Nine open slots. First three: … Want the rest?", speaking
-  settings, not file names, and giving dates on "last time".
+- (MCP-20 moved to bet 1, because it shares `readback.ts`.)
 
 ## Ops (the lead, by hand)
 - Approve Drew Brodsky's pending request (Daniel approved).

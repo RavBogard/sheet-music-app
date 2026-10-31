@@ -77,3 +77,35 @@ to the rest of the worship-tech family.
 - **Voice readback:** no preference. GATE: count plus the first three, settings not file names,
   dates on "last time". Proceeded on the recommendation.
 - **Shirei Tshuvah:** printed at 184pp. The registry is right; fix the CLAUDE.md note.
+
+## Visual refresh (Daniel, 2026-10-31, mid-session)
+- Daniel asked for /impeccable init plus a frontend-design / ui-ux-pro-max visual refresh of the
+  web app. This covers everything except the chart rendering, so that people see the work.
+- init interview: audience = band musicians (iPad), Daniel/David reviewing, and Brothers Lazaroff.
+  A fresh identity is OK. Outcome: all three, trust first.
+- PRODUCT.md is written to `docs/design/PRODUCT.md`. GATE: not at the repo root, because the repo's
+  CLAUDE.md allows only README/CLAUDE/AGENTS/CHANGELOG/COORDINATION and config at the root (the
+  stricter rule wins). The impeccable launcher does not auto-find it there, so read it directly in
+  design sessions.
+- Sequencing: the refresh starts after wave-1 PR C (web trims) merges, because it touches the same
+  files. Its Perform parts start after PR B. Visual direction options go to Daniel before the build.
+- Report artifact: https://claude.ai/artifact/A95Xw4Pn85UQoEumRYb4Tr
+
+## Security note (2026-10-31)
+- The PR #30 review found a pre-existing flaw: `rate-limit.ts` `getKey` keys buckets on the `sub` of
+  an UNVERIFIED Bearer JWT, so a forged token gets a fresh bucket each time. That bypasses every
+  limit that uses it. It is being fixed in PR #30's fix round, and Daniel was informed.
+- PR #30 fixed the `telemetry` tier only (it is now IP-keyed). Every other tier still keys on the
+  unverified `sub`. Follow-up security slice SEC-01: verify the token, or fall back to IP, for every
+  tier. Caution: the band iPads share one shul WiFi IP, so IP-keying the `chart`/`api` tiers could
+  throttle Perform mid-service. Prefer verifying the Firebase ID token (cached) over IP keying.
+  Assign to the strongest model with an adversarial review.
+
+## Ops done (2026-10-31)
+- Bus 5 is co-assigned to CRC Music (gRWqLaYIFAUlXyFATzGbihEzzfL2), alongside Daniel.
+- Drew: both accounts (DINwaB86… percussion, wZ1BAJXt… engineer) already have role admin. The
+  "pending request" in People is probably stale. Daniel can clear it in Manage → People.
+- TEL-01 back-fill skipped: PR #30 hides folders in the library list and returns not_a_chart for them.
+- Merged: #29 (Perform), #30 (web trims and the telemetry rate-limit). #28 is waiting on CI after
+  the emulator expectation fix (the moment label "Bar’chu").
+- SEC-01 builder launched (verified-token rate-limit keys, shared shul IP safe).
