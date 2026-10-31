@@ -59,6 +59,8 @@ export const READ_TOOLS: ReadonlySet<string> = new Set([
     "get_command_status",
     "get_bridge_health",
     "bridge_get_log",
+    "get_monitor_limits",
+    "list_saved_mixes",
     // ops reads
     "get_ai_config",
     "list_review_queue",
@@ -153,6 +155,8 @@ export const WRITE_TOOLS: ReadonlySet<string> = new Set([
     "set_matrix_mute",
     "assign_monitor_bus",
     "unassign_monitor_bus",
+    "set_monitor_limits",
+    "recall_mix",
     // ops
     "backfill_content_hash",
     "backfill_heal_metadata",

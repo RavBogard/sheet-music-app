@@ -54,6 +54,11 @@ export const BL_DROPPED_P6 = [
     "assign_monitor_bus",
     "unassign_monitor_bus",
     "get_bridge_health",
+    // BET-4 (2026-10-31): wedge limits and saved mixes, mixer tools too
+    "get_monitor_limits",
+    "set_monitor_limits",
+    "list_saved_mixes",
+    "recall_mix",
     // driveInbox
     "get_chart_inbox",
     "sync_chart_inbox",
@@ -84,7 +89,7 @@ describe("phase 6 golden: MCP tool lists", () => {
         expect(now.crc).toEqual(golden.crc)
         expect(now.ops).toEqual(golden.ops)
         // Phase 6: BL = today's list minus ONLY the tools of the features BL
-        // does not use (P6-BL-FLAGS.md): mixer (its 12 authoring tools) and
+        // does not use (P6-BL-FLAGS.md): mixer (its 16 authoring tools) and
         // driveInbox. Nothing else may differ.
         const blDropped = new Set(BL_DROPPED_P6)
         expect(now.brotherslazaroff).toEqual(golden.brotherslazaroff.filter((t) => !blDropped.has(t)))

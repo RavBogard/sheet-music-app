@@ -12,6 +12,9 @@ import {
     type FaderMachineState,
 } from "@/lib/monitor/fader-confirmation"
 import { useFaderThrottle } from "@/lib/monitor/use-fader-throttle"
+import { doubleTapTarget } from "@/lib/monitor/limits"
+import type { ClampNotice } from "@/lib/monitor-store"
+import { CapTick, ClampNote, useClampNotice } from "@/components/monitor/FaderLimit"
 
 interface VerticalFaderStripProps {
     label: string
@@ -28,6 +31,15 @@ interface VerticalFaderStripProps {
     unconfirmed?: boolean
     /** R2: the bridge refused this fader's last command (`seq` monotonic so repeats re-fire). */
     rejection?: { reason: string; seq: number } | null
+    /**
+     * BET-4: the sound engineer's limit for this fader (0..1), drawn as a tick.
+     * The bridge enforces it; the fader only shows it.
+     */
+    cap?: number | null
+    /** BET-4: the last saved level for this fader; double-tap returns here (else 0.6). */
+    homeLevel?: number | null
+    /** BET-4: the bridge held this fader's last move to the limit. */
+    clamp?: ClampNotice | null
 }
 
 const OUTCOME_CUE_MS = 800
@@ -43,7 +55,7 @@ const REJECTION_CUE_MS = 4000
  * Carries the same C-2/C-3/C-12 confirmation machine + C-6 staleness cue as the
  * horizontal `FaderStrip`, so the perform-toolbar surface is just as honest.
  */
-export function VerticalFaderStrip({ label, value, on, isMaster, onChange, onMuteToggle, stale = false, snapshotSeq = 0, unconfirmed = false, rejection = null }: VerticalFaderStripProps) {
+export function VerticalFaderStrip({ label, value, on, isMaster, onChange, onMuteToggle, stale = false, snapshotSeq = 0, unconfirmed = false, rejection = null, cap = null, homeLevel = null, clamp = null }: VerticalFaderStripProps) {
     const isDraggingRef = useRef(false)
     const sliderRef = useRef<HTMLDivElement>(null)
     const lastTapTime = useRef<number>(0)
@@ -107,9 +119,10 @@ export function VerticalFaderStrip({ label, value, on, isMaster, onChange, onMut
 
     const handlePointerDown = useCallback((e: React.PointerEvent) => {
         const now = Date.now()
-        // Double tap detection (within 300ms)
+        // Double tap (within 300ms): back to the last saved level (BET-4), or 0.6
+        // (about -6 dB) when nothing is saved; never above the limit.
         if (now - lastTapTime.current < 300) {
-            const resetVal = displayValue > 0.1 ? 0.0 : 0.75
+            const resetVal = doubleTapTarget(homeLevel, cap)
             isDraggingRef.current = false
             dispatch({ type: "commit", value: resetVal, now })
             throttle.commit(resetVal) // R4: a reset tap is terminal — never throttled
@@ -121,7 +134,7 @@ export function VerticalFaderStrip({ label, value, on, isMaster, onChange, onMut
         dispatch({ type: "drag_start" })
         ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
         updateFromPointer(e.clientY)
-    }, [updateFromPointer, displayValue, throttle])
+    }, [updateFromPointer, throttle, homeLevel, cap])
 
     const handlePointerMove = useCallback((e: React.PointerEvent) => {
         if (!isDraggingRef.current) return
@@ -144,6 +157,7 @@ export function VerticalFaderStrip({ label, value, on, isMaster, onChange, onMut
         throttle.commit(clamped) // R4: a nudge is a discrete sent value, not motion
     }, [throttle])
 
+    const clampShown = useClampNotice(clamp)
     const percentage = Math.round(displayValue * 100)
     const fillHeight = `${percentage}%`
     const isDragging = phase === "dragging"
@@ -230,6 +244,8 @@ export function VerticalFaderStrip({ label, value, on, isMaster, onChange, onMut
                     }}
                 />
 
+                <CapTick cap={cap} orientation="vertical" />
+
                 {/* Status cue (pending / confirmed / reverted / stale) — color-not-alone via glyph + aria-label */}
                 <div className="absolute top-1 left-1/2 -translate-x-1/2">
                     {isPending ? (
@@ -300,6 +316,8 @@ export function VerticalFaderStrip({ label, value, on, isMaster, onChange, onMut
                     {humanizeRejection(machine.rejectionReason ?? undefined)}
                 </div>
             )}
+
+            {clampShown && outcome !== "rejected" && <ClampNote notice={clampShown} compact />}
 
             {/* Mute button */}
             <Button

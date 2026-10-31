@@ -1,0 +1,398 @@
+{
+    "limitedTo": {
+        "where": "Monitor: on a wedge fader (the /monitor page and the Perform toolbar popover), shown for 3 seconds after the mixer held a move to the limit",
+        "who": "musicians on the wedge mixer",
+        "maxLength": 60,
+        "context": "{db} is a level such as '+2 dB'. The wedge (stage monitor) cannot go louder than the limit the sound engineer set."
+    },
+    "capTick": {
+        "where": "Monitor: on a wedge fader (the /monitor page and the Perform toolbar popover): accessible label of the small tick that marks the limit on the fader",
+        "who": "musicians on the wedge mixer",
+        "maxLength": 24,
+        "context": "{db} is a level such as '+2 dB'"
+    },
+    "pausedLine": {
+        "where": "Perform toolbar monitor popover: shown over the last known levels when the bridge (the program on the sound PC) is not running",
+        "who": "musicians on the wedge mixer",
+        "maxLength": 120,
+        "context": "Michael and Drew are people's names. The bridge is the program on the sound PC that links iPads to the mixer."
+    },
+    "busSwitcher": {
+        "where": "Monitor page and popover header: accessible label of the switcher shown to someone who is on two wedge buses",
+        "who": "musicians on the wedge mixer",
+        "maxLength": 24,
+        "context": "bus = a mixer output feeding one wedge"
+    },
+    "busOption": {
+        "where": "Monitor page and popover: one choice in the bus switcher",
+        "who": "musicians on the wedge mixer",
+        "maxLength": 16,
+        "context": "{bus} is a number 1-5"
+    },
+    "saveMix": {
+        "where": "Monitor page (My Mix tab) and Perform popover: button that saves the current wedge levels under a name",
+        "who": "musicians on the wedge mixer",
+        "maxLength": 20
+    },
+    "recallMix": {
+        "where": "Monitor page (My Mix tab) and Perform popover: button that opens the list of saved mixes",
+        "who": "musicians on the wedge mixer",
+        "maxLength": 20,
+        "context": "recall = bring saved levels back"
+    },
+    "mixNameLabel": {
+        "where": "Save-this-mix dialog: label of the name field",
+        "who": "musicians on the wedge mixer",
+        "maxLength": 20
+    },
+    "mixNameDate": {
+        "where": "Save-this-mix dialog: default name when today has no service type",
+        "who": "musicians on the wedge mixer",
+        "maxLength": 30,
+        "context": "{date} is a short date"
+    },
+    "saveMixHint": {
+        "where": "Save-this-mix dialog: one line under the title",
+        "who": "musicians on the wedge mixer",
+        "maxLength": 60
+    },
+    "save": {
+        "where": "Save-this-mix dialog: confirm button",
+        "who": "musicians on the wedge mixer",
+        "maxLength": 14
+    },
+    "saving": {
+        "where": "Save-this-mix dialog: confirm button while saving",
+        "who": "musicians on the wedge mixer",
+        "maxLength": 14
+    },
+    "cancel": {
+        "where": "Save-this-mix dialog and recall sheet: cancel button",
+        "who": "musicians on the wedge mixer",
+        "maxLength": 14
+    },
+    "mixSaved": {
+        "where": "Toast after a mix was saved",
+        "who": "musicians on the wedge mixer",
+        "maxLength": 30
+    },
+    "mixSaveFailed": {
+        "where": "Toast when saving a mix failed",
+        "who": "musicians on the wedge mixer",
+        "maxLength": 60
+    },
+    "recallTitle": {
+        "where": "Recall sheet: title",
+        "who": "musicians on the wedge mixer",
+        "maxLength": 30
+    },
+    "recallNamed": {
+        "where": "Recall sheet: heading of the person's own named mixes",
+        "who": "musicians on the wedge mixer",
+        "maxLength": 30
+    },
+    "recallAuto": {
+        "where": "Recall sheet: heading of the automatic snapshots taken at the end of each service",
+        "who": "musicians on the wedge mixer",
+        "maxLength": 30,
+        "context": "service = prayer service"
+    },
+    "recallNone": {
+        "where": "Recall sheet: empty state",
+        "who": "musicians on the wedge mixer",
+        "maxLength": 40
+    },
+    "recallLoading": {
+        "where": "Recall sheet and save dialog: while loading",
+        "who": "musicians on the wedge mixer",
+        "maxLength": 20
+    },
+    "recallLoadFailed": {
+        "where": "Recall sheet: load error",
+        "who": "musicians on the wedge mixer",
+        "maxLength": 50
+    },
+    "autoName": {
+        "where": "Recall sheet: name of an automatic snapshot that has no name",
+        "who": "musicians on the wedge mixer",
+        "maxLength": 24
+    },
+    "recallChanges_one": {
+        "where": "Recall sheet: count of fader changes the recall will make",
+        "who": "musicians on the wedge mixer",
+        "maxLength": 24
+    },
+    "recallChanges_other": {
+        "where": "Recall sheet: count of fader changes the recall will make",
+        "who": "musicians on the wedge mixer",
+        "maxLength": 24
+    },
+    "recallConfirm": {
+        "where": "Recall sheet: the confirm button that sends the change to the mixer",
+        "who": "musicians on the wedge mixer",
+        "maxLength": 24
+    },
+    "recallSending": {
+        "where": "Recall sheet: confirm button while sending",
+        "who": "musicians on the wedge mixer",
+        "maxLength": 16
+    },
+    "recallNothing": {
+        "where": "Recall sheet: no changes to make",
+        "who": "musicians on the wedge mixer",
+        "maxLength": 60
+    },
+    "recallMaster": {
+        "where": "Recall sheet: row name for the overall wedge level",
+        "who": "musicians on the wedge mixer",
+        "maxLength": 16,
+        "context": "the master = overall volume of the wedge"
+    },
+    "recallMuted": {
+        "where": "Recall sheet: shown instead of a level for a channel that will be or was muted",
+        "who": "musicians on the wedge mixer",
+        "maxLength": 10
+    },
+    "recallHeld": {
+        "where": "Recall sheet: note on a row whose saved level is above the sound engineer's limit",
+        "who": "musicians on the wedge mixer",
+        "maxLength": 24
+    },
+    "recallUnmatched": {
+        "where": "Recall sheet: saved channels the mixer no longer has; they are left alone",
+        "who": "musicians on the wedge mixer",
+        "maxLength": 80,
+        "context": "{names} is a list of channel names"
+    },
+    "recallPartial": {
+        "where": "Recall sheet: the recall was cut off after some faders had moved",
+        "who": "musicians on the wedge mixer",
+        "maxLength": 70,
+        "context": "fader = a level slider"
+    },
+    "recallRetry": {
+        "where": "Recall sheet: confirm button after a recall stopped partway; finishes the recall",
+        "who": "musicians on the wedge mixer",
+        "maxLength": 16
+    },
+    "limitsAboveUnity": {
+        "where": "Limits panel: inline warning when a limit is raised above 0 dB",
+        "who": "the sound engineer and admins",
+        "maxLength": 80,
+        "context": "feed back = acoustic feedback (howling)"
+    },
+    "limitsConfirm": {
+        "where": "Limits panel: save button while a limit is raised above 0 dB",
+        "who": "the sound engineer and admins",
+        "maxLength": 20
+    },
+    "recallSent": {
+        "where": "Toast after the recall was sent",
+        "who": "musicians on the wedge mixer",
+        "maxLength": 30
+    },
+    "recallFailed": {
+        "where": "Toast when the recall failed",
+        "who": "musicians on the wedge mixer",
+        "maxLength": 60
+    },
+    "limitsTitle": {
+        "where": "Monitor page, Configure tab: heading of the wedge limits panel",
+        "who": "the sound engineer and admins",
+        "maxLength": 20,
+        "context": "limit = the loudest a wedge send or master may go"
+    },
+    "limitsHint": {
+        "where": "Monitor page, Configure tab: one line under the Limits heading",
+        "who": "the sound engineer and admins",
+        "maxLength": 140,
+        "context": "Claude is the AI assistant; keep the name"
+    },
+    "limitSend": {
+        "where": "Limits panel: slider for the highest level of each channel in a wedge",
+        "who": "the sound engineer and admins",
+        "maxLength": 24
+    },
+    "limitMaster": {
+        "where": "Limits panel: slider for the highest overall wedge level",
+        "who": "the sound engineer and admins",
+        "maxLength": 24
+    },
+    "limitsDefault": {
+        "where": "Limits panel: heading of the default limits",
+        "who": "the sound engineer and admins",
+        "maxLength": 24
+    },
+    "limitsPerBus": {
+        "where": "Limits panel: heading of one bus's own limits",
+        "who": "the sound engineer and admins",
+        "maxLength": 24,
+        "context": "{bus} is a number 1-5"
+    },
+    "limitsOverride": {
+        "where": "Limits panel: switch that gives one bus its own limits instead of the defaults",
+        "who": "the sound engineer and admins",
+        "maxLength": 40
+    },
+    "limitsSave": {
+        "where": "Limits panel: save button",
+        "who": "the sound engineer and admins",
+        "maxLength": 20
+    },
+    "limitsSaved": {
+        "where": "Toast after the limits were saved",
+        "who": "the sound engineer and admins",
+        "maxLength": 30
+    },
+    "limitsSaveFailed": {
+        "where": "Toast when saving the limits failed",
+        "who": "the sound engineer and admins",
+        "maxLength": 60
+    },
+    "engineerLink": {
+        "where": "Monitor page header: link to the engineer console",
+        "who": "the sound engineer and admins",
+        "maxLength": 24
+    },
+    "engineerTitle": {
+        "where": "Engineer console page: title",
+        "who": "the sound engineer and admins",
+        "maxLength": 30
+    },
+    "engineerDenied": {
+        "where": "Engineer console page: shown to anyone else",
+        "who": "musicians on the wedge mixer",
+        "maxLength": 90
+    },
+    "busTitle": {
+        "where": "Engineer console: card title for one wedge bus",
+        "who": "the sound engineer and admins",
+        "maxLength": 16,
+        "context": "{bus} is a number 1-5"
+    },
+    "nobodyOnBus": {
+        "where": "Engineer console: bus card with no one assigned",
+        "who": "the sound engineer and admins",
+        "maxLength": 30
+    },
+    "topChannels": {
+        "where": "Engineer console: heading of a bus card's top channels",
+        "who": "the sound engineer and admins",
+        "maxLength": 24
+    },
+    "nothingAudible": {
+        "where": "Engineer console: bus card where every channel is off",
+        "who": "the sound engineer and admins",
+        "maxLength": 24
+    },
+    "ride": {
+        "where": "Engineer console: button that opens every fader of one bus",
+        "who": "the sound engineer and admins",
+        "maxLength": 20,
+        "context": "ride = adjust levels live during a service"
+    },
+    "rideDone": {
+        "where": "Engineer console: closes the open bus",
+        "who": "the sound engineer and admins",
+        "maxLength": 12
+    },
+    "bridgeTitle": {
+        "where": "Engineer console: heading of the bridge status card",
+        "who": "the sound engineer and admins",
+        "maxLength": 16,
+        "context": "the bridge = the program on the sound PC that links iPads to the mixer"
+    },
+    "bridgeRunning": {
+        "where": "Engineer console, bridge card: the bridge is alive",
+        "who": "the sound engineer and admins",
+        "maxLength": 20
+    },
+    "bridgeNotRunning": {
+        "where": "Engineer console, bridge card: the bridge has not checked in for 2 minutes",
+        "who": "the sound engineer and admins",
+        "maxLength": 20
+    },
+    "bridgeNeverSeen": {
+        "where": "Engineer console, bridge card: no heartbeat ever",
+        "who": "the sound engineer and admins",
+        "maxLength": 30
+    },
+    "lastSeenSeconds": {
+        "where": "Engineer console, bridge card",
+        "who": "the sound engineer and admins",
+        "maxLength": 40,
+        "context": "{seconds} is a number"
+    },
+    "lastSeenMinutes": {
+        "where": "Engineer console, bridge card",
+        "who": "the sound engineer and admins",
+        "maxLength": 40,
+        "context": "{minutes} is a number"
+    },
+    "launchReason": {
+        "where": "Engineer console, bridge card: what last started the bridge",
+        "who": "the sound engineer and admins",
+        "maxLength": 50,
+        "context": "{reason} is one of the reason strings below"
+    },
+    "reasonBoot": {
+        "where": "Engineer console, bridge card: fills {reason}",
+        "who": "the sound engineer and admins",
+        "maxLength": 30
+    },
+    "reasonWatchdog": {
+        "where": "Engineer console, bridge card: fills {reason}; the watchdog relaunches the bridge if it stops",
+        "who": "the sound engineer and admins",
+        "maxLength": 30
+    },
+    "reasonUpdate": {
+        "where": "Engineer console, bridge card: fills {reason}",
+        "who": "the sound engineer and admins",
+        "maxLength": 30
+    },
+    "reasonManual": {
+        "where": "Engineer console, bridge card: fills {reason}",
+        "who": "the sound engineer and admins",
+        "maxLength": 30
+    },
+    "launchUnknown": {
+        "where": "Engineer console, bridge card: an older bridge that does not report it",
+        "who": "the sound engineer and admins",
+        "maxLength": 40
+    },
+    "watchdogYes": {
+        "where": "Engineer console, bridge card",
+        "who": "the sound engineer and admins",
+        "maxLength": 30
+    },
+    "watchdogNo": {
+        "where": "Engineer console, bridge card: a warning in words",
+        "who": "the sound engineer and admins",
+        "maxLength": 30
+    },
+    "watchdogUnknown": {
+        "where": "Engineer console, bridge card: an older bridge that does not report it",
+        "who": "the sound engineer and admins",
+        "maxLength": 40
+    },
+    "queue_one": {
+        "where": "Engineer console, bridge card: commands queued for the mixer",
+        "who": "the sound engineer and admins",
+        "maxLength": 30
+    },
+    "queue_other": {
+        "where": "Engineer console, bridge card: commands queued for the mixer",
+        "who": "the sound engineer and admins",
+        "maxLength": 30
+    },
+    "queueEmpty": {
+        "where": "Engineer console, bridge card",
+        "who": "the sound engineer and admins",
+        "maxLength": 30
+    },
+    "master": {
+        "where": "Engineer console and limits: the overall wedge level of a bus",
+        "who": "the sound engineer and admins",
+        "maxLength": 16
+    }
+}

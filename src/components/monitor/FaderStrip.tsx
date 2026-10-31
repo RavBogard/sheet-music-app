@@ -11,6 +11,9 @@ import {
     type FaderMachineState,
 } from "@/lib/monitor/fader-confirmation"
 import { useFaderThrottle } from "@/lib/monitor/use-fader-throttle"
+import { doubleTapTarget } from "@/lib/monitor/limits"
+import type { ClampNotice } from "@/lib/monitor-store"
+import { CapTick, ClampNote, useClampNotice } from "@/components/monitor/FaderLimit"
 
 interface FaderStripProps {
     label: string
@@ -44,6 +47,15 @@ interface FaderStripProps {
      * repeat rejection re-fires the cue; `reason` is the bridge's raw string.
      */
     rejection?: { reason: string; seq: number } | null
+    /**
+     * BET-4: the sound engineer's limit for this fader (0..1), drawn as a tick.
+     * The bridge enforces it; the fader only shows it.
+     */
+    cap?: number | null
+    /** BET-4: the last saved level for this fader; double-tap returns here (else 0.6). */
+    homeLevel?: number | null
+    /** BET-4: the bridge held this fader's last move to the limit. */
+    clamp?: ClampNotice | null
 }
 
 const OUTCOME_CUE_MS = 800
@@ -51,7 +63,7 @@ const OUTCOME_CUE_MS = 800
 /** A rejection carries words to read, so it lingers longer than a check/undo glyph. */
 const REJECTION_CUE_MS = 4000
 
-export function FaderStrip({ label, value, on, isMaster, onChange, onUnmuteCheck, stale = false, snapshotSeq = 0, unconfirmed = false, rejection = null }: FaderStripProps) {
+export function FaderStrip({ label, value, on, isMaster, onChange, onUnmuteCheck, stale = false, snapshotSeq = 0, unconfirmed = false, rejection = null, cap = null, homeLevel = null, clamp = null }: FaderStripProps) {
     const isDraggingRef = useRef(false)
     const sliderRef = useRef<HTMLDivElement>(null)
     const lastTapTime = useRef<number>(0)
@@ -125,9 +137,10 @@ export function FaderStrip({ label, value, on, isMaster, onChange, onUnmuteCheck
 
     const handlePointerDown = useCallback((e: React.PointerEvent) => {
         const now = Date.now()
-        // Double tap (within 300ms) resets: a kill to 0, or to unity (0.75) if already down.
+        // Double tap (within 300ms) resets to the last saved level (BET-4), or
+        // 0.6 (about -6 dB) when nothing is saved; never above the limit.
         if (now - lastTapTime.current < 300) {
-            const resetVal = displayValue > 0.1 ? 0.0 : 0.75
+            const resetVal = doubleTapTarget(homeLevel, cap)
             isDraggingRef.current = false
             dispatch({ type: "commit", value: resetVal, now })
             throttle.commit(resetVal) // R4: a reset tap is terminal — never throttled
@@ -139,7 +152,7 @@ export function FaderStrip({ label, value, on, isMaster, onChange, onUnmuteCheck
         dispatch({ type: "drag_start" })
             ; (e.target as HTMLElement).setPointerCapture(e.pointerId)
         updateFromPointer(e.clientX)
-    }, [updateFromPointer, displayValue, throttle])
+    }, [updateFromPointer, throttle, homeLevel, cap])
 
     const handlePointerMove = useCallback((e: React.PointerEvent) => {
         if (!isDraggingRef.current) return
@@ -158,6 +171,7 @@ export function FaderStrip({ label, value, on, isMaster, onChange, onUnmuteCheck
         throttle.commit(displayValue)
     }, [displayValue, throttle])
 
+    const clampShown = useClampNotice(clamp)
     const percentage = Math.round(displayValue * 100)
     const isDragging = phase === "dragging"
     const isPending = phase === "pending"
@@ -214,6 +228,8 @@ export function FaderStrip({ label, value, on, isMaster, onChange, onUnmuteCheck
                     }}
                 />
 
+                <CapTick cap={cap} orientation="horizontal" />
+
                 {/* Content Overlay */}
                 <div className="absolute inset-0 flex items-center justify-between px-4 pointer-events-none">
                     <span className={`text-sm font-semibold truncate pr-4 ${isMaster ? "text-white" : "text-zinc-200"}`}>
@@ -254,6 +270,7 @@ export function FaderStrip({ label, value, on, isMaster, onChange, onUnmuteCheck
                                 {humanizeRejection(machine.rejectionReason ?? undefined)}
                             </span>
                         )}
+                        {clampShown && outcome !== "rejected" && <ClampNote notice={clampShown} />}
                         {showUnconfirmed && (
                             <HelpCircle
                                 data-testid="fader-unconfirmed-cue"

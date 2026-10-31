@@ -102,6 +102,23 @@ service cloud.firestore {
     function mixerReader()     { return atLeast(bridgeOrg(), 'me') || se(bridgeOrg()); }
     function mixerOperator()   { return atLeast(bridgeOrg(), 'mu') || se(bridgeOrg()); }
     function mixerPrivileged() { return atLeast(bridgeOrg(), 'ad') || (se(bridgeOrg()) && atLeast(bridgeOrg(), 'mu')); }
+    // BET-4 wedge ceilings (config/monitor.ceilings). Only mixerPrivileged may
+    // write config/monitor at all; a write that changes `ceilings` must also
+    // carry a usable default (two fader positions 0..1) and name its writer,
+    // so a bad edit can never leave the bridge without a cap to fall back on.
+    function isLevel(v) { return (v is number) && v >= 0 && v <= 1; }
+    function ceilingsOk() {
+      let after = request.resource.data.get('ceilings', null);
+      let before = resource == null ? null : resource.data.get('ceilings', null);
+      return after == before
+        || (after is map
+            && after.get('default', null) is map
+            && isLevel(after.default.get('send', -1))
+            && isLevel(after.default.get('master', -1))
+            && after.get('updatedBy', '') == request.auth.uid
+            && (!('perBus' in after) || after.perBus is map)
+            && (!('perChannel' in after) || after.perChannel is map));
+    }
 
     // ── USERS (profile only; roster reads go through /api/tenant/people) ───
     function selfProfileFields() {
@@ -495,7 +512,7 @@ service cloud.firestore {
            (cfgIs(docId, 'congregation') && atLeast(cfgTenant(docId), 'ad'))
         || (cfgIs(docId, 'defaults') && atLeast(cfgTenant(docId), 'ad'))
         || (cfgIs(docId, 'featured') && atLeast(cfgTenant(docId), 'bl'))
-        || (docId == 'monitor' && mixerPrivileged()));
+        || (docId == 'monitor' && mixerPrivileged() && ceilingsOk()));
     }
     match /system/globalAlert {
       allow read: if signedIn();
@@ -528,6 +545,15 @@ service cloud.firestore {
                     && (!('value' in request.resource.data)        || request.resource.data.value is number
                                                                      || request.resource.data.value is bool);
       allow update, delete: if false;
+    }
+    // BET-4 saved mixes: monitor-live/snapshots/buses/{busIndex}/items/{id}.
+    // Written by the bridge (auto) and the server (named) only; reads go
+    // through /api/monitor/mixes, which checks bus ownership. Directly: an
+    // engineer or admin reads any, a musician only their own named mix.
+    match /monitor-live/snapshots/buses/{busIndex}/items/{snapshotId} {
+      allow read: if mixerPrivileged()
+                  || (mixerOperator() && resource.data.get('ownerUid', '') == request.auth.uid);
+      allow write: if false;
     }
     match /monitor-live/commands/acks/{commandId} {
       allow read: if mixerOperator() && resource.data.get('uid', '') == request.auth.uid;

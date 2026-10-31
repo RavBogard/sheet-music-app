@@ -172,6 +172,21 @@ describe("API refused when the flag is off", () => {
         t.orgId = "brotherslazaroff"
         await expectOff(await call(), "mixer")
     })
+
+    it("mixer: BET-4 saved-mix routes refused for Brothers Lazaroff and every other non-crc tenant", async () => {
+        const mixes = await import("@/app/api/monitor/mixes/route")
+        const recall = await import("@/app/api/monitor/mixes/recall/route")
+        const get = (org: string) => new NextRequest("https://x.test/api/monitor/mixes?busIndex=2", { headers: { "x-org-id": org } })
+        for (const org of ["brotherslazaroff", "throwaway"]) {
+            t.orgId = org
+            await expectOff(await (mixes.GET as unknown as PostRoute)(get(org)), "mixer")
+            await expectOff(await (mixes.POST as unknown as PostRoute)(post("/api/monitor/mixes", { busIndex: 2, name: "x" }, org)), "mixer")
+            await expectOff(
+                await (recall.POST as unknown as PostRoute)(post("/api/monitor/mixes/recall", { snapshotId: "s", dryRun: false }, org)),
+                "mixer",
+            )
+        }
+    })
 })
 
 // ── Crons ───────────────────────────────────────────────────────────────────
@@ -269,6 +284,28 @@ describe("MCP: tools dropped, and refused at the handler", () => {
         }
         expect(((await handlers.get_mix({}, extra("brotherslazaroff"))) as { isError?: boolean }).isError).toBe(true)
         expect(await handlers.notify_band({}, extra("brotherslazaroff"))).toEqual(await ok())
+    })
+
+    it("BET-4: the limits and saved-mix tools are mixer tools — Brothers Lazaroff neither lists nor runs them", async () => {
+        const { droppedToolsFor, FEATURE_TOOLS } = await import("@/lib/mcp/tenant-tools")
+        const bet4 = ["get_monitor_limits", "set_monitor_limits", "list_saved_mixes", "recall_mix"]
+        for (const n of bet4) expect(FEATURE_TOOLS.mixer).toContain(n)
+        const blDropped = droppedToolsFor("brotherslazaroff", codeOrgConfig("brotherslazaroff"))
+        for (const n of bet4) expect(blDropped.has(n), n).toBe(true)
+
+        const { buildMcpHandler } = await import("@/lib/mcp/build-handler")
+        const { callTool } = await import("@/lib/mcp/__tests__/helpers/mcp-rpc")
+        const authoring = buildMcpHandler("authoring", "/api")
+        t.tokenOrg = "brotherslazaroff"
+        for (const n of bet4) {
+            const r = (await callTool(authoring, n, { snapshotId: "s" }, { orgHeader: "brotherslazaroff", host: "www.brotherslazaroff.live" })) as {
+                isError: boolean
+                content: Array<{ text: string }>
+            }
+            expect(r.isError, n).toBe(true)
+            // Dropped from BL's list, so the call never reaches a handler.
+            expect(r.content[0].text, n).toMatch(/not found|feature_off/)
+        }
     })
 
     it("a listed tool still refuses: ops surface bridge_get_log from a non-crc token", async () => {

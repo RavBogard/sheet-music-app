@@ -90,6 +90,7 @@ import {
     unassignMonitorBus,
 } from "./monitor-observability"
 import { getBridgeHealth } from "./bridge-health"
+import { getMonitorLimits, setMonitorLimits, listSavedMixes, recallMix } from "./monitor-mixes"
 import {
     bridgeResync,
     bridgeReconnect,
@@ -3504,6 +3505,70 @@ export function registerMonitorTools(server: McpServer): void {
             inputSchema: {},
         },
         async (_args, extra) => jsonResult(await bridgeGetLog(uidFrom(extra))),
+    )
+
+    // BET-4 — wedge limits and saved mixes (shared with /api/monitor).
+    const levelSchema = z.number().min(0).max(1)
+    server.registerTool(
+        "get_monitor_limits",
+        {
+            description:
+                "Read the wedge limits the sound engineer set: the highest fader position a channel send and a bus master may reach. The bridge holds every send and bus-master move to these, from the iPad and from this MCP alike, and clamps a higher request to the limit. Returns `{source:'stored'|'defaults', default:{send,master}, perBus, perChannel, effective:[{busIndex, send, master}], updatedBy}`; every level comes as `{level (0-1 fader position), db}`. When nothing is stored the defaults apply (0.70 for sends and masters, about -2 dB on the X32 fader law). Same access as the other monitor reads.",
+            inputSchema: {},
+        },
+        async (_args, extra) => jsonResult(await getMonitorLimits(uidFrom(extra))),
+    )
+
+    server.registerTool(
+        "set_monitor_limits",
+        {
+            description:
+                "Change the wedge limits (sound engineer or admin only). Values are fader positions 0-1, NOT dB (0.75 = 0 dB, 0.70 = -2 dB, 0.60 = -6 dB). Merges into what is stored: pass only what changes. `default` sets the send and master limit for every bus; `perBus` overrides one bus (keys '1'-'5'); `perChannel` caps one input channel on every bus (keys '1'-'32'), the place for a mic that rings; pass `null` for a bus or channel to remove its override. The most specific value wins: channel, then bus, then default. Raising any limit above 0 dB (0.75) risks feedback: such a call returns a preview (`needsConfirm:true`, `raised:[...]`) and writes nothing until you read it back to the person and resend with `confirm:true`. Lowering a limit, or keeping it at or below 0 dB, needs no confirm. Reversible and silent (no one is notified), so `dryRun` defaults to false; pass `dryRun:true` to preview. Returns the resulting limits in the get_monitor_limits shape.",
+            inputSchema: {
+                default: z.object({ send: levelSchema.optional(), master: levelSchema.optional() }).optional(),
+                perBus: z
+                    .record(z.string(), z.object({ send: levelSchema.optional(), master: levelSchema.optional() }).nullable())
+                    .optional()
+                    .describe("Keyed by bus index '1'-'5'; null removes that bus's override"),
+                perChannel: z
+                    .record(z.string(), z.object({ send: levelSchema.optional() }).nullable())
+                    .optional()
+                    .describe("Keyed by channel index '1'-'32'; null removes that channel's cap"),
+                dryRun: z.boolean().optional().describe("true = preview only. Defaults to false."),
+                confirm: z
+                    .boolean()
+                    .optional()
+                    .describe("Required (true) when any limit would RISE above 0.75 (0 dB); without it the call only previews"),
+            },
+        },
+        async (args, extra) => jsonResult(await setMonitorLimits(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "list_saved_mixes",
+        {
+            description:
+                "List the saved wedge mixes for one bus: the caller's own named mixes and the most recent automatic snapshots the bridge takes at the end of each service. Named mixes are private to the person who saved them. Musicians see only their own bus; the sound engineer and admins may pass any busIndex. Omit busIndex to use the caller's first bus. Returns `{busIndex, named:[...], auto:[...], home}`; each mix has `{id, kind, name, serviceType, createdAt, channelCount, masterDb}`. Pass an `id` to recall_mix.",
+            inputSchema: {
+                busIndex: z.number().int().min(1).max(5).optional().describe("Bus 1-5; omit for your own"),
+                autoCount: z.number().int().min(1).max(10).optional().describe("How many automatic snapshots (default 3)"),
+            },
+        },
+        async (args, extra) => jsonResult(await listSavedMixes(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "recall_mix",
+        {
+            description:
+                "Bring a saved wedge mix back. Musicians may recall onto their own bus only; the sound engineer and admins onto any bus. Channels are matched by NAME first, so a renumbered desk still gets the right levels; a saved channel whose name is no longer on the desk is listed in `unmatched` and left alone. Every level is held to the wedge limits (`heldAtLimit`). `dryRun` defaults to TRUE: the first call returns the plan, every change with `before` and `after` in dB, so you can read it back and confirm. Call again with `dryRun:false` to send it: the move goes through the normal command path as a short ramp (under a second), so the bridge's ownership and limit checks apply to every step. If sending fails partway the result has `committed:'partial'` and `failedAtWave`: some faders moved; call again with `dryRun:false` to finish (it re-plans from the desk's current levels). Returns `{busIndex, snapshot, changes:[{target, channelIndex, channelName, before:{level,db,on}, after:{level,db,on}, heldAtLimit}], unmatched, unchanged, dryRun, committed, commandCount}`.",
+            inputSchema: {
+                snapshotId: z.string().min(1).describe("The id from list_saved_mixes"),
+                busIndex: z.number().int().min(1).max(5).optional().describe("Bus 1-5; omit for your own"),
+                dryRun: z.boolean().optional().describe("Default true (plan only). Pass false to send the recall."),
+            },
+        },
+        async (args, extra) => jsonResult(await recallMix(uidFrom(extra), args)),
     )
 }
 

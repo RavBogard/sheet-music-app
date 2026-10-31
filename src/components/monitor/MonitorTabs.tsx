@@ -9,7 +9,13 @@ import { ConnectionIndicator, DisconnectedOverlay, isMixerOffline } from "@/comp
 import { getVisibleChannels, useMonitorStore } from "@/lib/monitor-store"
 import { busFaderKey, sendLevelKey } from "@/lib/monitor/target-key"
 import { useMonitorStaleness } from "@/lib/monitor/use-monitor-staleness"
-import { Star } from "lucide-react"
+import { SlidersHorizontal, Star } from "lucide-react"
+import Link from "next/link"
+import { useT } from "@/i18n/client"
+import { useFaderLimits } from "@/lib/monitor/use-fader-limits"
+import { SavedMixControls } from "@/components/monitor/SavedMixControls"
+import { LimitsPanel } from "@/components/monitor/LimitsPanel"
+import { BusSwitcher } from "@/components/monitor/BusSwitcher"
 import { Button } from "@/components/ui/button"
 import type { BusInfo, BusSend, ChannelInfo, MatrixInfo, MonitorConfig } from "@/types/monitor"
 import type { ConnectionStatus } from "@/lib/firestore-monitor-client"
@@ -104,6 +110,9 @@ export function MonitorTabs({
     const unconfirmed = useMonitorStore(s => s.unconfirmed) ?? []
     const rejections = useMonitorStore(s => s.rejections) ?? {}
     const masterKey = busFaderKey(myBusIndex)
+    // BET-4: limit tick, double-tap home level and clamp notice per fader.
+    const limits = useFaderLimits(myBusIndex)
+    const t = useT()
 
     return (
         <div className="max-w-lg mx-auto p-4 pb-24">
@@ -113,13 +122,27 @@ export function MonitorTabs({
                     {myBus.name && myBus.name !== `Bus ${myBusIndex}` ? myBus.name : "My Monitor"}
                 </h1>
                 <div className="flex items-center gap-2">
+                    {hasEngineerAccess && (
+                        <Link
+                            href="/monitor/engineer"
+                            data-testid="engineer-console-link"
+                            aria-label={t("monitor.engineerLink")}
+                            title={t("monitor.engineerLink")}
+                            className="inline-flex items-center justify-center min-h-[44px] min-w-[44px] rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
+                        >
+                            <SlidersHorizontal aria-hidden className="w-5 h-5" />
+                        </Link>
+                    )}
                     <HealthIndicator />
                     <ConnectionIndicator status={status} bridgeStatus={config?.bridge} error={error} />
                 </div>
             </div>
-            <p className="text-sm text-muted-foreground mb-4">
-                Bus {myBusIndex}
-            </p>
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+                <p className="text-sm text-muted-foreground">
+                    Bus {myBusIndex}
+                </p>
+                <BusSwitcher />
+            </div>
 
             {/* Tabbed Interface */}
             <Tabs defaultValue="my-mix">
@@ -146,6 +169,8 @@ export function MonitorTabs({
 
                 {/* My Mix Tab */}
                 <TabsContent value="my-mix" className="space-y-4">
+                    {/* BET-4: save the levels you hear now; bring a saved mix back. */}
+                    <SavedMixControls busIndex={myBusIndex} disabled={mixerOffline} />
                     <DisconnectedOverlay active={mixerOffline}>
                         <div className="space-y-4">
                             {/* Master fader */}
@@ -158,6 +183,9 @@ export function MonitorTabs({
                                     stale={stale} snapshotSeq={snapshotSeq}
                                     unconfirmed={unconfirmed.includes(masterKey)}
                                     rejection={rejections[masterKey] ?? null}
+                                    cap={limits.masterCap}
+                                    homeLevel={limits.masterHome}
+                                    clamp={limits.masterClamp}
                                     onChange={onBusMaster}
                                 />
                             </div>
@@ -181,6 +209,9 @@ export function MonitorTabs({
                                                         stale={stale} snapshotSeq={snapshotSeq}
                                                         unconfirmed={unconfirmed.includes(sendLevelKey(send.channelIndex, myBusIndex))}
                                                         rejection={rejections[sendLevelKey(send.channelIndex, myBusIndex)] ?? null}
+                                                cap={limits.sendCap(send.channelIndex)}
+                                                homeLevel={limits.sendHome(send.channelIndex)}
+                                                clamp={limits.sendClamp(send.channelIndex)}
                                                         onChange={(val) => onSendLevel(send.channelIndex, val)}
                                                         onUnmuteCheck={() => onSendOn(send.channelIndex, true)}
                                                     />
@@ -213,6 +244,9 @@ export function MonitorTabs({
                             stale={stale} snapshotSeq={snapshotSeq}
                             unconfirmed={unconfirmed.includes(masterKey)}
                             rejection={rejections[masterKey] ?? null}
+                            cap={limits.masterCap}
+                            homeLevel={limits.masterHome}
+                            clamp={limits.masterClamp}
                             onChange={onBusMaster}
                         />
                     </div>
@@ -253,6 +287,9 @@ export function MonitorTabs({
                                                 stale={stale} snapshotSeq={snapshotSeq}
                                                 unconfirmed={unconfirmed.includes(sendLevelKey(send.channelIndex, myBusIndex))}
                                                 rejection={rejections[sendLevelKey(send.channelIndex, myBusIndex)] ?? null}
+                                                cap={limits.sendCap(send.channelIndex)}
+                                                homeLevel={limits.sendHome(send.channelIndex)}
+                                                clamp={limits.sendClamp(send.channelIndex)}
                                                 onChange={(val) => onSendLevel(send.channelIndex, val)}
                                                 onUnmuteCheck={() => onSendOn(send.channelIndex, true)}
                                             />
@@ -280,6 +317,7 @@ export function MonitorTabs({
                 {hasEngineerAccess && (
                     <TabsContent value="bus" className="space-y-4">
                         {config && <BusAssignmentPanel config={config} />}
+                        <LimitsPanel />
                         <DefaultChannelPicker />
                     </TabsContent>
                 )}
