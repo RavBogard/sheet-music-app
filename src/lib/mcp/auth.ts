@@ -9,6 +9,7 @@ import {
     VIEW_AS_PREFIX,
 } from "@/lib/mcp/tokens"
 import { logger } from "@/lib/logger"
+import { noteRateLimitIdentity } from "@/lib/rate-limit-identity"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import { primeTenantConfig } from "@/lib/org/org-exists"
 import type { OrgId } from "@/lib/org/types"
@@ -80,7 +81,44 @@ function unauthorized(): Response {
     return new Response("Unauthorized", { status: 401 })
 }
 
+/**
+ * One verification per request. The rate limiter verifies an MCP bearer to
+ * key its bucket on the bearer's uid, and the route then verifies the same
+ * bearer to authorise the call; both get the first answer instead of paying
+ * a second Firestore lookup. A rejection is replayed as a fresh Response.
+ */
+type BearerVerdict =
+    | { ok: VerifiedBearer }
+    | { status: number; body: string; headers: [string, string][] }
+const bearerVerdicts = new WeakMap<object, Map<string, Promise<BearerVerdict>>>()
+
 export async function verifyBearer(req: Request, opts: VerifyBearerOptions = {}): Promise<VerifiedBearer | Response> {
+    const surfaceKey = `${opts.surface ?? "tenant"}|${req.headers.get("authorization") ?? ""}`
+    let perReq = bearerVerdicts.get(req)
+    if (!perReq) {
+        perReq = new Map()
+        bearerVerdicts.set(req, perReq)
+    }
+    let pending = perReq.get(surfaceKey)
+    if (!pending) {
+        pending = verifyBearerUncached(req, opts).then(async (r): Promise<BearerVerdict> => {
+            if (!(r instanceof Response)) {
+                noteRateLimitIdentity(req, r.uid)
+                return { ok: r }
+            }
+            noteRateLimitIdentity(req, null)
+            return { status: r.status, body: await r.text(), headers: [...r.headers.entries()] }
+        })
+        perReq.set(surfaceKey, pending)
+        // A thrown verification is not cached: the next call tries again.
+        pending.catch(() => perReq!.delete(surfaceKey))
+    }
+    const verdict = await pending
+    if ("ok" in verdict) return verdict.ok
+    return new Response(verdict.body, { status: verdict.status, headers: verdict.headers })
+}
+
+async function verifyBearerUncached(req: Request, opts: VerifyBearerOptions): Promise<VerifiedBearer | Response> {
     const header = req.headers.get("authorization")
     if (!header?.startsWith("Bearer ")) return unauthorized()
     const raw = header.slice(7).trim()
