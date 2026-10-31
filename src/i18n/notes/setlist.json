@@ -512,5 +512,15 @@
         "where": "/setlists past list: button that collapses the folded setlists.",
         "who": "leaders",
         "maxLength": 30
+    },
+    "chartsBound": {
+        "where": "Setlists list and editor head: how many songs have a chart attached, e.g. 14/14 charts",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "updatedAgo": {
+        "where": "Setlists list and editor head: when the setlist was last changed, e.g. Updated 3 days ago",
+        "who": "leaders",
+        "maxLength": 32
     }
 }
