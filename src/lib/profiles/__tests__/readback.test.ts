@@ -118,17 +118,18 @@ describe("buildReadback", () => {
         expect(r.rest).toBe("All 2 songs are your usual Randy Shabbat morning (1 with no key on record).")
     })
 
-    it("more than 5 exceptions: text lists 5 and says how many more; exceptions keeps all", () => {
+    it("more than 5 exceptions: voice says the count, the first three, and offers the rest (MCP-20)", () => {
         const rows = Array.from({ length: 7 }, (_, i) =>
             song(i, `Song ${i}`, { tier: "new", phrase: "new — which chart?", hasChart: false, keyOnRecord: false }),
         )
         const r = buildReadback({ ...base, rows })
         expect(r.exceptions).toHaveLength(7)
         expect(READBACK_VOICE_MAX).toBe(5)
-        for (let i = 0; i < 5; i++) expect(r.text).toContain(`Song ${i}:`)
-        expect(r.text).not.toContain("Song 5:")
-        expect(r.text).toContain("And 2 more on screen.")
-        expect(r.text).not.toMatch(/…|show all/)
+        expect(r.text).toContain("Seven open slots. First three:")
+        for (let i = 0; i < 3; i++) expect(r.text).toContain(`Song ${i}:`)
+        expect(r.text).not.toContain("Song 3:")
+        expect(r.text).toContain("Want the rest?")
+        expect(r.text).not.toMatch(/on screen|…|show all/)
         expect(r.rest).toBe("")
     })
 
@@ -140,8 +141,8 @@ describe("buildReadback", () => {
         const openItems = [item("a", "chart still needed", "2026-10-30T00:00:00Z"), item("b", "swap when it lands", "2026-10-31T00:00:00Z")]
         const r = buildReadback({ ...base, rows, openItems })
         expect(r.exceptions.map((e) => e.kind).slice(-2)).toEqual(["open_item", "open_item"])
-        expect(r.text).not.toContain("Song 5:")
-        const more = r.text.indexOf("And 1 more on screen.")
+        expect(r.text).not.toContain("Song 3:")
+        const more = r.text.indexOf("Want the rest?")
         expect(more).toBeGreaterThan(-1)
         expect(r.text.indexOf("Open: chart still needed.")).toBeGreaterThan(more)
         expect(r.text.indexOf("Open: swap when it lands.")).toBeGreaterThan(more)

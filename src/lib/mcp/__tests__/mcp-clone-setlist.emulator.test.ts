@@ -293,6 +293,32 @@ describe("MCP clone_setlist (emulator)", () => {
         expect(doc.eventDate).toBeInstanceOf(Timestamp)
     })
 
+    it("MCP-15: rabbiSlot and special given for the new service are stored on the clone", async () => {
+        const sourceId = await buildSource()
+        const result = (await cloneSetlist(ADMIN, {
+            sourceSetlistId: sourceId,
+            rabbiSlot: "randy",
+            special: true,
+        })) as { ok: true; setlistId: string }
+        const doc = (await db().collection("setlists").doc(result.setlistId).get()).data() as Record<string, unknown>
+        expect(doc.rabbiSlot).toBe("randy")
+        expect(doc.special).toBe(true)
+    })
+
+    it("MCP-15: create_setlist stores rabbiSlot and special, with and without an idempotency key", async () => {
+        for (const idempotencyKey of [undefined, "bet1-create-key"]) {
+            const created = (await createSetlist(ADMIN, {
+                name: "Shabbat Morning with Randy",
+                serviceType: "shabbat_morning",
+                rabbiSlot: "randy",
+                special: false,
+                ...(idempotencyKey ? { idempotencyKey } : {}),
+            })) as { setlistId: string }
+            const doc = (await db().collection("setlists").doc(created.setlistId).get()).data() as Record<string, unknown>
+            expect([doc.serviceType, doc.rabbiSlot, doc.special]).toEqual(["shabbat_morning", "randy", false])
+        }
+    })
+
     it("copyServiceNotes:false strips the source's pastoral notes", async () => {
         const sourceId = await buildSource()
         const result = (await cloneSetlist(ADMIN, {

@@ -35,7 +35,7 @@ import { getSongById, resolveTrackBondDefaults } from "@/lib/mcp/server-songs"
 import { getChartHealth } from "@/lib/file-fetcher"
 import { liturgyRefGuard, bookSlugGuard } from "@/lib/mcp/liturgy-ref-guard"
 import { rowOrg } from "@/lib/mcp/org-context"
-import { catalogServiceType, rabbiSlotOf, storedClassFor } from "@/lib/history/classify"
+import { catalogServiceType, rabbiSlotOf, storedClassFor, storedRabbiSlot } from "@/lib/history/classify"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 import { parseEventDate } from "@/lib/parse-event-date"
@@ -119,6 +119,10 @@ export interface CreateSetlistArgs {
     eventDate?: string
     serviceType?: string
     rabbi?: string
+    /** MCP-15: the rabbi slot whose music this service follows, so the next draft learns from it. */
+    rabbiSlot?: "daniel_karen" | "randy" | null
+    /** MCP-15: a special week (guests, holiday, memorial) never shapes the usual. */
+    special?: boolean
     /**
      * Cycle-5 C5A-003 — explicit test-setlist flag. Defaults `false`. No
      * heuristic on the `test-` ownerId/name prefix is applied at the MCP
@@ -193,6 +197,8 @@ export async function createSetlist(
             rabbi: args.rabbi,
             isTest: args.isTest,
             book: args.book,
+            ...(args.rabbiSlot !== undefined ? { rabbiSlot: args.rabbiSlot } : {}),
+            ...(args.special !== undefined ? { special: args.special } : {}),
         })
         // Allocate once per invocation. If Firestore retries this transaction,
         // the callback keeps the same target id; a concurrent invocation loses
@@ -252,6 +258,8 @@ export async function createSetlist(
             if (args.serviceType !== undefined) setlistPayload.templateType = args.serviceType
             if (args.rabbi !== undefined) setlistPayload.rabbi = args.rabbi
             Object.assign(setlistPayload, storedClassFor({ templateType: args.serviceType, rabbi: args.rabbi }))
+            if (args.rabbiSlot !== undefined) setlistPayload.rabbiSlot = storedRabbiSlot(args.rabbiSlot)
+            if (typeof args.special === "boolean") setlistPayload.special = args.special
             if (args.book !== undefined) setlistPayload.book = args.book
 
             tx.create(db.collection("setlists").doc(candidateSetlistId), setlistPayload)
@@ -290,6 +298,8 @@ export async function createSetlist(
         serviceType: args.serviceType as SetlistMetadataPatch["serviceType"],
         rabbi: args.rabbi,
         book: args.book,
+        rabbiSlot: args.rabbiSlot,
+        special: args.special,
         tracks: [],
         isTest: args.isTest === true ? true : undefined,
     })

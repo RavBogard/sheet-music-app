@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest"
 import fs from "node:fs"
 import path from "node:path"
-import { CRC_CORE_PROFILES, profileKeyFor, rabbiRequired, serviceLabelFor, slotKeyFor } from "../keys"
+import { CRC_CORE_PROFILES, legacySlotKeyFor, profileKeyFor, rabbiRequired, serviceLabelFor, slotKeyFor } from "../keys"
 import { SERVICE_TYPE_CATALOG } from "@/lib/templates/service-types"
 
 describe("profileKeyFor", () => {
@@ -12,7 +12,7 @@ describe("profileKeyFor", () => {
 })
 
 describe("CRC_CORE_PROFILES", () => {
-    it("lists the six core profiles with keys derived from type and slot", () => {
+    it("lists the core profiles with keys derived from type and slot", () => {
         expect(CRC_CORE_PROFILES.map((p) => p.key)).toEqual([
             "friday_night:daniel_karen",
             "friday_night:randy",
@@ -20,6 +20,7 @@ describe("CRC_CORE_PROFILES", () => {
             "shabbat_morning:randy",
             "shir_shabbat",
             "bnei_mitzvah_saturday",
+            "havdalah_bnei_mitzvah",
         ])
         for (const p of CRC_CORE_PROFILES) {
             expect(p.key).toBe(profileKeyFor(p.serviceType, p.rabbiSlot))
@@ -36,6 +37,7 @@ describe("CRC_CORE_PROFILES", () => {
             "shabbat_morning:randy": "crc-saturday",
             shir_shabbat: "legacy-shabbat-evening",
             bnei_mitzvah_saturday: "legacy-beit-mitzvah",
+            havdalah_bnei_mitzvah: "legacy-beit-mitzvah",
         })
     })
 
@@ -47,6 +49,7 @@ describe("CRC_CORE_PROFILES", () => {
             "Randy Shabbat morning",
             "Shir Shabbat",
             "B'nei Mitzvah",
+            "Havdalah B'nei Mitzvah",
         ])
     })
 })
@@ -68,7 +71,12 @@ describe("serviceLabelFor", () => {
 })
 
 describe("slotKeyFor", () => {
-    const partGroups: Record<string, string> = { "barchu-bb": "barchu walkdown", barchu: "barchu walkdown" }
+    const partGroups: Record<string, string> = {
+        "barchu-bb": "barchu walkdown",
+        barchu: "barchu walkdown",
+        "fiddle-bb": "fiddley tune",
+        fiddle: "fiddley tune",
+    }
     const pg = (f: string) => partGroups[f] ?? null
 
     it("uses the moment when there is one", () => {
@@ -76,10 +84,30 @@ describe("slotKeyFor", () => {
     })
 
     it("instrument parts share the song slot via partGroup", () => {
-        const a = slotKeyFor({ title: "Barchu (Walkdown) Bb", fileId: "barchu-bb" }, pg)
-        const b = slotKeyFor({ title: "Barchu (Walkdown)", fileId: "barchu" }, pg)
-        expect(a).toBe("song:barchu walkdown")
+        const a = slotKeyFor({ title: "Fiddley Tune Bb", fileId: "fiddle-bb" }, pg)
+        const b = slotKeyFor({ title: "Fiddley Tune", fileId: "fiddle" }, pg)
+        expect(a).toBe("song:fiddley tune")
         expect(b).toBe(a)
+    })
+
+    it("keys every setting of one prayer by its moment, from the title (MCP-02)", () => {
+        const keys = ["Mi Chamocha (Moshav)", "Mi Chamocha 6-8", "Mi Chamocha - Ana B'Koach", "Mi chamocha (Moshav) morning.pdf"].map(
+            (title) => slotKeyFor({ title, fileId: "x" }, pg),
+        )
+        expect(new Set(keys)).toEqual(new Set(["moment:mi-chamocha"]))
+        // The instrument copies of a liturgical arrangement share the moment too.
+        expect(slotKeyFor({ title: "Barchu (Walkdown) Bb", fileId: "barchu-bb" }, pg)).toBe("moment:barchu")
+    })
+
+    it("a page names the moment when the title does not", () => {
+        expect(slotKeyFor({ title: "Fiddley Tune", fileId: "fiddle", liturgyRef: { book: "crc-saturday", folio: 68 } }, pg)).toBe(
+            "moment:mi-chamocha",
+        )
+    })
+
+    it("Brothers Lazaroff keeps song slots: no title lookup when byTitle is false", () => {
+        expect(slotKeyFor({ title: "Barchu (Walkdown)", fileId: "barchu" }, pg, { byTitle: false })).toBe("song:barchu walkdown")
+        expect(legacySlotKeyFor({ title: "Barchu (Walkdown)", fileId: "barchu" }, pg)).toBe("song:barchu walkdown")
     })
 
     it("falls back to the title stem without a partGroup", () => {

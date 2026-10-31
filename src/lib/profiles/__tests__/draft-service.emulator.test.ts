@@ -3,7 +3,7 @@ import { initializeApp, deleteApp, getApps, type App } from "firebase-admin/app"
 import { getFirestore, Timestamp } from "firebase-admin/firestore"
 
 import { createSetlistFromDraftTool, draftServiceTool } from "@/lib/mcp/tools/draft-service"
-import { seedServiceProfiles } from "@/lib/mcp/tools/service-profiles"
+import { reseedServiceProfileTool, seedServiceProfiles } from "@/lib/mcp/tools/service-profiles"
 import { writeSetlistFromTemplateRows } from "@/lib/mcp/tools/templates"
 
 /**
@@ -19,6 +19,7 @@ describe("draft a service from its profile (emulator)", () => {
     const ADMIN = "u-admin"
     const BL_LEAD = "u-bl-lead"
     const KEY = "shabbat_morning:randy"
+    const MUSICIAN = "u-musician"
 
     function db() {
         return getFirestore(app)
@@ -30,9 +31,11 @@ describe("draft a service from its profile (emulator)", () => {
         draftId: string
         special: boolean
         profile: { key: string; book: string | null }
-        rows: Array<{ index: number; label: string; tier: string | null; fileId?: string; key?: string | null }>
+        rows: Array<{ index: number; label: string; tier: string | null; fileId?: string; key?: string | null; recall?: { fileId: string; key: string | null } }>
         openIndexes: number[]
-        readback: { exceptions: Array<{ kind: string }>; rest: string }
+        readback: { headline: string; text: string; exceptions: Array<{ kind: string; text: string }>; rest: string }
+        origin: { kind: string; count?: number; name?: string }
+        vsLast: { setlistId: string; rows: Array<{ slotKey: string; fileId: string; key: string | null }> } | null
     }
     type Created = { ok: true; setlistId: string; announcements: string[]; oneOffNote?: string; book: string | null }
 
@@ -50,9 +53,12 @@ describe("draft a service from its profile (emulator)", () => {
             const snap = await db().collection(coll).get()
             await Promise.all(snap.docs.map((d) => d.ref.delete()))
         }
+        const devs = await db().collectionGroup("performedDeviations").get()
+        await Promise.all(devs.docs.map((d) => d.ref.delete()))
         for (const [uid, org, role] of [
             [ADMIN, CRC, "admin"],
             [BL_LEAD, BL, "band_leader"],
+            [MUSICIAN, CRC, "musician"],
         ]) {
             await db().collection("users").doc(uid).set({ displayName: uid, membershipsMigratedAt: new Date() })
             await db().collection("memberships").doc(`${org}__${uid}`).set({ uid, tenantId: org, role })
@@ -312,5 +318,124 @@ describe("draft a service from its profile (emulator)", () => {
         await db().collection("service_drafts").doc(draft.draftId).update({ expiresAt: Timestamp.fromMillis(Date.now() - 1000) })
         const expired = (await createSetlistFromDraftTool(ADMIN, { draftId: draft.draftId }, CRC)) as unknown as Err
         expect(expired.error.machine_code).toBe("draft_not_found")
+    })
+
+    // ─── Bet 1: service memory ───────────────────────────────────────────
+
+    it("the order is learned from the last regular services, and the headline says so; a Bat Mitzvah never feeds it", async () => {
+        // A Bat Mitzvah stored as shabbat_morning/randy, newer than every regular week.
+        await db().collection("setlists").doc("sl-bm").set({
+            orgId: CRC,
+            name: "Eliana Levine Bat Mitzvah",
+            serviceType: "shabbat_morning",
+            rabbiSlot: "randy",
+            special: false,
+            eventDate: Timestamp.fromDate(new Date("2026-10-18T15:00:00Z")),
+        })
+        await db().collection("tracks").doc("sl-bm-0").set({ type: "song", title: "Intro Music", fileId: "f-oseh", setlistId: "sl-bm", orgId: CRC, order: 0 })
+        const draft = (await draftServiceTool(ADMIN, { date: "2026-10-24", serviceType: "shabbat_morning", rabbiSlot: "randy" }, CRC)) as Draft
+        expect(draft.origin).toMatchObject({ kind: "history", count: 3 })
+        expect(draft.readback.headline).toMatch(/last 3 regular Shabbat mornings, Oct 3 – Oct 17/)
+        expect(draft.rows.map((r) => r.label)).toEqual(["Shacharit", "Bar’chu", "Oseh Shalom"])
+        expect(draft.vsLast?.setlistId).toBe("sl-0")
+        expect(draft.vsLast?.rows.map((r) => [r.slotKey, r.fileId])).toEqual([
+            ["moment:barchu", "f-barchu"],
+            ["song:pg-oseh", "f-oseh"],
+        ])
+    })
+
+    it("an open row recalls last time's exact chart, and useRecall creates with it", async () => {
+        const draft = (await draftServiceTool(ADMIN, { date: "2026-10-24", serviceType: "shabbat_morning", rabbiSlot: "randy" }, CRC)) as Draft
+        expect(draft.rows[2].fileId).toBeUndefined()
+        expect(draft.rows[2].recall).toMatchObject({ fileId: "f-oseh", key: "C" })
+        const created = (await createSetlistFromDraftTool(ADMIN, { draftId: draft.draftId, choices: [{ index: 2, useRecall: true }] }, CRC)) as Created
+        expect(created.ok).toBe(true)
+        const row = (await db().collection("tracks").where("setlistId", "==", created.setlistId).where("order", "==", 2).get()).docs[0].data()
+        expect([row.fileId, row.key]).toEqual(["f-oseh", "C"])
+        expect((await db().collection("standing_choices").get()).size).toBe(0)
+    })
+
+    it("carries the previous setlist's unresolved open items into the draft readback", async () => {
+        await db().collection("setlists").doc("sl-0").update({
+            openItems: [
+                { id: "o1", text: "new Oseh arrangement coming", trackId: null, createdAt: "2026-10-16T00:00:00Z", createdByName: "Daniel", resolvedAt: null },
+                { id: "o2", text: "done already", trackId: null, createdAt: "2026-10-16T00:00:00Z", createdByName: "Daniel", resolvedAt: "2026-10-17T00:00:00Z" },
+            ],
+        })
+        const draft = (await draftServiceTool(ADMIN, { date: "2026-10-24", serviceType: "shabbat_morning", rabbiSlot: "randy" }, CRC)) as Draft
+        const items = draft.readback.exceptions.filter((e) => e.kind === "open_item")
+        expect(items).toHaveLength(1)
+        expect(items[0].text).toContain("new Oseh arrangement coming")
+    })
+
+    it("history is read as performed: a chart the band swapped in counts toward the usual", async () => {
+        for (const i of [1, 2]) {
+            await db().collection("tracks").doc(`sl-${i}-2`).update({ fileId: "f-oseh-2" })
+        }
+        // Planned f-oseh on Oct 17, but the band swapped to f-oseh-2 that morning.
+        await db().collection("setlists").doc("sl-0").collection("performedDeviations").doc("2026-10-17-000001-sl-0-2").set({
+            rowId: "sl-0-2",
+            kind: "swap",
+            plannedFileId: "f-oseh",
+            plannedTitle: "Oseh Shalom (Hirsch)",
+            beforeFileId: "f-oseh",
+            beforeTitle: "Oseh Shalom (Hirsch)",
+            performedFileId: "f-oseh-2",
+            performedTitle: "Oseh Shalom (Zeira)",
+            at: Date.parse("2026-10-17T16:00:00Z"),
+            by: ADMIN,
+            eventDay: "2026-10-17",
+            rev: 1,
+        })
+        const draft = (await draftServiceTool(ADMIN, { date: "2026-10-24", serviceType: "shabbat_morning", rabbiSlot: "randy" }, CRC)) as Draft
+        expect(draft.rows[2]).toMatchObject({ tier: "usual", fileId: "f-oseh-2" })
+        // The plan itself is never written.
+        expect((await db().collection("tracks").doc("sl-0-2").get()).data()!.fileId).toBe("f-oseh")
+    })
+
+    it("with no history, a matching legacy template gives the order with every song open", async () => {
+        await db().collection("setlistTemplates").doc("tpl-randy-fri").set({
+            orgId: CRC,
+            name: "Randy Friday night",
+            templateType: "friday_night",
+            tracks: [
+                { type: "header", title: "Kabbalat Shabbat" },
+                { type: "song", title: "L'cha Dodi", fileId: "f-barchu", key: "G" },
+            ],
+        })
+        // Daniel's Friday template never answers for Randy.
+        await db().collection("setlistTemplates").doc("tpl-daniel-fri").set({ orgId: CRC, name: "Daniel Friday night", templateType: "friday_night", tracks: [] })
+        const draft = (await draftServiceTool(ADMIN, { date: "2026-10-23", serviceType: "friday_night", rabbiSlot: "randy" }, CRC)) as Draft
+        expect(draft.ok).toBe(true)
+        expect(draft.origin).toMatchObject({ kind: "template", name: "Randy Friday night" })
+        expect(draft.readback.headline).toContain("Randy Friday night template")
+        expect(draft.rows.map((r) => r.label)).toEqual(["Kabbalat Shabbat", "L'cha Dodi"])
+        expect(draft.rows[1].fileId).toBeUndefined()
+        expect(draft.openIndexes).toEqual([1])
+    })
+
+    it("reseed_service_profile: dry run by default, force to write, editors only, CRC profiles only", async () => {
+        const id = `profile__${CRC}__${KEY}`
+        await db().collection("setlistTemplates").doc(id).update({ tracks: [{ type: "header", title: "stale" }] })
+        type Report = { ok: true; dryRun: boolean; outcome: string; learnedFrom: Array<{ setlistId: string }>; order: Array<{ title: string }> }
+        const dry = (await reseedServiceProfileTool(ADMIN, { serviceType: "shabbat_morning", rabbiSlot: "randy" }, CRC)) as Report
+        expect(dry).toMatchObject({ ok: true, dryRun: true, outcome: "updated" })
+        expect(dry.learnedFrom.map((s) => s.setlistId)).toEqual(["sl-0", "sl-1", "sl-2"])
+        expect(dry.order.map((r) => r.title)).toEqual(["Shacharit", "Bar’chu", "Oseh Shalom"])
+        expect((await db().collection("setlistTemplates").doc(id).get()).data()!.tracks).toHaveLength(1)
+
+        const noForce = (await reseedServiceProfileTool(ADMIN, { serviceType: "shabbat_morning", rabbiSlot: "randy", dryRun: false }, CRC)) as unknown as Err
+        expect(noForce.error.machine_code).toBe("force_required")
+        const real = (await reseedServiceProfileTool(ADMIN, { serviceType: "shabbat_morning", rabbiSlot: "randy", dryRun: false, force: true }, CRC)) as Report
+        expect(real.dryRun).toBe(false)
+        expect((await db().collection("setlistTemplates").doc(id).get()).data()!.tracks).toHaveLength(3)
+
+        const musician = (await reseedServiceProfileTool(MUSICIAN, { serviceType: "shabbat_morning", rabbiSlot: "randy" }, CRC)) as unknown as Err
+        expect(musician.error.machine_code).toBe("forbidden_role")
+        const noRabbi = (await reseedServiceProfileTool(ADMIN, { serviceType: "shabbat_morning" }, CRC)) as unknown as Err
+        expect(noRabbi.error.machine_code).toBe("rabbi_required")
+        const bl = (await reseedServiceProfileTool(BL_LEAD, { serviceType: "gig" }, BL)) as unknown as Err
+        expect(bl.error.machine_code).toBe("profile_not_found")
+        expect((await db().collection("setlistTemplates").where("orgId", "==", BL).get()).size).toBe(0)
     })
 })

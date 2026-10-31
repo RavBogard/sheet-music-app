@@ -39,7 +39,8 @@ export async function getSongHistoryTool(
         )
     }
     try {
-        const { setlists, truncated } = await loadHistorySetlists(org)
+        // History as performed: a chart the band swapped in counts as played (MCP-23).
+        const { setlists, truncated } = await loadHistorySetlists(org, { asPerformed: true })
         const fileIds = setlists.flatMap((s) =>
             s.tracks.map((t) => t.fileId).filter((f): f is string => !!f),
         )

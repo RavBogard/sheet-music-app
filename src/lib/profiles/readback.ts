@@ -40,6 +40,29 @@ export interface ReadbackRow {
     deadChart?: string
     /** Draft only: played in a key other than the chart's written key. */
     keyMismatch?: string
+    /**
+     * Draft only (MCP-04, "fill it but say it"): a filled row and why it is
+     * worth hearing. A filled row with no reasons stays folded in the rest line.
+     */
+    filled?: FilledNote
+    /** Open slots: what the slot had before, said as a setting and a month (MCP-20). */
+    recall?: { setting: string; key: string | null; date: string | null; serviceLabel?: string | null }
+}
+
+export type FilledReason =
+    /** The usual chart was last played more than STALE_WEEKS before the service. */
+    | { kind: "stale"; date: string }
+    /** The latest regular service played something else in this slot. */
+    | { kind: "differs"; date: string; setting: string }
+    | { kind: "no_key" }
+    /** The profile was learned from one service only. */
+    | { kind: "single" }
+
+export interface FilledNote {
+    tier: "standard" | "usual"
+    setting: string
+    key: string | null
+    reasons: FilledReason[]
 }
 
 export interface OpenItem {
@@ -51,9 +74,22 @@ export interface OpenItem {
 }
 
 export interface ReadbackItem {
-    kind: "existing" | "open_slot" | "no_chart" | "differs" | "recent_standard" | "promotion" | "open_item" | "dead_chart" | "key_mismatch"
+    kind:
+        | "existing"
+        | "book_differs"
+        | "open_slot"
+        | "filled"
+        | "no_chart"
+        | "differs"
+        | "recent_standard"
+        | "promotion"
+        | "open_item"
+        | "dead_chart"
+        | "key_mismatch"
     index: number | null
     text: string
+    /** What is said aloud when it differs from `text` (a setting, not a file name; a month). */
+    voice?: string
 }
 
 export interface Readback {
@@ -79,9 +115,54 @@ export interface ReadbackInput {
     existing?: { setlistId: string; name: string }[]
     /** IANA zone for the date a standard was set; UTC when absent. */
     timeZone?: string
+    /** Draft only: where the running order came from, said after the headline (MCP-03). */
+    origin?: string | null
+    /** Said first, beside `existing` (e.g. the book differs from the profile's). Never blocks. */
+    notices?: Array<{ kind: "book_differs"; text: string }>
 }
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+const MONTH_NAMES = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+]
+const NUMBER_WORDS = [
+    "Zero",
+    "One",
+    "Two",
+    "Three",
+    "Four",
+    "Five",
+    "Six",
+    "Seven",
+    "Eight",
+    "Nine",
+    "Ten",
+    "Eleven",
+    "Twelve",
+    "Thirteen",
+    "Fourteen",
+    "Fifteen",
+    "Sixteen",
+    "Seventeen",
+    "Eighteen",
+    "Nineteen",
+    "Twenty",
+]
+/** A usual chart not played for longer than this is named in the readback. */
+export const STALE_WEEKS = 8
+/** In a long list, the voice says this many and offers the rest. */
+export const READBACK_VOICE_FIRST = 3
 const DAY_MS = 24 * 60 * 60 * 1000
 const OPEN_TIERS: ReadonlySet<Tier> = new Set<Tier>(["last_time", "other_service", "new"])
 
@@ -99,6 +180,91 @@ export function monthDay(value: string | null | undefined): string | null {
 function sinceDay(at: string, timeZone: string | undefined): string {
     const t = Date.parse(at)
     return timeZone && !Number.isNaN(t) ? dayInZone(t, timeZone) : at
+}
+
+/** "July" (UTC), or null. */
+export function monthName(value: string | null | undefined): string | null {
+    if (!value) return null
+    const iso = /^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T00:00:00Z` : value
+    const t = Date.parse(iso)
+    return Number.isNaN(t) ? null : MONTH_NAMES[new Date(t).getUTCMonth()]
+}
+
+/**
+ * The setting of a chart, said instead of its file name: the library's
+ * `setting` when it has one, else the clarifier in the name ("Mi chamocha
+ * (Moshav) morning.pdf" → "Moshav"; "Adon Olam - IWITW" → "IWITW"), else the
+ * clean name.
+ */
+export function settingOf(chartName: string | null | undefined, setting?: string | null): string {
+    if (setting && setting.trim()) return setting.trim()
+    const name = (chartName ?? "")
+        .trim()
+        .replace(/\.(pdf|musicxml|mxl|xml|docx?|txt|png|jpe?g)$/i, "")
+        .replace(/_/g, " ")
+    const paren = /\(([^)]+)\)/.exec(name)
+    if (paren && paren[1].trim()) return paren[1].trim()
+    const dash = name.split(/\s+[—–-]\s+/)
+    if (dash.length > 1 && dash[1].trim()) return dash[1].trim()
+    return name.replace(/\s{2,}/g, " ").trim()
+}
+
+/**
+ * A setlist name without a trailing date that only repeats the service date
+ * ("Eliana Bat Mitzvah — Oct 31" on Oct 31 → "Eliana Bat Mitzvah").
+ */
+export function stripTrailingDate(name: string, date: string | null): string {
+    if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return name
+    const [y, m, d] = date.split("-").map(Number)
+    const mon = `(?:${MONTHS[m - 1]}|${MONTH_NAMES[m - 1]})\\.?`
+    const forms = [
+        `${mon}\\s+0?${d}(?:st|nd|rd|th)?(?:,?\\s+${y})?`,
+        `0?${m}/0?${d}(?:/(?:${y}|${String(y).slice(2)}))?`,
+        `${y}-0?${m}-0?${d}`,
+    ]
+    const re = new RegExp(`[\\s,;:—–-]*\\(?(?:${forms.join("|")})\\)?\\s*$`, "i")
+    const out = name.replace(re, "").trim()
+    return out || name
+}
+
+/** "Shabbat mornings" — the plural a learned-from line says. */
+export function serviceNoun(serviceType: string, label: string, n: number): string {
+    const nouns: Record<string, [string, string]> = {
+        shabbat_morning: ["Shabbat morning", "Shabbat mornings"],
+        friday_night: ["Friday night", "Friday nights"],
+        shir_shabbat: ["Shir Shabbat", "Shir Shabbat services"],
+        bnei_mitzvah_saturday: ["B'nei Mitzvah service", "B'nei Mitzvah services"],
+        havdalah_bnei_mitzvah: ["Havdalah B'nei Mitzvah", "Havdalah B'nei Mitzvah services"],
+    }
+    const pair = nouns[serviceType] ?? [`${label} service`, `${label} services`]
+    return n === 1 ? pair[0] : pair[1]
+}
+
+function filledText(label: string, f: FilledNote): string {
+    const clauses = f.reasons.map((r) => {
+        switch (r.kind) {
+            case "differs":
+                return `${monthDay(r.date) ?? r.date} was ${r.setting}`
+            case "stale":
+                return `last played in ${monthName(r.date) ?? r.date}`
+            case "no_key":
+                return "key not on record"
+            case "single":
+                return "learned from one service only"
+        }
+    })
+    const inKey = f.key ? ` in ${f.key}` : ""
+    return `${label}: ${f.setting}, your ${f.tier === "standard" ? "standard" : "usual"}${inKey}; ${clauses.join("; ")}`
+}
+
+function openVoice(r: ReadbackRow): string | undefined {
+    if (!r.recall) return undefined
+    const { setting, key, date, serviceLabel } = r.recall
+    const inKey = key ? ` in ${key}` : ""
+    const month = monthName(date)
+    if (r.tier === "last_time") return `${r.label}: last time ${setting}${inKey}${month ? `, in ${month}` : ""}`
+    if (r.tier === "other_service") return `${r.label}: done before at ${serviceLabel ?? "another service"}${month ? ` in ${month}` : ""}, not here`
+    return undefined
 }
 
 function bookTitle(slug: string | null): string | null {
@@ -123,8 +289,10 @@ function spoken(text: string): string {
 export function buildReadback(input: ReadbackInput): Readback {
     const { profileLabel, rows, openItems, now } = input
 
-    const parts = [profileLabel ?? input.title ?? null, monthDay(input.date), bookTitle(input.book)].filter((p): p is string => !!p)
+    const title = input.title ? stripTrailingDate(input.title, input.date) : null
+    const parts = [profileLabel ?? title ?? null, monthDay(input.date), bookTitle(input.book)].filter((p): p is string => !!p)
     let headline = parts.length > 0 ? `${parts.join(", ")}.` : ""
+    if (input.origin) headline = `${headline} ${input.origin}`.trim()
     if (input.special) {
         headline = `${headline} Marked special: changes are for this week only.`.trim()
     }
@@ -134,11 +302,18 @@ export function buildReadback(input: ReadbackInput): Readback {
     for (const e of input.existing ?? []) {
         exceptions.push({ kind: "existing", index: null, text: `There is already a setlist on this date: ${e.name}` })
     }
+    for (const n of input.notices ?? []) exceptions.push({ kind: n.kind, index: null, text: n.text })
+    const leading = exceptions.length
     for (const r of rows) {
         if (!r.isSong) continue
         const before = exceptions.length
         if (r.tier && OPEN_TIERS.has(r.tier)) {
-            exceptions.push({ kind: "open_slot", index: r.index, text: `${r.label}: ${r.phrase ?? ""}`.trim() })
+            const item: ReadbackItem = { kind: "open_slot", index: r.index, text: `${r.label}: ${r.phrase ?? ""}`.trim() }
+            const voice = r.tier === "new" ? `${r.label}: new, which chart?` : openVoice(r)
+            if (voice && voice !== item.text) item.voice = voice
+            exceptions.push(item)
+        } else if (r.filled && r.filled.reasons.length > 0 && r.hasChart) {
+            exceptions.push({ kind: "filled", index: r.index, text: filledText(r.label, r.filled) })
         } else if (!r.hasChart) {
             exceptions.push({ kind: "no_chart", index: r.index, text: `${r.label}: no chart yet` })
         } else if (r.differs) {
@@ -188,11 +363,23 @@ export function buildReadback(input: ReadbackInput): Readback {
         }
     }
 
-    // The cap is for row exceptions; open items are always said.
-    const said = exceptions.slice(0, Math.min(rowExceptions, READBACK_VOICE_MAX)).map((e) => spoken(e.text))
-    const more = rowExceptions - READBACK_VOICE_MAX
-    if (more > 0) said.push(`And ${more} more on screen.`)
-    for (const e of exceptions.slice(rowExceptions)) said.push(spoken(e.text))
+    // Said first: an existing setlist and notices. Then the row exceptions: all of them up to
+    // READBACK_VOICE_MAX, else a count, the first few, and an offer of the rest (MCP-20).
+    // Open items are always said.
+    const say = (e: ReadbackItem) => spoken(e.voice ?? e.text)
+    const said = exceptions.slice(0, leading).map(say)
+    const rowItems = exceptions.slice(leading, rowExceptions)
+    if (rowItems.length <= READBACK_VOICE_MAX) {
+        said.push(...rowItems.map(say))
+    } else {
+        const n = rowItems.length
+        const noun = rowItems.every((e) => e.kind === "open_slot") ? "open slots" : "things to check"
+        const first = rowItems.slice(0, READBACK_VOICE_FIRST)
+        said.push(`${NUMBER_WORDS[n] ?? String(n)} ${noun}. First ${NUMBER_WORDS[first.length].toLowerCase()}:`)
+        said.push(...first.map(say))
+        said.push("Want the rest?")
+    }
+    for (const e of exceptions.slice(rowExceptions)) said.push(say(e))
     const text = [headline, ...said, rest].filter((s) => s.length > 0).join(" ")
 
     return { headline, exceptions, rest, text }

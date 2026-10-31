@@ -1,6 +1,7 @@
 import { isSongType } from "@/lib/setlist-track-count"
 import { SERVICE_TYPE_CATALOG } from "@/lib/templates/service-types"
 import type { LibraryLite } from "@/lib/history/song-history"
+import { settingOf, STALE_WEEKS, type FilledNote, type FilledReason } from "./readback"
 import { cleanLabel, type Promotion, type SlotTier, type Tier } from "./tiers"
 
 /**
@@ -57,8 +58,24 @@ export interface DraftRow {
     promotion?: Promotion
     /** True when the row was filled from its tier (standard or usual). */
     filled: boolean
+    /**
+     * Open slots only (MCP-06): the exact chart this slot had last time (or at
+     * another service). Recall, never a fill: a choice may say `useRecall`.
+     */
+    recall?: Recall
+    /** MCP-14: the per-part charts of the slot, from the profile row. */
+    parts?: Array<{ fileId: string; chartName: string; title: string }>
     /** Template-shaped row the setlist track is written from. */
     track: Record<string, unknown>
+}
+
+export interface Recall {
+    fileId: string
+    chartName: string
+    key: string | null
+    date: string | null
+    /** The service it was played at (a catalog label). */
+    service: string | null
 }
 
 export interface DraftProfileRow {
@@ -69,6 +86,10 @@ export interface DraftProfileRow {
     track: Record<string, unknown>
     tier?: SlotTier
     standing?: { leadMusician: string | null } | null
+    /** The profile's service label, for a last_time recall. */
+    service?: string | null
+    /** The other service's label, for an other_service recall. */
+    otherService?: string | null
 }
 
 /** True for a holiday service type: such a draft is special unless the author says otherwise. */
@@ -90,7 +111,11 @@ function str(v: unknown): string | null {
 }
 
 /** Draft rows from a profile's rows and their live tiers. */
-export function buildDraftRows(rows: DraftProfileRow[]): DraftRow[] {
+export function buildDraftRows(
+    rows: DraftProfileRow[],
+    /** The service day of an ISO event date (the tenant's zone); UTC day when absent. */
+    dayOf: (iso: string) => string = (iso) => iso.slice(0, 10),
+): DraftRow[] {
     return rows.map((r) => {
         const track = pickTrack(r.track)
         // A stored row may carry a file name for a title ("Sim_shalom.pdf"): say it clean.
@@ -121,7 +146,21 @@ export function buildDraftRows(rows: DraftProfileRow[]): DraftRow[] {
             track,
         }
         if (tier?.promotion) row.promotion = tier.promotion
-        if (!fills) return row
+        const parts = Array.isArray(r.track.parts) ? (r.track.parts as DraftRow["parts"]) : undefined
+        if (parts && parts.length > 1) row.parts = parts
+        if (!fills) {
+            if (tier && (tier.tier === "last_time" || tier.tier === "other_service") && tier.fileId && !tier.dead) {
+                row.recall = {
+                    fileId: tier.fileId,
+                    chartName: tier.chartName ?? tier.fileId,
+                    key: tier.key ?? null,
+                    date: tier.lastDate ? dayOf(tier.lastDate) : null,
+                    service: r.service ?? null,
+                }
+                if (tier.tier === "other_service") row.recall.service = r.otherService ?? null
+            }
+            return row
+        }
         track.fileId = tier!.fileId
         if (tier!.chartName) track.fileName = tier!.chartName
         if (tier!.key) track.key = tier!.key
@@ -180,6 +219,8 @@ export function openIndexesOf(rows: DraftRow[]): number[] {
 
 export interface DraftChoice {
     index: number
+    /** MCP-06: use the open row's `recall` chart (and its key unless `key` is given). */
+    useRecall?: boolean
     fileId?: string
     key?: string
     leadMusician?: string
@@ -205,7 +246,7 @@ export interface StandingRequest {
 
 export type ApplyChoicesResult =
     | { ok: true; rows: DraftRow[]; oneOff: string[]; standing: StandingRequest[] }
-    | { ok: false; code: "invalid_argument" | "chart_not_found" | "no_chart"; message: string; index: number }
+    | { ok: false; code: "invalid_argument" | "chart_not_found" | "no_chart" | "no_recall"; message: string; index: number }
 
 /**
  * Apply the author's choices to the draft rows. A choice names a song row by
@@ -228,7 +269,15 @@ export function applyChoices(
             return { ok: false, code: "invalid_argument", message: `Choice index ${c.index} is not a song row of the draft.`, index: c.index }
         }
         const before = { fileId: str(row.track.fileId), key: str(row.track.key) }
-        const fileId = str(c.fileId)
+        let fileId = str(c.fileId)
+        let recallKey: string | null = null
+        if (c.useRecall === true && !fileId) {
+            if (!row.recall) {
+                return { ok: false, code: "no_recall", message: `Row ${c.index} has no earlier chart to reuse.`, index: c.index }
+            }
+            fileId = row.recall.fileId
+            recallKey = row.recall.key
+        }
         if (fileId) {
             const chart = charts.get(fileId)
             if (!chart) {
@@ -245,7 +294,7 @@ export function applyChoices(
             row.fileId = fileId
             row.chartName = chart.name
         }
-        const key = str(c.key)
+        const key = str(c.key) ?? recallKey
         if (key) row.track.key = key
         const lead = str(c.leadMusician)
         if (lead) row.track.leadMusician = lead
@@ -273,6 +322,31 @@ export function applyChoices(
         }
     }
     return { ok: true, rows: out, oneOff, standing }
+}
+
+/**
+ * MCP-04, "fill it but say it": why a filled row is worth hearing. The usual
+ * is older than STALE_WEEKS before the service; the latest regular service
+ * played something else; the key is not on record; or the profile was learned
+ * from one service only. No reasons: the row stays folded.
+ */
+export function filledNoteFor(tier: SlotTier | undefined, serviceDate: string, learnedCount: number | null): FilledNote | undefined {
+    if (!tier || (tier.tier !== "usual" && tier.tier !== "standard") || !tier.fileId) return undefined
+    const reasons: FilledReason[] = []
+    if (tier.differsFromLast) {
+        reasons.push({
+            kind: "differs",
+            date: tier.differsFromLast.date.slice(0, 10),
+            setting: settingOf(tier.differsFromLast.chartName, tier.differsFromLast.setting),
+        })
+    }
+    if (tier.tier === "usual" && tier.lastDate) {
+        const age = Date.parse(`${serviceDate}T12:00:00Z`) - Date.parse(tier.lastDate)
+        if (age > STALE_WEEKS * 7 * 86_400_000) reasons.push({ kind: "stale", date: tier.lastDate.slice(0, 10) })
+    }
+    if (!tier.keyOnRecord) reasons.push({ kind: "no_key" })
+    if (learnedCount === 1) reasons.push({ kind: "single" })
+    return { tier: tier.tier, setting: settingOf(tier.chartName, tier.setting), key: tier.key ?? null, reasons }
 }
 
 /** The note read back when one-off changes were made to filled rows. */

@@ -15,6 +15,7 @@ import {
     profileKeyFor,
     rabbiRequired,
     serviceLabelFor,
+    legacySlotKeyFor,
     slotKeyFor,
 } from "@/lib/profiles/keys"
 import {
@@ -111,6 +112,8 @@ interface RowContext {
     serviceType: string
     profileLabel: string
     slotKey: string
+    /** The slot key before MCP-02, where an older choice may be stored. */
+    legacySlotKey: string
     track: Record<string, unknown>
     fileId: string | null
     chartName: string | null
@@ -191,6 +194,12 @@ async function loadRow(
             fileId,
         },
         (fid) => library.get(fid)?.partGroup ?? null,
+        // Brothers Lazaroff keeps its song slots; CRC keys a prayer's settings by moment (MCP-02).
+        { byTitle: org === DEFAULT_ORG_ID },
+    )
+    const legacySlotKey = legacySlotKeyFor(
+        { momentId: str(track.momentId), title: typeof track.title === "string" ? track.title : "", fileId },
+        (fid) => library.get(fid)?.partGroup ?? null,
     )
     // The rabbi splits a profile only where the rabbi changes the music
     // (friday_night, shabbat_morning); elsewhere one profile serves every rabbi.
@@ -201,6 +210,7 @@ async function loadRow(
         serviceType,
         profileLabel: profileLabelFor(profileKey, serviceType),
         slotKey,
+        legacySlotKey,
         track,
         fileId,
         chartName: lib?.name ?? str(track.fileName) ?? str(track.title),
@@ -281,7 +291,11 @@ export async function clearStandingChoiceTool(
     try {
         const ctx = await loadRow(uid, args, org)
         if ("error" in ctx) return ctx
-        const primary = await clearStanding(org, uid, ctx.profileKey, ctx.slotKey)
+        let primary = await clearStanding(org, uid, ctx.profileKey, ctx.slotKey)
+        // A choice made before slots were keyed by moment is stored under the old key.
+        if (!primary.cleared && ctx.legacySlotKey !== ctx.slotKey) {
+            primary = await clearStanding(org, uid, ctx.profileKey, ctx.legacySlotKey)
+        }
         if (!primary.cleared) {
             return richError(
                 "standing_not_found",

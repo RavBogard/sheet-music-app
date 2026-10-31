@@ -1,6 +1,7 @@
 import { classifyService } from "@/lib/history/classify"
 import type { OrgId } from "@/lib/org/types"
-import { memoryServiceType, profileKeyFor, rabbiRequired, slotKeyFor } from "./keys"
+import { DEFAULT_ORG_ID } from "@/lib/org/registry"
+import { legacySlotKeyFor, memoryServiceType, profileKeyFor, rabbiRequired, slotKeyFor } from "./keys"
 import type { SlotTier, StandingChoice } from "./tiers"
 
 /**
@@ -43,6 +44,19 @@ function str(v: unknown): string | null {
     return typeof v === "string" && v.trim() ? v : null
 }
 
+/** What the profile knows about one candidate's slot (MCP-16). */
+export interface ProfileSlotInfo {
+    /** The chart is the slot's standard or usual. */
+    match: boolean
+    /** The slot's usual was last played more than STALE_MATCH_WEEKS before now. */
+    stale: boolean
+    /** The key the slot is standard or usual in, else last played in; null when not on record. */
+    historyKey: string | null
+}
+
+/** A usual older than this caps a profile match at medium confidence. */
+export const STALE_MATCH_WEEKS = 8
+
 /**
  * Positions of the candidates whose chart is the profile's standard or usual
  * chart for their slot. The setlist's class is read with classifyService, the
@@ -54,7 +68,18 @@ export async function profileMatches(
     setlist: Record<string, unknown>,
     candidates: ProfileMatchCandidate[],
 ): Promise<Set<number>> {
-    const out = new Set<number>()
+    const info = await profileSlotInfo(org, setlist, candidates)
+    return new Set([...info.entries()].filter(([, v]) => v.match).map(([k]) => k))
+}
+
+/** Per candidate position, what the profile knows about its slot; empty when the setlist has no profile. */
+export async function profileSlotInfo(
+    org: OrgId,
+    setlist: Record<string, unknown>,
+    candidates: ProfileMatchCandidate[],
+    now: Date = new Date(),
+): Promise<Map<number, ProfileSlotInfo>> {
+    const out = new Map<number, ProfileSlotInfo>()
     if (candidates.length === 0) return out
     const cls = classifyService({
         name: typeof setlist.name === "string" ? setlist.name : "",
@@ -73,24 +98,33 @@ export async function profileMatches(
     const profileKey = profileKeyFor(serviceType, rabbiSlot)
 
     const { loadSlotUses } = await import("./slot-uses")
-    const { readStanding, standingMapKey } = await import("./standing")
+    const { readStandingFor } = await import("./standing")
     const { computeSlotTier } = await import("./tiers")
     const { index } = await loadSlotUses(org, { serviceType, rabbiSlot })
     const groupOf = new Map(candidates.map((c) => [c.fileId, c.partGroup]))
     const partGroupOf = (fid: string) => groupOf.get(fid) ?? index.partGroupOf(fid)
-    const slotKeys = candidates.map((c) =>
-        slotKeyFor({ momentId: c.momentId ?? null, title: c.title, fileId: c.fileId }, partGroupOf),
-    )
-    const standing = await readStanding(org, [profileKey], slotKeys)
+    const byTitle = org === DEFAULT_ORG_ID
+    const slots = candidates.map((c) => {
+        const t = { momentId: c.momentId ?? null, title: c.title, fileId: c.fileId }
+        const slotKey = slotKeyFor(t, partGroupOf, { byTitle })
+        const legacy = legacySlotKeyFor(t, partGroupOf)
+        return { slotKey, aliases: legacy !== slotKey ? [legacy] : [] }
+    })
+    const standing = await readStandingFor(org, profileKey, slots)
     candidates.forEach((c, i) => {
-        const slotKey = slotKeys[i]
-        const choice = standing.get(standingMapKey(profileKey, slotKey)) ?? null
+        const slotKey = slots[i].slotKey
+        const choice = standing.get(slotKey) ?? null
         const tier = computeSlotTier({
             standing: choice,
             profileUses: index.profileUses(slotKey),
             otherUses: index.otherUses(slotKey),
         })
-        if (tierHoldsPartGroup(tier, choice, c.partGroup, partGroupOf)) out.add(c.position)
+        const stale =
+            tier.tier === "usual" &&
+            !!tier.lastDate &&
+            now.getTime() - Date.parse(tier.lastDate) > STALE_MATCH_WEEKS * 7 * 86_400_000
+        const historyKey = tier.tier === "new" || tier.tier === "other_service" ? null : (tier.key ?? null)
+        out.set(c.position, { match: tierHoldsPartGroup(tier, choice, c.partGroup, partGroupOf), stale, historyKey })
     })
     return out
 }

@@ -153,6 +153,7 @@ export function buildSlotUses(
                 fileId,
                 partGroup: lib?.partGroup ?? fileId,
                 chartName: lib?.name ?? t.fileName ?? t.title,
+                ...(lib?.setting ? { setting: lib.setting } : {}),
                 ...(dead ? { dead: true } : {}),
                 recent: inProfile ? recentDays.has(s.eventDate!.slice(0, 10)) : undefined,
                 key: t.key ?? null,
@@ -173,6 +174,25 @@ export function buildSlotUses(
     }
 }
 
+/**
+ * The org's history as performed (MCP-23) and the library rows it names,
+ * with the canonical twins of archived charts.
+ */
+export async function loadMemoryHistory(org: OrgId): Promise<{
+    setlists: HistorySetlist[]
+    library: Map<string, LibraryLite>
+    truncated: boolean
+}> {
+    const { loadHistorySetlists, loadLibraryLite } = await import("@/lib/history/load")
+    const { setlists, truncated } = await loadHistorySetlists(org, { asPerformed: true })
+    const fileIds = setlists.flatMap((s) => s.tracks.map((t) => t.fileId).filter((x): x is string => !!x))
+    const library = await loadLibraryLite(org, fileIds)
+    // An archived chart with a canonical twin recalls the twin: load those rows too.
+    const canon = [...library.values()].filter(isDeadChart).map((l) => l.canonicalFileId).filter((x): x is string => !!x && !library.has(x))
+    if (canon.length > 0) for (const [id, l] of await loadLibraryLite(org, canon)) library.set(id, l)
+    return { setlists, library, truncated }
+}
+
 /** Load the org's history and library, then index slot uses for one profile. */
 export async function loadSlotUses(
     org: OrgId,
@@ -183,12 +203,6 @@ export async function loadSlotUses(
     library: Map<string, LibraryLite>
     truncated: boolean
 }> {
-    const { loadHistorySetlists, loadLibraryLite } = await import("@/lib/history/load")
-    const { setlists, truncated } = await loadHistorySetlists(org, {})
-    const fileIds = setlists.flatMap((s) => s.tracks.map((t) => t.fileId).filter((x): x is string => !!x))
-    const library = await loadLibraryLite(org, fileIds)
-    // An archived chart with a canonical twin recalls the twin: load those rows too.
-    const canon = [...library.values()].filter(isDeadChart).map((l) => l.canonicalFileId).filter((x): x is string => !!x && !library.has(x))
-    if (canon.length > 0) for (const [id, l] of await loadLibraryLite(org, canon)) library.set(id, l)
+    const { setlists, library, truncated } = await loadMemoryHistory(org)
     return { index: buildSlotUses(setlists, library, f), setlists, library, truncated }
 }

@@ -8,30 +8,46 @@ import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 import { rowOrg } from "@/lib/mcp/org-context"
 import { bookSlugGuard } from "@/lib/mcp/liturgy-ref-guard"
 import { loadLibraryLite } from "@/lib/history/load"
-import { orgTimeZone } from "@/lib/org/locale"
+import { dayInZone, orgTimeZone } from "@/lib/org/locale"
+import { getBook } from "@/lib/books/registry"
+import { isSongType } from "@/lib/setlist-track-count"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 import { logger } from "@/lib/logger"
-import { profileKeyFor, rabbiRequired } from "@/lib/profiles/keys"
+import { profileKeyFor, rabbiRequired, serviceLabelFor } from "@/lib/profiles/keys"
 import {
     applyChoices,
     annotateCharts,
     buildDraftRows,
     defaultSpecial,
     DRAFT_TTL_MS,
+    filledNoteFor,
     oneOffNoteFor,
     openIndexesOf,
     type ChartInfo,
     type DraftChoice,
     type DraftRow,
     type DraftWarning,
+    type Recall,
 } from "@/lib/profiles/draft"
-import { buildReadback, type Readback } from "@/lib/profiles/readback"
+import {
+    buildReadback,
+    monthDay,
+    serviceNoun,
+    settingOf,
+    type OpenItem,
+    type Readback,
+    type ReadbackRow,
+} from "@/lib/profiles/readback"
+import { seedProfile } from "@/lib/profiles/seed"
+import { buildSlotUses, existingOnDate, loadMemoryHistory } from "@/lib/profiles/slot-uses"
+import { vsLastOf, type VsLast } from "@/lib/profiles/vs-last"
 import { writeStanding } from "@/lib/profiles/standing"
 import type { Promotion, Tier } from "@/lib/profiles/tiers"
-import { findProfileTemplateFor, loadProfileTiers, seedMissingProfile } from "./service-profiles"
+import { readOpenItems } from "./open-items"
+import { cacheLearnedProfile, coreProfileFor, findLegacyTemplate, findProfileTemplateFor, tierProfileRows } from "./service-profiles"
 import { profileLabelFor, setAnnouncement } from "./standing"
-import { rateLimitGate, writeSetlistFromTemplateRows, type UnresolvedLiturgyRow } from "./templates"
+import { rateLimitGate, writeSetlistFromTemplateRows, type TemplateProfile, type UnresolvedLiturgyRow } from "./templates"
 
 /**
  * Setlist memory, release 2 — `draft_service` and `create_setlist_from_draft`.
@@ -93,6 +109,10 @@ export interface DraftServiceRowOut {
     tier: Tier | null
     phrase: string | null
     promotion?: Promotion
+    /** Open slots: the chart this slot had before, to reuse with `{index, useRecall: true}`. Never filled. */
+    recall?: Recall
+    /** The per-part charts of a slot that had several rows (piano, lyrics, lead sheet). */
+    parts?: Array<{ fileId: string; chartName: string; title: string }>
 }
 
 export interface DraftServiceResult {
@@ -100,12 +120,16 @@ export interface DraftServiceResult {
     draftId: string
     expiresAt: string
     profile: { key: string; label: string; book: string | null }
+    /** Where the running order came from: the last regular services, the saved profile, or a legacy template. */
+    origin: DraftOrigin
     special: boolean
     rows: DraftServiceRowOut[]
     openIndexes: number[]
     truncated: boolean
     /** Setlists already on this date for this service. A warning only: the draft still creates. */
     existing: { setlistId: string; name: string }[]
+    /** MCP-05: per slot, what the profile's last regular service had. Recall only. */
+    vsLast: VsLast | null
     /** dead_chart and key_mismatch notes on filled rows. Warnings only. */
     warnings: DraftWarning[]
     /** The draft said aloud, exceptions first (release 3). */
@@ -146,6 +170,8 @@ function rowOut(r: DraftRow): DraftServiceRowOut {
     if (r.fileId) out.key = r.key ?? null
     if (r.fileId && r.writtenKey !== undefined) out.writtenKey = r.writtenKey
     if (r.promotion) out.promotion = r.promotion
+    if (r.recall) out.recall = r.recall
+    if (r.parts) out.parts = r.parts
     return out
 }
 
@@ -180,18 +206,59 @@ export async function draftServiceTool(
         const editor = await assertEditor(db, uid, org)
         if (!editor.ok) return editor
 
-        const doc = (await findProfileTemplateFor(org, profileKey)) ?? (await seedMissingProfile(uid, org, profileKey))
-        if (!doc) {
-            return richError(
-                "no_profile",
-                `There is no profile for '${profileKey}' yet: no past setlist is marked with this service and rabbi.`,
-                { profileKey },
-                "Build this one from a template or a recent setlist, with templateType and rabbi set. The next draft_service for this service learns from it.",
-            )
+        const zone = orgTimeZone(org)
+        const dayOf = (iso: string) => {
+            const t = Date.parse(iso)
+            return Number.isNaN(t) ? iso.slice(0, 10) : dayInZone(t, zone)
         }
-        const loaded = await loadProfileTiers(org, doc, serviceType, rabbiSlot, date)
+        const now = new Date()
+        const def = coreProfileFor(org, profileKey)
+        const memory = await loadMemoryHistory(org)
+        const index = buildSlotUses(memory.setlists, memory.library, { serviceType, rabbiSlot, before: date })
+        // MCP-03: the running order is re-learned from the last regular services on every draft.
+        const learned = def ? seedProfile(def, memory.setlists, memory.library, now, { before: date }) : null
+        const doc = await findProfileTemplateFor(org, profileKey)
+        const stored = doc?.data()
+        const storedProfile = (stored?.profile ?? null) as TemplateProfile | null
+        const label = def?.label ?? storedProfile?.label ?? profileLabelFor(profileKey, serviceType)
+        const book = def?.book ?? storedProfile?.book ?? null
+        const catalogLabel = serviceLabelFor(serviceType) ?? serviceType
+
+        let tracks: Record<string, unknown>[]
+        let templateId: string
+        let serviceNotes: string | null = typeof stored?.serviceNotes === "string" ? stored.serviceNotes : null
+        let origin: DraftOrigin
+        if (def && learned?.learnedFrom) {
+            // The profile doc is a cache: refresh it for a current draft, never from a past date's view.
+            const current = date >= dayInZone(now.getTime(), zone)
+            templateId = !doc || current ? await cacheLearnedProfile(uid, org, def, learned, doc) : doc.id
+            tracks = learned.tracks as unknown as Record<string, unknown>[]
+            const dates = learned.learnedFrom.setlists.map((s) => dayOf(s.eventDate))
+            origin = { kind: "history", count: learned.learnedFrom.count, from: dates[dates.length - 1], to: dates[0], setlists: learned.learnedFrom.setlists.map((s) => s.setlistId) }
+        } else if (doc) {
+            tracks = Array.isArray(stored?.tracks) ? (stored!.tracks as Record<string, unknown>[]) : []
+            templateId = doc.id
+            origin = { kind: "saved_profile" }
+        } else {
+            // MCP-15: no history yet — a matching legacy template gives the order, open slots only.
+            const legacy = def ? await findLegacyTemplate(org, def) : null
+            if (!legacy) {
+                return richError(
+                    "no_profile",
+                    `There is no profile for '${profileKey}' yet: no past setlist is marked with this service and rabbi, and no template matches it.`,
+                    { profileKey },
+                    "Build this one from a template or a recent setlist (clone_setlist or create_setlist with serviceType and rabbiSlot set). The next draft_service for this service learns from it.",
+                )
+            }
+            tracks = legacy.tracks.map(openTemplateRow)
+            templateId = legacy.id
+            serviceNotes = legacy.serviceNotes
+            origin = { kind: "template", templateId: legacy.id, name: legacy.name }
+        }
+
+        const loadedRows = await tierProfileRows(org, tracks, profileKey, index)
         const rows = buildDraftRows(
-            loaded.rows.map((r) => ({
+            loadedRows.map((r) => ({
                 index: r.index,
                 type: r.type,
                 title: r.title,
@@ -199,26 +266,41 @@ export async function draftServiceTool(
                 track: r.track,
                 tier: r.tier,
                 standing: r.standing ?? null,
+                service: catalogLabel,
+                otherService: r.slotKey ? (index.otherUses(r.slotKey)[0]?.serviceLabel ?? null) : null,
             })),
+            dayOf,
         )
         const filledIds = rows.map((r) => r.fileId).filter((f): f is string => !!f)
         const warnings = annotateCharts(rows, await loadLibraryLite(org, filledIds))
         const special = typeof args.special === "boolean" ? args.special : defaultSpecial(serviceType)
-        const label = loaded.profile?.label ?? profileLabelFor(profileKey, serviceType)
-        const book = loaded.profile?.book ?? null
-        const now = new Date()
+        const existing = existingOnDate(memory.setlists, date, serviceType, zone)
+
+        // MCP-21: the profile's previous setlist — its unresolved open items carry into this
+        // readback, and a book other than the profile's is said.
+        const previous = index.profileSetlists[0] ?? null
+        const carried = previous ? await carriedOpenItems(db, org, previous.id, dayOf(previous.eventDate!)) : []
+        const notices: Array<{ kind: "book_differs"; text: string }> = []
+        if (previous?.book && book && previous.book !== book) {
+            notices.push({
+                kind: "book_differs",
+                text: `Book differs from profile: your last ${label} (${monthDay(dayOf(previous.eventDate!))}) used ${bookName(previous.book)}; the profile uses ${bookName(book)}`,
+            })
+        }
+        const vsLast = vsLastOf(index.profileSetlists, memory.library, { before: date, dayOf })
+
         const expiresAt = new Date(now.getTime() + DRAFT_TTL_MS)
         const ref = db.collection(DRAFTS_COLLECTION).doc(crypto.randomUUID())
-        const stored: StoredDraft = {
+        const storedDraft: StoredDraft = {
             orgId: org,
             uid,
             profileKey,
             profileLabel: label,
-            templateId: loaded.templateId,
+            templateId,
             serviceType,
             rabbiSlot: askedRabbi,
             book,
-            serviceNotes: loaded.serviceNotes,
+            serviceNotes,
             date,
             special,
             name: str(args.name),
@@ -226,16 +308,20 @@ export async function draftServiceTool(
             createdAt: now.toISOString(),
             expiresAt: Timestamp.fromDate(expiresAt),
         }
-        await ref.set(stored)
+        await ref.set(storedDraft)
+        const learnedCount = origin.kind === "history" ? origin.count : null
         const readback = buildReadback({
-            timeZone: orgTimeZone(org),
+            timeZone: zone,
             profileLabel: label,
             date,
             book,
             special,
+            origin: originSentence(origin, serviceType, catalogLabel),
+            notices,
             rows: rows.map((r, i) => {
-                const choice = loaded.rows[i]?.standing
-                return {
+                const lr = loadedRows[i]
+                const choice = lr?.standing
+                const out: ReadbackRow = {
                     index: r.index,
                     label: r.label,
                     isSong: r.type === "song",
@@ -248,9 +334,22 @@ export async function draftServiceTool(
                     deadChart: warnings.find((w) => w.kind === "dead_chart" && w.index === r.index)?.text,
                     keyMismatch: warnings.find((w) => w.kind === "key_mismatch" && w.index === r.index)?.text,
                 }
+                if (r.filled) {
+                    const note = filledNoteFor(lr?.tier, date, learnedCount)
+                    if (note) out.filled = note
+                }
+                if (r.recall) {
+                    out.recall = {
+                        setting: settingOf(r.recall.chartName, lr?.tier?.setting),
+                        key: r.recall.key,
+                        date: r.recall.date,
+                        serviceLabel: r.recall.service,
+                    }
+                }
+                return out
             }),
-            openItems: [],
-            existing: loaded.existing,
+            openItems: carried,
+            existing,
             now,
         })
         return {
@@ -258,13 +357,15 @@ export async function draftServiceTool(
             draftId: ref.id,
             expiresAt: expiresAt.toISOString(),
             profile: { key: profileKey, label, book },
+            origin,
             special,
             rows: rows.map(rowOut),
             openIndexes: openIndexesOf(rows),
-            truncated: loaded.truncated,
-            existing: loaded.existing,
+            truncated: memory.truncated,
+            existing,
+            vsLast,
             warnings: [
-                ...loaded.existing.map((e): DraftWarning => ({ kind: "existing", index: null, text: `There is already a setlist on this date: ${e.name}` })),
+                ...existing.map((e): DraftWarning => ({ kind: "existing", index: null, text: `There is already a setlist on this date: ${e.name}` })),
                 ...warnings,
             ],
             readback,
@@ -277,6 +378,52 @@ export async function draftServiceTool(
             { errorCode: 500 },
             "Retry; nothing was created.",
         )
+    }
+}
+
+/** Where a draft's running order came from. */
+export type DraftOrigin =
+    | { kind: "history"; count: number; from: string; to: string; setlists: string[] }
+    | { kind: "saved_profile" }
+    | { kind: "template"; templateId: string; name: string }
+
+/** The headline line that says where the order came from (MCP-03, MCP-15). */
+export function originSentence(origin: DraftOrigin, serviceType: string, catalogLabel: string): string {
+    switch (origin.kind) {
+        case "history":
+            return origin.count === 1
+                ? `Order from your one regular ${serviceNoun(serviceType, catalogLabel, 1)}, ${monthDay(origin.to)}.`
+                : `Order from your last ${origin.count} regular ${serviceNoun(serviceType, catalogLabel, origin.count)}, ${monthDay(origin.from)} – ${monthDay(origin.to)}.`
+        case "saved_profile":
+            return `Order from the saved profile: no regular ${serviceNoun(serviceType, catalogLabel, 2)} before this date.`
+        case "template":
+            return `Order from your ${origin.name} template, with every song open: no ${serviceNoun(serviceType, catalogLabel, 1)} history yet.`
+    }
+}
+
+/** A legacy template row as a draft row: its order and label, never its chart. */
+function openTemplateRow(t: Record<string, unknown>): Record<string, unknown> {
+    if (!isSongType(t.type)) return t
+    const out: Record<string, unknown> = { ...t, type: "song", slotKind: "open" }
+    for (const f of ["fileId", "fileName", "songId", "key", "leadMusician", "bpm"]) delete out[f]
+    return out
+}
+
+function bookName(slug: string): string {
+    return getBook(slug)?.title ?? slug
+}
+
+/** Unresolved open items of an earlier setlist, each marked with that setlist's date. */
+async function carriedOpenItems(db: DB, org: OrgId, setlistId: string, day: string): Promise<OpenItem[]> {
+    try {
+        const snap = await db.collection("setlists").doc(setlistId).get()
+        const data = snap.exists ? (snap.data() as Record<string, unknown>) : null
+        if (!data || rowOrg(data.orgId) !== org) return []
+        const when = monthDay(day)
+        return readOpenItems(data).map((i) => ({ ...i, text: when ? `${i.text} (from ${when})` : i.text }))
+    } catch (error) {
+        logger.warn("draft_service: open items of the previous setlist unreadable", error)
+        return []
     }
 }
 
@@ -382,6 +529,8 @@ export async function createSetlistFromDraftTool(
             if (f) chartIds.add(f)
             const rowFile = Number.isInteger(c?.index) ? str(rows[c.index]?.track?.fileId) : null
             if (rowFile) chartIds.add(rowFile)
+            const recallFile = c?.useRecall === true && Number.isInteger(c?.index) ? str(rows[c.index]?.recall?.fileId) : null
+            if (recallFile) chartIds.add(recallFile)
         }
         const library = await loadLibraryLite(org, [...chartIds])
         const charts = new Map<string, ChartInfo>(
@@ -395,7 +544,9 @@ export async function createSetlistFromDraftTool(
                 { draftId, index: applied.index },
                 applied.code === "chart_not_found"
                     ? "Find the chart with search_library and pass its fileId."
-                    : "Choices name song rows by their draft index.",
+                    : applied.code === "no_recall"
+                      ? "Only an open row with `recall` can reuse it; pass fileId instead."
+                      : "Choices name song rows by their draft index.",
             )
         }
 
