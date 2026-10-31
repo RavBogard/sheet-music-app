@@ -154,3 +154,5 @@ to the rest of the worship-tech family.
   button, not-saved marks), bet 4 (wedge safety), bet 5 (BL band mode), bet 6 (family spine).
   Backlog extras: SEED-UNION, the BM emulator flake, DEDUPE-ACTIVE, STATUS-NULL, the leftover
   glass/indigo CSS noted in DESIGN.md.
+- Bet 3 merged: #39 (offline integrity) and #40 (tap zones, note line, Next, device transposition). Next-label wording 'Next: title · key' was the lead's call.
+- Bet 4 started. Spec: BET-4-wedge-safety.md. Wording the lead's call, logged in the spec.
