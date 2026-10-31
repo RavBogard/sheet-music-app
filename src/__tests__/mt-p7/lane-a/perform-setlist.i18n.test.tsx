@@ -187,7 +187,7 @@ describe("Perform setlist view — English output unchanged", () => {
             { id: "s-2", name: "Test Setlist Two", eventDate: "2099-01-09T10:00:00Z", songCount: 2 },
         ] as never
         const l = renderWithI18n(<PublicSetlistListing initialSetlists={seed} />)
-        const counts = Array.from(l.container.querySelectorAll("[data-testid=upcoming-list] span.shrink-0")).map((s) => s.textContent)
+        const counts = Array.from(l.container.querySelectorAll("[data-testid=upcoming-list] [data-testid=perform-card-song-count]")).map((s) => s.textContent)
         expect(counts).toEqual(["0 songs", "1 song", "2 songs"])
         l.unmount()
 

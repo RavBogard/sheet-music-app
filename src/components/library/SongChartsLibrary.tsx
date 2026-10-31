@@ -31,7 +31,6 @@ import { cn } from "@/lib/utils"
 import { LibraryFilters, applyLibraryFilters, createEmptyFilters, LibraryFilterState } from "@/components/library/LibraryFilters"
 import { useAuth } from "@/lib/auth-context"
 import { apiFetch } from "@/lib/api-client"
-import { useCongregation } from "@/lib/congregation-store"
 import { toast } from "sonner"
 import { getDb } from "@/lib/local/schema"
 import { AudioPlayer } from "@/components/audio/AudioPlayer"
@@ -248,7 +247,6 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
         name.replace(/\.(pdf|musicxml|xml|mxl)$/i, '').replace(/_/g, ' ')
 
     const { isAdmin, isBandLeader, profile, canUpload, user } = useAuth()
-    const congregation = useCongregation()
     const { digitizing, handleDigitize, handleArchive, handleRename } = useLibraryActions({ loadLibrary, getCleanName })
     const addToSetlist = useAddToSetlist()
 
@@ -393,15 +391,15 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
     })
 
     return (
-        <div className="h-screen flex flex-col bg-background text-foreground">
-            {/* Header */}
-            <div className="h-20 border-b border-border flex items-center px-4 gap-4">
-                <Button size="icon" variant="ghost" aria-label={t("library.header.back")} className="h-12 w-12" onClick={handleBack}>
-                    <DirectionalIcon icon={ChevronLeft} className="h-8 w-8" />
+        <div className="h-[calc(100dvh-3.5rem-var(--tabbar-h))] flex flex-col bg-background text-foreground">
+            {/* Head row (web refresh, blend E): the title large, the tools on the right. */}
+            <div className="border-b border-rule bg-background">
+            <div className="max-w-3xl mx-auto w-full flex items-center px-2 sm:px-4 py-3 gap-2 sm:gap-3">
+                <Button size="icon" variant="ghost" aria-label={t("library.header.back")} className="h-11 w-11 rounded-md shrink-0" onClick={handleBack}>
+                    <DirectionalIcon icon={ChevronLeft} className="h-5 w-5" />
                 </Button>
-                <div className="flex items-center gap-3 flex-1">
-                    <img src="/logo.jpg" alt={congregation.shortName} className="h-8 w-8 rounded-full border border-brand/20 object-cover" />
-                    <h1 className="text-2xl font-bold font-display">{t("library.header.title")}</h1>
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <h1 className="truncate text-[1.35rem] sm:text-[1.6rem] font-extrabold leading-tight tracking-[-0.015em]">{t("library.header.title")}</h1>
                 </div>
                 {canUpload && (
                     <div className="flex gap-2">
@@ -460,27 +458,28 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
                 <Button
                     variant={selectMode ? "default" : "ghost"}
                     size="icon"
-                    className="h-9 w-9"
+                    className="h-11 w-11 rounded-md shrink-0"
                     onClick={() => {
                         setSelectMode(!selectMode)
                         if (selectMode) setSelectedIds(new Set())
                     }}
                     title={selectMode ? t("library.header.exitSelectMode") : t("library.header.selectFiles")}
                 >
-                    <CheckSquare className="h-4 w-4" />
+                    <CheckSquare className="h-5 w-5" />
                 </Button>
+            </div>
             </div>
 
             {/* Search & section toggles */}
-            <div className="p-4 border-b border-border space-y-4">
-                <div className="relative max-w-xl mx-auto">
-                    <Search className="absolute start-4 top-1/2 -translate-y-1/2 h-6 w-6 text-muted-foreground" />
+            <div className="px-4 py-3 border-b border-rule space-y-3">
+                <div className="relative max-w-3xl mx-auto">
+                    <Search className="absolute start-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" aria-hidden="true" />
                     <Input
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         placeholder={tab === "audio" ? t("library.search.audioPlaceholder") : t("library.search.chartsPlaceholder")}
                         aria-label={tab === "audio" ? t("library.search.audioLabel") : t("library.search.chartsLabel")}
-                        className="ps-12 h-14 text-xl rounded-full bg-brand/5 border-brand/10 focus:border-brand focus:ring-brand/20"
+                        className="ps-11 h-12 text-[17px] rounded-md bg-card border-input shadow-none focus-visible:border-ring focus-visible:ring-ring/30"
                     />
                 </div>
 
@@ -502,12 +501,12 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
                     <div
                         role="status"
                         aria-live="polite"
-                        className="max-w-xl mx-auto flex flex-wrap items-center justify-center gap-3 text-base text-amber-700 dark:text-amber-300"
+                        className="max-w-3xl mx-auto flex flex-wrap items-center gap-3 text-base font-medium text-caution"
                     >
                         <span>{t("library.usage.partial")}</span>
                         <Button
                             variant="outline"
-                            className="min-h-11 px-4 text-base border-amber-500/40 text-amber-700 dark:text-amber-300 hover:bg-amber-500/10"
+                            className="min-h-11 px-4 text-base border-caution/40 text-caution hover:bg-caution/10"
                             onClick={() => setUsageRetryToken(n => n + 1)}
                         >
                             {t("library.usage.retry")}
@@ -519,7 +518,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
                 <div
                     role="group"
                     aria-label={t("library.sections.groupLabel")}
-                    className="max-w-xl mx-auto inline-flex w-fit items-center justify-center gap-2 flex-wrap"
+                    className="max-w-3xl mx-auto flex w-full items-center gap-2 flex-wrap"
                 >
                     {(
                         [
@@ -546,7 +545,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
                                 aria-pressed={active}
                                 data-state={active ? 'active' : 'inactive'}
                                 onClick={() => setTab(value)}
-                                className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium border cursor-pointer transition-colors data-[state=active]:bg-brand/15 data-[state=active]:text-foreground data-[state=active]:border-brand/30 data-[state=active]:ring-1 data-[state=active]:ring-brand/30 data-[state=inactive]:bg-muted/50 data-[state=inactive]:text-muted-foreground data-[state=inactive]:border-border data-[state=inactive]:hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                                className="tnum inline-flex items-center gap-1.5 min-h-11 rounded-md px-3.5 text-sm font-semibold border cursor-pointer transition-colors data-[state=active]:bg-accent data-[state=active]:text-foreground data-[state=active]:border-brand data-[state=inactive]:bg-card data-[state=inactive]:text-muted-foreground data-[state=inactive]:border-border data-[state=inactive]:hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                             >
                                 {icon}
                                 {label}
@@ -561,7 +560,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
                     <div
                         role="group"
                         aria-label={t("library.shared.chipGroupLabel")}
-                        className="max-w-xl mx-auto flex flex-wrap items-center justify-center gap-2"
+                        className="max-w-3xl mx-auto flex flex-wrap items-center gap-2"
                     >
                         <span className="text-xs text-muted-foreground">{t("library.shared.chipGroupHeading")}</span>
                         {shared.chips.map(c => (
@@ -577,7 +576,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
                                     shared.toggle(c.id)
                                     if (turningOn) setTab(`${SHARED_TAB_PREFIX}${c.id}`)
                                 }}
-                                className="inline-flex items-center gap-1.5 min-h-11 rounded-full px-4 py-2 text-xs font-medium border border-dashed cursor-pointer transition-colors bg-muted/50 text-muted-foreground border-border hover:text-foreground aria-pressed:border-solid aria-pressed:bg-brand/15 aria-pressed:text-foreground aria-pressed:border-brand/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                                className="inline-flex items-center gap-1.5 min-h-11 rounded-md px-3.5 text-xs font-semibold border border-dashed cursor-pointer transition-colors bg-card text-muted-foreground border-border hover:text-foreground aria-pressed:border-solid aria-pressed:bg-accent aria-pressed:text-foreground aria-pressed:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                             >
                                 {c.label}
                                 <span className="text-muted-foreground">{t("library.shared.fromOwner", { owner: c.owner })}</span>
@@ -591,14 +590,14 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
                     full cross-tenant chart pool for authoring/binding. Off by
                     default (the library is host-org filtered). */}
                 {isAdmin && (
-                    <div className="mt-2 flex items-center justify-center">
+                    <div className="max-w-3xl mx-auto flex items-center">
                         <button
                             type="button"
                             role="switch"
                             aria-checked={allSites}
                             aria-label={t("library.allSites.label")}
                             onClick={() => setAllSites(v => !v)}
-                            className="inline-flex items-center gap-2 min-h-11 rounded-full px-4 py-2 text-xs font-medium border cursor-pointer transition-colors data-[state=on]:bg-brand/15 data-[state=on]:text-foreground data-[state=on]:border-brand/30 data-[state=on]:ring-1 data-[state=on]:ring-brand/30 data-[state=off]:bg-muted/50 data-[state=off]:text-muted-foreground data-[state=off]:border-border data-[state=off]:hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                            className="inline-flex items-center gap-2 min-h-11 rounded-md px-3.5 text-xs font-semibold border cursor-pointer transition-colors data-[state=on]:bg-accent data-[state=on]:text-foreground data-[state=on]:border-brand data-[state=off]:bg-card data-[state=off]:text-muted-foreground data-[state=off]:border-border data-[state=off]:hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                             data-state={allSites ? 'on' : 'off'}
                         >
                             <span className={cn("inline-block w-2 h-2 rounded-full", allSites ? "bg-brand" : "bg-muted-foreground/40")} />
@@ -609,7 +608,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
             </div>
 
             {/* File List */}
-            <ScrollArea className="flex-1 p-4" ref={scrollRootRef}>
+            <ScrollArea className="flex-1 min-h-0 px-4 pt-4" ref={scrollRootRef}>
                 {/*
                   C5C-003: render the skeleton while the store hasn't yet been
                   hydrated, regardless of whether a React Query fetch is
@@ -652,10 +651,12 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
                             `gap-2` the old grid supplied and is what gets
                             measured, so row height/spacing is unchanged. */}
                         <div
+                            className={combinedItems.length > 0 ? "border border-rule rounded-lg overflow-hidden bg-card" : undefined}
                             style={{
                                 height: `${rowVirtualizer.getTotalSize()}px`,
                                 width: '100%',
                                 position: 'relative',
+                                boxSizing: 'content-box',
                             }}
                         >
                             {rowVirtualizer.getVirtualItems().map(virtualRow => {

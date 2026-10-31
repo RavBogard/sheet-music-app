@@ -80,5 +80,7 @@
     "chartLoad.signIn": {"where": "Single-chart page error: sign-in button", "who": "signed-out visitors", "maxLength": 16},
     "chartLoad.back": {"where": "Single-chart page error: back button", "who": "everyone", "maxLength": 12},
     "chartLoad.library": {"where": "Single-chart page error: button to the chart library", "who": "signed-in band members", "maxLength": 12},
-    "chartLoad.loading": {"where": "Single-chart page: loading text under the spinner", "who": "everyone", "maxLength": 30}
+    "chartLoad.loading": {"where": "Single-chart page: loading text under the spinner", "who": "everyone", "maxLength": 30},
+    "status.updated": {"where": "Perform setlist view: status line under the setlist name, how fresh the setlist is", "who": "musicians and leaders", "maxLength": 30, "context": "{when} is a relative time such as '3 hours ago' (already translated)"},
+    "status.chartsOnDevice": {"where": "Perform setlist view: status line under the setlist name, how many of the setlist's charts are saved on this tablet for offline use", "who": "musicians and leaders", "maxLength": 34, "context": "{ready}/{total} are chart counts. 'this iPad' = the tablet the musician is holding"}
 }

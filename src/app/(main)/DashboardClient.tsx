@@ -262,21 +262,6 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
         return pastSetlists[0] || null
     }, [tonightSetlist, allSetlists])
 
-    const atmosphereClasses = useMemo(() => {
-        switch (greeting.atmosphere) {
-            case 'shabbat':
-                return 'from-amber-500/10 via-brand/5 to-transparent'
-            case 'holiday':
-                return 'from-yellow-500/10 via-brand/5 to-transparent'
-            case 'morning':
-                return 'from-brand/8 via-indigo-500/5 to-transparent'
-            case 'evening':
-                return 'from-brand/10 via-violet-900/8 to-transparent'
-            default:
-                return 'from-brand/5 to-transparent'
-        }
-    }, [greeting.atmosphere])
-
     const stagger = (n: number) =>
         shouldAnimate ? `dash-stagger dash-stagger-${n}` : ''
 
@@ -287,7 +272,9 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
                 ATMOSPHERIC HERO ZONE -- renders immediately,
                 no data dependency. Greeting is computed client-side.
                ══════════════════════════════════════════ */}
-            <div className={`bg-gradient-to-b ${atmosphereClasses} px-4 md:px-6 pt-4 pb-6`}>
+            {/* Web refresh (blend E): a plain light ground, no atmospheric
+                gradient; the greeting is the large head, the date its status line. */}
+            <div className="px-4 md:px-6 pt-5 pb-2">
                 <div className="max-w-2xl mx-auto w-full">
 
                     {/* Branding — v11.2-05-01 (BUG-6): host-resolved (flash-free,
@@ -305,37 +292,27 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
                                 alt={heroShortName}
                                 width={32}
                                 height={32}
-                                className="w-8 h-8 rounded-full border border-brand/20"
+                                className="w-8 h-8 rounded-full border border-rule"
                             />
                         ) : (
                             <OrgLogo logoUrl="" shortName={heroShortName} sizeClass="w-8 h-8" />
                         )}
-                        <span className="text-xs font-semibold text-brand/70 tracking-wider uppercase">
+                        <span className="text-sm font-bold text-foreground">
                             {heroShortName}
                         </span>
                     </div>
 
                     {/* Greeting */}
                     <div className="mb-5">
-                        <h1 className={cn(
-                            "text-[26px] font-bold tracking-tight leading-tight font-display",
-                            greeting.isSpecial
-                                ? "bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text"
-                                : "text-foreground"
-                        )}>
+                        <h1 className="text-[1.6rem] sm:text-[1.85rem] font-extrabold tracking-[-0.015em] leading-tight text-foreground">
                             {greeting.text}
-                            {greeting.isSpecial && (
-                                <span className="inline-block ms-2 text-lg align-middle opacity-80">
-                                    {greeting.atmosphere === 'shabbat' ? '\u2728' : '\uD83C\uDF89'}
-                                </span>
-                            )}
                         </h1>
-                        <p className="text-sm text-muted-foreground/80 mt-1 font-medium tracking-wide">
+                        <p className="text-sm text-muted-foreground mt-1 font-medium">
                             {greeting.hebrewDate.split(' ').map((part, i, arr) => (
                                 <span key={i}>
                                     {part}
                                     {i < arr.length - 1 && (i === arr.length - 2
-                                        ? <span className="mx-1.5 text-muted-foreground/40">{'\u00B7'}</span>
+                                        ? <span aria-hidden="true" className="mx-1.5 text-muted-foreground">{'\u00B7'}</span>
                                         : ' '
                                     )}
                                 </span>
@@ -350,14 +327,10 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
                     <div className="flex flex-col gap-4">
                         {!setlistsReady ? (
                             /* Skeleton card while loading — brand-tinted */
-                            <div className="rounded-2xl border border-brand/10 bg-card/50 p-5 space-y-3">
-                                <div className="flex items-center gap-2">
-                                    <div className="h-3 w-3 rounded-full bg-brand/15 animate-pulse" />
-                                    <div className="h-3 w-20 bg-brand/10 rounded animate-pulse" />
-                                </div>
-                                <div className="h-5 w-52 bg-brand/15 rounded animate-pulse" />
-                                <div className="h-3 w-32 bg-brand/10 rounded animate-pulse" />
-                                <div className="h-9 w-full bg-brand/10 rounded-xl animate-pulse mt-2" />
+                            <div className="rounded-lg border border-rule bg-card p-5 space-y-3">
+                                <div className="h-3 w-32 bg-muted rounded animate-pulse" />
+                                <div className="h-6 w-56 bg-muted rounded animate-pulse" />
+                                <div className="h-12 w-full bg-muted rounded-md animate-pulse mt-2" />
                             </div>
                         ) : tonightSetlist ? (
                             <NextServiceCard
@@ -378,7 +351,7 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
                             // v60-13-02 diagnostic surface — show the real reason
                             // setlists couldn't load instead of "No services scheduled yet"
                             // (which is misleading when a subscription error is the cause).
-                            <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-4 space-y-2">
+                            <div className="rounded-lg border border-destructive/30 bg-card p-4 space-y-2">
                                 <p className="text-sm font-semibold text-destructive">{t("dashboard.loadErrorTitle")}</p>
                                 <p className="text-xs text-muted-foreground break-words">{subscriptionError}</p>
                                 <p className="text-[10px] text-muted-foreground">{t("dashboard.loadErrorHint")}</p>
@@ -433,7 +406,7 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
                 {/* ── Recent Public Setlists (non-member / no upcoming) ── */}
                 {setlistsReady && !tonightSetlist && recentSetlists.length > 0 && (
                     <div className={cn("flex flex-col gap-2", stagger(3))}>
-                        <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                        <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-[0.08em] px-1">
                             {t("dashboard.recentSetlists")}
                         </h2>
                         {recentSetlists.slice(0, 4).map(s => (
@@ -447,7 +420,7 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
 
                 {/* ── Guest Sign-In ── */}
                 {!user && !authLoading && (
-                    <div className={cn("bg-card rounded-2xl p-5 text-center space-y-4 border border-border", stagger(4))}>
+                    <div className={cn("bg-card rounded-lg p-5 text-center space-y-4 border border-rule", stagger(4))}>
                         <QRSignIn />
                         <div className="flex items-center gap-3">
                             <div className="h-px flex-1 bg-border" />
@@ -456,7 +429,7 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
                         </div>
                         <Button
                             onClick={signIn}
-                            className="w-full h-11 rounded-xl font-semibold bg-primary text-primary-foreground hover:opacity-90"
+                            className="w-full h-12 rounded-md text-[15px] font-bold bg-primary text-primary-foreground hover:bg-primary/90"
                         >
                             {t("dashboard.signInWithGoogle")}
                         </Button>

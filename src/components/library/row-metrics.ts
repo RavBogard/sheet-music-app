@@ -15,17 +15,18 @@
  */
 
 /**
- * Estimated row height in px (content min-h-11 = 44px + py-1.5 ×2 = 12px,
- * plus the 8px inter-row gap the old `gap-2` grid provided). Only a seed for
+ * Estimated row height in px. Web refresh (blend E): rows are a hairline
+ * list with no gap — a title line (~22px) and a meta line (~18px) inside
+ * py-2 (16px), plus the 1px rule: 60px when nothing wraps. Only a seed for
  * the virtualizer — every mounted row is measured for real via
  * `measureElement`, so wrapped long titles keep their true height — but it is
  * exactly what the skeleton must draw, because the skeleton is what the
  * measurement replaces.
  */
-export const ROW_ESTIMATE_PX = 64
+export const ROW_ESTIMATE_PX = 60
 
-/** Matches the `gap-2` (0.5rem) the non-virtualized grid used between rows. */
-export const ROW_GAP_PX = 8
+/** No gap: rows sit on the 1px hairline grid (web refresh). */
+export const ROW_GAP_PX = 0
 
 /**
  * How many placeholder rows the skeleton draws.

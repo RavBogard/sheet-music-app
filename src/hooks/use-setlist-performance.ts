@@ -20,7 +20,7 @@ import {
 } from "@/lib/sync/snapshot-listener"
 import { Setlist, SetlistTrack, SetlistMusician } from "@/types/models"
 import { MusicianProfile } from "@/types/models"
-import { toISOString } from "@/lib/firestore-helpers"
+import { toDate, toISOString } from "@/lib/firestore-helpers"
 import { applyTonight, eventDayOf, overridesApply, type OverridesDoc, type WithTonight } from "@/lib/performance/tonight"
 import { subscribeTonight as defaultSubscribeTonight } from "@/lib/performance/tonight-client"
 import { useOrg } from "@/lib/org/org-context"
@@ -69,6 +69,8 @@ interface UseSetlistPerformanceReturn {
     setlistUpdatedSinceLoad: boolean
     /** Identifies the live version behind the strip (loop guard). */
     setlistLiveStamp: string | null
+    /** Web refresh: when the setlist was last changed (live doc, else the SSR frame). Display only. */
+    setlistUpdatedAt: Date | null
 }
 
 interface UseSetlistPerformanceOpts {
@@ -289,6 +291,8 @@ export function useSetlistPerformance(
         typeof liveVersion === "number"
             ? `v${liveVersion}`
             : toISOString(setlistData?.updatedAt as never)
+    const setlistUpdatedAt: Date | null =
+        toDate((setlistData?.updatedAt ?? initial?.setlist?.updatedAt) as never) ?? null
 
     // TONIGHT-ONLY SWAPS (David's ask 4, 2026-09-22). An additive layer over
     // the rows above: the overrides doc can only change the chart fields of
@@ -428,5 +432,6 @@ export function useSetlistPerformance(
         eventDate,
         setlistUpdatedSinceLoad,
         setlistLiveStamp,
+        setlistUpdatedAt,
     }
 }

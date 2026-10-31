@@ -109,5 +109,9 @@
         "back": "Back",
         "library": "Library",
         "loading": "Loading chart..."
+    },
+    "status": {
+        "updated": "Updated {when}",
+        "chartsOnDevice": "{ready}/{total} charts on this iPad"
     }
 }

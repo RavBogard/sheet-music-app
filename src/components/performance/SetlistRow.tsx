@@ -9,6 +9,7 @@ import type { UseLongPressBag } from "@/hooks/use-long-press"
 import type { WithTonight } from "@/lib/performance/tonight"
 import { useT } from "@/i18n/client"
 import { DirectionalIcon } from "@/components/i18n/DirectionalIcon"
+import { SECTION_BAND_CLASS, type SectionBand } from "@/components/setlist/grid/section-bands"
 
 export interface SetlistRowProps {
     track: WithTonight<SetlistTrack>
@@ -35,11 +36,12 @@ export interface SetlistRowProps {
      * means no Swap control at all (musicians, public iPads).
      */
     onSwapTap?: () => void
+    /** Web refresh: a header row's band (hue + the pages under it). */
+    band?: SectionBand
 }
 
 export function SetlistRow({
     track,
-    index,
     isCurrentPosition,
     defaultTransposition,
     isPublicView,
@@ -48,6 +50,7 @@ export function SetlistRow({
     onLeaderSetPosition,
     gestureHandlers,
     onSwapTap,
+    band,
 }: SetlistRowProps) {
     const t = useT()
     const isSong = !track.type || track.type === "song"
@@ -99,7 +102,7 @@ export function SetlistRow({
     const folioBadge = folio !== undefined ? (
         <span
             data-testid="folio"
-            className="shrink-0 w-16 text-end font-bold text-lg tabular-nums text-foreground"
+            className="tnum shrink-0 w-20 text-end text-[1.35rem] font-extrabold leading-none tracking-[-0.02em] whitespace-nowrap text-foreground"
         >
             {t("performSetlist.row.folio", { page: folio })}
         </span>
@@ -114,7 +117,7 @@ export function SetlistRow({
             {honors.map((h, i) => (
                 <li key={`${h.name}-${i}`} className="flex items-center gap-1.5 text-sm">
                     <User className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
-                    <span className="text-foreground truncate">{h.name}</span>
+                    <span className="text-foreground font-medium truncate">{h.name}</span>
                     {h.note && (
                         <span className="text-muted-foreground truncate">— {h.note}</span>
                     )}
@@ -126,7 +129,7 @@ export function SetlistRow({
     const outlineDetail = (
         <>
             {outlinePerformer && (
-                <p className="text-sm text-blue-700 dark:text-blue-400 truncate mt-0.5">
+                <p className="text-sm font-medium text-brand truncate mt-0.5">
                     {outlinePerformer}
                 </p>
             )}
@@ -142,7 +145,7 @@ export function SetlistRow({
     )
 
     const headerExtra = (folio !== undefined || honors.length > 0) ? (
-        <div className="flex items-center gap-2 px-4 pb-1">
+        <div className="flex items-center gap-2 px-4 py-1.5 bg-card border-b border-rule">
             {honors.length > 0 && (
                 <span className="flex items-center gap-1.5 text-sm min-w-0">
                     <User className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
@@ -170,13 +173,28 @@ export function SetlistRow({
     // <button> so the whole row is a ≥44px tap target with native keyboard
     // activation. Musicians see a plain, non-interactive label.
     if (isHeader) {
+        // Web refresh: a full-hue band carrying the running head and the
+        // pages of the rows under it, the same band the editor draws.
+        const sectionPages =
+            band?.folioFrom === undefined || band.folioTo === undefined
+                ? null
+                : band.folioFrom === band.folioTo
+                  ? t("setlistGrid.sectionPage", { page: band.folioFrom })
+                  : t("setlistGrid.sectionPages", { from: band.folioFrom, to: band.folioTo })
+        const bandClass = cn(
+            "flex items-center gap-3 px-4 py-2.5 min-h-11 w-full text-start mt-4 first:mt-0",
+            SECTION_BAND_CLASS[band?.hue ?? "blue"],
+        )
         const headerInner = (
             <>
-                <div className="h-px flex-1 bg-brand/10" />
-                <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
+                <span className="flex-1 min-w-0 truncate text-sm font-extrabold uppercase tracking-[0.08em]">
                     {track.title}
                 </span>
-                <div className="h-px flex-1 bg-brand/10" />
+                {sectionPages && (
+                    <span data-testid="perform-section-pages" className="tnum shrink-0 text-sm font-bold tracking-[0.04em]">
+                        {sectionPages}
+                    </span>
+                )}
             </>
         )
         if (isLeader) {
@@ -185,7 +203,11 @@ export function SetlistRow({
                     <button
                         type="button"
                         onClick={handleClick}
-                        className="flex items-center gap-3 px-4 min-h-11 w-full text-start my-1 cursor-pointer"
+                        data-section-hue={band?.hue}
+                        className={cn(
+                            bandClass,
+                            "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                        )}
                     >
                         {headerInner}
                     </button>
@@ -195,7 +217,7 @@ export function SetlistRow({
         }
         return (
             <>
-                <div className="flex items-center gap-3 px-4 py-1.5 my-1">
+                <div className={bandClass} data-section-hue={band?.hue}>
                     {headerInner}
                 </div>
                 {headerExtra}
@@ -207,7 +229,7 @@ export function SetlistRow({
     const songContent = isSong ? (
         <div className="flex-1 min-w-0">
             <div className="flex items-baseline gap-2">
-                <span className="font-semibold text-lg text-foreground truncate shrink min-w-0">
+                <span className="font-bold text-[1.2rem] leading-snug text-foreground truncate shrink min-w-0">
                     {title}
                 </span>
                 {displayKey && (
@@ -217,7 +239,7 @@ export function SetlistRow({
                     // L 0.985 → ~6.5:1 AA. Dark: bg L 0.55 vs fg L 0.97 → ~5.5:1 AA.
                     <span
                         data-testid="key-badge"
-                        className="font-mono text-sm font-bold px-2 py-0.5 bg-brand text-brand-foreground rounded-lg shrink-0 text-center"
+                        className="tnum shrink-0 inline-flex items-center justify-center min-w-[2.75rem] h-8 px-2 self-center rounded-md border border-border bg-secondary text-base font-bold text-secondary-foreground"
                     >
                         {displayKey}
                     </span>
@@ -226,13 +248,13 @@ export function SetlistRow({
                     // text-amber-800 in light mode (text-amber-300 fails WCAG AA
                     // contrast on the light-theme row backgrounds — axe color-
                     // contrast, ~1.1:1); dark mode keeps the vivid amber-300.
-                    <span className="text-xs text-amber-800 dark:text-amber-300 truncate max-w-[200px] md:max-w-[300px] shrink">
+                    <span className="text-sm font-medium text-caution truncate max-w-[200px] md:max-w-[300px] shrink">
                         {track.notes}
                     </span>
                 )}
                 <span className="flex-1" />
                 {track.bpm && (
-                    <span className="text-xs text-muted-foreground tabular-nums shrink-0">
+                    <span className="tnum text-xs text-muted-foreground shrink-0">
                         {t("performSetlist.row.bpm", { bpm: track.bpm })}
                     </span>
                 )}
@@ -245,7 +267,7 @@ export function SetlistRow({
                 // text-blue-700 in light mode (text-blue-400 fails WCAG AA
                 // contrast on the light-theme row backgrounds — axe color-
                 // contrast, 2.18:1); dark mode keeps the lighter blue-400.
-                <p className="text-sm text-blue-700 dark:text-blue-400 truncate mt-0.5">
+                <p className="text-sm font-medium text-brand truncate mt-0.5">
                     {track.leadMusician || track.performer}
                 </p>
             )}
@@ -261,7 +283,7 @@ export function SetlistRow({
         <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2.5 min-w-0">
                 <FileMusic className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
-                <span className="text-base text-foreground truncate min-w-0">{title}</span>
+                <span className="text-[1.05rem] font-semibold text-foreground truncate min-w-0">{title}</span>
                 <span className="flex-1" />
                 {/* P4-5: the chevron draws BEFORE the folio, so the badge is the
                     last element on every row type's line and its fixed w-16
@@ -291,10 +313,12 @@ export function SetlistRow({
         </div>
     )
 
+    // Web refresh: white rows on the 1px hairline grid (no zebra), tall
+    // enough (py-3.5 around a 1.2rem title) to hit standing at arm's length. The current position is a
+    // tinted row with an inset ring; `data-current` carries it for tests.
     const rowClasses = cn(
-        "flex items-center px-4 py-3 transition-colors",
-        isCurrentPosition && "bg-brand/20 border-s-4 border-brand",
-        !isCurrentPosition && isSong && (index % 2 === 0 ? "bg-amber-500/[0.10]" : "bg-brand/[0.12]")
+        "flex items-center px-4 py-3.5 border-b border-rule transition-colors",
+        isCurrentPosition ? "bg-accent ring-2 ring-inset ring-brand" : "bg-card",
         // Passive non-song labels are de-emphasized via the muted *title color*
         // (songContent's text-muted-foreground span), NOT row opacity. opacity-60
         // composited the muted text below WCAG AA on the light theme (axe color-
@@ -304,7 +328,7 @@ export function SetlistRow({
     // Non-interactive rows
     if (!isInteractive) {
         return (
-            <div className={cn(rowClasses, "cursor-default")}>
+            <div className={cn(rowClasses, "cursor-default")} data-current={isCurrentPosition || undefined}>
                 {songContent}
             </div>
         )
@@ -329,6 +353,7 @@ export function SetlistRow({
             data-testid="perform-row"
             data-row-id={track.id}
             data-file-id={track.fileId ?? ""}
+            data-current={isCurrentPosition || undefined}
             aria-label={openableNonSong ? t("performSetlist.row.openChart", { songTitle: title }) : undefined}
             onClick={composedClick}
             onKeyDown={(e) => {
@@ -351,7 +376,7 @@ export function SetlistRow({
                 rowClasses,
                 "min-h-11",
                 hasFile
-                    ? "cursor-pointer hover:bg-muted/50 active:bg-muted/70"
+                    ? "cursor-pointer hover:bg-accent/60 active:bg-accent"
                     : "cursor-default"
             )}
         >
@@ -359,7 +384,7 @@ export function SetlistRow({
                 <div className="flex-1 min-w-0">
                     {songContent}
                     {/* Everyone sees that tonight differs from the plan. */}
-                    <p data-testid="tonight-note" className="text-xs text-amber-800 dark:text-amber-300 truncate mt-0.5">
+                    <p data-testid="tonight-note" className="text-sm font-semibold text-warning-line truncate mt-0.5">
                         {t("performSetlist.row.tonightPlanned", { plannedTitle: displayChartTitle(track.tonight.plannedTitle) })}
                     </p>
                 </div>
@@ -371,7 +396,7 @@ export function SetlistRow({
 
     if (!onSwapTap) return rowEl
     return (
-        <div className="flex items-stretch">
+        <div className="flex items-stretch bg-card">
             <div className="flex-1 min-w-0">{rowEl}</div>
             <button
                 type="button"
@@ -381,9 +406,9 @@ export function SetlistRow({
                     e.stopPropagation()
                     onSwapTap()
                 }}
-                className="shrink-0 w-14 min-h-11 flex flex-col items-center justify-center gap-0.5 text-[10px] font-semibold text-muted-foreground hover:bg-muted active:bg-muted/80 border-s border-border/40 [touch-action:manipulation]"
+                className="shrink-0 w-16 min-h-11 flex flex-col items-center justify-center gap-0.5 text-xs font-semibold text-muted-foreground hover:bg-accent hover:text-foreground active:bg-accent border-s border-b border-rule cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring [touch-action:manipulation]"
             >
-                <Replace className="h-4 w-4" aria-hidden="true" />
+                <Replace className="h-5 w-5" aria-hidden="true" />
                 {t("performSetlist.row.swap")}
             </button>
         </div>

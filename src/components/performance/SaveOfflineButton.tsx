@@ -12,6 +12,10 @@ import { useT } from "@/i18n/client"
 interface Props {
     /** Song-track fileIds for this setlist (cacheable charts). */
     fileIds: string[]
+    /** Web refresh: reports how many of this setlist's charts are on this
+     *  device, so the head row's status line can say "N/M charts on this
+     *  iPad". Read-only; it changes nothing about caching. */
+    onReadyChange?: (ready: number, total: number) => void
 }
 
 type Phase = "idle" | "saving"
@@ -39,7 +43,7 @@ type Phase = "idle" | "saving"
  * amber = attention (partially cached — tap to finish). Color is never the
  * only signal — the icon (Download → spinner → Check) changes too.
  */
-export function SaveOfflineButton({ fileIds }: Props) {
+export function SaveOfflineButton({ fileIds, onReadyChange }: Props) {
     const t = useT()
     // Dedupe + drop pseudo (`flow-`) items and falsy ids; `prefetchSetlistPDFs`
     // guards these too, but the count/fraction must reflect only real charts.
@@ -68,6 +72,10 @@ export function SaveOfflineButton({ fileIds }: Props) {
             return 0
         }
     }, [cacheable])
+
+    useEffect(() => {
+        onReadyChange?.(readyCount, total)
+    }, [onReadyChange, readyCount, total])
 
     // Idle-time auto-precache on entry. Online-only, best-effort, non-blocking.
     // Re-runs only when the setlist's cacheable set changes (sig), guarded by a
@@ -199,9 +207,9 @@ export function SaveOfflineButton({ fileIds }: Props) {
     // contrast, 1.6:1 on the "Saved" state); green-700 was marginal (4.46:1 on
     // prod), green-800 clears at 6.43:1. Dark mode keeps the vivid shades.
     const accent = allReady
-        ? "text-green-800 dark:text-green-400"
+        ? "text-success"
         : partial
-          ? "text-amber-800 dark:text-amber-400"
+          ? "text-caution"
           : "text-muted-foreground"
 
     // WS-13 (v11.6-03-02): the all-ready state shows the explicit N/N count
@@ -241,7 +249,7 @@ export function SaveOfflineButton({ fileIds }: Props) {
             ) : (
                 <Download className="h-4 w-4" />
             )}
-            <span className="text-xs hidden sm:inline" aria-live="polite">
+            <span className="tnum text-xs font-semibold hidden sm:inline" aria-live="polite">
                 {label}
             </span>
         </Button>

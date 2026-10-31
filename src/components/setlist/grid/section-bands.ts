@@ -1,4 +1,10 @@
-import type { LocalTrack } from '@/lib/local/types'
+/** The fields the bands read. Editor rows (LocalTrack) and Perform rows (SetlistTrack) both fit. */
+export interface BandRow {
+    id?: string
+    type?: string
+    title?: string
+    liturgyRef?: unknown
+}
 
 /**
  * Web refresh (blend E): section header rows draw as full-hue bands that
@@ -13,6 +19,14 @@ export type SectionHue = 'green' | 'oxblood' | 'ochre' | 'blue'
 /** Hue order used when a header's name is not a known section. */
 export const HUE_CYCLE: readonly SectionHue[] = ['green', 'oxblood', 'ochre', 'blue']
 
+/** Full-hue band classes. Each hue carries its own ink. Shared by the editor and Perform. */
+export const SECTION_BAND_CLASS: Record<SectionHue, string> = {
+    green: 'bg-section-green text-section-green-foreground',
+    oxblood: 'bg-section-oxblood text-section-oxblood-foreground',
+    ochre: 'bg-section-ochre text-section-ochre-foreground',
+    blue: 'bg-section-blue text-section-blue-foreground',
+}
+
 export interface SectionBand {
     hue: SectionHue
     /** Lowest and highest printed page among the rows in this section. */
@@ -20,7 +34,7 @@ export interface SectionBand {
     folioTo?: number
 }
 
-export function isSectionRow(track: { [key: string]: unknown }): boolean {
+export function isSectionRow(track: { type?: unknown }): boolean {
     const type = track.type as string | undefined
     return type === 'header' || type === 'section'
 }
@@ -53,7 +67,7 @@ export function hueForSectionName(name: string): SectionHue | null {
 }
 
 /** Row id → band, for every section header row in `tracks`. */
-export function sectionBands(tracks: readonly LocalTrack[]): Record<string, SectionBand> {
+export function sectionBands(tracks: readonly BandRow[]): Record<string, SectionBand> {
     const out: Record<string, SectionBand> = {}
     let headerIndex = 0
     let current: SectionBand | null = null
@@ -64,7 +78,7 @@ export function sectionBands(tracks: readonly LocalTrack[]): Record<string, Sect
                 HUE_CYCLE[headerIndex % HUE_CYCLE.length]
             headerIndex += 1
             current = { hue }
-            out[track.id] = current
+            if (track.id) out[track.id] = current
             continue
         }
         const folio = (track.liturgyRef as { folio?: unknown } | undefined)?.folio
