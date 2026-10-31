@@ -527,10 +527,14 @@ describe("MCP chart-upload tools (emulator)", () => {
             fileBase64: b64("%PDF-1.4 dup"),
             mimeType: "application/pdf",
         })
+        // Bet 2: the refusal names the match and offers revisionOf before force.
         expect(exactBlocked).toMatchObject({
             ok: false,
-            error: { message: expect.stringContaining("force: true") },
+            error: { machine_code: "duplicate_detected_in_library" },
+            matches: [expect.objectContaining({ fileId: first.fileId })],
+            hint: expect.stringContaining("force: true"),
         })
+        expect((exactBlocked as unknown as { hint: string }).hint).toContain(`revisionOf:'${first.fileId}'`)
         const exactForced = (await uploadChart(ADMIN, {
             title: "Adon Olam",
             fileBase64: b64("%PDF-1.4 dup-forced"),
@@ -538,6 +542,35 @@ describe("MCP chart-upload tools (emulator)", () => {
             force: true,
         })) as { ok: true; fileId: string }
         expect(exactForced.ok).toBe(true)
+    })
+
+    it("revisionOf files a new version past the dedupe and archives the old one (bet 2)", async () => {
+        const first = (await uploadChart(ADMIN, {
+            title: "Hashkivenu band chart",
+            fileBase64: b64("%PDF-1.4 v1"),
+            mimeType: "application/pdf",
+        })) as { ok: true; fileId: string }
+        expect(first.ok).toBe(true)
+        const second = (await uploadChart(ADMIN, {
+            title: "Hashkivenu band chart v2",
+            fileBase64: b64("%PDF-1.4 v2"),
+            mimeType: "application/pdf",
+            revisionOf: first.fileId,
+        })) as { ok: true; fileId: string; revision: { revisionOf: string; previousArchived: boolean } }
+        expect(second.ok).toBe(true)
+        expect(second.revision).toMatchObject({ revisionOf: first.fileId, previousArchived: true })
+        const oldRow = (await db().collection("library_index").doc(first.fileId).get()).data()!
+        expect(oldRow).toMatchObject({ status: "archived", supersededBy: second.fileId })
+        const newRow = (await db().collection("library_index").doc(second.fileId).get()).data()!
+        expect(newRow).toMatchObject({ lineageId: first.fileId, supersedes: first.fileId, partGroup: oldRow.partGroup })
+
+        const ghost = await uploadChart(ADMIN, {
+            title: "Something else",
+            fileBase64: b64("%PDF-1.4 x"),
+            mimeType: "application/pdf",
+            revisionOf: "no-such-chart",
+        })
+        expect(ghost).toMatchObject({ ok: false, error: { machine_code: "row_not_found" } })
     })
 
     it("library_index entries carry normalizedName for prefix range queries (G-5)", async () => {

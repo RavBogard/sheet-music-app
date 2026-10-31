@@ -58,8 +58,9 @@ Single-row changes need no stage: use \`update_track\` or
 
 Before you hand a setlist back, run \`verify_setlist_charts\` and go through
 any row you committed at low confidence with the author. To fix a row, use
-\`update_track\`, or \`swap_chart\` to refresh its title and key from the new
-chart.
+\`update_track\`, or \`swap_chart\` to refresh its title from the new chart.
+On a chart change the row keeps a played key the author gave; otherwise it
+takes the new chart's written key. Say \`keyChanged\` ("key now D, was E").
 
 Nothing needs publishing. A setlist is live as soon as it exists, and
 everything downstream selects by date. Never tell the author a setlist needs
@@ -72,6 +73,10 @@ publishing.
   'commit' with bondTo, only on the author's word. Revise with
   revisionOf:<fileId>. Never ask the author to upload what you wrote.
 - A Drive folder the author already has: \`import_drive_folder\`.
+- A new version of a library chart (a revised PDF, "v2"): pass
+  revisionOf:<the old fileId> to the intake you use. Upcoming setlists move to
+  it; past setlists keep the chart they had. When a duplicate refusal lists
+  \`matches\`, offer revisionOf before force.
 - Never ask anyone to paste a file into the chat for upload.
 
 When in doubt, stage with \`propose_setlist_changes\` rather than writing
@@ -138,8 +143,9 @@ Single-row changes need no stage: use \`update_track\` or
 
 Before you hand a setlist back, run \`verify_setlist_charts\` and go through
 any row you committed at low confidence with the author. To fix a row, use
-\`update_track\`, or \`swap_chart\` to refresh its title and key from the new
-chart.
+\`update_track\`, or \`swap_chart\` to refresh its title from the new chart.
+On a chart change the row keeps a played key the author gave; otherwise it
+takes the new chart's written key. Say \`keyChanged\` ("key now D, was E").
 
 Nothing needs publishing. A setlist is live as soon as it exists, and
 everything downstream selects by date. Never tell the author a setlist needs
@@ -154,6 +160,10 @@ publishing.
 - Chart files from any device: \`get_chart_inbox\`, hand the author the Drive
   folder link, then \`sync_chart_inbox\` once the files are in.
 - A Drive folder the author already has: \`import_drive_folder\`.
+- A new version of a library chart (a revised PDF, "v2"): pass
+  revisionOf:<the old fileId> to the intake you use. Upcoming setlists move to
+  it; past setlists keep the chart they had. When a duplicate refusal lists
+  \`matches\`, offer revisionOf before force.
 - Never ask anyone to paste a file into the chat for upload.
 
 When in doubt, stage with \`propose_setlist_changes\` rather than writing

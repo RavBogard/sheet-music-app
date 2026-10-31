@@ -26,6 +26,7 @@ import { reconcileLibrary } from "./reconcile-library"
 import { salvageChartBytes } from "./salvage-chart-bytes"
 import { backfillHealMetadata } from "./backfill-heal-metadata"
 import { backfillTrackMimetype } from "./backfill-track-mimetype"
+import { backfillChartLineage } from "./backfill-chart-lineage"
 import { backfillLibrarySettingParts } from "./backfill-setting-parts"
 import { backfillLibraryKeys } from "./backfill-library-keys"
 import { archiveNonChartArtifacts } from "./archive-nonchart-artifacts"
@@ -1919,7 +1920,7 @@ export function registerWriteTools(server: McpServer): void {
         "update_track",
         {
             description:
-                "Update one track's metadata on a setlist (key, vocal lead, title, notes, type, bonded songId, referenceLink) and optionally move it to a new position. Preserves trackId — unlike remove+add — so external references stay valid. Only fields you pass in `patch` get updated; omitted fields are untouched. Pass `position` to move the row in place (closes the 'must call reorder_setlist with the full ordered id list to move one row' gap). Re-bonding: passing a new `songId` updates `fileId` automatically (the library is keyed by Drive file id). Unbonding: pass `songId: null` to clear the chart (songId + fileId + fileName) while keeping the row, its title/key/position/notes, and dropping the chart from the setlist's fileIds aggregate — no need to delete + re-add a free-text row. Returns the post-update row. Admins and band leaders only. Every successful write bumps the setlist's `version` and echoes the row back; chain the returned `version` into the next call's `lastSeenVersion` rather than re-reading a stale get_setlist value. Pass `lastSeenVersion` (the track's `version` from your last get_setlist) for W-04 optimistic concurrency: rejects with `{error: 'stale_version', currentVersion, ...}` if another writer changed THIS track first, or `{error: 'track_not_found', setlistVersion, ...}` if the row was deleted out from under you. BINDS ON TYPE: when the setlist names a `book` with a liturgy lookup (crc-friday, crc-saturday) and the row can name a moment (song/prayer/reading/transition), the title is matched against Daniel's confirmed spellings and the row's `liturgyRef` is written automatically — reported back as `liturgy.bound`. An ambiguous or merely plausible title writes NOTHING and comes back as `liturgy.suggestions` for you to resolve; a row you pass an explicit `liturgyRef` for, or that already carries one, is never touched.",
+                "Update one track's metadata on a setlist (key, vocal lead, title, notes, type, bonded songId, referenceLink) and optionally move it to a new position. Preserves trackId — unlike remove+add — so external references stay valid. Only fields you pass in `patch` get updated; omitted fields are untouched. Pass `position` to move the row in place (closes the 'must call reorder_setlist with the full ordered id list to move one row' gap). Re-bonding: passing a new `songId` updates `fileId` automatically (the library is keyed by Drive file id). KEY RULE on a chart change (same as swap_chart): the row keeps its played key only when the author gave one (a `key` in this patch, or a row key that differs from the old chart's written key); otherwise it takes the new chart's written key. The response's `keyChanged: {from, to}` says what happened (null when the key stayed) — say it, e.g. \"key now D (was E)\". Unbonding: pass `songId: null` to clear the chart (songId + fileId + fileName) while keeping the row, its title/key/position/notes, and dropping the chart from the setlist's fileIds aggregate — no need to delete + re-add a free-text row. Returns the post-update row. Admins and band leaders only. Every successful write bumps the setlist's `version` and echoes the row back; chain the returned `version` into the next call's `lastSeenVersion` rather than re-reading a stale get_setlist value. Pass `lastSeenVersion` (the track's `version` from your last get_setlist) for W-04 optimistic concurrency: rejects with `{error: 'stale_version', currentVersion, ...}` if another writer changed THIS track first, or `{error: 'track_not_found', setlistVersion, ...}` if the row was deleted out from under you. BINDS ON TYPE: when the setlist names a `book` with a liturgy lookup (crc-friday, crc-saturday) and the row can name a moment (song/prayer/reading/transition), the title is matched against Daniel's confirmed spellings and the row's `liturgyRef` is written automatically — reported back as `liturgy.bound`. An ambiguous or merely plausible title writes NOTHING and comes back as `liturgy.suggestions` for you to resolve; a row you pass an explicit `liturgyRef` for, or that already carries one, is never touched.",
             inputSchema: {
                 setlistId: z.string().min(1).describe("Setlist id"),
                 trackId: z
@@ -1942,7 +1943,7 @@ export function registerWriteTools(server: McpServer): void {
         "swap_chart",
         {
             description:
-                "Atomically swap the chart bonded to one row — refreshes fileId + fileName + title + key from the new song's catalog record in a single call. Preserves leadMusician, notes, referenceLink, and position. Pass `syncMetadata: false` to leave title (NOTE-1 fallback) and key alone; default true means a clean swap. Use this instead of bare update_track({songId}) whenever the operator wants the row's display metadata to match the new chart.",
+                "Atomically swap the chart bonded to one row — refreshes fileId + fileName + title from the new song's catalog record in a single call. Preserves leadMusician, notes, referenceLink, and position. KEY RULE (same as update_track): the row keeps its played key only when the author gave one (a row key that differs from the old chart's written key); otherwise it takes the new chart's written key. Returns `keyChanged: {from, to}` (null when the key stayed) — say it, e.g. \"key now D (was E)\". Pass `syncMetadata: false` to leave title (NOTE-1 fallback) and key alone; default true means a clean swap. Use this instead of bare update_track({songId}) whenever the operator wants the row's display metadata to match the new chart.",
             inputSchema: {
                 setlistId: z.string().min(1).describe("Setlist id"),
                 trackId: z
@@ -1957,7 +1958,7 @@ export function registerWriteTools(server: McpServer): void {
                     .boolean()
                     .optional()
                     .describe(
-                        "If true (default), title + key are force-synced from the new song. If false, title falls back to NOTE-1 (only auto-refreshes when the row was using the OLD song's title) and key stays untouched.",
+                        "If true (default), the title is synced from the new song and the key follows the key rule. If false, title falls back to NOTE-1 (only auto-refreshes when the row was using the OLD song's title) and key stays untouched.",
                     ),
             },
         },
@@ -2673,6 +2674,26 @@ export function registerWriteTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await backfillLibrarySettingParts(uidFrom(extra), args, orgFrom(extra))),
+    )
+
+    server.registerTool(
+        "backfill_chart_lineage",
+        {
+            description:
+                "Admin / band_leader back-fill (bet 2): propose lineage links for obvious siblings that are really versions of one chart — active rows of your org with the same partGroup and instrument part once version markers ('v2', 'updated', 'DRAFT', '(updated PDF)', a date) are removed, differing only by those markers, chained oldest upload first. A group where two rows share one name, or a row has no upload time, is listed in `ambiguous` and never linked. F-05: `dryRun` defaults true and lists the pairs; a real run needs `dryRun: false, force: true`. A real run writes only `lineageId`, `supersedes`/`supersededBy` and the first version's `partGroup` on the later ones (a row changed during the run is left alone and counted), and moves standing choices to each chain's newest version. It archives nothing and changes no setlist; drafts recall the newest version from then on. Returns `{ok, dryRun, scanned, pairs: [{from, to, partGroup, lineageId}], ambiguous, skipped: {changedDuringRun}, standingMoved, failed}`.",
+            inputSchema: {
+                dryRun: z
+                    .boolean()
+                    .optional()
+                    .describe("When true (default), list the pairs without writing."),
+                force: z
+                    .boolean()
+                    .optional()
+                    .describe("Required with `dryRun: false` to write."),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await backfillChartLineage(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -3506,6 +3527,10 @@ const collectionSchema = z
         "Which library section to file the chart under. 'uploads' is the user-uploaded section (default). 'core' is the main CRC catalog — admins and band leaders may write to it. 'supplemental' is the Shireinu songbook and 'nava' is the Nava Tehila corpus — admins and band leaders may write to both. Musicians and canUpload-only callers should leave this unset or pass 'uploads'. NOTE: deleting from 'core', 'supplemental' or 'nava' still requires admin (delete_chart).",
     )
 
+/** Bet 2: one wording for `revisionOf` on every intake path. */
+const REVISION_OF_DESCRIPTION =
+    "The fileId of the library chart this file is a NEW VERSION of (a revised PDF, 'v2', 'updated'). The new chart joins that chart's lineage and partGroup; setlists dated today or later move to it with their played key and title kept, past setlists keep the old chart, standing choices and profiles follow, and the old chart is archived (still readable). Skips the name duplicate check. When a duplicate refusal lists `matches`, pass the right one here rather than force:true."
+
 export function registerChartUploadTools(server: McpServer): void {
     server.registerTool(
         "upload_chart",
@@ -3554,8 +3579,13 @@ export function registerChartUploadTools(server: McpServer): void {
                     .boolean()
                     .optional()
                     .describe(
-                        "Bypass duplicate detection (exact + fuzzy). Use when uploading a legitimate variant (different key, arrangement, or composer suffix) that's tripping a 'similar name' error. Default false.",
+                        "Bypass duplicate detection (exact + fuzzy). Use when uploading a legitimate variant (different key, arrangement, or composer suffix) that's tripping a 'similar name' error (a new version of the same chart takes revisionOf instead). Default false.",
                     ),
+                revisionOf: z
+                    .string()
+                    .min(1)
+                    .optional()
+                    .describe(REVISION_OF_DESCRIPTION),
             },
         },
         async (args, extra) =>
@@ -3600,8 +3630,13 @@ export function registerChartUploadTools(server: McpServer): void {
                     .boolean()
                     .optional()
                     .describe(
-                        "Bypass duplicate detection (exact + fuzzy). Use when importing a legitimate variant (different key, arrangement, or composer suffix) that's tripping a 'similar name' error. Default false.",
+                        "Bypass duplicate detection (exact + fuzzy). Use when importing a legitimate variant (different key, arrangement, or composer suffix) that's tripping a 'similar name' error (a new version of the same chart takes revisionOf instead). Default false.",
                     ),
+                revisionOf: z
+                    .string()
+                    .min(1)
+                    .optional()
+                    .describe(REVISION_OF_DESCRIPTION),
                 dryRun: z
                     .boolean()
                     .optional()
@@ -3681,8 +3716,13 @@ export function registerChartUploadTools(server: McpServer): void {
                     .boolean()
                     .optional()
                     .describe(
-                        "Bypass duplicate detection (exact + fuzzy). Use when the chart is a legitimate variant that's tripping a 'similar name' error. Ignored in heal mode (targetFileId).",
+                        "Bypass duplicate detection (exact + fuzzy). Use when the chart is a legitimate variant that's tripping a 'similar name' error (a new version of the same chart takes revisionOf instead). Ignored in heal mode (targetFileId).",
                     ),
+                revisionOf: z
+                    .string()
+                    .min(1)
+                    .optional()
+                    .describe(REVISION_OF_DESCRIPTION),
                 targetFileId: z
                     .string()
                     .optional()
@@ -3790,8 +3830,13 @@ export function registerChartUploadTools(server: McpServer): void {
                     .boolean()
                     .optional()
                     .describe(
-                        "Bypass duplicate detection (exact + fuzzy). Use when the chart is a legitimate variant tripping a 'similar name' error.",
+                        "Bypass duplicate detection (exact + fuzzy). Use when the chart is a legitimate variant tripping a 'similar name' error (a new version of the same chart takes revisionOf instead).",
                     ),
+                revisionOf: z
+                    .string()
+                    .min(1)
+                    .optional()
+                    .describe(REVISION_OF_DESCRIPTION),
             },
         },
         async (args, extra) =>
@@ -3865,8 +3910,13 @@ export function registerChartUploadTools(server: McpServer): void {
                     .boolean()
                     .optional()
                     .describe(
-                        "Bypass duplicate detection (exact + fuzzy). Use when saving a legitimate variant that's tripping a 'similar name' error. Default false.",
+                        "Bypass duplicate detection (exact + fuzzy). Use when saving a legitimate variant that's tripping a 'similar name' error (a new version of the same chart takes revisionOf instead). Default false.",
                     ),
+                revisionOf: z
+                    .string()
+                    .min(1)
+                    .optional()
+                    .describe(REVISION_OF_DESCRIPTION),
             },
         },
         async (args, extra) =>

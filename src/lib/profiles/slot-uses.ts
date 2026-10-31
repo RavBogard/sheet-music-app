@@ -6,6 +6,7 @@ import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import { isSongType } from "@/lib/setlist-track-count"
 import { serviceLabelFor, slotKeyFor } from "./keys"
 import { USUAL_WINDOW, type SlotUse } from "./tiers"
+import { currentVersionOf, MAX_LINEAGE_HOPS } from "@/lib/library/lineage-pure"
 
 /**
  * Setlist memory, release 2 — past uses of each slot, for tiers.
@@ -159,8 +160,11 @@ export function buildSlotUses(
             const slotKey = slotKeyFor(t, partGroupOf, { byTitle: f.byTitle !== false })
             if (seen.has(slotKey)) continue
             seen.add(slotKey)
-            let lib = library.get(t.fileId)
-            let fileId = t.fileId
+            // Bet 2: memory follows lineage. A chart with a newer version is
+            // recalled as its lineage's current version; the setlist itself
+            // keeps the exact chart it had.
+            let fileId = currentVersionOf(t.fileId, (id) => library.get(id))
+            let lib = library.get(fileId)
             let dead = false
             if (isDeadChart(lib)) {
                 // Recall the canonical chart when there is one; otherwise the dead chart is never filled.
@@ -209,9 +213,19 @@ export async function loadMemoryHistory(org: OrgId): Promise<{
     const { setlists, truncated } = await loadHistorySetlists(org, { asPerformed: true })
     const fileIds = setlists.flatMap((s) => s.tracks.map((t) => t.fileId).filter((x): x is string => !!x))
     const library = await loadLibraryLite(org, fileIds)
-    // An archived chart with a canonical twin recalls the twin: load those rows too.
-    const canon = [...library.values()].filter(isDeadChart).map((l) => l.canonicalFileId).filter((x): x is string => !!x && !library.has(x))
-    if (canon.length > 0) for (const [id, l] of await loadLibraryLite(org, canon)) library.set(id, l)
+    // Newer versions (bet 2) and the canonical twins of archived charts are
+    // recalled in their place: load those rows too, following each chain.
+    for (let round = 0; round < MAX_LINEAGE_HOPS; round++) {
+        const next = new Set<string>()
+        for (const l of library.values()) {
+            if (l.supersededBy && !library.has(l.supersededBy)) next.add(l.supersededBy)
+            if (isDeadChart(l) && l.canonicalFileId && !library.has(l.canonicalFileId)) next.add(l.canonicalFileId)
+        }
+        if (next.size === 0) break
+        const loaded = await loadLibraryLite(org, [...next])
+        if (loaded.size === 0) break
+        for (const [id, l] of loaded) library.set(id, l)
+    }
     return { setlists, library, truncated }
 }
 

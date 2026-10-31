@@ -8,7 +8,8 @@ import {
     processChartUpload,
     type LibraryCollection,
 } from "@/lib/library-upload"
-import { uploadFailureEnvelope } from "./library-upload"
+import { previousCollection, revisionTargetFor, uploadFailureEnvelope } from "./library-upload"
+import { applyRevision, type RevisionReport } from "@/lib/library/lineage"
 import {
     forbiddenRoleEnvelope,
     richError,
@@ -262,6 +263,11 @@ export interface FinalizeChartUploadArgs {
      * type. Used to re-supply bytes for pre-atomic-guard orphans.
      */
     targetFileId?: string
+    /**
+     * Bet 2: the fileId of the chart these bytes are a new version of (see
+     * upload_chart). Skips the name dedupe. Not allowed with targetFileId.
+     */
+    revisionOf?: string
 }
 
 export interface FinalizeChartUploadResult {
@@ -271,7 +277,8 @@ export interface FinalizeChartUploadResult {
     collection: LibraryCollection
     sizeBytes: number
     /** True when this finalize healed an existing orphan in place (targetFileId). */
-    healed?: boolean
+    healed?: boolean    /** Bet 2: what a `revisionOf` finalize moved and kept. */
+    revision?: RevisionReport
 }
 
 export async function finalizeChartUpload(
@@ -339,6 +346,15 @@ export async function finalizeChartUpload(
     // Auth was checked on init; re-check here so a role change between
     // init and finalize doesn't sneak through.
     if (!isUploadAllowed(roles)) return uploadForbidden(roles)
+    if (args.revisionOf?.trim() && args.targetFileId?.trim()) {
+        return richError(
+            "invalid_argument",
+            "revisionOf and targetFileId cannot be combined: heal mode writes onto an existing row, a revision files a new one.",
+            { fields: ["revisionOf", "targetFileId"] },
+        )
+    }
+    const previous = await revisionTargetFor(db, args.revisionOf, org, uid, roles)
+    if (previous && "error" in previous) return previous
     const limited = await checkUserRateLimit(uid, "upload", {
         bypass: isTrustedLeader(roles),
     })
@@ -475,13 +491,13 @@ export async function finalizeChartUpload(
         originalFileName: fileName,
         mimeType,
         title,
-        collection: (session.collection as LibraryCollection | undefined) ?? undefined,
+        collection: (session.collection as LibraryCollection | undefined) ?? previousCollection(previous),
         key: (session.key as string | undefined) ?? undefined,
         bpm: (session.bpm as number | undefined) ?? undefined,
         tags: (session.tags as string[] | undefined) ?? undefined,
         uploaderUid: uid,
         uploaderEmail: roles.email,
-        force: args.force,
+        force: args.force || !!previous,
         orgId: org,
     })
 
@@ -520,6 +536,9 @@ export async function finalizeChartUpload(
     // Multi-tenant P2: processChartUpload already stamped orgId; kept as a
     // no-op guard.
     await stampOrg(db, result.fileId, org)
+    const revision = previous
+        ? await applyRevision(uid, org, previous, result.fileId, { tool: "finalize_chart_upload" })
+        : undefined
 
     return {
         ok: true,
@@ -527,6 +546,7 @@ export async function finalizeChartUpload(
         title: result.title,
         collection: result.collection,
         sizeBytes: buffer.byteLength,
+        ...(revision ? { revision } : {}),
     }
 }
 
@@ -815,6 +835,11 @@ export interface CommitChunkedChartUploadArgs {
     uploadSessionId: string
     /** Bypass dedup (exact + fuzzy). Same semantic as upload_chart's force. */
     force?: boolean
+    /**
+     * Bet 2: the fileId of the chart these bytes are a new version of (see
+     * upload_chart). Skips the name dedupe. Not allowed with targetFileId.
+     */
+    revisionOf?: string
 }
 
 export async function commitChunkedChartUpload(
@@ -989,6 +1014,7 @@ export async function commitChunkedChartUpload(
         {
             uploadSessionId: args.uploadSessionId,
             force: args.force,
+            ...(args.revisionOf ? { revisionOf: args.revisionOf } : {}),
         },
         org,
     )

@@ -48,6 +48,7 @@ import {
 } from "@/lib/liturgy/bind-on-type"
 import type { LiturgyRef } from "@/lib/books/types"
 import { logger } from "@/lib/logger"
+import { chartChangeKey } from "@/lib/library/lineage-pure"
 import { isTestSetlist } from "@/types/models"
 import {
     WRITE_RECEIPTS_COLLECTION,
@@ -813,6 +814,41 @@ export async function addTrackToSetlist(
     return result
 }
 
+// ─── one key rule on a chart change (MCP-18) ───────────────────────────────
+
+async function readTrackRow(
+    db: FirebaseFirestore.Firestore,
+    trackId: string,
+): Promise<Record<string, unknown> | null> {
+    try {
+        const snap = await db.collection("tracks").doc(trackId).get()
+        return snap.exists ? ((snap.data() as Record<string, unknown>) ?? null) : null
+    } catch {
+        return null
+    }
+}
+
+/**
+ * The row's key after its chart changes: the author's key (passed now, or a
+ * played key that differs from the old chart's written key) is kept;
+ * otherwise the new chart's written key.
+ */
+async function chartChangeKeyFor(
+    row: Record<string, unknown> | null,
+    newWrittenKey: string | null | undefined,
+    explicitKey?: string | null,
+) {
+    const oldId =
+        (typeof row?.songId === "string" && row.songId) || (typeof row?.fileId === "string" && row.fileId) || null
+    const oldSong = oldId ? await getSongById(oldId) : null
+    return chartChangeKey({
+        rowKey: typeof row?.key === "string" ? row.key : null,
+        oldWrittenKey: oldSong?.key ?? null,
+        newWrittenKey: newWrittenKey ?? null,
+        ...(explicitKey !== undefined ? { explicitKey } : {}),
+    })
+}
+
 // ─── update_track (CF1) ─────────────────────────────────────────────────────
 
 export interface UpdateTrackArgs {
@@ -828,7 +864,13 @@ export async function updateSetlistTrack(
     args: UpdateTrackArgs,
     org: OrgId = DEFAULT_ORG_ID,
 ): Promise<
-    | { ok: true; track: Record<string, unknown>; liturgy?: { bound?: LiturgyRef; suggestions?: LiturgySuggestion[] } }
+    | {
+          ok: true
+          track: Record<string, unknown>
+          liturgy?: { bound?: LiturgyRef; suggestions?: LiturgySuggestion[] }
+          /** Present on a chart change: the row's key before and after, or null when it stayed. */
+          keyChanged?: { from: string | null; to: string | null } | null
+      }
     | RichErrorEnvelope
     | ToolEnvelopeError
 > {
@@ -855,6 +897,8 @@ export async function updateSetlistTrack(
     // lookup; bringing update_track to parity closes the orphan-manufacture
     // hole the chart-health gates downstream were designed to defend against.
     // bulk_update_tracks shares the same gap but is left for a separate pass.
+    let keyChanged: { from: string | null; to: string | null } | null | undefined
+    let ruledKey: string | null | undefined
     if (typeof args.patch.songId === "string" && args.patch.songId.trim()) {
         const newSong = await getSongById(args.patch.songId)
         if (!newSong)
@@ -864,6 +908,13 @@ export async function updateSetlistTrack(
                 { songId: args.patch.songId },
                 "Verify the songId via search_library / list_library before re-bonding.",
             )
+        // MCP-18: a chart change follows the same key rule as swap_chart.
+        const row = await readTrackRow(db, args.trackId)
+        if (row && row.songId !== args.patch.songId && row.fileId !== args.patch.songId) {
+            const rule = await chartChangeKeyFor(row, newSong.key, args.patch.key)
+            keyChanged = rule.keyChanged
+            if (args.patch.key === undefined && rule.keyChanged) ruledKey = rule.key
+        }
     }
 
     // BIND ON TYPE (round 3, item 5) — a RENAME is the other moment a row can
@@ -876,6 +927,7 @@ export async function updateSetlistTrack(
     // Re-deciding it here would silently move a number on a lectern sheet.
     let liturgy: { bound?: LiturgyRef; suggestions?: LiturgySuggestion[] } | undefined
     const patch = { ...args.patch }
+    if (ruledKey !== undefined) patch.key = ruledKey ?? undefined
     if (typeof patch.title === "string" && patch.title.trim() && !patch.liturgyRef) {
         const snap = await db.collection("tracks").doc(args.trackId).get()
         const existing = (snap.data() as Record<string, unknown>) ?? {}
@@ -930,7 +982,13 @@ export async function updateSetlistTrack(
         },
         args.lastSeenVersion,
     )
-    if (result.ok) return { ok: true, track: result.track, ...(liturgy ? { liturgy } : {}) }
+    if (result.ok)
+        return {
+            ok: true,
+            track: result.track,
+            ...(liturgy ? { liturgy } : {}),
+            ...(keyChanged !== undefined ? { keyChanged } : {}),
+        }
     if ("kind" in result) return result.envelope
     return richError(
         "update_track_failed",
@@ -953,6 +1011,11 @@ export interface SwapChartArgs {
      * the row was using the old song's catalog title); key is untouched.
      */
     syncMetadata?: boolean
+    /**
+     * Internal (chart revisions, never on the MCP schema): keep the row's own
+     * title even when it was the old chart's catalog title.
+     */
+    keepTitle?: boolean
 }
 
 /**
@@ -970,7 +1033,7 @@ export async function swapChart(
     args: SwapChartArgs,
     org: OrgId = DEFAULT_ORG_ID,
 ): Promise<
-    | { ok: true; track: Record<string, unknown> }
+    | { ok: true; track: Record<string, unknown>; keyChanged: { from: string | null; to: string | null } | null }
     | RichErrorEnvelope
     | ToolEnvelopeError
 > {
@@ -1018,11 +1081,19 @@ export async function swapChart(
     // syncMetadata is on, since updateTrack's NOTE-1 path won't override
     // a customized title without an explicit patch.title.
     const patch: UpdateTrackPatch = { songId: args.newSongId }
+    const row = await readTrackRow(db, args.trackId)
+    let keyChanged: { from: string | null; to: string | null } | null = null
     if (syncMetadata) {
         patch.title = newSong.title
-        if (newSong.key !== undefined) patch.key = newSong.key
+        // MCP-18: one key rule with update_track — keep the played key only
+        // when the author gave one, else take the new chart's written key.
+        const rule = await chartChangeKeyFor(row, newSong.key)
+        if (rule.keyChanged) patch.key = rule.key ?? undefined
+        keyChanged = rule.keyChanged
         // F-017 — sync tempo alongside key so a swap leaves a coherent row.
         if (newSong.bpm !== undefined) patch.bpm = newSong.bpm
+    } else if (args.keepTitle && row && typeof row.title === "string" && row.title.trim()) {
+        patch.title = row.title
     }
 
     const result = await updateTrack(
@@ -1040,7 +1111,7 @@ export async function swapChart(
             }
         },
     )
-    if (result.ok) return { ok: true, track: result.track }
+    if (result.ok) return { ok: true, track: result.track, keyChanged }
     // swap_chart doesn't pass lastSeenVersion, so stale_version can't fire;
     // track_not_found still can. Cycle-2 REG-001b: pass the rich envelope
     // straight through — the wrapper type now includes ToolEnvelopeError.
