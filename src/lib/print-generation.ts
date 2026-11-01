@@ -1,6 +1,7 @@
 import { apiFetch } from "@/lib/api-client"
 import { plainT } from "@/i18n/plain"
 import { SetlistTrack } from "@/types/models"
+import type { Gig } from "@/lib/gig/model"
 
 export interface PrintTrackPayload {
     title: string
@@ -25,6 +26,14 @@ export interface PrintTrackPayload {
      *  packet needs this for the same reason the rabbi's sheet does. */
     liturgyRef?: { book: string; unitId?: string; folio: number }
     honors?: Array<{ name: string; note?: string }>
+    /** BET-5: a header row's id, sent only when the gig has set targets to match. */
+    id?: string
+    /** BET-5: the row's length in seconds; sent only when the row has one. */
+    durationSec?: number
+    /** BET-5: runs straight into the next song; sent only when true. */
+    segue?: boolean
+    /** BET-5: the key per singer; sent only when recorded. */
+    singerKeys?: Array<{ musician: string; key: string }>
 }
 
 export interface GeneratePrintPayload {
@@ -50,6 +59,10 @@ export interface GeneratePrintPayload {
     omitCover?: boolean
     tracks: PrintTrackPayload[]
     allowOmissions?: boolean
+    /** BET-5: the one-page show sheet (band tenants) instead of the packet. */
+    showSheet?: boolean
+    /** BET-5: the gig the show sheet and the cover's set totals read. */
+    gig?: Gig
 }
 
 export interface OmittedPrintChart {

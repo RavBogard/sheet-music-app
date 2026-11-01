@@ -183,5 +183,91 @@
         "where": "Print dialog: error when some charts could not go into the packet",
         "who": "leaders, musicians",
         "maxLength": 80
+    },
+    "showSheet.loadIn": {
+        "where": "Show sheet PDF (band tenants): load-in time in the header block",
+        "who": "musicians",
+        "maxLength": 20,
+        "context": "{time} is a 24-hour time like 17:00"
+    },
+    "showSheet.soundcheck": {
+        "where": "Show sheet PDF: soundcheck time",
+        "who": "musicians",
+        "maxLength": 24,
+        "context": "{time} is a 24-hour time"
+    },
+    "showSheet.show": {
+        "where": "Show sheet PDF: show start and end times",
+        "who": "musicians",
+        "maxLength": 24,
+        "context": "{start} and {end} are 24-hour times"
+    },
+    "showSheet.start": {
+        "where": "Show sheet PDF: show start time when no end time is set",
+        "who": "musicians",
+        "maxLength": 20,
+        "context": "{start} is a 24-hour time"
+    },
+    "showSheet.end": {
+        "where": "Show sheet PDF: show end time when no start time is set",
+        "who": "musicians",
+        "maxLength": 20,
+        "context": "{end} is a 24-hour time"
+    },
+    "showSheet.contact": {
+        "where": "Show sheet PDF: the venue contact (free text)",
+        "who": "musicians",
+        "maxLength": 60,
+        "context": "{contact} is free text typed by the leader"
+    },
+    "showSheet.columnSong": {
+        "where": "Show sheet PDF: song column heading",
+        "who": "musicians",
+        "maxLength": 12
+    },
+    "showSheet.columnKey": {
+        "where": "Show sheet PDF: key column heading",
+        "who": "musicians",
+        "maxLength": 6
+    },
+    "showSheet.columnSings": {
+        "where": "Show sheet PDF: column heading for who sings the song",
+        "who": "musicians",
+        "maxLength": 10
+    },
+    "showSheet.columnLength": {
+        "where": "Show sheet PDF: column heading for the song's length",
+        "who": "musicians",
+        "maxLength": 8
+    },
+    "showSheet.target": {
+        "where": "Show sheet PDF and gig packet cover: the set's target length",
+        "who": "musicians",
+        "maxLength": 16,
+        "context": "{target} is a length like 45:00"
+    },
+    "showSheet.over": {
+        "where": "Show sheet PDF and gig packet cover: how far a set runs past its target",
+        "who": "musicians",
+        "maxLength": 20,
+        "context": "{amount} is a length like 3:20"
+    },
+    "showSheet.untimed": {
+        "where": "Show sheet PDF and gig packet cover: songs in a set with no length",
+        "who": "musicians",
+        "maxLength": 16,
+        "context": "{count} is a number of songs"
+    },
+    "showSheet.gigTotal": {
+        "where": "Show sheet PDF and gig packet cover: the whole gig's running length",
+        "who": "musicians",
+        "maxLength": 20,
+        "context": "{total} is a length like 1:23:40"
+    },
+    "showSheet.more": {
+        "where": "Show sheet PDF: shown when a very long set list does not fit on the one page",
+        "who": "musicians",
+        "maxLength": 24,
+        "context": "{count} is a number of songs left off the page"
     }
 }

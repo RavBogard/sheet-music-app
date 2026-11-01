@@ -43,5 +43,24 @@
         "generateFailed": "Failed to generate PDF",
         "serverError": "Server error ({status})",
         "chartsOmitted": "Some charts could not be included in the packet."
+    },
+    "showSheet": {
+        "loadIn": "Load-in {time}",
+        "soundcheck": "Soundcheck {time}",
+        "show": "Show {start}–{end}",
+        "start": "Show {start}",
+        "end": "Ends {end}",
+        "contact": "Contact: {contact}",
+        "columnSong": "Song",
+        "columnKey": "Key",
+        "columnSings": "Sings",
+        "columnLength": "Length",
+        "target": "target {target}",
+        "over": "{amount} over",
+        "untimed_one": "{count} untimed",
+        "untimed_other": "{count} untimed",
+        "gigTotal": "Total {total}",
+        "more_one": "+{count} more song",
+        "more_other": "+{count} more songs"
     }
 }

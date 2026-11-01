@@ -88,6 +88,11 @@ import { SetlistRowsSkeleton } from './SetlistRowsSkeleton'
 import { SetlistGridTopBar } from './SetlistGridTopBar'
 import { SetlistMetaEditSheet } from './SetlistMetaEditSheet'
 import { SetlistFamilyHead } from '@/components/family/SetlistFamilyHead'
+import { GigPanel } from '@/components/setlist/gig/GigPanel'
+import { useOrg } from '@/lib/org/org-context'
+import { isBandTenant } from '@/lib/org/vocab'
+import { readGig } from '@/lib/gig/model'
+import { formatDuration, setTotalsByHeader, showsTiming } from '@/lib/gig/display'
 
 const EDITABLE_COL_IDS = [
     'type',
@@ -1618,6 +1623,27 @@ export function SetlistGrid({
     // David's ask 4: rows swapped for tonight in Perform show it here.
     const tonightTitles = useTonightTitles(setlistId, liveSetlist?.eventDate ?? null)
 
+    // BET-5 (band mode): a band tenant gets the gig line, row lengths, segues
+    // and singer keys. Any other tenant (CRC) sees lengths and set totals only
+    // once a row carries a length, so its screens are otherwise unchanged.
+    const isBand = isBandTenant(useOrg())
+    const gig = useMemo(() => readGig(liveSetlist?.gig), [liveSetlist?.gig])
+    const timing = !isLoading && showsTiming(isBand, rows)
+    const totals = useMemo(() => setTotalsByHeader(rows, gig), [rows, gig])
+    const metaSets = useMemo(
+        () =>
+            isBand
+                ? rows
+                      .filter((r) => r.type === 'header' || r.type === 'section')
+                      .map((r) => ({
+                          id: r.id,
+                          title: typeof r.title === 'string' ? r.title : '',
+                          targetMinutes: totals.byHeaderId[r.id]?.targetMinutes,
+                      }))
+                : undefined,
+        [isBand, rows, totals],
+    )
+
     // Web refresh: the status line under the title says, at a glance, how big
     // the service is, how many of its songs have a chart, and how fresh it is.
     const statusParts = useMemo(() => {
@@ -1631,9 +1657,10 @@ export function SetlistGrid({
             parts.push(t('setlist.songCount', { count: 0 }))
         }
         const updated = typeof liveSetlist?.updatedAt === 'number' ? liveSetlist.updatedAt : 0
+        if (timing && totals.seconds > 0) parts.push(t('gig.statusTotal', { total: formatDuration(totals.seconds) }))
         if (updated > 0) parts.push(t('setlistGrid.statusUpdated', { when: formatUpdatedWhen(fmt, updated) }))
         return parts
-    }, [isLoading, rows, liveSetlist?.updatedAt, t, fmt])
+    }, [isLoading, rows, liveSetlist?.updatedAt, t, fmt, timing, totals.seconds])
 
     return (
         <div
@@ -1648,6 +1675,7 @@ export function SetlistGrid({
                 onBack={onBack ?? (() => router.back())}
                 onEditMeta={() => setMetaSheetOpen(true)}
                 performHref={performOn ? `/perform/setlist/${setlistId}` : undefined}
+                gigSlot={isBand ? <GigPanel gig={gig} onEdit={() => setMetaSheetOpen(true)} /> : undefined}
             />
 
             <SetlistMetaEditSheet
@@ -1663,7 +1691,9 @@ export function SetlistGrid({
                             : undefined,
                     templateType:
                         liveSetlist?.templateType as Setlist['templateType'],
+                    gig,
                 }}
+                sets={metaSets}
             />
 
             <div className={cn(PAGE_WIDTH_CLASS, "pt-4 sm:pt-6 flex flex-col gap-6 flex-grow pb-40")}>
@@ -1715,6 +1745,9 @@ export function SetlistGrid({
                             )
                         }
                         onDeleteRow={(track) => void handleDeleteRow(track)}
+                        isBand={isBand}
+                        showTiming={timing}
+                        setTotalsByHeaderId={timing ? totals.byHeaderId : undefined}
                     />
                 )}
             </div>

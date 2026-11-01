@@ -30,6 +30,7 @@ import type { SectionBand } from './section-bands'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { isSectionRow, sectionBands } from './section-bands'
 import { computeReorderUpdates } from './SetlistGrid'
+import type { SetTotal } from '@/lib/gig/set-totals'
 
 export interface MobileCardListProps {
     setlistId: string
@@ -54,6 +55,12 @@ export interface MobileCardListProps {
     onDeleteRow: (track: LocalTrack) => void
     /** David's ask 4: row id → the chart swapped in for tonight. */
     tonightByRowId?: Record<string, string>
+    /** BET-5: a band tenant (segue toggle and singer keys on every song row). */
+    isBand?: boolean
+    /** BET-5: show the inline length field (band tenant, or any row has a length). */
+    showTiming?: boolean
+    /** BET-5: header row id → that set's running length. */
+    setTotalsByHeaderId?: Record<string, SetTotal>
 }
 
 /**
@@ -89,6 +96,9 @@ export function MobileCardList({
     onCommitTrackPatch,
     onDeleteRow,
     tonightByRowId,
+    isBand = false,
+    showTiming = false,
+    setTotalsByHeaderId,
 }: MobileCardListProps) {
     const t = useT()
     const [editingTrackId, setEditingTrackId] = useState<string | null>(null)
@@ -298,6 +308,9 @@ export function MobileCardList({
                             collection={track.songId ? collections?.[track.songId] : undefined}
                             band={bands[track.id]}
                             actions={actions}
+                            isBand={isBand}
+                            showTiming={showTiming}
+                            setTotal={setTotalsByHeaderId?.[track.id]}
                         />
                     ))}
                 </ul>
@@ -325,6 +338,9 @@ interface CardRowProps {
     collection?: string
     band?: SectionBand
     actions: CardRowActions
+    isBand: boolean
+    showTiming: boolean
+    setTotal?: SetTotal
 }
 
 /**
@@ -340,6 +356,9 @@ const CardRow = memo(function CardRow({
     collection,
     band,
     actions,
+    isBand,
+    showTiming,
+    setTotal,
 }: CardRowProps) {
     const onTap = useCallback(() => actions.toggleEditing(track.id), [actions, track.id])
     const onContextEditRow = useCallback(() => actions.editRow(index), [actions, index])
@@ -361,6 +380,9 @@ const CardRow = memo(function CardRow({
             position={position}
             collection={collection}
             band={band}
+            isBand={isBand}
+            showTiming={showTiming}
+            setTotal={setTotal}
             onTap={onTap}
             onContextEditRow={onContextEditRow}
             onContextBindChart={onContextBindChart}
