@@ -26,7 +26,8 @@ import Link from "next/link"
 import { Loader2, ArrowLeft, Music, Users, Pencil, Printer, ListCollapse, List } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useSetlistPerformance } from "@/hooks/use-setlist-performance"
-import { usePerformEntryPrecache } from "@/hooks/use-perform-entry-precache"
+import { PERFORM_PRECACHE_DONE_EVENT, usePerformEntryPrecache } from "@/hooks/use-perform-entry-precache"
+import { loadPDFOverlay } from "@/lib/perform-chart-loaders"
 import { requestPerformCacheUrl } from "@/components/performance/perform-shell-sw-register"
 import { useAuth } from "@/lib/auth-context"
 import { useLibrary } from "@/hooks/use-library"
@@ -67,7 +68,8 @@ const PrintModal = dynamic(
 // graph. `ssr: false` matches the other dynamic viewer imports — PDFOverlay
 // reads `window.location` and Dexie at mount; no SSR value to gain.
 const PDFOverlay = dynamic(
-    () => import("@/components/performance/PDFOverlay").then(m => m.PDFOverlay),
+    // Shared import site with the Perform warm-up (perf audit P1-2).
+    () => loadPDFOverlay().then(m => m.PDFOverlay),
     { ssr: false },
 )
 
@@ -300,6 +302,9 @@ export function SetlistPerformClient({
         .filter(t => !!t.fileId)
         .map(t => t.fileId as string)
         .filter((id, i, all) => all.indexOf(id) === i)
+    // The count SaveOfflineButton will report (it drops `flow-` pseudo ids),
+    // used only to reserve the status line's width before it reports.
+    const reservedChartCount = songFileIds.filter((id) => !id.startsWith("flow-")).length
 
     // F1 (perform-entry-precache): warm Dexie with every bonded chart the
     // moment the overlay mounts — `requestIdleCallback` (the SaveOfflineButton
@@ -310,6 +315,29 @@ export function SetlistPerformClient({
     // via `prefetchSetlistPDFs`'s `hasFile` short-circuit. Best-effort;
     // failures are swallowed.
     usePerformEntryPrecache(songFileIds, chartVersions)
+    // Perf audit P2-3: on a device that hasn't saved this setlist yet, every
+    // chart row grew a "not saved on this iPad" line as soon as the offline
+    // store was read, then lost it again as the entry precache saved each
+    // chart: the list jumped twice under a musician's finger (CLS 0.07-0.10).
+    // Hold the per-row lines until that first pass settles; after it, a line
+    // means the chart really didn't save. The head row's "N/M charts on this
+    // iPad" count shows progress meanwhile. Offline at entry (no pass runs) or
+    // a pass that never reports: the lines appear at once / after 30 s.
+    const [entryPassSettled, setEntryPassSettled] = useState(false)
+    useEffect(() => {
+        if (entryPassSettled) return
+        if (typeof navigator !== "undefined" && navigator.onLine === false) {
+            setEntryPassSettled(true)
+            return
+        }
+        const settle = () => setEntryPassSettled(true)
+        window.addEventListener(PERFORM_PRECACHE_DONE_EVENT, settle)
+        const fallback = setTimeout(settle, 30_000)
+        return () => {
+            window.removeEventListener(PERFORM_PRECACHE_DONE_EVENT, settle)
+            clearTimeout(fallback)
+        }
+    }, [entryPassSettled])
 
     // PERF-18: background chart refreshes wait while a chart is open, so they
     // never compete with the one being read. Saves of missing charts still run.
@@ -416,6 +444,19 @@ export function SetlistPerformClient({
                                     {t("performSetlist.status.chartsOnDevice", { ready: deviceReady, total: deviceTotal })}
                                 </span>
                             </>
+                        )}
+                        {/* Perf audit P2-3: the device count arrives after
+                            hydration (the offline store is read on the
+                            client). Appearing late, it wrapped the status
+                            line onto a second line on a phone and pushed the
+                            whole list down a few px (CLS 0.07-0.10, right
+                            where a musician taps). Reserve its width with an
+                            invisible stand-in of the same text until then. */}
+                        {deviceReady === null && reservedChartCount > 0 && (
+                            <span aria-hidden="true" className="invisible" data-testid="perform-status-device-reserve">
+                                <span> · </span>
+                                <span>{t("performSetlist.status.chartsOnDevice", { ready: reservedChartCount, total: reservedChartCount })}</span>
+                            </span>
                         )}
                     </p>
                     {bookName && (
@@ -581,8 +622,8 @@ export function SetlistPerformClient({
                 serviceNotes={serviceNotes}
                 setlistId={setlistId}
                 collapseLiturgy={liturgyCollapsed}
-                savedFileIds={savedFileIds}
-                saveFailures={saveFailures}
+                savedFileIds={entryPassSettled ? savedFileIds : null}
+                saveFailures={entryPassSettled ? saveFailures : null}
                 onSwapTap={isLeader && user && serviceDay ? (index) => setSwapIndex(index) : undefined}
             />
 

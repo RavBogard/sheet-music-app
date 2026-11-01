@@ -72,6 +72,25 @@ describe("pdf-worker-offline", () => {
         expect(putFile).toHaveBeenCalledWith(KEY, blob)
     })
 
+    it("primeOfflineWorker with a known version fetches once and never imports react-pdf", async () => {
+        const putFile = vi.fn(async () => {})
+        vi.doMock("@/lib/offline-idb", () => ({ getFile: vi.fn(), hasFile: vi.fn(async () => false), putFile }))
+        const reactPdfFactory = vi.fn(() => ({ pdfjs: { version: "0.0.0" } }))
+        vi.doMock("react-pdf", reactPdfFactory)
+        const blob = new Blob([new Uint8Array(16)], { type: "text/javascript" })
+        const fetchMock = vi.fn(async () => ({ ok: true, blob: async () => blob }))
+        vi.stubGlobal("fetch", fetchMock)
+        setOnline(true)
+
+        const mod = await import("@/lib/pdf-worker-offline")
+        await mod.primeOfflineWorker("5.4.296")
+
+        expect(fetchMock).toHaveBeenCalledTimes(1)
+        expect(fetchMock).toHaveBeenCalledWith(STATIC, { cache: "force-cache" })
+        expect(putFile).toHaveBeenCalledWith(KEY, blob)
+        expect(reactPdfFactory).not.toHaveBeenCalled()
+    })
+
     it("primeOfflineWorker is a no-op OFFLINE (can't fetch, must not write)", async () => {
         const putFile = vi.fn(async () => {})
         vi.doMock("@/lib/offline-idb", () => ({ getFile: vi.fn(), hasFile: vi.fn(async () => false), putFile }))

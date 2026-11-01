@@ -61,11 +61,16 @@ export function desiredWorkerSrc(version: string): string {
  * Idempotent + best-effort; a no-op when offline (can't fetch) or already cached.
  * Call on Perform entry (online idle) and on Save-offline.
  */
-export async function primeOfflineWorker(): Promise<void> {
+export async function primeOfflineWorker(knownVersion?: string): Promise<void> {
     try {
         if (typeof window === "undefined" || isOffline()) return
-        const { pdfjs } = await import("react-pdf")
-        const version = pdfjs.version
+        // Perf audit P1-2: use the build-time version (next.config `env`) so
+        // priming doesn't import react-pdf, which evaluates all of pdf.js, just
+        // to read it. Falls back to the library when the build didn't set it.
+        const version =
+            knownVersion ||
+            process.env.NEXT_PUBLIC_PDFJS_VERSION ||
+            (await import("react-pdf")).pdfjs.version
         const key = workerKey(version)
         if (await hasFile(key)) return
         const res = await fetch(staticWorkerSrc(version), { cache: "force-cache" })

@@ -364,7 +364,10 @@ export const config = {
          *   reasoning as manifest.json: a public document with no secrets must
          *   not sit behind the session gate. (Caught against production
          *   2026-09-14, before this line existed.)
+         * - logo-<size>.{avif,webp,jpg} — the pre-sized nav logos (perf audit
+         *   P1-1). Public images like logo.jpg; inside the matcher an unauth
+         *   request 307s to /login and the header logo breaks on Perform.
          */
-        '/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|logo.jpg|today\\.json|manifest(?:-[a-z0-9-]+)?\\.json|sw.js|workbox-.*|pdf\\.worker\\..*\\.mjs|.*\\.png$).*)',
+        '/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|logo.jpg|logo-\\d+\\.(?:avif|webp|jpg)$|today\\.json|manifest(?:-[a-z0-9-]+)?\\.json|sw.js|workbox-.*|pdf\\.worker\\..*\\.mjs|.*\\.png$).*)',
     ],
 }

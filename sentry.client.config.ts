@@ -2,34 +2,65 @@
  * Sentry client-side configuration.
  * Activate by setting NEXT_PUBLIC_SENTRY_DSN in your environment.
  *
- * Uses dynamic import so the ~40KB Sentry SDK only loads when actually needed.
- * Errors in the first ~500ms before Sentry boots won't be captured, but
- * that's an acceptable trade-off for faster initial page load.
+ * Perf audit P2-6: the SDK is no longer fetched during first load. The old
+ * config imported the whole `@sentry/nextjs` namespace (a 378-392 KB chunk,
+ * not "~40KB") straight away on every page, inside the Perform warm-up
+ * window. Now:
+ *
+ * - The client is the trimmed `@sentry/browser` build (`src/lib/sentry-browser.ts`).
+ * - It starts once the page has loaded and the browser is idle (or after a
+ *   few seconds where `requestIdleCallback` is missing, as on iPad Safari).
+ * - Errors are not lost meanwhile. Uncaught errors and unhandled rejections
+ *   from this point on are kept (up to 20) and sent when the client starts,
+ *   and any `reportError`-style capture starts the client at once.
+ *   Trade-off: errors before this file runs were never captured, and
+ *   handled captures from the sync engine in the first seconds can still be
+ *   missed, as they were while the old import was in flight.
  */
-const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN
+import { loadSentryBrowser } from "@/lib/sentry-lazy"
 
-if (dsn) {
-    import("@sentry/nextjs").then(async (Sentry) => {
-        const { redactBearerTokens } = await import("@/lib/sentry-redact")
-        Sentry.init({
-            dsn,
-            environment: process.env.NEXT_PUBLIC_VERCEL_ENV || process.env.NODE_ENV,
-            release:
-                process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA?.slice(0, 8) || "dev",
-            integrations: [Sentry.browserTracingIntegration()],
-            tracesSampleRate: 0.1,
-            // Session replays disabled — privacy + bandwidth for band iPads.
-            // Re-enable per Daniel's call once we have a privacy story for the
-            // band/setlist UI surfaces.
-            replaysSessionSampleRate: 0,
-            replaysOnErrorSampleRate: 0.1,
-            ignoreErrors: [
-                // React streaming hydration internals — fires when browser extensions
-                // or rapid navigation remove DOM nodes before React can swap Suspense
-                // fallbacks. Not actionable; does not affect functionality.
-                "Cannot read properties of null (reading 'parentNode')",
-            ],
-            beforeSend: redactBearerTokens,
-        })
-    })
+const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN
+const MAX_EARLY = 20
+const FALLBACK_MS = 4000
+
+if (dsn && typeof window !== "undefined") {
+    const early: unknown[] = []
+    const onError = (e: ErrorEvent) => {
+        if (early.length < MAX_EARLY) early.push(e.error ?? e.message)
+    }
+    const onRejection = (e: PromiseRejectionEvent) => {
+        if (early.length < MAX_EARLY) early.push(e.reason)
+    }
+    window.addEventListener("error", onError)
+    window.addEventListener("unhandledrejection", onRejection)
+
+    // Offline when the start comes due (an iPad that lost the shul WiFi), or
+    // the chunk fails to load: try again when the connection returns, with
+    // the buffer still listening meanwhile.
+    const retryWhenOnline = () => window.addEventListener("online", start, { once: true })
+    function start() {
+        if (navigator.onLine === false) {
+            retryWhenOnline()
+            return
+        }
+        const p = loadSentryBrowser()
+        if (!p) return
+        void p.then((m) => {
+            // The SDK's own global handlers take over from here.
+            window.removeEventListener("error", onError)
+            window.removeEventListener("unhandledrejection", onRejection)
+            for (const err of early.splice(0)) m.captureException(err)
+        }).catch(retryWhenOnline)
+    }
+
+    const whenIdle = () => {
+        if (typeof window.requestIdleCallback === "function") {
+            window.requestIdleCallback(start, { timeout: FALLBACK_MS })
+        } else {
+            setTimeout(start, FALLBACK_MS)
+        }
+    }
+
+    if (document.readyState === "complete") whenIdle()
+    else window.addEventListener("load", whenIdle, { once: true })
 }

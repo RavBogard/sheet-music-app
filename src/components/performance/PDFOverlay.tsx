@@ -19,29 +19,37 @@ import { useEdgeTapZones } from "./use-edge-tap-zones"
 import { useDeviceTranspositionPrefs } from "@/hooks/use-musician-transposition"
 import { useModalSurface } from "./use-modal-surface"
 import { useChartKeyScroll } from "./use-chart-key-scroll"
+// Shared import sites with the Perform warm-up: same chunks offline (PR #48 S1).
+import {
+    loadAudioViewer,
+    loadImageScoreViewer,
+    loadPDFViewer,
+    loadSmartScoreViewer,
+    loadTextScoreViewer,
+} from "@/lib/perform-chart-loaders"
 const PrintModal = dynamic(() => import("@/components/setlist/PrintModal").then(m => m.PrintModal), { ssr: false })
 
 // Dynamically import PDFViewer to avoid SSR worker issues (per RESEARCH.md Pitfall 1)
 const PDFViewer = dynamic(
-    () => import("@/components/music/PDFViewer").then((mod) => mod.PDFViewer),
+    () => loadPDFViewer().then((mod) => mod.PDFViewer),
     { ssr: false }
 )
 
 // Dynamically import SmartScoreViewer for MusicXML rendering (matching PDFViewer pattern)
 const SmartScoreViewer = dynamic(
-    () => import("@/components/music/SmartScoreViewer").then((mod) => mod.SmartScoreViewer),
+    () => loadSmartScoreViewer().then((mod) => mod.SmartScoreViewer),
     { ssr: false }
 )
 
 const TextScoreViewer = dynamic(
-    () => import("@/components/music/TextScoreViewer").then((mod) => mod.TextScoreViewer),
+    () => loadTextScoreViewer().then((mod) => mod.TextScoreViewer),
     { ssr: false }
 )
 
 // v70-01: image-chart support (PNG/JPEG/HEIC).
 // Disabled SSR matches the other viewer dynamic imports.
 const ImageScoreViewer = dynamic(
-    () => import("@/components/music/ImageScoreViewer").then((mod) => mod.ImageScoreViewer),
+    () => loadImageScoreViewer().then((mod) => mod.ImageScoreViewer),
     { ssr: false }
 )
 
@@ -49,7 +57,7 @@ const ImageScoreViewer = dynamic(
 // "track.type:'song' + .mp3 fileId → 404 via PDFViewer" silent failure
 // — see AudioViewer.tsx header for the full story.
 const AudioViewer = dynamic(
-    () => import("@/components/music/AudioViewer").then((mod) => mod.AudioViewer),
+    () => loadAudioViewer().then((mod) => mod.AudioViewer),
     { ssr: false }
 )
 

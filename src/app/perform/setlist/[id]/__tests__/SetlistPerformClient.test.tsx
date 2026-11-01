@@ -18,7 +18,7 @@
  */
 import 'fake-indexeddb/auto'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, cleanup } from '@testing-library/react'
+import { render, screen, cleanup, act, waitFor } from '@testing-library/react'
 
 import { resetDbForTests } from '@/lib/local/schema'
 
@@ -73,6 +73,13 @@ vi.mock('@/lib/musician-profile', () => ({
 
 vi.mock('@/lib/sync/snapshot-listener', () => ({
     startSnapshotListener: vi.fn(() => () => {}),
+}))
+
+// Perf audit P2-3: the entry precache never settles unless a test says so,
+// so the "not saved" row lines can be checked before and after it.
+vi.mock('@/lib/prefetch', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('@/lib/prefetch')>()),
+    prefetchSetlistPDFs: vi.fn(() => new Promise<void>(() => {})),
 }))
 
 // react-pdf is dynamic-imported by PDFOverlay, which is itself
@@ -280,5 +287,43 @@ describe('SetlistPerformClient — SSR contract (UNAUTH-009)', () => {
         // useSafeFirestoreSync resolves. This is the dev-without-creds
         // branch — no regression vs pre-UNAUTH-009 behavior.
         expect(screen.getByText(/Loading setlist/i)).toBeTruthy()
+    })
+})
+
+describe('SetlistPerformClient — no late layout shift (perf audit P2-3)', () => {
+    beforeEach(async () => {
+        await resetDbForTests()
+    })
+    afterEach(async () => {
+        cleanup()
+        await resetDbForTests()
+    })
+
+    it('reserves the device-count width and holds "not saved" row lines until the entry precache settles', async () => {
+        const ui = (
+            <SetlistPerformClient
+                setlistId={SETLIST_ID}
+                initialSetlist={initialSetlist}
+                initialTracks={initialTracks}
+            />
+        )
+        // The server HTML, painted before the offline store can be read,
+        // carries an invisible stand-in for the device count's width.
+        const { renderToString } = await import('react-dom/server')
+        expect(renderToString(ui)).toContain('data-testid="perform-status-device-reserve"')
+
+        render(ui)
+        // The device count replaces the stand-in on the client...
+        await waitFor(() => expect(screen.getByTestId('perform-status-device')).toBeTruthy())
+        expect(screen.queryByTestId('perform-status-device-reserve')).toBeNull()
+        // ...but no row grows a "not saved" line while the first pass runs.
+        expect(screen.queryAllByTestId('row-not-saved-offline')).toHaveLength(0)
+
+        // Once the pass settles, a chart still missing shows its line.
+        const { PERFORM_PRECACHE_DONE_EVENT } = await import('@/hooks/use-perform-entry-precache')
+        act(() => {
+            window.dispatchEvent(new Event(PERFORM_PRECACHE_DONE_EVENT))
+        })
+        await waitFor(() => expect(screen.queryAllByTestId('row-not-saved-offline').length).toBeGreaterThan(0))
     })
 })

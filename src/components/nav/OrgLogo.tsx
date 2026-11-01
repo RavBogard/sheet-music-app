@@ -14,9 +14,13 @@ import { cn } from "@/lib/utils"
  * automatically: `bg-brand`/`text-brand-foreground` flip to navy under
  * `[data-org="brotherslazaroff"]` (set on <html> server-side), indigo for CRC.
  *
- * CRC always passes `logoUrl="/logo.jpg"` → the <img> branch reproduces the
- * prior hardcoded DesktopHeader/MobileHeader logo byte-identically.
+ * CRC passes `logoUrl="/logo.jpg"` → a <picture> of the pre-sized
+ * `/logo-64|128.{avif,webp,jpg}` files (perf audit P1-1), never the 587 KB
+ * source. Any other logoUrl renders as given, sized to the circle.
  */
+
+/** CRC's configured logo URL (the full-size source; see the pre-sized branch below). */
+const CRC_LOGO = "/logo.jpg"
 
 /** First letter of up to two words, uppercased (e.g. "Brothers Lazaroff" → "BL"). */
 function initialsFor(shortName: string): string {
@@ -40,7 +44,31 @@ export function OrgLogo({
     // CRC keeps its canonical descriptive alt (its full name, a brand: verbatim);
     // other orgs derive from shortName.
     const crcName = "Central Reform Congregation"
-    const alt = t("nav.orgLogoAlt", { orgName: logoUrl === "/logo.jpg" ? crcName : shortName })
+    const alt = t("nav.orgLogoAlt", { orgName: logoUrl === CRC_LOGO ? crcName : shortName })
+
+    if (logoUrl === CRC_LOGO) {
+        // Perf audit P1-1: the source logo.jpg is 1000x1000 / 587 KB, painted
+        // at 28-32 CSS px on every Perform and app page. Serve the committed
+        // pre-sized files instead (scripts/ops/make-logo-sizes.mjs): AVIF,
+        // then WebP, then a JPEG fallback, 64px for 1x-2x and 128px above.
+        // The width/height attributes reserve the box before it decodes.
+        return (
+            <picture>
+                <source type="image/avif" srcSet="/logo-64.avif 64w, /logo-128.avif 128w" sizes="32px" />
+                <source type="image/webp" srcSet="/logo-64.webp 64w, /logo-128.webp 128w" sizes="32px" />
+                <img
+                    src="/logo-64.jpg"
+                    srcSet="/logo-64.jpg 64w, /logo-128.jpg 128w"
+                    sizes="32px"
+                    width={32}
+                    height={32}
+                    decoding="async"
+                    alt={alt}
+                    className={cn(sizeClass, "rounded-full border border-border transition-opacity group-hover:opacity-80")}
+                />
+            </picture>
+        )
+    }
 
     if (logoUrl) {
         return (
@@ -48,7 +76,10 @@ export function OrgLogo({
             <img
                 src={logoUrl}
                 alt={alt}
-                className={cn(sizeClass, "rounded-full border border-border transition-opacity group-hover:opacity-80")}
+                width={32}
+                height={32}
+                decoding="async"
+                className={cn(sizeClass, "rounded-full border border-border object-cover transition-opacity group-hover:opacity-80")}
             />
         )
     }

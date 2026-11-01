@@ -16,7 +16,7 @@ import {
     sortableKeyboardCoordinates,
     verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
-import { useMemo, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { useT } from '@/i18n/client'
 
@@ -26,6 +26,7 @@ import { useUndoStore, type UndoableDoc } from '@/lib/local/undo-store'
 import { getDb } from '@/lib/local/schema'
 
 import { MobileRowCard } from './MobileRowCard'
+import type { SectionBand } from './section-bands'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { isSectionRow, sectionBands } from './section-bands'
 import { computeReorderUpdates } from './SetlistGrid'
@@ -175,6 +176,46 @@ export function MobileCardList({
         }
     }, [t, tracks])
 
+    // Perf audit P2-5: rows are memoized (CardRow below), so they need
+    // callbacks that keep their identity. The parent passes fresh arrows on
+    // every render; route them through a ref read at call time, so a focus or
+    // edit-state change re-renders only the rows whose props changed instead
+    // of the whole list.
+    const handlersRef = useRef({
+        onContextEditRow,
+        onContextBindChart,
+        onContextDuplicate,
+        onContextDelete,
+        onCommitTrackPatch,
+        onDeleteRow,
+    })
+    useEffect(() => {
+        handlersRef.current = {
+            onContextEditRow,
+            onContextBindChart,
+            onContextDuplicate,
+            onContextDelete,
+            onCommitTrackPatch,
+            onDeleteRow,
+        }
+    })
+    const actions = useMemo<CardRowActions>(
+        () => ({
+            toggleEditing: (id) => setEditingTrackId((cur) => (cur === id ? null : id)),
+            editRow: (index) => handlersRef.current.onContextEditRow(index),
+            bindChart: (id) => handlersRef.current.onContextBindChart(id),
+            duplicate: (id) => handlersRef.current.onContextDuplicate(id),
+            contextDelete: (track) => handlersRef.current.onContextDelete(track),
+            commit: (track, patch) =>
+                handlersRef.current.onCommitTrackPatch(track.id, patch, track.updatedAt),
+            deleteRow: (track) => {
+                handlersRef.current.onDeleteRow(track)
+                setEditingTrackId(null)
+            },
+        }),
+        [],
+    )
+
     const handleDragEnd = async (e: DragEndEvent) => {
         const { active, over } = e
         if (!over) return
@@ -246,47 +287,87 @@ export function MobileCardList({
                     data-testid="mobile-card-list"
                     className="flex flex-col"
                 >
-                    {tracks.map((track, idx) => {
-                        const isEditing = editingTrackId === track.id
-
-                        return (
-                            <MobileRowCard
-                                key={track.id}
-                                track={track}
-                                isEditing={isEditing}
-                                tonightTitle={tonightByRowId?.[track.id]}
-                                position={positions[track.id]}
-                                collection={track.songId ? collections?.[track.songId] : undefined}
-                                band={bands[track.id]}
-                                onTap={() =>
-                                    setEditingTrackId(
-                                        isEditing ? null : track.id,
-                                    )
-                                }
-                                onContextEditRow={() => onContextEditRow(idx)}
-                                onContextBindChart={() =>
-                                    onContextBindChart(track.id)
-                                }
-                                onContextDuplicate={() =>
-                                    onContextDuplicate(track.id)
-                                }
-                                onContextDelete={() => onContextDelete(track)}
-                                onCommit={async (patch) => {
-                                    await onCommitTrackPatch(
-                                        track.id,
-                                        patch as Record<string, unknown>,
-                                        track.updatedAt,
-                                    )
-                                }}
-                                onDeleteRow={() => {
-                                    onDeleteRow(track)
-                                    setEditingTrackId(null)
-                                }}
-                            />
-                        )
-                    })}
+                    {tracks.map((track, idx) => (
+                        <CardRow
+                            key={track.id}
+                            track={track}
+                            index={idx}
+                            isEditing={editingTrackId === track.id}
+                            tonightTitle={tonightByRowId?.[track.id]}
+                            position={positions[track.id]}
+                            collection={track.songId ? collections?.[track.songId] : undefined}
+                            band={bands[track.id]}
+                            actions={actions}
+                        />
+                    ))}
                 </ul>
             </SortableContext>
         </DndContext>
     )
 }
+
+interface CardRowActions {
+    toggleEditing: (id: string) => void
+    editRow: (index: number) => void
+    bindChart: (id: string) => void
+    duplicate: (id: string) => void
+    contextDelete: (track: LocalTrack) => void
+    commit: (track: LocalTrack, patch: Record<string, unknown>) => Promise<void>
+    deleteRow: (track: LocalTrack) => void
+}
+
+interface CardRowProps {
+    track: LocalTrack
+    index: number
+    isEditing: boolean
+    tonightTitle?: string
+    position?: number
+    collection?: string
+    band?: SectionBand
+    actions: CardRowActions
+}
+
+/**
+ * One list row, memoized: it re-renders only when its own track, position,
+ * edit state or chip data change. `actions` is stable for the list's life.
+ */
+const CardRow = memo(function CardRow({
+    track,
+    index,
+    isEditing,
+    tonightTitle,
+    position,
+    collection,
+    band,
+    actions,
+}: CardRowProps) {
+    const onTap = useCallback(() => actions.toggleEditing(track.id), [actions, track.id])
+    const onContextEditRow = useCallback(() => actions.editRow(index), [actions, index])
+    const onContextBindChart = useCallback(() => actions.bindChart(track.id), [actions, track.id])
+    const onContextDuplicate = useCallback(() => actions.duplicate(track.id), [actions, track.id])
+    const onContextDelete = useCallback(() => actions.contextDelete(track), [actions, track])
+    const onCommit = useCallback(
+        async (patch: Partial<LocalTrack>) => {
+            await actions.commit(track, patch as Record<string, unknown>)
+        },
+        [actions, track],
+    )
+    const onDeleteRow = useCallback(() => actions.deleteRow(track), [actions, track])
+    return (
+        <MobileRowCard
+            track={track}
+            isEditing={isEditing}
+            tonightTitle={tonightTitle}
+            position={position}
+            collection={collection}
+            band={band}
+            onTap={onTap}
+            onContextEditRow={onContextEditRow}
+            onContextBindChart={onContextBindChart}
+            onContextDuplicate={onContextDuplicate}
+            onContextDelete={onContextDelete}
+            onCommit={onCommit}
+            onDeleteRow={onDeleteRow}
+        />
+    )
+})

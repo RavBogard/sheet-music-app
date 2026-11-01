@@ -13,6 +13,20 @@ const withBundleAnalyzer = require("@next/bundle-analyzer")({
 // browsers with the legacy SW registered will auto-update to a self-
 // unregistering worker; after ~30 days the tombstone can be deleted too.
 
+function pdfjsVersion(): string {
+  for (const pkg of [
+    'react-pdf/node_modules/pdfjs-dist/package.json',
+    'pdfjs-dist/package.json',
+  ]) {
+    try {
+      return require(pkg).version as string
+    } catch {
+      // try the next location
+    }
+  }
+  return ''
+}
+
 const nextConfig: NextConfig = {
   turbopack: {},
   serverExternalPackages: ['@google-cloud/vision', 'pdfjs-dist', '@sparticuz/chromium', 'puppeteer-core'],
@@ -29,7 +43,18 @@ const nextConfig: NextConfig = {
       './node_modules/@sparticuz/chromium/bin/**',
     ],
   },
+  // Perf audit P2-1: the Perform warm-up fetches the versioned pdf.js worker
+  // once without importing react-pdf (which would evaluate pdf.js), so it
+  // needs the version at build time. Same resolution order as
+  // scripts/ops/copy-pdf-worker.js: react-pdf's nested pdfjs-dist, else root.
+  env: {
+    NEXT_PUBLIC_PDFJS_VERSION: pdfjsVersion(),
+  },
   images: {
+    // Perf audit P2-2/P2-4: AVIF first for the /login logo, and cache the
+    // optimizer's output for a day instead of revalidating on every visit.
+    formats: ['image/avif', 'image/webp'],
+    minimumCacheTTL: 86400,
     remotePatterns: [
       {
         protocol: 'https',
@@ -51,6 +76,17 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     return [
+      // Perf audit P2-4: static assets that were served `max-age=0,
+      // must-revalidate`. The worker file name carries the pdf.js version, so
+      // it never changes in place; the logos are not hashed, so a week.
+      {
+        source: '/:file(pdf\\.worker\\.min\\.[0-9.]+\\.mjs)',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
+      },
+      {
+        source: '/:file(logo-\\d+\\.(?:avif|webp|jpg))',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=604800, stale-while-revalidate=86400' }],
+      },
       {
         source: '/(.*)',
         headers: [

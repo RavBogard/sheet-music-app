@@ -9,14 +9,30 @@
  */
 
 import { logger } from '@/lib/logger'
+import { loadSentryBrowser } from '@/lib/sentry-lazy'
 
-let Sentry: typeof import('@sentry/nextjs') | null = null
+type SentryApi = Pick<typeof import('@sentry/nextjs'), 'captureException' | 'captureMessage'>
 
-// Dynamically import Sentry on both client and server when DSN is configured
-if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
+let Sentry: SentryApi | null = null
+
+// Server: import Sentry when a DSN is configured. The browser does NOT import
+// it here (perf audit P2-6): this module sits in the Perform error boundary,
+// and an eager import pulled the full 378 KB SDK into every first load. In the
+// browser the trimmed client is loaded on the first report instead.
+if (process.env.NEXT_PUBLIC_SENTRY_DSN && typeof window === 'undefined') {
     import('@sentry/nextjs').then(mod => { Sentry = mod }).catch(err => {
         logger.warn('[ErrorReport] Sentry import failed — error reporting will use console only:', err)
     })
+}
+
+/** Run `send` against the server SDK now, or the browser client once loaded. */
+function withSentry(send: (s: SentryApi) => void): void {
+    if (Sentry) {
+        send(Sentry)
+        return
+    }
+    const browser = loadSentryBrowser()
+    if (browser) void browser.then(send).catch(() => {})
 }
 
 interface ErrorContext {
@@ -42,8 +58,8 @@ export function captureException(error: unknown, context?: ErrorContext): void {
         logger.error(stack)
     }
 
-    if (Sentry) {
-        Sentry.captureException(error, {
+    withSentry((sentry) => {
+        sentry.captureException(error, {
             tags: {
                 source: context?.source,
                 location: context?.location,
@@ -51,7 +67,7 @@ export function captureException(error: unknown, context?: ErrorContext): void {
             user: context?.userId ? { id: context.userId } : undefined,
             extra: context?.extra,
         })
-    }
+    })
 }
 
 /** Sentry severity levels we use for non-exception captures. */
@@ -79,8 +95,8 @@ export function captureMessage(
         logger.warn(tag)
     }
 
-    if (Sentry) {
-        Sentry.captureMessage(message, {
+    withSentry((sentry) => {
+        sentry.captureMessage(message, {
             level,
             tags: {
                 source: context?.source,
@@ -88,5 +104,5 @@ export function captureMessage(
             },
             extra: context?.extra,
         })
-    }
+    })
 }
