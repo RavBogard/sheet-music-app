@@ -398,7 +398,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
                 the tab ("Library"); there is no back strip, the tab bar is the
                 way out. A back button shows only when a host embeds the
                 library and passes `onBack`. */}
-            <div className={cn(PAGE_WIDTH_CLASS, "pt-3 sm:pt-4 pb-2")}>
+            <div className={cn(PAGE_WIDTH_CLASS, "pt-5 sm:pt-6 pb-3")}>
             <PageHeader
                 title={t("nav.library")}
                 leading={onBack ? (
@@ -463,30 +463,30 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
                 )}
                 <Button
                     variant={selectMode ? "default" : "ghost"}
-                    size="icon-sm"
-                    className="rounded-md shrink-0"
+                    size="icon"
+                    className="h-11 w-11 rounded-md shrink-0"
                     onClick={() => {
                         setSelectMode(!selectMode)
                         if (selectMode) setSelectedIds(new Set())
                     }}
                     title={selectMode ? t("library.header.exitSelectMode") : t("library.header.selectFiles")}
                 >
-                    <CheckSquare className="h-4 w-4" />
+                    <CheckSquare className="h-5 w-5" />
                 </Button>
                 </>}
             />
             </div>
 
             {/* Search & section toggles */}
-            <div className={cn(PAGE_WIDTH_CLASS, "pb-2 space-y-2")}>
+            <div className={cn(PAGE_WIDTH_CLASS, "pb-3 space-y-3")}>
                 <div className="relative">
-                    <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                    <Search className="absolute start-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" aria-hidden="true" />
                     <Input
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         placeholder={tab === "audio" ? t("library.search.audioPlaceholder") : t("library.search.chartsPlaceholder")}
                         aria-label={tab === "audio" ? t("library.search.audioLabel") : t("library.search.chartsLabel")}
-                        className="ps-9 h-11 text-base rounded-md bg-card border-input shadow-none focus-visible:border-ring focus-visible:ring-ring/30"
+                        className="ps-11 h-12 text-[17px] rounded-md bg-card border-input shadow-none focus-visible:border-ring focus-visible:ring-ring/30"
                     />
                 </div>
 

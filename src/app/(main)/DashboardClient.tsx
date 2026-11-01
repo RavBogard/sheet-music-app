@@ -263,11 +263,12 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
         shouldAnimate ? `dash-stagger dash-stagger-${n}` : ''
 
     return (
-        <PageContainer className={cn("flex flex-col gap-3", !shouldAnimate && "dash-no-animate")}>
+        <PageContainer className={cn("flex flex-col gap-4", !shouldAnimate && "dash-no-animate")}>
             {/* Consistency pass: one page container and head row. The brand
                 lives in the shell's top bar only (no second in-page logo); the
                 greeting is the title, the Hebrew date its subtitle. */}
             <PageHeader
+                className="mb-1"
                 title={greeting.text}
                 subtitle={greeting.hebrewDate.split(' ').map((part, i, arr) => (
                     <span key={i}>
@@ -284,15 +285,13 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
                         HERO CARD: Single focused card -- one card, one action.
                         Visible to all users (Guests, Pending, Members).
                        ══════════════════════════════════════════ */}
-                    <div className="flex flex-col gap-3">
+                    <div className="flex flex-col gap-4">
                         {!setlistsReady ? (
-                            /* Skeleton in the compact card's shape (Option B) */
-                            <div className="flex items-center gap-3 rounded-lg border border-rule bg-card px-3 sm:px-4 py-2">
-                                <div className="min-w-0 flex-1 space-y-1.5">
-                                    <div className="h-4 w-56 max-w-full bg-muted rounded animate-pulse" />
-                                    <div className="h-3 w-32 bg-muted rounded animate-pulse" />
-                                </div>
-                                <div className="h-8 w-24 shrink-0 bg-muted rounded-md animate-pulse" />
+                            /* Skeleton card while loading — brand-tinted */
+                            <div className="rounded-lg border border-rule bg-card p-5 space-y-3">
+                                <div className="h-3 w-32 bg-muted rounded animate-pulse" />
+                                <div className="h-6 w-56 bg-muted rounded animate-pulse" />
+                                <div className="h-12 w-full bg-muted rounded-md animate-pulse mt-2" />
                             </div>
                         ) : tonightSetlist ? (
                             <NextServiceCard
