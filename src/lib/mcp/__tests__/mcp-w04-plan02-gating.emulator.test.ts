@@ -23,6 +23,7 @@ import {
     updateSetlist,
     updateSetlistTrack,
 } from "../tools/setlist-write"
+import { mirrorLegacyRoles } from "@/test-stubs/mirror-legacy-roles"
 
 /**
  * W-04 Plan 02 — optimistic-concurrency gating across the five single-row
@@ -93,6 +94,9 @@ describe("W-04 Plan 02 — lastSeenVersion gating (emulator)", () => {
     })
 
     // ─── update_track ──────────────────────────────────────────────────────
+
+    // SEC-02: role gates read memberships only; give each seeded person theirs.
+    beforeEach(async () => { await mirrorLegacyRoles(db()) })
 
     it("update_track rejects with stale_version envelope when lastSeenVersion mismatches", async () => {
         const setlistId = await newSetlist()

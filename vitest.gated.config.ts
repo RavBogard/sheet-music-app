@@ -74,6 +74,10 @@ const EXCLUSIONS_FILE = 'ci/gated-suite-exclusions.txt'
  * so the bundle-size regressions are still watched wherever a build exists.
  * Only the required check's arithmetic becomes reproducible.
  *
+ * GATED ELSEWHERE (SEC-02/bundle PR, 2026-11-01): the two login budget tests
+ * (`login-bundle-size`, `login-full-payload-size`) also run in the required
+ * `Build Check` job, right after `next build`, where `.next` always exists.
+ *
  * This list shrinks the day these tests stop depending on a build artifact.
  * It is NOT the debt list and must not be merged into it.
  */

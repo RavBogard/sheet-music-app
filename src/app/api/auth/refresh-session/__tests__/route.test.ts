@@ -6,16 +6,18 @@ import { makeReq } from "@/__tests__/api-test-helpers"
 
 let profileData: Record<string, unknown> | undefined = undefined
 let recordClaims: Record<string, unknown> | undefined = { role: "admin" }
+// SEC-02: the signed role comes from memberships/crc__<uid> only.
+let membershipRole: string | undefined = undefined
 
 const mockFirestore = {
-    // Multi-tenant P2: no memberships / platform docs here, so the caller is an
-    // unmigrated (legacy) account and the P0 doc-role-capped-to-claims rule applies.
     collection: vi.fn((name: string) => ({
         doc: vi.fn(() => ({
             get: async () =>
                 name === "users"
                     ? { exists: profileData !== undefined, data: () => profileData }
-                    : { exists: false, data: () => undefined },
+                    : name === "memberships"
+                      ? { exists: membershipRole !== undefined, data: () => ({ role: membershipRole }) }
+                      : { exists: false, data: () => undefined },
         })),
     })),
 }
@@ -80,6 +82,7 @@ describe("POST /api/auth/refresh-session", () => {
     beforeEach(() => {
         vi.clearAllMocks()
         profileData = undefined
+        membershipRole = undefined
         recordClaims = { role: "admin" }
     })
 
@@ -91,7 +94,7 @@ describe("POST /api/auth/refresh-session", () => {
 
     it("mints companion cookie matching Firestore role (band_leader)", async () => {
         mockAuth("u-1")
-        profileData = { role: "band_leader" }
+        membershipRole = "band_leader"
         const res = await POST(req())
         expect(res.status).toBe(200)
         const json = await res.json()
@@ -113,7 +116,7 @@ describe("POST /api/auth/refresh-session", () => {
 
     it("signs cookie that verifies with matching uid + role", async () => {
         mockAuth("u-42")
-        profileData = { role: "musician" }
+        membershipRole = "musician"
         const res = await POST(req())
         const setCookie = res.headers.get("set-cookie") || ""
         const match = setCookie.match(/__session_role=([^;]+)/)
@@ -124,13 +127,12 @@ describe("POST /api/auth/refresh-session", () => {
         const verified = await verifyRoleCookie(raw)
         expect(verified).toEqual({ uid: "u-42", role: "musician", org: "crc" })
     })
-    it("multi-tenant P0: never signs a role above the account's claims (doc 'admin', claim 'pending', token 'musician')", async () => {
+    it("SEC-02: a users-doc or claim role with no membership signs role null", async () => {
         mockAuth("u-1")
         profileData = { role: "admin" }
-        recordClaims = { role: "pending" }
+        recordClaims = { role: "admin" }
         const res = await POST(req())
         expect(res.status).toBe(200)
-        // token claim (musician) is the highest the account actually holds
-        expect((await res.json()).role).toBe("musician")
+        expect((await res.json()).role).toBe(null)
     })
 })

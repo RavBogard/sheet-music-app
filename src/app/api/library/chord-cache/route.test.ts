@@ -140,7 +140,7 @@ describe("v11.3-01-02 · /api/library/chord-cache · anon read/persist (BUG-4)",
     // AC-3: authed musician keeps full PATCH (chordsVerified + manual provenance)
     it("allows an authed musician to set chordsVerified → 200, written", async () => {
         mockGet.mockResolvedValue({ exists: true, data: () => ({ orgId: "crc" }) }) // W9: row exists
-        mockVerifyIdToken.mockResolvedValue({ uid: "u1", role: "musician", email: "m@test" })
+        mockVerifyIdToken.mockResolvedValue({ uid: "u1", role: "musician", m: { crc: "mu" }, email: "m@test" })
         const res = await PATCH(
             makeReq("/api/library/chord-cache", {
                 method: "PATCH",
@@ -154,7 +154,7 @@ describe("v11.3-01-02 · /api/library/chord-cache · anon read/persist (BUG-4)",
 
     it("honors a manual nativeKeySource for an authed musician", async () => {
         mockGet.mockResolvedValue({ exists: true, data: () => ({ orgId: "crc" }) }) // W9: row exists
-        mockVerifyIdToken.mockResolvedValue({ uid: "u1", role: "musician", email: "m@test" })
+        mockVerifyIdToken.mockResolvedValue({ uid: "u1", role: "musician", m: { crc: "mu" }, email: "m@test" })
         const res = await PATCH(
             makeReq("/api/library/chord-cache", {
                 method: "PATCH",

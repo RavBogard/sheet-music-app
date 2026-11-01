@@ -11,6 +11,7 @@ import { getFirestore } from "firebase-admin/firestore"
 
 import { markChartStatus } from "../tools/mark-chart-status"
 import { undoDedupeGroup } from "../tools/undo-dedupe"
+import { mirrorLegacyRoles } from "@/test-stubs/mirror-legacy-roles"
 
 /**
  * M1 — the single-row mark (`R-0904-live-cw-2` §2, `R-0904-live-cw-6`).
@@ -63,6 +64,10 @@ describe("MCP mark_chart_status — the single-row human mark (emulator)", () =>
         await seedUser(ADMIN, "admin")
         await seedUser(MUSICIAN, "musician")
     })
+
+    // SEC-02: role gates read memberships only; give each seeded person the
+    // membership the people migration would have written.
+    beforeEach(async () => { await mirrorLegacyRoles(db(), { migrate: true }) })
 
     it("marks the named row and NOTHING else, recording the decision's provenance", async () => {
         await seedIndex("keep-me", { name: "Mizmor Shiru Ladonai.mp3" })

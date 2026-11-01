@@ -5,10 +5,8 @@
  *
  *   - platform owner (`platform/owners.uids` contains uid) → effectiveRole admin;
  *   - membership `memberships/{org}__{uid}` → its role / soundEngineer;
- *   - no membership and `users/{uid}.membershipsMigratedAt` absent → legacy
- *     `users/{uid}.role` / `.soundEngineer` (tenant-blind, exactly the old
- *     users-doc role read);
- *   - no membership and migrated → null (not a member).
+ *   - no membership → null (not a member). SEC-02: there is no legacy
+ *     `users/{uid}.role` fallback any more, migrated or not.
  *
  * Usage in a test file:
  *   vi.mock("@/lib/org/access", () => import("@/test-stubs/org-access-fake"))
@@ -68,14 +66,6 @@ export async function getTenantAccess(
         role = m.role as TenantRole
         soundEngineer = m.soundEngineer === true
         source = "membership"
-    } else if (!u?.membershipsMigratedAt) {
-        // Same as the real module: unmigrated → the token's legacy claims when
-        // the caller passes them (requireAuth), else the users-doc role.
-        const lc = opts?.legacyClaims
-        const src = lc ?? u
-        role = src && typeof src.role === "string" ? (src.role as TenantRole) : null
-        soundEngineer = src?.soundEngineer === true
-        source = role ? "legacy" : "none"
     }
     return {
         uid,
@@ -98,6 +88,13 @@ export function hasTenantRole(a: TenantAccess, min: Exclude<TenantRole, "denied"
 
 export async function readTenantRole(db: DB, uid: string, orgId: OrgId): Promise<string | undefined> {
     return (await getTenantAccess(uid, orgId, { db })).effectiveRole ?? undefined
+}
+
+/** SEC-02 twin of the real module: membership only (platform owner → admin). */
+export async function readMembershipRole(db: DB, uid: string, orgId: OrgId): Promise<string | undefined> {
+    if (await isPlatformOwner(uid, db)) return "admin"
+    const m = await readDoc(db, "memberships", `${orgId}__${uid}`)
+    return m && typeof m.role === "string" ? m.role : undefined
 }
 
 /**

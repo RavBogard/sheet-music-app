@@ -245,6 +245,16 @@ jobs:
           NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY || 'test-key' }}
           NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || 'test.firebaseapp.com' }}
 
+      # The login bundle budgets need a fresh `.next`, which only this job has,
+      # so they are gated HERE (Build Check is a required check) rather than in
+      # `Gated Unit Suite`, where they stay environment pins. The manifest test
+      # first: without it the budget tests would skip and pass silently.
+      - name: Login bundle budgets
+        run: |
+          test -f .next/build-manifest.json || { echo "::error::no .next/build-manifest.json after build"; exit 1; }
+          test -d .next/static/chunks/app/login || { echo "::error::no /login page chunk after build"; exit 1; }
+          npx vitest run src/__tests__/login-bundle-size.test.ts src/__tests__/login-full-payload-size.test.ts --reporter=verbose
+
   # (l) THE MOMENTS AGREEMENT CHECK — 2026-09-20, audit Wave 2.
   #
   # `src/data/books/moments.json` is a trim of shireishabbat's artifact. If the

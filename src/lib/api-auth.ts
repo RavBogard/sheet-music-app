@@ -57,7 +57,9 @@ function accessFromToken(decoded: DecodedIdToken, orgId: OrgId): TenantAccess {
     const claims = decoded as unknown as Record<string, unknown>
     const po = claims.po === true
     const hasM = !!claims.m && typeof claims.m === "object"
-    const role = asTenantRole(tenantRoleFromClaims({ ...claims, po: false }, orgId))
+    // SEC-02: only the per-tenant membership map (`m`) counts; a token without
+    // one (legacy, tenant-blind `role` claim) carries no role in any tenant.
+    const role = hasM ? asTenantRole(tenantRoleFromClaims({ ...claims, po: false }, orgId)) : null
     let soundEngineer = false
     if (hasM) soundEngineer = Array.isArray(claims.se) && (claims.se as unknown[]).includes(orgId)
     else soundEngineer = claims.soundEngineer === true
@@ -69,7 +71,7 @@ function accessFromToken(decoded: DecodedIdToken, orgId: OrgId): TenantAccess {
         soundEngineer,
         canUpload: false,
         po,
-        source: role ? "legacy" : "none",
+        source: role ? "membership" : "none",
     }
 }
 
@@ -142,8 +144,8 @@ export async function requireAuth(
     }
 
     // Multi-tenant P2 (design §3.4): the role is the caller's role in the HOST
-    // tenant (x-org-id, set by the proxy), read from their membership. Not yet
-    // migrated → today's tenant-blind claim role (legacyClaims). The platform
+    // tenant (x-org-id, set by the proxy), read from their membership only
+    // (SEC-02: no tenant-blind legacy fallback). The platform
     // owner (platform/owners) is admin everywhere; SUPER_ADMIN_UID is retired.
     const orgId = coerceOrgId(req.headers.get("x-org-id"))
     // Multi-tenant phase 3: prime the host tenant's config so synchronous
@@ -152,9 +154,7 @@ export async function requireAuth(
     await primeTenantConfig(orgId)
     let access: TenantAccess
     try {
-        access = await getTenantAccess(decoded.uid, orgId, {
-            legacyClaims: decoded as unknown as Record<string, unknown>,
-        })
+        access = await getTenantAccess(decoded.uid, orgId)
     } catch (e) {
         logger.warn("[api-auth] membership read failed; using token claims", { uid: decoded.uid, orgId, e })
         access = accessFromToken(decoded, orgId)

@@ -9,6 +9,7 @@ import {
 } from "vitest"
 import { initializeApp, deleteApp, getApps, type App } from "firebase-admin/app"
 import { getFirestore } from "firebase-admin/firestore"
+import { mirrorLegacyRoles } from "@/test-stubs/mirror-legacy-roles"
 
 /**
  * W4 (R-0903-live-cw-2 §3) — `backfill_content_hash`.
@@ -69,6 +70,10 @@ describe("MCP backfill_content_hash (emulator)", () => {
 
     const PDF_A = Buffer.from("%PDF-1.4 Hashkivenu A", "utf8")
     const PDF_B = Buffer.from("%PDF-1.4 Hashkivenu B", "utf8")
+
+    // SEC-02: role gates read memberships only; give each seeded person the
+    // membership the people migration would have written.
+    beforeEach(async () => { await mirrorLegacyRoles(db(), { migrate: true }) })
 
     it("refuses non-admin callers", async () => {
         const r = await backfillContentHash(MUSICIAN, { force: true })

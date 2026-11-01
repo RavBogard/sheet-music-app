@@ -73,7 +73,9 @@ describe.skipIf(!buildPresent)('shared client JS rootMainFiles size', () => {
         const sizes: Array<{ chunk: string; bytes: number }> = []
         for (const chunk of chunks) {
             const abs = join(NEXT_DIR, chunk)
-            if (!existsSync(abs)) continue
+            // A chunk the manifest lists but the build lacks is a broken or
+            // stale .next, never "0 bytes": fail rather than under-count.
+            expect(existsSync(abs), `manifest lists ${chunk} but ${abs} is missing`).toBe(true)
             const { size } = statSync(abs)
             totalBytes += size
             sizes.push({ chunk, bytes: size })

@@ -7,6 +7,7 @@ import { backfillWeekKeys } from "@/lib/mcp/tools/week-key-backfill"
 import { ceremonyCardCacheSize, clearCeremonyCardCache, readCeremonyCard } from "@/lib/family/ceremony-card"
 import { collections, linkId, saveDetails } from "@/lib/beit-mitzvah/service"
 import type { WeekInfo } from "@/lib/family/week-key"
+import { mirrorLegacyRoles } from "@/test-stubs/mirror-legacy-roles"
 
 /**
  * BET-6 — the week-key back-fill (F-05) and the Beit Mitzvah card read,
@@ -50,6 +51,10 @@ describe("BET-6 back-fill and ceremony card (emulator)", () => {
         await db().collection("setlists").doc("test").set({ orgId: "crc", name: "[TEST] x", eventDate: "2026-10-10T15:00:00.000Z", isTest: true })
         await db().collection("setlists").doc("bl").set({ orgId: "brotherslazaroff", name: "Gig", eventDate: "2026-10-10T15:00:00.000Z" })
     })
+
+    // SEC-02: role gates read memberships only; give each seeded person the
+    // membership the people migration would have written.
+    beforeEach(async () => { await mirrorLegacyRoles(db(), { migrate: true }) })
 
     it("dry run (the default) reports the full plan and writes nothing", async () => {
         const r = await backfillWeekKeys(ADMIN, {}, "crc", compute)

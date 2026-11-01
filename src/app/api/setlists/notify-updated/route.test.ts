@@ -6,6 +6,7 @@ import { NextResponse } from 'next/server'
 
 import { makeReq } from '@/__tests__/api-test-helpers'
 import { firebaseAdminMock, mockAuth, mockUsersSnap } from '@/__tests__/mock-firebase-admin'
+import { withMockMemberships } from '@/test-stubs/tenant-claims'
 
 // ── Mocks ──
 
@@ -39,7 +40,7 @@ const firestoreWithBatch = {
 
 vi.mock('@/lib/firebase-admin', () => ({
     initAdmin: vi.fn().mockReturnValue(true),
-    getFirestore: vi.fn(() => firestoreWithBatch),
+    getFirestore: vi.fn(() => withMockMemberships(firestoreWithBatch)),
     verifyIdToken: firebaseAdminMock.verifyIdToken,
 }))
 

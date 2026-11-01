@@ -78,7 +78,7 @@ describe("v11.7-06-01 · /api/recordings/upload · org-stamp from host", () => {
     beforeEach(() => {
         vi.clearAllMocks()
         // A band-leader caller (isBandLeader is derived from role === 'band_leader').
-        mockVerifyIdToken.mockResolvedValue({ uid: "leader-1", role: "band_leader" })
+        mockVerifyIdToken.mockResolvedValue({ uid: "leader-1", role: "band_leader", m: { crc: "bl", brotherslazaroff: "bl" } })
         mockSet.mockResolvedValue(undefined)
     })
 

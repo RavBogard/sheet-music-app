@@ -5,6 +5,7 @@ import { getFirestore } from "firebase-admin/firestore"
 import { reviewChartBonds } from "../tools/chart-bond-audit"
 import { cloneSetlist } from "../tools/clone-setlist"
 import { createTemplate, cloneSetlistFromTemplate } from "../tools/templates"
+import { mirrorLegacyRoles } from "@/test-stubs/mirror-legacy-roles"
 
 /**
  * setlist-fixes Lane B (Bug 1 + Bug 4 + UX-7) — emulator coverage.
@@ -93,6 +94,9 @@ describe("MCP review_chart_bonds + clone audit (emulator)", () => {
             title: "D'var Torah",
         })
     }
+
+    // SEC-02: role gates read memberships only; give each seeded person theirs.
+    beforeEach(async () => { await mirrorLegacyRoles(db()) })
 
     it("flags the wrong bond and clears the clean one", async () => {
         await seedLibrary()

@@ -23,6 +23,7 @@ import {
     addTrackToSetlist,
     createSetlist,
 } from "../tools/setlist-write"
+import { mirrorLegacyRoles } from "@/test-stubs/mirror-legacy-roles"
 
 /**
  * W-01 Tasks 1+2 — propose_setlist_changes + commit_staged_changes.
@@ -117,6 +118,9 @@ describe("W-01 Task 1+2 — propose + commit lifecycle (emulator)", () => {
     })
 
     // ─── propose_setlist_changes ────────────────────────────────────────────
+
+    // SEC-02: role gates read memberships only; give each seeded person theirs.
+    beforeEach(async () => { await mirrorLegacyRoles(db()) })
 
     it("AC-1: propose creates the stage doc and leaves the setlist + tracks untouched", async () => {
         const setlistId = await newSetlist()

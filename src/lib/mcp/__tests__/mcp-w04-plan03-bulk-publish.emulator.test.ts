@@ -87,6 +87,8 @@ describe("W-04 Plan 03 — bulk + publish version gating (emulator)", () => {
                 role: "admin",
                 email: "rabbi@example.com",
             })
+        // SEC-02: role gates read only the tenant membership.
+        await db().collection("memberships").doc(`crc__${ADMIN}`).set({ uid: ADMIN, tenantId: "crc", role: "admin", soundEngineer: false, addedBy: "test-account" })
         // Seed at least one bondable song for the publish_setlist tests'
         // chart-health pre-flight, plus a library_index row.
         await db()

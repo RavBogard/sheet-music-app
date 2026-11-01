@@ -104,6 +104,7 @@ import {
     __resetLibraryEventHandlersForTesting,
     type LibraryRowCreatedEvent,
 } from "@/lib/library/library-events"
+import { mirrorLegacyRoles } from "@/test-stubs/mirror-legacy-roles"
 
 describe("MCP chunked-upload session tools (emulator)", () => {
     let app: App
@@ -150,6 +151,10 @@ describe("MCP chunked-upload session tools (emulator)", () => {
         stagedStore.clear()
         __resetLibraryEventHandlersForTesting()
     })
+
+    // SEC-02: role gates read memberships only; give each seeded person the
+    // membership the people migration would have written.
+    beforeEach(async () => { await mirrorLegacyRoles(db(), { migrate: true }) })
 
     it("request_chart_upload_url issues a session + signed PUT URL for an authorized uploader", async () => {
         mockGetSignedUrl.mockResolvedValueOnce(["https://signed.example/put-1"])

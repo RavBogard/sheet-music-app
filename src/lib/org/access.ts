@@ -18,10 +18,13 @@ import {
  * tenant". Web routes pass the host tenant (x-org-id); MCP passes the token's
  * tenant. Design: docs/planning/2026-10-12-multitenant/work/P2-design.md §3.3.
  *
- * Transition (§3.5, server side): membership missing AND users/{uid}
- * .membershipsMigratedAt absent → `source:'legacy'` with today's tenant-blind
- * role (users doc role, or the caller's legacy claims when supplied). Missing
- * and migrated → no role. No cross-request cache for memberships (removal is
+ * SEC-02 (2026-11-01): membership only. The phase-2 transition fallback (no
+ * membership and not migrated → the tenant-blind users-doc role or legacy
+ * claim role) is gone: every account is migrated, every account-creation and
+ * role path writes a membership (setMembership / ensureMembershipsMigrated),
+ * and a tenant-blind role must never pass a tenant gate. No membership → no
+ * role (`source:'none'`); the platform owner is still admin everywhere.
+ * No cross-request cache for memberships (removal is
  * immediate for routes and MCP); only platform/owners is memoised (60 s).
  */
 export type { Membership, TenantRole } from "@/lib/org/membership-types"
@@ -55,11 +58,8 @@ export async function getTenantAccess(
     opts?: {
         db?: Firestore
         /**
-         * Legacy-path role source. When the person is not migrated yet, routes
-         * that authorised from the ID-token claim before phase 2 (requireAuth,
-         * reader music, backups) pass the decoded token here so the legacy
-         * answer is byte-for-byte today's; omitted → users/{uid} doc (what
-         * readUserRole / getServerUser read).
+         * @deprecated SEC-02: ignored. The legacy, tenant-blind claim role no
+         * longer decides anything; kept so existing callers compile.
          */
         legacyClaims?: Record<string, unknown> | null
     },
@@ -85,16 +85,6 @@ export async function getTenantAccess(
         role = memRole
         soundEngineer = mem.soundEngineer === true && roleRank(role) >= roleRank("member")
         source = "membership"
-    } else if (!user?.membershipsMigratedAt) {
-        const lc = opts?.legacyClaims
-        if (lc) {
-            role = asTenantRole(lc.role)
-            soundEngineer = lc.soundEngineer === true
-        } else {
-            role = asTenantRole(user?.role)
-            soundEngineer = user?.soundEngineer === true
-        }
-        source = role ? "legacy" : "none"
     }
 
     return {
@@ -121,6 +111,22 @@ export function hasTenantRole(a: TenantAccess, min: Exclude<TenantRole, "denied"
 export async function readTenantRole(db: Firestore, uid: string, orgId: OrgId): Promise<string | undefined> {
     const a = await getTenantAccess(uid, orgId, { db })
     return a.effectiveRole ?? undefined
+}
+
+/**
+ * SEC-02: the caller's role IN THIS TENANT from its membership doc only (the
+ * same answer as readTenantRole, without the users-doc read). Platform owners
+ * read as "admin". No membership (or one without a valid role) → undefined,
+ * which every gate denies.
+ */
+export async function readMembershipRole(db: Firestore, uid: string, orgId: OrgId): Promise<string | undefined> {
+    const [memSnap, po] = await Promise.all([
+        db.collection("memberships").doc(membershipId(orgId, uid)).get(),
+        isPlatformOwner(uid, db),
+    ])
+    if (po) return "admin"
+    const mem = memSnap.exists ? ((memSnap.data() ?? {}) as Record<string, unknown>) : null
+    return (mem ? asTenantRole(mem.role) : null) ?? undefined
 }
 
 const OWNERS_TTL_MS = 60_000
@@ -276,19 +282,16 @@ async function readMigrationOverridesSafe(db: Firestore): Promise<MembershipOver
 
 /**
  * The role the `__session_role` companion cookie carries for `orgId`
- * (design §3.4): the tenant role from the membership (po → admin). While the
- * person is unmigrated (legacy source) the P0 rule still holds — the users-doc
- * role, never above what the account's claims grant (stored or token claim).
+ * (design §3.4): the tenant role from the membership (po → admin). SEC-02:
+ * membership only, so the unmigrated P0 rule (users-doc role capped to the
+ * claims) no longer applies. `tokenRole` is ignored and kept for callers.
  */
 export async function resolveSessionRole(
     uid: string,
     orgId: OrgId,
-    tokenRole?: string | null,
+    _tokenRole?: string | null,
     opts?: { db?: Firestore },
 ): Promise<string | null> {
     const access = await getTenantAccess(uid, orgId, opts)
-    if (access.po || access.source !== "legacy") return access.effectiveRole
-    if (!access.role) return null
-    const rec = await getAuth().getUser(uid)
-    return capRoleToClaims(access.role, rec.customClaims?.role as string | undefined, tokenRole ?? undefined) ?? null
+    return access.effectiveRole
 }

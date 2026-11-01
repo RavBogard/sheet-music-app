@@ -20,6 +20,7 @@ import {
 } from "../tools/admin-test-session"
 import { provisionTestAccount } from "../tools/test-tokens"
 import { verifyBearer } from "../auth"
+import { mirrorLegacyRoles } from "@/test-stubs/mirror-legacy-roles"
 
 /**
  * admin-test-session core (emulator). Proves the durable Firestore + Auth +
@@ -79,6 +80,10 @@ describe("admin-test-session core (emulator)", () => {
         }
         await db().collection("users").doc(ADMIN_UID).set({ role: "admin" })
     })
+
+    // SEC-02: role gates read memberships only; give each seeded person the
+    // membership the people migration would have written.
+    beforeEach(async () => { await mirrorLegacyRoles(db(), { migrate: true }) })
 
     it("mints a test-admin user with admin + admin_test custom claims", async () => {
         const result = await provisionAdminTestSession({ callerContext: "1.2.3.4" })

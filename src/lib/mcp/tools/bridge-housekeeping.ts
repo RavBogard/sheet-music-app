@@ -1,7 +1,7 @@
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 import { forbiddenRoleEnvelope } from "@/lib/mcp/error-envelopes"
-import { readTenantRole } from "@/lib/org/access"
+import { readMembershipRole } from "@/lib/org/access"
 import type { OrgId } from "@/lib/org/types"
 // Multi-tenant P2: bridge/mixer role checks read the BRIDGE tenant's membership
 // (crc — the X32 is CRC's), never the MCP token tenant.
@@ -101,7 +101,7 @@ async function assertAdmin(
     toolName: string,
     org: OrgId,
 ): Promise<{ ok: true } | ReturnType<typeof forbiddenRoleEnvelope>> {
-    const role = await readTenantRole(db, uid, org)
+    const role = await readMembershipRole(db, uid, org)
     if (role === "admin") return { ok: true }
     return forbiddenRoleEnvelope({
         callerRole: role ?? null,

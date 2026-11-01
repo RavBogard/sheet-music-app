@@ -42,6 +42,8 @@ describe("MCP aiConfig tools — cycle-3 c2 (emulator)", () => {
 
     async function seedUser(uid: string, role: string) {
         await db().collection("users").doc(uid).set({ role })
+        // SEC-02: role gates read only the tenant membership.
+        await db().collection("memberships").doc(`crc__${uid}`).set({ uid, tenantId: "crc", role, soundEngineer: false, addedBy: "test-account" })
     }
 
     async function seedConfig(data: Record<string, unknown>) {

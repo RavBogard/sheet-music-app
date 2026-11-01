@@ -8,7 +8,12 @@
  * directly via `vi.mock(...)` to override per-case.
  */
 
-import { vi } from 'vitest'
+import { beforeEach, vi } from 'vitest'
+import { setMockMembershipRole } from '@/test-stubs/tenant-claims'
+
+// SEC-02: the mocked membership role (test-stubs/tenant-claims) never carries
+// over from one test to the next; a test that wants one calls mockAuth.
+beforeEach(() => setMockMembershipRole(null))
 
 if (typeof window !== 'undefined' && !window.matchMedia) {
     Object.defineProperty(window, 'matchMedia', {

@@ -54,6 +54,7 @@ import { updateSong, applySongMetadata } from "../tools/song-metadata"
 import { saveScrapedChart } from "../tools/library-upload"
 import { getSong, listLibrary } from "../tools/library"
 import type { RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
+import { mirrorLegacyRoles } from "@/test-stubs/mirror-legacy-roles"
 
 /**
  * Cowork #3 (save_scraped_chart key/bpm/leadMusician parity) + #5 (update_song)
@@ -121,6 +122,10 @@ describe("MCP update_song + save_scraped_chart parity + enrichment coverage (emu
     }
 
     // ─── update_song (#5) ────────────────────────────────────────────────────
+
+    // SEC-02: role gates read memberships only; give each seeded person the
+    // membership the people migration would have written.
+    beforeEach(async () => { await mirrorLegacyRoles(db(), { migrate: true }) })
 
     it("admin sets key + bpm — writes BOTH library_index and songs.defaults", async () => {
         await seedChart("upload-aaa")

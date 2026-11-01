@@ -16,6 +16,7 @@ import {
     LEGACY_RUN_ID,
     type LegacyUndoFileRow,
 } from "../tools/undo-dedupe"
+import { mirrorLegacyRoles } from "@/test-stubs/mirror-legacy-roles"
 
 /**
  * W3 (R-0903-live-cw-2 §5) — `undo_dedupe_group`.
@@ -81,6 +82,10 @@ describe("MCP undo_dedupe_group (emulator)", () => {
         expect(r.committed).toBe(1)
         return r.dedupeRunId as string
     }
+
+    // SEC-02: role gates read memberships only; give each seeded person the
+    // membership the people migration would have written.
+    beforeEach(async () => { await mirrorLegacyRoles(db(), { migrate: true }) })
 
     it("refuses non-admin callers", async () => {
         const r = await undoDedupeGroup(MUSICIAN, {

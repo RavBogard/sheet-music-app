@@ -92,6 +92,7 @@ vi.mock("@/lib/logger", () => ({
 }))
 
 import { testDeleteStorageObject } from "../tools/test-delete-storage-object"
+import { mirrorLegacyRoles } from "@/test-stubs/mirror-legacy-roles"
 
 describe("MCP __test_delete_storage_object (emulator)", () => {
     let app: App
@@ -158,6 +159,10 @@ describe("MCP __test_delete_storage_object (emulator)", () => {
     function seedStorage(fileId: string, mime = "application/pdf") {
         storageState.set(pathFor(fileId, mime), 4096)
     }
+
+    // SEC-02: role gates read memberships only; give each seeded person the
+    // membership the people migration would have written.
+    beforeEach(async () => { await mirrorLegacyRoles(db(), { migrate: true }) })
 
     it("refuses band_leader caller with forbidden_role", async () => {
         await seedTestRow(TEST_UUID)

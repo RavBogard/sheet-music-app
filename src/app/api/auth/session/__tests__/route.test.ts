@@ -21,8 +21,8 @@ const mockAuthAdmin = {
 }
 
 const mockFirestore = {
-    // Multi-tenant P2: no memberships / platform docs here, so the caller is an
-    // unmigrated (legacy) account and the P0 doc-role-capped-to-claims rule applies.
+    // SEC-02: the role comes from memberships only (membershipData); the users
+    // doc and the claims never decide it.
     collection: vi.fn((name: string) => ({
         doc: vi.fn(() => ({
             get: async () =>
@@ -87,8 +87,8 @@ describe("POST /api/auth/session", () => {
         createSessionCookieImpl = async () => "firebase-session-cookie"
     })
 
-    it("sets both __session and __session_role when Firestore role exists", async () => {
-        profileData = { role: "musician" }
+    it("sets both __session and __session_role when the membership has a role", async () => {
+        membershipData = { role: "musician", tenantId: "crc", uid: "u-1" }
         const res = await POST(req())
         expect(res.status).toBe(200)
         const setCookie = res.headers.get("set-cookie") || ""
@@ -131,26 +131,14 @@ describe("POST /api/auth/session", () => {
         const res = await POST(req({}))
         expect(res.status).toBe(400)
     })
-    it("multi-tenant P0: never signs a role above the account's claims (self-written doc role 'admin', claim 'pending')", async () => {
+    it("SEC-02: a users-doc or claim role with no membership signs role null", async () => {
         profileData = { role: "admin" }
-        recordClaims = { role: "pending" }
+        recordClaims = { role: "admin" }
         const res = await POST(req())
         expect(res.status).toBe(200)
-        const setCookie = res.headers.get("set-cookie") ?? ""
-        const match = setCookie.match(/__session_role=([^;]+)/)
+        const match = /__session_role=([^;]+)/.exec(res.headers.get("set-cookie") ?? "")
         const { verifyRoleCookie } = await import("@/lib/session-role")
-        const verified = await verifyRoleCookie(decodeURIComponent(match![1]))
-        expect(verified).toEqual({ uid: "u-1", role: "pending", org: "crc" })
-    })
-
-    it("multi-tenant P0: a lower document role still wins (demotion honoured)", async () => {
-        profileData = { role: "musician" }
-        recordClaims = { role: "band_leader" }
-        const res = await POST(req())
-        const setCookie = res.headers.get("set-cookie") ?? ""
-        const match = setCookie.match(/__session_role=([^;]+)/)
-        const { verifyRoleCookie } = await import("@/lib/session-role")
-        expect(await verifyRoleCookie(decodeURIComponent(match![1]))).toEqual({ uid: "u-1", role: "musician", org: "crc" })
+        expect(await verifyRoleCookie(decodeURIComponent(match![1]))).toEqual({ uid: "u-1", role: null, org: "crc" })
     })
 
     it("multi-tenant P2: signs the host tenant's membership role and carries the org", async () => {

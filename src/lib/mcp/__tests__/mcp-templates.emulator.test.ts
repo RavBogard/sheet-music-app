@@ -10,6 +10,7 @@ import {
     deleteTemplate,
     cloneSetlistFromTemplate,
 } from "../tools/templates"
+import { mirrorLegacyRoles } from "@/test-stubs/mirror-legacy-roles"
 
 /**
  * Cycle-6 Lane 2 — emulator coverage for the setlist-template CRUD pack.
@@ -86,6 +87,9 @@ describe("MCP templates CRUD (emulator)", () => {
     })
 
     // ─── REPRO-L2-create-template ─────────────────────────────────────────
+    // SEC-02: role gates read memberships only; give each seeded person theirs.
+    beforeEach(async () => { await mirrorLegacyRoles(db()) })
+
     it("create_template writes a Firestore doc with version:1 and trackCount", async () => {
         const result = (await createTemplate(ADMIN, {
             name: "Test Shabbat Morning",

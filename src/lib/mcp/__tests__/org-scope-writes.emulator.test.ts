@@ -89,6 +89,11 @@ describe("MCP write org-scoping (emulator)", () => {
             .collection("users")
             .doc(ADMIN)
             .set({ role: "admin", email: "rabbi@crc.test" })
+        // SEC-02: role gates read only the tenant membership — admin of both
+        // tenants, so the BL calls below reach the org wall (not the role gate).
+        for (const org of [CRC, BL]) {
+            await db().collection("memberships").doc(`${org}__${ADMIN}`).set({ uid: ADMIN, tenantId: org, role: "admin", soundEngineer: false, addedBy: "test-account" })
+        }
 
         // CRC setlist + one track (the cross-tenant write target).
         await db().collection("setlists").doc("s-crc").set({
