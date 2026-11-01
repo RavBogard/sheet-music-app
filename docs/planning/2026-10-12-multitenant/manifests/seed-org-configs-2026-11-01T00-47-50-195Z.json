@@ -1,0 +1,476 @@
+{
+  "at": "2026-11-01T00:47:50.195Z",
+  "projectId": "crcmusiccharts",
+  "docs": {
+    "crc": {
+      "existed": true,
+      "data": {
+        "createdAt": {
+          "__ts": "2026-06-08T20:12:51.763Z"
+        },
+        "domain": "centralreform.live",
+        "name": "Central Reform Congregation",
+        "id": "crc",
+        "liturgy": {
+          "books": [
+            "crc-friday",
+            "crc-saturday",
+            "crc-machzor-2008",
+            "shabbat-maariv",
+            "shabbat-shacharit",
+            "shirei-tshuvah",
+            "legacy-shabbat-evening",
+            "legacy-shabbat-morning"
+          ],
+          "defaultBookByService": {},
+          "serviceTypes": [
+            {
+              "key": "friday_night",
+              "label": "Friday Night",
+              "defaultStart": ""
+            },
+            {
+              "key": "shir_shabbat",
+              "label": "Shir Shabbat",
+              "defaultStart": ""
+            },
+            {
+              "key": "shabbat_morning",
+              "label": "Shabbat Morning",
+              "defaultStart": ""
+            },
+            {
+              "key": "bnei_mitzvah_saturday",
+              "label": "B'nei Mitzvah Saturday",
+              "defaultStart": ""
+            },
+            {
+              "key": "havdalah_bnei_mitzvah",
+              "label": "Havdalah B'nei Mitzvah",
+              "defaultStart": ""
+            },
+            {
+              "key": "rosh_hashanah_evening",
+              "label": "Rosh Hashanah Evening",
+              "defaultStart": ""
+            },
+            {
+              "key": "rosh_hashanah_morning",
+              "label": "Rosh Hashanah Morning",
+              "defaultStart": ""
+            },
+            {
+              "key": "yom_kippur_kol_nidre",
+              "label": "Yom Kippur Kol Nidre",
+              "defaultStart": ""
+            },
+            {
+              "key": "yom_kippur_morning",
+              "label": "Yom Kippur Morning",
+              "defaultStart": ""
+            },
+            {
+              "key": "yom_kippur_afternoon",
+              "label": "Yom Kippur Afternoon/Neilah",
+              "defaultStart": ""
+            },
+            {
+              "key": "sukkot",
+              "label": "Sukkot",
+              "defaultStart": ""
+            },
+            {
+              "key": "simchat_torah",
+              "label": "Simchat Torah",
+              "defaultStart": ""
+            },
+            {
+              "key": "passover",
+              "label": "Passover",
+              "defaultStart": ""
+            },
+            {
+              "key": "shavuot",
+              "label": "Shavuot",
+              "defaultStart": ""
+            }
+          ],
+          "rabbiSlots": [
+            {
+              "key": "daniel_karen",
+              "label": "Rabbi Daniel / Rabbi Karen",
+              "match": [
+                "daniel",
+                "karen"
+              ]
+            },
+            {
+              "key": "randy",
+              "label": "Rabbi Randy",
+              "match": [
+                "randy"
+              ]
+            }
+          ]
+        },
+        "configVersion": 1,
+        "agentGuide": "",
+        "branding": {
+          "shortName": "CRC Music",
+          "abbreviation": "CRC",
+          "tagline": "",
+          "forceDark": false,
+          "appName": "Central Reform Congregation Music",
+          "metaTitleDefault": "CRC Music | Digital Sheet Library",
+          "metaTitleTemplate": "%s | CRC Music",
+          "metaDescription": "Digital Sheet Music Library for Central Reform Congregation",
+          "ogTitle": "Central Reform Congregation — Music",
+          "themeColor": "#0e0d18",
+          "logoUrl": "/logo.jpg",
+          "wordmarkUrl": "",
+          "heroImageUrl": "",
+          "location": "St. Louis, MO",
+          "manifestPath": "/manifest.json",
+          "baseUrl": "https://centralreform.live",
+          "fontDisplay": "righteous",
+          "fontBody": "poppins",
+          "colors": {
+            "light": {},
+            "dark": {}
+          },
+          "legacyCssTheme": null
+        },
+        "domains": {
+          "primary": "centralreform.live",
+          "aliases": [
+            "www.centralreform.live"
+          ]
+        },
+        "congregationDefaults": {
+          "name": "Central Reform Congregation",
+          "shortName": "CRC Music",
+          "location": "St. Louis, MO",
+          "logoUrl": "/logo.jpg",
+          "description": "Digital Sheet Music Library for CRC Musicians",
+          "themeColor": "#7c3aed"
+        },
+        "locale": {
+          "language": "en",
+          "direction": "ltr",
+          "timeZone": "America/Chicago",
+          "calendar": "diaspora",
+          "reminderLocalHour": 5,
+          "reminderUtcHour": 10
+        },
+        "features": {
+          "mixer": true,
+          "driveInbox": true,
+          "schedulingEmails": true,
+          "todayFeed": true,
+          "notifyBand": true,
+          "perform": true
+        },
+        "library": {
+          "collections": [
+            {
+              "id": "core",
+              "label": "CRC Charts"
+            },
+            {
+              "id": "supplemental",
+              "label": "Shireinu"
+            },
+            {
+              "id": "nava",
+              "label": "Nava Tehilah"
+            },
+            {
+              "id": "uploads",
+              "label": "Uploads"
+            }
+          ],
+          "defaultCollection": "core"
+        },
+        "vocabulary": {
+          "mode": "shul",
+          "overrides": {
+            "ai.libraryConventions": "Library naming conventions (CRC music library):\n\n- Reform Jewish liturgical music + supplemental.\n- Common naming: \"Title (Composer)\" or \"Title (Arrangement)\" — e.g.\n  \"Shalom Rav (Frankel)\", \"Mi Chamocha (Klepper)\".\n- Hebrew-Latin transliteration is the canonical form (NOT Hebrew script\n  on chart titles, even if the chart itself is in Hebrew).\n- Collections:\n    - core: high-frequency liturgical music (Shabbat liturgy, Hatzi\n      Kaddish, etc.) — used every week.\n    - supplemental: niggunim, holiday-specific, occasional repertoire.\n    - uploads: provisional landing zone; everything starts here unless\n      David routed it explicitly via Drive subfolder.\n- Tags are short, kebab-case, optional. Examples:\n  \"friday-evening\", \"shabbat-morning\", \"high-holy-days\", \"frankel\",\n  \"klepper\", \"shireinu\", \"kavanah\".\n\nIf you're not sure of a field, return null / [] — do NOT guess."
+          }
+        },
+        "legal": {
+          "operatorName": "Central Reform Congregation",
+          "contactEmail": "music@centralreform.live",
+          "useCrcText": true
+        },
+        "configUpdatedAt": {
+          "__ts": "2026-10-12T17:59:50.806Z"
+        },
+        "email": {
+          "fromName": "CRC Music",
+          "fromAddress": "",
+          "replyTo": "",
+          "headerBg": "#1a1a2e",
+          "footerText": "CRC Music — Central Reform Congregation",
+          "headerImagePath": "",
+          "headerImageHeightPx": 0
+        },
+        "status": "active",
+        "driveInbox": {
+          "folderId": ""
+        }
+      }
+    },
+    "brotherslazaroff": {
+      "existed": true,
+      "data": {
+        "createdAt": {
+          "__ts": "2026-06-08T20:12:51.976Z"
+        },
+        "domain": "brotherslazaroff.live",
+        "name": "Brothers Lazaroff",
+        "id": "brotherslazaroff",
+        "liturgy": {
+          "books": [
+            "crc-friday",
+            "crc-saturday",
+            "crc-machzor-2008",
+            "shabbat-maariv",
+            "shabbat-shacharit",
+            "shirei-tshuvah",
+            "legacy-shabbat-evening",
+            "legacy-shabbat-morning"
+          ],
+          "defaultBookByService": {},
+          "serviceTypes": [
+            {
+              "key": "friday_night",
+              "label": "Friday Night",
+              "defaultStart": ""
+            },
+            {
+              "key": "shir_shabbat",
+              "label": "Shir Shabbat",
+              "defaultStart": ""
+            },
+            {
+              "key": "shabbat_morning",
+              "label": "Shabbat Morning",
+              "defaultStart": ""
+            },
+            {
+              "key": "bnei_mitzvah_saturday",
+              "label": "B'nei Mitzvah Saturday",
+              "defaultStart": ""
+            },
+            {
+              "key": "havdalah_bnei_mitzvah",
+              "label": "Havdalah B'nei Mitzvah",
+              "defaultStart": ""
+            },
+            {
+              "key": "rosh_hashanah_evening",
+              "label": "Rosh Hashanah Evening",
+              "defaultStart": ""
+            },
+            {
+              "key": "rosh_hashanah_morning",
+              "label": "Rosh Hashanah Morning",
+              "defaultStart": ""
+            },
+            {
+              "key": "yom_kippur_kol_nidre",
+              "label": "Yom Kippur Kol Nidre",
+              "defaultStart": ""
+            },
+            {
+              "key": "yom_kippur_morning",
+              "label": "Yom Kippur Morning",
+              "defaultStart": ""
+            },
+            {
+              "key": "yom_kippur_afternoon",
+              "label": "Yom Kippur Afternoon/Neilah",
+              "defaultStart": ""
+            },
+            {
+              "key": "sukkot",
+              "label": "Sukkot",
+              "defaultStart": ""
+            },
+            {
+              "key": "simchat_torah",
+              "label": "Simchat Torah",
+              "defaultStart": ""
+            },
+            {
+              "key": "passover",
+              "label": "Passover",
+              "defaultStart": ""
+            },
+            {
+              "key": "shavuot",
+              "label": "Shavuot",
+              "defaultStart": ""
+            }
+          ],
+          "rabbiSlots": [
+            {
+              "key": "daniel_karen",
+              "label": "Rabbi Daniel / Rabbi Karen",
+              "match": [
+                "daniel",
+                "karen"
+              ]
+            },
+            {
+              "key": "randy",
+              "label": "Rabbi Randy",
+              "match": [
+                "randy"
+              ]
+            }
+          ]
+        },
+        "configVersion": 1,
+        "agentGuide": "",
+        "branding": {
+          "shortName": "Brothers Lazaroff",
+          "abbreviation": "BL",
+          "tagline": "Songs & setlists for the band",
+          "forceDark": true,
+          "appName": "Brothers Lazaroff",
+          "metaTitleDefault": "Brothers Lazaroff",
+          "metaTitleTemplate": "%s | Brothers Lazaroff",
+          "metaDescription": "Songs & setlists for the band",
+          "ogTitle": "Brothers Lazaroff",
+          "themeColor": "#04201f",
+          "logoUrl": "",
+          "wordmarkUrl": "/brands/brotherslazaroff/wordmark.png",
+          "heroImageUrl": "",
+          "location": "St. Louis, MO",
+          "manifestPath": "/manifest-brotherslazaroff.json",
+          "baseUrl": "https://brotherslazaroff.live",
+          "fontDisplay": "zillaSlab",
+          "fontBody": "poppins",
+          "colors": {
+            "light": {},
+            "dark": {}
+          },
+          "legacyCssTheme": "brotherslazaroff"
+        },
+        "domains": {
+          "primary": "brotherslazaroff.live",
+          "aliases": [
+            "www.brotherslazaroff.live"
+          ]
+        },
+        "congregationDefaults": {
+          "name": "Central Reform Congregation",
+          "shortName": "CRC Music",
+          "location": "St. Louis, MO",
+          "logoUrl": "/logo.jpg",
+          "description": "Digital Sheet Music Library for CRC Musicians",
+          "themeColor": "#7c3aed"
+        },
+        "locale": {
+          "language": "en",
+          "direction": "ltr",
+          "timeZone": "America/Chicago",
+          "calendar": "diaspora",
+          "reminderLocalHour": 5,
+          "reminderUtcHour": 10
+        },
+        "library": {
+          "collections": [
+            {
+              "id": "core",
+              "label": "Charts"
+            },
+            {
+              "id": "uploads",
+              "label": "Uploads"
+            }
+          ],
+          "defaultCollection": ""
+        },
+        "vocabulary": {
+          "mode": "band",
+          "overrides": {
+            "setlist": "set",
+            "editSetlistDetails": "Edit set details",
+            "namePlaceholder": "e.g., Friday night set",
+            "publicListingTitle": "Upcoming Shows & Sets",
+            "publicListingSubtitle": "Public sets",
+            "newSetlist": "New Set",
+            "blankSetlist": "Blank set",
+            "cloneSetlistAction": "Clone Set",
+            "createSetlistAction": "Create Set",
+            "wizardNamePlaceholder": "e.g., Friday night set",
+            "pastSection": "Past shows",
+            "planPlaceholder": "Plan Show",
+            "upcomingSection": "Upcoming Shows",
+            "createNewSetlistHeading": "Create New Set",
+            "matrixTitle": "Set Matrix",
+            "email.notificationFromName": "CRC Music",
+            "email.notificationFooter": "CRC Music — Central Reform Congregation",
+            "email.venueName": "Central Reform Congregation",
+            "sms.venueShort": "CRC",
+            "sms.publishPrefix": "CRC Music",
+            "feed.productName": "CRC Music",
+            "feed.calendarNamePrefix": "CRC Music",
+            "feed.location": "Central Reform Congregation",
+            "feed.uidPrefix": "crc",
+            "feed.uidDomain": "centralreform.live",
+            "feed.filePrefix": "crc-schedule",
+            "print.footer": "Generated by CRC Music Books • a project of Rabbi Daniel Bogard",
+            "print.packetSubject": "CRC Music Books gig packet",
+            "chart.footerLeft": "Central Reform Congregation",
+            "chart.footerRight": "centralreform.live",
+            "og.alt": "Central Reform Congregation — Digital Sheet Music Library",
+            "og.monogram": "CRC",
+            "og.title": "Central Reform Congregation",
+            "page.unauthorizedTitle": "Unauthorized | Central Reform Congregation",
+            "page.v2TitleTemplate": "%s | CRC Music · v2 Beta",
+            "page.v2TitleDefault": "CRC Music · v2 Beta",
+            "page.skeletonBrand": "CRC Music",
+            "profile.scheduleName": "your CRC schedule",
+            "library.ownBadge": "CRC",
+            "seo.baseUrl": "https://centralreform.live",
+            "library.coreSectionLabel": "CRC Charts",
+            "ai.systemInstructionLead": "You are an enrichment assistant for the Central Reform Congregation music library. You inspect a chart file plus its current library_index metadata and emit a structured enrichment report. You NEVER refuse — you always emit the JSON object. If you're uncertain, return low confidence, populate `concerns`, and set `review_required: true`. Do NOT fabricate fields you can't determine from the input.",
+            "ai.libraryConventions": "Library naming conventions (CRC music library):\n\n- Reform Jewish liturgical music + supplemental.\n- Common naming: \"Title (Composer)\" or \"Title (Arrangement)\" — e.g.\n  \"Shalom Rav (Frankel)\", \"Mi Chamocha (Klepper)\".\n- Hebrew-Latin transliteration is the canonical form (NOT Hebrew script\n  on chart titles, even if the chart itself is in Hebrew).\n- Collections:\n    - core: high-frequency liturgical music (Shabbat liturgy, Hatzi\n      Kaddish, etc.) — used every week.\n    - supplemental: niggunim, holiday-specific, occasional repertoire.\n    - uploads: provisional landing zone; everything starts here unless\n      David routed it explicitly via Drive subfolder.\n- Tags are short, kebab-case, optional. Examples:\n  \"friday-evening\", \"shabbat-morning\", \"high-holy-days\", \"frankel\",\n  \"klepper\", \"shireinu\", \"kavanah\".\n\nIf you're not sure of a field, return null / [] — do NOT guess."
+          }
+        },
+        "legal": {
+          "operatorName": "Central Reform Congregation",
+          "contactEmail": "music@centralreform.live",
+          "useCrcText": true
+        },
+        "configUpdatedAt": {
+          "__ts": "2026-10-12T17:59:50.929Z"
+        },
+        "email": {
+          "fromName": "Brothers Lazaroff",
+          "fromAddress": "",
+          "replyTo": "",
+          "headerBg": "#04201f",
+          "footerText": "Brothers Lazaroff",
+          "headerImagePath": "/brands/brotherslazaroff/wordmark.png",
+          "headerImageHeightPx": 28
+        },
+        "status": "active",
+        "features": {
+          "mixer": false,
+          "driveInbox": false,
+          "schedulingEmails": false,
+          "todayFeed": true,
+          "notifyBand": true,
+          "perform": true
+        },
+        "driveInbox": {
+          "folderId": ""
+        }
+      }
+    }
+  }
+}
