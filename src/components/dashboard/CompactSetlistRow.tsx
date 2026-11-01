@@ -57,7 +57,7 @@ export function CompactSetlistRow({ setlist, onSelect }: { setlist: Setlist; onS
             <Button
                 variant="ghost"
                 onClick={handleSelect}
-                className={`w-full h-auto min-h-14 flex items-center gap-3 bg-card hover:bg-accent/60 rounded-md px-3 py-2.5 text-start group border border-rule active:scale-100 ${navigatingTo ? 'opacity-50 pointer-events-none' : ''}`}
+                className={`w-full h-auto min-h-14 flex items-center gap-3 bg-card hover:bg-accent/60 rounded-none px-4 py-2.5 text-start group active:scale-100 ${navigatingTo ? 'opacity-50 pointer-events-none' : ''}`}
             >
                 {content}
             </Button>
@@ -67,7 +67,7 @@ export function CompactSetlistRow({ setlist, onSelect }: { setlist: Setlist; onS
     return (
         <Link
             href={href}
-            className="w-full min-h-14 flex items-center gap-3 bg-card hover:bg-accent/60 rounded-md px-3 py-2.5 transition-colors text-start group border border-rule focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="w-full min-h-14 flex items-center gap-3 bg-card hover:bg-accent/60 px-4 py-2.5 transition-colors text-start group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
         >
             {content}
         </Link>

@@ -143,7 +143,7 @@ export default function QRApprovePage() {
     if (state === "expired") {
         return (
             <Shell>
-                <AlertCircle className="h-12 w-12 text-amber-500" />
+                <AlertCircle className="h-12 w-12 text-caution" />
                 <h1 className="text-xl font-bold text-foreground">{t("auth.approveExpiredTitle")}</h1>
                 <p className="text-muted-foreground text-sm text-center">
                     {t("auth.approveExpiredBody", { orgName })}
@@ -180,7 +180,7 @@ export default function QRApprovePage() {
     if (state === "approving") {
         return (
             <Shell>
-                <Loader2 className="h-8 w-8 animate-spin text-violet-500" />
+                <Loader2 className="h-8 w-8 animate-spin text-brand" />
                 <p className="text-foreground font-medium">{t("auth.approveSigningInOnIpad")}</p>
             </Shell>
         )
@@ -190,14 +190,14 @@ export default function QRApprovePage() {
     if (!user) {
         return (
             <Shell>
-                <Monitor className="h-12 w-12 text-violet-500" />
+                <Monitor className="h-12 w-12 text-brand" />
                 <h1 className="text-xl font-bold text-foreground">{t("auth.approveTitle")}</h1>
                 <p className="text-muted-foreground text-sm text-center">
                     {t("auth.approveSignInPrompt")}
                 </p>
                 <Button
                     onClick={handleSignInThenApprove}
-                    className="w-full max-w-xs h-12 rounded-xl font-semibold text-base"
+                    className="w-full max-w-xs h-12 rounded-lg font-semibold text-base"
                 >
                     <LogIn className="h-5 w-5 me-2" />
                     {t("auth.approveSignInWithGoogle")}
@@ -210,14 +210,14 @@ export default function QRApprovePage() {
     // but show a manual button as fallback
     return (
         <Shell>
-            <Monitor className="h-12 w-12 text-violet-500" />
+            <Monitor className="h-12 w-12 text-brand" />
             <h1 className="text-xl font-bold text-foreground">{t("auth.approveTitle")}</h1>
             <p className="text-muted-foreground text-sm text-center">
                 {withBoldName(t("auth.approveTapToSignInAs", { userName: NAME_SLOT }), user.displayName || user.email)}
             </p>
             <Button
                 onClick={handleApprove}
-                className="w-full max-w-xs h-14 rounded-xl font-bold text-lg bg-violet-600 hover:bg-violet-500"
+                className="w-full max-w-xs h-14 rounded-lg font-bold text-lg bg-brand hover:bg-brand"
             >
                 <CheckCircle2 className="h-5 w-5 me-2" />
                 {t("auth.approveButton")}

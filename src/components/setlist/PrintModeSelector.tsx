@@ -48,16 +48,16 @@ export function PrintModeSelector({
             {hasMyProfile && (
                 <label className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
                     printMode === "just-me"
-                        ? "border-violet-500/50 bg-violet-500/5"
+                        ? "border-brand/50 bg-brand/5"
                         : "border-border hover:bg-muted/50"
                 }`}>
                     <input
                         type="radio" name="printMode" value="just-me"
                         checked={printMode === "just-me"}
                         onChange={() => setPrintMode("just-me")}
-                        className="accent-violet-500"
+                        className="accent-brand"
                     />
-                    <User className="h-4 w-4 text-violet-500 shrink-0" />
+                    <User className="h-4 w-4 text-brand shrink-0" />
                     <div className="flex-1 min-w-0">
                         <span className="text-sm font-medium">{t("setlistPrint.modeJustMe")}</span>
                         <span className="text-xs text-muted-foreground ms-2">{myLabel}</span>
@@ -69,7 +69,7 @@ export function PrintModeSelector({
             {musicians.length > 0 && (
                 <div className={`rounded-lg border transition-colors ${
                     printMode === "select-musicians"
-                        ? "border-violet-500/50 bg-violet-500/5"
+                        ? "border-brand/50 bg-brand/5"
                         : "border-border"
                 }`}>
                     <label className="flex items-center gap-3 p-3 cursor-pointer hover:bg-muted/30 rounded-t-lg">
@@ -77,13 +77,13 @@ export function PrintModeSelector({
                             type="radio" name="printMode" value="select-musicians"
                             checked={printMode === "select-musicians"}
                             onChange={() => setPrintMode("select-musicians")}
-                            className="accent-violet-500"
+                            className="accent-brand"
                         />
-                        <Users className="h-4 w-4 text-violet-500 shrink-0" />
+                        <Users className="h-4 w-4 text-brand shrink-0" />
                         <div className="flex-1 min-w-0">
                             <span className="text-sm font-medium">{t("setlistPrint.modePerMusician")}</span>
                             {printMode === "select-musicians" && selectedUids.length > 0 && (
-                                <span className="text-xs text-violet-500 ms-2">
+                                <span className="text-xs text-brand ms-2">
                                     {selectedUids.length > 1
                                         ? t("setlistPrint.selectedCountZip", { count: selectedUids.length })
                                         : t("setlistPrint.selectedCount", { count: selectedUids.length })}
@@ -121,7 +121,7 @@ export function PrintModeSelector({
                                             type="checkbox"
                                             checked={selectedUids.includes(m.uid)}
                                             onChange={() => toggleMusician(m.uid)}
-                                            className="accent-violet-600 w-4 h-4 rounded"
+                                            className="accent-brand w-4 h-4 rounded"
                                         />
                                         <span className="text-sm">{m.displayName}</span>
                                         {preset && m.profile.instrument && <span className="text-xs text-muted-foreground">({instrumentLabel(m.profile.instrument, t)})</span>}

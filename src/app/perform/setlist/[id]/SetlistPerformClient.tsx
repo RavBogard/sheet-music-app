@@ -50,6 +50,7 @@ import { useT } from "@/i18n/client"
 import { useFormat } from "@/i18n/format-client"
 import { formatUpdatedWhen } from "@/lib/format/updated-when"
 import { cn } from "@/lib/utils"
+import { PAGE_WIDTH_CLASS } from "@/components/layout/Page"
 
 const PrintModal = dynamic(
     () => import("@/components/setlist/PrintModal").then(m => m.PrintModal),
@@ -377,11 +378,15 @@ export function SetlistPerformClient({
                 line under it ("Updated … · N/M charts on this iPad"), and the
                 tools on the right with Edit as the one blue action. */}
             <div className="z-20 relative bg-background border-b border-rule">
-                <div className="w-full max-w-4xl mx-auto flex items-start gap-2 sm:gap-3 px-2 sm:px-4 py-3">
+                {/* Consistency pass: the page container width, and a head that
+                    wraps instead of crushing: back + title (2 lines) + status on
+                    a full row on a phone, the toolbar in one row under them. */}
+                <div className={cn(PAGE_WIDTH_CLASS, "flex flex-wrap items-start gap-x-3 gap-y-2 py-3")}>
+                <div className="flex min-w-0 flex-[1_1_22rem] items-start gap-1 sm:gap-2">
                 <Link
                     href={backHref}
                     aria-label={isPublicView ? t("performSetlist.backToHomeLabel") : t("performSetlist.backToSetlistsLabel")}
-                    className="h-11 w-11 flex items-center justify-center rounded-md hover:bg-accent transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="h-11 w-11 -ms-2 flex items-center justify-center rounded-md hover:bg-accent transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                     <DirectionalIcon icon={ArrowLeft} className="h-5 w-5 text-foreground" />
                 </Link>
@@ -416,7 +421,8 @@ export function SetlistPerformClient({
                         <p className="text-sm text-muted-foreground truncate">{bookName}</p>
                     )}
                 </div>
-                <div className="flex flex-wrap items-center justify-end gap-1 shrink-0">
+                </div>
+                <div className="ms-auto flex flex-wrap items-center justify-end gap-1 shrink-0">
                     {/* "Keep screen on" — now a MANUAL OVERRIDE, not the only
                         way in (2026-08-31). <KeepAwakeAutoArm/> above already
                         armed the lock on mount; this toggle exists so a
@@ -497,7 +503,7 @@ export function SetlistPerformClient({
                         }
                         window.location.reload()
                     }}
-                    className="w-full min-h-12 px-4 text-[15px] font-semibold bg-section-ochre text-section-ochre-foreground border-b border-rule cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                    className="w-full min-h-12 px-4 text-[15px] font-semibold bg-card text-caution underline-offset-4 hover:underline border-b border-rule cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                 >
                     {t("perform.offline.setlistUpdated")}
                 </button>

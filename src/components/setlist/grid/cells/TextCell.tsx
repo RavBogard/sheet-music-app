@@ -174,7 +174,7 @@ export function TextCell({
                 data-testid="text-cell-input"
                 className={cn(
                     'h-10 w-full rounded-sm bg-transparent px-1 py-0',
-                    'border-2 border-indigo-500',
+                    'border-2 border-brand',
                     'text-sm font-medium outline-none',
                     'focus-visible:outline-none',
                     className,
@@ -209,8 +209,8 @@ export function TextCell({
                 'inline-flex h-10 w-full min-w-0 items-center px-1 text-start',
                 'truncate text-sm',
                 'cursor-text rounded-sm border border-transparent',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400',
-                isFocused && 'ring-2 ring-indigo-400/60 bg-indigo-500/5',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
+                isFocused && 'ring-2 ring-brand/60 bg-brand/5',
                 className,
             )}
         >

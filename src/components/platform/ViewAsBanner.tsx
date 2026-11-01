@@ -10,7 +10,7 @@ export function ViewAsBanner() {
     const org = useOrg()
     if (!readOnlyView) return null
     return (
-        <div role="status" className="sticky top-0 z-[60] flex items-center justify-center gap-3 bg-amber-500 px-4 py-1.5 text-sm font-medium text-black">
+        <div role="status" className="sticky top-0 z-[60] flex items-center justify-center gap-3 bg-caution px-4 py-1.5 text-sm font-medium text-black">
             <span>Viewing {getOrgBranding(org).shortName} as a member. Read-only.</span>
             <a href="?viewAs=0" className="underline underline-offset-2">Stop viewing</a>
         </div>

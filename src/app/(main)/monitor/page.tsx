@@ -1,3 +1,4 @@
+import { PageContainer, PageHeader } from "@/components/layout/Page"
 import { getServerUser } from "@/lib/server-auth"
 import { redirect } from "next/navigation"
 import { getT } from "@/i18n/server"
@@ -40,19 +41,20 @@ export default async function MonitorPage() {
     if (!hasAccess) {
         // Render a server-side "Unauthorized" message instead of loading the client app
         return (
-            <div className="flex flex-col items-center justify-center h-[60vh] gap-4 p-6 text-center">
-                <h1 className="text-xl font-bold">Monitor Access Denied</h1>
-                <p className="text-muted-foreground">
-                    You don't have monitor access. Ask a sound engineer or admin to assign you a bus.
-                </p>
-            </div>
+            <PageContainer className="space-y-4">
+                <PageHeader title={t("nav.monitor")} />
+                <div className="rounded-lg border border-rule bg-card p-5">
+                    <h2 className="text-[17px] font-bold">{t("monitor.accessDeniedTitle")}</h2>
+                    <p className="mt-1 text-sm text-muted-foreground">{t("monitor.accessDeniedBody")}</p>
+                </div>
+            </PageContainer>
         )
     }
 
     return (
-        <>
+        <PageContainer>
             <h1 className="sr-only">{t("nav.monitor")}</h1>
             <MonitorClient />
-        </>
+        </PageContainer>
     )
 }

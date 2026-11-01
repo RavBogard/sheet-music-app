@@ -108,10 +108,10 @@ export function SetlistHistoryPanel({ setlistId, onRestore, onClose }: Props) {
     }
 
     return (
-        <div className="border border-border rounded-xl bg-card overflow-hidden">
+        <div className="border border-border rounded-lg bg-card overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/50">
                 <div className="flex items-center gap-2 text-sm font-medium">
-                    <History className="w-4 h-4 text-violet-500" />
+                    <History className="w-4 h-4 text-brand" />
                     {t("setlist.historyTitle")}
                 </div>
                 <button onClick={onClose} className="p-1 hover:bg-accent rounded">
@@ -191,7 +191,7 @@ export function SetlistHistoryPanel({ setlistId, onRestore, onClose }: Props) {
                                                 </div>
                                             ))}
                                             {diff.reordered && (
-                                                <div className="flex items-center gap-1 text-amber-500">
+                                                <div className="flex items-center gap-1 text-caution">
                                                     <ArrowUpDown className="w-3 h-3" />
                                                     {t("setlist.historyTracksReordered")}
                                                 </div>

@@ -15,7 +15,8 @@ import {
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import { logger } from "@/lib/logger"
-import { Headphones, Trash2, Loader2, UserMinus } from "lucide-react"
+import { Headphones, Trash2, Loader2, UserMinus, MoreHorizontal } from "lucide-react"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import {
     AlertDialog,
@@ -241,12 +242,12 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
         const cls = size === "sm" ? "text-[10px] h-5 px-1.5" : "text-[9px] h-4 px-1.5"
         return (
             <>
-                {effectiveRole === 'admin' && <Badge variant="default" className={cn("bg-brand/20 text-brand border-brand/50", cls)}>{t("admin-people.badgeAdmin")}</Badge>}
-                {effectiveRole === 'band_leader' && <Badge variant="default" className={cn("bg-brand/20 text-brand border-brand/50", cls)}>{t("admin-people.badgeLeader")}</Badge>}
-                {effectiveRole === 'musician' && <Badge variant="default" className={cn("bg-success/20 text-success border-success/50", cls)}>{t("admin-people.badgeMusician")}</Badge>}
-                {effectiveRole === 'member' && <Badge variant="default" className={cn("bg-muted-foreground/20 text-muted-foreground border-muted-foreground/30", cls)}>{t("admin-people.badgeMember")}</Badge>}
-                {user.soundEngineer && <Badge variant="default" className={cn("bg-success/20 text-success border-success/50", cls)}>{t("admin-people.badgeSound")}</Badge>}
-                {isPending && <Badge variant="destructive" className={cn("bg-amber-500/20 text-amber-500 border-amber-500/50", cls)}>{t("admin-people.badgePending")}</Badge>}
+                {effectiveRole === 'admin' && <Badge variant="default" className={cn("bg-accent text-brand border-brand/40", cls)}>{t("admin-people.badgeAdmin")}</Badge>}
+                {effectiveRole === 'band_leader' && <Badge variant="default" className={cn("bg-accent text-brand border-brand/40", cls)}>{t("admin-people.badgeLeader")}</Badge>}
+                {effectiveRole === 'musician' && <Badge variant="default" className={cn("bg-success/10 text-success border-success/40", cls)}>{t("admin-people.badgeMusician")}</Badge>}
+                {effectiveRole === 'member' && <Badge variant="default" className={cn("bg-muted text-muted-foreground border-border", cls)}>{t("admin-people.badgeMember")}</Badge>}
+                {user.soundEngineer && <Badge variant="default" className={cn("bg-success/10 text-success border-success/40", cls)}>{t("admin-people.badgeSound")}</Badge>}
+                {isPending && <Badge variant="outline" className={cn("bg-caution/10 text-caution border-caution/40", cls)}>{t("admin-people.badgePending")}</Badge>}
                 {isDenied && <Badge variant="outline" className={cn("border-border text-muted-foreground", cls)}>{roleLabel("denied")}</Badge>}
             </>
         )
@@ -259,10 +260,10 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
             onClick={handleSoundEngineerToggle}
             disabled={soundEngLoading}
             className={cn(
-                "rounded-lg border",
+                "rounded-md border",
                 user.soundEngineer
                     ? "bg-success/20 border-success/40 text-success"
-                    : "bg-muted/50 border-border/50 text-muted-foreground/40 hover:text-muted-foreground hover:bg-muted"
+                    : "bg-card border-border text-muted-foreground hover:text-foreground hover:bg-accent"
             )}
             title={user.soundEngineer ? t("admin-people.removeSoundEngineer") : t("admin-people.makeSoundEngineer")}
             aria-label={user.soundEngineer ? t("admin-people.removeSoundEngineerRole") : t("admin-people.makeSoundEngineer")}
@@ -277,7 +278,7 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
             size="icon"
             onClick={() => setConfirmRemove(true)}
             disabled={loading}
-            className="rounded-lg border bg-muted/50 border-border/50 text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 hover:border-destructive/20"
+            className="rounded-md border bg-card border-border text-muted-foreground hover:text-destructive hover:bg-destructive/10 hover:border-destructive/20"
             title={t("admin-people.removeFromTenant", { tenantName })}
             aria-label={t("admin-people.removePersonFromTenant", { personName: name, tenantName })}
         >
@@ -292,10 +293,10 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
             onClick={handleDelete}
             disabled={deleteLoading}
             className={cn(
-                "rounded-lg border",
+                "rounded-md border",
                 confirmDelete
                     ? "bg-destructive/20 border-destructive/40 text-destructive"
-                    : "bg-muted/50 border-border/50 text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 hover:border-destructive/20"
+                    : "bg-card border-border text-muted-foreground hover:text-destructive hover:bg-destructive/10 hover:border-destructive/20"
             )}
             title={confirmDelete ? t("admin-people.tapAgainToConfirm") : t("admin-people.removeUser")}
             aria-label={confirmDelete ? t("admin-people.confirmRemoval", { personName: name }) : t("admin-people.removePerson", { personName: name })}
@@ -369,74 +370,95 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
 
     return (
         <>
-        <div className={cn("flex flex-wrap items-center gap-3 px-4 py-3 bg-card transition-colors hover:bg-muted/50", isSelected && "bg-brand/5 hover:bg-brand/10")}>
-            {/* Checkbox Column */}
+        {/* Consistency pass: one dense hairline row per person, the same as
+            the setlists list. Avatar, name over a muted meta line (email,
+            role badges, joined), the person's icon actions, and a compact
+            role select on the right. Below sm the icon actions fold into a
+            "more" menu so the row stays one line; a request's approve and
+            decline controls wrap under it there. */}
+        <div className={cn("flex flex-wrap items-center gap-x-3 gap-y-2 px-2 sm:px-3 py-1.5 min-h-14 bg-card transition-colors hover:bg-accent/50", isSelected && "bg-accent")}>
             <label className="min-h-11 min-w-11 flex items-center justify-center shrink-0 cursor-pointer">
                 <input
                     type="checkbox"
                     checked={isSelected || false}
                     onChange={onSelect}
+                    aria-label={t("admin-people.selectPerson", { personName: name })}
                     className="h-4 w-4 rounded border-border accent-brand shrink-0 cursor-pointer"
                 />
             </label>
 
-            <div className="min-w-0 flex-1 grid grid-cols-12 gap-4 items-center ps-2">
-                {/* User Info Column (col-span-12 on mobile, col-span-5 on sm) */}
-                <div className="col-span-12 sm:col-span-5 flex items-center gap-3 min-w-0">
-                    <Avatar className="h-9 w-9 border border-border shrink-0">
-                        <AvatarImage src={user.photoURL ?? undefined} />
-                        <AvatarFallback>{user.displayName?.[0] || "?"}</AvatarFallback>
-                    </Avatar>
-                    <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                            <p className="font-medium text-foreground text-sm truncate">{user.displayName}</p>
-                            {isSelf && <Badge variant="default" className="bg-muted-foreground/20 text-muted-foreground border-muted-foreground/30 text-[9px] h-4 px-1">{t("admin-people.youBadge")}</Badge>}
-                        </div>
-                        <p className="text-xs text-muted-foreground truncate" title={user.email ?? undefined}>{user.email}</p>
-                    </div>
-                </div>
+            <Avatar className="h-9 w-9 border border-border shrink-0">
+                <AvatarImage src={user.photoURL ?? undefined} />
+                <AvatarFallback>{user.displayName?.[0] || "?"}</AvatarFallback>
+            </Avatar>
 
-                {/* Attributes Column (hidden on mobile, col-span-3 on sm) */}
-                <div className="hidden sm:flex col-span-3 items-center gap-1.5 flex-wrap">
-                    {roleBadges("sm")}
-                    <span className="text-[10px] text-muted-foreground/50 truncate max-w-[100px]" title={created ? fmt.dateTime(created) : ""}>
-                        {created ? fmt.relative(created) : ""}
+            <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5 min-w-0">
+                    <p className="font-semibold text-foreground text-[15px] leading-snug truncate">{user.displayName}</p>
+                    {isSelf && <Badge variant="outline" className="border-border text-muted-foreground text-[10px] h-4 px-1 shrink-0">{t("admin-people.youBadge")}</Badge>}
+                </div>
+                <div className="tnum flex items-center gap-x-2 gap-y-0.5 flex-wrap text-xs font-medium text-muted-foreground min-w-0">
+                    <span className="truncate max-w-full" title={user.email ?? undefined}>{user.email}</span>
+                    <span className="hidden sm:inline-flex items-center gap-1.5">
+                        {roleBadges("sm")}
                     </span>
-                </div>
-
-                {/* Role Management Column (hidden on mobile, col-span-4 on sm) */}
-                <div className="hidden sm:flex col-span-4 items-center justify-end gap-2 pe-2 flex-wrap">
-                    {soundButton}
-                    {removeButton}
-                    {deleteButton}
-
-                    {showRequestControls ? (
-                        requestControls("w-[120px] bg-background border-border h-11 text-xs font-medium")
-                    ) : !isSelf ? (
-                        roleSelect("w-[120px] bg-background border-border h-11 text-xs font-medium")
-                    ) : (
-                        <span className="text-[11px] font-medium text-muted-foreground/70 px-3 py-1.5 border border-border/50 rounded-md bg-muted/50">
-                            {roleLabel(effectiveRole)}
-                        </span>
-                    )}
+                    {created ? (
+                        <span className="hidden md:inline" title={fmt.dateTime(created)}>{fmt.relative(created)}</span>
+                    ) : null}
                 </div>
             </div>
 
-            {/* Mobile Actions (visible only < sm) */}
-            <div className="sm:hidden basis-full flex items-center justify-between gap-2 px-2 pt-2 mt-1 border-t border-border/50 flex-wrap">
-                <div className="flex items-center gap-1.5 flex-wrap flex-1">
-                    {roleBadges("xs")}
-                </div>
-
-                <div className="flex items-center gap-1 flex-wrap">
-                    {soundButton}
-                    {removeButton}
-                    {deleteButton}
-                    {showRequestControls
-                        ? requestControls("w-[100px] bg-background border-border h-11 text-[10px]")
-                        : !isSelf && roleSelect("w-[100px] bg-background border-border h-11 text-[10px]")}
-                </div>
+            {/* Icon actions inline from sm */}
+            <div className="hidden sm:flex items-center gap-1.5 shrink-0">
+                {soundButton}
+                {removeButton}
+                {deleteButton}
             </div>
+
+            {/* ...and in a "more" menu below sm */}
+            {(soundButton || removeButton || deleteButton) ? (
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="sm:hidden size-11 shrink-0 text-muted-foreground" aria-label={t("admin-people.moreActions", { personName: name })}>
+                            <MoreHorizontal className="h-5 w-5" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        {soundButton ? (
+                            <DropdownMenuItem onSelect={() => { void handleSoundEngineerToggle() }}>
+                                <Headphones className="me-2 h-4 w-4" />
+                                {user.soundEngineer ? t("admin-people.removeSoundEngineer") : t("admin-people.makeSoundEngineer")}
+                            </DropdownMenuItem>
+                        ) : null}
+                        {removeButton ? (
+                            <DropdownMenuItem onSelect={() => setConfirmRemove(true)}>
+                                <UserMinus className="me-2 h-4 w-4" />
+                                {t("admin-people.removeFromTenant", { tenantName })}
+                            </DropdownMenuItem>
+                        ) : null}
+                        {deleteButton ? (
+                            <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => { void handleDelete() }}>
+                                <Trash2 className="me-2 h-4 w-4" />
+                                {confirmDelete ? t("admin-people.tapAgainToConfirm") : t("admin-people.removeUser")}
+                            </DropdownMenuItem>
+                        ) : null}
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            ) : null}
+
+            {showRequestControls ? (
+                <div className="flex items-center gap-2 flex-wrap basis-full sm:basis-auto justify-end shrink-0">
+                    {requestControls("w-[7.5rem] h-11 text-sm font-medium bg-card border-border")}
+                </div>
+            ) : !isSelf ? (
+                <div className="shrink-0">
+                    {roleSelect("w-[7.5rem] h-11 text-sm font-medium bg-card border-border")}
+                </div>
+            ) : (
+                <span className="shrink-0 text-xs font-semibold text-muted-foreground px-3 py-1.5 border border-border rounded-md bg-muted">
+                    {roleLabel(effectiveRole)}
+                </span>
+            )}
         </div>
 
         {/* Role change confirmation dialog */}

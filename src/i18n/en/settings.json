@@ -19,7 +19,6 @@
         "dark": "Dark",
         "system": "System"
     },
-    "performDarkHint": "Performance mode always uses dark theme for stage visibility.",
     "gigMode": {
         "title": "Live Gig Mode",
         "description": "Disables background syncing and analytics for bulletproof stability on stage."
@@ -144,5 +143,6 @@
         "calendarGenerating": "Generating...",
         "calendarGenerate": "Generate Calendar URL",
         "calendarGenerateHint": "Generate a URL to subscribe to your {community} schedule in your personal calendar app."
-    }
+    },
+    "performThemeHint": "Perform mode follows this setting. Choose Dark for a dim stage."
 }

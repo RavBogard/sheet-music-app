@@ -29,7 +29,7 @@ export function PlatformCard({ id, title, description, children, action }: {
     action?: ReactNode
 }) {
     return (
-        <section id={id} aria-labelledby={id ? `${id}-title` : undefined} className="border border-border rounded-xl p-4 md:p-5 space-y-4 scroll-mt-24">
+        <section id={id} aria-labelledby={id ? `${id}-title` : undefined} className="border border-border rounded-lg p-4 md:p-5 space-y-4 scroll-mt-24">
             <div className="flex items-start justify-between gap-3">
                 <div>
                     <h2 id={id ? `${id}-title` : undefined} className="text-base font-semibold text-foreground">{title}</h2>
@@ -206,7 +206,7 @@ export function StatusChip({ tone, children }: { tone: "good" | "warn" | "bad" |
             className={cn(
                 "inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium whitespace-nowrap",
                 tone === "good" && "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
-                tone === "warn" && "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300",
+                tone === "warn" && "border-caution/30 bg-caution/10 text-caution dark:text-caution",
                 tone === "bad" && "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300",
                 tone === "neutral" && "border-border bg-muted text-muted-foreground",
             )}

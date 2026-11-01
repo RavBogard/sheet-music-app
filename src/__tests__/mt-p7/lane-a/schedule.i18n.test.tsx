@@ -136,13 +136,13 @@ describe("schedule page (pseudo-locale)", () => {
         expectNoUntranslatedText(r.container)
     })
 
-    it("qps-rtl: root is rtl, back chevron mirrors", async () => {
+    // Consistency pass: the page head has no back button any more (the tab
+    // bar is the way out), so there is no chevron to mirror.
+    it("qps-rtl: root is rtl", async () => {
         seed()
         const r = renderPseudo(<SchedulePage />, { rtl: true })
         await act(async () => {})
         expect(r.container.firstElementChild!.getAttribute("dir")).toBe("rtl")
-        const back = r.container.querySelector("button svg")!
-        expect(back.getAttribute("class")).toMatch(/-scale-x-100/)
         expectNoUntranslatedText(r.container, { allow: DATA })
     })
 

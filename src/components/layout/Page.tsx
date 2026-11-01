@@ -1,0 +1,72 @@
+import type { ReactNode } from "react"
+import { cn } from "@/lib/utils"
+
+/**
+ * The one page container (web refresh, consistency pass). Every list page
+ * (dashboard, Setlists, Library, Manage, Settings, Monitor, Perform) sits in
+ * the same centred 1080px column with the DESIGN.md gutters (16px, 24px from
+ * md), so no page is left-aligned while its neighbours are centred.
+ */
+export const PAGE_WIDTH_CLASS = "w-full max-w-[1080px] mx-auto px-4 md:px-6"
+
+export function PageContainer({
+    children,
+    className,
+    ...rest
+}: { children: ReactNode; className?: string } & React.HTMLAttributes<HTMLDivElement>) {
+    return (
+        <div className={cn(PAGE_WIDTH_CLASS, "pt-5 sm:pt-6 pb-10", className)} {...rest}>
+            {children}
+        </div>
+    )
+}
+
+/**
+ * The one page head row: the title at the DESIGN.md headline scale, an
+ * optional one-line subtitle under it, the actions on the right. Below 600px
+ * the actions wrap under the title instead of crushing it.
+ */
+export function PageHeader({
+    title,
+    subtitle,
+    actions,
+    leading,
+    titleAs: Title = "h1",
+    className,
+    titleClassName,
+}: {
+    title: ReactNode
+    subtitle?: ReactNode
+    actions?: ReactNode
+    /** An element before the title (a back button on detail pages). */
+    leading?: ReactNode
+    titleAs?: "h1" | "h2"
+    className?: string
+    titleClassName?: string
+}) {
+    return (
+        <div className={cn("flex flex-wrap items-end justify-between gap-x-4 gap-y-3", className)}>
+            <div className="flex min-w-0 flex-[1_1_18rem] items-start gap-2">
+                {leading}
+                <div className="min-w-0">
+                    <Title className={cn("text-[1.35rem] sm:text-[1.6rem] font-extrabold leading-tight tracking-[-0.015em] text-foreground", titleClassName)}>
+                        {title}
+                    </Title>
+                    {subtitle ? (
+                        <p className="tnum mt-1 text-sm font-medium text-muted-foreground">{subtitle}</p>
+                    ) : null}
+                </div>
+            </div>
+            {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
+        </div>
+    )
+}
+
+/** The uppercase list-group heading ("Upcoming", "Account"). */
+export const GROUP_HEADING_CLASS = "text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground px-1"
+
+/** A Paper list group on the hairline grid: no card per row. */
+export const LIST_GROUP_CLASS = "flex flex-col divide-y divide-rule border border-rule rounded-lg overflow-hidden bg-card"
+
+/** A plain Paper card (Settings sections, the dashboard onboarding card). */
+export const CARD_CLASS = "rounded-lg border border-rule bg-card"

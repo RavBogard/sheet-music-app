@@ -75,9 +75,9 @@ export function TaskCards() {
                 {tasks.map(task => (
                     <div
                         key={task.id}
-                        className="bg-card border border-brand/10 border-s-2 border-s-brand/20 rounded-xl px-3 py-2.5 flex items-start gap-2.5"
+                        className="bg-card border border-rule rounded-lg px-3 py-2.5 flex items-start gap-2.5"
                     >
-                        <Square className="w-4 h-4 text-brand/30 mt-0.5 shrink-0" />
+                        <Square className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
                         <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-foreground truncate">
                                 {task.title}

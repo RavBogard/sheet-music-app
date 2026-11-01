@@ -584,11 +584,11 @@ function ReconciliationCard({
 
             {errorKindLabel ? (
                 <div
-                    className="mb-2 rounded-sm border border-amber-400/30 bg-amber-500/5 px-2 py-1"
+                    className="mb-2 rounded-sm border border-caution/30 bg-caution/5 px-2 py-1"
                     data-testid={`reconciliation-error-kind-${localId}`}
                     data-error-kind={errorKindTestId}
                 >
-                    <p className="text-xs font-semibold text-amber-300">
+                    <p className="text-xs font-semibold text-caution">
                         {errorKindLabel}
                     </p>
                     {errorKindHint ? (

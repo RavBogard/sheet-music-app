@@ -121,7 +121,7 @@ export function TrackPrintOptionsList({
                                         <span className="font-mono">
                                             {track.key}
                                             {transposedKey && (
-                                                <span className="text-violet-500 dark:text-violet-400"> → {transposedKey}</span>
+                                                <span className="text-brand dark:text-brand"> → {transposedKey}</span>
                                             )}
                                         </span>
                                     )}
@@ -144,7 +144,7 @@ export function TrackPrintOptionsList({
                                     <Minus className="h-3 w-3" />
                                 </Button>
                                 <span className={`w-8 text-center text-xs font-mono ${
-                                    tp.transposition !== 0 ? 'text-violet-500 dark:text-violet-400' : 'text-muted-foreground'
+                                    tp.transposition !== 0 ? 'text-brand dark:text-brand' : 'text-muted-foreground'
                                 }`}>
                                     {tp.transposition > 0 ? `+${tp.transposition}` : tp.transposition}
                                 </span>
@@ -168,7 +168,7 @@ export function TrackPrintOptionsList({
             </div>
 
             {activeTranspositions > 0 && (
-                <p className="text-xs text-violet-500 dark:text-violet-400/70">
+                <p className="text-xs text-brand dark:text-brand/70">
                     {t("setlistPrint.songsWillBeTransposed", { count: activeTranspositions })}{" "}
                     {t("setlistPrint.chordsDetectedNote")}
                 </p>

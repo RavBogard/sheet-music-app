@@ -1,7 +1,8 @@
 "use client"
 
 import { useOrg } from "@/lib/org/org-context"
-import { orgString } from "@/lib/org/strings"
+import { label } from "@/lib/org/vocab"
+import { PageContainer, PageHeader } from "@/components/layout/Page"
 import { useT } from "@/i18n/client"
 
 /**
@@ -14,28 +15,25 @@ import { useT } from "@/i18n/client"
  *
  * Multi-tenant phase 1: a client component so it can read the tenant from
  * <OrgProvider> both as the server page's Suspense fallback and inside
- * PublicSetlistListing; the brand is `page.skeletonBrand` (BL frozen to
- * "CRC Music").
+ * PublicSetlistListing. The consistency pass moved the brand into the
+ * shell's top bar, so the head is the page title, as on the listing.
  */
 export function PublicSetlistSkeleton({
     cards = 6,
 }: {
     cards?: number
 } = {}) {
-    const brand = orgString(useOrg(), "page.skeletonBrand")
+    const org = useOrg()
     const t = useT()
     return (
-        <div
-            className="flex flex-col gap-4 px-4 pt-6 pb-20 max-w-2xl mx-auto w-full"
+        <PageContainer
+            className="flex flex-col gap-4"
             aria-busy="true"
             aria-live="polite"
         >
-            <div className="flex items-center gap-3 mb-2">
-                <div className="flex-1 min-w-0">
-                    <h1 className="text-[1.6rem] font-extrabold leading-tight tracking-[-0.015em]">{brand}</h1>
-                    <p className="text-sm font-medium text-muted-foreground">{t("performSetlist.publicSetlists")}</p>
-                </div>
-            </div>
+            {/* The brand is in the shell's top bar; the page head matches the
+                listing's: the Setlists title and the public-listing subtitle. */}
+            <PageHeader className="mb-2" title={t("nav.setlists")} subtitle={label(org, "publicListingSubtitle")} />
             {/* Web refresh: the same hairline list the listing draws, one
                 72px row per setlist (date column, title, meta line). */}
             <div className="flex flex-col divide-y divide-rule border border-rule rounded-lg overflow-hidden bg-card" aria-hidden="true">
@@ -52,6 +50,6 @@ export function PublicSetlistSkeleton({
                     </div>
                 ))}
             </div>
-        </div>
+        </PageContainer>
     )
 }

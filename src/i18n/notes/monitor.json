@@ -394,5 +394,17 @@
         "where": "Engineer console and limits: the overall wedge level of a bus",
         "who": "the sound engineer and admins",
         "maxLength": 16
+    },
+    "accessDeniedTitle": {
+        "where": "Monitor page: card title when the person has no wedge bus assigned",
+        "who": "musicians",
+        "maxLength": 40,
+        "context": "Monitors are WEDGES (floor speakers), not in-ear monitors."
+    },
+    "accessDeniedBody": {
+        "where": "Monitor page: line under the no-access card title",
+        "who": "musicians",
+        "maxLength": 90,
+        "context": "A 'bus' is the mixer output that feeds one musician's wedge."
     }
 }

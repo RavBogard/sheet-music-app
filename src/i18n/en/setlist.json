@@ -101,5 +101,6 @@
     "variantsShow_other": "Show {count} other versions",
     "variantsHide": "Hide other versions",
     "updatedAgo": "Updated {when}",
-    "chartsBound": "{bound}/{total} charts"
+    "chartsBound": "{bound}/{total} charts",
+    "rabbiFilterGroupLabel": "Filter by rabbi"
 }

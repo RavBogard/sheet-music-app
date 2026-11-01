@@ -128,7 +128,7 @@ export function MatchFileModal({
                                             key={file.id}
                                             variant="ghost"
                                             onClick={() => handleSelect(file.id)}
-                                            className="w-full h-auto flex items-center gap-3 p-3 rounded-xl border border-primary/20 bg-primary/5 hover:bg-primary/10 text-start group active:scale-100 whitespace-normal"
+                                            className="w-full h-auto flex items-center gap-3 p-3 rounded-lg border border-primary/20 bg-primary/5 hover:bg-primary/10 text-start group active:scale-100 whitespace-normal"
                                         >
                                             <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
                                                 <Icon className="h-4 w-4 text-primary" />

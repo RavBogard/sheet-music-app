@@ -81,7 +81,7 @@ export function TouchOrPopover({
                     }}
                     onCloseAutoFocus={onCloseAutoFocus}
                     className={cn(
-                        'z-50 overflow-hidden rounded-md border border-white/10 bg-background shadow-lg',
+                        'z-50 overflow-hidden rounded-md border border-rule bg-background shadow-lg',
                         'animate-in fade-in-0 zoom-in-95 duration-150 motion-reduce:animate-none',
                         contentClassName,
                     )}

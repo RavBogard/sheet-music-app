@@ -134,7 +134,7 @@ export function DuplicateScanner({ files, onArchiveComplete }: DuplicateScannerP
           <>
             <div className="flex-1 overflow-y-auto space-y-4 pe-1">
               {groups.map((group, gi) => (
-                <div key={gi} className="border border-border rounded-xl p-3 space-y-2">
+                <div key={gi} className="border border-border rounded-lg p-3 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-medium text-muted-foreground">
                       {t("libraryHealth.dup.groupHeading", { number: gi + 1, percent: Math.round(group.similarity * 100) })}

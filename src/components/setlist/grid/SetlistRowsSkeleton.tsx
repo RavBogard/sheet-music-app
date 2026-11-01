@@ -55,7 +55,7 @@ export function SetlistRowsSkeleton({ trackCount }: { trackCount?: number }) {
                 <div
                     key={i}
                     aria-hidden
-                    className="flex items-center gap-4 rounded-2xl border px-4 py-4 min-h-[72px] bg-white/[0.02] border-white/10"
+                    className="flex items-center gap-4 rounded-lg border px-4 py-4 min-h-[72px] bg-muted/50 border-rule"
                 >
                     <div className="flex flex-col items-center gap-1 justify-center p-2 -ms-2">
                         <div className="h-5 w-5 rounded bg-muted/40 animate-pulse" />

@@ -34,7 +34,7 @@ export function PrintStats({
                     {showTranspositions && activeTranspositions > 0 && (
                         <div className="flex justify-between">
                             <span className="text-muted-foreground">{t("setlistPrint.statTransposed")}</span>
-                            <span className="font-medium text-violet-500">{activeTranspositions}</span>
+                            <span className="font-medium text-brand">{activeTranspositions}</span>
                         </div>
                     )}
                     {linkedPdfCount < totalTracks && (

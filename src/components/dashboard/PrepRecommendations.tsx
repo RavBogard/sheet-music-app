@@ -37,8 +37,8 @@ export function PrepRecommendations({
     const shown = urgent.slice(0, 3)
 
     return (
-        <div className="bg-amber-500/8 border border-amber-500/15 rounded-xl px-4 py-3 space-y-2">
-            <div className="flex items-center gap-2 text-amber-500 text-xs font-semibold">
+        <div className="bg-caution/8 border border-caution/15 rounded-lg px-4 py-3 space-y-2">
+            <div className="flex items-center gap-2 text-caution text-xs font-semibold">
                 <AlertTriangle className="w-3.5 h-3.5" />
                 {t("dashboard.practiceRecommendations")}
             </div>

@@ -48,13 +48,13 @@ export function LibrarySyncCard() {
     }
 
     return (
-        <div className="bg-card border border-border p-5 rounded-xl space-y-3">
+        <div className="bg-card border border-border p-5 rounded-lg space-y-3">
             <h3 className="font-semibold text-foreground text-sm">{t("admin-library.syncTitle")}</h3>
             <p className="text-xs text-muted-foreground">{t("admin-library.syncSubtitle")}</p>
             <Button
                 onClick={handleSync}
                 disabled={syncing}
-                className="w-full gap-2 rounded-xl min-h-11"
+                className="w-full gap-2 rounded-lg min-h-11"
                 size="sm"
             >
                 <Repeat className={cn("w-4 h-4", syncing && "animate-spin")} />

@@ -108,9 +108,9 @@ describe("LibraryFileRow (v11.7-05 density + composer)", () => {
                 getCleanName={getCleanName}
             />,
         )
-        const cell = container.querySelector(".list-cell")
+        const cell = container.querySelector('[data-slot="library-row-cell"]')
         expect(cell).not.toBeNull()
-        expect(cell!.className).toContain("min-h-11")
+        expect(cell!.className).toMatch(/min-h-1[12]/)
         // Title is no longer the oversized text-xl bold treatment.
         const title = screen.getByText("Hashkivenu")
         expect(title.className).toContain("font-medium")

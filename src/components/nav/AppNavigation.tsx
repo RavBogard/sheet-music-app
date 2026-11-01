@@ -27,14 +27,15 @@ export interface AppNavigationProps {
 }
 
 export function AppNavigation(props: AppNavigationProps) {
-    // Navigation is automatically hidden for /perform routes because they are outside the (main) layout group.
-    // The Setlist Editor (/setlists/[id]) is inside (main) and should show navigation.
+    // One shell on every route: the (main) pages, the /perform listing and the
+    // Perform setlist page all render this. Only the open chart viewer
+    // (/perform/[fileId]) stays full-screen without it.
 
     return (
         <div className="z-40 w-full relative print:hidden">
             <GlobalAlertBanner />
             <DesktopHeader {...props} />
-            <MobileHeader serverOrgShortName={props.serverOrgShortName} serverLogoUrl={props.serverLogoUrl} serverWordmarkUrl={props.serverWordmarkUrl} />
+            <MobileHeader serverOrgShortName={props.serverOrgShortName} serverLogoUrl={props.serverLogoUrl} serverWordmarkUrl={props.serverWordmarkUrl} serverIsAuthed={props.serverIsAuthed} />
             <MobileTabBar {...props} />
         </div>
     )

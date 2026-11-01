@@ -103,7 +103,7 @@ export function HeroCard({
             variant="ghost"
             onClick={isImminent ? onPerform : onClick}
             className={cn(
-                "w-full h-auto text-start rounded-2xl p-5 shadow-lg active:scale-[0.98] group border relative overflow-hidden items-start whitespace-normal flex-col",
+                "w-full h-auto text-start rounded-lg p-5 shadow-lg active:scale-[0.98] group border relative overflow-hidden items-start whitespace-normal flex-col",
                 isImminent
                     ? "bg-gradient-to-br from-brand to-brand/80 border-white/15 shadow-brand/20 hover:from-brand hover:to-brand/70"
                     : "bg-gradient-to-br from-brand/90 to-brand/80 border-white/10 hover:from-brand/95 hover:to-brand/85"
@@ -168,7 +168,7 @@ export function HeroCard({
                         </span>
                     ) : (
                         <>
-                            <span className="text-amber-300/80 flex items-center gap-1 text-xs font-medium">
+                            <span className="text-caution/80 flex items-center gap-1 text-xs font-medium">
                                 <Circle className="w-3 h-3" />
                                 {t("dashboard.chartsCachedProgress", { cached: offlineStatus.cached, total: offlineStatus.total })}
                             </span>

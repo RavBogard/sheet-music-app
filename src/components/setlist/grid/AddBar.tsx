@@ -58,7 +58,7 @@ const TILE_SPECS: TrackTypeTileSpec[] = [
     {
         type: 'reading',
         labelKey: 'setlistGrid.trackTypeReading',
-        icon: <BookOpen className="h-5 w-5 text-amber-300" aria-hidden />,
+        icon: <BookOpen className="h-5 w-5 text-caution" aria-hidden />,
     },
     {
         type: 'prayer',
@@ -191,11 +191,11 @@ export function AddBar({
                         aria-label={t('setlistGrid.addOtherTypeAria')}
                         onContextMenu={(e) => e.preventDefault()}
                         className={cn(
-                            'flex h-11 items-center justify-center px-3 border-s border-white/10',
+                            'flex h-11 items-center justify-center px-3 border-s border-rule',
                             '[@media(pointer:coarse)]:h-12 [@media(pointer:coarse)]:px-4',
-                            'text-muted-foreground hover:text-foreground hover:bg-white/[0.03]',
+                            'text-muted-foreground hover:text-foreground hover:bg-accent/50',
                             'cursor-pointer',
-                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400',
+                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
                         )}
                     >
                         <ChevronUp aria-hidden className="h-4 w-4" />
@@ -220,11 +220,11 @@ export function AddBar({
                                 closeTiles()
                             }}
                             className={cn(
-                                'flex flex-col items-center justify-center gap-1 rounded-md border border-white/10 bg-card p-3 text-xs',
+                                'flex flex-col items-center justify-center gap-1 rounded-md border border-rule bg-card p-3 text-xs',
                                 'min-h-[48px] [@media(pointer:coarse)]:min-h-[56px]',
-                                'hover:bg-white/[0.03] hover:border-white/20',
+                                'hover:bg-accent/50 hover:border-border',
                                 'cursor-pointer',
-                                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400',
+                                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
                             )}
                         >
                             {tile.icon}

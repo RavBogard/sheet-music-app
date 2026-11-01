@@ -1,6 +1,6 @@
 export default function LibraryLoading() {
     return (
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 animate-pulse">
+        <div className="w-full max-w-[1080px] mx-auto px-4 md:px-6 pt-5 sm:pt-6 pb-10 animate-pulse">
             {/* Search bar skeleton */}
             <div className="h-10 bg-muted rounded-lg w-full max-w-md mb-6" />
 

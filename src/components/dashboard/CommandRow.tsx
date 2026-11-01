@@ -34,10 +34,10 @@ export function CommandRow({
     actions.push({ icon: ListMusic, label: t("dashboard.navSetlists"), href: '/setlists', color: 'text-emerald-500 bg-emerald-500/10' })
 
     if (isBandLeader) {
-        actions.push({ icon: Plus, label: t("dashboard.navNew"), href: '/setlists/new', color: 'text-amber-500 bg-amber-500/10' })
+        actions.push({ icon: Plus, label: t("dashboard.navNew"), href: '/setlists/new', color: 'text-caution bg-caution/10' })
     }
 
-    const sharedClasses = "flex items-center justify-center gap-2 py-3 px-2 bg-card hover:bg-accent rounded-xl transition-all active:scale-95 border border-border group"
+    const sharedClasses = "flex items-center justify-center gap-2 py-3 px-2 bg-card hover:bg-accent rounded-lg transition-all active:scale-95 border border-border group"
 
     return (
         <div className={cn("grid gap-2", className)} style={{ gridTemplateColumns: `repeat(${actions.length}, 1fr)` }}>

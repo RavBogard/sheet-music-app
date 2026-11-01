@@ -48,7 +48,7 @@ export function ActivityLog() {
             ) : rows.length === 0 ? (
                 !error && <p className="text-sm text-muted-foreground">Nothing recorded yet.</p>
             ) : (
-                <div className="border border-border rounded-xl overflow-x-auto">
+                <div className="border border-border rounded-lg overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead className="bg-muted/40">
                             <tr className="text-left text-xs text-muted-foreground">

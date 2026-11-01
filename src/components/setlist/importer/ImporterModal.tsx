@@ -422,14 +422,14 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
                             {/* Option 2: Upload */}
                             <div className="space-y-3">
                                 <Label className="text-sm font-semibold flex items-center gap-2">
-                                    <FileText className="h-4 w-4 text-violet-500" />
+                                    <FileText className="h-4 w-4 text-brand" />
                                     {t("importer.uploadCsvLabel")}
                                 </Label>
                                 <label
                                     htmlFor="csv-file-input"
-                                    className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center text-center transition-colors hover:bg-muted/30 cursor-pointer focus-within:ring-2 focus-within:ring-brand ${csvFile ? 'border-violet-500 bg-violet-500/5' : 'border-border'}`}
+                                    className={`border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center text-center transition-colors hover:bg-muted/30 cursor-pointer focus-within:ring-2 focus-within:ring-brand ${csvFile ? 'border-brand bg-brand/5' : 'border-border'}`}
                                 >
-                                    <UploadCloud className={`h-8 w-8 mb-3 ${csvFile ? 'text-violet-500' : 'text-muted-foreground'}`} />
+                                    <UploadCloud className={`h-8 w-8 mb-3 ${csvFile ? 'text-brand' : 'text-muted-foreground'}`} />
                                     <p className="text-sm font-medium" aria-live="polite">
                                         {csvFile ? csvFile.name : t("importer.selectCsvFile")}
                                     </p>
@@ -462,7 +462,7 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
                                 </Label>
                                 <label
                                     htmlFor="doc-file-input"
-                                    className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center text-center transition-colors hover:bg-muted/30 cursor-pointer focus-within:ring-2 focus-within:ring-brand ${docFile ? 'border-emerald-500 bg-emerald-500/5' : 'border-border'}`}
+                                    className={`border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center text-center transition-colors hover:bg-muted/30 cursor-pointer focus-within:ring-2 focus-within:ring-brand ${docFile ? 'border-emerald-500 bg-emerald-500/5' : 'border-border'}`}
                                 >
                                     <UploadCloud className={`h-8 w-8 mb-3 ${docFile ? 'text-emerald-500' : 'text-muted-foreground'}`} />
                                     <p className="text-sm font-medium" aria-live="polite">
@@ -597,7 +597,7 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
 
                                                                 {/* Library Match */}
                                                                 {item.libraryMatchId && (
-                                                                    <div className="flex items-start gap-1.5 text-xs text-violet-500 dark:text-violet-400 bg-violet-500/10 rounded px-2 py-1">
+                                                                    <div className="flex items-start gap-1.5 text-xs text-brand dark:text-brand bg-brand/10 rounded px-2 py-1">
                                                                         <Link className="h-3.5 w-3.5 shrink-0 mt-0.5" />
                                                                         <span className="leading-tight">
                                                                             {withBold(t("importer.matchesLibrary", { name: BOLD_MARK }), BOLD_MARK, item.libraryMatchName)}
@@ -667,7 +667,7 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
 
                                 <div className="space-y-2">
                                     <Label htmlFor="interview-service-type" className="text-sm font-semibold flex items-center gap-2">
-                                        <ListMusic className="h-4 w-4 text-violet-500" />
+                                        <ListMusic className="h-4 w-4 text-brand" />
                                         {t("importer.serviceTypeLabel")}
                                     </Label>
                                     <select
@@ -776,7 +776,7 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
                                                     )}
                                                     {track.libraryMatch ? (
                                                         <span
-                                                            className="flex items-center gap-1.5 text-xs text-violet-500 dark:text-violet-400 shrink-0 max-w-[200px]"
+                                                            className="flex items-center gap-1.5 text-xs text-brand dark:text-brand shrink-0 max-w-[200px]"
                                                             title={t("importer.matchesLibrary", { name: track.libraryMatch.name })}
                                                         >
                                                             <Link className="h-3.5 w-3.5 shrink-0" />
@@ -786,7 +786,7 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
                                                             </span>
                                                         </span>
                                                     ) : (
-                                                        <span className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 shrink-0">
+                                                        <span className="flex items-center gap-1 text-xs text-caution dark:text-caution shrink-0">
                                                             <FileWarning className="h-3.5 w-3.5" />
                                                             {t("importer.missingChart")}
                                                         </span>

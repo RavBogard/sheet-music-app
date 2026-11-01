@@ -40,9 +40,9 @@ export function EmptyState({
                     className={cn(
                         'inline-flex items-center justify-center gap-2',
                         'min-h-[44px] min-w-[260px] rounded-md px-6 py-3',
-                        'bg-indigo-500 text-white font-medium',
-                        'hover:bg-indigo-400 active:bg-indigo-600',
-                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-2',
+                        'bg-brand text-white font-medium',
+                        'hover:bg-brand active:bg-brand',
+                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2',
                         'disabled:opacity-60 disabled:cursor-not-allowed',
                         'cursor-pointer transition-colors duration-200 motion-reduce:transition-none',
                     )}
@@ -64,9 +64,9 @@ export function EmptyState({
                         className={cn(
                             'inline-flex items-center justify-center gap-2',
                             'min-h-[44px] rounded-md px-4 py-2',
-                            'border border-white/10 dark:border-white/10 bg-transparent',
-                            'hover:bg-white/5 active:bg-white/10',
-                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2',
+                            'border border-rule dark:border-rule bg-transparent',
+                            'hover:bg-accent/50 active:bg-accent',
+                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2',
                             'cursor-pointer transition-colors duration-200 motion-reduce:transition-none',
                         )}
                     >
@@ -80,9 +80,9 @@ export function EmptyState({
                         className={cn(
                             'inline-flex items-center justify-center gap-2',
                             'min-h-[44px] rounded-md px-4 py-2',
-                            'border border-white/10 dark:border-white/10 bg-transparent',
-                            'hover:bg-white/5 active:bg-white/10',
-                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2',
+                            'border border-rule dark:border-rule bg-transparent',
+                            'hover:bg-accent/50 active:bg-accent',
+                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2',
                             'cursor-pointer transition-colors duration-200 motion-reduce:transition-none',
                         )}
                     >

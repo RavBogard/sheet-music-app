@@ -81,5 +81,9 @@
     "emptyNoMatches": "No users match your current filters.",
     "testAccountsHidden_one": "{count} test account hidden. Show",
     "testAccountsHidden_other": "{count} test accounts hidden. Show",
-    "testAccountsHide": "Hide test accounts"
+    "testAccountsHide": "Hide test accounts",
+    "roleFilterLabel": "Filter by role",
+    "selectAll": "Select everyone in the list",
+    "selectPerson": "Select {personName}",
+    "moreActions": "More actions for {personName}"
 }

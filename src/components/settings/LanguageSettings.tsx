@@ -35,7 +35,7 @@ export function LanguageSettings({ onChange }: { onChange?: (lang: TenantLanguag
     }
 
     return (
-        <div className="bg-card border border-border p-5 rounded-2xl">
+        <div className="bg-card border border-border p-5 rounded-lg">
             <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2">
                 <Languages className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
                 {t("language.title")}
@@ -51,7 +51,7 @@ export function LanguageSettings({ onChange }: { onChange?: (lang: TenantLanguag
                         dir={value === "he" ? "rtl" : "ltr"}
                         onClick={() => choose(value)}
                         className={cn(
-                            "min-h-11 px-4 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+                            "min-h-11 px-4 py-2.5 rounded-lg text-sm font-medium transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
                             current === value
                                 ? "bg-primary/10 text-primary ring-1 ring-primary/30"
                                 : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground border border-border",

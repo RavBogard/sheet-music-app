@@ -9,6 +9,7 @@ import type { TenantRole } from "@/lib/org/membership-types"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { SegmentedChips } from "@/components/ui/segmented-chips"
 import { Loader2, Search, FilterX } from "lucide-react"
 import { Spinner } from "@/components/ui/spinner"
 import { useT } from "@/i18n/client"
@@ -235,50 +236,43 @@ export function PeopleSection() {
                 </button>
             )}
 
-            {/* Filters Toolbar */}
-            <div className="flex items-center gap-3 p-1">
-                <div className="relative flex-1 max-w-xs">
-                    <Search className="absolute start-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <input
-                        type="text"
-                        placeholder={t("admin-people.searchPlaceholder")}
-                        className="w-full bg-card border border-border rounded-lg ps-9 pe-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring transition-shadow min-h-11"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                </div>
-
-                <div className="flex items-center bg-card border border-border rounded-lg p-0.5 overflow-x-auto min-w-0 hide-scrollbar">
-                    {(['all', 'pending', 'member', 'musician', 'band_leader', 'admin', 'denied'] as const).map((role) => (
+            {/* Filters: search, then the shared segmented chips for the role
+                filter (they wrap; no scroll box, no scrollbar). */}
+            <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-2">
+                    <div className="relative flex-1 max-w-sm">
+                        <Search aria-hidden="true" className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <input
+                            type="text"
+                            placeholder={t("admin-people.searchPlaceholder")}
+                            aria-label={t("admin-people.searchPlaceholder")}
+                            className="w-full bg-card border border-input rounded-md ps-9 pe-3 text-[15px] focus:outline-none focus:border-ring focus:ring-2 focus:ring-ring/30 transition-shadow h-11"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                    </div>
+                    {(searchQuery || roleFilter !== 'all') && (
                         <Button
-                            key={role}
                             variant="ghost"
-                            size="sm"
-                            onClick={() => setRoleFilter(role)}
-                            className={cn(
-                                "text-xs font-medium rounded-md min-h-11",
-                                roleFilter === role
-                                    ? "bg-accent text-foreground font-semibold ring-1 ring-inset ring-brand"
-                                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                            )}
+                            size="icon"
+                            onClick={() => { setSearchQuery(""); setRoleFilter('all') }}
+                            className="size-11 text-muted-foreground hover:text-foreground flex-shrink-0"
+                            title={t("admin-people.clearFilters")}
+                            aria-label={t("admin-people.clearFilters")}
                         >
-                            {t(FILTER_LABEL_KEYS[role])}
+                            <FilterX className="w-4 h-4" />
                         </Button>
-                    ))}
+                    )}
                 </div>
-
-                {(searchQuery || roleFilter !== 'all') && (
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => { setSearchQuery(""); setRoleFilter('all') }}
-                        className="text-muted-foreground hover:text-foreground flex-shrink-0"
-                        title={t("admin-people.clearFilters")}
-                        aria-label={t("admin-people.clearFilters")}
-                    >
-                        <FilterX className="w-4 h-4" />
-                    </Button>
-                )}
+                <SegmentedChips
+                    ariaLabel={t("admin-people.roleFilterLabel")}
+                    value={roleFilter}
+                    onChange={setRoleFilter}
+                    options={(['all', 'pending', 'member', 'musician', 'band_leader', 'admin', 'denied'] as const).map((role) => ({
+                        value: role,
+                        label: t(FILTER_LABEL_KEYS[role]),
+                    }))}
+                />
             </div>
 
             {/* Data Grid list */}
@@ -286,25 +280,26 @@ export function PeopleSection() {
                 <div className="flex justify-center p-12"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
             ) : (
                 <div className="bg-card border border-rule rounded-lg overflow-hidden divide-y divide-rule">
-                    {/* Grid Header */}
-                    <div className="flex items-center gap-3 px-4 py-2 bg-muted">
+                    {/* List head: select-all and the column label. The list is
+                        part of the page; it never scrolls on its own. */}
+                    <div className="flex items-center gap-3 px-2 sm:px-3 py-1 bg-card">
                         <label className="min-h-11 min-w-11 flex items-center justify-center shrink-0 cursor-pointer">
                             <input
                                 type="checkbox"
                                 checked={selectedUsers.size === filteredUsers.length && filteredUsers.length > 0}
                                 onChange={() => selectedUsers.size > 0 ? clearSelection() : selectAllFiltered()}
-                                className="h-5 w-5 rounded border-border accent-brand shrink-0 cursor-pointer"
+                                aria-label={t("admin-people.selectAll")}
+                                className="h-4 w-4 rounded border-border accent-brand shrink-0 cursor-pointer"
                             />
                         </label>
-                        <div className="min-w-0 flex-1 grid grid-cols-12 gap-4 items-center ps-2">
-                            <div className="col-span-12 sm:col-span-5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("admin-people.columnUser")}</div>
-                            <div className="hidden sm:block col-span-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("admin-people.columnAttributes")}</div>
-                            <div className="hidden sm:block col-span-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-end pe-2">{t("admin-people.columnRoleManagement")}</div>
+                        <div className="min-w-0 flex-1 flex items-center justify-between gap-4">
+                            <span className="text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground">{t("admin-people.columnUser")}</span>
+                            <span className="hidden sm:inline text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground pe-2">{t("admin-people.columnRoleManagement")}</span>
                         </div>
                     </div>
 
                     {/* Grid Rows */}
-                    <div className="max-h-[600px] overflow-y-auto">
+                    <div className="divide-y divide-rule">
                         {filteredUsers.length === 0 ? (
                             <div className="p-8 text-center text-muted-foreground text-sm">
                                 {users.length === 0 ? t("admin-people.emptyNoUsers") : t("admin-people.emptyNoMatches")}

@@ -84,7 +84,7 @@ export function UpcomingTimeline({
                                 const isExp = expanded === s.id
 
                                 return (
-                                    <div key={s.id} className="bg-card border border-brand/10 rounded-xl overflow-hidden">
+                                    <div key={s.id} className="bg-card border border-brand/10 rounded-lg overflow-hidden">
                                         <Link
                                             href={`/perform/setlist/${s.id}`}
                                             onClick={onSelect ? () => onSelect(s) : undefined}

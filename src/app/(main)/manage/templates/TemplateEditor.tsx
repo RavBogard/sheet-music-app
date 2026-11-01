@@ -36,7 +36,7 @@ const TYPE_COLORS: Record<string, string> = {
     song: "bg-brand/20 text-brand",
     prayer: "bg-brand/20 text-brand",
     reading: "bg-success/20 text-success",
-    transition: "bg-amber-500/20 text-amber-500",
+    transition: "bg-caution/20 text-caution",
     note: "bg-muted-foreground/20 text-muted-foreground",
     header: "bg-brand/20 text-brand",
 }
@@ -163,7 +163,7 @@ export function TemplateEditor({ templateKey, defaultSlots, customSlots, importe
                     <p className="text-xs text-muted-foreground">
                         {t("manage-templates.slotCount", { count: slots.length })}
                         {isCustomized && (
-                            <span className="ms-2 px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-medium">
+                            <span className="ms-2 px-1.5 py-0.5 rounded bg-caution/20 text-caution font-medium">
                                 {t("manage-templates.customizedBadge")}
                             </span>
                         )}

@@ -67,10 +67,10 @@ function getRoleConfig(profile: RabbiProfile) {
         case 'strummer':
             return {
                 Icon: Mic2,
-                bgClass: 'bg-amber-500/5',
-                borderClass: 'border-amber-500/20',
-                iconClass: 'text-amber-600 dark:text-amber-400',
-                textClass: 'text-amber-700 dark:text-amber-300',
+                bgClass: 'bg-caution/5',
+                borderClass: 'border-caution/20',
+                iconClass: 'text-caution dark:text-caution',
+                textClass: 'text-caution dark:text-caution',
             }
         case 'non_musical':
             return {

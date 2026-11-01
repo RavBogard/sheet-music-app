@@ -19,6 +19,9 @@ import { KeepAwakeControl } from "./KeepAwakeControl"
 import { MAX_PUBLIC_SERVICES, splitPublicSetlists } from "./public-setlist-order"
 import { RowDate } from "@/components/setlist/RowDate"
 import { DirectionalIcon } from "@/components/i18n/DirectionalIcon"
+import { PageContainer, PageHeader } from "@/components/layout/Page"
+import { VariantGroupList } from "@/components/setlist/VariantGroupList"
+import { foldSetlistVariants } from "@/lib/setlist-variant-fold"
 
 interface PublicSetlistListingProps {
     /**
@@ -110,12 +113,21 @@ export function PublicSetlistListing({ initialSetlists }: PublicSetlistListingPr
     // upcoming (capped if there's a flood), then most-recent past filling the
     // remainder. Cap at the call site only — `splitPublicSetlists` keeps its
     // shared sort + isTest/test-uid filtering intact.
-    const { upcoming, past } = useMemo(() => {
+    // Consistency pass: the past list folds instrument copies (" · Bb",
+    // "(Copy)") under their parent service exactly as /setlists does, with
+    // the same shared fold. The cap counts folded groups, so a parent and its
+    // copies take one slot and every copy stays one tap away.
+    const { upcoming, pastGroups } = useMemo(() => {
         const split = splitPublicSetlists(setlists)
         const cappedUpcoming = split.upcoming.slice(0, MAX_PUBLIC_SERVICES)
         const remaining = Math.max(0, MAX_PUBLIC_SERVICES - cappedUpcoming.length)
-        return { upcoming: cappedUpcoming, past: split.past.slice(0, remaining) }
+        const groups = foldSetlistVariants(split.past, (x) => {
+            const d = toDate(x.eventDate)
+            return d ? d.toISOString().slice(0, 10) : null
+        })
+        return { upcoming: cappedUpcoming, pastGroups: groups.slice(0, remaining) }
     }, [setlists])
+    const past = pastGroups
     const isEmpty = upcoming.length === 0 && past.length === 0
 
     if (loading) {
@@ -168,47 +180,53 @@ export function PublicSetlistListing({ initialSetlists }: PublicSetlistListingPr
     }
 
     return (
-        <div className="flex flex-col gap-4 px-4 pt-6 pb-20 max-w-2xl mx-auto w-full">
-            {/* Header */}
-            <div className="flex items-center gap-3 mb-2">
-                <div className="flex-1 min-w-0">
-                    <h1 className="text-[1.6rem] font-extrabold leading-tight tracking-[-0.015em]">{orgName}</h1>
-                    <p className="text-sm font-medium text-muted-foreground">{label(org, 'publicListingSubtitle')}</p>
-                </div>
-                {/* FU-c12-3 — the wake-lock toggle (and its `useWakeLock` hook)
-                    only mount for SIGNED-IN viewers via <KeepAwakeControl/>.
-                    The affordance exists for the band-leader who leaves the
-                    picker open during a service for quick song-pick; anonymous
-                    visitors + crawlers have no use for it and previously got an
-                    idle `visibilitychange` listener + a purposeless "Keep
-                    screen on" button. Gating to authed viewers keeps the leader
-                    workflow while making "the anon landing never touches the
-                    WakeLock API" structural. (Request was already gesture-gated,
-                    so this is hygiene, not an auto-request bugfix.) */}
-                {user && !authLoading && <KeepAwakeControl />}
-                {/* C11 M3-012 — auth-state indicator. Signed-in viewers get an
-                    avatar pill linking to settings so the context-shift to the
-                    authed app (visible the moment they tap into a setlist) isn't
-                    invisible on the landing. Logged-out viewers get the QR/Google
-                    Sign-In card below — adding a pill here too would duplicate
-                    that affordance (AC3 "Sign-in pill OR existing QR card, not
-                    both"). Gated on `!authLoading` to avoid flash-then-yank CLS,
-                    matching the QR card's guard. */}
-                {user && !authLoading && (
-                    <Link
-                        href="/settings"
-                        aria-label={t("performSetlist.signedInAs", { userName: user.displayName || user.email || t("performSetlist.musicianFallback") })}
-                        className="shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    >
-                        <Avatar className="h-9 w-9 border border-border">
-                            <AvatarImage src={user.photoURL ?? undefined} alt="" />
-                            <AvatarFallback>
-                                <UserCircle className="w-5 h-5" />
-                            </AvatarFallback>
-                        </Avatar>
-                    </Link>
-                )}
-            </div>
+        <PageContainer className="flex flex-col gap-4">
+            {/* Head row (consistency pass): the brand lives in the shell's top
+                bar now, so the page head is the title that matches the tab,
+                the public-listing subtitle, and the viewer's controls on the
+                right. */}
+            <PageHeader
+                className="mb-2"
+                title={t("nav.setlists")}
+                subtitle={label(org, 'publicListingSubtitle')}
+                actions={user && !authLoading ? (
+                    <>
+                        {/* FU-c12-3 — the wake-lock toggle (and its `useWakeLock` hook)
+                            only mount for SIGNED-IN viewers via <KeepAwakeControl/>.
+                            The affordance exists for the band-leader who leaves the
+                            picker open during a service for quick song-pick; anonymous
+                            visitors + crawlers have no use for it and previously got an
+                            idle `visibilitychange` listener + a purposeless "Keep
+                            screen on" button. Gating to authed viewers keeps the leader
+                            workflow while making "the anon landing never touches the
+                            WakeLock API" structural. (Request was already gesture-gated,
+                            so this is hygiene, not an auto-request bugfix.) */}
+                        {user && !authLoading && <KeepAwakeControl />}
+                        {/* C11 M3-012 — auth-state indicator. Signed-in viewers get an
+                            avatar pill linking to settings so the context-shift to the
+                            authed app (visible the moment they tap into a setlist) isn't
+                            invisible on the landing. Logged-out viewers get the QR/Google
+                            Sign-In card below — adding a pill here too would duplicate
+                            that affordance (AC3 "Sign-in pill OR existing QR card, not
+                            both"). Gated on `!authLoading` to avoid flash-then-yank CLS,
+                            matching the QR card's guard. */}
+                        {user && !authLoading && (
+                            <Link
+                                href="/settings"
+                                aria-label={t("performSetlist.signedInAs", { userName: user.displayName || user.email || t("performSetlist.musicianFallback") })}
+                                className="shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                            >
+                                <Avatar className="h-9 w-9 border border-border">
+                                    <AvatarImage src={user.photoURL ?? undefined} alt="" />
+                                    <AvatarFallback>
+                                        <UserCircle className="w-5 h-5" />
+                                    </AvatarFallback>
+                                </Avatar>
+                            </Link>
+                        )}
+                    </>
+                ) : undefined}
+            />
 
             {/* Logged-out sign-in: QR (scan-with-phone) + Google. Pinned to the
                 top so a congregation member sees "scan to sign in" immediately.
@@ -353,13 +371,14 @@ export function PublicSetlistListing({ initialSetlists }: PublicSetlistListingPr
                             <h2 className="text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground px-1">
                                 {label(org, 'pastSection')}
                             </h2>
-                            <div className="flex flex-col divide-y divide-rule border border-rule rounded-lg overflow-hidden bg-card">
-                                {past.map((s) => renderCard(s, true))}
-                            </div>
+                            <VariantGroupList
+                                groups={pastGroups}
+                                renderRow={(s) => renderCard(s, true)}
+                            />
                         </section>
                     )}
                 </>
             )}
-        </div>
+        </PageContainer>
     )
 }

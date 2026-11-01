@@ -204,7 +204,6 @@ export default async function RootLayout({
         >
           {t("common.skipToMain")}
         </a>
-        <div className="bg-noise" />
         <OrgProvider orgId={orgId} config={orgConfig}>
           <I18nProvider {...clientI18nProps(i18n)}>
           <ThemeProvider

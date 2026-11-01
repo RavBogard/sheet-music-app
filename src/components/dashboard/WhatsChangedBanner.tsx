@@ -18,7 +18,7 @@ export function WhatsChangedBanner({
     if (changedItems.length === 0) return null
 
     return (
-        <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl px-4 py-3 flex items-start gap-3">
+        <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg px-4 py-3 flex items-start gap-3">
             <Bell className="w-4 h-4 text-blue-400 mt-0.5 shrink-0" />
             <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-blue-400">

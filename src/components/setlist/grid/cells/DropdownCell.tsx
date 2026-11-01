@@ -209,8 +209,8 @@ export function DropdownCell({
                         '[@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:px-2',
                         'truncate text-sm',
                         'cursor-pointer rounded-sm border border-transparent',
-                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400',
-                        isFocused && 'ring-2 ring-indigo-400/60 bg-indigo-500/5',
+                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
+                        isFocused && 'ring-2 ring-brand/60 bg-brand/5',
                         className,
                     )}
                 >
@@ -240,7 +240,7 @@ export function DropdownCell({
                             value={filter}
                             onValueChange={setFilter}
                             placeholder={placeholder ?? t('setlistGrid.typeToFilter')}
-                            className="w-full bg-transparent px-3 py-2 text-sm outline-none border-b border-white/10"
+                            className="w-full bg-transparent px-3 py-2 text-sm outline-none border-b border-rule"
                             onKeyDown={(e) => {
                                 if (e.key === 'Tab') {
                                     e.preventDefault()
@@ -279,13 +279,13 @@ export function DropdownCell({
                                         value={`${opt.label} ${opt.value}`}
                                         onSelect={() => commit(opt.value, 'down')}
                                         className={cn(
-                                            'flex cursor-pointer items-center gap-2 px-2 py-1 text-sm aria-selected:bg-indigo-500/15',
+                                            'flex cursor-pointer items-center gap-2 px-2 py-1 text-sm aria-selected:bg-brand/15',
                                             // v51-01-01: ≥44px tap targets
                                             // on touch + breathing room to
                                             // avoid fat-finger mispicks.
                                             '[@media(pointer:coarse)]:min-h-[44px] [@media(pointer:coarse)]:py-2',
                                             value === opt.value &&
-                                                'font-semibold text-indigo-200 bg-indigo-500/10',
+                                                'font-semibold text-brand bg-brand/10',
                                         )}
                                     >
                                         {opt.icon ? (
@@ -310,7 +310,7 @@ export function DropdownCell({
                                 <CommandItem
                                     value={`__addfree__${filter}`}
                                     onSelect={() => commit(filter.trim(), 'down')}
-                                    className="flex cursor-pointer items-center gap-2 px-2 py-1 text-sm aria-selected:bg-indigo-500/15 [@media(pointer:coarse)]:min-h-[44px] [@media(pointer:coarse)]:py-2"
+                                    className="flex cursor-pointer items-center gap-2 px-2 py-1 text-sm aria-selected:bg-brand/15 [@media(pointer:coarse)]:min-h-[44px] [@media(pointer:coarse)]:py-2"
                                 >
                                     <span>{t('setlistGrid.addCustomValue', { value: filter.trim() })}</span>
                                 </CommandItem>

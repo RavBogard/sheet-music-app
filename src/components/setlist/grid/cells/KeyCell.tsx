@@ -175,10 +175,10 @@ function KeyList({ options, currentValue, onPick, testIdSuffix }: KeyListProps) 
                             onSelect={() => onPick(opt.value)}
                             data-testid={`key-picker-option-${opt.value}`}
                             className={cn(
-                                'flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm aria-selected:bg-indigo-500/15',
+                                'flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm aria-selected:bg-brand/15',
                                 '[@media(pointer:coarse)]:min-h-[44px] [@media(pointer:coarse)]:py-2',
                                 currentValue === opt.value &&
-                                    'font-semibold text-indigo-200 bg-indigo-500/10',
+                                    'font-semibold text-brand bg-brand/10',
                             )}
                         >
                             <span className="truncate">{opt.label}</span>

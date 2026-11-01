@@ -36,18 +36,18 @@ export default async function MainLayout({
                     serverWordmarkUrl={branding.wordmarkUrl}
                 />
                 {/*
-                    Padding Handling:
-                    - Below lg (phones, iPad portrait): pt-14 clears the top bar,
-                      pb-24 clears the bottom tab bar
-                    - lg and up: pt-14 clears the top bar; no tab bar
+                    Padding: pt-14 clears the top bar. The footer shows on every
+                    non-Perform page at every width (consistency pass); below lg
+                    its wrapper pads by --tabbar-h so the bottom tab bar never
+                    covers it.
                 */}
                 <ViewAsBanner />
-                <main id="main-content" className="flex-1 pt-14 pb-24 lg:pb-0">
+                <main id="main-content" className="flex-1 pt-14">
                     <PageTransition>
                         {children}
                     </PageTransition>
                 </main>
-                <div className="hidden lg:block">
+                <div className="bg-card" style={{ paddingBottom: "var(--tabbar-h)" }}>
                     <Footer />
                 </div>
                 <LazyClientComponents />

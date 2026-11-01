@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useState } from "react"
 import { useT } from "@/i18n/client"
+import { SegmentedChips } from "@/components/ui/segmented-chips"
 
 interface SetlistToolbarProps {
     /** @deprecated No longer used — kept for backward compat */
@@ -31,9 +32,9 @@ export function SetlistToolbar({
     const [searchOpen, setSearchOpen] = useState(!!searchQuery)
 
     return (
-        <div className="px-3 pt-4 md:px-6 md:pt-6 shrink-0 space-y-3">
+        <div className="shrink-0 space-y-3">
             <div className="flex items-center justify-between flex-wrap gap-2">
-                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                <h2 className="text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground px-1">
                     {t("setlist.allSetlists")}
                 </h2>
 
@@ -49,12 +50,12 @@ export function SetlistToolbar({
                         {searchOpen ? <X className="h-4 w-4" /> : <Search className="h-4 w-4" />}
                     </Button>
 
-                    <div role="group" aria-label={t("setlist.viewGroupLabel")} className="flex bg-card p-1 rounded-xl w-fit">
+                    <div role="group" aria-label={t("setlist.viewGroupLabel")} className="flex gap-1 rounded-lg border border-rule bg-card p-0.5 w-fit">
                         <Button
                             variant={view === 'list' ? 'secondary' : 'ghost'}
                             size="icon"
                             onClick={() => onViewChange('list')}
-                            className={`h-11 w-11 transition-all ${view === 'list' ? 'bg-brand/15 text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-brand/5'}`}
+                            className={`h-11 w-11 transition-all ${view === 'list' ? 'bg-accent text-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-accent'}`}
                             aria-label={t("setlist.listViewLabel")}
                             aria-pressed={view === 'list'}
                             title={t("setlist.listViewTitle")}
@@ -65,7 +66,7 @@ export function SetlistToolbar({
                             variant={view === 'calendar' ? 'secondary' : 'ghost'}
                             size="icon"
                             onClick={() => onViewChange('calendar')}
-                            className={`h-11 w-11 transition-all ${view === 'calendar' ? 'bg-brand/15 text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-brand/5'}`}
+                            className={`h-11 w-11 transition-all ${view === 'calendar' ? 'bg-accent text-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-accent'}`}
                             aria-label={t("setlist.calendarViewLabel")}
                             aria-pressed={view === 'calendar'}
                             title={t("setlist.calendarViewTitle")}
@@ -76,7 +77,7 @@ export function SetlistToolbar({
                             variant={view === 'matrix' ? 'secondary' : 'ghost'}
                             size="icon"
                             onClick={() => onViewChange('matrix')}
-                            className={`h-11 w-11 transition-all ${view === 'matrix' ? 'bg-brand/15 text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-brand/5'}`}
+                            className={`h-11 w-11 transition-all ${view === 'matrix' ? 'bg-accent text-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-accent'}`}
                             aria-label={t("setlist.matrixViewLabel")}
                             aria-pressed={view === 'matrix'}
                             title={t("setlist.matrixViewTitle")}
@@ -97,32 +98,23 @@ export function SetlistToolbar({
                         onChange={(e) => onSearchChange(e.target.value)}
                         placeholder={t("setlist.searchPlaceholder")}
                         aria-label={t("setlist.searchSetlists")}
-                        className="h-9 text-sm"
+                        className="h-11 text-[15px]"
                         autoFocus
                     />
                 </div>
             )}
 
             {availableRabbis.length > 0 && (
-                <div className="flex gap-1.5 flex-wrap">
-                    <button
-                        onClick={() => onRabbiFilterChange("")}
-                        className={`px-2.5 py-1 rounded-full text-xs transition-colors ${!rabbiFilter ? "bg-brand text-white" : "bg-muted text-muted-foreground hover:text-foreground"
-                            }`}
-                    >
-                        {t("setlist.rabbiFilterAll")}
-                    </button>
-                    {availableRabbis.map((r) => (
-                        <button
-                            key={r}
-                            onClick={() => onRabbiFilterChange(rabbiFilter === r ? "" : r)}
-                            className={`px-2.5 py-1 rounded-full text-xs transition-colors ${rabbiFilter === r ? "bg-brand text-white" : "bg-muted text-muted-foreground hover:text-foreground"
-                                }`}
-                        >
-                            {t("setlist.rabbiFilterChip", { name: r })}
-                        </button>
-                    ))}
-                </div>
+                <SegmentedChips
+                    ariaLabel={t("setlist.rabbiFilterGroupLabel")}
+                    value={rabbiFilter}
+                    // Tapping the active rabbi again clears the filter, as before.
+                    onChange={(v) => onRabbiFilterChange(v === rabbiFilter ? "" : v)}
+                    options={[
+                        { value: "", label: t("setlist.rabbiFilterAll") },
+                        ...availableRabbis.map((r) => ({ value: r, label: t("setlist.rabbiFilterChip", { name: r }) })),
+                    ]}
+                />
             )}
         </div>
     )

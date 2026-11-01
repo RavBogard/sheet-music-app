@@ -31,7 +31,7 @@ export function TenantsList() {
             )}
             {tenants && tenants.length === 0 && <p className="text-sm text-muted-foreground">No tenants yet.</p>}
             {tenants && tenants.length > 0 && (
-                <div className="border border-border rounded-xl overflow-x-auto">
+                <div className="border border-border rounded-lg overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead className="bg-muted/40">
                             <tr className="text-left text-xs text-muted-foreground">
@@ -65,7 +65,7 @@ export function TenantsList() {
                                     </td>
                                     <td className="px-4 py-3 whitespace-nowrap">
                                         {t.memberCount}
-                                        {t.pendingCount > 0 && <span className="text-amber-600 dark:text-amber-400"> +{t.pendingCount} waiting</span>}
+                                        {t.pendingCount > 0 && <span className="text-caution dark:text-caution"> +{t.pendingCount} waiting</span>}
                                     </td>
                                     <td className="px-4 py-3 text-muted-foreground">
                                         {t.featuresOn.length === 0 ? "None" : t.featuresOn.map((f) => FEATURE_LABELS[f]?.label ?? f).join(", ")}
