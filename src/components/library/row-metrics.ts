@@ -15,15 +15,15 @@
  */
 
 /**
- * Estimated row height in px. Option B: rows are a dense hairline list with
- * no gap — a title line (~20px) and a meta line (~16px) inside py-1 (8px),
- * at least the 44px hit floor, plus the 1px rule: 45px when nothing wraps. Only a seed for
+ * Estimated row height in px. Web refresh (blend E): rows are a hairline
+ * list with no gap — a title line (~22px) and a meta line (~18px) inside
+ * py-2 (16px), plus the 1px rule: 60px when nothing wraps. Only a seed for
  * the virtualizer — every mounted row is measured for real via
  * `measureElement`, so wrapped long titles keep their true height — but it is
  * exactly what the skeleton must draw, because the skeleton is what the
  * measurement replaces.
  */
-export const ROW_ESTIMATE_PX = 45
+export const ROW_ESTIMATE_PX = 60
 
 /** No gap: rows sit on the 1px hairline grid (web refresh). */
 export const ROW_GAP_PX = 0

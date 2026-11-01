@@ -280,13 +280,14 @@ describe('MobileRowCard — bonded non-song chart affordance (cowork #6b)', () =
         ).toBeInTheDocument()
     })
 
-    it('a bonded SONG row is unchanged (font-semibold foreground)', () => {
+    it('a bonded SONG row is unchanged (text-lg font-semibold foreground)', () => {
         render(
             <Harness
                 track={makeTrack({ type: 'song', songId: 'song-z', title: 'Amazing Grace' })}
             />,
         )
         const title = screen.getByText('Amazing Grace')
+        expect(title.className).toContain('text-lg')
         expect(title.className).toContain('font-semibold')
         expect(title.className).toContain('text-foreground')
     })

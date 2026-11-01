@@ -650,15 +650,15 @@ export function SetlistPerformClient({
                 time); an explicit disarm via the toggle is remembered and is
                 NOT overridden here. Renders nothing. */}
             <KeepAwakeAutoArm />
-            {/* Head row (Option B): the title at 1rem/800 and ONE meta line
-                under it ("Updated … · N/M charts on this iPad", the book after
-                it), the tools on the right with Edit as the one blue action. */}
+            {/* Head row (web refresh, blend E): the title large, the status
+                line under it ("Updated … · N/M charts on this iPad"), and the
+                tools on the right with Edit as the one blue action. */}
             <div className="z-20 relative bg-background border-b border-rule">
                 {/* Consistency pass: the page container width, and a head that
                     wraps instead of crushing: back + title (2 lines) + status on
                     a full row on a phone, the toolbar in one row under them. */}
-                <div className={cn(PAGE_WIDTH_CLASS, "flex flex-wrap items-center gap-x-3 gap-y-1 py-1.5")}>
-                <div className="flex min-w-0 flex-[1_1_22rem] items-center gap-1 sm:gap-2">
+                <div className={cn(PAGE_WIDTH_CLASS, "flex flex-wrap items-start gap-x-3 gap-y-2 py-3")}>
+                <div className="flex min-w-0 flex-[1_1_22rem] items-start gap-1 sm:gap-2">
                 <Link
                     href={backHref}
                     aria-label={isPublicView ? t("performSetlist.backToHomeLabel") : t("performSetlist.backToSetlistsLabel")}
@@ -666,9 +666,9 @@ export function SetlistPerformClient({
                 >
                     <DirectionalIcon icon={ArrowLeft} className="h-5 w-5 text-foreground" />
                 </Link>
-                <div className="flex-1 min-w-0">
-                    <h1 className="line-clamp-2 break-words text-base font-extrabold leading-tight">{name}</h1>
-                    <p data-testid="perform-status-line" className="tnum text-xs font-medium text-muted-foreground">
+                <div className="flex-1 min-w-0 pt-1">
+                    <h1 className="line-clamp-2 break-words text-[1.35rem] sm:text-[1.6rem] font-extrabold leading-tight tracking-[-0.015em]">{name}</h1>
+                    <p data-testid="perform-status-line" className="tnum mt-0.5 text-sm font-medium text-muted-foreground">
                         <span>
                             {totalCount > songCount
                                 ? t("performSetlist.header.songsAndItems", { count: songCount, totalCount })
@@ -692,7 +692,7 @@ export function SetlistPerformClient({
                                 <span
                                     data-testid="perform-status-device"
                                     data-complete={deviceReady >= deviceTotal ? "true" : "false"}
-                                    className={cn("font-bold", deviceReady < deviceTotal ? "text-caution" : "text-success")}
+                                    className={cn(deviceReady < deviceTotal && "text-caution font-semibold")}
                                 >
                                     {t("performSetlist.status.chartsOnDevice", { ready: deviceReady, total: deviceTotal })}
                                 </span>
@@ -711,15 +711,11 @@ export function SetlistPerformClient({
                                 <span>{t("performSetlist.status.chartsOnDevice", { ready: reservedChartCount, total: reservedChartCount })}</span>
                             </span>
                         )}
-                        {/* Option B: the book joins the one meta line. */}
-                        {bookName && (
-                            <>
-                                <span aria-hidden="true"> · </span>
-                                <span data-testid="perform-status-book">{bookName}</span>
-                            </>
-                        )}
                     </p>
-                    {isBand && <GigPanel gig={gig} />}
+                    {bookName && (
+                        <p className="text-sm text-muted-foreground truncate">{bookName}</p>
+                    )}
+                    {isBand && <GigPanel gig={gig} className="mt-0.5" />}
                     {/* BET-6: parasha line and Beit Mitzvah card (CRC only). */}
                     <SetlistFamilyHead setlistId={setlistId} setlist={initialSetlist as unknown as Record<string, unknown> | null} />
                 </div>

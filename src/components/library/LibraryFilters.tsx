@@ -87,7 +87,7 @@ export function LibraryFilters({ allFiles, filters, onFiltersChange, usageMap }:
     if (availableKeys.length === 0 && availableTopics.length === 0) return null
 
     return (
-        <div className="space-y-2">
+        <div className="space-y-4">
             {/* Filter chip bar */}
             <div className="flex gap-2 overflow-x-auto scrollbar-hide px-1">
                 {/* Key filter chip */}
