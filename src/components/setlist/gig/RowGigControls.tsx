@@ -82,7 +82,7 @@ export function DurationField({
                     }
                 }}
                 className={cn(
-                    'tnum touch-hit h-8 w-[4.5rem] rounded-md border bg-background px-2 text-center text-sm font-semibold text-foreground',
+                    'tnum h-11 w-[4.5rem] rounded-md border bg-background px-2 text-center text-sm font-semibold text-foreground',
                     'placeholder:font-normal placeholder:text-muted-foreground',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                     invalid ? 'border-warning-line' : 'border-input',
@@ -113,13 +113,13 @@ export function SegueToggle({ segue, onCommit }: { segue: boolean; onCommit: (pa
             onPointerDown={stop}
             onKeyDown={stop}
             className={cn(
-                'touch-hit inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md cursor-pointer',
+                'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md cursor-pointer',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                 'transition-colors duration-150 motion-reduce:transition-none',
                 segue ? 'bg-accent text-brand' : 'text-muted-foreground/60 hover:bg-accent hover:text-foreground',
             )}
         >
-            <DirectionalIcon icon={ArrowRight} aria-hidden className={cn('h-4 w-4', segue && 'stroke-[2.75]')} />
+            <DirectionalIcon icon={ArrowRight} aria-hidden className={cn('h-5 w-5', segue && 'stroke-[2.75]')} />
         </button>
     )
 }

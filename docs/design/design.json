@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-01T00:00:00.000Z",
+  "generatedAt": "2026-10-31T22:12:26.552Z",
   "title": "Design System: CentralReform.live",
   "extensions": {
     "colorMeta": {
@@ -543,99 +543,24 @@
           "oklch(0.82 0.03 255)",
           "oklch(0.95 0.03 255)"
         ]
-      },
-      "section-green-ink": {
-        "role": "tertiary",
-        "displayName": "Section Green Ink",
-        "canonical": "#1F7A6E",
-        "tonalRamp": [
-          "#0F3D37",
-          "#1B6A5F",
-          "#269688",
-          "#32C3B0",
-          "#58D5C4",
-          "#85E0D4",
-          "#B6ECE5",
-          "#EBFAF8"
-        ]
-      },
-      "section-oxblood-ink": {
-        "role": "tertiary",
-        "displayName": "Section Oxblood Ink",
-        "canonical": "#8E2E3B",
-        "tonalRamp": [
-          "#3A1318",
-          "#64202A",
-          "#8F2E3B",
-          "#B93C4D",
-          "#CC6170",
-          "#DA8B96",
-          "#E9BAC0",
-          "#F9ECEE"
-        ]
-      },
-      "section-ochre-ink": {
-        "role": "tertiary",
-        "displayName": "Section Ochre Ink",
-        "canonical": "#8F6210",
-        "tonalRamp": [
-          "#443009",
-          "#75530F",
-          "#A77616",
-          "#D8991D",
-          "#E7B046",
-          "#EDC578",
-          "#F4DCAE",
-          "#FCF5E8"
-        ]
-      },
-      "section-blue-ink": {
-        "role": "tertiary",
-        "displayName": "Section Blue Ink",
-        "canonical": "#23356B",
-        "tonalRamp": [
-          "#131D3A",
-          "#213164",
-          "#2F468E",
-          "#3C5BB8",
-          "#617CCB",
-          "#8C9FD9",
-          "#BAC5E8",
-          "#ECEFF9"
-        ]
-      },
-      "page-call": {
-        "role": "secondary",
-        "displayName": "Page-Call Book-Blue",
-        "canonical": "#23356B",
-        "tonalRamp": [
-          "#131D3A",
-          "#213164",
-          "#2F468E",
-          "#3C5BB8",
-          "#617CCB",
-          "#8C9FD9",
-          "#BAC5E8",
-          "#ECEFF9"
-        ]
       }
     },
     "typographyMeta": {
       "headline": {
         "displayName": "Headline",
-        "purpose": "A page or setlist title in the head row: 1rem/800, one line over ONE meta line."
+        "purpose": "Setlist title in the head row; 1.35rem below 640px."
       },
       "page-call": {
         "displayName": "Page Call",
-        "purpose": "Printed page at the end of a row: row size (0.85rem), 700, book-blue, tabular."
+        "purpose": "Printed page at the end of a row; 1.35rem in Perform."
       },
       "title": {
         "displayName": "Title",
-        "purpose": "Song row title: 1rem/600 in Perform, 0.92rem in the editor and Library."
+        "purpose": "Song row title in Perform."
       },
       "list-title": {
         "displayName": "List Title",
-        "purpose": "Setlist name in the setlists and Perform lists: 0.95rem/700."
+        "purpose": "Setlist name in the setlists list."
       },
       "tab": {
         "displayName": "Tab",
@@ -646,12 +571,12 @@
         "purpose": "Status line and row metadata, tabular."
       },
       "running-head": {
-        "displayName": "Section Label",
-        "purpose": "Section label over its 2px coloured underline: 12px, 800, uppercase, 0.1em, in the hue ink."
+        "displayName": "Running Head",
+        "purpose": "Section band title, uppercase; 13px in the editor."
       },
       "label": {
         "displayName": "Label",
-        "purpose": "Meta lines, chart chip, notes and set totals: 12px."
+        "purpose": "Chart chip under a title."
       }
     },
     "shadows": [
@@ -711,9 +636,9 @@
       "name": "Primary Button",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "The one blue action per view (Perform, Edit, New). In a head row it is drawn small (32px, 13px text) with a 44px hit area.",
+      "description": "The one blue action per view (Perform, Edit, sign in).",
       "html": "<button class=\"ds-btn-primary\">Perform</button>",
-      "css": ".ds-btn-primary{display:inline-flex;align-items:center;height:32px;padding:0 12px;border:0;border-radius:8px;background:var(--primary,#2563EB);color:var(--primary-foreground,#fff);font-family:Assistant,sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:background .15s}.ds-btn-primary:hover{background:color-mix(in srgb,var(--primary,#2563EB) 90%,transparent)}.ds-btn-primary:focus-visible{outline:2px solid var(--ring,#2563EB);outline-offset:2px}"
+      "css": ".ds-btn-primary{display:inline-flex;align-items:center;min-height:44px;padding:0 20px;border:0;border-radius:8px;background:var(--primary,#2563EB);color:var(--primary-foreground,#fff);font-family:Assistant,sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:background .15s}.ds-btn-primary:hover{background:color-mix(in srgb,var(--primary,#2563EB) 90%,transparent)}.ds-btn-primary:focus-visible{outline:2px solid var(--ring,#2563EB);outline-offset:2px}"
     },
     {
       "name": "Outline Button",
@@ -724,28 +649,28 @@
       "css": ".ds-btn-outline{display:inline-flex;align-items:center;min-height:44px;padding:0 16px;border:1px solid var(--border,#E3E6EE);border-radius:8px;background:var(--card,#fff);color:var(--foreground,#18202E);font-family:Assistant,sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s}.ds-btn-outline:hover{background:var(--accent,#EAF0FE)}.ds-btn-outline:focus-visible{outline:2px solid var(--ring,#2563EB);outline-offset:2px}"
     },
     {
-      "name": "Section Label",
+      "name": "Section Band",
       "kind": "custom",
-      "refersTo": "section-label-green",
-      "description": "Option B: a thin 2px coloured underline with a small uppercase label in the hue ink and the page range, muted, at the right. No filled band. A leader's label is a 44px button; it stays a heading.",
-      "html": "<div class=\"ds-secs\"><div class=\"ds-sec ds-sec-green\">Kabbalat Shabbat <span>pp. 12–19</span></div><div class=\"ds-row\">…</div><div class=\"ds-sec ds-sec-oxblood\">Torah Service <span>pp. 30–34</span></div><div class=\"ds-sec ds-sec-ochre\">Shacharit <span>pp. 40–52</span></div><div class=\"ds-sec ds-sec-blue\">Maariv <span>p. 60</span></div></div>",
-      "css": ".ds-sec{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;padding:10px 16px 4px;margin-top:8px;border-bottom:2px solid var(--c);color:var(--c);font-family:Assistant,sans-serif;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.1em}.ds-sec:first-child{margin-top:0}.ds-sec span{font-weight:700;letter-spacing:.02em;text-transform:none;color:var(--muted-foreground,#556072);font-variant-numeric:tabular-nums lining-nums}.ds-sec-green{--c:var(--section-green-ink,#1F7A6E)}.ds-sec-oxblood{--c:var(--section-oxblood-ink,#8E2E3B)}.ds-sec-ochre{--c:var(--section-ochre-ink,#8F6210)}.ds-sec-blue{--c:var(--section-blue-ink,#23356B)}"
+      "refersTo": "section-band-green",
+      "description": "Full-hue section header with running head and page range.",
+      "html": "<div class=\"ds-bands\"><div class=\"ds-band ds-band-green\"><span>Kabbalat Shabbat</span><span class=\"ds-band-pages\">pp. 12–19</span></div><div class=\"ds-band ds-band-oxblood\"><span>Torah Service</span><span class=\"ds-band-pages\">pp. 30–34</span></div><div class=\"ds-band ds-band-ochre\"><span>Shacharit</span><span class=\"ds-band-pages\">pp. 40–52</span></div><div class=\"ds-band ds-band-blue\"><span>Maariv</span><span class=\"ds-band-pages\">p. 60</span></div></div>",
+      "css": ".ds-band{display:flex;align-items:center;gap:12px;min-height:44px;padding:10px 16px;margin-top:16px;border-radius:6px;font-family:Assistant,sans-serif;font-size:14px;font-weight:800;text-transform:uppercase;letter-spacing:.08em}.ds-band:first-child{margin-top:0}.ds-band span:first-child{flex:1}.ds-band-pages{font-weight:700;letter-spacing:.04em;font-variant-numeric:tabular-nums lining-nums}.ds-band-green{background:var(--section-green,#1F7A6E);color:var(--section-green-foreground,#fff)}.ds-band-oxblood{background:var(--section-oxblood,#8E2E3B);color:var(--section-oxblood-foreground,#fff)}.ds-band-ochre{background:var(--section-ochre,#C58B1A);color:var(--section-ochre-foreground,#18202E)}.ds-band-blue{background:var(--section-blue,#23356B);color:var(--section-blue-foreground,#fff)}"
     },
     {
       "name": "Song Row",
       "kind": "custom",
       "refersTo": "song-row",
-      "description": "Option B: a dense white row on the hairline (about 38px drawn, 44px hit): muted number, title, small outlined key tag, page call in book-blue; notes and warnings as a small second line.",
-      "html": "<div class=\"ds-row\"><div class=\"ds-row-main\"><span class=\"ds-row-n\">6</span><span class=\"ds-row-title\">Bar’chu Walkdown</span><span class=\"ds-key\">Em</span><span class=\"ds-folio\">p. 59</span></div><p class=\"ds-note\">Keep it going into Yotzer Or</p></div>",
-      "css": ".ds-row{padding:8px 16px;min-height:44px;box-sizing:border-box;background:var(--card,#fff);border-bottom:1px solid var(--rule,#E3E6EE);font-family:Assistant,sans-serif;color:var(--foreground,#18202E);transition:background .15s}.ds-row:hover{background:var(--accent,#EAF0FE)}.ds-row-main{display:flex;align-items:baseline;gap:8px}.ds-row-n{width:22px;font-size:12px;color:var(--muted-foreground,#556072);font-variant-numeric:tabular-nums}.ds-row-title{flex:1;font-weight:600;font-size:1rem;line-height:1.375}.ds-key{align-self:center;padding:0 5px;border:1px solid var(--input,#D5DAE5);border-radius:3px;font-size:12px;font-weight:700;line-height:16px;font-variant-numeric:tabular-nums}.ds-folio{width:56px;text-align:end;font-size:.85rem;font-weight:700;line-height:1;color:var(--page-call,#23356B);font-variant-numeric:tabular-nums lining-nums}.ds-note{margin:2px 0 0 30px;font-size:12px;font-weight:500;color:var(--caution,#8A5A00)}"
+      "description": "White row on the hairline: title, key tag, page call, chip and a written warning.",
+      "html": "<div class=\"ds-row\"><div class=\"ds-row-main\"><span class=\"ds-row-title\">Lecha Dodi</span><span class=\"ds-key\">Dm</span><span class=\"ds-folio\">p. 14</span></div><p class=\"ds-chip\">Main · PDF · Vocal Lead: Randy</p><p class=\"ds-warn\">Not saved offline</p></div>",
+      "css": ".ds-row{padding:14px 16px;background:var(--card,#fff);border-bottom:1px solid var(--rule,#E3E6EE);font-family:Assistant,sans-serif;color:var(--foreground,#18202E);transition:background .15s}.ds-row:hover{background:var(--accent,#EAF0FE)}.ds-row-main{display:flex;align-items:baseline;gap:8px}.ds-row-title{flex:1;font-weight:700;font-size:1.2rem;line-height:1.375}.ds-key{display:inline-flex;align-items:center;justify-content:center;align-self:center;min-width:44px;height:32px;padding:0 8px;border:1px solid var(--border,#E3E6EE);border-radius:8px;background:var(--secondary,#EEF1F7);color:var(--secondary-foreground,#2B3445);font-weight:700;font-variant-numeric:tabular-nums}.ds-folio{width:80px;text-align:end;font-size:1.35rem;font-weight:800;line-height:1;letter-spacing:-0.02em;font-variant-numeric:tabular-nums lining-nums}.ds-chip{margin:2px 0 0;font-size:12px;font-weight:500;color:var(--muted-foreground,#556072)}.ds-warn{margin:2px 0 0;font-size:12px;font-weight:600;color:var(--warning-line,#8E2E3B)}"
     },
     {
       "name": "Setlist List Group",
       "kind": "card",
       "refersTo": "list-group",
-      "description": "Paper block of setlist rows (name over one meta line, 44px) with hairline dividers under a group heading.",
+      "description": "Paper block of setlist rows with hairline dividers under a group heading.",
       "html": "<section><h4 class=\"ds-group-h\">Upcoming</h4><div class=\"ds-group\"><div class=\"ds-lrow\"><b>Shabbat Morning</b><span>Sat Nov 7 · 24 songs · <em>22/24 charts ready</em></span></div><div class=\"ds-lrow\"><b>Friday Night</b><span>Fri Nov 6 · 18 songs</span></div></div></section>",
-      "css": ".ds-group-h{margin:0 0 8px;padding:0 4px;font-family:Assistant,sans-serif;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted-foreground,#556072)}.ds-group{border:1px solid var(--rule,#E3E6EE);border-radius:10px;overflow:hidden;background:var(--card,#fff)}.ds-lrow{display:flex;flex-direction:column;justify-content:center;min-height:44px;padding:4px 16px;border-bottom:1px solid var(--rule,#E3E6EE);font-family:Assistant,sans-serif;cursor:pointer;transition:background .15s}.ds-lrow:last-child{border-bottom:0}.ds-lrow:hover{background:color-mix(in srgb,var(--accent,#EAF0FE) 50%,transparent)}.ds-lrow b{font-size:.95rem;font-weight:700;color:var(--foreground,#18202E)}.ds-lrow span{font-size:12px;font-weight:500;color:var(--muted-foreground,#556072);font-variant-numeric:tabular-nums}.ds-lrow em{font-style:normal;font-weight:600;color:var(--caution,#8A5A00)}"
+      "css": ".ds-group-h{margin:0 0 8px;padding:0 4px;font-family:Assistant,sans-serif;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted-foreground,#556072)}.ds-group{border:1px solid var(--rule,#E3E6EE);border-radius:10px;overflow:hidden;background:var(--card,#fff)}.ds-lrow{display:flex;flex-direction:column;justify-content:center;min-height:72px;padding:12px 16px;border-bottom:1px solid var(--rule,#E3E6EE);font-family:Assistant,sans-serif;cursor:pointer;transition:background .15s}.ds-lrow:last-child{border-bottom:0}.ds-lrow:hover{background:color-mix(in srgb,var(--accent,#EAF0FE) 50%,transparent)}.ds-lrow b{font-size:17px;font-weight:700;color:var(--foreground,#18202E)}.ds-lrow span{font-size:14px;font-weight:500;color:var(--muted-foreground,#556072);font-variant-numeric:tabular-nums}.ds-lrow em{font-style:normal;font-weight:600;color:var(--caution,#8A5A00)}"
     },
     {
       "name": "Text Input",
@@ -765,15 +690,14 @@
     }
   ],
   "narrative": {
-    "northStar": "The Siddur Section Rails, quiet (Option B)",
-    "overview": "The service reads like the book it follows, and nothing gets between the reader and the order. Each section opens on a thin coloured underline carrying a small uppercase label and its page range; every row carries its page call at the margin in bold book-blue at row size. Above it sits a slim book-cloth top bar with the tabs; below it, clean white paper on a cool ground, a 1px hairline grid, and one blue action. Every head is a title plus ONE meta line that states freshness and readiness.\n\nDensity is the product rule (Daniel, 2026-11-01: blend E's full-colour bands, huge page numbers and tall headers were too bloated and slowed getting to the info). Rows run about 36–40px drawn and keep 44px hit areas through padding or the touch-hit utility. Hierarchy comes from weight and a little colour, not scale: the title is 800, the page call 700 in book-blue, the metadata small and quiet. The world is light-first for bright rooms and desks; dark is a considered night-blue with lifted section inks.\n\nBrothers Lazaroff runs the same density under its own cloth: forced dark, a deep teal ground and top bar, a teal brand accent (also its page-call ink), a pale primary action, Zilla Slab on its headings, and a slate fourth section ink. The chart viewer inside Perform is outside this system.",
+    "northStar": "The Siddur Section Rails",
+    "overview": "The service reads like the book it follows. A setlist is set as a printed order: each section opens on a full-hue band carrying its running head and its page range, and every row carries its page call in large tabular numerals at the margin. Above it sits a slim book-cloth top bar with the tabs; below it, clean white paper on a cool ground, a 1px hairline grid, and one blue action. Freshness and readiness are always stated in a status line under the title.\n\nDensity is the product rule: text-first rows, no cover art, no card per row. Hierarchy comes from scale contrast, not decoration: the title and the page calls are large and heavy, the metadata is small and quiet. The world is light-first for bright rooms and desks; dark is a considered night-blue, not black, with the section hues a step deeper so the bands do not glare on a dim stage.\n\nBrothers Lazaroff runs the same world under its own cloth: forced dark, a deep teal ground and a deep teal top bar, a teal brand accent, a pale primary action, and Zilla Slab on its headings. The section bands, hairline grid, page calls and type ramp are shared. The chart viewer inside Perform is outside this system.",
     "keyCharacteristics": [
       "A book-cloth top bar (56px) with tabs at desktop; a white bottom tab bar (64px) below 1024px.",
-      "Section labels as a thin 2px coloured underline: small uppercase label in the hue ink left, muted \"pp. N–M\" (and set totals) right. No filled bands.",
-      "Page calls right-aligned in a fixed column at row size, 700 weight, book-blue, tabular numerals.",
-      "Dense white rows (about 38px drawn, 44px hit) on a 1px hairline, never a card per row, never zebra.",
-      "Every head is a title (1rem/800) plus ONE meta line; the gig line, parasha and Beit Mitzvah are single small lines.",
-      "One blue primary action per view, drawn small in a head row.",
+      "Section header rows as full-hue bands: uppercase tracked running head left, \"pp. N–M\" right.",
+      "Page calls right-aligned in a fixed column, 800 weight, tabular numerals.",
+      "White rows on a 1px hairline, never a card per row, never zebra.",
+      "One blue primary action per view.",
       "Assistant everywhere, Latin and Hebrew."
     ],
     "rules": [
@@ -783,8 +707,8 @@
         "section": "colors"
       },
       {
-        "name": "The Section Ink Rule",
-        "body": "The four section inks draw section labels and their underline and nothing else that carries meaning. A hue is a section's identity; reusing it for status or decoration breaks the reading.",
+        "name": "The Bands Only Rule",
+        "body": "The four section hues fill section bands and nothing else that carries meaning. A hue is a section's identity; reusing it for status or decoration breaks the reading.",
         "section": "colors"
       },
       {
@@ -798,36 +722,30 @@
         "section": "typography"
       },
       {
-        "name": "The Quiet Hierarchy Rule",
-        "body": "Hierarchy is weight (800 titles, 700 page calls, 500 metadata) and a small step in size (1rem against 0.75rem), never large numerals or tall heads. No second display face for CRC.",
+        "name": "The Scale Contrast Rule",
+        "body": "Hierarchy is weight 800 against 500 and 1.5rem against 0.75rem. No second display face for CRC, no color-coded headings.",
         "section": "typography"
       },
       {
         "name": "The Hairline Rule",
         "body": "Rows are separated by a 1px Hairline and nothing else: no zebra, no gap, no per-row border box.",
         "section": "elevation"
-      },
-      {
-        "name": "The One Meta Line Rule",
-        "body": "A head is a title and ONE meta line under it, with the primary action on the right. Status, book, date and readiness share that line, separated by dots; nothing gets its own tall block.",
-        "section": "layout"
       }
     ],
     "dos": [
-      "**Do** open every view with the title, ONE meta line that states freshness and readiness, and the one blue action.",
-      "**Do** head each section with a thin coloured underline carrying its label and page range.",
-      "**Do** put the page call last on the row in a fixed column, bold, in book-blue at row size.",
-      "**Do** keep rows dense (about 36–40px drawn) and every target at 44px through padding or touch-hit.",
+      "**Do** open every setlist view with the title, a status line that states freshness and readiness, and the one blue action.",
+      "**Do** head each section with a full-hue band carrying its running head and page range.",
+      "**Do** put the page call last on the row in a fixed column at 800 weight and full ink.",
       "**Do** use `tnum` on every number in a column.",
-      "**Do** use the shared tokens (`--shell`, `--rule`, `--brand`, `--primary`, `--section-*-ink`, `--page-call`) so Brothers Lazaroff re-skins without component edits."
+      "**Do** keep every target at 44px or more.",
+      "**Do** use the shared tokens (`--shell`, `--rule`, `--brand`, `--primary`) so Brothers Lazaroff re-skins without component edits."
     ],
     "donts": [
-      "**Don't** fill a section with its hue, or set page numbers in large numerals; both were retired on 2026-11-01.",
-      "**Don't** stack a status line, a book line and a card under a title; fold them into the one meta line.",
       "**Don't** put a card or a shadow on each row, and don't zebra-stripe; the hairline is the grid.",
-      "**Don't** use a section ink for anything but a section label.",
+      "**Don't** use a section hue for anything but a section band.",
       "**Don't** put a second filled primary button on a view.",
       "**Don't** carry a warning by color alone; write it.",
+      "**Don't** use glass, glow, gradients or noise on refreshed surfaces.",
       "**Don't** let a CRC color, name or wordmark into the Brothers Lazaroff theme."
     ]
   }

@@ -26,7 +26,7 @@ import { KEY_OPTIONS_DATA } from './cells/KeyCell'
 import { RecordingCell } from './cells/RecordingCell'
 import { displayChartTitle } from '@/lib/format/chart-title'
 import { RecordingBindPopover } from './RecordingBindPopover'
-import { SECTION_BAND_CLASS as BAND_CLASS, SECTION_LABEL_META_CLASS, type SectionBand } from './section-bands'
+import { SECTION_BAND_CLASS as BAND_CLASS, type SectionBand } from './section-bands'
 import { DurationField, SegueToggle, SingerKeysEditor } from '@/components/setlist/gig/RowGigControls'
 import { SetTotalText } from '@/components/setlist/gig/SetTotalText'
 import { isSegue, leadSingerKey, singerKeysOf } from '@/lib/gig/display'
@@ -339,7 +339,7 @@ export function MobileRowCard({
                 setNodeRef(el)
             }}
             style={dragStyle}
-            className={cn('flex flex-col relative', isSection && 'pt-2 first:pt-0')}
+            className={cn('flex flex-col relative', isSection && 'pt-3 first:pt-0')}
             data-dragging={isDragging || undefined}
             data-section-hue={isSection ? band?.hue : undefined}
         >
@@ -362,17 +362,15 @@ export function MobileRowCard({
                             // (data-row-edit); the whole row shows the ring.
                             'has-[[data-row-edit]:focus-visible]:ring-2 has-[[data-row-edit]:focus-visible]:ring-inset has-[[data-row-edit]:focus-visible]:ring-ring',
                             'transition-colors duration-150 motion-reduce:transition-none',
-                            // Option B: dense track-list rows (~38px drawn). The
-                            // 44px hit areas come from the controls' touch-hit,
-                            // not row height. A section is a thin coloured
-                            // underline with a small label, not a filled band.
+                            // Dense, track-list rows (~48px): the 44px hit areas
+                            // come from the controls themselves, not row height.
                             isSection
-                                ? cn('min-h-9 items-end ps-0.5 pe-3 sm:pe-4 border-b-2', BAND_CLASS[band?.hue ?? 'blue'])
+                                ? cn('min-h-11 ps-0.5 pe-3 sm:pe-4 rounded-sm', BAND_CLASS[band?.hue ?? 'blue'])
                                 // Below sm the row may wrap: at 200% text on a phone the
                                 // rem-sized controls and page call drop to a second line
                                 // instead of pushing the page sideways. At 100% the
                                 // title's 4rem floor is never reached on a 375px phone.
-                                : 'min-h-10 ps-0.5 pe-2 sm:pe-3 max-sm:flex-wrap bg-card hover:bg-accent/50 border-b border-rule',
+                                : 'min-h-12 ps-0.5 pe-2 sm:pe-3 max-sm:flex-wrap bg-card hover:bg-accent/50 border-b border-rule',
                             isDragging && 'shadow-[0_8px_24px_rgb(24_32_46/0.18)] ring-2 ring-ring/60 z-10',
                         )}
                     >
@@ -389,17 +387,17 @@ export function MobileRowCard({
                             {...listeners}
                             className={cn(
                                 'flex shrink-0 items-center justify-center rounded-md',
-                                'cursor-grab active:cursor-grabbing touch-none touch-hit h-9 w-8',
-                                isSection ? 'text-muted-foreground/60 hover:text-foreground' : 'text-muted-foreground/60 hover:text-foreground',
+                                'cursor-grab active:cursor-grabbing touch-none min-h-11 min-w-11',
+                                isSection ? 'text-current opacity-70 hover:opacity-100' : 'text-muted-foreground/60 hover:text-foreground',
                                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                                 'transition-colors duration-150 motion-reduce:transition-none',
                             )}
                         >
-                            <GripVertical aria-hidden className="h-4 w-4" />
+                            <GripVertical aria-hidden className="h-5 w-5" />
                         </button>
 
                         {!isSection && (
-                            <span aria-hidden className="tnum w-6 shrink-0 text-end text-xs font-medium text-muted-foreground">
+                            <span aria-hidden className="tnum w-6 shrink-0 text-end text-sm font-semibold text-muted-foreground">
                                 {position ?? track.order + 1}
                             </span>
                         )}
@@ -424,11 +422,10 @@ export function MobileRowCard({
                                         : t('setlistGrid.cardUntitledAria')
                                 }
                                 onKeyDown={handleCardKeyDown}
-                                // touch-hit: the edit target takes 44px of taps on every
-                                // row, section labels and unbonded labels included,
-                                // while the row is drawn at ~38px.
+                                // min-h-11: the edit target is 44px tall on every row,
+                                // section bands and unbonded labels included.
                                 className={cn(
-                                    'touch-hit min-w-0 flex-1 min-h-9 flex flex-col justify-center py-1 outline-none',
+                                    'min-w-0 flex-1 min-h-11 flex flex-col justify-center py-1 outline-none',
                                     !isSection && 'max-sm:min-w-16',
                                 )}
                             >
@@ -440,12 +437,12 @@ export function MobileRowCard({
                                     <span
                                         data-testid={isSection ? `section-running-head-${track.id}` : undefined}
                                         className={cn(
-                                            isSection ? 'text-xs font-extrabold uppercase tracking-[0.1em]'
+                                            isSection ? 'text-[13px] font-extrabold uppercase tracking-[0.08em]'
                                             // Bonded prayer/reading reads as a full chart-bearing row
                                             // (foreground, non-italic); only an UNBONDED non-song row
                                             // keeps the passive dimmed-italic label.
-                                            : !isSong ? (hasChart ? 'text-[0.92rem] font-medium text-foreground' : 'text-[0.92rem] italic text-muted-foreground')
-                                            : 'text-[0.92rem] font-semibold text-foreground',
+                                            : !isSong ? (hasChart ? 'text-base font-medium text-foreground' : 'text-sm italic text-muted-foreground')
+                                            : 'text-base sm:text-lg font-semibold text-foreground',
                                         )}
                                     >
                                         {displayChartTitle(track.title) || (
@@ -494,7 +491,7 @@ export function MobileRowCard({
                             <span
                                 data-testid={`row-key-${track.id}`}
                                 data-lead-key={sungKey ? '' : undefined}
-                                className="tnum shrink-0 inline-flex items-center justify-center px-1.5 rounded-[3px] border border-input text-xs font-bold leading-4 text-foreground"
+                                className="tnum shrink-0 inline-flex items-center justify-center min-w-[2.5rem] h-7 px-2 rounded-md border border-border bg-secondary text-sm font-bold text-secondary-foreground"
                             >
                                 <span className="sr-only">
                                     {sungKey
@@ -535,24 +532,24 @@ export function MobileRowCard({
                                 onClick={(e) => e.stopPropagation()}
                                 className={cn(
                                     'flex-none inline-flex items-center justify-center rounded-md',
-                                    // 44px hit area (WEB-13), drawn at 36px.
-                                    'touch-hit h-9 w-9',
+                                    // 44px hit area (WEB-13).
+                                    'h-11 w-11',
                                     'cursor-pointer text-brand hover:bg-accent',
                                     'transition-colors motion-reduce:transition-none',
                                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                                 )}
                             >
-                                <Music aria-hidden className="h-4 w-4" />
+                                <Music aria-hidden className="h-5 w-5" />
                             </a>
                         ) : (
                             <span
                                 role="img"
                                 aria-label={t('setlistGrid.noChartBound')}
-                                className="flex-none inline-flex h-9 w-9 items-center justify-center"
+                                className="flex-none inline-flex h-11 w-11 items-center justify-center"
                             >
                                 <FileText
                                     aria-hidden
-                                    className="h-4 w-4 text-muted-foreground/40"
+                                    className="h-5 w-5 text-muted-foreground/40"
                                 />
                             </span>
                         ))}
@@ -571,25 +568,24 @@ export function MobileRowCard({
                             >
                                 <RecordingCell
                                     disabled={false}
-                                    className="touch-hit h-9 w-9"
                                     onClick={(e) => e.stopPropagation()}
                                 />
                             </RecordingBindPopover>
                         ) : isSection ? null : (
                             // No song bound → recordings attach to a song, so
                             // the affordance renders disabled (no popover).
-                            <RecordingCell disabled className="h-9 w-9" />
+                            <RecordingCell disabled />
                         )}
                         </span>
 
                         {/* The page call sits in the margin: the far right edge,
                             after every control, so the numbers line up down
                             the list. */}
-                        {isSection && setTotal ? <SetTotalText total={setTotal} className="pb-1" /> : null}
+                        {isSection && setTotal ? <SetTotalText total={setTotal} /> : null}
 
                         {isSection ? (
                             sectionPages ? (
-                                <span data-testid={`section-pages-${track.id}`} className={cn(SECTION_LABEL_META_CLASS, 'pb-1')}>
+                                <span data-testid={`section-pages-${track.id}`} className="tnum shrink-0 text-[13px] font-bold tracking-[0.04em]">
                                     {sectionPages}
                                 </span>
                             ) : null
@@ -599,12 +595,12 @@ export function MobileRowCard({
                             // keeps the room the length and segue take.
                             <span
                                 data-testid={folio !== undefined ? `page-call-${track.id}` : undefined}
-                                className="tnum shrink-0 min-w-12 text-end leading-none whitespace-nowrap"
+                                className="tnum shrink-0 min-w-14 sm:min-w-16 text-end leading-none whitespace-nowrap"
                             >
                                 {folio !== undefined ? (
                                     <>
                                         <span className="text-[11px] font-semibold text-muted-foreground me-0.5">{t('setlistGrid.pageCallPrefix')}</span>
-                                        <span className="text-[0.85rem] font-bold text-page-call">{folio}</span>
+                                        <span className="text-[1.5rem] font-extrabold tracking-[-0.02em] text-foreground">{folio}</span>
                                     </>
                                 ) : null}
                             </span>
