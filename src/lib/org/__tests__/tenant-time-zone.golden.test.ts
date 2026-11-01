@@ -75,8 +75,8 @@ describe.each(ORGS)("golden time zone — %s", (org) => {
                     startsAt: "2026-06-05T23:00:00.000Z",
                     stream: { url: "https://stream.example/live", startsAt: "2026-06-05T22:50:00.000Z" },
                     version: 3,
-                    // BET-6: additive; every key above is unchanged.
-                    occasion: "regular",
+                    // BET-6: additive, CRC only; every key above is unchanged.
+                    ...(org === "crc" ? { occasion: "regular" } : {}),
                 },
                 {
                     setlistId: "sat",
@@ -86,7 +86,7 @@ describe.each(ORGS)("golden time zone — %s", (org) => {
                     startsAt: "2026-06-06T15:30:00.000Z",
                     stream: { url: "https://stream.example/live", startsAt: "2026-06-06T15:20:00.000Z" },
                     version: 1,
-                    occasion: "regular",
+                    ...(org === "crc" ? { occasion: "regular" } : {}),
                 },
             ],
         })
