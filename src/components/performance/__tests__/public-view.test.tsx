@@ -212,7 +212,7 @@ describe("Public View", () => {
         // C11 M3-012 — signed-in users get an avatar pill upper-right linking
         // to /settings so the auth-state context-shift isn't invisible when
         // they tap into a setlist and the admin nav suddenly appears.
-        it("shows the signed-in avatar pill linking to settings when authed", async () => {
+        it("does not repeat the signed-in avatar in the page head (the shell's top bar shows it)", async () => {
             mockUseAuth.mockReturnValue({
                 user: { uid: "u1", displayName: "Aviva", email: "aviva@example.com", photoURL: null },
                 loading: false,
@@ -227,8 +227,7 @@ describe("Public View", () => {
 
             render(<PublicSetlistListing />)
 
-            const pill = screen.getByRole("link", { name: /signed in as aviva/i })
-            expect(pill.getAttribute("href")).toBe("/settings")
+            expect(screen.queryByRole("link", { name: /signed in as aviva/i })).toBeNull()
         })
 
         // C11 AC3 — logged-out viewers see the QR card OR a Sign-in pill, not

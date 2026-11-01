@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react"
 import Link from "next/link"
-import { Music, UserCircle, Play, ChevronRight } from "lucide-react"
+import { Music, Play, ChevronRight } from "lucide-react"
 import { createSetlistService, Setlist } from "@/lib/setlist-firebase"
 import { toDate } from "@/lib/firestore-helpers"
 import { useAuth } from "@/lib/auth-context"
@@ -11,7 +11,6 @@ import { getOrgBranding } from "@/lib/org/branding"
 import { label } from "@/lib/org/vocab"
 import { useT } from "@/i18n/client"
 import { useFormat } from "@/i18n/format-client"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { QRSignIn } from "@/components/auth/QRSignIn"
 import { PublicSetlistSkeleton } from "./PublicSetlistSkeleton"
@@ -202,28 +201,8 @@ export function PublicSetlistListing({ initialSetlists }: PublicSetlistListingPr
                             WakeLock API" structural. (Request was already gesture-gated,
                             so this is hygiene, not an auto-request bugfix.) */}
                         {user && !authLoading && <KeepAwakeControl />}
-                        {/* C11 M3-012 — auth-state indicator. Signed-in viewers get an
-                            avatar pill linking to settings so the context-shift to the
-                            authed app (visible the moment they tap into a setlist) isn't
-                            invisible on the landing. Logged-out viewers get the QR/Google
-                            Sign-In card below — adding a pill here too would duplicate
-                            that affordance (AC3 "Sign-in pill OR existing QR card, not
-                            both"). Gated on `!authLoading` to avoid flash-then-yank CLS,
-                            matching the QR card's guard. */}
-                        {user && !authLoading && (
-                            <Link
-                                href="/settings"
-                                aria-label={t("performSetlist.signedInAs", { userName: user.displayName || user.email || t("performSetlist.musicianFallback") })}
-                                className="shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                            >
-                                <Avatar className="h-9 w-9 border border-border">
-                                    <AvatarImage src={user.photoURL ?? undefined} alt="" />
-                                    <AvatarFallback>
-                                        <UserCircle className="w-5 h-5" />
-                                    </AvatarFallback>
-                                </Avatar>
-                            </Link>
-                        )}
+                        {/* The signed-in avatar lives in the shell's top bar now, so
+                            the page head no longer repeats it. */}
                     </>
                 ) : undefined}
             />
