@@ -357,7 +357,7 @@ export function filledNoteFor(
 }
 
 /** The note read back when one-off changes were made to filled rows. */
-export function oneOffNoteFor(changes: string[]): string | undefined {
+export function oneOffNoteFor(changes: string[], noun: "week" | "show" = "week"): string | undefined {
     if (changes.length === 0) return undefined
-    return `${changes.join(", ")} ${changes.length === 1 ? "is" : "are"} just for this week. Say "keep it" to make ${changes.length === 1 ? "it" : "them"} standard.`
+    return `${changes.join(", ")} ${changes.length === 1 ? "is" : "are"} just for this ${noun}. Say "keep it" to make ${changes.length === 1 ? "it" : "them"} standard.`
 }

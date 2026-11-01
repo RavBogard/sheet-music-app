@@ -15,7 +15,20 @@ import { isSongType } from "@/lib/setlist-track-count"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 import { logger } from "@/lib/logger"
-import { profileKeyFor, rabbiRequired, serviceLabelFor } from "@/lib/profiles/keys"
+import {
+    BARE_GIG_SCOPE,
+    legacySlotKeyFor,
+    memoryServiceType,
+    profileKeyFor,
+    rabbiRequired,
+    serviceLabelFor,
+    slotKeyFor,
+} from "@/lib/profiles/keys"
+import { bandDraftProfileRows } from "@/lib/profiles/band-draft"
+import { readStandingFor } from "@/lib/profiles/standing"
+import { classifyService } from "@/lib/history/classify"
+import { getTracksForSetlist } from "@/lib/server-tracks"
+import { orgString } from "@/lib/org/strings"
 import {
     applyChoices,
     annotateCharts,
@@ -92,10 +105,16 @@ async function displayNameFor(db: DB, uid: string): Promise<string> {
 
 export interface DraftServiceArgs {
     date: string
-    serviceType: string
+    /** Required for a congregation; a band drafting from a past gig may omit it. */
+    serviceType?: string
     rabbiSlot?: string | null
     special?: boolean
     name?: string
+    /**
+     * BET-5 (TF-05), band tenants only: the past gig to draft from. Its order
+     * is kept; every song is open except a standing choice ("keep it").
+     */
+    basedOnSetlistId?: string
 }
 
 export interface DraftServiceRowOut {
@@ -143,7 +162,8 @@ interface StoredDraft {
     profileKey: string
     profileLabel: string
     templateId: string
-    serviceType: string
+    /** null on a band draft from a gig with no stored type. */
+    serviceType: string | null
     rabbiSlot: string | null
     book: string | null
     serviceNotes: string | null
@@ -155,6 +175,8 @@ interface StoredDraft {
     expiresAt: Timestamp
     /** Set while create_setlist_from_draft is creating the setlist. */
     claimId?: string
+    /** BET-5: a band draft, from this past gig. */
+    basedOnSetlistId?: string
 }
 
 function rowOut(r: DraftRow): DraftServiceRowOut {
@@ -186,8 +208,31 @@ export async function draftServiceTool(
     if (!date || !DATE_RE.test(date) || Number.isNaN(Date.parse(date))) {
         return richError("invalid_argument", "Pass `date` as YYYY-MM-DD.", { fields: ["date"] }, "e.g. '2026-11-07'.")
     }
+    const band = hidesLiturgicalFields(org)
+    if (args?.basedOnSetlistId !== undefined) {
+        const basedOn = str(args.basedOnSetlistId)
+        if (!basedOn) {
+            return richError("invalid_argument", "`basedOnSetlistId` must be a set id.", { fields: ["basedOnSetlistId"] }, "Get it from list_setlists.")
+        }
+        if (!band) {
+            return richError(
+                "invalid_argument",
+                "`basedOnSetlistId` is for bands. A service drafts from its profile.",
+                { fields: ["basedOnSetlistId"] },
+                "Pass serviceType (and rabbiSlot where it applies) instead.",
+            )
+        }
+        return draftBandGigTool(uid, { ...args, date, basedOnSetlistId: basedOn }, org)
+    }
     if (!serviceType) {
-        return richError("invalid_argument", "Pass `serviceType`.", { fields: ["serviceType"] }, "e.g. 'shabbat_morning'.")
+        return band
+            ? richError(
+                  "invalid_argument",
+                  "Pass `basedOnSetlistId`: the past set to build this one from.",
+                  { fields: ["basedOnSetlistId"] },
+                  "Find the set with list_setlists (sort 'recent_event').",
+              )
+            : richError("invalid_argument", "Pass `serviceType`.", { fields: ["serviceType"] }, "e.g. 'shabbat_morning'.")
     }
     const askedRabbi = str(args?.rabbiSlot)
     if (rabbiRequired(serviceType) && !askedRabbi) {
@@ -402,6 +447,7 @@ export type DraftOrigin =
     | { kind: "history"; count: number; from: string; to: string; setlists: string[] }
     | { kind: "saved_profile" }
     | { kind: "template"; templateId: string; name: string }
+    | { kind: "gig"; setlistId: string; name: string; date: string | null }
 
 /** The headline line that says where the order came from (MCP-03, MCP-15). */
 export function originSentence(origin: DraftOrigin, serviceType: string, catalogLabel: string): string {
@@ -414,6 +460,8 @@ export function originSentence(origin: DraftOrigin, serviceType: string, catalog
             return `Order from the saved profile: no regular ${serviceNoun(serviceType, catalogLabel, 2)} before this date.`
         case "template":
             return `Order from your ${origin.name} template, with every song open: no ${serviceNoun(serviceType, catalogLabel, 1)} history yet.`
+        case "gig":
+            return `Order from ${origin.name}${origin.date ? `, ${monthDay(origin.date)}` : ""}, with every song open except the ones you keep.`
     }
 }
 
@@ -440,6 +488,200 @@ async function carriedOpenItems(db: DB, org: OrgId, setlistId: string, day: stri
     } catch (error) {
         logger.warn("draft_service: open items of the previous setlist unreadable", error)
         return []
+    }
+}
+
+// ─── draft_service for a band (BET-5, TF-05) ───────────────────────────────
+
+/**
+ * The scope a band's "keep it" lives in for this gig: the same derivation
+ * set_standing_choice uses on a row of it (its stored type, else `gig`).
+ */
+function bandScopeFor(org: OrgId, setlist: Record<string, unknown>): string {
+    const cls = classifyService({
+        name: typeof setlist.name === "string" ? setlist.name : "",
+        templateType: str(setlist.templateType),
+        rabbi: str(setlist.rabbi),
+        serviceType: str(setlist.serviceType),
+        rabbiSlot: str(setlist.rabbiSlot),
+        special: typeof setlist.special === "boolean" ? setlist.special : null,
+    })
+    const serviceType = memoryServiceType(org, cls.serviceType, str(setlist.serviceType)) ?? BARE_GIG_SCOPE
+    return profileKeyFor(serviceType, rabbiRequired(serviceType) ? cls.rabbiSlot : null)
+}
+
+/** What a band's standing choice is "standard for", said in announcements. */
+export function bandScopeLabel(scope: string): string {
+    return scope === BARE_GIG_SCOPE ? "every gig" : `${profileLabelFor(scope, scope)} gigs`
+}
+
+function isoOf(v: unknown): string | null {
+    if (typeof v === "string") return v
+    if (v && typeof v === "object" && typeof (v as { toDate?: unknown }).toDate === "function") {
+        try {
+            return (v as { toDate: () => Date }).toDate().toISOString()
+        } catch {
+            return null
+        }
+    }
+    return null
+}
+
+async function draftBandGigTool(
+    uid: string,
+    args: DraftServiceArgs & { date: string; basedOnSetlistId: string },
+    org: OrgId,
+): Promise<DraftServiceResult | RichErrorEnvelope> {
+    const { date, basedOnSetlistId } = args
+    try {
+        initAdmin()
+        const db = getFirestore()
+        const editor = await assertEditor(db, uid, org)
+        if (!editor.ok) return editor
+
+        const snap = await db.collection("setlists").doc(basedOnSetlistId).get()
+        const source = snap.exists ? (snap.data() as Record<string, unknown>) : null
+        // Another tenant's set answers exactly as a missing one.
+        if (!source || rowOrg(source.orgId) !== org) {
+            return richError(
+                "setlist_not_found",
+                `Set '${basedOnSetlistId}' was not found.`,
+                { basedOnSetlistId },
+                "Find the past set with list_setlists (sort 'recent_event').",
+            )
+        }
+        const zone = orgTimeZone(org)
+        const dayOf = (iso: string) => {
+            const t = Date.parse(iso)
+            return Number.isNaN(t) ? iso.slice(0, 10) : dayInZone(t, zone)
+        }
+        const tracks = ((await getTracksForSetlist(db, basedOnSetlistId, source)) as unknown as Record<string, unknown>[])
+            .filter((t) => typeof t.orgId !== "string" || !t.orgId || rowOrg(t.orgId) === org)
+            .sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0))
+        const library = await loadLibraryLite(
+            org,
+            tracks.map((t) => str(t.fileId)).filter((f): f is string => !!f),
+        )
+        const partGroupOf = (fid: string) => library.get(fid)?.partGroup ?? null
+        const scope = bandScopeFor(org, source)
+        const slots = tracks.map((t) => {
+            if (!isSongType(t.type)) return null
+            const row = { momentId: str(t.momentId), title: typeof t.title === "string" ? t.title : "", fileId: str(t.fileId) }
+            const slotKey = slotKeyFor(row, partGroupOf, { byTitle: false })
+            const legacy = legacySlotKeyFor(row, partGroupOf)
+            return { slotKey, aliases: legacy !== slotKey ? [legacy] : [] }
+        })
+        const standing = await readStandingFor(
+            org,
+            scope,
+            slots.filter((x): x is { slotKey: string; aliases: string[] } => !!x),
+        )
+        const sourceName = str(source.name) ?? basedOnSetlistId
+        const sourceDate = isoOf(source.eventDate) ?? isoOf(source.date)
+        const profileRows = bandDraftProfileRows(
+            tracks.map((t, i) => {
+                const slotKey = slots[i]?.slotKey ?? null
+                const fid = str(t.fileId)
+                const lib = fid ? library.get(fid) : undefined
+                return {
+                    track: t,
+                    slotKey,
+                    standing: slotKey ? (standing.get(slotKey) ?? null) : null,
+                    chartName: lib?.name ?? null,
+                    dead: lib?.status === "orphaned" || lib?.status === "archived",
+                }
+            }),
+            { name: sourceName, eventDate: sourceDate },
+        )
+        const rows = buildDraftRows(profileRows, dayOf)
+        const filledIds = rows.map((r) => r.fileId).filter((f): f is string => !!f)
+        const warnings = annotateCharts(rows, await loadLibraryLite(org, filledIds))
+
+        const label = bandScopeLabel(scope)
+        const setWord = orgString(org, "setlist")
+        const title = str(args.name) ?? `${setWord.charAt(0).toUpperCase()}${setWord.slice(1)}`
+        const origin: DraftOrigin = {
+            kind: "gig",
+            setlistId: basedOnSetlistId,
+            name: sourceName,
+            date: sourceDate ? dayOf(sourceDate) : null,
+        }
+        const now = new Date()
+        const expiresAt = new Date(now.getTime() + DRAFT_TTL_MS)
+        const ref = db.collection(DRAFTS_COLLECTION).doc(crypto.randomUUID())
+        const storedType = str(source.serviceType)
+        const storedDraft: StoredDraft = {
+            orgId: org,
+            uid,
+            profileKey: scope,
+            profileLabel: label,
+            templateId: "",
+            serviceType: storedType,
+            rabbiSlot: null,
+            book: null,
+            serviceNotes: null,
+            date,
+            special: args.special === true,
+            name: str(args.name),
+            rows: clean(rows),
+            createdAt: now.toISOString(),
+            expiresAt: Timestamp.fromDate(expiresAt),
+            basedOnSetlistId,
+        }
+        await ref.set(storedDraft)
+        const readback = buildReadback({
+            timeZone: zone,
+            profileLabel: null,
+            title,
+            date,
+            book: null,
+            special: false,
+            origin: originSentence(origin, storedType ?? BARE_GIG_SCOPE, label),
+            rows: rows.map((r) => {
+                const choice = r.tier === "standard" && r.slotKey ? standing.get(r.slotKey) : undefined
+                const out: ReadbackRow = {
+                    index: r.index,
+                    label: r.label,
+                    isSong: r.type === "song",
+                    hasChart: !!r.fileId,
+                    tier: r.tier,
+                    phrase: r.phrase,
+                    keyOnRecord: r.key != null,
+                    standing: choice ? { byName: choice.byName, at: choice.at } : null,
+                    deadChart: warnings.find((w) => w.kind === "dead_chart" && w.index === r.index)?.text,
+                    keyMismatch: warnings.find((w) => w.kind === "key_mismatch" && w.index === r.index)?.text,
+                }
+                if (r.recall) {
+                    out.recall = {
+                        setting: settingOf(r.recall.chartName, null),
+                        key: r.recall.key,
+                        date: r.recall.date,
+                        serviceLabel: r.recall.service,
+                    }
+                }
+                return out
+            }),
+            openItems: [],
+            now,
+        })
+        return {
+            ok: true,
+            draftId: ref.id,
+            expiresAt: expiresAt.toISOString(),
+            profile: { key: scope, label, book: null },
+            origin,
+            special: storedDraft.special,
+            rows: rows.map(rowOut),
+            openIndexes: openIndexesOf(rows),
+            truncated: false,
+            existing: [],
+            vsLast: null,
+            warnings,
+            readback,
+        }
+    } catch (error) {
+        logger.warn("draft_service (band) failed:", error)
+        return richError("internal_error", "Could not draft the set.", { errorCode: 500 }, "Retry; nothing was created.")
     }
 }
 
@@ -588,7 +830,7 @@ export async function createSetlistFromDraftTool(
             name,
             eventDate: draft.date,
             book: bookOverride !== undefined ? bookOverride : draft.book,
-            templateType: draft.serviceType,
+            templateType: draft.serviceType ?? null,
             serviceNotes: draft.serviceNotes,
             sourceTemplateId: draft.templateId,
             extraSetlistFields: {
@@ -639,7 +881,7 @@ export async function createSetlistFromDraftTool(
             unresolvedLiturgy: written.unresolvedLiturgy,
             bondReviewCount: written.bondReviewCount,
         }
-        const oneOffNote = oneOffNoteFor(applied.oneOff)
+        const oneOffNote = oneOffNoteFor(applied.oneOff, draft.basedOnSetlistId ? "show" : "week")
         if (oneOffNote) out.oneOffNote = oneOffNote
         if (warnings.length > 0) out.warnings = warnings
         return out

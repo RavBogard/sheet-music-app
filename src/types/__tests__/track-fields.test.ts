@@ -35,6 +35,9 @@ const PROJECTIONS: Projection[] = [
             "fixed", // Perform mode collapses fixed-liturgy rows into a divider
         ],
         intentionallyDropped: {
+            durationSec: "BET-5 band field; B5b decides how set totals reach this surface (PR B5a ships data and MCP only).",
+            segue: "BET-5 band field; B5b draws the segue arrow on Perform and print (PR B5a ships data and MCP only).",
+            singerKeys: "BET-5 band field; B5b shows singer keys in the row detail and show sheet (PR B5a ships data and MCP only).",
             momentId:
                 "A JOIN KEY, not a rendered field: it is what the cue log and a change of book are matched on. Nothing on this surface reads it, and the page it implies is already carried by liturgyRef.",
             id: "Internal Firestore document id; QueueItem addresses tracks by array position and fileId, not the source doc id.",
@@ -79,6 +82,9 @@ const PROJECTIONS: Projection[] = [
             "honors", // carried on PrintTrack; the cover table draws no honors cell (the rabbi's service sheet owns that lens)
         ],
         intentionallyDropped: {
+            durationSec: "BET-5 band field; B5b decides how set totals reach this surface (PR B5a ships data and MCP only).",
+            segue: "BET-5 band field; B5b draws the segue arrow on Perform and print (PR B5a ships data and MCP only).",
+            singerKeys: "BET-5 band field; B5b shows singer keys in the row detail and show sheet (PR B5a ships data and MCP only).",
             momentId:
                 "A JOIN KEY, not a rendered field: it is what the cue log and a change of book are matched on. Nothing on this surface reads it, and the page it implies is already carried by liturgyRef.",
             id: "Internal Firestore document id; the print pipeline addresses tracks by fileId, not the source doc id.",
@@ -133,6 +139,9 @@ const PROJECTIONS: Projection[] = [
             "honors",
         ],
         intentionallyDropped: {
+            durationSec: "BET-5 band field; B5b decides how set totals reach this surface (PR B5a ships data and MCP only).",
+            segue: "BET-5 band field; B5b draws the segue arrow on Perform and print (PR B5a ships data and MCP only).",
+            singerKeys: "BET-5 band field; B5b shows singer keys in the row detail and show sheet (PR B5a ships data and MCP only).",
             momentId:
                 "A JOIN KEY, not a rendered field: it is what the cue log and a change of book are matched on. Nothing on this surface reads it, and the page it implies is already carried by liturgyRef.",
             id: "Internal Firestore document id; the wire payload addresses tracks by array position and the pipeline by fileId.",
@@ -175,6 +184,9 @@ const PROJECTIONS: Projection[] = [
             "honors",
         ],
         intentionallyDropped: {
+            durationSec: "BET-5 band field; B5b decides how set totals reach this surface (PR B5a ships data and MCP only).",
+            segue: "BET-5 band field; B5b draws the segue arrow on Perform and print (PR B5a ships data and MCP only).",
+            singerKeys: "BET-5 band field; B5b shows singer keys in the row detail and show sheet (PR B5a ships data and MCP only).",
             momentId:
                 "A JOIN KEY, not a rendered field: it is what the cue log and a change of book are matched on. Nothing on this surface reads it, and the page it implies is already carried by liturgyRef.",
             id: "Read, but only as the lookup key into trackTranspositions / trackIncludedIds; PrintTrackPayload has no id field so it is not sent.",
@@ -212,6 +224,9 @@ const PROJECTIONS: Projection[] = [
             "transposition",
         ],
         intentionallyDropped: {
+            durationSec: "BET-5 band field; B5b decides how set totals reach this surface (PR B5a ships data and MCP only).",
+            segue: "BET-5 band field; B5b draws the segue arrow on Perform and print (PR B5a ships data and MCP only).",
+            singerKeys: "BET-5 band field; B5b shows singer keys in the row detail and show sheet (PR B5a ships data and MCP only).",
             momentId:
                 "A JOIN KEY, not a rendered field: it is what the cue log and a change of book are matched on. Nothing on this surface reads it, and the page it implies is already carried by liturgyRef.",
             id: "Internal Firestore document id; PrintTrack addresses tracks by fileId.",
@@ -248,6 +263,9 @@ const PROJECTIONS: Projection[] = [
             "transposition", // the track's own value only; no musician profile on this surface
         ],
         intentionallyDropped: {
+            durationSec: "BET-5 band field; B5b decides how set totals reach this surface (PR B5a ships data and MCP only).",
+            segue: "BET-5 band field; B5b draws the segue arrow on Perform and print (PR B5a ships data and MCP only).",
+            singerKeys: "BET-5 band field; B5b shows singer keys in the row detail and show sheet (PR B5a ships data and MCP only).",
             momentId:
                 "A JOIN KEY, not a rendered field: it is what the cue log and a change of book are matched on. Nothing on this surface reads it, and the page it implies is already carried by liturgyRef.",
             id: "Internal Firestore document id; PrintTrack addresses tracks by fileId.",

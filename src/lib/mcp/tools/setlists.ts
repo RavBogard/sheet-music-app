@@ -8,6 +8,9 @@ import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 import { logger } from "@/lib/logger"
 import { readOpenItems } from "./open-items"
+import { hidesLiturgicalFields } from "@/lib/org/vocab"
+import { readGig } from "@/lib/gig/model"
+import { anyDuration, setTotals } from "@/lib/gig/set-totals"
 
 /**
  * MCP read tools for setlists. Plain async functions wrapping the existing
@@ -165,13 +168,7 @@ export async function getSetlist(
     const setlistLastModifiedAt =
         typeof data.lastModifiedAt === "string" ? data.lastModifiedAt : undefined
 
-    return {
-        ...setlist,
-        version: setlistVersion,
-        lastModifiedAt: setlistLastModifiedAt,
-        // Setlist memory release 3: unresolved open items only, oldest first.
-        openItems: readOpenItems(data),
-        tracks: tracks.map((t) => {
+    const trackViews = tracks.map((t) => {
             const row = t as Record<string, unknown>
             return {
                 id: t.id,
@@ -218,9 +215,47 @@ export async function getSetlist(
                     typeof row.lastModifiedAt === "string"
                         ? row.lastModifiedAt
                         : undefined,
+                // BET-5: band fields, present only when set, so a setlist
+                // without them reads exactly as before.
+                ...trackGigFields(row),
             }
-        }),
+        })
+
+    // BET-5: set totals for a band tenant, and for any setlist with a timed row.
+    const gig = readGig(data.gig)
+    const totals =
+        hidesLiturgicalFields(org) || anyDuration(trackViews)
+            ? setTotals(trackViews, gig)
+            : undefined
+
+    return {
+        ...setlist,
+        version: setlistVersion,
+        lastModifiedAt: setlistLastModifiedAt,
+        // Setlist memory release 3: unresolved open items only, oldest first.
+        openItems: readOpenItems(data),
+        tracks: trackViews,
+        ...(totals ? { setTotals: totals } : {}),
     }
+}
+
+/** A track's BET-5 fields, each only when it is well-typed. */
+export function trackGigFields(row: Record<string, unknown>): {
+    durationSec?: number
+    segue?: true
+    singerKeys?: Array<{ musician: string; key: string }>
+} {
+    const out: { durationSec?: number; segue?: true; singerKeys?: Array<{ musician: string; key: string }> } = {}
+    if (typeof row.durationSec === "number" && Number.isFinite(row.durationSec)) out.durationSec = row.durationSec
+    if (row.segue === true) out.segue = true
+    if (Array.isArray(row.singerKeys)) {
+        const keys = row.singerKeys.filter(
+            (e): e is { musician: string; key: string } =>
+                !!e && typeof e === "object" && typeof (e as { musician?: unknown }).musician === "string" && typeof (e as { key?: unknown }).key === "string",
+        )
+        if (keys.length > 0) out.singerKeys = keys.map((e) => ({ musician: e.musician, key: e.key }))
+    }
+    return out
 }
 
 // ────────────────────────────────────────────────────────────────────────────

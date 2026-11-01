@@ -59,6 +59,19 @@ function sanitizeHonors(
         }))
 }
 
+/** BET-5: singer keys with their strings cleaned; malformed entries dropped. */
+function sanitizeSingerKeys(value: unknown): Array<{ musician: string; key: string }> {
+    if (!Array.isArray(value)) return []
+    return value
+        .filter((e): e is { musician: string; key: string } =>
+            !!e && typeof e === "object" &&
+            typeof (e as { musician?: unknown }).musician === "string" &&
+            typeof (e as { key?: unknown }).key === "string",
+        )
+        .map((e) => ({ musician: sanitizeFreeformString(e.musician).trim(), key: sanitizeFreeformString(e.key).trim() }))
+        .filter((e) => e.musician && e.key)
+}
+
 /**
  * W-04 Plan 01: every write path stamps `version: increment(1)` +
  * `lastModifiedAt` on the setlist + affected tracks. Plan 02 swaps to
@@ -228,6 +241,8 @@ export interface AddTrackInput {
     /** Fixed-liturgy row — see SetlistTrack.fixed. */
     fixed?: boolean
     honors?: Array<{ name: string; note?: string }>
+    /** BET-5: the row's length, copied from the song's default. */
+    durationSec?: number
 }
 
 /**
@@ -302,6 +317,7 @@ export async function addTrack(
         if (input.liturgyRef !== undefined) payload.liturgyRef = input.liturgyRef
         if (input.momentId !== undefined) payload.momentId = input.momentId
         if (input.fixed !== undefined) payload.fixed = input.fixed
+        if (typeof input.durationSec === "number") payload.durationSec = input.durationSec
         if (input.honors !== undefined) {
             const sanitizedHonors = sanitizeHonors(input.honors)
             if (sanitizedHonors !== undefined) payload.honors = sanitizedHonors
@@ -471,6 +487,12 @@ export interface UpdateTrackPatch {
     /** Fixed-liturgy row — see SetlistTrack.fixed. */
     fixed?: boolean
     honors?: Array<{ name: string; note?: string }>
+    /** BET-5: the row's length in seconds; null clears it. */
+    durationSec?: number | null
+    /** BET-5: runs straight into the next song. */
+    segue?: boolean
+    /** BET-5: a key per singer, as the author recorded it. */
+    singerKeys?: Array<{ musician: string; key: string }>
 }
 
 /** Field patches that survive into the Firestore update (not the reorder). */
@@ -490,6 +512,9 @@ const UPDATABLE_FIELDS = [
     "momentId",
     "fixed",
     "honors",
+    "durationSec",
+    "segue",
+    "singerKeys",
 ] as const
 
 /**
@@ -579,6 +604,17 @@ export async function updateTrack(
                 fieldUpdate.honors = sanitizedHonors
                 changed = true
             }
+            continue
+        }
+        // BET-5: a null length clears it rather than storing null.
+        if (k === "durationSec" && patch.durationSec === null) {
+            fieldUpdate.durationSec = FieldValue.delete()
+            changed = true
+            continue
+        }
+        if (k === "singerKeys") {
+            fieldUpdate.singerKeys = sanitizeSingerKeys(patch.singerKeys)
+            changed = true
             continue
         }
         // F-015: strip control chars/null bytes from user freeform string fields.
@@ -1321,6 +1357,14 @@ export async function bulkUpdateTracks(
                     if (k === "honors") {
                         const sanitizedHonors = sanitizeHonors(entry.patch.honors)
                         if (sanitizedHonors !== undefined) update.honors = sanitizedHonors
+                        continue
+                    }
+                    if (k === "durationSec" && entry.patch.durationSec === null) {
+                        update.durationSec = FieldValue.delete()
+                        continue
+                    }
+                    if (k === "singerKeys") {
+                        update.singerKeys = sanitizeSingerKeys(entry.patch.singerKeys)
                         continue
                     }
                     // F-015: strip control chars/null bytes from freeform strings.

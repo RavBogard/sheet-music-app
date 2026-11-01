@@ -5,6 +5,7 @@ import { logger } from "@/lib/logger"
 import { writeAccess, type WriteAccess } from "@/lib/library/visibility-server"
 import { notOwnerError } from "@/lib/mcp/not-owner"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
+import { parseSongDuration } from "@/lib/gig/model"
 import type { OrgId } from "@/lib/org/types"
 import {
     loadUploader,
@@ -43,6 +44,8 @@ export interface SongMetadataPatch {
     bpm?: number
     /** Vocal lead — maps to songs `defaults.lead` + library_index `leadMusician`. */
     leadMusician?: string
+    /** BET-5: the song's default length in seconds; a new setlist row copies it. */
+    durationSec?: number
 }
 
 export interface ApplySongMetadataResult {
@@ -55,9 +58,9 @@ export interface ApplySongMetadataResult {
     /** Whether the library_index/{id} row was (or would be) written. */
     indexWritten: boolean
     /** Persisted values before the write (library_index wins, songs.defaults fallback). */
-    before: { key: string | null; bpm: number | null; leadMusician: string | null }
-    /** Resolved values after applying the patch. */
-    after: { key: string | null; bpm: number | null; leadMusician: string | null }
+    before: { key: string | null; bpm: number | null; leadMusician: string | null; durationSec?: number | null }
+    /** Resolved values after applying the patch. durationSec only when the patch sets it. */
+    after: { key: string | null; bpm: number | null; leadMusician: string | null; durationSec?: number | null }
     /**
      * v11-02-03: true when `opts.org` was supplied and the existing chart
      * belongs to a DIFFERENT tenant — no write happened. Callers map this to a
@@ -106,19 +109,23 @@ export async function applySongMetadata(
     const songData = songSnap.exists ? (songSnap.data() ?? {}) : {}
     const songDefaults = (songData.defaults ?? {}) as Record<string, unknown>
 
-    const before = {
+    const before: ApplySongMetadataResult["before"] = {
         key: pickStr(indexData.key) ?? pickStr(songDefaults.key),
         bpm: pickNum(indexData.bpm) ?? pickNum(songDefaults.bpm),
         leadMusician:
             pickStr(indexData.leadMusician) ?? pickStr(songDefaults.lead),
+    }
+    if (patch.durationSec !== undefined) {
+        before.durationSec = pickNum(indexData.durationSec) ?? pickNum(songDefaults.durationSec)
     }
 
     const fieldsChanged: string[] = []
     if (patch.key !== undefined) fieldsChanged.push("key")
     if (patch.bpm !== undefined) fieldsChanged.push("bpm")
     if (patch.leadMusician !== undefined) fieldsChanged.push("leadMusician")
+    if (patch.durationSec !== undefined) fieldsChanged.push("durationSec")
 
-    const after = {
+    const after: ApplySongMetadataResult["after"] = {
         key: patch.key !== undefined ? patch.key : before.key,
         bpm: patch.bpm !== undefined ? patch.bpm : before.bpm,
         leadMusician:
@@ -126,6 +133,7 @@ export async function applySongMetadata(
                 ? patch.leadMusician
                 : before.leadMusician,
     }
+    if (patch.durationSec !== undefined) after.durationSec = patch.durationSec
 
     // v11-02-03: cross-tenant write wall. When the caller's org is supplied and
     // the chart exists, deny (no write) if it belongs to another tenant — prefer
@@ -177,6 +185,8 @@ export async function applySongMetadata(
         if (patch.bpm !== undefined) songUpdate["defaults.bpm"] = patch.bpm
         if (patch.leadMusician !== undefined)
             songUpdate["defaults.lead"] = patch.leadMusician
+        if (patch.durationSec !== undefined)
+            songUpdate["defaults.durationSec"] = patch.durationSec
         batch.update(db.collection("songs").doc(fileId), songUpdate)
     }
     if (willWriteIndex) {
@@ -185,6 +195,8 @@ export async function applySongMetadata(
         if (patch.bpm !== undefined) indexUpdate.bpm = patch.bpm
         if (patch.leadMusician !== undefined)
             indexUpdate.leadMusician = patch.leadMusician
+        if (patch.durationSec !== undefined)
+            indexUpdate.durationSec = patch.durationSec
         batch.update(db.collection("library_index").doc(fileId), indexUpdate)
     }
     await batch.commit()
@@ -227,6 +239,8 @@ export interface UpdateSongArgs {
     id: string
     key?: string
     bpm?: number
+    /** BET-5: the song's default length in whole seconds. */
+    durationSec?: number
     /** When true, return the before/after plan without writing (observability). */
     dryRun?: boolean
 }
@@ -258,12 +272,16 @@ export async function updateSong(
 > {
     if (!args.id?.trim())
         return richError("invalid_argument", "id is required.", { field: "id" })
-    if (args.key === undefined && args.bpm === undefined)
+    if (args.key === undefined && args.bpm === undefined && args.durationSec === undefined)
         return richError(
             "invalid_argument",
-            "Provide at least one of: key, bpm.",
-            { fields: ["key", "bpm"] },
+            "Provide at least one of: key, bpm, durationSec.",
+            { fields: ["key", "bpm", "durationSec"] },
         )
+    if (args.durationSec !== undefined) {
+        const parsed = parseSongDuration(args.durationSec)
+        if (!parsed.ok) return parsed.error
+    }
     if (
         args.bpm !== undefined &&
         (typeof args.bpm !== "number" || !(args.bpm > 0))
@@ -287,7 +305,7 @@ export async function updateSong(
     const result = await applySongMetadata(
         db,
         id,
-        { key: args.key, bpm: args.bpm },
+        { key: args.key, bpm: args.bpm, durationSec: args.durationSec },
         { dryRun: args.dryRun, org },
     )
     // Phase 5: a chart shared with the caller (visible, not owned) gets the

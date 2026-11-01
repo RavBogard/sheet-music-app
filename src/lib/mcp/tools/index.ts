@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { DurationSecSchema, GigPatchSchema, SingerKeySchema, TranspositionSchema } from "@/lib/gig/model"
 import { KNOWN_COLLECTIONS, LIBRARY_DISPLAY_ORDER } from "@/lib/library/collections"
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import {
@@ -463,6 +464,15 @@ const trackPatchFields = {
             "Library song id to (re)bond this row's chart. Pass `null` to UNBOND — clears the chart (songId + fileId + fileName) while keeping the row and its title, key, position, lead, and notes intact. Omit to leave the existing bond unchanged.",
         ),
     referenceLink: z.string().optional(),
+    durationSec: DurationSecSchema.nullable()
+        .optional()
+        .describe("The row's length in whole seconds (e.g. 245 for 4:05). null clears it. Set totals add these up; a song with none is counted as untimed."),
+    segue: z.boolean().optional().describe("True when the song runs straight into the next one."),
+    singerKeys: z
+        .array(SingerKeySchema)
+        .max(12)
+        .optional()
+        .describe("The key each singer sings this in, as the author says it: [{musician, key}]. Replaces the list; [] clears it. Never choose a key for anyone."),
 } as const
 
 export const bulkTrackPatchSchema = z
@@ -629,7 +639,7 @@ export function registerReadTools(server: McpServer): void {
         "get_setlist",
         {
             description:
-                "Get one setlist by id, including its tracks in performance order. Use after list_setlists to see what songs are on a specific service.",
+                "Get one setlist by id, including its tracks in performance order. Use after list_setlists to see what songs are on a specific service. A band's setlist also carries `gig` and `setTotals` (one entry per set: `seconds`, `untimed`, `targetMinutes?`, `overUnderSec?`); rows carry `durationSec`, `segue` and `singerKeys` when set.",
             inputSchema: {
                 id: z.string().min(1).describe("Setlist id"),
             },
@@ -893,12 +903,13 @@ export function registerReadTools(server: McpServer): void {
         "draft_service",
         {
             description:
-                "Draft one service from its living profile, for the author to review before anything is created. The running order is re-learned on every draft from the service's last 5 regular weeks (never a special week or a B'nei Mitzvah; `origin` and the headline say what it was learned from); with no history yet it comes from a matching template, every song open. A song slot (one per prayer moment, whatever its setting) is filled only when it is `standard` (set with set_standing_choice) or `usual` (the same chart on 3 of the last 5 regular weeks); every other song slot is left open with its label, listed in `openIndexes`, and carries `recall` (the exact chart it had last time) when there is one. It never picks a setting nobody chose. A filled row that is worth hearing (a usual not played for 8 weeks, a different chart last week, no key on record) is named in the readback. `vsLast` lists what the last regular service had per slot. friday_night and shabbat_morning need `rabbiSlot`: ask who is leading, never infer it. `special` defaults to true for holiday services. With no history and no template it returns `no_profile`: build that week from a recent setlist with the rabbi set, and the next draft learns from it. The draft is kept 30 minutes; create the setlist with create_setlist_from_draft. Say `readback.text` aloud (exceptions first, then one line for everything else) and show `readback.exceptions` as a short list; give the full rows only when asked. Admin / band_leader. Tenant-scoped. Returns `{ok, draftId, expiresAt, profile:{key,label,book}, origin, special, rows:[{index, label, type, slotKey, fileId?, chartName?, key?, tier, phrase, promotion?, recall?, parts?}], openIndexes, truncated, vsLast, readback:{headline, exceptions:[{kind, index, text, voice?}], rest, text}}`.",
+                "Draft one service from its living profile, for the author to review before anything is created. The running order is re-learned on every draft from the service's last 5 regular weeks (never a special week or a B'nei Mitzvah; `origin` and the headline say what it was learned from); with no history yet it comes from a matching template, every song open. A song slot (one per prayer moment, whatever its setting) is filled only when it is `standard` (set with set_standing_choice) or `usual` (the same chart on 3 of the last 5 regular weeks); every other song slot is left open with its label, listed in `openIndexes`, and carries `recall` (the exact chart it had last time) when there is one. It never picks a setting nobody chose. A filled row that is worth hearing (a usual not played for 8 weeks, a different chart last week, no key on record) is named in the readback. `vsLast` lists what the last regular service had per slot. friday_night and shabbat_morning need `rabbiSlot`: ask who is leading, never infer it. `special` defaults to true for holiday services. With no history and no template it returns `no_profile`: build that week from a recent setlist with the rabbi set, and the next draft learns from it. A band passes `basedOnSetlistId` (a past set) instead of serviceType: the draft keeps that set's order, leaves every song open with its old chart as `recall`, and fills only the songs the band said to keep. The draft is kept 30 minutes; create the setlist with create_setlist_from_draft. Say `readback.text` aloud (exceptions first, then one line for everything else) and show `readback.exceptions` as a short list; give the full rows only when asked. Admin / band_leader. Tenant-scoped. Returns `{ok, draftId, expiresAt, profile:{key,label,book}, origin, special, rows:[{index, label, type, slotKey, fileId?, chartName?, key?, tier, phrase, promotion?, recall?, parts?}], openIndexes, truncated, vsLast, readback:{headline, exceptions:[{kind, index, text, voice?}], rest, text}}`.",
             inputSchema: {
                 date: z.string().describe("Service date, YYYY-MM-DD."),
                 serviceType: z
                     .string()
-                    .describe("Service type key, e.g. 'shabbat_morning', 'friday_night', 'shir_shabbat'."),
+                    .optional()
+                    .describe("Service type key, e.g. 'shabbat_morning', 'friday_night', 'shir_shabbat'. Required for a congregation."),
                 rabbiSlot: z
                     .enum(["daniel_karen", "randy"])
                     .optional()
@@ -908,6 +919,13 @@ export function registerReadTools(server: McpServer): void {
                     .optional()
                     .describe("A special week (holiday, guest service). Special weeks never count toward 'usual'."),
                 name: z.string().optional().describe("Name for the setlist; defaults to the profile label and date."),
+                basedOnSetlistId: z
+                    .string()
+                    .min(1)
+                    .optional()
+                    .describe(
+                        "Bands only: the past set to build this one from (list_setlists). Its order is kept; every song is open, with the chart it had as `recall`, except songs the band said to keep. No serviceType or rabbiSlot is needed.",
+                    ),
             },
         },
         async (args, extra) =>
@@ -991,7 +1009,7 @@ export function registerReadTools(server: McpServer): void {
         "read_back_setlist",
         {
             description:
-                "Read an existing setlist back the way it should be said aloud: exceptions first, then one line for everything else, plus open items. Use after any change and whenever the author asks 'what's on Saturday?'. When the setlist stores its service type (and rabbi, where that changes the music) and the profile exists, rows are compared with their standard or usual; otherwise it lists only rows with no chart and open items. A book other than the profile's is said. Say `readback.text`; show `readback.exceptions` as a short list. `vsLast` lists, per slot, what the profile's last regular service before this one had (recall only). Read-only. Tenant-scoped. Returns `{ok, setlistId, readback:{headline, exceptions:[{kind, index, text, voice?}], rest, text}, vsLast}`.",
+                "Read an existing setlist back the way it should be said aloud: exceptions first, then one line for everything else, plus open items. Use after any change and whenever the author asks 'what's on Saturday?'. When the setlist stores its service type (and rabbi, where that changes the music) and the profile exists, rows are compared with their standard or usual; otherwise it lists only rows with no chart and open items. A book other than the profile's is said. Say `readback.text`; show `readback.exceptions` as a short list. `vsLast` lists, per slot, what the profile's last regular service before this one had (recall only). Read-only. Tenant-scoped. Returns `{ok, setlistId, readback:{headline, exceptions:[{kind, index, text, voice?}], rest, text}, vsLast, setTotals?}`. `setTotals` (a band's sets, or any setlist with timed rows) is one entry per set — the rows between header rows — with `seconds`, `untimed` (songs with no length) and, when the gig sets one, `targetMinutes` and `overUnderSec`.",
             inputSchema: {
                 setlistId: z.string().min(1).describe("Setlist id."),
             },
@@ -1765,7 +1783,7 @@ export function registerWriteTools(server: McpServer): void {
         "update_setlist",
         {
             description:
-                "Update a setlist's metadata (name, date, service type, rabbi, notes). Metadata only — does NOT touch tracks; use the track tools for that. Admins and band leaders may update it — band_leader can update setlists owned by others (collaborate), but only the owner or admin may delete (see delete_setlist). Returns the post-update setlist record (name, eventDate, rabbi, serviceType, serviceNotes) so callers can confirm the patch landed without a follow-up get_setlist. Pass `lastSeenVersion` (the `version` from your last get_setlist / list_setlists) to reject with `{error: 'stale_version', currentVersion, ...}` when another writer has changed the setlist since you read it (W-04 optimistic concurrency). CHANGING `book` RE-RESOLVES EVERY PAGE: each row carrying a liturgyRef is looked up in the new book by unit id, then by the moment behind it, then by the row's own name — and the result comes back as `rebook: {from, to, resolved[], unresolved[]}`. A row that cannot be found in the new book KEEPS the page it had and is marked `liturgyRef.stale`; a page is never blanked and never guessed. Show the caller `unresolved` — those rows still print the old book's numbers.",
+                "Update a setlist's metadata (name, date, service type, rabbi, notes, and for a band the `gig`: venue, address, times, set targets). Metadata only — does NOT touch tracks; use the track tools for that. Admins and band leaders may update it — band_leader can update setlists owned by others (collaborate), but only the owner or admin may delete (see delete_setlist). Returns the post-update setlist record (name, eventDate, rabbi, serviceType, serviceNotes) so callers can confirm the patch landed without a follow-up get_setlist. Pass `lastSeenVersion` (the `version` from your last get_setlist / list_setlists) to reject with `{error: 'stale_version', currentVersion, ...}` when another writer has changed the setlist since you read it (W-04 optimistic concurrency). CHANGING `book` RE-RESOLVES EVERY PAGE: each row carrying a liturgyRef is looked up in the new book by unit id, then by the moment behind it, then by the row's own name — and the result comes back as `rebook: {from, to, resolved[], unresolved[]}`. A row that cannot be found in the new book KEEPS the page it had and is marked `liturgyRef.stale`; a page is never blanked and never guessed. Show the caller `unresolved` — those rows still print the old book's numbers.",
             inputSchema: {
                 id: z.string().min(1).describe("Setlist id"),
                 name: z.string().min(1).optional().describe("New setlist name"),
@@ -1798,6 +1816,11 @@ export function registerWriteTools(server: McpServer): void {
                     .optional()
                     .describe(
                         "Which rabbi slot leads this service: 'daniel_karen' or 'randy'. null clears it. Changing `rabbi` without this clears the stored slot, so it is read from the new rabbi text.",
+                    ),
+                gig: GigPatchSchema.nullable()
+                    .optional()
+                    .describe(
+                        "The show around a set: {venue, address, loadIn, soundcheck, start, end, contact, notes, setTargets:[{headerRowId?, minutes}]}. Times are 24-hour HH:mm in the local time. Fields you pass are set, a null field is removed, fields you leave out are kept; setTargets is replaced whole. A target names its set by the header row that opens it; one without headerRowId applies to the sets in order. null removes the whole gig.",
                     ),
                 lastSeenVersion: lastSeenVersionSchema.describe(
                     "Optional optimistic-concurrency gate: pass the setlist's `version` from your last get_setlist / list_setlists. The write rejects with `{error: 'stale_version', currentVersion, lastSeenVersion, hint, ...}` if it doesn't match — call get_setlist and retry.",
@@ -1921,7 +1944,7 @@ export function registerWriteTools(server: McpServer): void {
         "update_track",
         {
             description:
-                "Update one track's metadata on a setlist (key, vocal lead, title, notes, type, bonded songId, referenceLink) and optionally move it to a new position. Preserves trackId — unlike remove+add — so external references stay valid. Only fields you pass in `patch` get updated; omitted fields are untouched. Pass `position` to move the row in place (closes the 'must call reorder_setlist with the full ordered id list to move one row' gap). Re-bonding: passing a new `songId` updates `fileId` automatically (the library is keyed by Drive file id). KEY RULE on a chart change (same as swap_chart): the row keeps its played key only when the author gave one (a `key` in this patch, or a row key that differs from the old chart's written key); otherwise it takes the new chart's written key. The response's `keyChanged: {from, to}` says what happened (null when the key stayed) — say it, e.g. \"key now D (was E)\". Unbonding: pass `songId: null` to clear the chart (songId + fileId + fileName) while keeping the row, its title/key/position/notes, and dropping the chart from the setlist's fileIds aggregate — no need to delete + re-add a free-text row. Returns the post-update row. Admins and band leaders only. Every successful write bumps the setlist's `version` and echoes the row back; chain the returned `version` into the next call's `lastSeenVersion` rather than re-reading a stale get_setlist value. Pass `lastSeenVersion` (the track's `version` from your last get_setlist) for W-04 optimistic concurrency: rejects with `{error: 'stale_version', currentVersion, ...}` if another writer changed THIS track first, or `{error: 'track_not_found', setlistVersion, ...}` if the row was deleted out from under you. BINDS ON TYPE: when the setlist names a `book` with a liturgy lookup (crc-friday, crc-saturday) and the row can name a moment (song/prayer/reading/transition), the title is matched against Daniel's confirmed spellings and the row's `liturgyRef` is written automatically — reported back as `liturgy.bound`. An ambiguous or merely plausible title writes NOTHING and comes back as `liturgy.suggestions` for you to resolve; a row you pass an explicit `liturgyRef` for, or that already carries one, is never touched.",
+                "Update one track's metadata on a setlist (key, vocal lead, title, notes, type, bonded songId, referenceLink, and the band fields durationSec, segue and singerKeys) and optionally move it to a new position. Preserves trackId — unlike remove+add — so external references stay valid. Only fields you pass in `patch` get updated; omitted fields are untouched. Pass `position` to move the row in place (closes the 'must call reorder_setlist with the full ordered id list to move one row' gap). Re-bonding: passing a new `songId` updates `fileId` automatically (the library is keyed by Drive file id). KEY RULE on a chart change (same as swap_chart): the row keeps its played key only when the author gave one (a `key` in this patch, or a row key that differs from the old chart's written key); otherwise it takes the new chart's written key. The response's `keyChanged: {from, to}` says what happened (null when the key stayed) — say it, e.g. \"key now D (was E)\". Unbonding: pass `songId: null` to clear the chart (songId + fileId + fileName) while keeping the row, its title/key/position/notes, and dropping the chart from the setlist's fileIds aggregate — no need to delete + re-add a free-text row. Returns the post-update row. Admins and band leaders only. Every successful write bumps the setlist's `version` and echoes the row back; chain the returned `version` into the next call's `lastSeenVersion` rather than re-reading a stale get_setlist value. Pass `lastSeenVersion` (the track's `version` from your last get_setlist) for W-04 optimistic concurrency: rejects with `{error: 'stale_version', currentVersion, ...}` if another writer changed THIS track first, or `{error: 'track_not_found', setlistVersion, ...}` if the row was deleted out from under you. BINDS ON TYPE: when the setlist names a `book` with a liturgy lookup (crc-friday, crc-saturday) and the row can name a moment (song/prayer/reading/transition), the title is matched against Daniel's confirmed spellings and the row's `liturgyRef` is written automatically — reported back as `liturgy.bound`. An ambiguous or merely plausible title writes NOTHING and comes back as `liturgy.suggestions` for you to resolve; a row you pass an explicit `liturgyRef` for, or that already carries one, is never touched.",
             inputSchema: {
                 setlistId: z.string().min(1).describe("Setlist id"),
                 trackId: z
@@ -2230,7 +2253,7 @@ export function registerWriteTools(server: McpServer): void {
         "create_contact",
         {
             description:
-                "Remember an ad-hoc recipient for next time — a person the system has no account for (e.g. a guest musician or a parent). Saves a contact (name + email and/or phone) scoped to your org. Use this after a send where the leader wanted to email someone who isn't a band member, so you don't have to retype them next week. Deduplicates by email (returns the existing contact instead of a duplicate). Does NOT send anything — to notify a contact, pass it as a `recipients` entry on notify_band.",
+                "Remember an ad-hoc recipient for next time — a person the system has no account for (e.g. a guest musician or a parent). Saves a contact (name + email and/or phone) scoped to your org. Use this after a send where the leader wanted to email someone who isn't a band member, so you don't have to retype them next week. Deduplicates by email (returns the existing contact instead of a duplicate; an instrument or transposition passed then is recorded on it). Does NOT send anything — to notify a contact, pass it as a `recipients` entry on notify_band.",
             inputSchema: {
                 name: z.string().min(1).describe("Display name, e.g. 'Jane Cohen'"),
                 email: z
@@ -2241,6 +2264,13 @@ export function registerWriteTools(server: McpServer): void {
                     .string()
                     .optional()
                     .describe("Phone number (stored for the future; SMS is not sent yet)"),
+                instrument: z
+                    .string()
+                    .optional()
+                    .describe("The instrument this person plays, e.g. 'alto sax'."),
+                transposition: TranspositionSchema.optional().describe(
+                    "The part they read: C, Bb, Eb, F or bass. generate_gig_packet with this contactId builds their part in it.",
+                ),
             },
         },
         async (args, extra) =>
@@ -3992,7 +4022,7 @@ export function registerChartUploadTools(server: McpServer): void {
         "update_song",
         {
             description:
-                "Fix a library entry's musical key or BPM without going through admin-only enrichment (cowork #5). Use when the catalog has a wrong/missing key or bpm — e.g. a chart saved with no key so bonded rows pull `key: null`. Admins, band leaders, AND musicians (the same accounts that may add charts) can call this; it is NOT admin-only like edit_enrichment. Writes BOTH the songs catalog (`defaults.key`/`defaults.bpm` — read by get_song / search_library and by bond resolution when you add the song to a setlist) AND the library_index row (read by list_library and the in-app catalog), so the fix shows up everywhere. Pass at least one of key/bpm. Idempotent. dryRun:true returns the before/after plan without writing (observability) — no `force` needed for the real write since this is a single-row, non-destructive metadata edit. Returns `{ok, id, dryRun, fieldsChanged, before, after, songWritten, indexWritten}`. To change a chart's collection / title / tags as well, use the admin-only edit_enrichment / edit_library_entry.",
+                "Fix a library entry's musical key, BPM or length (durationSec) without going through admin-only enrichment (cowork #5). Use when the catalog has a wrong/missing key or bpm — e.g. a chart saved with no key so bonded rows pull `key: null`. Admins, band leaders, AND musicians (the same accounts that may add charts) can call this; it is NOT admin-only like edit_enrichment. Writes BOTH the songs catalog (`defaults.key`/`defaults.bpm` — read by get_song / search_library and by bond resolution when you add the song to a setlist) AND the library_index row (read by list_library and the in-app catalog), so the fix shows up everywhere. Pass at least one of key/bpm/durationSec. Idempotent. dryRun:true returns the before/after plan without writing (observability) — no `force` needed for the real write since this is a single-row, non-destructive metadata edit. Returns `{ok, id, dryRun, fieldsChanged, before, after, songWritten, indexWritten}`. To change a chart's collection / title / tags as well, use the admin-only edit_enrichment / edit_library_entry.",
             inputSchema: {
                 id: z
                     .string()
@@ -4010,6 +4040,9 @@ export function registerChartUploadTools(server: McpServer): void {
                     .positive()
                     .optional()
                     .describe("New tempo in BPM (positive integer)."),
+                durationSec: DurationSecSchema.optional().describe(
+                    "The song's usual length in whole seconds (e.g. 245 for 4:05). A row added from this song copies it; set totals add rows' lengths up.",
+                ),
                 dryRun: z
                     .boolean()
                     .optional()
@@ -4074,6 +4107,13 @@ export function registerChartUploadTools(server: McpServer): void {
                     .optional()
                     .describe(
                         "Which rows the packet carries. Default 'music' — charts only, which is what the band wants on a stand. 'full' and 'both' prepend the rabbi's order of service (every row with its printed page) ahead of the charts; they are the same document here, because in a gig packet the charts ARE the music section. The response echoes `rows` and lists the `sections` actually produced.",
+                    ),
+                contactId: z
+                    .string()
+                    .min(1)
+                    .optional()
+                    .describe(
+                        "Build one saved contact's part instead (a sub): every chart transposed for the contact's `transposition` (C, Bb, Eb, F or bass), with their name on the cover. Returns `{ok, downloadUrl, expiresAt, part:{contactId, name, instrument?, transposition, semitones}, appendedCount, transposedCount, omitted}`. Nothing is sent; share the link yourself.",
                     ),
             },
         },

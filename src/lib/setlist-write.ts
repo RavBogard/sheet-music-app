@@ -23,6 +23,7 @@ import {
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import { parseEventDate as toTimestamp } from "@/lib/parse-event-date"
 import { deriveSetlistCounts } from "@/lib/setlist-derived-counts"
+import type { GigPatch } from "@/lib/gig/model"
 import { isTestSetlist, type Setlist } from "@/types/models"
 
 // ─── Types ───────────────────────────────────────────────────────────
@@ -101,6 +102,11 @@ export type SetlistMetadataPatch = Partial<{
     storedServiceType: string | null
     rabbiSlot: string | null
     special: boolean
+    /**
+     * BET-5: a gig patch (src/lib/gig/model.ts). Each field is set when given
+     * and removed when null; `gig: null` removes the whole gig.
+     */
+    gig: GigPatch | null
 }>
 
 // ─── Helpers ─────────────────────────────────────────────────────────
@@ -291,6 +297,15 @@ export async function updateSetlistServerSide(
     }
     if (patch.rabbiSlot !== undefined) mapped.rabbiSlot = patch.rabbiSlot
     if (patch.special !== undefined) mapped.special = patch.special
+    if (patch.gig === null) {
+        mapped.gig = FieldValue.delete()
+    } else if (patch.gig !== undefined) {
+        // Dotted paths: only the fields given change; the rest of the gig stays.
+        for (const [k, v] of Object.entries(patch.gig)) {
+            if (v === undefined) continue
+            mapped[`gig.${k}`] = v === null ? FieldValue.delete() : v
+        }
+    }
     // Setlist memory r2: a templateType / rabbi edit with no explicit stored
     // value writes the stored class from the same normalisation, so it can
     // never go stale.

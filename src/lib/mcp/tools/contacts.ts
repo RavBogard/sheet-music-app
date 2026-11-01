@@ -5,6 +5,7 @@ import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 import { rowOrg } from "@/lib/mcp/org-context"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
+import { parseContactPart, TRANSPOSITIONS, type Transposition } from "@/lib/gig/model"
 
 /**
  * v11.4-03 (D8 item 3) — contacts: a leader's address book of remembered
@@ -19,6 +20,10 @@ export interface ContactView {
     name: string
     email: string | null
     phone: string | null
+    /** BET-5: present only when set. */
+    instrument?: string
+    /** BET-5: the part this person reads (C, Bb, Eb, F or bass); present only when set. */
+    transposition?: Transposition
 }
 
 export interface ListContactsResult {
@@ -30,6 +35,10 @@ export interface CreateContactArgs {
     name?: string
     email?: string
     phone?: string
+    /** BET-5: the instrument a sub plays, free text. */
+    instrument?: string
+    /** BET-5: the part they read; generate_gig_packet transposes by it. */
+    transposition?: string
 }
 
 export interface CreateContactResult {
@@ -48,13 +57,18 @@ export interface DeleteContactResult {
     deletedId: string
 }
 
-function toView(id: string, d: Record<string, unknown>): ContactView {
-    return {
+export function toView(id: string, d: Record<string, unknown>): ContactView {
+    const view: ContactView = {
         id,
         name: typeof d.name === "string" ? d.name : "",
         email: typeof d.email === "string" ? d.email : null,
         phone: typeof d.phone === "string" ? d.phone : null,
     }
+    if (typeof d.instrument === "string" && d.instrument) view.instrument = d.instrument
+    if (typeof d.transposition === "string" && (TRANSPOSITIONS as readonly string[]).includes(d.transposition)) {
+        view.transposition = d.transposition as Transposition
+    }
+    return view
 }
 
 export async function listContacts(
@@ -152,6 +166,11 @@ export async function createContact(
         return richError("invalid_argument", "A contact needs a non-empty name.", {
             field: "name",
         })
+    const part = parseContactPart({ instrument: args.instrument, transposition: args.transposition })
+    if (!part.ok) return part.error
+    const partFields: { instrument?: string; transposition?: Transposition } = {}
+    if (part.instrument) partFields.instrument = part.instrument
+    if (part.transposition) partFields.transposition = part.transposition
     if (!email && !phone)
         return richError(
             "invalid_argument",
@@ -173,12 +192,18 @@ export async function createContact(
             const e = (doc.data() as Record<string, unknown>).email
             return typeof e === "string" && e.toLowerCase() === lower
         })
-        if (match)
+        if (match) {
+            // BET-5: the address book has no edit tool, so a repeat create that
+            // names an instrument or part records it on the existing contact.
+            if (Object.keys(partFields).length > 0) {
+                await match.ref.update({ ...partFields, updatedAt: FieldValue.serverTimestamp() })
+            }
             return {
                 ok: true,
                 created: false,
-                contact: toView(match.id, match.data() as Record<string, unknown>),
+                contact: toView(match.id, { ...(match.data() as Record<string, unknown>), ...partFields }),
             }
+        }
     }
 
     const ref = db.collection("contacts").doc()
@@ -187,6 +212,7 @@ export async function createContact(
         name,
         ...(email ? { email } : {}),
         ...(phone ? { phone } : {}),
+        ...partFields,
         createdBy: callerUid,
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
@@ -194,7 +220,7 @@ export async function createContact(
     return {
         ok: true,
         created: true,
-        contact: { id: ref.id, name, email: email || null, phone: phone || null },
+        contact: { id: ref.id, name, email: email || null, phone: phone || null, ...partFields },
     }
 }
 

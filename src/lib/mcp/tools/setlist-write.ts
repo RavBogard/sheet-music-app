@@ -48,6 +48,7 @@ import {
 } from "@/lib/liturgy/bind-on-type"
 import type { LiturgyRef } from "@/lib/books/types"
 import { logger } from "@/lib/logger"
+import { parseGigArg, parseTrackGigPatch, readGig, type Gig, type GigPatch } from "@/lib/gig/model"
 import { chartChangeKey } from "@/lib/library/lineage-pure"
 import { isTestSetlist } from "@/types/models"
 import {
@@ -358,6 +359,12 @@ export interface UpdateSetlistArgs {
     special?: boolean
     /** Setlist memory r2 — which CRC rabbi slot leads; null clears it. */
     rabbiSlot?: "daniel_karen" | "randy" | null
+    /**
+     * BET-5: the show around a set (venue, address, times, contact, notes,
+     * set targets). Fields given are set, null fields removed, others kept;
+     * `gig: null` removes the gig. Validated in src/lib/gig/model.ts.
+     */
+    gig?: unknown
     /** W-04 Plan 02 optimistic-concurrency gate (setlist-level version). */
     lastSeenVersion?: number
 }
@@ -378,6 +385,8 @@ export async function updateSetlist(
               serviceNotes: string | null
               rabbiSlot: string | null
               special: boolean | null
+              /** BET-5: present only when the setlist has a gig. */
+              gig?: Gig
           }
           /**
            * Present only when the book changed. See `rebookRows`. With
@@ -399,7 +408,15 @@ export async function updateSetlist(
     const badBook = bookSlugGuard(args.book ?? undefined)
     if (badBook) return badBook
 
+    let gigPatch: GigPatch | null | undefined
+    if (args.gig !== undefined) {
+        const parsedGig = parseGigArg(args.gig)
+        if (!parsedGig.ok) return parsedGig.error
+        gigPatch = parsedGig.gig
+    }
+
     const patch: SetlistMetadataPatch = {}
+    if (gigPatch !== undefined) patch.gig = gigPatch
     if (args.name !== undefined) patch.name = args.name
     if (args.eventDate !== undefined) patch.eventDate = args.eventDate
     if (args.serviceType !== undefined) {
@@ -557,6 +574,10 @@ export async function updateSetlist(
             serviceNotes: str(updated?.serviceNotes),
             rabbiSlot: str(updated?.rabbiSlot),
             special: typeof updated?.special === "boolean" ? updated.special : null,
+            ...(() => {
+                const gig = readGig(updated?.gig)
+                return gig ? { gig } : {}
+            })(),
         },
         ...(rebook ? { rebook } : {}),
     }
@@ -782,6 +803,8 @@ export async function addTrackToSetlist(
         estimatedMinutes: args.estimatedMinutes,
         liturgyRef: args.liturgyRef ?? auto.ref,
         honors: args.honors,
+        // BET-5: a row added from a song with a known length starts with it.
+        ...(resolved.durationSec !== undefined ? { durationSec: resolved.durationSec } : {}),
     })
 
     // Re-read the just-written track so the response shape mirrors
@@ -889,6 +912,10 @@ export async function updateSetlistTrack(
     // immediately below.
     const badLiturgyRef = liturgyRefGuard(args.patch.liturgyRef)
     if (badLiturgyRef) return badLiturgyRef
+
+    // BET-5: the band fields (durationSec, segue, singerKeys), validated before any write.
+    const bandFields = parseTrackGigPatch(args.patch ?? {})
+    if (!bandFields.ok) return bandFields.error
 
     // F-01 (2026-05-16 bugstomp): pre-validate songId before writing. Without
     // this, a patch with a bogus songId silently bonds a row to a non-existent
