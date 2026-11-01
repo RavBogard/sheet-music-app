@@ -40,8 +40,8 @@ export function EmptyState({
                     className={cn(
                         'inline-flex items-center justify-center gap-2',
                         'min-h-[44px] min-w-[260px] rounded-md px-6 py-3',
-                        'bg-brand text-white font-medium',
-                        'hover:bg-brand active:bg-brand',
+                        'bg-primary text-primary-foreground font-medium',
+                        'hover:bg-primary/90 active:bg-primary',
                         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2',
                         'disabled:opacity-60 disabled:cursor-not-allowed',
                         'cursor-pointer transition-colors duration-200 motion-reduce:transition-none',

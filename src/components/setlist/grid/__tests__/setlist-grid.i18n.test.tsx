@@ -138,7 +138,7 @@ describe('setlist grid i18n (pseudo-locale)', () => {
         await waitFor(() => expect(screen.getByTestId('setlist-grid-top-bar').textContent).toMatch(/⟦/))
         expectNoUntranslatedText(r.container, { allow: ALLOW, ignoreSelector: IGNORE })
         // The untitled reading row, the Key / Vocal Lead badges and the add bar are pseudo.
-        expect(screen.getByTestId('mobile-card-row-c').getAttribute('aria-label')).toMatch(/^⟦/)
+        expect(screen.getByTestId('mobile-card-edit-row-c').getAttribute('aria-label')).toMatch(/^⟦/)
         expect(screen.getByTestId('add-row-trigger').textContent).toMatch(/⟦/)
     })
 

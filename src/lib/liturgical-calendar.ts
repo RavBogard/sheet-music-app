@@ -198,6 +198,59 @@ export async function getParasha(date: Date, org: OrgId = DEFAULT_ORG_ID): Promi
     }
 }
 
+/** One item from Hebcal's Shabbat API (names and dates only, never text). */
+export interface HebcalWeekItem {
+    category: string
+    subcat?: string
+    title: string
+    /** `YYYY-MM-DD`, or an ISO instant for candle times. */
+    date: string
+    /** e.g. "29 Tishrei 5787". */
+    hdate?: string
+}
+
+const weekItemsCache: Map<string, HebcalWeekItem[]> = new Map()
+
+/**
+ * BET-6: the Hebcal Shabbat items for the week starting on `day`
+ * (`YYYY-MM-DD`, already in the tenant's zone), with the same URL and calendar
+ * rule as getParasha. Returns null when Hebcal is unreachable; never throws.
+ */
+export async function getHebcalWeekItems(
+    day: string,
+    org: OrgId = DEFAULT_ORG_ID,
+    timeoutMs = 2500,
+): Promise<HebcalWeekItem[] | null> {
+    const calendar = orgCalendar(org)
+    const key = `${calendar}:${day}`
+    const cached = weekItemsCache.get(key)
+    if (cached) return cached
+    try {
+        const israel = calendar === 'israel' ? '&i=on' : ''
+        const url = `https://www.hebcal.com/shabbat?cfg=json&date=${day}&M=on&geo=none${israel}`
+        const controller = new AbortController()
+        const timeout = setTimeout(() => controller.abort(), timeoutMs)
+        const res = await fetch(url, { signal: controller.signal })
+        clearTimeout(timeout)
+        if (!res.ok) return null
+        const data = await res.json()
+        if (!Array.isArray(data?.items)) return null
+        const items: HebcalWeekItem[] = data.items
+            .filter((i: Record<string, unknown>) => typeof i?.category === 'string' && typeof i?.title === 'string' && typeof i?.date === 'string')
+            .map((i: Record<string, unknown>) => ({
+                category: i.category as string,
+                subcat: typeof i.subcat === 'string' ? i.subcat : undefined,
+                title: i.title as string,
+                date: i.date as string,
+                hdate: typeof i.hdate === 'string' ? i.hdate : undefined,
+            }))
+        weekItemsCache.set(key, items)
+        return items
+    } catch {
+        return null
+    }
+}
+
 /**
  * Get full service context with parasha (async).
  */

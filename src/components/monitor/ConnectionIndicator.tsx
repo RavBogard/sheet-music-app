@@ -95,29 +95,29 @@ export function getConnectionDisplayState(
 ): ConnectionDisplayState {
     // Firestore-level disconnected or error states take precedence
     if (status === "disconnected" || status === "error") {
-        return { label: "Offline", color: "bg-gray-400", isAnimated: false }
+        return { label: "Offline", color: "bg-muted-foreground", isAnimated: false }
     }
 
     if (status === "connecting") {
-        return { label: "Connecting...", color: "bg-yellow-500", isAnimated: true }
+        return { label: "Connecting...", color: "bg-caution", isAnimated: true }
     }
 
     // status === "connected" -- check bridge health
     if (bridge && !isBridgeOnline(bridge)) {
-        return { label: "Bridge offline", color: "bg-red-500", isAnimated: false }
+        return { label: "Bridge offline", color: "bg-destructive", isAnimated: false }
     }
 
     if (bridge && isMixerUnreachable(bridge)) {
-        return { label: "Mixer disconnected", color: "bg-yellow-500", isAnimated: false }
+        return { label: "Mixer disconnected", color: "bg-caution", isAnimated: false }
     }
 
     // R7: state pipeline behind, control path fine. Named distinctly so nobody
     // reads "Mixer disconnected" off a desk that is answering commands.
     if (bridge && isStateSyncing(bridge)) {
-        return { label: "Syncing…", color: "bg-yellow-500", isAnimated: false }
+        return { label: "Syncing…", color: "bg-caution", isAnimated: false }
     }
 
-    return { label: "Connected", color: "bg-green-500", isAnimated: false }
+    return { label: "Connected", color: "bg-success", isAnimated: false }
 }
 
 /**
@@ -160,9 +160,9 @@ export function ConnectionIndicator({ status, bridgeStatus, error }: ConnectionI
     const display = getConnectionDisplayState(status, bridgeStatus)
 
     return (
-        <div className="flex items-center gap-2 text-xs text-zinc-300">
+        <div className="flex items-center gap-2 text-xs text-foreground">
             {display.isAnimated ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-yellow-500" />
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-caution" />
             ) : (
                 <span className={`w-2 h-2 rounded-full ${display.color} shrink-0`} />
             )}
@@ -195,7 +195,7 @@ export function DisconnectedOverlay({ active, children }: DisconnectedOverlayPro
                 {children}
             </div>
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <span className="text-xs text-yellow-500 bg-zinc-900/80 px-3 py-1.5 rounded-md">
+                <span className="text-xs text-caution bg-card/80 px-3 py-1.5 rounded-md">
                     Mixer offline &mdash; last known levels
                 </span>
             </div>

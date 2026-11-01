@@ -11,7 +11,7 @@ const buttonVariants = cva(
       variant: {
         default: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-[inset_0_1px_rgba(255,255,255,0.2)] dark:shadow-[inset_0_1px_rgba(255,255,255,0.1)]",
         destructive:
-          "bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60 shadow-[inset_0_1px_rgba(255,255,255,0.2)]",
+          "bg-destructive text-destructive-foreground hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 shadow-[inset_0_1px_rgba(255,255,255,0.2)]",
         outline:
           "border border-border/50 bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:border-border/60 dark:bg-input/10 dark:hover:bg-secondary/40",
         secondary:
@@ -21,14 +21,16 @@ const buttonVariants = cva(
         link: "text-primary underline-offset-4 hover:underline",
         brand: "bg-brand text-brand-foreground hover:bg-brand/85 shadow-[inset_0_1px_rgba(255,255,255,0.15)] focus-visible:ring-brand/30",
       },
+      // sm, lg and icon-sm draw under 44px for density; `touch-hit` gives
+      // them an invisible 44px hit area (globals.css) without growing them.
       size: {
         default: "h-11 px-4 py-2 has-[>svg]:px-3",
         xs: "h-6 gap-1 rounded-md px-2 text-xs has-[>svg]:px-1.5 [&_svg:not([class*='size-'])]:size-3",
-        sm: "h-8 rounded-md gap-1.5 px-3 has-[>svg]:px-2.5",
-        lg: "h-10 rounded-md px-6 has-[>svg]:px-4",
+        sm: "h-8 touch-hit rounded-md gap-1.5 px-3 has-[>svg]:px-2.5",
+        lg: "h-10 touch-hit rounded-md px-6 has-[>svg]:px-4",
         icon: "size-11",
         "icon-xs": "size-6 rounded-md [&_svg:not([class*='size-'])]:size-3",
-        "icon-sm": "size-8",
+        "icon-sm": "size-8 touch-hit",
         "icon-lg": "size-12",
       },
     },

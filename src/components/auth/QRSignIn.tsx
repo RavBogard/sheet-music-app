@@ -231,7 +231,7 @@ export function QRSignIn() {
                     variant="link"
                     size="xs"
                     onClick={createSession}
-                    className="text-[10px] text-yellow-500 hover:text-yellow-400"
+                    className="text-[10px] text-caution hover:text-caution/80"
                 >
                     <RefreshCw className="h-2.5 w-2.5" /> {t("auth.qrConnectionIssue")}
                 </Button>

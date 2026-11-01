@@ -76,7 +76,7 @@ export function PerformanceOfflineIndicator({ setlistFileIds }: Props = {}) {
     const showFraction = !isOnline && total > 0 && readyCount !== null
 
     return (
-        <div className="fixed top-safe pt-2 inset-x-0 z-splash flex justify-center pointer-events-none">
+        <div data-modal-keep className="fixed top-safe pt-2 inset-x-0 z-splash flex justify-center pointer-events-none">
             <div className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-colors duration-500 shadow-[0_4px_16px_rgb(24_32_46/0.22)]
                 ${!isOnline
                     ? "bg-section-ochre text-section-ochre-foreground"

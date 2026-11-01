@@ -213,8 +213,8 @@ export function UploadDialog({ onUploadComplete, setlists = [], onAddToSetlist }
 
                 {success ? (
                     <div className="flex flex-col items-center gap-3 py-8">
-                        <CheckCircle className="h-12 w-12 text-green-400" />
-                        <p className="text-sm text-zinc-300">{t("libraryUpload.uploadedSuccess")}</p>
+                        <CheckCircle className="h-12 w-12 text-success" />
+                        <p className="text-sm text-foreground">{t("libraryUpload.uploadedSuccess")}</p>
                     </div>
                 ) : (
                     <div className="space-y-4">
@@ -226,13 +226,13 @@ export function UploadDialog({ onUploadComplete, setlists = [], onAddToSetlist }
                                 onDragOver={handleDragOver}
                                 onDragLeave={handleDragLeave}
                                 onClick={() => fileInputRef.current?.click()}
-                                className="border-2 border-dashed border-zinc-700 rounded-lg p-4 sm:p-8 text-center cursor-pointer hover:border-zinc-500 transition-colors"
+                                className="border-2 border-dashed border-border rounded-lg p-4 sm:p-8 text-center cursor-pointer hover:border-muted-foreground transition-colors"
                             >
-                                <FileUp className="h-8 w-8 text-zinc-500 mx-auto mb-3" />
-                                <p className="text-sm text-zinc-400 mb-1">
+                                <FileUp className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
+                                <p className="text-sm text-muted-foreground mb-1">
                                     {interpolateNodes(t("libraryUpload.dropPrompt"), { browse: <span className="text-brand">{t("libraryUpload.browse")}</span> })}
                                 </p>
-                                <p className="text-xs text-zinc-600">{t("libraryUpload.acceptedHint", { max: MAX_SIZE_MB })}</p>
+                                <p className="text-xs text-muted-foreground">{t("libraryUpload.acceptedHint", { max: MAX_SIZE_MB })}</p>
                                 <input
                                     ref={fileInputRef}
                                     type="file"
@@ -245,15 +245,15 @@ export function UploadDialog({ onUploadComplete, setlists = [], onAddToSetlist }
                                 />
                             </div>
                         ) : (
-                            <div className="flex items-center gap-3 p-3 bg-zinc-900 rounded-lg border border-zinc-800">
+                            <div className="flex items-center gap-3 p-3 bg-muted rounded-lg border border-border">
                                 <div className="h-10 w-10 bg-brand/10 rounded-lg flex items-center justify-center shrink-0">
                                     <FileUp className="h-5 w-5 text-brand" />
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <p className="text-sm font-medium truncate">{file.name}</p>
-                                    <p className="text-xs text-zinc-500">{t("libraryUpload.fileSizeKb", { size: (file.size / 1024).toFixed(0) })}</p>
+                                    <p className="text-xs text-muted-foreground">{t("libraryUpload.fileSizeKb", { size: (file.size / 1024).toFixed(0) })}</p>
                                 </div>
-                                <button onClick={() => setFile(null)} className="text-zinc-500 hover:text-white" aria-label={t("libraryUpload.removeFile")}>
+                                <button onClick={() => setFile(null)} className="text-muted-foreground hover:text-foreground" aria-label={t("libraryUpload.removeFile")}>
                                     <X className="h-4 w-4" />
                                 </button>
                             </div>
@@ -354,7 +354,7 @@ export function UploadDialog({ onUploadComplete, setlists = [], onAddToSetlist }
                                 <Button
                                     onClick={handleUpload}
                                     disabled={uploading}
-                                    className="w-full bg-brand hover:bg-brand/80 text-white"
+                                    className="w-full bg-brand hover:bg-brand/90 text-brand-foreground"
                                 >
                                     {uploading ? (
                                         <>

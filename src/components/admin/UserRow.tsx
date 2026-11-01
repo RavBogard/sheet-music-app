@@ -388,7 +388,7 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
             </label>
 
             <Avatar className="h-9 w-9 border border-border shrink-0">
-                <AvatarImage src={user.photoURL ?? undefined} />
+                <AvatarImage src={user.photoURL ?? undefined} alt="" />
                 <AvatarFallback>{user.displayName?.[0] || "?"}</AvatarFallback>
             </Avatar>
 

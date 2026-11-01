@@ -63,12 +63,12 @@ const TILE_SPECS: TrackTypeTileSpec[] = [
     {
         type: 'prayer',
         labelKey: 'setlistGrid.trackTypePrayer',
-        icon: <Heart className="h-5 w-5 text-blue-300" aria-hidden />,
+        icon: <Heart className="h-5 w-5 text-brand" aria-hidden />,
     },
     {
         type: 'transition',
         labelKey: 'setlistGrid.trackTypeTransition',
-        icon: <DirectionalIcon icon={ArrowRight} className="h-5 w-5 text-emerald-300" aria-hidden />,
+        icon: <DirectionalIcon icon={ArrowRight} className="h-5 w-5 text-success" aria-hidden />,
     },
     {
         type: 'note',
@@ -191,7 +191,7 @@ export function AddBar({
                         aria-label={t('setlistGrid.addOtherTypeAria')}
                         onContextMenu={(e) => e.preventDefault()}
                         className={cn(
-                            'flex h-11 items-center justify-center px-3 border-s border-rule',
+                            'flex h-11 min-w-11 items-center justify-center px-3 border-s border-rule',
                             '[@media(pointer:coarse)]:h-12 [@media(pointer:coarse)]:px-4',
                             'text-muted-foreground hover:text-foreground hover:bg-accent/50',
                             'cursor-pointer',

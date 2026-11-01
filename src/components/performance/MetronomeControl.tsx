@@ -48,8 +48,8 @@ export function MetronomeControl() {
                     "h-11 min-w-11 px-3 sm:px-4 rounded-lg cursor-pointer border",
                     "bg-card lg:bg-background/50",
                     isPlaying
-                        ? "border-red-500/50"
-                        : "border-border hover:border-white/30 hover:bg-muted",
+                        ? "border-destructive/50"
+                        : "border-border hover:border-muted-foreground hover:bg-muted",
                 )}
                 title={isPlaying ? t("perform.metronome.stopTitle") : t("perform.metronome.startTitle")}
                 aria-label={isPlaying ? t("perform.metronome.stopAria") : t("perform.metronome.startAria")}
@@ -57,16 +57,16 @@ export function MetronomeControl() {
                 <div className={cn(
                     "rounded-full transition-all duration-75 shrink-0",
                     isPlaying && isBeat
-                        ? "h-4 w-4 bg-red-500 shadow-[0_0_10px_#ef4444] scale-110"
+                        ? "h-4 w-4 bg-destructive scale-110"
                         : isPlaying
-                            ? "h-2.5 w-2.5 bg-red-800"
+                            ? "h-2.5 w-2.5 bg-destructive/40"
                             : "h-2 w-2 bg-muted-foreground/40"
                 )} />
                 {/* v45-emergency: show this compact BPM label until the wide BPM input
                     kicks in at 1280px+. Matches the visibility breakpoint above. */}
                 <span className={cn(
                     "text-xs font-semibold min-[1280px]:hidden",
-                    isPlaying ? "text-red-400" : "text-muted-foreground"
+                    isPlaying ? "text-destructive" : "text-muted-foreground"
                 )}>
                     {/* i18n-ignore: BPM is a musical unit, shown verbatim in every language */}
                     {isPlaying ? currentBpm : "BPM"}

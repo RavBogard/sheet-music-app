@@ -27,11 +27,15 @@ function Avatar({
 
 function AvatarImage({
   className,
+  // Decorative by default (WCAG 1.1.1): the person's name is always in the
+  // text beside an avatar. Pass a real alt where it stands alone.
+  alt = "",
   ...props
 }: React.ComponentProps<typeof AvatarPrimitive.Image>) {
   return (
     <AvatarPrimitive.Image
       data-slot="avatar-image"
+      alt={alt}
       className={cn("aspect-square size-full", className)}
       {...props}
     />

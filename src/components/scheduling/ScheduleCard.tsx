@@ -60,8 +60,8 @@ export function ScheduleCard({ assignment, otherMusicians, className }: Schedule
         <div className={cn(
             "group relative rounded-lg border bg-card p-5 transition-all hover:shadow-md",
             isPending && "border-caution/30 bg-caution/5",
-            isConfirmed && "border-emerald-500/30",
-            isDeclined && "border-red-500/30 opacity-60",
+            isConfirmed && "border-success/30",
+            isDeclined && "border-destructive/30 opacity-60",
             className,
         )}>
             {/* Status indicator */}
@@ -97,7 +97,7 @@ export function ScheduleCard({ assignment, otherMusicians, className }: Schedule
                             {otherMusicians.slice(0, 5).map((m, i) => (
                                 <span key={i} className={cn(
                                     "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs",
-                                    m.status === 'confirmed' ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" :
+                                    m.status === 'confirmed' ? "bg-success/10 text-success" :
                                         m.status === 'pending' ? "bg-caution/10 text-caution dark:text-caution" :
                                             "bg-muted text-muted-foreground"
                                 )}>
@@ -118,7 +118,7 @@ export function ScheduleCard({ assignment, otherMusicians, className }: Schedule
                             <Button
                                 size="sm"
                                 variant="default"
-                                className="gap-1.5 h-11 bg-emerald-600 hover:bg-emerald-700 text-white"
+                                className="gap-1.5 h-11 bg-success hover:bg-success/90 text-success-foreground"
                                 onClick={() => handleRespond('accept')}
                                 disabled={responding !== null}
                             >
@@ -132,7 +132,7 @@ export function ScheduleCard({ assignment, otherMusicians, className }: Schedule
                             <Button
                                 size="sm"
                                 variant="outline"
-                                className="gap-1.5 h-11 text-red-600 hover:bg-red-500/10 hover:text-red-600 border-red-500/30"
+                                className="gap-1.5 h-11 text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/30"
                                 onClick={() => handleRespond('decline')}
                                 disabled={responding !== null}
                             >
@@ -162,7 +162,7 @@ function StatusBadge({ status, autoConfirmed }: { status: string; autoConfirmed?
     switch (status) {
         case 'confirmed':
             return (
-                <Badge variant="outline" className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30">
+                <Badge variant="outline" className="bg-success/10 text-success border-success/30">
                     <Check className="h-3 w-3 me-1" />
                     {autoConfirmed ? t("schedule.badgeAutoConfirmed") : t("schedule.badgeConfirmed")}
                 </Badge>
@@ -176,7 +176,7 @@ function StatusBadge({ status, autoConfirmed }: { status: string; autoConfirmed?
             )
         case 'declined':
             return (
-                <Badge variant="outline" className="bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/30">
+                <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/30">
                     <X className="h-3 w-3 me-1" />
                     {t("schedule.badgeDeclined")}
                 </Badge>

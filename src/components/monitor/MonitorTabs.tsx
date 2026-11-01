@@ -61,15 +61,15 @@ function HealthIndicator() {
         <span
             className={`inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full ${
                 stale
-                    ? "bg-yellow-500/15 text-yellow-500"
-                    : "bg-emerald-500/15 text-emerald-500"
+                    ? "bg-caution/15 text-caution"
+                    : "bg-success/15 text-success"
             }`}
         >
             <span
                 className={`size-2 rounded-full ${
                     stale
-                        ? "bg-yellow-500"
-                        : "bg-emerald-500 animate-pulse motion-reduce:animate-none"
+                        ? "bg-caution"
+                        : "bg-success animate-pulse motion-reduce:animate-none"
                 }`}
             />
             {stale ? "Stale" : "Live"}
@@ -222,7 +222,7 @@ export function MonitorTabs({
                                 ) : (
                                     <p className="text-sm text-muted-foreground py-4 text-center">
                                         No channels in your mix yet. Go to the <strong>Channels</strong> tab and tap{" "}
-                                        <Star className="w-3 h-3 inline text-yellow-500" /> to add channels.
+                                        <Star className="w-3 h-3 inline text-caution" /> to add channels.
                                     </p>
                                 )}
                             </div>
@@ -255,7 +255,7 @@ export function MonitorTabs({
                         <div className="flex items-center justify-between mb-3">
                             <h2 className="text-sm font-medium text-muted-foreground">All Channels</h2>
                             <p className="text-xs text-muted-foreground">
-                                Tap <Star className="w-3 h-3 inline text-yellow-500" /> to add to your mix
+                                Tap <Star className="w-3 h-3 inline text-caution" /> to add to your mix
                             </p>
                         </div>
                         <div className="space-y-1">
@@ -272,8 +272,8 @@ export function MonitorTabs({
                                             onClick={() => onToggleStar(send.channelIndex)}
                                             className={
                                                 isStarred
-                                                    ? "text-yellow-500"
-                                                    : "text-zinc-700 hover:text-zinc-500"
+                                                    ? "text-caution"
+                                                    : "text-muted-foreground/60 hover:text-muted-foreground"
                                             }
                                             title={isStarred ? "Remove from my mix" : "Add to my mix"}
                                         >

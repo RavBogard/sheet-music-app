@@ -140,3 +140,24 @@ export function planTurn(direction: TurnDirection, m: ScrollMetrics, target: Tur
 /** Elements inside the chart area whose own taps must never turn a page. */
 export const TAP_ZONE_IGNORE_SELECTOR =
     'button, a, input, select, textarea, label, [role="button"], [role="dialog"], [role="menu"], [contenteditable="true"], [data-tap-zone-ignore]'
+
+/** Marks a surface that hosts the tap zones (PDFOverlay's dialog root). It is
+ *  never treated as an ignore target, even though it is a `[role="dialog"]`. */
+export const TAP_ZONE_SURFACE_ATTR = "data-tap-zone-surface"
+
+/**
+ * True when a tap on `target` must not turn a page: some element BETWEEN the
+ * target and the tap-zone container (inclusive of the target, exclusive of the
+ * container) matches TAP_ZONE_IGNORE_SELECTOR. Ancestors at or above the
+ * container never count: the chart viewer itself is a `role="dialog"`, and an
+ * unscoped `closest()` would ignore every tap on the chart.
+ */
+export function isTapZoneIgnoredTarget(target: Element | null, container: Element): boolean {
+    let el: Element | null = target
+    while (el && el !== container) {
+        if (!container.contains(el)) return false
+        if (!el.hasAttribute(TAP_ZONE_SURFACE_ATTR) && el.matches(TAP_ZONE_IGNORE_SELECTOR)) return true
+        el = el.parentElement
+    }
+    return false
+}

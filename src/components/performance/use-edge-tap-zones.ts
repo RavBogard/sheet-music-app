@@ -21,7 +21,7 @@ import {
     isZoomedPastFit,
     planTurn,
     DOUBLE_TAP_MS,
-    TAP_ZONE_IGNORE_SELECTOR,
+    isTapZoneIgnoredTarget,
     type TapSample,
     type TurnDirection,
 } from "./edge-tap-zones"
@@ -124,7 +124,8 @@ export function useEdgeTapZones(options: EdgeTapZoneOptions): (el: HTMLElement |
                 ignoreGesture = true
             }
             const target = e.target instanceof Element ? e.target : null
-            if (target?.closest(TAP_ZONE_IGNORE_SELECTOR)) ignoreGesture = true
+            // Scoped to the container: the dialog around the chart doesn't count.
+            if (isTapZoneIgnoredTarget(target, container)) ignoreGesture = true
             if (optsRef.current.isSuppressed()) ignoreGesture = true
             down = { x: e.clientX, y: e.clientY, t: now, id: e.pointerId }
             msSinceScrollAtDown = now - lastScrollT

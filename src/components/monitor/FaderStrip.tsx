@@ -191,18 +191,18 @@ export function FaderStrip({ label, value, on, isMaster, onChange, onUnmuteCheck
     const showUnconfirmed = unconfirmed && phase === "idle"
     // Outcome ring on the track (color-not-alone — paired with a glyph below).
     const outcomeRing = outcome === "confirmed"
-        ? "ring-2 ring-emerald-400/60"
+        ? "ring-2 ring-success/60"
         : outcome === "rejected"
-            ? "ring-2 ring-red-400/60"
+            ? "ring-2 ring-destructive/60"
             : outcome === "reverted"
-                ? "ring-2 ring-amber-400/60"
+                ? "ring-2 ring-caution/60"
                 : "ring-0 ring-transparent"
 
     return (
         <div className={`w-full py-1.5 transition-opacity ${!on ? "opacity-50 grayscale" : ""}`}>
             <div
                 ref={sliderRef}
-                className={`relative h-14 w-full rounded-xl bg-zinc-900/80 border border-brand/10 overflow-hidden cursor-pointer touch-none select-none ring-inset transition-[box-shadow] duration-300 motion-reduce:transition-none ${outcomeRing}`}
+                className={`relative h-14 w-full rounded-xl bg-card/80 border border-brand/10 overflow-hidden cursor-pointer touch-none select-none ring-inset transition-[box-shadow] duration-300 motion-reduce:transition-none ${outcomeRing}`}
                 onPointerDown={handlePointerDown}
                 onPointerMove={handlePointerMove}
                 onPointerUp={handlePointerUp}
@@ -232,7 +232,7 @@ export function FaderStrip({ label, value, on, isMaster, onChange, onUnmuteCheck
 
                 {/* Content Overlay */}
                 <div className="absolute inset-0 flex items-center justify-between px-4 pointer-events-none">
-                    <span className={`text-sm font-semibold truncate pr-4 ${isMaster ? "text-white" : "text-zinc-200"}`}>
+                    <span className={`text-sm font-semibold truncate pr-4 ${isMaster ? "text-foreground" : "text-foreground/85"}`}>
                         {label}
                     </span>
                     <div className="flex items-center gap-2">
@@ -241,7 +241,7 @@ export function FaderStrip({ label, value, on, isMaster, onChange, onUnmuteCheck
                                 data-testid="fader-pending-cue"
                                 role="img"
                                 aria-label="Sending to the mixer…"
-                                className="w-3 h-3 text-zinc-400 animate-spin motion-reduce:animate-none"
+                                className="w-3 h-3 text-muted-foreground animate-spin motion-reduce:animate-none"
                             />
                         )}
                         {outcome === "confirmed" && (
@@ -249,7 +249,7 @@ export function FaderStrip({ label, value, on, isMaster, onChange, onUnmuteCheck
                                 data-testid="fader-confirmed-cue"
                                 role="img"
                                 aria-label="Level confirmed by the mixer"
-                                className="w-3.5 h-3.5 text-emerald-400 shrink-0"
+                                className="w-3.5 h-3.5 text-success shrink-0"
                             />
                         )}
                         {outcome === "reverted" && (
@@ -257,14 +257,14 @@ export function FaderStrip({ label, value, on, isMaster, onChange, onUnmuteCheck
                                 data-testid="fader-reverted-cue"
                                 role="img"
                                 aria-label="No confirmation — reset to the mixer's level"
-                                className="w-3.5 h-3.5 text-amber-400 shrink-0"
+                                className="w-3.5 h-3.5 text-caution shrink-0"
                             />
                         )}
                         {/* R2: the reason, in words, where there used to be silence. */}
                         {outcome === "rejected" && (
                             <span
                                 data-testid="fader-rejected-cue"
-                                className="flex items-center gap-1 text-[10px] font-medium text-red-400 shrink-0"
+                                className="flex items-center gap-1 text-[10px] font-medium text-destructive shrink-0"
                             >
                                 <Ban role="img" aria-label="Refused by the mixer" className="w-3.5 h-3.5" />
                                 {humanizeRejection(machine.rejectionReason ?? undefined)}
@@ -276,7 +276,7 @@ export function FaderStrip({ label, value, on, isMaster, onChange, onUnmuteCheck
                                 data-testid="fader-unconfirmed-cue"
                                 role="img"
                                 aria-label="Level unknown — could not read this from the desk"
-                                className="w-3 h-3 text-zinc-500 shrink-0"
+                                className="w-3 h-3 text-muted-foreground shrink-0"
                             />
                         )}
                         {showStale && (
@@ -284,15 +284,15 @@ export function FaderStrip({ label, value, on, isMaster, onChange, onUnmuteCheck
                                 data-testid="fader-stale-cue"
                                 role="img"
                                 aria-label="Level may be out of date — showing last known value"
-                                className="w-3 h-3 text-yellow-500 shrink-0"
+                                className="w-3 h-3 text-caution shrink-0"
                             />
                         )}
                         <span
                             className={`text-xs font-mono font-bold shrink-0 ${showUnconfirmed
-                                ? "text-zinc-500 italic"
+                                ? "text-muted-foreground italic"
                                 : showStale
-                                    ? "text-yellow-500/90"
-                                    : "text-zinc-400"}`}
+                                    ? "text-caution"
+                                    : "text-muted-foreground"}`}
                             title={showUnconfirmed ? "Could not read this level from the desk" : undefined}
                         >
                             {showUnconfirmed ? `~${percentage}%` : `${percentage}%`}

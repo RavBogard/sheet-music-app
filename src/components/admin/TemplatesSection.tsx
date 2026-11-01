@@ -160,7 +160,7 @@ export function TemplatesSection() {
 
             {/* Import from Setlist picker dialog */}
             {showImportPicker && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowImportPicker(false)}>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-scrim" onClick={() => setShowImportPicker(false)}>
                     <div className="bg-background border border-border rounded-lg p-6 w-full max-w-md max-h-[70vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
                         <h3 className="text-lg font-semibold mb-4">{t("admin-templates.importFromSetlist")}</h3>
                         <p className="text-sm text-muted-foreground mb-4">

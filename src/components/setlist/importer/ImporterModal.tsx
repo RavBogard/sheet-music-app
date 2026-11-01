@@ -398,7 +398,7 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
                             {/* Option 1: URL */}
                             <div className="space-y-3">
                                 <Label className="text-sm font-semibold flex items-center gap-2">
-                                    <Link className="h-4 w-4 text-blue-500" />
+                                    <Link className="h-4 w-4 text-brand" />
                                     {t("importer.sheetsUrlLabel")}
                                 </Label>
                                 <Input
@@ -457,14 +457,14 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
                             {/* Option 3: Upload a service-outline document (v70-07) */}
                             <div className="space-y-3">
                                 <Label className="text-sm font-semibold flex items-center gap-2">
-                                    <FileType2 className="h-4 w-4 text-emerald-500" />
+                                    <FileType2 className="h-4 w-4 text-success" />
                                     {t("importer.uploadDocumentLabel")}
                                 </Label>
                                 <label
                                     htmlFor="doc-file-input"
-                                    className={`border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center text-center transition-colors hover:bg-muted/30 cursor-pointer focus-within:ring-2 focus-within:ring-brand ${docFile ? 'border-emerald-500 bg-emerald-500/5' : 'border-border'}`}
+                                    className={`border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center text-center transition-colors hover:bg-muted/30 cursor-pointer focus-within:ring-2 focus-within:ring-brand ${docFile ? 'border-success bg-success/5' : 'border-border'}`}
                                 >
-                                    <UploadCloud className={`h-8 w-8 mb-3 ${docFile ? 'text-emerald-500' : 'text-muted-foreground'}`} />
+                                    <UploadCloud className={`h-8 w-8 mb-3 ${docFile ? 'text-success' : 'text-muted-foreground'}`} />
                                     <p className="text-sm font-medium" aria-live="polite">
                                         {docFile ? docFile.name : t("importer.selectDocumentFile")}
                                     </p>
@@ -502,7 +502,7 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
 
                     {step === 'processing' && (
                         <div className="flex-1 flex flex-col items-center justify-center p-12 min-h-[400px]">
-                            <Loader2 className="h-10 w-10 animate-spin text-blue-500 mb-6" />
+                            <Loader2 className="h-10 w-10 animate-spin text-brand mb-6" />
                             <h3 className="text-title text-foreground mt-4">
                                 {isProcessingDoc ? t("importer.readingDocumentHeading") : t("importer.analyzingRowsHeading")}
                             </h3>
@@ -533,11 +533,11 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
                                                     {/* Type */}
                                                     <td className="px-4 py-3">
                                                         {item.type === 'header' ? (
-                                                            <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-zinc-800 text-zinc-300 text-xs font-bold uppercase">
+                                                            <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-muted text-foreground text-xs font-bold uppercase">
                                                                 {t("importer.rowHeader")}
                                                             </span>
                                                         ) : (
-                                                            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-400">
+                                                            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-brand">
                                                                 <Music className="h-3.5 w-3.5" /> {t("importer.rowSong")}
                                                             </span>
                                                         )}
@@ -580,14 +580,14 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
                                                             <div className="flex flex-col gap-1.5">
                                                                 {/* File URL/Error */}
                                                                 {item.chartError ? (
-                                                                    <div className="flex items-start gap-1.5 text-xs text-red-500 bg-red-500/10 rounded px-2 py-1 border border-red-500/20">
+                                                                    <div className="flex items-start gap-1.5 text-xs text-destructive bg-destructive/10 rounded px-2 py-1 border border-destructive/20">
                                                                         <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
                                                                         <span className="leading-tight">
                                                                             {item.chartError === "Private Link" ? t("importer.privateDriveLink") : t("importer.invalidLink")}
                                                                         </span>
                                                                     </div>
                                                                 ) : item.chartUrl ? (
-                                                                    <div className="flex items-center gap-1.5 text-xs text-green-500 dark:text-green-400">
+                                                                    <div className="flex items-center gap-1.5 text-xs text-success">
                                                                         <CheckCircle2 className="h-3.5 w-3.5" />
                                                                         <span className="truncate max-w-[150px]" title={item.chartUrl}>{t("importer.hasDriveLink")}</span>
                                                                     </div>
@@ -650,8 +650,8 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
 
                                 <div className="space-y-2">
                                     <Label htmlFor="interview-date" className="text-sm font-semibold flex items-center gap-2">
-                                        <Calendar className="h-4 w-4 text-blue-500" />
-                                        {t("importer.serviceDateLabel")} <span className="text-red-500">*</span>
+                                        <Calendar className="h-4 w-4 text-brand" />
+                                        {t("importer.serviceDateLabel")} <span className="text-destructive">*</span>
                                     </Label>
                                     <Input
                                         id="interview-date"

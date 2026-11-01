@@ -28,10 +28,10 @@ export function FallbackError({ error, resetErrorBoundary, title: titleProp, com
     }
 
     return (
-        <div className="flex flex-col items-center justify-center p-6 text-center bg-zinc-950/50 border border-zinc-800/50 rounded-lg backdrop-blur-sm min-h-[150px]">
+        <div className="flex flex-col items-center justify-center p-6 text-center bg-card/50 border border-border rounded-lg backdrop-blur-sm min-h-[150px]">
             <AlertTriangle className="h-8 w-8 text-destructive mb-3 opacity-80" />
-            <h3 className="font-semibold text-zinc-200">{title}</h3>
-            <p className="text-sm text-zinc-500 mt-1 max-w-sm">
+            <h3 className="font-semibold text-foreground">{title}</h3>
+            <p className="text-sm text-muted-foreground mt-1 max-w-sm">
                 {(error as Error).message || t("ui.unexpectedRenderError")}
             </p>
             <Button size="sm" variant="secondary" onClick={resetErrorBoundary} className="mt-4 gap-2">

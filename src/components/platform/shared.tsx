@@ -168,7 +168,7 @@ export function ConfirmDialog({ open, onOpenChange, title, description, confirmL
                 {children}
                 <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction className="bg-destructive text-white hover:bg-destructive/90" onClick={onConfirm}>
+                    <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={onConfirm}>
                         {confirmLabel}
                     </AlertDialogAction>
                 </AlertDialogFooter>
@@ -205,9 +205,9 @@ export function StatusChip({ tone, children }: { tone: "good" | "warn" | "bad" |
         <span
             className={cn(
                 "inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium whitespace-nowrap",
-                tone === "good" && "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+                tone === "good" && "border-success/30 bg-success/10 text-success",
                 tone === "warn" && "border-caution/30 bg-caution/10 text-caution dark:text-caution",
-                tone === "bad" && "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300",
+                tone === "bad" && "border-destructive/30 bg-destructive/10 text-destructive",
                 tone === "neutral" && "border-border bg-muted text-muted-foreground",
             )}
         >

@@ -162,7 +162,7 @@ export function UpcomingSetlistCard({ setlist, onPerform, onEdit, navigatingTo, 
             <RowDate date={eventDate} />
 
             <div className="flex-1 min-w-0 relative z-10 pointer-events-none">
-                <h5 title={setlist.name} className="text-[17px] font-bold leading-snug text-foreground line-clamp-2">{setlist.name}</h5>
+                <h3 title={setlist.name} className="text-[17px] font-bold leading-snug text-foreground line-clamp-2">{setlist.name}</h3>
                 <div className="tnum flex items-center gap-x-2 gap-y-0.5 mt-0.5 flex-wrap text-sm text-muted-foreground font-medium">
                     <span>{fmt.date(eventDate, { month: 'short', day: 'numeric', year: 'numeric' }) || t("setlist.noDate")}</span>
                     <Dot />
@@ -333,7 +333,7 @@ export function SetlistCard({ setlist, onPerform, onEdit, navigatingTo, onDuplic
             <RowDate date={eventDate} muted />
 
             <div className="flex-1 min-w-0 relative z-10 pointer-events-none">
-                <h5 title={setlist.name} className="text-base font-semibold leading-snug text-foreground line-clamp-2">{setlist.name}</h5>
+                <h3 title={setlist.name} className="text-base font-semibold leading-snug text-foreground line-clamp-2">{setlist.name}</h3>
                 <SetlistInfoLine setlist={setlist} />
             </div>
 
@@ -437,9 +437,9 @@ export function PlaceholderCard({ date, onCreate }: PlaceholderCardProps) {
             </div>
 
             <div className="flex-1 min-w-0">
-                <h5 className="text-base font-semibold text-muted-foreground group-hover:text-foreground transition-colors truncate">
+                <h3 className="text-base font-semibold text-muted-foreground group-hover:text-foreground transition-colors truncate">
                     {t("org.planPlaceholder")}
-                </h5>
+                </h3>
                 <div className="tnum mt-0.5 text-sm text-muted-foreground">
                     {fmt.date(date, { weekday: 'long', month: 'short', day: 'numeric' })}
                 </div>

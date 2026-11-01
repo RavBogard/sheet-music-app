@@ -32,6 +32,7 @@ import { requestPerformCacheUrl } from "@/components/performance/perform-shell-s
 import { useAuth } from "@/lib/auth-context"
 import { useLibrary } from "@/hooks/use-library"
 import { SetlistView } from "@/components/performance/SetlistView"
+import { SetlistFamilyHead } from "@/components/family/SetlistFamilyHead"
 import { PerformanceOfflineIndicator } from "@/components/performance/PerformanceOfflineIndicator"
 import { SaveOfflineButton } from "@/components/performance/SaveOfflineButton"
 import { setChartOpen, type SaveFailureReason } from "@/lib/prefetch"
@@ -461,6 +462,8 @@ export function SetlistPerformClient({
                     {bookName && (
                         <p className="text-sm text-muted-foreground truncate">{bookName}</p>
                     )}
+                    {/* BET-6: parasha line and Beit Mitzvah card (CRC only). */}
+                    <SetlistFamilyHead setlistId={setlistId} setlist={initialSetlist as unknown as Record<string, unknown> | null} />
                 </div>
                 </div>
                 <div className="ms-auto flex flex-wrap items-center justify-end gap-1 shrink-0">

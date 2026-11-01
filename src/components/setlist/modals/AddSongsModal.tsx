@@ -141,7 +141,7 @@ export function AddSongsModal({
                             variant="outline"
                             size="sm"
                             onClick={addVisibleSongs}
-                            className="h-9 text-xs bg-blue-500/10 border-blue-500/20 text-blue-400 hover:bg-blue-500 hover:text-foreground"
+                            className="h-9 text-xs bg-brand/10 border-brand/30 text-brand hover:bg-brand/15"
                         >
                             {t("setlistModals.addAllVisible")}
                         </Button>
@@ -165,14 +165,14 @@ export function AddSongsModal({
                                                 className={cn(
                                                     "inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs transition-all border",
                                                     isSelected
-                                                        ? "bg-blue-600 border-blue-500 text-white"
+                                                        ? "bg-primary border-primary text-primary-foreground"
                                                         : "bg-muted/50 border-border/50 text-foreground hover:border-border"
                                                 )}
                                             >
                                                 {s.category === 'staple' ? (
-                                                    <Flame className="h-3 w-3 text-orange-400" />
+                                                    <Flame className="h-3 w-3 text-caution" />
                                                 ) : (
-                                                    <Sparkles className="h-3 w-3 text-emerald-400" />
+                                                    <Sparkles className="h-3 w-3 text-success" />
                                                 )}
                                                 <span className="truncate max-w-[150px]">{s.file.name}</span>
                                                 <span className="text-[10px] text-muted-foreground/60 hidden sm:inline">{
@@ -202,12 +202,12 @@ export function AddSongsModal({
                                         onClick={() => toggleFileSelection(file)}
                                         className={cn(
                                             "w-full text-start p-3 rounded-lg transition-colors flex items-center gap-3",
-                                            isSelected ? "bg-blue-600 text-foreground" : "bg-muted border border-border hover:bg-muted"
+                                            isSelected ? "bg-primary text-primary-foreground" : "bg-muted border border-border hover:bg-muted"
                                         )}
                                     >
                                         <div className={cn(
                                             "w-10 h-10 rounded-lg flex items-center justify-center",
-                                            isSelected ? "bg-white/20" : "bg-blue-500/10 text-blue-500"
+                                            isSelected ? "bg-primary-foreground/20" : "bg-brand/10 text-brand"
                                         )}>
                                             {isSelected ? <Check className="h-5 w-5" /> : <Music className="h-4 w-4" />}
                                         </div>
@@ -215,7 +215,7 @@ export function AddSongsModal({
                                             <div className="text-sm font-medium truncate">{file.name}</div>
                                             <div className={cn(
                                                 "text-[10px] uppercase tracking-wider",
-                                                isSelected ? "text-blue-100" : "text-muted-foreground"
+                                                isSelected ? "text-primary-foreground/80" : "text-muted-foreground"
                                             )}>
                                                 {file.mimeType.split('/').pop()?.replace('vnd.google-apps.', '')}
                                             </div>

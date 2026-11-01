@@ -202,10 +202,14 @@ export function SetlistRow({
                 : band.folioFrom === band.folioTo
                   ? t("setlistGrid.sectionPage", { page: band.folioFrom })
                   : t("setlistGrid.sectionPages", { from: band.folioFrom, to: band.folioTo })
+        // The band is the section's heading (WCAG 1.3.1, 2.4.6): rotor users
+        // jump section to section. A leader's band stays a button, inside the
+        // heading.
         const bandClass = cn(
-            "flex items-center gap-3 px-4 py-2.5 min-h-11 w-full text-start mt-4 first:mt-0 rounded-sm",
+            "flex items-center gap-3 px-4 py-2.5 min-h-11 w-full text-start rounded-sm",
             SECTION_BAND_CLASS[band?.hue ?? "blue"],
         )
+        const bandSpacing = "mt-4 first:mt-0"
         const headerInner = (
             <>
                 <span className="flex-1 min-w-0 truncate text-sm font-extrabold uppercase tracking-[0.08em]">
@@ -221,26 +225,28 @@ export function SetlistRow({
         if (isLeader) {
             return (
                 <>
-                    <button
-                        type="button"
-                        onClick={handleClick}
-                        data-section-hue={band?.hue}
-                        className={cn(
-                            bandClass,
-                            "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
-                        )}
-                    >
-                        {headerInner}
-                    </button>
+                    <h2 className={bandSpacing} data-testid="perform-section-heading">
+                        <button
+                            type="button"
+                            onClick={handleClick}
+                            data-section-hue={band?.hue}
+                            className={cn(
+                                bandClass,
+                                "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                            )}
+                        >
+                            {headerInner}
+                        </button>
+                    </h2>
                     {headerExtra}
                 </>
             )
         }
         return (
             <>
-                <div className={bandClass} data-section-hue={band?.hue}>
+                <h2 className={cn(bandClass, bandSpacing)} data-section-hue={band?.hue} data-testid="perform-section-heading">
                     {headerInner}
-                </div>
+                </h2>
                 {headerExtra}
             </>
         )
@@ -277,17 +283,14 @@ export function SetlistRow({
             </div>
             {track.notes && (
                 // Notes sit on their own line under the title, two lines at most.
-                // text-amber-800 in light mode (text-amber-300 fails WCAG AA
-                // contrast on the light-theme row backgrounds); dark mode keeps
-                // the vivid amber-300.
+                // The caution token: 5.9:1 on white, and it lifts in dark mode.
                 <p className="text-sm font-medium text-caution line-clamp-2 break-words mt-0.5">
                     {track.notes}
                 </p>
             )}
             {hasSecondLine && (
-                // text-blue-700 in light mode (text-blue-400 fails WCAG AA
-                // contrast on the light-theme row backgrounds — axe color-
-                // contrast, 2.18:1); dark mode keeps the lighter blue-400.
+                // The brand token keeps AA contrast on the row in both themes
+                // (a pale blue here measured 2.18:1 on light rows).
                 <p className="text-sm font-medium text-brand truncate mt-0.5">
                     {track.leadMusician || track.performer}
                 </p>
@@ -341,6 +344,9 @@ export function SetlistRow({
     // tinted row with an inset ring; `data-current` carries it for tests.
     const rowClasses = cn(
         "flex items-center px-4 py-3.5 border-b border-rule transition-colors",
+        // A strong keyboard focus mark, readable at arm's length (WCAG 2.4.7):
+        // an outline, so it never fights the current-position ring.
+        "outline-none focus-visible:outline-3 focus-visible:outline-solid focus-visible:outline-ring focus-visible:-outline-offset-3",
         isCurrentPosition ? "bg-accent ring-2 ring-inset ring-brand" : "bg-card",
         // Passive non-song labels are de-emphasized via the muted *title color*
         // (songContent's text-muted-foreground span), NOT row opacity. opacity-60

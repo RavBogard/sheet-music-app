@@ -274,7 +274,7 @@ export function SavedMixControls({ busIndex, compact = false, disabled = false }
                                                             {levelText(c.after.on, c.after.level, t("monitor.recallMuted"))}
                                                         </span>
                                                         {c.heldAtLimit && (
-                                                            <span className="ms-2 text-amber-600 dark:text-amber-400">
+                                                            <span className="ms-2 text-caution">
                                                                 {t("monitor.recallHeld")}
                                                             </span>
                                                         )}
@@ -285,14 +285,14 @@ export function SavedMixControls({ busIndex, compact = false, disabled = false }
                                     </>
                                 )}
                                 {preview && preview.unmatched.length > 0 && (
-                                    <p className="text-sm text-amber-700 dark:text-amber-400">
+                                    <p className="text-sm text-caution">
                                         {t("monitor.recallUnmatched", {
                                             names: preview.unmatched.map((u) => u.channelName || `${u.channelIndex}`).join(", "),
                                         })}
                                     </p>
                                 )}
                                 {partial && (
-                                    <p data-testid="recall-partial" role="alert" className="text-sm font-medium text-amber-700 dark:text-amber-400">
+                                    <p data-testid="recall-partial" role="alert" className="text-sm font-medium text-caution">
                                         {t("monitor.recallPartial")}
                                     </p>
                                 )}

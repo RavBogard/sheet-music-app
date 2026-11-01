@@ -17,6 +17,8 @@ import { useI18n, useReadingDirection } from "@/i18n/client"
 import { ChartNoteStrip } from "./ChartNoteStrip"
 import { useEdgeTapZones } from "./use-edge-tap-zones"
 import { useDeviceTranspositionPrefs } from "@/hooks/use-musician-transposition"
+import { useModalSurface } from "./use-modal-surface"
+import { useChartKeyScroll } from "./use-chart-key-scroll"
 // Shared import sites with the Perform warm-up: same chunks offline (PR #48 S1).
 import {
     loadAudioViewer,
@@ -371,18 +373,39 @@ export function PDFOverlay({
     const { isRtl: readingRtl } = useReadingDirection()
     const suppressRef = useRef({ menuOpen, showPrintModal })
     useEffect(() => { suppressRef.current = { menuOpen, showPrintModal } }, [menuOpen, showPrintModal])
-    const chartScrollRef = useEdgeTapZones({
+    const isChartSuppressed = () =>
+        suppressRef.current.menuOpen ||
+        suppressRef.current.showPrintModal ||
+        useMusicStore.getState().isEditingChords ||
+        (typeof document !== "undefined" &&
+            document.querySelector('[role="dialog"][data-state="open"], [role="alertdialog"][data-state="open"]') !== null)
+    const edgeTapRef = useEdgeTapZones({
         enabled: tapZonesEnabled,
         isRtl: readingRtl,
         viewerKind,
-        isSuppressed: () =>
-            suppressRef.current.menuOpen ||
-            suppressRef.current.showPrintModal ||
-            useMusicStore.getState().isEditingChords ||
-            (typeof document !== "undefined" &&
-                document.querySelector('[role="dialog"][data-state="open"], [role="alertdialog"][data-state="open"]') !== null),
+        isSuppressed: isChartSuppressed,
         onNextChart: () => { useMusicStore.getState().nextSong() },
         onPreviousChart: () => { useMusicStore.getState().prevSong() },
+    })
+
+    // The overlay is a modal dialog for keyboard and screen-reader users: the
+    // setlist underneath is inert while it is open, focus lands on the chart
+    // and goes back to the row that opened it on close. Pointer input inside
+    // (tap zones, the leader long-press) is unaffected.
+    const overlayRootRef = useRef<HTMLDivElement>(null)
+    const chartContainerRef = useRef<HTMLDivElement | null>(null)
+    const chartScrollRef = useCallback((el: HTMLDivElement | null) => {
+        chartContainerRef.current = el
+        edgeTapRef(el)
+    }, [edgeTapRef])
+    useModalSurface(overlayRootRef, { initialFocusRef: chartContainerRef })
+    // Arrow keys, Page Up/Down and Space scroll within the current chart
+    // (never to another chart).
+    useChartKeyScroll({
+        getContainer: () => chartContainerRef.current,
+        getSurface: () => overlayRootRef.current,
+        viewerKind,
+        isSuppressed: isChartSuppressed,
     })
 
     // Escape closes the open child modal first, then the overlay itself.
@@ -492,7 +515,16 @@ export function PDFOverlay({
     )
 
     return (
-        <div className="fixed inset-0 z-50 bg-background flex flex-col">
+        <div
+            ref={overlayRootRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label={t("perform.overlay.dialogLabel", { songName: track.title ?? "" })}
+            tabIndex={-1}
+            data-testid="chart-overlay"
+            data-tap-zone-surface=""
+            className="fixed inset-0 z-50 bg-background flex flex-col outline-none"
+        >
             {/* PERF-11: the row's note and Vocal Lead, one line, above the chart. */}
             <ChartNoteStrip key={track.id ?? track.fileId} notes={track.notes} vocalLead={track.leadMusician} />
             {/* Content area -- branches on file type */}
@@ -507,7 +539,10 @@ export function PDFOverlay({
                     {({ handlers }) => (
                         <div
                             ref={chartScrollRef}
-                            className="flex-1 overflow-auto pb-0 relative"
+                            tabIndex={0}
+                            aria-label={t("perform.overlay.scrollRegion")}
+                            data-testid="chart-scroll-region"
+                            className="flex-1 overflow-auto pb-0 relative outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                             {...chartDir}
                             data-live-director-surface="pdf-overlay"
                             onPointerDown={handlers.onPointerDown}
@@ -526,7 +561,14 @@ export function PDFOverlay({
                     )}
                 </LiveDirectorGesture>
             ) : (
-                <div ref={chartScrollRef} className="flex-1 overflow-auto pb-0 relative" {...chartDir}>
+                <div
+                    ref={chartScrollRef}
+                    tabIndex={0}
+                    aria-label={t("perform.overlay.scrollRegion")}
+                    data-testid="chart-scroll-region"
+                    className="flex-1 overflow-auto pb-0 relative outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                    {...chartDir}
+                >
                     {chartSurface}
                     {showTempoFlash && track.bpm && track.bpm > 0 && (
                         <TempoFlash bpm={track.bpm} onDismiss={() => setShowTempoFlash(false)} />

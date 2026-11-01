@@ -1,4 +1,5 @@
 import { storedClassFor } from "@/lib/history/classify"
+import { computeWeek, weekFields } from "@/lib/family/week-key"
 import crypto from "crypto"
 import { FieldValue } from "firebase-admin/firestore"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
@@ -1185,6 +1186,11 @@ export async function writeSetlistFromTemplateRows(
 
     if (eventDate !== undefined && eventDate !== null) {
         setlistPayload.eventDate = toTimestamp(eventDate, org)
+    }
+    // BET-6: the advisory week key for the new date (CRC only; absent when unknown).
+    if (setlistPayload.eventDate !== undefined) {
+        const week = await computeWeek(setlistPayload.eventDate, org)
+        if (week) Object.assign(setlistPayload, weekFields(week))
     }
 
     if (cloneBook) setlistPayload.book = cloneBook
