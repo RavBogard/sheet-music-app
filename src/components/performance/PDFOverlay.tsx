@@ -514,6 +514,7 @@ export function PDFOverlay({
             aria-label={t("perform.overlay.dialogLabel", { songName: track.title ?? "" })}
             tabIndex={-1}
             data-testid="chart-overlay"
+            data-tap-zone-surface=""
             className="fixed inset-0 z-50 bg-background flex flex-col outline-none"
         >
             {/* PERF-11: the row's note and Vocal Lead, one line, above the chart. */}
