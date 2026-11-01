@@ -1,5 +1,6 @@
 import "server-only"
 
+import { familyWeekFields, type Occasion } from "@/lib/family/week-key"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 import { rowOrg } from "@/lib/mcp/org-context"
@@ -49,6 +50,10 @@ export interface ReadBackSetlistResult {
     vsLast: VsLast | null
     /** BET-5: each set's running length; for band tenants, and for any setlist with a timed row. */
     setTotals?: SetTotal[]
+    /** BET-6: the advisory family week key (CRC only; absent when unknown or stale). */
+    weekKey?: string
+    parasha?: { slug: string; name: string }
+    occasion?: Occasion
 }
 
 function str(v: unknown): string | null {
@@ -182,7 +187,7 @@ export async function readBackSetlistTool(
             openItems: readOpenItems(data),
             now: new Date(),
         })
-        return { ok: true, setlistId, readback, vsLast, ...(totals ? { setTotals: totals } : {}) }
+        return { ok: true, setlistId, readback, vsLast, ...(totals ? { setTotals: totals } : {}), ...familyWeekFields(data, org) }
     } catch (error) {
         logger.warn("read_back_setlist failed:", error)
         return richError(

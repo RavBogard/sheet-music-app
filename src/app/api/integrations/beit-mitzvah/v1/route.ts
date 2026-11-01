@@ -1,7 +1,7 @@
 import { getFirestore, initAdmin } from "@/lib/firebase-admin"
 import { bridgeRequest } from "@/lib/beit-mitzvah/contract"
 import { authorizeService, boundedJSON, errorResponse, privateHeaders } from "@/lib/beit-mitzvah/access"
-import { BridgeError, ensureService, projection } from "@/lib/beit-mitzvah/service"
+import { BridgeError, ensureService, projection, saveDetails } from "@/lib/beit-mitzvah/service"
 import { resourceURL } from "@/lib/beit-mitzvah/resources"
 
 export const runtime = "nodejs"
@@ -15,6 +15,7 @@ export async function POST(request: Request): Promise<Response> {
         const db = getFirestore()
         const body = parsed.data
         if (body.operation === "resource") return Response.json(await resourceURL(db, body.ceremonyId, body.rowId, body.resourceId), { headers: privateHeaders })
+        if (body.operation === "details") await saveDetails(db, body) // an older send is a no-op ack
         if (body.operation === "ensure") {
             const ensured = await ensureService(db, body)
             if (ensured.status === "ambiguous") return Response.json(ensured, { headers: privateHeaders })

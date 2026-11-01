@@ -462,6 +462,10 @@ describe("forbidden-key guard", () => {
             "publishedAt",
             "readerBook",
             "version",
+            // BET-6 (2026-10-31): advisory family week keys, names only.
+            "weekKey",
+            "parasha",
+            "occasion",
         ]
         for (const s of doc.services) {
             for (const k of Object.keys(s)) expect(allowed).toContain(k)

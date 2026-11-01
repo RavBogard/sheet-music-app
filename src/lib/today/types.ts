@@ -62,6 +62,16 @@ export interface TodayService {
     }
     /** The setlist's `version` at emit time. */
     version: number
+    /**
+     * BET-6 (additive, advisory, CRC only): the family week key, e.g.
+     * `5787-bereshit` or `5787-sukkot-1`. The Haftarah and Overlays sides join
+     * on it. Omitted when unknown.
+     */
+    weekKey?: string
+    /** BET-6: the weekly portion's slug and name (names only, never text). Omitted on a holiday week. */
+    parasha?: { slug: string; name: string }
+    /** BET-6: "bnei-mitzvah" | "holiday" | "guest" | "regular". Omitted when unclassifiable. */
+    occasion?: "bnei-mitzvah" | "holiday" | "guest" | "regular"
 }
 
 export interface TodayDoc {

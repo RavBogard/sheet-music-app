@@ -3,6 +3,7 @@ import { dayInZone, orgTimeZone } from "@/lib/org/locale"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 import { readerBookFor } from "./reader-book"
+import { familyWeekFields, isFamilyOrg, type StoredWeek } from "@/lib/family/week-key"
 import {
     DEFAULT_STREAM_LEAD_MINUTES,
     TODAY_WINDOW_DAYS,
@@ -36,6 +37,17 @@ export interface TodaySetlistInput {
     version?: unknown
     /** First `liturgyRef.folio` in track order, resolved by the caller. */
     startFolio?: number | null
+    /** BET-6: stored family week fields and the classification inputs for `occasion`. */
+    weekKey?: unknown
+    weekKeyDay?: unknown
+    parashaName?: unknown
+    occasion?: unknown
+    ceremonyId?: unknown
+    serviceType?: unknown
+    rabbiSlot?: unknown
+    special?: unknown
+    /** BET-6: a week computed live by the caller when the stored one is missing or stale. */
+    liveWeek?: StoredWeek | null
 }
 
 export interface BuildTodayInput {
@@ -149,6 +161,17 @@ export function buildTodayDoc(input: BuildTodayInput): TodayDoc {
         }
         const rabbi = asString(row.rabbi)
         if (rabbi) service.rabbi = rabbi
+        // BET-6: additive family keys; nothing for any tenant but CRC.
+        const org = input.org ?? DEFAULT_ORG_ID
+        const family = familyWeekFields(row as unknown as Record<string, unknown>, org)
+        const week = family.weekKey
+            ? { weekKey: family.weekKey, parasha: family.parasha ?? null }
+            : isFamilyOrg(org) ? row.liveWeek ?? null : null
+        if (week) {
+            service.weekKey = week.weekKey
+            if (week.parasha) service.parasha = { slug: week.parasha.slug, name: week.parasha.name }
+        }
+        if (family.occasion) service.occasion = family.occasion
 
         const streamUrl = asString(input.stream?.url)
         if (streamUrl) {

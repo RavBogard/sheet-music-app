@@ -1,4 +1,5 @@
 import { storedClassFor, storedRabbiSlot } from "@/lib/history/classify"
+import { computeWeek, weekFields } from "@/lib/family/week-key"
 import crypto from "crypto"
 import { FieldValue } from "firebase-admin/firestore"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
@@ -289,6 +290,11 @@ export async function cloneSetlist(
             )
         }
         setlistPayload.eventDate = toTimestamp(args.newEventDate, org)
+    }
+    // BET-6: the advisory week key for the new date (CRC only; absent when unknown).
+    if (setlistPayload.eventDate !== undefined) {
+        const week = await computeWeek(setlistPayload.eventDate, org)
+        if (week) Object.assign(setlistPayload, weekFields(week))
     }
 
     // Template + rabbi travel with the clone — they're attributes of the

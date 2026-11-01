@@ -25,6 +25,7 @@ import { parseEventDate as toTimestamp } from "@/lib/parse-event-date"
 import { deriveSetlistCounts } from "@/lib/setlist-derived-counts"
 import type { GigPatch } from "@/lib/gig/model"
 import { isTestSetlist, type Setlist } from "@/types/models"
+import { computeWeek, isFamilyOrg, weekFields } from "@/lib/family/week-key"
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -207,6 +208,11 @@ export async function createSetlistServerSide(
     if (input.book !== undefined) {
         setlistPayload.book = input.book
     }
+    // BET-6: the advisory week key (CRC only; absent when Hebcal is unreachable).
+    if (input.eventDate !== undefined) {
+        const week = await computeWeek(setlistPayload.eventDate, orgId)
+        if (week) Object.assign(setlistPayload, weekFields(week))
+    }
 
     // One atomic batch: the parent setlists/{id} doc + every top-level
     // tracks/{id} seed. Either the whole setlist commits or nothing does.
@@ -317,6 +323,13 @@ export async function updateSetlistServerSide(
     }
     if (patch.eventDate !== undefined) {
         mapped.eventDate = toTimestamp(patch.eventDate, org)
+        // BET-6: a moved date re-keys the week; an unknown week clears the old
+        // key rather than leaving a wrong one.
+        if (isFamilyOrg(org)) {
+            const week = await computeWeek(mapped.eventDate, org)
+            if (week) Object.assign(mapped, weekFields(week))
+            else Object.assign(mapped, { weekKey: FieldValue.delete(), weekKeyDay: FieldValue.delete(), parashaName: FieldValue.delete() })
+        }
     }
     mapped.updatedAt = FieldValue.serverTimestamp()
     mapped.version = FieldValue.increment(1)

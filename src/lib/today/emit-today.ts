@@ -8,6 +8,7 @@ import { logger } from "@/lib/logger"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 import { buildTodayDoc, type TodaySetlistInput } from "./build-today"
+import { computeWeek, isFamilyOrg, storedWeek, type StoredWeek } from "@/lib/family/week-key"
 import { readServicesFromConfig, readStreamFromConfig } from "./config"
 import { TODAY_CACHE_CONTROL, todayStoragePath, type TodayDoc } from "./types"
 
@@ -105,8 +106,22 @@ export async function buildToday(
         [...wanted].map(async (id) => folios.set(id, await startFolioFor(db, id))),
     )
 
+    // BET-6: a week the browser editor's date edit left stale (or never had)
+    // is computed live for the handful of services in the window. Fail-soft.
+    const live = new Map<string, StoredWeek | null>()
+    if (isFamilyOrg(org)) {
+        await Promise.all(
+            setlists
+                .filter((s) => wanted.has(s.id) && !storedWeek(s as unknown as Record<string, unknown>, org))
+                .map(async (s) => {
+                    const week = await computeWeek(s.eventDate, org)
+                    live.set(s.id, week ? { weekKey: week.weekKey, parasha: week.parasha } : null)
+                }),
+        )
+    }
+
     return buildTodayDoc({
-        setlists: setlists.map((s) => ({ ...s, startFolio: folios.get(s.id) ?? null })),
+        setlists: setlists.map((s) => ({ ...s, startFolio: folios.get(s.id) ?? null, liveWeek: live.get(s.id) ?? null })),
         services: readServicesFromConfig(config as Record<string, unknown> | null),
         stream: readStreamFromConfig(config as Record<string, unknown> | null),
         now,

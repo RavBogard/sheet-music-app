@@ -47,6 +47,7 @@ import {
     dismissFailure as dismissFailureTool,
 } from "./library-review"
 import { backfillSetlistTestFlag } from "./setlist-hygiene"
+import { backfillWeekKeys } from "./week-key-backfill"
 import {
     createSetlist,
     updateSetlist,
@@ -2546,6 +2547,20 @@ export function registerWriteTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await backfillSetlistTestFlag(uidFrom(extra), args, orgFrom(extra))),
+    )
+
+    server.registerTool(
+        "backfill_week_keys",
+        {
+            description:
+                "Admin-only ops pass (BET-6): stamps the advisory family week key (`weekKey`, e.g. `5787-bereshit` or `5787-sukkot-1`, with `weekKeyDay` and `parashaName`) on every dated CRC setlist that lacks one or whose date moved since it was keyed. Computed from Hebcal; a week Hebcal cannot answer is listed in `unresolved` and left alone. Writes only those three fields: no version bump, no row touched. CRC only; other tenants get an empty report. Defaults `dryRun:true` (full plan, no writes); a real run needs `dryRun:false, force:true`, and without `force` returns the `force_required` envelope carrying the plan. Returns `{scanned, eligible, alreadyKeyed, rowsChanged, unresolved, deltas, deltasTruncated, dryRun}`; `deltas` is capped at 500.",
+            inputSchema: {
+                dryRun: z.boolean().optional().describe("When true (default), returns the plan only. F-05."),
+                force: z.boolean().optional().describe("Required for real writes, with `dryRun: false`."),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await backfillWeekKeys(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(

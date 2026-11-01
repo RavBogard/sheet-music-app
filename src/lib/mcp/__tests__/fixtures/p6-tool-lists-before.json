@@ -243,6 +243,7 @@
     "backfill_library_setting_parts",
     "backfill_setlist_test_flag",
     "backfill_track_mimetype",
+    "backfill_week_keys",
     "bridge_clear_acks",
     "bridge_clear_pending_commands",
     "bridge_get_log",

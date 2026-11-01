@@ -11,6 +11,7 @@ import { readOpenItems } from "./open-items"
 import { hidesLiturgicalFields } from "@/lib/org/vocab"
 import { readGig } from "@/lib/gig/model"
 import { anyDuration, setTotals } from "@/lib/gig/set-totals"
+import { familyWeekFields, type Occasion } from "@/lib/family/week-key"
 
 /**
  * MCP read tools for setlists. Plain async functions wrapping the existing
@@ -48,6 +49,10 @@ interface SetlistSummary {
      *  lastSeenVersion on subsequent writes for optimistic concurrency
      *  (Plan 02 enforces; Plan 01 stamps only). */
     version?: number
+    /** BET-6: the advisory family week key (CRC only; absent when unknown or stale). */
+    weekKey?: string
+    /** BET-6: the service's occasion (CRC only). */
+    occasion?: Occasion
 }
 
 // Cycle-2 REG-001b: every error returns the canonical rich envelope.
@@ -133,6 +138,9 @@ export async function listSetlists(
             }
             if (typeof row.songCount === "number") summary.songCount = row.songCount
             if (typeof row.version === "number") summary.version = row.version
+            const family = familyWeekFields(row, org)
+            if (family.weekKey) summary.weekKey = family.weekKey
+            if (family.occasion) summary.occasion = family.occasion
             return summary
         })
 }
@@ -234,6 +242,11 @@ export async function getSetlist(
         lastModifiedAt: setlistLastModifiedAt,
         // Setlist memory release 3: unresolved open items only, oldest first.
         openItems: readOpenItems(data),
+        // BET-6: the stored key only when still valid for the date; stale reads as absent.
+        weekKey: undefined,
+        weekKeyDay: undefined,
+        parashaName: undefined,
+        ...familyWeekFields(data, org),
         tracks: trackViews,
         ...(totals ? { setTotals: totals } : {}),
     }
