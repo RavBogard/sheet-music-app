@@ -6,6 +6,11 @@
  *   npx vite-node -c vitest.config.ts scripts/ops/multitenant/seed-org-configs.ts            # dry run: prints the difference
  *   npx vite-node -c vitest.config.ts scripts/ops/multitenant/seed-org-configs.ts -- --apply # writes; saves a manifest
  *   npx vite-node -c vitest.config.ts scripts/ops/multitenant/seed-org-configs.ts -- --undo <manifest.json>
+ *   npx vite-node -c vitest.config.ts scripts/ops/multitenant/seed-org-configs.ts -- --check  # CI drift check
+ *
+ * --check is a dry run that prints field NAMES only (never values: CI logs of a
+ * public repo are public) and exits 3 when any field differs. With
+ * DRIFT_REPORT_FILE set it also writes the differing fields there as JSON.
  *
  * Each config field is written whole (update, not a deep merge), so a removed
  * override does not linger. Fields the config does not own (domain, createdAt
@@ -23,7 +28,8 @@ import { OrgConfigSchema } from "@/lib/org/config-schema"
 
 const PROJECT_ID = process.env.FIREBASE_PROJECT_ID || "crcmusiccharts"
 const args = process.argv.slice(2).filter((a) => a !== "--")
-const APPLY = args.includes("--apply")
+const CHECK = args.includes("--check")
+const APPLY = args.includes("--apply") && !CHECK
 const UNDO = args.includes("--undo") ? args[args.indexOf("--undo") + 1] : null
 const MANIFEST_DIR = join(process.cwd(), "docs/planning/2026-10-12-multitenant/manifests")
 
@@ -82,6 +88,7 @@ async function seed() {
         docs: {},
     }
     let changes = 0
+    const drift: Record<string, string[]> = {}
     const pending: Array<{ id: string; update: Record<string, unknown> }> = []
     for (const id of CODE_ORG_IDS) {
         const desired = OrgConfigSchema.parse(codeOrgConfig(id))
@@ -94,12 +101,13 @@ async function seed() {
         }
         const keys = Object.keys(update)
         console.log(`orgs/${id}: ${keys.length ? `${keys.length} field(s) differ: ${keys.join(", ")}` : "up to date"}`)
-        for (const k of keys) {
+        for (const k of CHECK ? [] : keys) {
             console.log(`  ${k}:
     now:  ${JSON.stringify(current[k] ?? null).slice(0, 400)}
     want: ${JSON.stringify(update[k]).slice(0, 400)}`)
         }
         if (keys.length) pending.push({ id, update })
+        if (keys.length) drift[id] = keys
         changes += keys.length
     }
     if (APPLY && changes) {
@@ -115,6 +123,12 @@ async function seed() {
                 { mergeFields: [...keys, "configUpdatedAt"] },
             )
         }
+    }
+    if (CHECK) {
+        if (process.env.DRIFT_REPORT_FILE) writeFileSync(process.env.DRIFT_REPORT_FILE, JSON.stringify(drift, null, 2) + "\n")
+        console.log(changes ? `drift: ${changes} field(s) differ between code and Firestore` : "no drift")
+        if (changes) process.exitCode = 3
+        return
     }
     console.log(APPLY ? `applied ${changes} field change(s)` : `dry run: ${changes} field change(s) would be written (pass --apply)`)
 }
