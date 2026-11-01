@@ -13,7 +13,8 @@ import { cleanLabel, computeSlotTier, USUAL_WINDOW, type Tier } from "./tiers"
  * Bet 1 (MCP-03): a profile is a cache, re-learned on every draft. The running
  * order is the modal order of the profile's last LEARN_WINDOW regular services
  * (never a special week; B'nei Mitzvah is its own service type, so it never
- * feeds a regular profile): a row is in the order when it is in at least half
+ * feeds a regular profile). With fewer than 3 regular services the order is simply the
+ * newest one's. Otherwise a row is in the order when it is in at least half
  * of them, and two rows keep the order most of those services gave them.
  *
  * A song's place in the order is its moment, else its position (the n-th
@@ -341,6 +342,9 @@ function sameSongLead(a: string | null | undefined, b: string | null | undefined
  */
 export function modalOrder(services: string[][]): string[] {
     if (services.length === 0) return []
+    // Fewer than 3 regular services is too little to call a mode: the newest one speaks, whole,
+    // rather than a union of every row either service had.
+    if (services.length < 3) return [...new Set(services[0])]
     const need = Math.ceil(services.length / 2)
     const count = new Map<string, number>()
     const firstSeen: string[] = []

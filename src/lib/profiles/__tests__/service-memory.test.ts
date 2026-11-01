@@ -88,6 +88,23 @@ describe("modalOrder", () => {
     it("one service is its own order", () => {
         expect(modalOrder([["h", "s1", "s2"]])).toEqual(["h", "s1", "s2"])
     })
+
+    it("with fewer than 3 services that differ, the newest one is the order (no union)", () => {
+        expect(modalOrder([["a", "b", "c"], ["a", "x", "y", "z"]])).toEqual(["a", "b", "c"])
+    })
+})
+
+describe("learned order with only 2 regular services", () => {
+    it("is the most recent service's rows, not both services' rows together", () => {
+        const two = [
+            setlist("n", "2026-10-17", [head(0), barchu(1)]),
+            setlist("o", "2026-10-10", [head(0), track(1, { title: "Fiddley Tune", fileId: "fiddle" }), mi(2, "mi-ana", "Mi Chamocha 6-8")]),
+        ]
+        const r = seedProfile(DANIEL_SAT, two, library, new Date("2026-11-01T00:00:00Z"), { before: "2026-11-07" })
+        expect(r.learnedFrom?.count).toBe(2)
+        expect(r.tracks).toHaveLength(2)
+        expect(r.tracks.map((t) => t.title).join("|")).not.toMatch(/Fiddley|Mi Chamocha/i)
+    })
 })
 
 describe("learned profile (MCP-02, -03, -14)", () => {
