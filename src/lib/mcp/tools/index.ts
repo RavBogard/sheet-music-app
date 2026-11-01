@@ -157,6 +157,7 @@ import { listBooksTool, lookupBookPageTool } from "./books"
 import { getSongHistoryTool, exportSetlistsTool } from "./history"
 import { setStandingChoiceTool, clearStandingChoiceTool } from "./standing"
 import { setPartPresetTool, listPartPresetsTool } from "./part-presets"
+import { listRecordingsTool, updateRecordingTool } from "./recordings"
 import { draftServiceTool, createSetlistFromDraftTool } from "./draft-service"
 import { addOpenItemTool, resolveOpenItemTool } from "./open-items"
 import { readBackSetlistTool } from "./read-back-setlist"
@@ -876,6 +877,41 @@ export function registerReadTools(server: McpServer): void {
     )
 
     server.registerTool(
+        "list_recordings",
+        {
+            description:
+                "List this congregation's recordings (audio takes of songs, cut from service recordings or uploaded). Each song shows musicians ONE featured take; `featured: true` marks it. Filter by `songId` (a chart id), `setlistId` (every song on the setlist, in row order) or `serviceDate` (YYYY-MM-DD of the service a clip was cut from). `status` defaults to 'live'; pass 'held' (low-confidence clips awaiting review, never shown to musicians) or 'all' for the spot-check list, held takes first. `url` is a public link that plays the take; you cannot play audio yourself, so give the link. Tenant-scoped. Returns `{ok, recordings:[{id, songId, songTitle, title, status, featured, source?, url}], counts:{live, held, hidden}, truncated?}`.",
+            inputSchema: {
+                songId: z.string().optional().describe("Only this chart's takes."),
+                setlistId: z.string().optional().describe("Takes of every song on this setlist, in row order."),
+                serviceDate: z.string().optional().describe("Only clips cut from the service on this date (YYYY-MM-DD)."),
+                status: z.enum(["live", "held", "hidden", "all"]).optional().describe("Default 'live'. 'held' or 'all' for the spot-check list."),
+                limit: z.number().int().min(1).max(500).optional().describe("Default 100, max 500."),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await listRecordingsTool(uidFrom(extra), args, orgFrom(extra))),
+    )
+
+    server.registerTool(
+        "update_recording",
+        {
+            description:
+                "Change one recording: `featured: true` makes it the song's one featured take (the others are un-featured); `status: 'hidden'` hides a wrong clip, `status: 'live'` brings a hidden or held one back; `songId` reattaches it to the right chart (needs `force: true` on a real write, and moves `featured` off). Use when the author says a clip is wrong or another take is better; never pick a take on your own judgment. Admin / band_leader. Tenant-scoped. F-05: `dryRun` defaults true and writes nothing. Returns `{ok, dryRun, applied, recordingId, before:{songId, status, featured}, after, unset?}`.",
+            inputSchema: {
+                recordingId: z.string().min(1).describe("From list_recordings."),
+                featured: z.literal(true).optional().describe("Make this the song's featured take."),
+                status: z.enum(["live", "hidden"]).optional().describe("'hidden' hides a wrong clip; 'live' restores one."),
+                songId: z.string().optional().describe("Reattach to this chart id (from search_library). Real write needs force: true."),
+                dryRun: z.boolean().optional().describe("When true (default), report without writing. F-05 standing rule: dryRun does NOT require force."),
+                force: z.boolean().optional().describe("Required for a real reattach (songId). Pair with `dryRun: false`."),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await updateRecordingTool(uidFrom(extra), args, orgFrom(extra))),
+    )
+
+    server.registerTool(
         "clear_standing_choice",
         {
             description:
@@ -1043,7 +1079,7 @@ export function registerReadTools(server: McpServer): void {
         "read_back_setlist",
         {
             description:
-                "Read an existing setlist back the way it should be said aloud: exceptions first, then one line for everything else, plus open items. Use after any change and whenever the author asks 'what's on Saturday?'. When the setlist stores its service type (and rabbi, where that changes the music) and the profile exists, rows are compared with their standard or usual; otherwise it lists only rows with no chart and open items. A book other than the profile's is said. Say `readback.text`; show `readback.exceptions` as a short list. `vsLast` lists, per slot, what the profile's last regular service before this one had (recall only). Read-only. Tenant-scoped. Returns `{ok, setlistId, readback:{headline, exceptions:[{kind, index, text, voice?}], rest, text}, vsLast, setTotals?}`. `setTotals` (a band's sets, or any setlist with timed rows) is one entry per set — the rows between header rows — with `seconds`, `untimed` (songs with no length) and, when the gig sets one, `targetMinutes` and `overUnderSec`.",
+                "Read an existing setlist back the way it should be said aloud: exceptions first, then one line for everything else, plus open items. Use after any change and whenever the author asks 'what's on Saturday?'. When the setlist stores its service type (and rabbi, where that changes the music) and the profile exists, rows are compared with their standard or usual; otherwise it lists only rows with no chart and open items. A book other than the profile's is said. Say `readback.text`; show `readback.exceptions` as a short list. `vsLast` lists, per slot, what the profile's last regular service before this one had (recall only). Read-only. Tenant-scoped. Returns `{ok, setlistId, readback:{headline, exceptions:[{kind, index, text, voice?}], rest, text}, vsLast, recordings, setTotals?}`. `recordings` lists each song row (`index`, `trackId`, `title`) with its featured take `recording` ({id, title, url}) or null; mention songs that have one. `setTotals` (a band's sets, or any setlist with timed rows) is one entry per set — the rows between header rows — with `seconds`, `untimed` (songs with no length) and, when the gig sets one, `targetMinutes` and `overUnderSec`.",
             inputSchema: {
                 setlistId: z.string().min(1).describe("Setlist id."),
             },
@@ -1144,7 +1180,7 @@ export function registerReadTools(server: McpServer): void {
         "get_song",
         {
             description:
-                "Get one song's metadata by id — title, key, BPM, vocal lead. Returns metadata only, never chart PDF bytes.",
+                "Get one song's metadata by id — title, key, BPM, vocal lead, and `recording` ({id, title, url}: the song's featured take, a public link) or null. Returns metadata only, never chart PDF bytes.",
             inputSchema: {
                 id: z.string().min(1).describe("Song id"),
             },

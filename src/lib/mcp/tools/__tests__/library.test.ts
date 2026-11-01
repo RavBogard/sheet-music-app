@@ -232,6 +232,8 @@ describe("getSong", () => {
             aiSuggestion: null,
             retryQueued: false,
         })
+        // Recordings 2026-11: the featured-take field is always present (null when none).
+        expect(r).toHaveProperty("recording", null)
     })
 
     it("returns null for a missing song", async () => {

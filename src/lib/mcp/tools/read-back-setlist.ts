@@ -24,6 +24,8 @@ import { hidesLiturgicalFields } from "@/lib/org/vocab"
 import { readGig } from "@/lib/gig/model"
 import { anyDuration, setTotals, type SetTotal } from "@/lib/gig/set-totals"
 import { findProfileTemplateFor } from "./service-profiles"
+import { featuredLinksFor } from "./recordings"
+import type { FeaturedRecording } from "@/lib/recordings/featured"
 
 /**
  * Setlist memory, release 3 — `read_back_setlist`: an existing setlist said
@@ -54,6 +56,11 @@ export interface ReadBackSetlistResult {
     weekKey?: string
     parasha?: { slug: string; name: string }
     occasion?: Occasion
+    /**
+     * Recordings 2026-11: one entry per song row, in row order, with the song's
+     * featured take ({id, title, url}) or null. Say when a song has a recording.
+     */
+    recordings: Array<{ index: number; trackId: string; title: string; recording: FeaturedRecording | null }>
 }
 
 function str(v: unknown): string | null {
@@ -125,6 +132,22 @@ export async function readBackSetlistTool(
         }))
         const totals =
             hidesLiturgicalFields(org) || anyDuration(totalsRows) ? setTotals(totalsRows, readGig(data.gig)) : undefined
+        // Recordings 2026-11: each song row's featured take (this org's only). Fail-soft.
+        const songRows = ordered
+            .map((t, index) => ({ index, t, songId: str(t.songId) ?? str(t.fileId) }))
+            .filter((x) => isSongType(str(x.t.type) ?? "song"))
+        let featured: Record<string, FeaturedRecording> = {}
+        try {
+            featured = await featuredLinksFor(db, org, songRows.map((x) => x.songId).filter((s): s is string => !!s))
+        } catch (err) {
+            logger.warn("read_back_setlist recordings read failed:", err)
+        }
+        const recordings = songRows.map((x) => ({
+            index: x.index,
+            trackId: String(x.t.id),
+            title: typeof x.t.title === "string" ? x.t.title : "",
+            recording: (x.songId && featured[x.songId]) || null,
+        }))
         const rows: Row[] = ordered
             .map((t) => ({
                 id: String(t.id),
@@ -187,7 +210,7 @@ export async function readBackSetlistTool(
             openItems: readOpenItems(data),
             now: new Date(),
         })
-        return { ok: true, setlistId, readback, vsLast, ...(totals ? { setTotals: totals } : {}), ...familyWeekFields(data, org) }
+        return { ok: true, setlistId, readback, vsLast, recordings, ...(totals ? { setTotals: totals } : {}), ...familyWeekFields(data, org) }
     } catch (error) {
         logger.warn("read_back_setlist failed:", error)
         return richError(
