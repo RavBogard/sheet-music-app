@@ -287,6 +287,30 @@ export interface Recording {
     notes?: string           // free-form attribution (v7.0 constraint #4)
     createdAt: FirestoreDate
     createdBy: string        // uid of the uploader
+    /** Recordings 2026-11: absent ⇒ 'live'. Held and hidden takes are never listed or played. */
+    status?: RecordingStatus
+    /** The song's chosen take (at most one per song; see setFeaturedRecording). */
+    featured?: boolean
+    /** Provenance of a clip cut from a service recording by the ingest. */
+    source?: RecordingSource
+    /** Ingest idempotency key (source file + cut times); a re-run never duplicates. */
+    ingestKey?: string
+}
+
+/** Recordings 2026-11: 'live' is listed and played; 'held' awaits review; 'hidden' was ruled out. */
+export type RecordingStatus = 'live' | 'held' | 'hidden'
+
+/** Where an ingested clip came from. Recordings are public; this is provenance, not access. */
+export interface RecordingSource {
+    file: string
+    serviceDate: string      // YYYY-MM-DD
+    startSec: number
+    endSec: number
+    mix?: string
+    /** Matcher confidence 0..1. Legacy uploads have no source and rank as 1. */
+    confidence: number
+    setlistId?: string
+    folder?: string
 }
 
 export type UserRole = 'admin' | 'band_leader' | 'musician' | 'member' | 'pending' | 'denied'

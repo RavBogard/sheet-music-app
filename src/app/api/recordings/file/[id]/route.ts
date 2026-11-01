@@ -5,7 +5,6 @@ import { createApiHandler } from "@/lib/api-wrapper"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { downloadFromStoragePath } from "@/lib/firebase-storage"
 import { checkRateLimit } from "@/lib/rate-limit"
-import { verifySessionCookieRequest } from "@/lib/drive-file-auth"
 import { byteRangeResponse } from "@/lib/http/byte-range"
 import { logger } from "@/lib/logger"
 
@@ -16,24 +15,16 @@ export const dynamic = 'force-dynamic'
  *
  * Streams a recording's audio bytes from Firebase Storage. The admin SDK
  * bypasses Storage rules, so playback needs no client Storage SDK and no
- * `storage.rules` change — this serving route IS the access control.
+ * `storage.rules` change.
  *
- * Auth: accept a Bearer token OR a verified Firebase `__session` cookie. An
- * <audio> element cannot attach a Bearer header, but it sends the HttpOnly
- * session cookie automatically — so this is a real auth boundary, not the
- * forgeable Sec-Fetch-* heuristic it previously relied on (v70-08-02).
+ * PUBLIC (Daniel, 2026-11-01: "anyone can listen. we don't care."): no
+ * sign-in, so an <audio> element on the public Listen page plays it. The rate
+ * limit and byte ranges stay; public caching is fine. Each tenant still LISTS
+ * only its own recordings; that is enforced where recordings are listed.
  */
 export const GET = createApiHandler(async (ctx) => {
     const limited = await checkRateLimit(ctx.req, 'api')
     if (limited) return limited
-
-    if (!ctx.auth && !(await verifySessionCookieRequest(ctx.req))) {
-        const t = await getT()
-        return NextResponse.json(
-            { error: t("api-recordings.authRequired") },
-            { status: 401 },
-        )
-    }
 
     const id = ctx.params?.id
     if (!id) {
@@ -84,7 +75,7 @@ export const GET = createApiHandler(async (ctx) => {
 
     // H3 (v11.5-02-01): serve through the Range helper so the native <audio>
     // scrubber can seek a streamed recording. No-Range GETs are byte-identical
-    // (plus Accept-Ranges); the auth/404/502 gates above are untouched.
+    // (plus Accept-Ranges); the 404/502 gates above are untouched.
     return byteRangeResponse(new Uint8Array(result.data.buffer), {
         contentType: (data.mimeType as string) || result.data.contentType,
         rangeHeader: ctx.req.headers.get('range'),
