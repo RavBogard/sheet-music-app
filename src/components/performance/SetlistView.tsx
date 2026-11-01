@@ -11,6 +11,9 @@ import { useT } from "@/i18n/client"
 import { cn } from "@/lib/utils"
 import { PAGE_WIDTH_CLASS } from "@/components/layout/Page"
 import { sectionBands } from "@/components/setlist/grid/section-bands"
+import { isSegue, setTotalsByHeader } from "@/lib/gig/display"
+import type { Gig } from "@/lib/gig/model"
+import { SegueMark } from "./SegueMark"
 
 export interface SetlistViewProps {
     tracks: SetlistTrack[]
@@ -41,6 +44,10 @@ export interface SetlistViewProps {
     savedFileIds?: ReadonlySet<string> | null
     /** PERF-21: why a chart didn't save, per fileId (this session's save passes). */
     saveFailures?: ReadonlyMap<string, SaveFailureReason> | null
+    /** BET-5: show set lengths on the section bands (band tenant, or any row has a length). */
+    showTiming?: boolean
+    /** BET-5: the gig, for each set's target length. */
+    gig?: Gig | null
 }
 
 export function SetlistView({
@@ -57,6 +64,8 @@ export function SetlistView({
     onSwapTap,
     savedFileIds,
     saveFailures,
+    showTiming = false,
+    gig = null,
 }: SetlistViewProps) {
     const t = useT()
     // Memoize transposed keys computation (pure function, keyed on tracks + transposition)
@@ -77,6 +86,11 @@ export function SetlistView({
     // Web refresh: header rows draw as the editor's full-hue bands, with the
     // pages of the rows under each. Display only; the order is the author's.
     const bands = useMemo(() => sectionBands(tracks), [tracks])
+    // BET-5: each set's running length on its band (display only).
+    const setTotals = useMemo(
+        () => (showTiming ? setTotalsByHeader(tracks, gig).byHeaderId : null),
+        [showTiming, tracks, gig],
+    )
     const [openRuns, setOpenRuns] = useState<Set<number>>(() => new Set())
     const runByStart = useMemo(() => new Map(runs.map((r) => [r.start, r])), [runs])
     const toggleRun = (start: number) =>
@@ -92,7 +106,20 @@ export function SetlistView({
     const saveFailureFor = (track: SetlistTrack): SaveFailureReason | undefined =>
         saveFailures && track.fileId ? saveFailures.get(track.fileId) : undefined
 
+    // BET-5: a song that runs straight into the next one gets a "→" between
+    // the two rows.
     const renderRow = (track: SetlistTrack, index: number) => {
+        const row = renderRowOnly(track, index)
+        if (!isSegue(track) || index >= tracks.length - 1) return row
+        return (
+            <React.Fragment key={`segue-${track.id || index}`}>
+                {row}
+                <SegueMark />
+            </React.Fragment>
+        )
+    }
+
+    const renderRowOnly = (track: SetlistTrack, index: number) => {
         // Long-press → live-director sheet wires per-row when the viewer is a
         // band_leader/admin AND we know the setlistId (insert writes need it).
         // Headers + tracks without an id (mid-hydration) skip the wrapper —
@@ -118,6 +145,7 @@ export function SetlistView({
                     onLeaderSetPosition={() => onLeaderSetPosition(index)}
                     onSwapTap={swapTap}
                     band={track.id ? bands[track.id] : undefined}
+                    setTotal={track.id ? setTotals?.[track.id] : undefined}
                     savedOffline={savedOfflineFor(track)}
                     saveFailure={saveFailureFor(track)}
                 />
@@ -145,6 +173,7 @@ export function SetlistView({
                         gestureHandlers={handlers}
                         onSwapTap={swapTap}
                         band={bands[track.id]}
+                        setTotal={setTotals?.[track.id]}
                         savedOffline={savedOfflineFor(track)}
                         saveFailure={saveFailureFor(track)}
                     />

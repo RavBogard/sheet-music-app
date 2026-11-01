@@ -36,7 +36,8 @@ import { toDate } from '@/lib/firestore-helpers'
 import type { EditDescriptor } from '@/lib/local/types'
 import { applyEdit as defaultApplyEdit } from '@/lib/local/write'
 import { useOrg } from '@/lib/org/org-context'
-import { hidesLiturgicalFields } from '@/lib/org/vocab'
+import { hidesLiturgicalFields, isBandTenant } from '@/lib/org/vocab'
+import { HHMM_RE, type Gig, type SetTarget } from '@/lib/gig/model'
 import { cn } from '@/lib/utils'
 import type { Setlist } from '@/types/models'
 
@@ -76,7 +77,14 @@ export interface SetlistMetaEditSheetProps {
         eventDate?: number | string | null
         rabbi?: string
         templateType?: Setlist['templateType']
+        /** BET-5: the gig (band tenants). */
+        gig?: Gig | null
     }
+    /**
+     * BET-5: the sets (header rows) in the author's order, for the per-set
+     * target lengths, with the minutes each set's target resolves to today.
+     */
+    sets?: Array<{ id: string; title: string; targetMinutes?: number }>
     /** Injectable for tests — defaults to the real outbox writer. */
     applyEdit?: (edit: EditDescriptor) => Promise<void>
 }
@@ -93,6 +101,7 @@ export function SetlistMetaEditSheet({
     open,
     onOpenChange,
     initial,
+    sets = EMPTY_SETS,
     applyEdit = defaultApplyEdit,
 }: SetlistMetaEditSheetProps) {
     const { t, isRtl } = useI18n()
@@ -116,6 +125,14 @@ export function SetlistMetaEditSheet({
     const [rabbi, setRabbi] = useState(initial.rabbi ?? '')
     const [saving, setSaving] = useState(false)
 
+    // BET-5: the gig fields, band tenants only. Times are the browser's
+    // 24-hour <input type="time"> value (HH:mm whatever the display locale).
+    const isBand = isBandTenant(org)
+    const [gigDraft, setGigDraft] = useState<GigDraft>(() => gigDraftOf(initial.gig))
+    const [targets, setTargets] = useState<Record<string, string>>(() => targetDraftOf(sets))
+    const [targetsTouched, setTargetsTouched] = useState(false)
+    const [gigError, setGigError] = useState(false)
+
     // Re-seed the form whenever the sheet transitions closed → open, so
     // reopening always shows the setlist's current values (not stale edits).
     useEffect(() => {
@@ -124,6 +141,10 @@ export function SetlistMetaEditSheet({
             setEventDate(toDate(initial.eventDate ?? null) ?? undefined)
             setServiceType(initial.templateType)
             setRabbi(initial.rabbi ?? '')
+            setGigDraft(gigDraftOf(initial.gig))
+            setTargets(targetDraftOf(sets))
+            setTargetsTouched(false)
+            setGigError(false)
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open])
@@ -157,6 +178,20 @@ export function SetlistMetaEditSheet({
         if (rabbi !== (initial.rabbi ?? '')) {
             patch.rabbi = rabbi.trim() ? rabbi.trim() : null
             patch.rabbiSlot = storedClassFor({ rabbi: rabbi.trim() || null }).rabbiSlot ?? null
+        }
+
+        if (isBand) {
+            const built = buildGig(gigDraft, initial.gig ?? null, targetsTouched ? targets : null, sets)
+            if (!built.ok) {
+                setGigError(true)
+                return
+            }
+            setGigError(false)
+            // Compared against the stored gig read the same way, so a stored
+            // gig whose keys sit in another order is not rewritten unchanged.
+            const before = buildGig(gigDraftOf(initial.gig), initial.gig ?? null, null, sets)
+            const beforeGig = before.ok ? before.gig : initial.gig ?? null
+            if (JSON.stringify(built.gig) !== JSON.stringify(beforeGig)) patch.gig = built.gig
         }
 
         // Nothing changed — close without enqueueing a write (AC-4).
@@ -299,6 +334,84 @@ export function SetlistMetaEditSheet({
                             </div>
                         </>
                     )}
+
+                    {isBand && (
+                        <fieldset data-testid="gig-fields" className="flex flex-col gap-4 border-t border-rule pt-5">
+                            <legend className="text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground mb-1">
+                                {t('gig.sheetGigHeading')}
+                            </legend>
+                            {PLACE_FIELDS.map(([f, labelKey, max]) => (
+                                <div key={f} className="flex flex-col gap-1.5">
+                                    <Label htmlFor={`gig-${f}`} variant="setlist">{t(labelKey)}</Label>
+                                    <Input
+                                        id={`gig-${f}`}
+                                        value={gigDraft[f]}
+                                        maxLength={max}
+                                        onChange={(e) => setGigDraft((d) => ({ ...d, [f]: e.target.value }))}
+                                        className="h-11 text-base bg-background/50 border-border"
+                                    />
+                                </div>
+                            ))}
+                            <div className="grid grid-cols-2 gap-3">
+                                {TIME_FIELDS.map(([f, labelKey]) => (
+                                    <div key={f} className="flex flex-col gap-1.5">
+                                        <Label htmlFor={`gig-${f}`} variant="setlist">{t(labelKey)}</Label>
+                                        <Input
+                                            id={`gig-${f}`}
+                                            type="time"
+                                            value={gigDraft[f]}
+                                            onChange={(e) => setGigDraft((d) => ({ ...d, [f]: e.target.value }))}
+                                            className="tnum h-11 text-base bg-background/50 border-border"
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="flex flex-col gap-1.5">
+                                <Label htmlFor="gig-notes" variant="setlist">{t('gig.fieldNotes')}</Label>
+                                <textarea
+                                    id="gig-notes"
+                                    value={gigDraft.notes}
+                                    maxLength={2000}
+                                    rows={2}
+                                    onChange={(e) => setGigDraft((d) => ({ ...d, notes: e.target.value }))}
+                                    className="min-h-11 w-full rounded-md border border-border bg-background/50 px-3 py-2 text-base text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                />
+                            </div>
+                            {sets.length > 0 && (
+                                <div className="flex flex-col gap-2" data-testid="gig-set-targets">
+                                    <p className="text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                                        {t('gig.setTargetsHeading')}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">{t('gig.setTargetsHint')}</p>
+                                    {sets.map((set) => (
+                                        <div key={set.id} className="flex items-center gap-3">
+                                            <Label htmlFor={`gig-target-${set.id}`} variant="setlist" className="min-w-0 flex-1 truncate">
+                                                {t('gig.setTargetLabel', { set: set.title || t('gig.setUntitled') })}
+                                            </Label>
+                                            <Input
+                                                id={`gig-target-${set.id}`}
+                                                type="number"
+                                                inputMode="numeric"
+                                                min={1}
+                                                max={600}
+                                                value={targets[set.id] ?? ''}
+                                                onChange={(e) => {
+                                                    setTargetsTouched(true)
+                                                    setTargets((cur) => ({ ...cur, [set.id]: e.target.value }))
+                                                }}
+                                                className="tnum h-11 w-24 text-base bg-background/50 border-border"
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                            {gigError && (
+                                <p role="alert" data-testid="gig-error" className="text-sm font-semibold text-warning-line">
+                                    {t('gig.gigInvalid')}
+                                </p>
+                            )}
+                        </fieldset>
+                    )}
                 </div>
 
                 <SheetFooter className="gap-2 border-t border-border/50 pt-4">
@@ -333,4 +446,76 @@ export function SetlistMetaEditSheet({
             </SheetContent>
         </Sheet>
     )
+}
+
+// ── BET-5: the gig draft ──
+
+type GigTextField = 'venue' | 'address' | 'loadIn' | 'soundcheck' | 'start' | 'end' | 'contact' | 'notes'
+type GigDraft = Record<GigTextField, string>
+
+const EMPTY_SETS: Array<{ id: string; title: string; targetMinutes?: number }> = []
+
+const PLACE_FIELDS: ReadonlyArray<[GigTextField, string, number]> = [
+    ['venue', 'gig.fieldVenue', 200],
+    ['address', 'gig.fieldAddress', 500],
+    ['contact', 'gig.fieldContact', 500],
+]
+
+const TIME_FIELDS: ReadonlyArray<[GigTextField, string]> = [
+    ['loadIn', 'gig.fieldLoadIn'],
+    ['soundcheck', 'gig.fieldSoundcheck'],
+    ['start', 'gig.fieldStart'],
+    ['end', 'gig.fieldEnd'],
+]
+
+const GIG_TEXT_FIELDS: readonly GigTextField[] = ['venue', 'address', 'loadIn', 'soundcheck', 'start', 'end', 'contact', 'notes']
+const GIG_TIME_FIELDS = new Set<GigTextField>(['loadIn', 'soundcheck', 'start', 'end'])
+
+function gigDraftOf(gig: Gig | null | undefined): GigDraft {
+    const out = {} as GigDraft
+    for (const f of GIG_TEXT_FIELDS) {
+        const v = gig?.[f]
+        out[f] = typeof v === 'string' ? v : ''
+    }
+    return out
+}
+
+function targetDraftOf(sets: ReadonlyArray<{ id: string; targetMinutes?: number }>): Record<string, string> {
+    const out: Record<string, string> = {}
+    for (const s of sets) out[s.id] = s.targetMinutes === undefined ? '' : String(s.targetMinutes)
+    return out
+}
+
+/**
+ * The gig to store, with only the fields that hold a value, in the order the
+ * model lists them; `null` when nothing is left. Set targets are rewritten
+ * (by header row id) only when the author edited them; otherwise the stored
+ * ones are kept as they are.
+ */
+export function buildGig(
+    draft: GigDraft,
+    previous: Gig | null,
+    targets: Record<string, string> | null,
+    sets: ReadonlyArray<{ id: string }>,
+): { ok: true; gig: Gig | null } | { ok: false } {
+    const gig: Gig = {}
+    for (const f of GIG_TEXT_FIELDS) {
+        const v = draft[f].trim()
+        if (!v) continue
+        if (GIG_TIME_FIELDS.has(f) && !HHMM_RE.test(v)) return { ok: false }
+        gig[f] = v
+    }
+    let setTargets: SetTarget[] | undefined = previous?.setTargets
+    if (targets) {
+        setTargets = []
+        for (const s of sets) {
+            const raw = (targets[s.id] ?? '').trim()
+            if (!raw) continue
+            const minutes = Number(raw)
+            if (!Number.isInteger(minutes) || minutes < 1 || minutes > 600) return { ok: false }
+            setTargets.push({ headerRowId: s.id, minutes })
+        }
+    }
+    if (setTargets && setTargets.length > 0) gig.setTargets = setTargets
+    return { ok: true, gig: Object.keys(gig).length > 0 ? gig : null }
 }

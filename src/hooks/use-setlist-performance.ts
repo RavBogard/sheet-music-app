@@ -1,5 +1,6 @@
 "use client"
 
+import { readGig, type Gig } from "@/lib/gig/model"
 import { useEffect, useState, useMemo } from "react"
 import { doc, type DocumentReference } from "firebase/firestore"
 import { useLiveQuery } from "dexie-react-hooks"
@@ -56,6 +57,8 @@ interface UseSetlistPerformanceReturn {
     setlistId: string
     rabbi: string | undefined
     book: string | undefined
+    /** BET-5: the gig (venue, times, set targets), read defensively; null when none. */
+    gig: Gig | null
     /** PrintModal's gig-packet date line — the setlist's own service date, not
      *  the day the packet happens to be printed. Normalised at the hook
      *  boundary from whatever FirestoreDate shape the doc carries (Timestamp,
@@ -344,6 +347,7 @@ export function useSetlistPerformance(
         setlistData?.rabbi ?? initial?.setlist?.rabbi
     const book: string | undefined =
         setlistData?.book ?? initial?.setlist?.book
+    const gig: Gig | null = readGig(setlistData?.gig ?? initial?.setlist?.gig)
 
     const eventDate: string | null =
         toISOString(setlistData?.eventDate ?? initial?.setlist?.eventDate)
@@ -429,6 +433,7 @@ export function useSetlistPerformance(
         setlistId,
         rabbi,
         book,
+        gig,
         eventDate,
         setlistUpdatedSinceLoad,
         setlistLiveStamp,

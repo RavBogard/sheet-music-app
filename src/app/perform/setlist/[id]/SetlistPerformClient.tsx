@@ -53,6 +53,10 @@ import { useFormat } from "@/i18n/format-client"
 import { formatUpdatedWhen } from "@/lib/format/updated-when"
 import { cn } from "@/lib/utils"
 import { PAGE_WIDTH_CLASS } from "@/components/layout/Page"
+import { GigPanel } from "@/components/setlist/gig/GigPanel"
+import { useOrg } from "@/lib/org/org-context"
+import { isBandTenant } from "@/lib/org/vocab"
+import { formatDuration, setTotalsByHeader, showsTiming } from "@/lib/gig/display"
 
 const PrintModal = dynamic(
     () => import("@/components/setlist/PrintModal").then(m => m.PrintModal),
@@ -119,6 +123,7 @@ export function SetlistPerformClient({
         musicians,
         rabbi,
         book,
+        gig,
         eventDate,
         setlistUpdatedSinceLoad,
         setlistLiveStamp,
@@ -361,6 +366,12 @@ export function SetlistPerformClient({
     const totalCount = tracks.filter((t) => t.type !== "header").length
     const bookName = bookTitle(book)
 
+    // BET-5: a band tenant's gig line and the gig's running length. Any other
+    // tenant (CRC) shows the length only once a row carries one.
+    const isBand = isBandTenant(useOrg())
+    const showTiming = showsTiming(isBand, tracks)
+    const gigSeconds = showTiming ? setTotalsByHeader(tracks, gig).seconds : 0
+
     // Back link: authenticated users go to /setlists, public users go to /perform (public listing)
     const backHref = isPublicView ? "/perform" : "/setlists"
 
@@ -436,6 +447,12 @@ export function SetlistPerformClient({
                                 ? t("performSetlist.header.songsAndItems", { count: songCount, totalCount })
                                 : t("performSetlist.songCount", { count: songCount })}
                         </span>
+                        {gigSeconds > 0 && (
+                            <>
+                                <span aria-hidden="true"> · </span>
+                                <span data-testid="perform-status-total">{t("gig.statusTotal", { total: formatDuration(gigSeconds) })}</span>
+                            </>
+                        )}
                         {setlistUpdatedAt && (
                             <>
                                 <span aria-hidden="true"> · </span>
@@ -471,6 +488,7 @@ export function SetlistPerformClient({
                     {bookName && (
                         <p className="text-sm text-muted-foreground truncate">{bookName}</p>
                     )}
+                    {isBand && <GigPanel gig={gig} className="mt-0.5" />}
                     {/* BET-6: parasha line and Beit Mitzvah card (CRC only). */}
                     <SetlistFamilyHead setlistId={setlistId} setlist={initialSetlist as unknown as Record<string, unknown> | null} />
                 </div>
@@ -634,6 +652,8 @@ export function SetlistPerformClient({
                 savedFileIds={entryPassSettled ? savedFileIds : null}
                 saveFailures={entryPassSettled ? saveFailures : null}
                 onSwapTap={isLeader && user && serviceDay ? (index) => setSwapIndex(index) : undefined}
+                showTiming={showTiming}
+                gig={gig}
             />
 
             {swapIndex !== null && tracks[swapIndex] && serviceDay && (() => {
@@ -699,6 +719,7 @@ export function SetlistPerformClient({
                     // Phase 4: the same book name this header shows, so the
                     // printed packet's folio column is attributed too.
                     bookTitle={bookName}
+                    gig={gig}
                     onClose={() => setShowPrintModal(false)}
                 />
             )}

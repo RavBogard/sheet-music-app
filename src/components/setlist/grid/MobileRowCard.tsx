@@ -27,6 +27,10 @@ import { RecordingCell } from './cells/RecordingCell'
 import { displayChartTitle } from '@/lib/format/chart-title'
 import { RecordingBindPopover } from './RecordingBindPopover'
 import { SECTION_BAND_CLASS as BAND_CLASS, type SectionBand } from './section-bands'
+import { DurationField, SegueToggle, SingerKeysEditor } from '@/components/setlist/gig/RowGigControls'
+import { SetTotalText } from '@/components/setlist/gig/SetTotalText'
+import { isSegue, leadSingerKey, singerKeysOf } from '@/lib/gig/display'
+import type { SetTotal } from '@/lib/gig/set-totals'
 
 /** Chart format from the cached file name / mime type; null when unknown. */
 function chartFormatKey(track: LocalTrack): string | null {
@@ -66,6 +70,12 @@ export interface MobileRowCardProps {
     band?: SectionBand
     /** Library the bonded chart lives in (data: the collection key, e.g. 'nava'). */
     collection?: string
+    /** BET-5: a band tenant: the segue toggle and singer keys on song rows. */
+    isBand?: boolean
+    /** BET-5: the inline length field (a band tenant, or any row has a length). */
+    showTiming?: boolean
+    /** BET-5: a section band's set length. */
+    setTotal?: SetTotal
 }
 
 /**
@@ -97,6 +107,9 @@ export function MobileRowCard({
     position,
     band,
     collection,
+    isBand = false,
+    showTiming = false,
+    setTotal,
 }: MobileRowCardProps) {
     const t = useT()
     const [title, setTitle] = useState(String(track.title ?? ''))
@@ -143,6 +156,16 @@ export function MobileRowCard({
         if (formatKey) chipParts.push(t(formatKey))
         if (isSong && track.leadMusician) chipParts.push(t('setlistGrid.chipVocalLead', { name: String(track.leadMusician) }))
     }
+
+    // BET-5: the key tag shows the lead singer's key when the author recorded
+    // one for them; otherwise the row's key, as before.
+    const sungKey = isSong ? leadSingerKey(track) : null
+    const tagKey = sungKey ?? (track.key ? String(track.key) : '')
+    const showSegue = isSong && (isBand || isSegue(track))
+    const showSingerKeys = isSong && (isBand || singerKeysOf(track).length > 0)
+    const commitGig = useCallback((patch: Record<string, unknown>) => {
+        void onCommit?.(patch as Partial<LocalTrack>)
+    }, [onCommit])
 
     useEffect(() => {
         setTitle(String(track.title ?? ''))
@@ -440,12 +463,30 @@ export function MobileRowCard({
                             ) : editRegion
                         })()}
 
-                        {!isSection && isSong && track.key ? (
-                            <span className="tnum shrink-0 inline-flex items-center justify-center min-w-[2.5rem] h-7 px-2 rounded-md border border-border bg-secondary text-sm font-bold text-secondary-foreground">
-                                <span className="sr-only">{t('setlistGrid.columnKey')} </span>
-                                {track.key}
+                        {!isSection && isSong && tagKey ? (
+                            <span
+                                data-testid={`row-key-${track.id}`}
+                                data-lead-key={sungKey ? '' : undefined}
+                                className="tnum shrink-0 inline-flex items-center justify-center min-w-[2.5rem] h-7 px-2 rounded-md border border-border bg-secondary text-sm font-bold text-secondary-foreground"
+                            >
+                                <span className="sr-only">
+                                    {sungKey
+                                        ? t('gig.leadKeyHint', { name: String(track.leadMusician) })
+                                        : t('setlistGrid.columnKey')}{' '}
+                                </span>
+                                {tagKey}
                             </span>
                         ) : null}
+
+                        {!isSection && showTiming ? (
+                            <DurationField
+                                durationSec={track.durationSec}
+                                title={track.title ? String(track.title) : undefined}
+                                onCommit={commitGig}
+                            />
+                        ) : null}
+
+                        {showSegue ? <SegueToggle segue={isSegue(track)} onCommit={commitGig} /> : null}
 
                         {!isSection && (track.songId ? (
                             // Bound chart → click-through link that opens the
@@ -516,13 +557,18 @@ export function MobileRowCard({
                         {/* The page call sits in the margin: the far right edge,
                             after every control, so the numbers line up down
                             the list. */}
+                        {isSection && setTotal ? <SetTotalText total={setTotal} /> : null}
+
                         {isSection ? (
                             sectionPages ? (
                                 <span data-testid={`section-pages-${track.id}`} className="tnum shrink-0 text-[13px] font-bold tracking-[0.04em]">
                                     {sectionPages}
                                 </span>
                             ) : null
-                        ) : (
+                        ) : isBand && folio === undefined ? null : (
+                            // A band tenant's rows carry no book pages; the
+                            // empty page-call column is left out so the title
+                            // keeps the room the length and segue take.
                             <span
                                 data-testid={folio !== undefined ? `page-call-${track.id}` : undefined}
                                 className="tnum shrink-0 min-w-14 sm:min-w-16 text-end leading-none whitespace-nowrap"
@@ -614,6 +660,10 @@ export function MobileRowCard({
                             </>
                         )}
                     </div>
+
+                    {showSingerKeys ? (
+                        <SingerKeysEditor singerKeys={track.singerKeys} onCommit={commitGig} />
+                    ) : null}
 
                     <label className="block mb-6">
                         <span className="text-xs text-muted-foreground uppercase tracking-[0.06em] font-bold mb-1 block">{t('setlistGrid.columnNotes')}</span>

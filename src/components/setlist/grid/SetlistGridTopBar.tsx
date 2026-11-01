@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import type { ReactNode } from 'react'
 import { ChevronLeft, Pencil, Play } from 'lucide-react'
 
 import { DirectionalIcon } from '@/components/i18n/DirectionalIcon'
@@ -25,6 +26,8 @@ export interface SetlistGridTopBarProps {
     onEditMeta?: () => void
     /** WEB-12: link to the band view of this setlist (Perform). Omitted when Perform is off. */
     performHref?: string
+    /** BET-5: the gig line under the status line (band tenants). */
+    gigSlot?: ReactNode
 }
 
 /**
@@ -39,6 +42,7 @@ export function SetlistGridTopBar({
     syncProps,
     onEditMeta,
     performHref,
+    gigSlot,
 }: SetlistGridTopBarProps) {
     const t = useT()
     const status = statusParts.filter((p): p is string => Boolean(p))
@@ -101,6 +105,7 @@ export function SetlistGridTopBar({
                             ))}
                         </p>
                     ) : null}
+                    {gigSlot}
                 </div>
                 </div>
 

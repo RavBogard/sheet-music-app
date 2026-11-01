@@ -16,6 +16,10 @@ import { PrintModeSelector, PrintMode } from "./PrintModeSelector"
 import { PrintStats } from "./PrintStats"
 import { logger } from "@/lib/logger"
 import { useFeature } from "@/lib/org/use-feature"
+import { useOrg } from "@/lib/org/org-context"
+import { isBandTenant } from "@/lib/org/vocab"
+import type { Gig } from "@/lib/gig/model"
+import { gigTrackFields } from "@/lib/gig/display"
 import { toast } from "sonner"
 import { useT } from "@/i18n/client"
 import { useFormat } from "@/i18n/format-client"
@@ -75,14 +79,19 @@ interface PrintModalProps {
      * the book it indexes. Absent → the cover names no book.
      */
     bookTitle?: string
+    /** BET-5: the gig, for the show sheet and the cover's set lengths (band tenants). */
+    gig?: Gig | null
 }
 
-export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMusicians, eventDate, rabbi, bookTitle }: PrintModalProps) {
+export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMusicians, eventDate, rabbi, bookTitle, gig }: PrintModalProps) {
     const { user, profile } = useAuth()
     const t = useT()
     const fmt = useFormat()
     // Multi-tenant phase 6: emailing packet links to the band is notifyBand.
     const notifyBandOn = useFeature("notifyBand")
+    // BET-5: a band tenant gets the one-page show sheet.
+    const isBand = isBandTenant(useOrg())
+    const [showSheetBusy, setShowSheetBusy] = useState(false)
     const [title, setTitle] = useState(setlistName)
     const [date, setDate] = useState(() => {
         const d = eventDate ? new Date(eventDate) : new Date()
@@ -294,9 +303,42 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
                     // while the rabbi's sheet did.
                     liturgyRef: t.liturgyRef,
                     honors: t.honors,
+                    // BET-5: lengths, segues and singer keys, only on rows that carry them.
+                    ...gigTrackFields(t, gig),
                 }
-            })
+            }),
+            ...(gig ? { gig } : {}),
         })
+    }
+
+    // BET-5: the show sheet is one page from the same print route: venue,
+    // times, the sets with their songs, keys, segues, singers and lengths.
+    const downloadShowSheet = async () => {
+        setShowSheetBusy(true)
+        setError(null)
+        try {
+            const blob = await generatePdfBlob({
+                title,
+                date,
+                coverOnly: true,
+                showSheet: true,
+                allowOmissions: true,
+                ...(gig ? { gig } : {}),
+                tracks: tracks.map((t) => ({
+                    title: t.title, key: t.key || '', tune: t.tune || '', notes: t.notes || '',
+                    leadMusician: t.leadMusician || '',
+                    transposition: 0, preferFlats: false, capoFret: 0, omitPdf: true,
+                    type: t.type,
+                    ...gigTrackFields(t, gig),
+                })),
+            })
+            downloadBlob(blob, `${title.replace(/[^a-z0-9]/gi, '_')}_show_sheet.pdf`)
+        } catch (e: unknown) {
+            logger.error('Show sheet failed:', e)
+            setError(t("gig.showSheetFailed"))
+        } finally {
+            setShowSheetBusy(false)
+        }
     }
 
     const executeEmailPackets = async () => {
@@ -677,6 +719,21 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
                                     {printMode === "select-musicians" && selectedUids.length > 1 ? t("setlistPrint.downloadZip") : t("setlistPrint.downloadPdf")}
                                 </Button>
                             </div>
+                            {isBand && (
+                                <div className="flex flex-col gap-1">
+                                    <Button
+                                        variant="outline"
+                                        className="w-full gap-2"
+                                        data-testid="print-show-sheet"
+                                        onClick={() => void downloadShowSheet()}
+                                        disabled={showSheetBusy || generating}
+                                    >
+                                        {showSheetBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ListChecks className="h-4 w-4" />}
+                                        {t("gig.showSheet")}
+                                    </Button>
+                                    <p className="text-xs text-muted-foreground text-center">{t("gig.showSheetHint")}</p>
+                                </div>
+                            )}
                             {setlistId && isSignedIn && notifyBandOn && (
                                 <Button
                                     variant="outline"

@@ -42,5 +42,24 @@
         "generateFailed": "יצירת קובץ ה-PDF נכשלה",
         "serverError": "שגיאת שרת ({status})",
         "chartsOmitted": "חלק מקובצי התווים לא נכללו בחוברת."
+    },
+    "showSheet": {
+        "loadIn": "פריקה {time}",
+        "soundcheck": "בדיקת סאונד {time}",
+        "show": "הופעה {start}–{end}",
+        "start": "הופעה {start}",
+        "end": "סיום {end}",
+        "contact": "איש/אשת קשר: {contact}",
+        "columnSong": "שיר",
+        "columnKey": "טון",
+        "columnSings": "שר/ה",
+        "columnLength": "אורך",
+        "target": "יעד {target}",
+        "over": "{amount} מעבר ליעד",
+        "untimed_one": "{count} ללא אורך",
+        "gigTotal": "סה״כ {total}",
+        "more_one": "ועוד שיר אחד",
+        "untimed_other": "{count} ללא אורך",
+        "more_other": "ועוד {count} שירים"
     }
 }

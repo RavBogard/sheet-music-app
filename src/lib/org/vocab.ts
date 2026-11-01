@@ -22,7 +22,15 @@ export function hidesLiturgicalFields(orgId: OrgId): boolean {
     return cfg?.vocabulary.mode === "band"
 }
 
-export type VocabKey = Extract<
+/**
+ * BET-5 (B5b): a band tenant (`vocabulary.mode === "band"`) gets the gig UI:
+ * the gig panel, row lengths, segues, singer keys and the show sheet.
+ */
+export function isBandTenant(orgId: OrgId): boolean {
+    return hidesLiturgicalFields(orgId)
+}
+
+export type VocabKey =Extract<
     StringKey,
     | "setlist"
     | "editSetlistDetails"

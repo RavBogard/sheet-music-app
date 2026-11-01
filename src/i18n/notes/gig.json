@@ -1,0 +1,243 @@
+{
+    "panelLabel": {
+        "where": "Setlist editor head (band tenants): screen-reader name of the gig details row",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "panelLoadIn": {
+        "where": "Setlist editor head and Perform head (band tenants): load-in time, e.g. 'Load-in 17:00'",
+        "who": "leaders, musicians",
+        "maxLength": 20,
+        "context": "{time} is a 24-hour time like 17:00"
+    },
+    "panelSoundcheck": {
+        "where": "Setlist editor head and Perform head (band tenants): soundcheck time",
+        "who": "leaders, musicians",
+        "maxLength": 24,
+        "context": "{time} is a 24-hour time like 18:30"
+    },
+    "panelShow": {
+        "where": "Setlist editor head and Perform head (band tenants): show start and end times",
+        "who": "leaders, musicians",
+        "maxLength": 24,
+        "context": "{start} and {end} are 24-hour times"
+    },
+    "panelStart": {
+        "where": "Setlist editor head and Perform head (band tenants): show start time when no end time is set",
+        "who": "leaders, musicians",
+        "maxLength": 20,
+        "context": "{start} is a 24-hour time"
+    },
+    "panelEnd": {
+        "where": "Setlist editor head and Perform head (band tenants): show end time when no start time is set",
+        "who": "leaders, musicians",
+        "maxLength": 20,
+        "context": "{end} is a 24-hour time"
+    },
+    "panelEdit": {
+        "where": "Setlist editor head (band tenants): button that opens the gig details editor",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "panelEmpty": {
+        "where": "Setlist editor head (band tenants): button shown when no venue or times are set yet",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "statusTotal": {
+        "where": "Setlist editor and Perform head status line: the running length of the whole gig",
+        "who": "leaders, musicians",
+        "maxLength": 20,
+        "context": "{total} is a length like 1:23:40 (hours:minutes:seconds) or 38:20 (minutes:seconds)"
+    },
+    "setTarget": {
+        "where": "Section band (editor, Perform): the set's target length after its running length, e.g. '38:20 · target 45:00'",
+        "who": "leaders, musicians",
+        "maxLength": 18,
+        "context": "{target} is a length like 45:00 (minutes:seconds)"
+    },
+    "setOver": {
+        "where": "Section band (editor, Perform): how far the set runs past its target, e.g. '3:20 over'",
+        "who": "leaders, musicians",
+        "maxLength": 20,
+        "context": "{amount} is a length like 3:20 (minutes:seconds)"
+    },
+    "setUntimed": {
+        "where": "Section band (editor, Perform): number of songs in the set that have no length yet",
+        "who": "leaders, musicians",
+        "maxLength": 16,
+        "context": "{count} is a number of songs"
+    },
+    "setTotalAria": {
+        "where": "Section band (editor, Perform): screen-reader text before the set's running length",
+        "who": "leaders, musicians",
+        "maxLength": 30,
+        "context": "{total} is a length like 38:20"
+    },
+    "durationAria": {
+        "where": "Setlist editor row (band tenants): screen-reader name of the inline length field",
+        "who": "leaders",
+        "maxLength": 60,
+        "context": "{title} is a song title (data)"
+    },
+    "durationAriaUntitled": {
+        "where": "Setlist editor row (band tenants): screen-reader name of the inline length field on an untitled row",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "durationPlaceholder": {
+        "where": "Setlist editor row (band tenants): placeholder in the inline length field (minutes:seconds)",
+        "who": "leaders",
+        "maxLength": 5,
+        "context": "A format hint: minutes, colon, two digits of seconds"
+    },
+    "durationInvalid": {
+        "where": "Setlist editor row (band tenants): message when the typed length cannot be read",
+        "who": "leaders",
+        "maxLength": 60
+    },
+    "segueToggle": {
+        "where": "Setlist editor row (band tenants): screen-reader name of the segue (→) toggle button",
+        "who": "leaders",
+        "maxLength": 50
+    },
+    "segueMark": {
+        "where": "Perform setlist row: screen-reader text for the → segue mark",
+        "who": "leaders, musicians",
+        "maxLength": 50
+    },
+    "singerKeysHeading": {
+        "where": "Setlist editor row detail (band tenants): heading over the list of singer → key",
+        "who": "leaders",
+        "maxLength": 24
+    },
+    "singerName": {
+        "where": "Setlist editor row detail: label of the singer name field",
+        "who": "leaders",
+        "maxLength": 16
+    },
+    "singerKey": {
+        "where": "Setlist editor row detail: label of the singer's key field",
+        "who": "leaders",
+        "maxLength": 10
+    },
+    "singerKeyNone": {
+        "where": "Setlist editor row detail: empty choice in the singer key picker",
+        "who": "leaders",
+        "maxLength": 4,
+        "context": "A dash meaning no key chosen yet"
+    },
+    "addSinger": {
+        "where": "Setlist editor row detail: button that adds a singer → key line",
+        "who": "leaders",
+        "maxLength": 24
+    },
+    "removeSinger": {
+        "where": "Setlist editor row detail: screen-reader name of the button removing a singer line",
+        "who": "leaders",
+        "maxLength": 40,
+        "context": "{name} is a musician's name (data)"
+    },
+    "removeSingerUntitled": {
+        "where": "Setlist editor row detail: screen-reader name of the button removing a singer line with no name yet",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "singerKeysDuplicate": {
+        "where": "Setlist editor row detail: message when the same singer is listed twice",
+        "who": "leaders",
+        "maxLength": 50
+    },
+    "leadKeyHint": {
+        "where": "Setlist editor and Perform row: screen-reader text on the key tag when it shows the lead singer's key",
+        "who": "leaders, musicians",
+        "maxLength": 30,
+        "context": "{name} is the row's lead singer (data)"
+    },
+    "sheetGigHeading": {
+        "where": "Setlist details sheet (band tenants): heading over the gig fields",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "fieldVenue": {
+        "where": "Setlist details sheet (band tenants): label of the venue field",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "fieldAddress": {
+        "where": "Setlist details sheet (band tenants): label of the address field",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "fieldLoadIn": {
+        "where": "Setlist details sheet (band tenants): label of the load-in time field",
+        "who": "leaders",
+        "maxLength": 16
+    },
+    "fieldSoundcheck": {
+        "where": "Setlist details sheet (band tenants): label of the soundcheck time field",
+        "who": "leaders",
+        "maxLength": 16
+    },
+    "fieldStart": {
+        "where": "Setlist details sheet (band tenants): label of the show start time field",
+        "who": "leaders",
+        "maxLength": 16
+    },
+    "fieldEnd": {
+        "where": "Setlist details sheet (band tenants): label of the show end time field",
+        "who": "leaders",
+        "maxLength": 16
+    },
+    "fieldContact": {
+        "where": "Setlist details sheet (band tenants): label of the free-text venue contact field",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "fieldNotes": {
+        "where": "Setlist details sheet (band tenants): label of the gig notes field",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "setTargetsHeading": {
+        "where": "Setlist details sheet (band tenants): heading over the per-set target length fields",
+        "who": "leaders",
+        "maxLength": 24
+    },
+    "setTargetsHint": {
+        "where": "Setlist details sheet (band tenants): hint under the set lengths heading",
+        "who": "leaders",
+        "maxLength": 90
+    },
+    "setTargetLabel": {
+        "where": "Setlist details sheet (band tenants): label of one set's target-minutes field",
+        "who": "leaders",
+        "maxLength": 40,
+        "context": "{set} is the set's header title (data), e.g. 'Set 1'"
+    },
+    "setUntitled": {
+        "where": "Setlist details sheet (band tenants): stands in for a set header that has no title",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "gigInvalid": {
+        "where": "Setlist details sheet (band tenants): message when a gig field cannot be saved",
+        "who": "leaders",
+        "maxLength": 90
+    },
+    "showSheet": {
+        "where": "Print dialog (band tenants): button that downloads the one-page show sheet",
+        "who": "leaders",
+        "maxLength": 24
+    },
+    "showSheetHint": {
+        "where": "Print dialog (band tenants): hint under the show sheet button",
+        "who": "leaders",
+        "maxLength": 80
+    },
+    "showSheetFailed": {
+        "where": "Print dialog (band tenants): error when the show sheet download fails",
+        "who": "leaders",
+        "maxLength": 70
+    }
+}
