@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
 import { Button } from "@/components/ui/button"
 import { Loader2, Smartphone, ChevronDown } from "lucide-react"
-import { QRSignIn } from "@/components/auth/QRSignIn"
+import dynamic from "next/dynamic"
 import { useT } from "@/i18n/client"
 
 /** Inline Google logo — avoids DNS+TLS to svgrepo.com. Used in the SSR'd
@@ -21,6 +21,13 @@ function GoogleIcon({ className }: { className?: string }) {
         </svg>
     )
 }
+
+// The QR sign-in panel (and the qrcode.react encoder it pulls in) shows only
+// after the person opts in, so it loads on that click, not on first paint.
+const QRSignIn = dynamic(
+    () => import("@/components/auth/QRSignIn").then((m) => m.QRSignIn),
+    { ssr: false, loading: () => <Loader2 className="mx-auto h-5 w-5 animate-spin text-muted-foreground" /> },
+)
 
 export default function LoginClient() {
     const { user, loading, signIn } = useAuth()
