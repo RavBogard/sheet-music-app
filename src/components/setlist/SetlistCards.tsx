@@ -58,7 +58,7 @@ export const SETLIST_ROW_CLASS =
 export const SETLIST_ROW_TITLE_CLASS = "text-[0.95rem] font-semibold leading-snug text-foreground line-clamp-2"
 
 /** The one meta line under a row title. */
-const META_CLASS = "tnum flex items-center gap-x-1.5 min-w-0 overflow-hidden whitespace-nowrap text-xs text-muted-foreground"
+const META_CLASS = "tnum flex flex-wrap items-center gap-x-1.5 min-w-0 text-xs text-muted-foreground [&>*]:whitespace-nowrap"
 
 function Dot() {
     return <span aria-hidden="true" className="text-muted-foreground/60">·</span>
@@ -94,7 +94,7 @@ function RowStatus({ setlist }: { setlist: Setlist }) {
             {updatedAt ? (
                 <span className="hidden sm:contents">
                     <Dot />
-                    <span className="truncate">{t("setlist.updatedAgo", { when: formatUpdatedWhen(fmt, updatedAt) })}</span>
+                    <span>{t("setlist.updatedAgo", { when: formatUpdatedWhen(fmt, updatedAt) })}</span>
                 </span>
             ) : null}
         </>

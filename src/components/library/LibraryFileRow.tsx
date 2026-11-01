@@ -199,7 +199,7 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
                                 )}
                             </p>
 
-                            <div className="tnum flex items-center gap-x-2 overflow-hidden whitespace-nowrap text-xs font-medium text-muted-foreground">
+                            <div className="tnum flex flex-wrap items-center gap-x-2 text-xs font-medium text-muted-foreground [&>*]:whitespace-nowrap">
                                 {isAudio && (
                                     <span className="inline-flex items-center gap-1">
                                         <Headphones className="w-3 h-3" aria-hidden="true" />

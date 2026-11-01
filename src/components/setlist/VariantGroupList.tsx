@@ -3,10 +3,9 @@
 import { useCallback, useState, type ReactNode } from "react"
 import { ChevronDown } from "lucide-react"
 import type { FoldedGroup } from "@/lib/setlist-variant-fold"
-import { toDate } from "@/lib/firestore-helpers"
+import type { toDate } from "@/lib/firestore-helpers"
 import { useT } from "@/i18n/client"
 import { cn } from "@/lib/utils"
-import { RowDate } from "./RowDate"
 
 /**
  * The folded past-setlists list (WEB-05), shared by /setlists and /perform:
@@ -20,11 +19,10 @@ import { RowDate } from "./RowDate"
 export function VariantGroupList<T extends { id: string; name: string; eventDate?: Parameters<typeof toDate>[0] }>({
     groups,
     renderRow,
-    renderInfo,
 }: {
     groups: FoldedGroup<T>[]
     renderRow: (setlist: T, extra?: ReactNode) => ReactNode
-    /** The meta line under a group head that has no parent row. */
+    /** Unused since the redo (a parentless group promotes its first version to the head row); kept so callers need no change. */
     renderInfo?: (setlist: T, extra?: ReactNode) => ReactNode
 }) {
     const t = useT()
@@ -40,8 +38,14 @@ export function VariantGroupList<T extends { id: string; name: string; eventDate
 
     return (
         <div className="flex flex-col divide-y divide-rule border border-rule rounded-lg overflow-hidden bg-card">
-            {groups.map(({ parent, baseName, variants }, gi) => {
-                const groupId = parent ? parent.id : `group-${gi}-${variants[0]?.id ?? ""}`
+            {groups.map(({ parent, variants: folded }, gi) => {
+                // A group with no parent row promotes its first version to the
+                // head, so the head is a real setlist row with the same
+                // actions as every other row; the rest fold under it.
+                const head = parent ?? folded[0]
+                const variants = parent ? folded : folded.slice(1)
+                if (!head) return null
+                const groupId = parent ? parent.id : `group-${gi}-${head.id}`
                 const open = expanded.has(groupId)
                 const chip = variants.length > 0 ? (
                     <button
@@ -70,18 +74,7 @@ export function VariantGroupList<T extends { id: string; name: string; eventDate
                 return (
                     <div key={groupId}>
                         {parent ? renderRow(parent, chip) : (
-                            // A group with no parent row is drawn as the same row:
-                            // the date column, the name, one meta line.
-                            <div
-                                data-testid="setlist-group-head"
-                                className="flex items-center gap-3 ps-3 pe-1.5 sm:ps-4 sm:pe-2 py-1.5 min-h-12 bg-card"
-                            >
-                                <RowDate date={toDate(variants[0]?.eventDate)} muted />
-                                <div className="flex-1 min-w-0">
-                                    <h3 className="text-[0.95rem] font-semibold leading-snug text-foreground line-clamp-2">{baseName}</h3>
-                                    {variants[0] && renderInfo ? renderInfo(variants[0], chip) : chip}
-                                </div>
-                            </div>
+                            <div data-testid="setlist-group-head">{renderRow(head, chip)}</div>
                         )}
                         {open && variants.length > 0 && (
                             // The versions, as the same rows, on a faint tint so

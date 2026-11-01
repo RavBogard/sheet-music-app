@@ -42,19 +42,20 @@ export function SetlistToolbar({
         </Button>
     )
 
-    // Option B: one row: the rabbi chips (scrolling sideways on a phone,
-    // never wrapping to a second line) and the search toggle at the end. No
-    // "All setlists" label: the groups below have their own headings.
+    // Option B: the rabbi chips and the search toggle at the end of the same
+    // row; on a phone the chips wrap (nothing is clipped or hidden behind the
+    // toggle). No "All setlists" label: the groups below have their own
+    // headings.
     return (
         <div className="shrink-0 space-y-2">
-            <div className="flex items-center gap-2">
+            <div className="flex items-start gap-2">
                 {availableRabbis.length > 0 ? (
                     <SegmentedChips
                         ariaLabel={t("setlist.rabbiFilterGroupLabel")}
                         value={rabbiFilter}
                         // Tapping the active rabbi again clears the filter, as before.
                         onChange={(v) => onRabbiFilterChange(v === rabbiFilter ? "" : v)}
-                        className="min-w-0 flex-1 flex-nowrap overflow-x-auto scrollbar-hide py-1.5 -my-1.5"
+                        className="min-w-0 flex-1"
                         options={[
                             { value: "", label: t("setlist.rabbiFilterAll") },
                             ...availableRabbis.map((r) => ({ value: r, label: t("setlist.rabbiFilterChip", { name: r }) })),

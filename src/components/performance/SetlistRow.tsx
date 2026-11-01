@@ -485,7 +485,7 @@ export function SetlistRow({
         return (
             <div className="flex items-stretch bg-card">
                 <div className="flex-1 min-w-0">{rowEl}</div>
-                <span aria-hidden="true" className="shrink-0 w-11 sm:w-14 border-s border-b border-rule" />
+                <span aria-hidden="true" className="shrink-0 w-11 sm:w-14 border-b border-rule" />
             </div>
         )
     }
@@ -500,7 +500,7 @@ export function SetlistRow({
                     e.stopPropagation()
                     onSwapTap()
                 }}
-                className="shrink-0 w-11 sm:w-14 min-h-11 flex flex-col items-center justify-center gap-0 text-[11px] font-semibold text-muted-foreground hover:bg-accent hover:text-foreground active:bg-accent border-s border-b border-rule cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring [touch-action:manipulation]"
+                className="shrink-0 w-11 sm:w-14 min-h-11 flex flex-col items-center justify-center gap-0 text-[11px] font-semibold text-muted-foreground hover:bg-accent hover:text-foreground active:bg-accent border-b border-rule cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring [touch-action:manipulation]"
             >
                 <Replace className="h-4 w-4" aria-hidden="true" />
                 <span className="hidden sm:inline">{t("performSetlist.row.swap")}</span>

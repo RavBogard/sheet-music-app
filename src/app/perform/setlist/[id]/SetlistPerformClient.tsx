@@ -738,7 +738,14 @@ export function SetlistPerformClient({
                     {/* F1: pre-arm the whole setlist for offline use (idle auto-precache
                         runs on mount; this CTA force-caches with progress). Shown to
                         everyone performing — offline resilience isn't role-gated. */}
-                    {songFileIds.length > 0 && <SaveOfflineButton fileIds={songFileIds} onReadyChange={onDeviceReady} versions={chartVersions} />}
+                    {/* Mounted always (it reports readiness to the meta line);
+                        drawn only while something is left to save, since
+                        "N/N charts on this iPad" already says when all are. */}
+                    {songFileIds.length > 0 && (
+                        <span data-testid="perform-save-slot" className={deviceReady !== null && deviceTotal > 0 && deviceReady >= deviceTotal ? "hidden" : "contents"}>
+                            <SaveOfflineButton fileIds={songFileIds} onReadyChange={onDeviceReady} versions={chartVersions} />
+                        </span>
+                    )}
                     {foldableLiturgyRows > 0 && (
                         <Button
                             onClick={() => setLiturgyCollapsed(!liturgyCollapsed)}
@@ -746,6 +753,11 @@ export function SetlistPerformClient({
                             variant="ghost"
                             aria-pressed={liturgyCollapsed}
                             aria-label={
+                                liturgyCollapsed
+                                    ? t("performSetlist.toolbar.showLiturgyRows", { count: foldableLiturgyRows })
+                                    : t("performSetlist.toolbar.hideLiturgyRows", { count: foldableLiturgyRows })
+                            }
+                            title={
                                 liturgyCollapsed
                                     ? t("performSetlist.toolbar.showLiturgyRows", { count: foldableLiturgyRows })
                                     : t("performSetlist.toolbar.hideLiturgyRows", { count: foldableLiturgyRows })
@@ -770,6 +782,7 @@ export function SetlistPerformClient({
                             aria-pressed={reordering}
                             data-testid="perform-reorder-toggle"
                             aria-label={reordering ? t("performSetlist.reorder.done") : t("performSetlist.reorder.startLabel")}
+                            title={reordering ? t("performSetlist.reorder.done") : t("performSetlist.reorder.startLabel")}
                             className="h-11 min-w-11 gap-1.5 text-muted-foreground hover:text-foreground cursor-pointer"
                         >
                             {reordering ? <Check className="h-4 w-4" /> : <ArrowUpDown className="h-4 w-4" />}
@@ -779,14 +792,14 @@ export function SetlistPerformClient({
                         </Button>
                     )}
                     {canPrint && (
-                        <Button onClick={() => setShowPrintModal(true)} size="sm" variant="ghost" aria-label={t("performSetlist.toolbar.printSetlist")} className="h-11 min-w-11 gap-1.5 text-muted-foreground hover:text-foreground cursor-pointer">
+                        <Button onClick={() => setShowPrintModal(true)} size="sm" variant="ghost" aria-label={t("performSetlist.toolbar.printSetlist")} title={t("performSetlist.toolbar.printSetlist")} className="h-11 min-w-11 gap-1.5 text-muted-foreground hover:text-foreground cursor-pointer">
                             <Printer className="h-4 w-4" />
                             <span className="text-xs font-semibold hidden lg:inline">{t("performSetlist.toolbar.print")}</span>
                         </Button>
                     )}
                     {isLeader && (
                         <Button asChild size="sm" className="h-11 min-w-11 gap-1.5 rounded-md px-3 sm:px-4 bg-primary text-primary-foreground hover:bg-primary/90 font-bold">
-                            <Link href={`/setlists/${setlistId}`} aria-label={t("performSetlist.toolbar.editSetlist")}>
+                            <Link href={`/setlists/${setlistId}`} aria-label={t("performSetlist.toolbar.editSetlist")} title={t("performSetlist.toolbar.editSetlist")}>
                                 <Pencil className="h-4 w-4" />
                                 <span className="text-sm hidden sm:inline">{t("performSetlist.toolbar.edit")}</span>
                             </Link>
