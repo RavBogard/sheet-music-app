@@ -3,6 +3,7 @@ import { initializeApp, deleteApp, getApps, type App } from "firebase-admin/app"
 import { getFirestore } from "firebase-admin/firestore"
 
 import { proposeLiturgyBindings } from "../tools/liturgy-bindings"
+import { mirrorLegacyRoles } from "@/test-stubs/mirror-legacy-roles"
 
 /**
  * A-W3' — `propose_liturgy_bindings` against a real Firestore.
@@ -92,6 +93,9 @@ describe("MCP propose_liturgy_bindings (emulator)", () => {
         await db().collection("setlists").doc(SETLIST).delete()
         await seed()
     })
+
+    // SEC-02: role gates read memberships only; give each seeded person theirs.
+    beforeEach(async () => { await mirrorLegacyRoles(db()) })
 
     it("binds the rows it is sure of and leaves the rest alone", async () => {
         const res = await proposeLiturgyBindings(ADMIN, {

@@ -26,8 +26,11 @@ const mockDoc = vi.fn(() => ({ get: mockGet, set: mockSet, update: mockUpdate })
 // Firestore mock routes by collection name (users → user doc, else qr-sessions).
 const mockUserGet = vi.fn<(...args: unknown[]) => Promise<DocSnap>>(async () => ({ exists: false }))      // users/<uid>
 const mockUserDoc = vi.fn(() => ({ get: mockUserGet }))
+// memberships/<org>__<uid> (SEC-02: the approval role's only source).
+const mockMemberGet = vi.fn<(...args: unknown[]) => Promise<DocSnap>>(async () => ({ exists: false }))
+const mockMemberDoc = vi.fn(() => ({ get: mockMemberGet }))
 const mockCollection = vi.fn((name: string) =>
-    name === "users" ? { doc: mockUserDoc } : { doc: mockDoc },
+    name === "users" ? { doc: mockUserDoc } : name === "memberships" ? { doc: mockMemberDoc } : { doc: mockDoc },
 )
 const mockVerifyIdToken = vi.fn<(...args: unknown[]) => Promise<unknown>>()
 const mockCreateCustomToken = vi.fn(async () => "custom-token-stub")
@@ -229,51 +232,35 @@ describe("PUT /api/auth/qr — approval role gate (WS-21)", () => {
             body: JSON.stringify({ code }),
         })
 
-    // AC-1 — claim-lagged but real member: no role claim, users/<uid>.role=musician → approve.
-    it("approves when the role claim is absent but users/{uid}.role is a band role", async () => {
+    // SEC-02: the approver's membership in the host tenant is the only role
+    // source; the token `role` claim and users/{uid}.role no longer count.
+    it("approves a musician member (no role claim needed)", async () => {
         mockVerifyIdToken.mockResolvedValue({ uid: "u1", name: "Musician One", email: "m@example.com" })
-        mockUserGet.mockResolvedValue({ exists: true, data: () => ({ role: "musician" }) })
+        mockMemberGet.mockResolvedValue({ exists: true, data: () => ({ role: "musician" }) })
 
-        const res = await PUT(makePutReq("lagged-token"))
+        const res = await PUT(makePutReq("token"))
         expect(res.status).toBe(200)
-        const body = await res.json()
-        expect(body.success).toBe(true)
-        // The session was actually approved...
+        expect((await res.json()).success).toBe(true)
         expect(mockUpdate).toHaveBeenCalledWith(expect.objectContaining({ status: "approved" }))
-        // ...via the user-doc fallback (the claim was absent).
-        expect(mockUserDoc).toHaveBeenCalledWith("u1")
+        expect(mockMemberDoc).toHaveBeenCalledWith("crc__u1")
     })
 
-    // AC-2a — non-member user-doc role → still 403, no approval.
-    it("refuses (403) when neither claim nor user-doc role is an allowed band role", async () => {
+    it("refuses (403) a member-role membership", async () => {
         mockVerifyIdToken.mockResolvedValue({ uid: "u2", email: "guest@example.com" })
-        mockUserGet.mockResolvedValue({ exists: true, data: () => ({ role: "member" }) })
+        mockMemberGet.mockResolvedValue({ exists: true, data: () => ({ role: "member" }) })
 
-        const res = await PUT(makePutReq("lagged-token"))
+        const res = await PUT(makePutReq("token"))
         expect(res.status).toBe(403)
         expect(mockUpdate).not.toHaveBeenCalled()
     })
 
-    // AC-2b — no user doc at all → 403.
-    it("refuses (403) when the user doc does not exist", async () => {
-        mockVerifyIdToken.mockResolvedValue({ uid: "u3", email: "ghost@example.com" })
-        mockUserGet.mockResolvedValue({ exists: false })
+    it("refuses (403) a legacy band-role claim and users-doc role with no membership", async () => {
+        mockVerifyIdToken.mockResolvedValue({ uid: "u3", role: "musician", email: "legacy@example.com" })
+        mockUserGet.mockResolvedValue({ exists: true, data: () => ({ role: "admin" }) })
+        mockMemberGet.mockResolvedValue({ exists: false })
 
-        const res = await PUT(makePutReq("lagged-token"))
+        const res = await PUT(makePutReq("token"))
         expect(res.status).toBe(403)
         expect(mockUpdate).not.toHaveBeenCalled()
-    })
-
-    // AC-3 — claim already allowed → approve. Multi-tenant P2: the users doc is
-    // read once as part of the host-tenant membership lookup, never again for
-    // the legacy fallback.
-    it("approves on a present role claim with no extra user-doc read", async () => {
-        mockVerifyIdToken.mockResolvedValue({ uid: "u4", role: "musician", name: "Claimed", email: "c@example.com" })
-
-        const res = await PUT(makePutReq("good-token"))
-        expect(res.status).toBe(200)
-        const body = await res.json()
-        expect(body.success).toBe(true)
-        expect(mockUserDoc).toHaveBeenCalledTimes(1)
     })
 })

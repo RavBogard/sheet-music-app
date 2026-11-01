@@ -7,7 +7,7 @@ import { getFirestore } from "firebase-admin/firestore"
 import { fetchFileById, type FetchedFile } from "@/lib/file-fetcher"
 import { initAdmin } from "@/lib/firebase-admin"
 import { downloadExactStorageGeneration } from "@/lib/firebase-storage"
-import { rowOrg, rowOrgIds, userInOrg } from "@/lib/org/membership"
+import { rowOrg } from "@/lib/org/membership"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import {
     selectLatestReaderMusic,
@@ -27,7 +27,6 @@ import {
 } from "@/lib/reader-music-public"
 import { getTracksForSetlist } from "@/lib/server-tracks"
 
-const ELIGIBLE_ROLES = new Set(["member", "musician", "band_leader", "admin"])
 
 export type ReaderMusicAccess =
     | {
@@ -70,25 +69,9 @@ export async function authorizeReaderMusic(
     if (!profileSnap.exists) return { ok: false, kind: "forbidden" }
     const profile = profileSnap.data() ?? {}
     // Multi-tenant P2 (design §3.4): member or above IN THE TARGET TENANT, from
-    // the membership (po passes). While the person is unmigrated the pre-P2
-    // rule below applies unchanged.
-    const access = await getTenantAccess(decoded.uid, orgId, {
-        db,
-        legacyClaims: decoded as unknown as Record<string, unknown>,
-    })
-    if (access.po || access.source === "membership" || access.migrated) {
-        if (!hasTenantRole(access, "member")) return { ok: false, kind: "forbidden" }
-    } else {
-        // Legacy: custom claims are the role authority. A user may write their
-        // own profile document, so profile.role is never an authorization
-        // fallback; the user row is an independent tenant wall.
-        if (!ELIGIBLE_ROLES.has(String(decoded.role ?? ""))) {
-            return { ok: false, kind: "forbidden" }
-        }
-        if (!userInOrg(decoded, orgId) || !rowOrgIds(profile.orgIds).includes(orgId)) {
-            return { ok: false, kind: "forbidden" }
-        }
-    }
+    // the membership (po passes). SEC-02: no legacy claim-role path.
+    const access = await getTenantAccess(decoded.uid, orgId, { db })
+    if (!hasTenantRole(access, "member")) return { ok: false, kind: "forbidden" }
 
     const readerMusicEnabled = profile.readerMusicEnabled === true
     if (requireOptIn && !readerMusicEnabled) {

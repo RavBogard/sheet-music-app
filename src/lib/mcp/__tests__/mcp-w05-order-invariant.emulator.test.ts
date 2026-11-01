@@ -23,6 +23,7 @@ import {
     reorderSetlist,
     updateSetlistTrack,
 } from "../tools/setlist-write"
+import { mirrorLegacyRoles } from "@/test-stubs/mirror-legacy-roles"
 
 /**
  * F-03 / W-05 invariant-on-write — companion to scripts/repack-track-order.ts.
@@ -129,6 +130,9 @@ describe("W-05 — order-invariant on the 3 named write paths (emulator)", () =>
             await Promise.all(snap.docs.map((d) => d.ref.delete()))
         }
     })
+
+    // SEC-02: role gates read memberships only; give each seeded person theirs.
+    beforeEach(async () => { await mirrorLegacyRoles(db()) })
 
     it("remove_track re-packs drifted siblings to contiguous [0..n-1]", async () => {
         const { setlistId, trackIds } = await seedDriftedSetlist([0, 2, 5])

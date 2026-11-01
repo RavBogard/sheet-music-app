@@ -8,6 +8,7 @@ import {
     addTrackToSetlist,
     updateSetlist,
 } from "../tools/setlist-write"
+import { mirrorLegacyRoles } from "@/test-stubs/mirror-legacy-roles"
 
 /**
  * GAP-002 (cycle-2 b4 bundle) — emulator coverage for `clone_setlist`.
@@ -122,6 +123,9 @@ describe("MCP clone_setlist (emulator)", () => {
             await Promise.all(snap.docs.map((d) => d.ref.delete()))
         }
     })
+
+    // SEC-02: role gates read memberships only; give each seeded person theirs.
+    beforeEach(async () => { await mirrorLegacyRoles(db()) })
 
     it("happy path: clones source into a new setlist with fresh trackIds and version=1", async () => {
         const sourceId = await buildSource()

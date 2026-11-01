@@ -11,6 +11,7 @@ import { initializeApp, deleteApp, getApps, type App } from "firebase-admin/app"
 import { getFirestore } from "firebase-admin/firestore"
 
 import { editEnrichment } from "../tools/library-review"
+import { mirrorLegacyRoles } from "@/test-stubs/mirror-legacy-roles"
 
 /**
  * v11.5-01-03 (H9) — band_leader library-edit authz, against the Firebase emulator.
@@ -88,6 +89,10 @@ describe("edit_library_entry / editEnrichment authz (emulator)", () => {
     async function tagsOf(rowId: string): Promise<unknown> {
         return (await db().collection("library_index").doc(rowId).get()).data()?.tags
     }
+
+    // SEC-02: role gates read memberships only; give each seeded person the
+    // membership the people migration would have written.
+    beforeEach(async () => { await mirrorLegacyRoles(db(), { migrate: true }) })
 
     it("AC-1: crc band_leader edits tags on an in-org row, in place", async () => {
         const res = await editEnrichment(

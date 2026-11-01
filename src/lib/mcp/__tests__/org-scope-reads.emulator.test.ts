@@ -12,6 +12,7 @@ import { getFirestore } from "firebase-admin/firestore"
 import { listSetlists, getSetlist } from "../tools/setlists"
 import { searchLibrary, getSong, listLibrary } from "../tools/library"
 import { searchChartText } from "../tools/chart-text-search"
+import { mirrorLegacyRoles } from "@/test-stubs/mirror-legacy-roles"
 
 /**
  * v11-02-02 — MCP read org-scoping against the Firebase emulator.
@@ -56,6 +57,7 @@ describe("MCP read org-scoping (emulator)", () => {
     async function seed() {
         // Admin user so search_chart_text's role gate passes.
         await db().collection("users").doc(ADMIN).set({ role: "admin" })
+        await mirrorLegacyRoles(db(), { migrate: true, uids: [ADMIN], keepExisting: true })
 
         // Setlists — one per tenant.
         await db().collection("setlists").doc("s-crc").set({
@@ -112,6 +114,10 @@ describe("MCP read org-scoping (emulator)", () => {
             .doc("page_0")
             .set({ chords: [{ text: "Cmaj7bl" }] })
     }
+
+    // SEC-02: role gates read memberships only; give each seeded person the
+    // membership the people migration would have written.
+    beforeEach(async () => { await mirrorLegacyRoles(db(), { migrate: true }) })
 
     it("AC-1/AC-2: list_setlists returns only the caller's tenant", async () => {
         await seed()

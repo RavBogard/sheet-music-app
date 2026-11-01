@@ -13,6 +13,7 @@ import {
     archiveNonChartArtifacts,
     type ArchiveNonChartResult,
 } from "../tools/archive-nonchart-artifacts"
+import { mirrorLegacyRoles } from "@/test-stubs/mirror-legacy-roles"
 
 /**
  * data-health dh-20260527a Class 3 — `archive_nonchart_artifacts`.
@@ -86,6 +87,10 @@ describe("MCP archive_nonchart_artifacts — dh-20260527a Class 3 (emulator)", (
         await seedUser(LEADER, "band_leader")
         await seedUser(MUSICIAN, "musician")
     })
+
+    // SEC-02: role gates read memberships only; give each seeded person the
+    // membership the people migration would have written.
+    beforeEach(async () => { await mirrorLegacyRoles(db(), { migrate: true }) })
 
     it("refuses a musician caller with a forbidden_role envelope", async () => {
         const r = await archiveNonChartArtifacts(MUSICIAN, { dryRun: true })

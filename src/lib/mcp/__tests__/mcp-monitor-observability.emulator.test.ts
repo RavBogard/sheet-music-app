@@ -7,6 +7,7 @@ import {
     assignMonitorBus,
     unassignMonitorBus,
 } from "../tools/monitor-observability"
+import { mirrorLegacyRoles } from "@/test-stubs/mirror-legacy-roles"
 
 /**
  * P2-B observability + bus-assignment MCP tools against the Firebase emulator.
@@ -94,6 +95,9 @@ describe("MCP monitor observability + assignment tools (emulator)", () => {
     })
 
     // ─── get_command_status (MCP-D3) ─────────────────────────────────────
+
+    // SEC-02: role gates read memberships only; give each seeded person theirs.
+    beforeEach(async () => { await mirrorLegacyRoles(db()) })
 
     it("denies a user with no monitor access", async () => {
         // BAND_LEADER has no assigned bus + isn't admin/SE → no monitor access.

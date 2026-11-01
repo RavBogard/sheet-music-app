@@ -11,6 +11,7 @@ import { getFirestore } from "firebase-admin/firestore"
 
 import { backfillSetlistTestFlag } from "../tools/setlist-hygiene"
 import { isTestSetlist } from "@/types/models"
+import { mirrorLegacyRoles } from "@/test-stubs/mirror-legacy-roles"
 
 /**
  * Cycle-2 SEC-004 — `backfill_setlist_test_flag` admin-only sweep that
@@ -53,6 +54,10 @@ describe("MCP backfill_setlist_test_flag — SEC-004 (emulator)", () => {
         await seedUser(ADMIN, "admin")
         await seedUser(MUSICIAN, "musician")
     })
+
+    // SEC-02: role gates read memberships only; give each seeded person the
+    // membership the people migration would have written.
+    beforeEach(async () => { await mirrorLegacyRoles(db(), { migrate: true }) })
 
     it("isTestSetlist classifier — covers test-* uid + [TEST/[CYCLE/[CF prefixes", () => {
         expect(isTestSetlist({ name: "Shabbat Morning", ownerId: ADMIN })).toBe(false)

@@ -72,6 +72,7 @@ import {
     unassignMusician,
     respondToAssignment,
 } from "../tools/roster"
+import { mirrorLegacyRoles } from "@/test-stubs/mirror-legacy-roles"
 
 /**
  * Cycle-3 c1 — emulator-backed roster + scheduling MCP tools.
@@ -248,7 +249,11 @@ describe("MCP roster tools — cycle-3 c1 (emulator)", () => {
 
     // ─── list_musicians ─────────────────────────────────────────────────────
 
+    // SEC-02: role gates read memberships only; give each seeded person theirs.
+    beforeEach(async () => { await mirrorLegacyRoles(db()) })
+
     it("list_musicians: refuses non-trusted-leader callers with rich forbidden_role envelope", async () => {
+        await mirrorLegacyRoles(db(), { orgs: ["crc"], uids: [MUSICIAN], allRoles: true, keepExisting: true })
         const r = await listMusicians(MUSICIAN)
         expect(r).toMatchObject({
             ok: false,
@@ -387,6 +392,7 @@ describe("MCP roster tools — cycle-3 c1 (emulator)", () => {
         })
 
         it("find_user: refuses a plain musician with the rich forbidden_role envelope (AC-3)", async () => {
+            await mirrorLegacyRoles(db(), { orgs: ["crc"], uids: [MUSICIAN], allRoles: true, keepExisting: true })
             const r = await findUser(MUSICIAN, { nameContains: "x" }, "crc")
             expect(r).toMatchObject({
                 ok: false,

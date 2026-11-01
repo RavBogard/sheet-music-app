@@ -12,6 +12,7 @@ import {
     cloneSetlistFromTemplate,
 } from "../tools/templates"
 import { createSetlist } from "../tools/setlist-write"
+import { mirrorLegacyRoles } from "@/test-stubs/mirror-legacy-roles"
 
 /**
  * v11-05-01 — emulator coverage for org-scoping the `setlistTemplates` collection.
@@ -71,6 +72,9 @@ describe("MCP templates org-scoping (emulator)", () => {
         expect(blRes.ok).toBe(true)
         return { crcId: crcRes.templateId, blId: blRes.templateId }
     }
+
+    // SEC-02: role gates read memberships only; give each seeded person theirs.
+    beforeEach(async () => { await mirrorLegacyRoles(db()) })
 
     it("AC-3: create stamps the caller's org on the template doc", async () => {
         const { crcId, blId } = await seedBothOrgs()

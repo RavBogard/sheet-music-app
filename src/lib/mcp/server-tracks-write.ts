@@ -10,7 +10,7 @@ import { logger } from "@/lib/logger"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 import { rowOrg } from "@/lib/mcp/org-context"
-import { readTenantRole } from "@/lib/org/access"
+import { readMembershipRole } from "@/lib/org/access"
 import {
     codeFor,
     forbiddenRoleEnvelope,
@@ -143,7 +143,7 @@ export async function assertEditor(
     // tenant-blind read.
     org: OrgId,
 ): Promise<{ ok: true } | ForbiddenRoleEnvelope> {
-    const role = await readTenantRole(db, uid, org)
+    const role = await readMembershipRole(db, uid, org)
     if (role === "admin" || role === "band_leader") return { ok: true }
     return forbiddenRoleEnvelope({
         callerRole: role ?? null,

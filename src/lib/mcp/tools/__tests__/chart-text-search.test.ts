@@ -128,7 +128,9 @@ const getAllMock = vi.fn(async (...refs: Array<{ id: string }>) => {
 
 const mockDb = {
     collection: vi.fn((path: string) => {
-        if (path === "users") {
+        // SEC-02: the role gate reads memberships/{org}__{uid}; the fixture's
+        // role answers it (users is kept for any profile read).
+        if (path === "users" || path === "memberships") {
             return {
                 doc: vi.fn(() => ({ get: userDocGetMock })),
             }

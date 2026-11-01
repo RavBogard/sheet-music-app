@@ -9,6 +9,7 @@ import {
 } from "../tools/mint-admin-bearer"
 import { verifyBearer } from "../auth"
 import { generateRawToken, hashToken } from "../tokens"
+import { mirrorLegacyRoles } from "@/test-stubs/mirror-legacy-roles"
 
 /**
  * Emulator coverage for the programmatic admin-bearer mint pack
@@ -70,6 +71,10 @@ describe("MCP mint_admin_bearer (emulator)", () => {
     })
 
     // 1. Happy path — root admin mints; raw bearer returned + correct provenance.
+    // SEC-02: role gates read memberships only; give each seeded person the
+    // membership the people migration would have written.
+    beforeEach(async () => { await mirrorLegacyRoles(db(), { migrate: true }) })
+
     it("root admin mints a bearer; doc has correct provenance", async () => {
         const root = await seedRootToken()
         const result = await mintAdminBearerCore(rootCaller(root.tokenId), {

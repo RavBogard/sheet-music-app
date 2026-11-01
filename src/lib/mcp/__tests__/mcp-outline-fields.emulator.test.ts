@@ -34,6 +34,8 @@ describe("outline fields survive the MCP write path (emulator)", () => {
         expect(process.env.FIRESTORE_EMULATOR_HOST).toBeTruthy()
         app = getApps()[0] ?? initializeApp({ projectId: "demo-mcp-outline-fields" })
         await db().collection("users").doc(ADMIN).set({ displayName: "Rabbi Daniel", role: "admin" })
+        // SEC-02: role gates read only the tenant membership.
+        await db().collection("memberships").doc(`crc__${ADMIN}`).set({ uid: ADMIN, tenantId: "crc", role: "admin", soundEngineer: false, addedBy: "test-account" })
     })
     afterAll(async () => { await deleteApp(app) })
     beforeEach(async () => {

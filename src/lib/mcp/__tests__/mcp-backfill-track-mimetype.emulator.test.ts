@@ -10,6 +10,7 @@ import { initializeApp, deleteApp, getApps, type App } from "firebase-admin/app"
 import { getFirestore } from "firebase-admin/firestore"
 
 import { backfillTrackMimetype } from "../tools/backfill-track-mimetype"
+import { mirrorLegacyRoles } from "@/test-stubs/mirror-legacy-roles"
 
 /**
  * cowork #2/#7 — `backfill_track_mimetype` trusted-leader hygiene backfill.
@@ -71,6 +72,9 @@ describe("MCP backfill_track_mimetype — cowork #2/#7 (emulator)", () => {
         await seedUser(LEADER, "band_leader")
         await seedUser(MUSICIAN, "musician")
     })
+
+    // SEC-02: role gates read memberships only; give each seeded person theirs.
+    beforeEach(async () => { await mirrorLegacyRoles(db()) })
 
     it("refuses a musician caller with a forbidden_role envelope", async () => {
         await seedTrack("t1", { setlistId: "s1", fileId: "upload-1" })

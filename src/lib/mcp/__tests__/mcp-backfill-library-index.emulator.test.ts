@@ -10,6 +10,7 @@ import { initializeApp, deleteApp, getApps, type App } from "firebase-admin/app"
 import { getFirestore } from "firebase-admin/firestore"
 
 import { backfillLibraryIndex } from "../tools/library"
+import { mirrorLegacyRoles } from "@/test-stubs/mirror-legacy-roles"
 
 /**
  * Cycle-2 DATA-001 — `backfill_library_index` admin-only hygiene pass.
@@ -71,6 +72,10 @@ describe("MCP backfill_library_index — DATA-001 (emulator)", () => {
         await seedUser(ADMIN, "admin")
         await seedUser(MUSICIAN, "musician")
     })
+
+    // SEC-02: role gates read memberships only; give each seeded person the
+    // membership the people migration would have written.
+    beforeEach(async () => { await mirrorLegacyRoles(db(), { migrate: true }) })
 
     it("refuses non-admin callers", async () => {
         await seedIndex("u1", { name: " whitespace " })

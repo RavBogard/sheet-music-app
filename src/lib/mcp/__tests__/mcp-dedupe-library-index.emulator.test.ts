@@ -11,6 +11,7 @@ import { getFirestore } from "firebase-admin/firestore"
 
 import { dedupeLibraryIndex, FORMAT_CLASS_SEP } from "../tools/library"
 import { searchLibrary } from "../tools/library"
+import { mirrorLegacyRoles } from "@/test-stubs/mirror-legacy-roles"
 
 /**
  * Cycle-1 F-019 + F-008 — one-shot library_index dedupe.
@@ -36,6 +37,7 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
 
     async function seedUser(uid: string, role: string) {
         await db().collection("users").doc(uid).set({ role })
+        await mirrorLegacyRoles(db(), { migrate: true, uids: [uid], keepExisting: true })
     }
     async function seedIndex(id: string, data: Record<string, unknown>) {
         // E1 fixture audit (`R-0904-live-cw-3`): every row in the production
@@ -81,6 +83,10 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
         await seedUser(MUSICIAN, "musician")
         await seedUser(MEMBER, "member")
     })
+
+    // SEC-02: role gates read memberships only; give each seeded person the
+    // membership the people migration would have written.
+    beforeEach(async () => { await mirrorLegacyRoles(db(), { migrate: true }) })
 
     it("C9I5-001 — refuses non-admin callers (musician + member) with rich forbidden_role", async () => {
         await seedIndex("ana-clean", {
@@ -372,6 +378,8 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
         })
         await seedIndex("other-2", { name: "Shalom Rav", orgId: "broslaz" })
 
+        // SEC-02: the admin acts in "broslaz", so they need a membership there.
+        await mirrorLegacyRoles(db(), { orgs: ["broslaz"], uids: [ADMIN], keepExisting: true })
         const r = await dedupeLibraryIndex(ADMIN, { dryRun: true }, "broslaz")
         if ("error" in r) throw new Error(typeof r.error === "string" ? r.error : JSON.stringify(r.error))
         expect(r.coverage.total).toBe(2)

@@ -101,12 +101,13 @@ describe("memberships (emulator)", () => {
         expect(hasTenantRole(d, "admin")).toBe(true)
     })
 
-    it("getTenantAccess: legacy fallback only while unmigrated", async () => {
+    it("getTenantAccess: SEC-02 no legacy fallback; the migration's memberships decide", async () => {
         await user("old", { role: "band_leader" }, { role: "band_leader", soundEngineer: true, canUpload: true })
-        const legacy = await getTenantAccess("old", "brotherslazaroff")
-        expect(legacy).toMatchObject({ source: "legacy", role: "band_leader", soundEngineer: true, canUpload: true })
+        const before = await getTenantAccess("old", "brotherslazaroff")
+        expect(before).toMatchObject({ source: "none", role: null, effectiveRole: null, canUpload: true })
         const viaClaims = await getTenantAccess("old", "crc", { legacyClaims: { role: "musician" } })
-        expect(viaClaims.role).toBe("musician")
+        expect(viaClaims.role).toBeNull()
+        expect(await readTenantRole(db(), "old", "crc")).toBeUndefined()
         await ensureMembershipsMigrated("old")
         expect(await readTenantRole(db(), "old", "brotherslazaroff")).toBeUndefined()
         expect(await readTenantRole(db(), "old", "crc")).toBe("band_leader")

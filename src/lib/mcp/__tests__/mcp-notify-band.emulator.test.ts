@@ -54,6 +54,7 @@ vi.mock("@/lib/file-fetcher", () => ({
 }))
 
 import { publishSetlist } from "../tools/setlist-publish"
+import { mirrorLegacyRoles } from "@/test-stubs/mirror-legacy-roles"
 
 /**
  * MCP notify_band against the Firebase emulator.
@@ -190,6 +191,14 @@ describe("MCP notify_band (emulator)", () => {
             title: "Kabbalat Shabbat",
         })
     }
+
+    // SEC-02: role gates read memberships only; give each seeded person theirs.
+    // Leaders are crc members; ADMIN also acts in brotherslazaroff (the BL
+    // audience tests), and nobody else is a BL member unless a test says so.
+    beforeEach(async () => {
+        await mirrorLegacyRoles(db(), { orgs: ["crc"] })
+        await mirrorLegacyRoles(db(), { orgs: ["brotherslazaroff"], uids: [ADMIN], keepExisting: true })
+    })
 
     it("replays a completed publish receipt, rejects key reuse, and keeps deliberate re-publish explicit", async () => {
         const id = "set-publish-receipt"
@@ -797,6 +806,7 @@ describe("MCP notify_band (emulator)", () => {
         const id = "set-real-owner-cross"
         const TEST_CALLER = "test-c7i3-band_leader-cafe1234"
         await seedUser(TEST_CALLER, { role: "band_leader", isTestUser: true })
+        await mirrorLegacyRoles(db(), { orgs: ["crc"], uids: [TEST_CALLER], keepExisting: true })
         await seedSetlist(id, { ownerId: ADMIN }) // owner is real (admin uid)
         await seedTrack("t1", id, 0, {
             type: "song",
@@ -816,6 +826,7 @@ describe("MCP notify_band (emulator)", () => {
         const id = "set-real-owner-cross-dryrun"
         const TEST_CALLER = "test-c7i3-band_leader-d34db33f"
         await seedUser(TEST_CALLER, { role: "band_leader", isTestUser: true })
+        await mirrorLegacyRoles(db(), { orgs: ["crc"], uids: [TEST_CALLER], keepExisting: true })
         await seedSetlist(id, { ownerId: ADMIN })
         await seedTrack("t1", id, 0, {
             type: "song",

@@ -137,6 +137,7 @@ import {
     MAX_ITEM_BYTES,
     MAX_ITEMS_PER_BATCH,
 } from "@/lib/intake/batch-types"
+import { mirrorLegacyRoles } from "@/test-stubs/mirror-legacy-roles"
 
 const ORG = "crc"
 const OTHER_ORG = "lazaroff"
@@ -198,6 +199,10 @@ describe("batch intake MCP tools (emulator)", () => {
     })
 
     // ─── open_chart_dropzone ─────────────────────────────────────────────
+
+    // SEC-02: role gates read memberships only; give each seeded person the
+    // membership the people migration would have written.
+    beforeEach(async () => { await mirrorLegacyRoles(db(), { migrate: true, orgs: [ORG, OTHER_ORG] }) })
 
     it("refuses to open a dropzone for a member with no upload permission", async () => {
         const r = await openChartDropzone(MEMBER, ORG, {})

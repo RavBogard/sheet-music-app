@@ -105,6 +105,7 @@ import {
 } from "../tools/library-upload"
 import { driveSourceIsConvertible } from "@/lib/google-drive"
 import { getSongById } from "../server-songs"
+import { mirrorLegacyRoles } from "@/test-stubs/mirror-legacy-roles"
 
 /**
  * MCP chart-upload tools against the Firebase emulator.
@@ -200,6 +201,10 @@ describe("MCP chart-upload tools (emulator)", () => {
     }
 
     // ─── upload_chart ───────────────────────────────────────────────────────
+
+    // SEC-02: role gates read memberships only; give each seeded person the
+    // membership the people migration would have written.
+    beforeEach(async () => { await mirrorLegacyRoles(db(), { migrate: true }) })
 
     it("admin uploads a PDF — writes library_index + songs, Storage called once", async () => {
         const result = (await uploadChart(ADMIN, {
@@ -1040,6 +1045,7 @@ describe("MCP chart-upload tools (emulator)", () => {
                 .collection("users")
                 .doc(otherMusician)
                 .set({ role: "musician", email: "other@example.com" })
+            await mirrorLegacyRoles(db(), { migrate: true, uids: [otherMusician], keepExisting: true })
             const denied = await deleteChart(otherMusician, { fileId })
             expect(denied).toMatchObject({
             ok: false,

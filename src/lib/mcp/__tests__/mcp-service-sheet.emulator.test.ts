@@ -68,6 +68,7 @@ vi.mock("@/lib/rate-limit", () => ({ checkUserRateLimit: vi.fn().mockResolvedVal
 
 import { generateServiceSheet } from "../tools/service-sheet"
 import { createSetlist, addTrackToSetlist } from "../tools/setlist-write"
+import { mirrorLegacyRoles } from "@/test-stubs/mirror-legacy-roles"
 
 describe("generate_service_sheet (emulator)", () => {
     let app: App
@@ -120,6 +121,9 @@ describe("generate_service_sheet (emulator)", () => {
         })
         return setlistId
     }
+
+    // SEC-02: role gates read memberships only; give each seeded person theirs.
+    beforeEach(async () => { await mirrorLegacyRoles(db()) })
 
     it("returns a signed download url and a real page count", async () => {
         const setlistId = await seedService()

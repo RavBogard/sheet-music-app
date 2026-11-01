@@ -1,7 +1,7 @@
 import "server-only"
 
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
-import { readTenantRole } from "@/lib/org/access"
+import { readMembershipRole } from "@/lib/org/access"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 import {
@@ -124,7 +124,7 @@ async function assertAdmin(
 ): Promise<{ ok: true } | RichErrorEnvelope> {
     initAdmin()
     const db = getFirestore()
-    const role = await readTenantRole(db, uid, org)
+    const role = await readMembershipRole(db, uid, org)
     if (role === "admin") return { ok: true }
     return forbiddenRoleEnvelope({
         callerRole: role ?? null,

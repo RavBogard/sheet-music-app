@@ -12,6 +12,7 @@ import {
     setMatrixFader,
     setMatrixMute,
 } from "../tools/monitor"
+import { mirrorLegacyRoles } from "@/test-stubs/mirror-legacy-roles"
 
 /**
  * MCP monitor-control tools against the Firebase emulator.
@@ -162,6 +163,10 @@ describe("MCP monitor-control tools (emulator)", () => {
     })
 
     // ─── Access enforcement ────────────────────────────────────────────────
+
+    // SEC-02: role gates read memberships only; give each seeded person the
+    // membership the people migration would have written.
+    beforeEach(async () => { await mirrorLegacyRoles(db(), { migrate: true }) })
 
     it("denies users with no admin role, no SE flag, and no assigned bus", async () => {
         const r = await listMonitorBuses(NO_ACCESS)

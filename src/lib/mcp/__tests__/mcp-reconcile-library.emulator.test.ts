@@ -179,6 +179,7 @@ vi.mock("@/lib/google-drive", () => ({
 
 // AFTER the mocks: import the module under test.
 import { reconcileLibrary } from "../tools/reconcile-library"
+import { mirrorLegacyRoles } from "@/test-stubs/mirror-legacy-roles"
 
 describe("MCP reconcile_library — NEW-2 cycle-3 (emulator)", () => {
     let app: App
@@ -191,6 +192,7 @@ describe("MCP reconcile_library — NEW-2 cycle-3 (emulator)", () => {
 
     async function seedUser(uid: string, role: string) {
         await db().collection("users").doc(uid).set({ role })
+        await mirrorLegacyRoles(db(), { migrate: true, uids: [uid], keepExisting: true })
     }
     async function seedIndex(id: string, data: Record<string, unknown>) {
         await db().collection("library_index").doc(id).set(data)
@@ -236,6 +238,10 @@ describe("MCP reconcile_library — NEW-2 cycle-3 (emulator)", () => {
     afterEach(() => {
         vi.clearAllMocks()
     })
+
+    // SEC-02: role gates read memberships only; give each seeded person the
+    // membership the people migration would have written.
+    beforeEach(async () => { await mirrorLegacyRoles(db(), { migrate: true }) })
 
     it("admin gate refuses non-admin callers", async () => {
         await seedUser(MUSICIAN, "musician")

@@ -141,7 +141,7 @@ export async function POST(req: NextRequest) {
     if (bodyTargetUid && bodyTargetUid !== bearerUid) {
         // ── Admin-bearer mint-on-behalf branch (UX-001) ─────────────────
         // Multi-tenant P2: the caller must be admin in the BEARER's tenant
-        // (membership; po → admin; legacy users-doc role while unmigrated).
+        // (membership; po → admin). SEC-02: no legacy users-doc role.
         const db = getFirestore()
         let callerRole: string | null = null
         try {

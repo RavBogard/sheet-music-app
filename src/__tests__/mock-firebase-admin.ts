@@ -1,4 +1,5 @@
 import { vi } from 'vitest'
+import { mClaim, setMockMembershipRole, withMockMemberships } from '@/test-stubs/tenant-claims'
 
 /**
  * Shared Firebase Admin mock objects.
@@ -36,7 +37,8 @@ export const mockWhere: ReturnType<typeof vi.fn> = vi.fn(() => {
 export const mockUpdate = vi.fn()
 export const mockSet = vi.fn()
 
-export const mockFirestore = {
+// SEC-02: route auth reads memberships only; mockAuth sets the caller's role there.
+const mockFirestoreBase = {
     collection: vi.fn(() => ({
         doc: vi.fn(() => ({
             id: 'mock-doc-id',
@@ -67,6 +69,7 @@ export const mockFirestore = {
         return fn(transaction)
     }),
 }
+export const mockFirestore = withMockMemberships(mockFirestoreBase)
 
 export const firebaseAdminMock = {
     initAdmin: vi.fn().mockReturnValue(true),
@@ -78,10 +81,12 @@ export const firebaseAdminMock = {
  * Configure verifyIdToken to return a user with the given role and correct claim flags.
  */
 export function mockAuth(role: string) {
+    setMockMembershipRole(role)
     firebaseAdminMock.verifyIdToken.mockResolvedValue({
         uid: 'user123',
         email: 'test@example.com',
         role,
+        ...mClaim(role),
         isAdmin: role === 'admin',
         isBandLeader: role === 'band_leader' || role === 'admin',
         isMusician: ['musician', 'band_leader', 'admin'].includes(role),

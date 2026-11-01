@@ -42,6 +42,7 @@ import {
     findContact,
 } from "../tools/contacts"
 import { previewPublish } from "../tools/preview-publish"
+import { mirrorLegacyRoles } from "@/test-stubs/mirror-legacy-roles"
 
 /**
  * v11.4-03 (D8 item 3) — contacts MCP tools against the Firebase emulator.
@@ -80,6 +81,9 @@ describe("MCP contacts (emulator)", () => {
     })
 
     // ─── AC-1: leader CRUD + AC-3 validation/dedupe ─────────────────────────
+
+    // SEC-02: role gates read memberships only; give each seeded person theirs.
+    beforeEach(async () => { await mirrorLegacyRoles(db()) })
 
     it("AC-1: create_contact → list_contacts round-trips with orgId + createdBy", async () => {
         const created = await createContact(

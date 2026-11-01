@@ -26,6 +26,7 @@ import {
     createSetlist,
     updateSetlistTrack,
 } from "../tools/setlist-write"
+import { mirrorLegacyRoles } from "@/test-stubs/mirror-legacy-roles"
 
 /**
  * W-01 Tasks 3 + 4 + 5 — preview_notify_band wrapper, flag/review/record loop.
@@ -181,6 +182,9 @@ describe("W-01 Tasks 3+4+5 — preview/flag/review/record (emulator)", () => {
     })
 
     // ─── AC-5: preview_notify_band ──────────────────────────────────────────────
+
+    // SEC-02: role gates read memberships only; give each seeded person theirs.
+    beforeEach(async () => { await mirrorLegacyRoles(db()) })
 
     it("AC-5: preview_notify_band reformats the dryRun envelope and recommends 'send' on clean state", async () => {
         const setlistId = await newSetlist({ templateType: "shabbat-morning" })

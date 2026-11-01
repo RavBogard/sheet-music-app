@@ -11,6 +11,7 @@ import { getFirestore } from "firebase-admin/firestore"
 import { createHash } from "node:crypto"
 
 import { dedupeLibraryIndex } from "../tools/library"
+import { mirrorLegacyRoles } from "@/test-stubs/mirror-legacy-roles"
 
 /**
  * W5 (R-0903-live-cw-2 §3, §4, §6) — the byte-identity lane, the deciding
@@ -68,6 +69,10 @@ describe("MCP dedupe_library — the hash pass (emulator)", () => {
         }
         await db().collection("users").doc(ADMIN).set({ role: "admin" })
     }, 30_000)
+
+    // SEC-02: role gates read memberships only; give each seeded person the
+    // membership the people migration would have written.
+    beforeEach(async () => { await mirrorLegacyRoles(db(), { migrate: true }) })
 
     it("finds a byte-identical pair the NAME pass could never see, and marks nothing", async () => {
         // The production pair: `gminor_spirits` and `G-minor Spirits` share
