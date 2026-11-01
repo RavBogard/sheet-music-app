@@ -345,7 +345,7 @@ export function SetlistPerformClient({
         const idx = tracks.findIndex((t) => t.id === bootTrackRef.current)
         const row = idx >= 0 ? tracks[idx] : null
         if (row && row.type !== "header" && (row.type as string) !== "section") setActiveSongIndex(idx)
-    }, [tracks])
+    }, [tracks, setActiveSongIndex])
 
     useEffect(() => {
         if (typeof window === "undefined") return
