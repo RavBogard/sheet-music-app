@@ -58,7 +58,11 @@
         "wrap": "Wrap",
         "fit": "Fit",
         "zoomOut": "Zoom out",
-        "zoomIn": "Zoom in"
+        "zoomIn": "Zoom in",
+        "parts": "Parts",
+        "partsLabel": "Parts to show",
+        "partN": "Part {n}",
+        "partsReset": "Use the default parts"
     },
     "transposer": {
         "errorTitle": "Transposer Error",

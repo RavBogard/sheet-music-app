@@ -5,6 +5,9 @@ import { OpenSheetMusicDisplay, TransposeCalculator } from 'opensheetmusicdispla
 import { Loader2, Music2, Check, RefreshCw } from 'lucide-react'
 import { useMusicStore } from '@/lib/store'
 import { useAuth } from '@/lib/auth-context'
+import { useOrg } from '@/lib/org/org-context'
+import { pickPresets, resolvePartSelection } from '@/lib/music/part-presets'
+import { fetchPartPresets } from '@/lib/music/part-presets-client'
 import { changeTrackKey } from '@/lib/live-director'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -128,7 +131,17 @@ export function SmartScoreViewer({ fileId, trackId, trackKey }: SmartScoreViewer
     const MAX_RETRIES = 3
     const LOAD_WATCHDOG_MS = 45_000
 
-    const { transposition, zoom, aiXmlContent, setMusicXmlKey, musicXmlKey } = useMusicStore()
+    const { transposition, zoom, aiXmlContent, setMusicXmlKey, musicXmlKey, chartParts, setChartParts, partPresetCache, setPartPresetCache } = useMusicStore()
+    const org = useOrg()
+    // PERF-15: parts of a multi-part score. `partNames` stays empty for a
+    // one-part chart, which is what hides the Parts button.
+    const [partNames, setPartNames] = useState<string[]>([])
+    const [visibleParts, setVisibleParts] = useState<number[]>([])
+    const [partsOpen, setPartsOpen] = useState(false)
+    const partNamesRef = useRef<string[]>([])
+    const visibleRef = useRef<number[]>([])
+    // Set once the person picks on this open, so a late preset never overrides them.
+    const userPickedRef = useRef(false)
     // Match-button feedback state: 'idle' → 'pending' (write in flight) →
     // 'done' (briefly green-check) → back to 'idle'. Local only; the
     // authoritative track.key value flows in via the trackKey prop from
@@ -138,7 +151,11 @@ export function SmartScoreViewer({ fileId, trackId, trackKey }: SmartScoreViewer
     // Heal-gating inputs — read non-reactively at the moment of decision so
     // role flips after mount don't trigger a stale heal (and so test mocks
     // can swap roles between renders cleanly).
-    const { isBandLeader, isAdmin } = useAuth()
+    const { isBandLeader, isAdmin, user, profile } = useAuth()
+    // Signed-in musician's profile instrument (slug); signed out = no instrument preset.
+    const profileInstrument = user?.uid ? (profile?.musicianProfile?.instrument ?? null) : null
+    const partsInputRef = useRef({ chartParts, setChartParts, partPresetCache, setPartPresetCache, org, uid: user?.uid ?? null, instrument: profileInstrument })
+    partsInputRef.current = { chartParts, setChartParts, partPresetCache, setPartPresetCache, org, uid: user?.uid ?? null, instrument: profileInstrument }
     const isLeaderRef = useRef(false)
     const trackIdRef = useRef<string | undefined>(trackId)
     const trackKeyRef = useRef<string | undefined>(trackKey)
@@ -199,6 +216,110 @@ export function SmartScoreViewer({ fileId, trackId, trackKey }: SmartScoreViewer
         const contentAtUnitZoom = contentWidth / currentZoom
         const fit = (containerWidth * FIT_MARGIN) / contentAtUnitZoom
         return clamp(fit, FIT_MIN, FIT_MAX)
+    }
+
+    // PERF-15: show only `visible` parts (OSMD `Instruments[i].Visible`), then
+    // render and fit. A render that fails with a subset falls back to the full
+    // score, so a bad part list can never strand the chart.
+    const setPartVisibility = (osmd: OpenSheetMusicDisplay, visible: number[] | null) => {
+        const instruments = (osmd.Sheet as unknown as { Instruments?: { Visible: boolean }[] } | undefined)?.Instruments
+        if (!instruments) return
+        instruments.forEach((inst, i) => { inst.Visible = visible ? visible.includes(i) : true })
+    }
+    const renderFitted = (osmd: OpenSheetMusicDisplay, tp: number, zm: number) => {
+        // First (measuring) render at zoom 1 with the current transposition.
+        osmd.Zoom = 1
+        if (osmd.Sheet) osmd.Sheet.Transpose = tp
+        osmd.render()
+
+        // Compute the fit baseline and enlarge to fill width. Short scores
+        // (small content, fast render) get a second render; long scores
+        // (already fill width, slow render) compute ~1 and skip it.
+        fitBaseRef.current = computeFitBase() ?? 1
+        const finalZoom = clamp(fitBaseRef.current * zm, FIT_MIN, FIT_MAX)
+        if (Math.abs(finalZoom - 1) > FIT_NOOP_EPSILON) {
+            osmd.Zoom = finalZoom
+            osmd.updateGraphic()
+            osmd.render()
+        }
+    }
+    const renderWithParts = (
+        osmd: OpenSheetMusicDisplay,
+        visible: number[] | null,
+        tp: number,
+        zm: number,
+    ): { shown: number[] | null; fellBack: boolean } => {
+        if (!visible) {
+            renderFitted(osmd, tp, zm)
+            return { shown: null, fellBack: false }
+        }
+        try {
+            setPartVisibility(osmd, visible)
+            renderFitted(osmd, tp, zm)
+            return { shown: visible, fellBack: false }
+        } catch (err) {
+            logger.warn("Part render failed; showing the full score", err)
+            setPartVisibility(osmd, null)
+            renderFitted(osmd, tp, zm)
+            return { shown: null, fellBack: true }
+        }
+    }
+    const allPartIndexes = (n: number) => Array.from({ length: n }, (_, i) => i)
+    const showVisible = (v: number[]) => {
+        visibleRef.current = v
+        setVisibleParts(v)
+    }
+
+    // What this device should show: its own pick, else the person's preset,
+    // else the instrument's preset (from the cached org presets), else all.
+    const selectionFor = (names: string[], presets?: Parameters<typeof pickPresets>[0], ignoreDevicePick = false) => {
+        const { chartParts: picks, partPresetCache: cache, org: orgId, uid, instrument } = partsInputRef.current
+        const found = pickPresets(presets ?? cache?.[orgId] ?? [], uid, instrument)
+        return resolvePartSelection({ partNames: names, devicePick: ignoreDevicePick ? undefined : picks?.[fileId], ...found })
+    }
+
+    // Re-render with `next` (null = all). True only when the parts really
+    // rendered; a fallback to the full score or an error is false.
+    const applyPartPick = (next: number[] | null): boolean => {
+        const osmd = osmdRef.current
+        const n = partNamesRef.current.length
+        if (!osmd || !osmd.Sheet || !readyRef.current || n < 2) return false
+        const target = next && next.length < n ? next : null
+        try {
+            const { shown, fellBack } = renderWithParts(osmd, target, transpositionRef.current, zoomRef.current)
+            appliedRef.current = { transposition: transpositionRef.current, zoom: zoomRef.current }
+            showVisible(shown ?? allPartIndexes(n))
+            return !fellBack
+        } catch (err) {
+            logger.error("OSMD Parts Error", err)
+            return false
+        }
+    }
+    const togglePart = (i: number) => {
+        const has = visibleParts.includes(i)
+        // At least one part always stays on.
+        if (has && visibleParts.length === 1) return
+        const next = (has ? visibleParts.filter((v) => v !== i) : [...visibleParts, i]).sort((a, b) => a - b)
+        userPickedRef.current = true
+        // Remember the pick only once it has actually rendered.
+        if (applyPartPick(next)) partsInputRef.current.setChartParts?.(fileId, partNamesRef.current, next)
+    }
+    const resetParts = async () => {
+        const names = partNamesRef.current
+        userPickedRef.current = false
+        partsInputRef.current.setChartParts?.(fileId, names, null)
+        const { org: orgId, uid, partPresetCache: cache, setPartPresetCache: setCache } = partsInputRef.current
+        let list = cache?.[orgId]
+        if (!list) {
+            const fetched = await fetchPartPresets(orgId, !!uid)
+            if (fetched) {
+                setCache?.(orgId, fetched)
+                list = fetched
+            }
+        }
+        if (userPickedRef.current) return
+        const sel = selectionFor(names, list ?? [], true)
+        applyPartPick(sel.source === 'full' ? null : sel.visible)
     }
 
     // Load + initial render + fit. Re-runs only when the source changes.
@@ -302,20 +423,26 @@ export function SmartScoreViewer({ fileId, trackId, trackKey }: SmartScoreViewer
                 // Yield again before the heavy render loop.
                 await sleep(50)
 
-                // First (measuring) render at zoom 1 with the current transposition.
-                osmd.Zoom = 1
-                if (osmd.Sheet) osmd.Sheet.Transpose = transposition
-                osmd.render()
-
-                // Compute the fit baseline and enlarge to fill width. Short scores
-                // (small content, fast render) get a second render; long scores
-                // (already fill width, slow render) compute ~1 and skip it.
-                fitBaseRef.current = computeFitBase() ?? 1
-                const finalZoom = clamp(fitBaseRef.current * zoom, FIT_MIN, FIT_MAX)
-                if (Math.abs(finalZoom - 1) > FIT_NOOP_EPSILON) {
-                    osmd.Zoom = finalZoom
-                    osmd.updateGraphic()
-                    osmd.render()
+                // PERF-15: parts. A one-part chart changes nothing. Several parts
+                // render at once from what this device already knows: its own pick,
+                // else the cached preset, else the full score. Presets are never
+                // awaited here; a fresh read applies afterwards (below).
+                const instruments = (osmd.Sheet as unknown as { Instruments?: { Name?: string }[] } | undefined)?.Instruments
+                const names = (instruments ?? []).map((inst) => (typeof inst?.Name === 'string' ? inst.Name : ''))
+                const multi = names.length > 1
+                userPickedRef.current = false
+                let startSel: ReturnType<typeof selectionFor> | null = null
+                if (multi) startSel = selectionFor(names)
+                const { shown } = renderWithParts(
+                    osmd,
+                    startSel && startSel.source !== 'full' ? startSel.visible : null,
+                    transposition,
+                    zoom,
+                )
+                if (!stale()) {
+                    partNamesRef.current = multi ? names : []
+                    setPartNames(multi ? names : [])
+                    showVisible(shown ?? allPartIndexes(names.length))
                 }
 
                 appliedRef.current = { transposition, zoom }
@@ -324,6 +451,23 @@ export function SmartScoreViewer({ fileId, trackId, trackKey }: SmartScoreViewer
                 if (!stale()) {
                     retriesRef.current = 0
                     setLoading(false)
+                }
+
+                // PERF-15: refresh the org's presets in the background and apply
+                // them only if the device has no pick and the person has not picked.
+                if (multi && startSel?.source !== 'device' && !stale()) {
+                    const { org: orgId, uid } = partsInputRef.current
+                    void fetchPartPresets(orgId, !!uid).then((list) => {
+                        if (!list || stale()) return
+                        partsInputRef.current.setPartPresetCache?.(orgId, list)
+                        if (userPickedRef.current) return
+                        const sel = selectionFor(names, list)
+                        const target = sel.source === 'full' ? null : sel.visible
+                        const current = visibleRef.current
+                        const want = target ?? allPartIndexes(names.length)
+                        if (want.length === current.length && want.every((v, i) => v === current[i])) return
+                        applyPartPick(target)
+                    })
                 }
 
                 // Lift the parsed key signature out of OSMD into the store so
@@ -612,6 +756,66 @@ export function SmartScoreViewer({ fileId, trackId, trackKey }: SmartScoreViewer
                                 t("music.viewer.matchTo", { key: musicXmlKey })
                             )}
                         </Button>
+                    )}
+                </div>
+            )}
+
+            {partNames.length > 1 && (
+                <div className="w-full mb-1" data-testid="musicxml-parts">
+                    <div className="flex items-center gap-2">
+                        <Button
+                            type="button"
+                            variant="secondary"
+                            className="h-11 min-w-11 px-4"
+                            aria-expanded={partsOpen}
+                            aria-controls="musicxml-parts-panel"
+                            onClick={() => setPartsOpen((o) => !o)}
+                            data-testid="musicxml-parts-button"
+                        >
+                            {t("music.viewer.parts")}
+                            <span className="text-xs text-muted-foreground" aria-hidden="true">
+                                {visibleParts.length}/{partNames.length}
+                            </span>
+                        </Button>
+                    </div>
+                    {partsOpen && (
+                        <div
+                            id="musicxml-parts-panel"
+                            role="group"
+                            aria-label={t("music.viewer.partsLabel")}
+                            className="mt-1 rounded-md border border-border bg-card p-1"
+                            data-testid="musicxml-parts-panel"
+                        >
+                            {partNames.map((name, i) => {
+                                const checked = visibleParts.includes(i)
+                                const onlyOne = checked && visibleParts.length === 1
+                                return (
+                                    <label
+                                        key={i}
+                                        className="flex min-h-11 items-center gap-3 px-3 text-sm text-foreground"
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            className="h-5 w-5 accent-primary"
+                                            checked={checked}
+                                            disabled={onlyOne}
+                                            onChange={() => togglePart(i)}
+                                            data-testid={`musicxml-part-${i}`}
+                                        />
+                                        <span {...chartDir}>{name || t("music.viewer.partN", { n: i + 1 })}</span>
+                                    </label>
+                                )
+                            })}
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                className="h-11 w-full justify-start px-3"
+                                onClick={resetParts}
+                                data-testid="musicxml-parts-reset"
+                            >
+                                {t("music.viewer.partsReset")}
+                            </Button>
+                        </div>
                     )}
                 </div>
             )}
