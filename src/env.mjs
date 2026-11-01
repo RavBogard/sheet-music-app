@@ -151,6 +151,10 @@ export const env = createEnv({
         NEXT_PUBLIC_FIREBASE_VAPID_KEY: z.string().optional(),
         /** Sentry browser DSN. Unset: no client-side error reporting. */
         NEXT_PUBLIC_SENTRY_DSN: z.string().optional(),
+        /** pdf.js version, set by next.config.ts at build time from the installed
+         *  pdfjs-dist (perf audit P2-1). Not set by hand. Unset: the worker primer
+         *  reads it from react-pdf, which evaluates all of pdf.js. */
+        NEXT_PUBLIC_PDFJS_VERSION: z.string().optional(),
     },
     runtimeEnv: {
         FIREBASE_SERVICE_ACCOUNT_KEY: process.env.FIREBASE_SERVICE_ACCOUNT_KEY,
@@ -217,6 +221,7 @@ export const env = createEnv({
         NEXT_PUBLIC_BASE_URL: process.env.NEXT_PUBLIC_BASE_URL,
         NEXT_PUBLIC_FIREBASE_VAPID_KEY: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
         NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
+        NEXT_PUBLIC_PDFJS_VERSION: process.env.NEXT_PUBLIC_PDFJS_VERSION,
     },
     skipValidation: !!process.env.SKIP_ENV_VALIDATION,
     emptyStringAsUndefined: true,

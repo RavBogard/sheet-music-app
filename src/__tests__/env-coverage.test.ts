@@ -37,6 +37,7 @@ const EXEMPT: Record<string, string> = {
     ANALYZE: "build-time bundle-analyzer switch",
     SKIP_ENV_VALIDATION: "the escape hatch env.mjs itself reads",
     NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA: "injected by Vercel at build time",
+    NEXT_PUBLIC_VERCEL_ENV: "injected by Vercel at build time (Sentry environment tag)",
 
     // Test and probe harnesses. These exist only when a harness sets them;
     // the app must behave identically when they are absent, and a boot-time
