@@ -8,7 +8,8 @@ import { parseEventDate } from "@/lib/parse-event-date"
 import { resolveSlotLiturgyRef } from "@/lib/books/slot-liturgy"
 import { codeOrgConfig } from "@/lib/org/config-code"
 import { parseOrgConfig } from "@/lib/org/config-schema"
-import { type EnsureRequest, type BridgeResponse, type Projection, type SharedRow, sharedRow } from "./contract"
+import { computeWeek, weekFields } from "@/lib/family/week-key"
+import { type DetailsRequest, type EnsureRequest, type BridgeResponse, type Projection, type SharedRow, sharedRow } from "./contract"
 
 type Data = Record<string, unknown>
 export class BridgeError extends Error {
@@ -80,6 +81,8 @@ export async function ensureService(db: Firestore, request: EnsureRequest): Prom
             excludedSetlistId: request.excludedSetlistId,
         }))
     })
+    // BET-6: the advisory week key for a newly created service (CRC only).
+    const week = await computeWeek(request.localDate, "crc")
     return db.runTransaction(async tx => {
         const receipt = (await tx.get(receiptRef)).data()
         if (receipt && receipt.inputHash !== inputHash) throw new BridgeError("idempotency_conflict")
@@ -162,8 +165,15 @@ export async function ensureService(db: Firestore, request: EnsureRequest): Prom
                 ownerId: "beit-mitzvah-service", ownerName: "Beit Mitzvah", hydrated: true, isTest: false,
                 ...deriveSetlistCounts(rows),
                 book,
+                // BET-6: the ceremony this service belongs to (opaque id, no names).
+                ceremonyId: request.ceremonyId, occasion: "bnei-mitzvah",
+                ...(week ? weekFields(week) : {}),
             }))
             for (const row of rows) tx.create(db.collection("tracks").doc(String(row.id)), { ...row, setlistId })
+        }
+        // BET-6: a linked existing service learns its ceremony, unless it already names one.
+        if (selected && typeof selected.ceremonyId !== "string") {
+            tx.update(db.collection("setlists").doc(setlistId), { ceremonyId: request.ceremonyId, occasion: "bnei-mitzvah" })
         }
         const reviewRequired = !!selected && (dateOf(selected.eventDate) !== request.localDate || selected.templateType !== templateType(request.ceremonyType))
         tx.create(ceremonyRef, clean({ orgId: "crc", ceremonyId: request.ceremonyId, setlistId, localDate: request.localDate, ceremonyType: request.ceremonyType,
@@ -239,4 +249,22 @@ export async function projection(db: Firestore, ceremonyId: string): Promise<Bri
             review: `https://www.centralreform.live/integrations/beit-mitzvah?ceremonyId=${ceremonyId}` },
     }
     return { version: 1, status: approved ? "linked" : "review_required", setlistId: projection.setlistId, sourceRevision: source.sourceRevision, projection }
+}
+
+/**
+ * BET-6: the portal's ceremony details for the setlist's read-only card
+ * (student names, slot, reading reference names, rehearsal dates). Stored on
+ * the existing link only; it never creates a service, changes a setlist or
+ * touches the projection revision. Replaces the previous details whole.
+ */
+export async function saveDetails(db: Firestore, request: DetailsRequest): Promise<void> {
+    const ref = db.collection(collections.links).doc(linkId(request.ceremonyId))
+    await db.runTransaction(async tx => {
+        const link = (await tx.get(ref)).data()
+        if (!isCRC(link)) throw new BridgeError("not_found", 404)
+        tx.update(ref, { details: clean({
+            students: request.students, slot: request.slot, torahRef: request.torahRef,
+            haftarahRef: request.haftarahRef, rehearsals: request.rehearsals,
+        }), detailsUpdatedAt: FieldValue.serverTimestamp() })
+    })
 }

@@ -200,6 +200,20 @@ export interface Setlist {
     serviceType?: string | null
     rabbiSlot?: string | null
     special?: boolean
+    /**
+     * BET-6 (CRC only, advisory — never drives behaviour): the family week key
+     * `"<hebrewYear>-<parashaSlug>"` (e.g. `5787-bereshit`, or a holiday slug
+     * `5787-sukkot-1`), the tenant-local day it was computed from, and the
+     * portion's name (null on a holiday week). A key whose `weekKeyDay` no
+     * longer matches `eventDate` reads as absent. See src/lib/family/week-key.ts.
+     */
+    weekKey?: string
+    weekKeyDay?: string
+    parashaName?: string | null
+    /** BET-6: set by the Beit Mitzvah bridge; otherwise inferred at read time. */
+    occasion?: 'bnei-mitzvah' | 'holiday' | 'guest' | 'regular'
+    /** BET-6: the Beit Mitzvah portal's opaque ceremony UUID (no names). */
+    ceremonyId?: string
     transferredAt?: string
     previousOwnerId?: string
     assignedUids?: string[]

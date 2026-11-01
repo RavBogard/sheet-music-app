@@ -166,6 +166,7 @@ export const WRITE_TOOLS: ReadonlySet<string> = new Set([
     "backfill_library_keys",
     "backfill_library_index",
     "backfill_setlist_test_flag",
+    "backfill_week_keys",
     "seed_service_profiles",
     "archive_nonchart_artifacts",
     "reconcile_library",

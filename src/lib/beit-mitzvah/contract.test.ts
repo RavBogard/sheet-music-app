@@ -32,6 +32,18 @@ const GOLDEN_REQUESTS = {
         rowId: "row_1",
         resourceId: "res_1",
     },
+    // BET-6: the setlist card's details. Names and reference NAMES only.
+    details: {
+        version: 1,
+        orgId: "crc",
+        ceremonyId: CEREMONY,
+        operation: "details",
+        students: ["Avery Example"],
+        slot: "Saturday morning",
+        torahRef: "Genesis 1:1–2:3",
+        haftarahRef: "Isaiah 42:5–43:10",
+        rehearsals: ["2026-11-03"],
+    },
 }
 
 const GOLDEN_RESPONSE: BridgeResponse = {
@@ -75,6 +87,11 @@ describe("Beit Mitzvah contract v1 golden pair", () => {
             { ...GOLDEN_REQUESTS.resource, url: "https://evil.example/x" },
             { ...GOLDEN_REQUESTS.projection, ceremonyId: "student-42" },
             { ...GOLDEN_REQUESTS.ensure, operation: "delete" },
+            // BET-6: a reference is a name, never verse text.
+            { ...GOLDEN_REQUESTS.details, torahRef: "בראשית" },
+            { ...GOLDEN_REQUESTS.details, haftarahRef: "Thus says God the LORD, who created the heavens and stretched them out, who spread forth the earth and what comes from it, who gives breath" },
+            { ...GOLDEN_REQUESTS.details, students: [] },
+            { ...GOLDEN_REQUESTS.details, rehearsals: ["soon"] },
         ]
         for (const body of bad) expect(bridgeRequest.safeParse(body).success, JSON.stringify(body)).toBe(false)
     })

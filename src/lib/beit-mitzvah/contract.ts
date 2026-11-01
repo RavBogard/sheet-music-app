@@ -6,6 +6,9 @@ export const localDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(value =>
     const date = new Date(`${value}T12:00:00Z`)
     return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value
 })
+/** A reading's reference name, e.g. "Genesis 1:1–2:3". No Hebrew, no verse text. */
+export const referenceName = z.string().trim().min(1).max(120).regex(/^[A-Za-z0-9 .,:;'’()–—-]+$/)
+export type DetailsRequest = Extract<BridgeRequest, { operation: "details" }>
 const base = { version: z.literal(1), orgId: z.literal("crc"), ceremonyId }
 export const bridgeRequest = z.discriminatedUnion("operation", [
     z.object({ ...base, operation: z.literal("ensure"), localDate,
@@ -16,6 +19,16 @@ export const bridgeRequest = z.discriminatedUnion("operation", [
         displayName: z.string().trim().min(1).max(160).optional(),
     }).strict(),
     z.object({ ...base, operation: z.literal("projection") }).strict(),
+    // BET-6: what the setlist's read-only ceremony card shows. Names and
+    // reference NAMES only ("Genesis 1:1–2:3"), never verse text: a reference
+    // is Latin letters, digits and punctuation, so text cannot ride along.
+    z.object({ ...base, operation: z.literal("details"),
+        students: z.array(z.string().trim().min(1).max(120)).min(1).max(6),
+        slot: z.string().trim().min(1).max(80).optional(),
+        torahRef: referenceName.optional(),
+        haftarahRef: referenceName.optional(),
+        rehearsals: z.array(localDate).max(12).optional(),
+    }).strict(),
     z.object({ ...base, operation: z.literal("resource"), rowId: opaqueId, resourceId: opaqueId }).strict(),
 ])
 export type BridgeRequest = z.infer<typeof bridgeRequest>

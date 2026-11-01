@@ -87,6 +87,7 @@ import { MobileCardList } from './MobileCardList'
 import { SetlistRowsSkeleton } from './SetlistRowsSkeleton'
 import { SetlistGridTopBar } from './SetlistGridTopBar'
 import { SetlistMetaEditSheet } from './SetlistMetaEditSheet'
+import { SetlistFamilyHead } from '@/components/family/SetlistFamilyHead'
 
 const EDITABLE_COL_IDS = [
     'type',
@@ -1666,6 +1667,8 @@ export function SetlistGrid({
             />
 
             <div className={cn(PAGE_WIDTH_CLASS, "pt-4 sm:pt-6 flex flex-col gap-6 flex-grow pb-40")}>
+                {/* BET-6: parasha line and Beit Mitzvah card (CRC only; renders nothing otherwise). */}
+                <SetlistFamilyHead setlistId={setlistId} setlist={liveSetlist as Record<string, unknown> | null | undefined} />
                 {/* T1.1 (2026-05-12, Bug 4): BatchActionBar removed —
                     multi-select is no longer a feature. The grip icon on
                     each card is now a real drag handle (drag to reorder),

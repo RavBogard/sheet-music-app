@@ -1,0 +1,56 @@
+{
+  "parasha": {
+    "where": "Setlist editor and Perform head: the week's Torah portion under the title. {name} is the portion's transliterated name from Hebcal.",
+    "who": "band, leaders",
+    "maxLength": 40,
+    "context": "Metadata only, never liturgical text. Values are names, slots and dates from the Beit Mitzvah portal."
+  },
+  "cardTitle": {
+    "where": "Setlist editor and Perform head: heading of the read-only Beit Mitzvah card.",
+    "who": "band, leaders",
+    "maxLength": 24,
+    "context": "Metadata only, never liturgical text. Values are names, slots and dates from the Beit Mitzvah portal."
+  },
+  "cardLabel": {
+    "where": "Setlist editor and Perform head: accessible name of the Beit Mitzvah card.",
+    "who": "band, leaders",
+    "maxLength": 40,
+    "context": "Metadata only, never liturgical text. Values are names, slots and dates from the Beit Mitzvah portal."
+  },
+  "service": {
+    "where": "Beit Mitzvah card: label beside the service slot and date.",
+    "who": "band, leaders",
+    "maxLength": 16,
+    "context": "Metadata only, never liturgical text. Values are names, slots and dates from the Beit Mitzvah portal."
+  },
+  "morning": {
+    "where": "Beit Mitzvah card: the service slot when the portal names none (morning ceremony).",
+    "who": "band, leaders",
+    "maxLength": 28,
+    "context": "Metadata only, never liturgical text. Values are names, slots and dates from the Beit Mitzvah portal."
+  },
+  "havdalah": {
+    "where": "Beit Mitzvah card: the service slot when the portal names none (Havdalah ceremony).",
+    "who": "band, leaders",
+    "maxLength": 28,
+    "context": "Metadata only, never liturgical text. Values are names, slots and dates from the Beit Mitzvah portal."
+  },
+  "torah": {
+    "where": "Beit Mitzvah card: label beside the Torah reading's reference name.",
+    "who": "band, leaders",
+    "maxLength": 16,
+    "context": "Metadata only, never liturgical text. Values are names, slots and dates from the Beit Mitzvah portal."
+  },
+  "haftarah": {
+    "where": "Beit Mitzvah card: label beside the haftarah's reference name.",
+    "who": "band, leaders",
+    "maxLength": 16,
+    "context": "Metadata only, never liturgical text. Values are names, slots and dates from the Beit Mitzvah portal."
+  },
+  "rehearsals": {
+    "where": "Beit Mitzvah card: label beside the rehearsal dates.",
+    "who": "band, leaders",
+    "maxLength": 16,
+    "context": "Metadata only, never liturgical text. Values are names, slots and dates from the Beit Mitzvah portal."
+  }
+}
