@@ -80,7 +80,7 @@ describe("matrix view i18n", () => {
     it("load failure message is translated", async () => {
         vi.stubGlobal("fetch", vi.fn(async () => ({ ok: false, json: async () => ({}) })))
         renderPseudo(<SetlistMatrixView />)
-        await waitFor(() => expect(document.querySelector(".text-red-400")).not.toBeNull())
+        await waitFor(() => expect(document.querySelector("[role=alert]")).not.toBeNull())
         expectNoUntranslatedText(document.body)
     })
 })

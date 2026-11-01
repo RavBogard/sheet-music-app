@@ -82,7 +82,7 @@ export function SetlistMatrixView() {
             </div>
 
             {error && (
-                <div className="p-4 bg-destructive/10 border border-destructive/30 rounded-lg text-destructive">
+                <div role="alert" className="p-4 bg-destructive/10 border border-destructive/30 rounded-lg text-destructive">
                     {error}
                 </div>
             )}

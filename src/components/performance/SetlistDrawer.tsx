@@ -61,6 +61,7 @@ export function QueueRow({
         <button
             onClick={onOpen}
             aria-label={openableFlowItem ? t("performSetlist.row.openChart", { songTitle: track.name }) : undefined}
+            aria-current={isCurrent ? "true" : undefined}
             className={cn(
                 "flex items-center gap-4 h-full px-4 rounded-xl transition-all text-start w-full",
                 isCurrent
