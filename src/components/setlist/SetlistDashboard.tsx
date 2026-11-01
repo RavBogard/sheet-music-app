@@ -100,7 +100,7 @@ export function SetlistDashboard({ serverShortName, ...props }: UseSetlistDashbo
             {/* Consistency pass: the one page container and head row. */}
             <div>
                 <div>
-                    <PageContainer className="space-y-6">
+                    <PageContainer className="space-y-3">
                         {/* Head row: the page title matches its tab; the greeting
                             and the upcoming count are the subtitle; one blue action. */}
                         <PageHeader
@@ -117,9 +117,10 @@ export function SetlistDashboard({ serverShortName, ...props }: UseSetlistDashbo
                                         type="button"
                                         onClick={() => setShowWizard(true)}
                                         data-testid="setlists-new-setlist"
-                                        className="h-11 px-5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 font-bold text-[15px]"
+                                        size="sm"
+                                        className="rounded-md bg-primary text-primary-foreground hover:bg-primary/90 font-bold text-[13px]"
                                     >
-                                        <Plus aria-hidden className="h-5 w-5 me-1.5" />
+                                        <Plus aria-hidden className="h-4 w-4" />
                                         {t("org.createNewSetlistHeading")}
                                     </Button>
                                 ) : undefined}
@@ -134,14 +135,14 @@ export function SetlistDashboard({ serverShortName, ...props }: UseSetlistDashbo
                             availableRabbis={availableRabbis}
                         />
 
-                            <div className="space-y-8">
+                            <div className="space-y-5">
                                 {!loading && error && (
                                     <ErrorState title={t("setlist.loadErrorTitle")} description={error} retryLabel={t("setlist.tryAgain")} onRetry={() => window.location.reload()} />
                                 )}
 
                                 {loading && (
                                     <div className="flex flex-col divide-y divide-rule border border-rule rounded-lg overflow-hidden bg-card">
-                                        {[1, 2, 3].map(i => <Skeleton key={i} className="h-[72px] rounded-none bg-muted/60" />)}
+                                        {[1, 2, 3].map(i => <Skeleton key={i} className="h-11 rounded-none bg-muted/60" />)}
                                     </div>
                                 )}
 

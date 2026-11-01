@@ -376,7 +376,7 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
             role select on the right. Below sm the icon actions fold into a
             "more" menu so the row stays one line; a request's approve and
             decline controls wrap under it there. */}
-        <div className={cn("flex flex-wrap items-center gap-x-3 gap-y-2 px-2 sm:px-3 py-1.5 min-h-14 bg-card transition-colors hover:bg-accent/50", isSelected && "bg-accent")}>
+        <div className={cn("flex flex-wrap items-center gap-x-3 gap-y-1 px-2 sm:px-3 py-1 min-h-11 bg-card transition-colors hover:bg-accent/50", isSelected && "bg-accent")}>
             <label className="min-h-11 min-w-11 flex items-center justify-center shrink-0 cursor-pointer">
                 <input
                     type="checkbox"
@@ -387,14 +387,14 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
                 />
             </label>
 
-            <Avatar className="h-9 w-9 border border-border shrink-0">
+            <Avatar className="h-7 w-7 border border-border shrink-0">
                 <AvatarImage src={user.photoURL ?? undefined} alt="" />
                 <AvatarFallback>{user.displayName?.[0] || "?"}</AvatarFallback>
             </Avatar>
 
             <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5 min-w-0">
-                    <p className="font-semibold text-foreground text-[15px] leading-snug truncate">{user.displayName}</p>
+                    <p className="font-semibold text-foreground text-[0.92rem] leading-snug truncate">{user.displayName}</p>
                     {isSelf && <Badge variant="outline" className="border-border text-muted-foreground text-xs h-4 px-1 shrink-0">{t("admin-people.youBadge")}</Badge>}
                 </div>
                 <div className="tnum flex items-center gap-x-2 gap-y-0.5 flex-wrap text-xs font-medium text-muted-foreground min-w-0">
@@ -448,11 +448,11 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
 
             {showRequestControls ? (
                 <div className="flex items-center gap-2 flex-wrap basis-full sm:basis-auto justify-end shrink-0">
-                    {requestControls("w-[7.5rem] h-11 text-sm font-medium bg-card border-border")}
+                    {requestControls("touch-hit w-[7.5rem] h-8 text-[13px] font-medium bg-card border-border")}
                 </div>
             ) : !isSelf ? (
                 <div className="shrink-0">
-                    {roleSelect("w-[7.5rem] h-11 text-sm font-medium bg-card border-border")}
+                    {roleSelect("touch-hit w-[7.5rem] h-8 text-[13px] font-medium bg-card border-border")}
                 </div>
             ) : (
                 <span className="shrink-0 text-xs font-semibold text-muted-foreground px-3 py-1.5 border border-border rounded-md bg-muted">

@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils"
 export const SEGMENTED_GROUP_CLASS = "flex w-full flex-wrap items-center gap-2"
 
 export const SEGMENTED_CHIP_CLASS = cn(
-    "tnum inline-flex shrink-0 items-center gap-1.5 min-h-11 rounded-md border px-3.5 text-sm font-semibold whitespace-nowrap cursor-pointer transition-colors",
+    "tnum touch-hit inline-flex shrink-0 items-center gap-1.5 h-8 rounded-md border px-3 text-[13px] font-semibold whitespace-nowrap cursor-pointer transition-colors",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
     "data-[state=active]:bg-accent data-[state=active]:text-foreground data-[state=active]:border-brand",
     "data-[state=inactive]:bg-card data-[state=inactive]:text-muted-foreground data-[state=inactive]:border-border data-[state=inactive]:hover:text-foreground",

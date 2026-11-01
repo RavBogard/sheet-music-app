@@ -47,7 +47,7 @@ function inferServiceType(setlist: Setlist): ServiceType | null {
 /* ─── Shared row pieces (web refresh, blend E: a clean list, not a card per row) ─── */
 
 const ROW_CLASS =
-    "group relative flex items-center gap-3 sm:gap-4 px-3 sm:px-4 py-3 min-h-[72px] bg-card hover:bg-accent/50 transition-colors"
+    "group relative flex items-center gap-3 px-3 sm:px-4 py-1 min-h-11 bg-card hover:bg-accent/50 transition-colors"
 
 function Dot() {
     return <span aria-hidden="true" className="text-muted-foreground/60">·</span>
@@ -96,7 +96,7 @@ export function SetlistInfoLine({ setlist }: { setlist: Setlist }) {
     const fmt = useFormat()
     const eventDate = toDateHelper(setlist.eventDate)
     return (
-        <div className="tnum flex items-center gap-x-2 gap-y-0.5 mt-0.5 flex-wrap text-sm text-muted-foreground">
+        <div className="tnum flex items-center gap-x-1.5 flex-wrap text-xs text-muted-foreground">
             <span>{fmt.date(eventDate, { month: 'short', day: 'numeric', year: 'numeric' }) || t("setlist.noDate")}</span>
             <Dot />
             <span>{t("setlist.songCount", { count: (setlist.songCount ?? setlist.trackCount) || 0 })}</span>
@@ -162,8 +162,8 @@ export function UpcomingSetlistCard({ setlist, onPerform, onEdit, navigatingTo, 
             <RowDate date={eventDate} />
 
             <div className="flex-1 min-w-0 relative z-10 pointer-events-none">
-                <h3 title={setlist.name} className="text-[17px] font-bold leading-snug text-foreground line-clamp-2">{setlist.name}</h3>
-                <div className="tnum flex items-center gap-x-2 gap-y-0.5 mt-0.5 flex-wrap text-sm text-muted-foreground font-medium">
+                <h3 title={setlist.name} className="text-[0.95rem] font-bold leading-snug text-foreground line-clamp-2">{setlist.name}</h3>
+                <div className="tnum flex items-center gap-x-1.5 flex-wrap text-xs text-muted-foreground font-medium">
                     <span>{fmt.date(eventDate, { month: 'short', day: 'numeric', year: 'numeric' }) || t("setlist.noDate")}</span>
                     <Dot />
                     <span>{t("setlist.songCount", { count: (setlist.songCount ?? setlist.trackCount) || 0 })}</span>
@@ -180,10 +180,10 @@ export function UpcomingSetlistCard({ setlist, onPerform, onEdit, navigatingTo, 
                     <Button
                         variant="outline"
                         onClick={(e) => { e.stopPropagation(); onEdit(e); }}
-                        className="hidden lg:flex border-border bg-card text-foreground hover:bg-accent rounded-md px-4 h-11 font-semibold"
+                        className="touch-hit hidden lg:flex border-border bg-card text-foreground hover:bg-accent rounded-md px-3 h-8 text-[13px] font-semibold"
                         aria-label={t("setlist.editSetlistAria", { name: setlist.name })}
                     >
-                        <Pencil className="h-4 w-4 me-2" />
+                        <Pencil className="h-3.5 w-3.5 me-1.5" />
                         {t("setlist.edit")}
                     </Button>
                 )}
@@ -195,11 +195,11 @@ export function UpcomingSetlistCard({ setlist, onPerform, onEdit, navigatingTo, 
                             e.stopPropagation()
                             onDownload(setlist)
                         }}
-                        className="hidden lg:flex w-11 h-11 hover:bg-accent rounded-md items-center justify-center transition-colors cursor-pointer bg-transparent border-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        className="touch-hit hidden lg:flex w-9 h-9 hover:bg-accent rounded-md items-center justify-center transition-colors cursor-pointer bg-transparent border-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         aria-label={t("setlist.downloadOfflineAria", { name: setlist.name })}
                         title={t("setlist.downloadOffline")}
                     >
-                        <Download className={cn("h-5 w-5 text-muted-foreground hover:text-foreground", isDownloading && "animate-pulse text-brand")} />
+                        <Download className={cn("h-4 w-4 text-muted-foreground hover:text-foreground", isDownloading && "animate-pulse text-brand")} />
                     </button>
                 )}
 
@@ -210,9 +210,9 @@ export function UpcomingSetlistCard({ setlist, onPerform, onEdit, navigatingTo, 
                             <button
                                 type="button"
                                 aria-label={t("setlist.menuAria", { name: setlist.name })}
-                                className="w-11 h-11 hover:bg-accent rounded-md flex items-center justify-center transition-colors cursor-pointer text-muted-foreground hover:text-foreground bg-transparent border-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                className="touch-hit w-9 h-9 hover:bg-accent rounded-md flex items-center justify-center transition-colors cursor-pointer text-muted-foreground hover:text-foreground bg-transparent border-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                             >
-                                <MoreVertical className="h-5 w-5" />
+                                <MoreVertical className="h-4 w-4" />
                             </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-56">
@@ -333,7 +333,7 @@ export function SetlistCard({ setlist, onPerform, onEdit, navigatingTo, onDuplic
             <RowDate date={eventDate} muted />
 
             <div className="flex-1 min-w-0 relative z-10 pointer-events-none">
-                <h3 title={setlist.name} className="text-base font-semibold leading-snug text-foreground line-clamp-2">{setlist.name}</h3>
+                <h3 title={setlist.name} className="text-[0.95rem] font-semibold leading-snug text-foreground line-clamp-2">{setlist.name}</h3>
                 <SetlistInfoLine setlist={setlist} />
             </div>
 
@@ -345,7 +345,7 @@ export function SetlistCard({ setlist, onPerform, onEdit, navigatingTo, onDuplic
                         size="icon"
                         onClick={(e) => { e.stopPropagation(); onEdit(e); }}
                         aria-label={t("setlist.editSetlistAria", { name: setlist.name })}
-                        className="h-11 w-11 hover:bg-accent rounded-md text-muted-foreground hover:text-foreground"
+                        className="touch-hit h-9 w-9 hover:bg-accent rounded-md text-muted-foreground hover:text-foreground"
                     >
                         <Pencil className="h-4 w-4" />
                     </Button>
@@ -357,9 +357,9 @@ export function SetlistCard({ setlist, onPerform, onEdit, navigatingTo, onDuplic
                             <button
                                 type="button"
                                 aria-label={t("setlist.menuAria", { name: setlist.name })}
-                                className="h-11 w-11 hover:bg-accent rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground cursor-pointer bg-transparent border-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                className="touch-hit h-9 w-9 hover:bg-accent rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground cursor-pointer bg-transparent border-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                             >
-                                <MoreVertical className="h-5 w-5" />
+                                <MoreVertical className="h-4 w-4" />
                             </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-56">
@@ -432,15 +432,15 @@ export function PlaceholderCard({ date, onCreate }: PlaceholderCardProps) {
             onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onCreate(date) } }}
             className={cn(ROW_CLASS, "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring")}
         >
-            <div aria-hidden className="w-12 h-12 shrink-0 rounded-md border border-dashed border-border flex items-center justify-center text-muted-foreground group-hover:text-brand group-hover:border-brand transition-colors">
-                <Plus className="h-5 w-5" />
+            <div aria-hidden className="w-9 h-9 shrink-0 rounded-md border border-dashed border-border flex items-center justify-center text-muted-foreground group-hover:text-brand group-hover:border-brand transition-colors">
+                <Plus className="h-4 w-4" />
             </div>
 
             <div className="flex-1 min-w-0">
-                <h3 className="text-base font-semibold text-muted-foreground group-hover:text-foreground transition-colors truncate">
+                <h3 className="text-[0.95rem] font-semibold text-muted-foreground group-hover:text-foreground transition-colors truncate">
                     {t("org.planPlaceholder")}
                 </h3>
-                <div className="tnum mt-0.5 text-sm text-muted-foreground">
+                <div className="tnum text-xs text-muted-foreground">
                     {fmt.date(date, { weekday: 'long', month: 'short', day: 'numeric' })}
                 </div>
             </div>

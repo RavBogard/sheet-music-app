@@ -155,11 +155,11 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
                         isChart && isDigitizing && "bg-accent cursor-wait",
                     )}
                 >
-                    {/* Web refresh (blend E): one dense hairline row — the title
-                        with its setting, then a quiet meta line (format ·
-                        library · tempo · topics · recency), and the key tag in
-                        its own column on the right. */}
-                    <div data-slot="library-row-cell" className="flex items-center gap-3 py-1.5 px-3 sm:px-4 min-h-12 w-full">
+                    {/* Option B: one dense hairline row — the title with its
+                        setting, then a quiet meta line (format · library ·
+                        tempo · topics · recency), and a small outlined key tag
+                        in its own column on the right. */}
+                    <div data-slot="library-row-cell" className="flex items-center gap-3 py-1 px-3 sm:px-4 min-h-11 w-full">
                         {/* Select mode checkbox */}
                         {selectMode && !isFolder && (
                             <div className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${isSelected ? 'bg-brand border-brand' : 'border-muted-foreground/40'
@@ -169,7 +169,7 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
                         )}
 
                         {isFolder ? (
-                            <Folder className="h-5 w-5 text-section-ochre shrink-0" />
+                            <Folder className="h-4 w-4 text-section-ochre-ink shrink-0" />
                         ) : isAudio ? (
                             <div className="h-8 w-8 shrink-0 rounded-full bg-accent flex items-center justify-center">
                                 {isPlaying ? (
@@ -183,25 +183,25 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
                         ) : isDigitizing ? (
                             <Loader2 className="h-5 w-5 text-brand shrink-0 animate-spin" />
                         ) : (
-                            <FileMusic className="h-5 w-5 text-muted-foreground shrink-0 group-hover:text-brand transition-colors" />
+                            <FileMusic className="h-4 w-4 text-muted-foreground shrink-0 group-hover:text-brand transition-colors" />
                         )}
 
                         <div className="flex-1 min-w-0">
                             <p className="line-clamp-2 break-words leading-snug">
-                                <span className="font-medium text-[16px] text-foreground">
+                                <span className="font-medium text-[0.92rem] text-foreground">
                                     {isChart ? chartTitle : displayName}
                                 </span>
                                 {/* v11.7-05: composer/arrangement (the setting) as a
                                     dimmed sub-label — subordinate to the title,
                                     never competing; omitted when absent (text-only). */}
                                 {composer && (
-                                    <span className="ms-2 text-sm font-medium text-muted-foreground">
+                                    <span className="ms-2 text-xs font-medium text-muted-foreground">
                                         {composer}
                                     </span>
                                 )}
                             </p>
 
-                            <div className="tnum mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs font-medium text-muted-foreground">
+                            <div className="tnum flex flex-wrap items-center gap-x-2 text-xs font-medium text-muted-foreground">
                                 {isAudio && (
                                     <span className="inline-flex items-center gap-1">
                                         <Headphones className="w-3 h-3" aria-hidden="true" />
@@ -276,12 +276,12 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
                         </div>
 
                         {isChart && item.metadata?.key && (
-                            <span className="tnum shrink-0 inline-flex items-center justify-center min-w-[2.5rem] h-7 px-2 rounded-md border border-border bg-secondary text-sm font-bold text-secondary-foreground">
+                            <span className="tnum shrink-0 inline-flex items-center justify-center px-1.5 rounded-[3px] border border-input text-xs font-bold leading-4 text-foreground">
                                 <span className="sr-only">{t("setlistGrid.columnKey")} </span>
                                 {item.metadata.key}
                             </span>
                         )}
-                        {!isAudio && <DirectionalIcon icon={ChevronRight} className="h-5 w-5 shrink-0 text-muted-foreground/60 group-hover:text-foreground" />}
+                        {!isAudio && <DirectionalIcon icon={ChevronRight} className="h-4 w-4 shrink-0 text-muted-foreground/60 group-hover:text-foreground" />}
                     </div>
                 </Button>
             </ContextMenuTrigger>
