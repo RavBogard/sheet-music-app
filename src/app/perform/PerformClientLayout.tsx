@@ -8,6 +8,7 @@ import { registerPerformShellSW } from "@/components/performance/perform-shell-s
 import { KeepAwakeProvider } from "@/components/performance/keep-awake-context"
 import { KeepAwakeBanner } from "@/components/performance/KeepAwakeBanner"
 import { primeOfflineWorker } from "@/lib/pdf-worker-offline"
+import { AppNavigation } from "@/components/nav/AppNavigation"
 
 /**
  * Pre-warm the PDF.js worker on Perform-route mount so the worker module is
@@ -169,9 +170,17 @@ function PerformShellSWBootstrap() {
 
 export function PerformClientLayout({
     children,
+    branding,
 }: {
     children: React.ReactNode
+    /** Host-org branding, resolved server-side, for the shell on the listing. */
+    branding?: { shortName?: string; logoUrl?: string; wordmarkUrl?: string }
 }) {
+    // One shell on every route: the /perform listing gets the same top bar and
+    // tab bar as the rest of the app. The setlist page renders it from its own
+    // layout; the open chart viewer (/perform/[fileId]) stays full-screen.
+    const pathname = usePathname()
+    const isListing = pathname === "/perform"
     // P2-011 (WCAG 1.3.1): /perform routes live outside the (main) route group
     // and thus don't inherit (main)/layout.tsx's <main id="main-content"> wrapper.
     // Without a real <main> landmark the global "Skip to main content" link
@@ -190,7 +199,18 @@ export function PerformClientLayout({
     return (
         <AuthedQueryProvider>
             <KeepAwakeProvider>
-                <main id="main-content" className="min-h-screen">
+                {isListing && (
+                    <AppNavigation
+                        serverOrgShortName={branding?.shortName}
+                        serverLogoUrl={branding?.logoUrl}
+                        serverWordmarkUrl={branding?.wordmarkUrl}
+                    />
+                )}
+                <main
+                    id="main-content"
+                    className={isListing ? "min-h-screen pt-14" : "min-h-screen"}
+                    style={isListing ? { paddingBottom: "var(--tabbar-h)" } : undefined}
+                >
                     <PdfWorkerPreload />
                     <PerformShellSWBootstrap />
                     <LayoutOfflineIndicator />

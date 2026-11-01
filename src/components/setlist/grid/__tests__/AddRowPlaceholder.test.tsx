@@ -71,7 +71,7 @@ describe('AddRowPlaceholder', () => {
         expect(trigger).toHaveTextContent('Song')
         expect(trigger).not.toHaveTextContent('Add a song or section')
         const icon = trigger.querySelector('svg')
-        expect(icon?.getAttribute('class') ?? '').toMatch(/text-indigo-300/)
+        expect(icon?.getAttribute('class') ?? '').toMatch(/text-brand/)
     })
 
     it('opens the picker on trigger click and lists library songs alphabetically', async () => {

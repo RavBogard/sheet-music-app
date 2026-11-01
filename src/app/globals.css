@@ -264,14 +264,6 @@
   /* The login hero composites this performance photo UNDER the bl-hero gradient
      (see @utility bl-hero). Sourced from brotherslazaroff.com (Joe's Cafe). */
   --bl-hero-image: url('/brands/brotherslazaroff/hero.jpg');
-  /* v11.7-07-01: retune the active-state glow accents from CRC indigo (hue 275)
-     to the BL teal brand (hue 210, matching --brand) so the desktop active nav
-     link + the mobile tab bar's active/center tabs glow teal, not purple. These
-     override the :root tokens consumed via var() — no component edits needed for
-     MobileTabBar; CRC's :root values are untouched (CRC byte-identical). */
-  --shadow-brand-glow: 0 0 12px oklch(0.72 0.115 210 / 0.40);
-  --shadow-brand-glow-soft: 0 0 14px oklch(0.72 0.115 210 / 0.20);
-  --nav-active-glow: 0 0 10px oklch(0.72 0.115 210 / 0.30);
 }
 
 .dark[data-org="brotherslazaroff"] {
@@ -383,14 +375,6 @@
   border-bottom-width: 1px;
 }
 
-:root {
-  --shadow-brand-glow: 0 0 12px rgb(37 99 235 / 0.25);
-  --shadow-brand-glow-soft: 0 0 14px rgb(37 99 235 / 0.12);
-  /* v11.7-07-01: active-nav-link glow. Default = the prior DesktopHeader inline
-     literal verbatim (CRC pixels unchanged); overridden to teal under
-     [data-org="brotherslazaroff"] so BL stops glowing CRC-indigo. */
-  --nav-active-glow: none;
-}
 
 @utility pt-safe {
   padding-top: env(safe-area-inset-top);
@@ -408,34 +392,10 @@
   padding-left: env(safe-area-inset-left);
 }
 
-@utility bg-noise {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100dvh;
-  pointer-events: none;
-  z-index: 1;
-  opacity: 0;
-}
 
-:is(.dark *).bg-noise,
-.dark>.bg-noise,
-.dark .bg-noise {
-  opacity: 0.04;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
-}
-
-@utility glass {
-  @apply bg-background/65 backdrop-blur-2xl border border-border/60;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04);
-}
-
-:is(.dark *).glass,
-.dark .glass {
-  box-shadow: 0 8px 32px rgba(15, 15, 35, 0.3);
-}
-
+/* glass-card is kept only for the two surfaces outside the refresh: the chart
+   viewer's toolbar and the Brothers Lazaroff login card over its photo hero.
+   Nothing on a refreshed surface uses it. */
 @utility glass-card {
   @apply bg-card/70 backdrop-blur-xl border border-white/20 shadow-lg shadow-black/5;
 }
@@ -479,9 +439,6 @@
   @apply bg-popover/75 backdrop-blur-xl border border-border shadow-xl;
 }
 
-@utility list-cell {
-  @apply flex items-center px-4 py-3 bg-card transition-colors hover:bg-accent/50 fluid-interaction border-b border-border/40;
-}
 
 /* ── Dashboard Stagger Animations ── */
 @keyframes dash-fade-up {

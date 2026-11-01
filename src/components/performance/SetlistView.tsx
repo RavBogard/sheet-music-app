@@ -8,6 +8,8 @@ import { LiveDirectorGesture } from "./LiveDirectorGesture"
 import { LiturgyRunDivider } from "./LiturgyRunDivider"
 import { liturgyRuns, runFolios } from "./liturgy-runs"
 import { useT } from "@/i18n/client"
+import { cn } from "@/lib/utils"
+import { PAGE_WIDTH_CLASS } from "@/components/layout/Page"
 import { sectionBands } from "@/components/setlist/grid/section-bands"
 
 export interface SetlistViewProps {
@@ -153,7 +155,7 @@ export function SetlistView({
 
     return (
         <div className="flex-1 overflow-y-auto w-full">
-            <div className="flex flex-col pb-24 w-full max-w-4xl mx-auto sm:px-4 sm:pt-2">
+            <div className={cn(PAGE_WIDTH_CLASS, "flex flex-col pb-24 pt-2")}>
                 {/* Service notes banner */}
                 {serviceNotes && (
                     <div className="mx-3 sm:mx-0 mt-2 mb-3 px-4 py-3 bg-accent border border-rule rounded-md">

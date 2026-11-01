@@ -63,7 +63,7 @@ export function UnifiedCalendar({
     }
 
     return (
-        <div className={cn("flex flex-col glass-card rounded-xl overflow-hidden", className)}>
+        <div className={cn("flex flex-col bg-card border border-rule rounded-lg overflow-hidden", className)}>
             <CalendarHeader
                 monthLabel={monthLabel}
                 mode={mode}

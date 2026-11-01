@@ -28,6 +28,8 @@ import type { OrgId } from "@/lib/org/types"
 import { KNOWN_COLLECTIONS, normalizeCollection, type KnownCollection } from "@/lib/library/collections"
 import { defaultPickerCollection, librarySections } from "@/lib/songs/picker-scope"
 import { cn } from "@/lib/utils"
+import { PAGE_WIDTH_CLASS, PageHeader } from "@/components/layout/Page"
+import { SegmentedChips } from "@/components/ui/segmented-chips"
 import { LibraryFilters, applyLibraryFilters, createEmptyFilters, LibraryFilterState } from "@/components/library/LibraryFilters"
 import { useAuth } from "@/lib/auth-context"
 import { apiFetch } from "@/lib/api-client"
@@ -392,15 +394,19 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
 
     return (
         <div className="h-[calc(100dvh-3.5rem-var(--tabbar-h))] flex flex-col bg-background text-foreground">
-            {/* Head row (web refresh, blend E): the title large, the tools on the right. */}
-            <div className="border-b border-rule bg-background">
-            <div className="max-w-3xl mx-auto w-full flex items-center px-2 sm:px-4 py-3 gap-2 sm:gap-3">
-                <Button size="icon" variant="ghost" aria-label={t("library.header.back")} className="h-11 w-11 rounded-md shrink-0" onClick={handleBack}>
-                    <DirectionalIcon icon={ChevronLeft} className="h-5 w-5" />
-                </Button>
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <h1 className="truncate text-[1.35rem] sm:text-[1.6rem] font-extrabold leading-tight tracking-[-0.015em]">{t("library.header.title")}</h1>
-                </div>
+            {/* Head row (consistency pass): the one page head. The title matches
+                the tab ("Library"); there is no back strip, the tab bar is the
+                way out. A back button shows only when a host embeds the
+                library and passes `onBack`. */}
+            <div className={cn(PAGE_WIDTH_CLASS, "pt-5 sm:pt-6 pb-3")}>
+            <PageHeader
+                title={t("nav.library")}
+                leading={onBack ? (
+                    <Button size="icon" variant="ghost" aria-label={t("library.header.back")} className="h-11 w-11 rounded-md shrink-0 -ms-2" onClick={handleBack}>
+                        <DirectionalIcon icon={ChevronLeft} className="h-5 w-5" />
+                    </Button>
+                ) : undefined}
+                actions={<>
                 {canUpload && (
                     <div className="flex gap-2">
                         <UploadDialog 
@@ -467,12 +473,13 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
                 >
                     <CheckSquare className="h-5 w-5" />
                 </Button>
-            </div>
+                </>}
+            />
             </div>
 
             {/* Search & section toggles */}
-            <div className="px-4 py-3 border-b border-rule space-y-3">
-                <div className="relative max-w-3xl mx-auto">
+            <div className={cn(PAGE_WIDTH_CLASS, "pb-3 space-y-3")}>
+                <div className="relative">
                     <Search className="absolute start-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" aria-hidden="true" />
                     <Input
                         value={searchQuery}
@@ -501,7 +508,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
                     <div
                         role="status"
                         aria-live="polite"
-                        className="max-w-3xl mx-auto flex flex-wrap items-center gap-3 text-base font-medium text-caution"
+                        className="flex flex-wrap items-center gap-3 text-base font-medium text-caution"
                     >
                         <span>{t("library.usage.partial")}</span>
                         <Button
@@ -514,45 +521,26 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
                     </div>
                 )}
 
-                {/* Section toggles — plain segmented control; see C4-004 note on imports above. */}
-                <div
-                    role="group"
-                    aria-label={t("library.sections.groupLabel")}
-                    className="max-w-3xl mx-auto flex w-full items-center gap-2 flex-wrap"
-                >
-                    {(
-                        [
-                            // Multi-tenant phase 1: the tenant's sections, in its order, with its
-                            // labels (config `library.collections`). CRC: CRC Charts / Shireinu /
-                            // Nava Tehilah / Uploads; BL: Charts / Uploads — as before.
-                            ...sections.map(({ id, label }) => ({ value: id, label: t("library.sections.tabWithCount", { label, n: filteredByCollection[id].length }), icon: null as ReactNode })),
-                            ...(hasAudio
-                                ? [{ value: 'audio' as const, label: t("library.sections.audioWithCount", { n: audioFiles.length }), icon: <Music className="w-3.5 h-3.5" /> }]
-                                : []),
-                            // Phase 5: each switched-on shared collection, after the tenant's own.
-                            ...onSharedChips.map(c => ({
-                                value: `${SHARED_TAB_PREFIX}${c.id}` as LibraryTab,
-                                label: t("library.sections.tabWithCount", { label: c.label, n: filteredShared.get(c.id)?.length ?? 0 }),
-                                icon: null as ReactNode,
-                            })),
-                        ]
-                    ).map(({ value, label, icon }) => {
-                        const active = tab === value
-                        return (
-                            <button
-                                key={value}
-                                type="button"
-                                aria-pressed={active}
-                                data-state={active ? 'active' : 'inactive'}
-                                onClick={() => setTab(value)}
-                                className="tnum inline-flex items-center gap-1.5 min-h-11 rounded-md px-3.5 text-sm font-semibold border cursor-pointer transition-colors data-[state=active]:bg-accent data-[state=active]:text-foreground data-[state=active]:border-brand data-[state=inactive]:bg-card data-[state=inactive]:text-muted-foreground data-[state=inactive]:border-border data-[state=inactive]:hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                            >
-                                {icon}
-                                {label}
-                            </button>
-                        )
-                    })}
-                </div>
+                {/* Section toggles: the shared segmented chips (one filter control app-wide). */}
+                <SegmentedChips<LibraryTab>
+                    ariaLabel={t("library.sections.groupLabel")}
+                    value={tab}
+                    onChange={setTab}
+                    options={[
+                        // Multi-tenant phase 1: the tenant's sections, in its order, with its
+                        // labels (config `library.collections`). CRC: CRC Charts / Shireinu /
+                        // Nava Tehilah / Uploads; BL: Charts / Uploads — as before.
+                        ...sections.map(({ id, label }) => ({ value: id as LibraryTab, label: t("library.sections.tabWithCount", { label, n: filteredByCollection[id].length }) })),
+                        ...(hasAudio
+                            ? [{ value: 'audio' as LibraryTab, label: t("library.sections.audioWithCount", { n: audioFiles.length }), icon: <Music aria-hidden className="w-3.5 h-3.5" /> }]
+                            : []),
+                        // Phase 5: each switched-on shared collection, after the tenant's own.
+                        ...onSharedChips.map(c => ({
+                            value: `${SHARED_TAB_PREFIX}${c.id}` as LibraryTab,
+                            label: t("library.sections.tabWithCount", { label: c.label, n: filteredShared.get(c.id)?.length ?? 0 }),
+                        })),
+                    ]}
+                />
 
                 {/* Phase 5: collections other tenants share with this one.
                     Off until switched on; remembered per user. */}
@@ -560,7 +548,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
                     <div
                         role="group"
                         aria-label={t("library.shared.chipGroupLabel")}
-                        className="max-w-3xl mx-auto flex flex-wrap items-center gap-2"
+                        className="flex flex-wrap items-center gap-2"
                     >
                         <span className="text-xs text-muted-foreground">{t("library.shared.chipGroupHeading")}</span>
                         {shared.chips.map(c => (
@@ -590,7 +578,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
                     full cross-tenant chart pool for authoring/binding. Off by
                     default (the library is host-org filtered). */}
                 {isAdmin && (
-                    <div className="max-w-3xl mx-auto flex items-center">
+                    <div className="flex items-center">
                         <button
                             type="button"
                             role="switch"
@@ -608,7 +596,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
             </div>
 
             {/* File List */}
-            <ScrollArea className="flex-1 min-h-0 px-4 pt-4" ref={scrollRootRef}>
+            <ScrollArea className="flex-1 min-h-0 border-t border-rule" ref={scrollRootRef}>
                 {/*
                   C5C-003: render the skeleton while the store hasn't yet been
                   hydrated, regardless of whether a React Query fetch is
@@ -624,13 +612,13 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
                   the post-hydration UI shape.
                 */}
                 {!initialized && !error ? (
-                    <LibrarySkeleton />
+                    <div className={cn(PAGE_WIDTH_CLASS, "pt-4")}><LibrarySkeleton /></div>
                 ) : !initialized && error ? (
-                    <div className="max-w-md mx-auto mt-20">
+                    <div className={cn(PAGE_WIDTH_CLASS, "mt-20 max-w-md")}>
                         <ErrorState title={t("library.list.errorTitle")} description={error || t("library.list.errorFallback")} onRetry={() => loadLibrary()} />
                     </div>
                 ) : (
-                    <div className="max-w-3xl mx-auto pb-10">
+                    <div className={cn(PAGE_WIDTH_CLASS, "pt-4 pb-10")}>
                         {combinedItems.length === 0 && !loading && (
                             <EmptyState
                                 icon={Search}
@@ -753,7 +741,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
             {/* Sticky Audio Player */}
             {playingFile && audioUrl && (
                 <div className="border-t border-border bg-card/95 backdrop-blur-sm px-4 py-3 pb-safe">
-                    <div className="max-w-2xl mx-auto">
+                    <div className={PAGE_WIDTH_CLASS}>
                         <AudioPlayer
                             src={audioUrl}
                             title={getCleanName(playingFile.name)}

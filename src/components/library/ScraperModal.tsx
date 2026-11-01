@@ -282,7 +282,7 @@ export function ScraperModal({ onUploadComplete, setlists = [], onAddToSetlist }
                                                     {msg.role === 'user' ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
                                                 </div>
                                                 <div className={`flex flex-col gap-2 max-w-[85%] ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
-                                                    <div className={`p-3 rounded-2xl text-sm ${msg.role === 'user' ? 'bg-brand text-white rounded-se-sm' : 'bg-zinc-800/80 text-zinc-100 rounded-ss-sm'}`}>
+                                                    <div className={`p-3 rounded-lg text-sm ${msg.role === 'user' ? 'bg-brand text-white rounded-se-sm' : 'bg-zinc-800/80 text-zinc-100 rounded-ss-sm'}`}>
                                                         {msg.content}
                                                     </div>
                                                     
@@ -322,7 +322,7 @@ export function ScraperModal({ onUploadComplete, setlists = [], onAddToSetlist }
                                             <div className="shrink-0 w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-300">
                                                 <Bot className="h-4 w-4" />
                                             </div>
-                                            <div className="p-3 rounded-2xl bg-zinc-800/80 text-zinc-100 rounded-ss-sm flex items-center gap-2">
+                                            <div className="p-3 rounded-lg bg-zinc-800/80 text-zinc-100 rounded-ss-sm flex items-center gap-2">
                                                 <Loader2 className="h-3 w-3 animate-spin" />
                                                 <span className="text-xs">{t("libraryScraper.thinking")}</span>
                                             </div>

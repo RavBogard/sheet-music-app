@@ -110,7 +110,7 @@ export function RecordingBindPopover({
             trigger={children}
         >
             <div className="flex flex-col">
-                <div className="border-b border-white/10 px-3 py-2">
+                <div className="border-b border-rule px-3 py-2">
                     <p className="text-sm font-semibold text-foreground">
                         {t('setlistGrid.recordings')}
                     </p>
@@ -138,7 +138,7 @@ export function RecordingBindPopover({
                             {recordings.map((rec) => (
                                 <li
                                     key={rec.id}
-                                    className="flex flex-col gap-1 rounded-md bg-white/[0.03] p-2"
+                                    className="flex flex-col gap-1 rounded-md bg-muted/50 p-2"
                                 >
                                     <span className="truncate text-sm text-foreground">
                                         {rec.title}
@@ -162,7 +162,7 @@ export function RecordingBindPopover({
                 </div>
 
                 {canUpload && (
-                    <div className="border-t border-white/10 p-2">
+                    <div className="border-t border-rule p-2">
                         <input
                             ref={fileInputRef}
                             id={inputId}

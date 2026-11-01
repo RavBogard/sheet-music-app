@@ -74,7 +74,7 @@ export function AccessAuditLog() {
 
     return (
         <SectionErrorBoundary label={t("admin-people.auditLogLabel")}>
-        <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+        <div className="bg-card border border-border rounded-lg p-5 space-y-4">
             {logs.length === 0 ? (
                 <p className="text-sm text-muted-foreground p-4 text-center bg-muted/20 rounded-lg">{t("admin-people.auditEmpty")}</p>
             ) : (
@@ -85,7 +85,7 @@ export function AccessAuditLog() {
                         return (
                             <div key={log.id} className="flex gap-4 p-3 rounded-lg bg-muted/10 border border-border/50 text-sm">
                                 <div className="mt-0.5 shrink-0">
-                                    <Shield className={cn("w-4 h-4", isPromotion ? "text-success" : "text-amber-500")} />
+                                    <Shield className={cn("w-4 h-4", isPromotion ? "text-success" : "text-caution")} />
                                 </div>
                                 <div className="flex-1 space-y-1">
                                     <p className="text-foreground">
@@ -97,7 +97,7 @@ export function AccessAuditLog() {
                                     <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground">
                                         <span className="line-through opacity-70">{log.previousRole ?? '—'}</span>
                                         <DirectionalIcon icon={ArrowRight} className="w-3 h-3" />
-                                        <span className={cn("font-medium", isPromotion ? "text-success" : "text-amber-500")}>
+                                        <span className={cn("font-medium", isPromotion ? "text-success" : "text-caution")}>
                                             {log.newRole ?? '—'}
                                         </span>
                                     </div>

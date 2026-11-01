@@ -122,7 +122,7 @@ export function ChartThumb({ fileId, title, mimeType }: ChartThumbProps) {
                     e.stopPropagation()
                     setEnlarged(true)
                 }}
-                className="relative flex h-9 w-7 shrink-0 items-center justify-center overflow-hidden rounded-[3px] border border-white/10 bg-white/5 hover:ring-1 hover:ring-indigo-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-8"
+                className="relative flex h-9 w-7 shrink-0 items-center justify-center overflow-hidden rounded-[3px] border border-rule bg-muted/50 hover:ring-1 hover:ring-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-8"
             >
                 {result?.kind === 'image' ? (
                     <img src={result.url} alt="" className="h-full w-full object-cover object-top bg-white" />
@@ -204,7 +204,7 @@ function ChartPage1Dialog({
                     <DialogDescription className="sr-only">{t('setlistGrid.previewDescription')}</DialogDescription>
                 </div>
                 <div
-                    className="flex items-center justify-center overflow-auto rounded bg-white/5"
+                    className="flex items-center justify-center overflow-auto rounded bg-muted/50"
                     style={{ width, minHeight: Math.round(width * 1.29) }}
                 >
                     {result?.kind === 'image' ? (

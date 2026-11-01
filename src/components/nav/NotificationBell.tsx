@@ -104,7 +104,7 @@ export function NotificationBell() {
 
             {/* Dropdown */}
             {open && (
-                <div className="absolute end-0 top-full mt-2 w-80 bg-card border border-border rounded-xl shadow-xl z-50 overflow-hidden">
+                <div className="absolute end-0 top-full mt-2 w-80 bg-card border border-border rounded-lg shadow-xl z-50 overflow-hidden">
                     {/* Header */}
                     <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
                         <span className="text-sm font-semibold text-foreground">{t("nav.notifications")}</span>
@@ -138,9 +138,9 @@ export function NotificationBell() {
                                         variant="ghost"
                                         key={notif.id}
                                         onClick={() => handleClick(notif)}
-                                        className={`w-full h-auto items-start gap-3 px-4 py-3 rounded-none justify-start text-start hover:bg-accent/50 ${!notif.read ? 'bg-violet-500/5' : ''}`}
+                                        className={`w-full h-auto items-start gap-3 px-4 py-3 rounded-none justify-start text-start hover:bg-accent/50 ${!notif.read ? 'bg-brand/5' : ''}`}
                                     >
-                                        <div className={`mt-0.5 p-1.5 rounded-lg shrink-0 ${!notif.read ? 'bg-violet-500/10 text-violet-500' : 'bg-muted text-muted-foreground'}`}>
+                                        <div className={`mt-0.5 p-1.5 rounded-lg shrink-0 ${!notif.read ? 'bg-brand/10 text-brand' : 'bg-muted text-muted-foreground'}`}>
                                             <Icon className="w-3.5 h-3.5" />
                                         </div>
                                         <div className="flex-1 min-w-0">
@@ -157,7 +157,7 @@ export function NotificationBell() {
                                             )}
                                         </div>
                                         {!notif.read && (
-                                            <div className="w-2 h-2 rounded-full bg-violet-500 mt-2 shrink-0" />
+                                            <div className="w-2 h-2 rounded-full bg-brand mt-2 shrink-0" />
                                         )}
                                     </Button>
                                 )

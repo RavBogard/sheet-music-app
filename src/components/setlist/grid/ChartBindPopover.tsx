@@ -91,9 +91,9 @@ export function ChartBindPopover({
                 currentSongId={currentSongId}
                 inputAriaLabel={inputAriaLabel ?? t('setlistGrid.bindChartTitle')}
                 placeholder={t('setlistGrid.searchLibraryPlaceholder')}
-                inputClassName="w-full bg-transparent px-3 py-2 text-sm outline-none border-b border-white/10"
+                inputClassName="w-full bg-transparent px-3 py-2 text-sm outline-none border-b border-rule"
                 listClassName="max-h-72 overflow-y-auto py-1"
-                itemClassName="flex cursor-pointer items-center gap-2 px-2 py-1 text-sm aria-selected:bg-indigo-500/15 data-[current=true]:text-indigo-300"
+                itemClassName="flex cursor-pointer items-center gap-2 px-2 py-1 text-sm aria-selected:bg-brand/15 data-[current=true]:text-brand"
             />
         </TouchOrPopover>
     )

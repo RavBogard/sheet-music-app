@@ -62,8 +62,8 @@ export function AddRowPlaceholder({
         <div
             data-testid="add-row-placeholder"
             className={cn(
-                'flex w-full items-center border-t border-white/10',
-                'hover:bg-white/[0.03]',
+                'flex w-full items-center border-t border-rule',
+                'hover:bg-accent/50',
             )}
         >
             <TouchOrPopover
@@ -99,12 +99,12 @@ export function AddRowPlaceholder({
                             '[@media(pointer:coarse)]:h-12',
                             'font-medium text-foreground hover:text-foreground',
                             'cursor-pointer',
-                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400',
+                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
                         )}
                     >
                         <Plus
                             aria-hidden
-                            className="h-4 w-4 text-indigo-300"
+                            className="h-4 w-4 text-brand"
                         />
                         <span>{t('setlistGrid.addSong')}</span>
                     </button>
@@ -117,16 +117,16 @@ export function AddRowPlaceholder({
                     onEscape={close}
                     inputAriaLabel={t('setlistGrid.addSongAria')}
                     placeholder={t('setlistGrid.addSongPlaceholder')}
-                    inputClassName="w-full bg-transparent px-3 py-2 text-sm outline-none border-b border-white/10"
+                    inputClassName="w-full bg-transparent px-3 py-2 text-sm outline-none border-b border-rule"
                     listClassName="max-h-72 overflow-y-auto py-1"
-                    itemClassName="flex cursor-pointer items-center gap-2 px-2 py-1 text-sm aria-selected:bg-indigo-500/15"
+                    itemClassName="flex cursor-pointer items-center gap-2 px-2 py-1 text-sm aria-selected:bg-brand/15"
                 >
                     {filter.trim().length > 0 && (
                         <CommandGroup heading={t('setlistGrid.pickerCustomHeading')}>
                             <CommandItem
                                 value={`__create__${filter}`}
                                 onSelect={handleFreeText}
-                                className="flex cursor-pointer items-center gap-2 px-2 py-1 text-sm aria-selected:bg-indigo-500/15"
+                                className="flex cursor-pointer items-center gap-2 px-2 py-1 text-sm aria-selected:bg-brand/15"
                             >
                                 <Plus
                                     aria-hidden

@@ -152,7 +152,7 @@ export function AddSongsModal({
                         {showSuggestions && (
                             <div className="mb-4">
                                 <div className="flex items-center gap-1.5 mb-2">
-                                    <Lightbulb className="h-3.5 w-3.5 text-amber-400" />
+                                    <Lightbulb className="h-3.5 w-3.5 text-caution" />
                                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{t("setlistModals.suggested")}</p>
                                 </div>
                                 <div className="flex flex-wrap gap-1.5">

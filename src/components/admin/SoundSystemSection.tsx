@@ -200,7 +200,7 @@ export function SoundSystemSection() {
                 ) : (
                     <div className="space-y-4">
                         {/* Bridge Installation */}
-                        <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+                        <div className="bg-card border border-border rounded-lg p-5 space-y-4">
                             <h3 className="font-semibold text-foreground flex items-center gap-2 text-sm">
                                 <Download className="w-4 h-4 text-muted-foreground" />
                                 {t("admin-sound.bridgeInstallTitle")}
@@ -234,7 +234,7 @@ export function SoundSystemSection() {
                             </div>
                         </div>
 
-                        <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+                        <div className="bg-card border border-border rounded-lg p-5 space-y-4">
                             <h3 className="font-semibold text-foreground flex items-center gap-2 text-sm">
                                 <Settings2 className="w-4 h-4 text-muted-foreground" />
                                 {t("admin-sound.bridgeServerTitle")}

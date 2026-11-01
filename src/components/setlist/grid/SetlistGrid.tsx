@@ -65,6 +65,7 @@ import {
 import { useGridKeyboard } from '@/hooks/use-grid-keyboard'
 import { useGridSelection } from '@/hooks/use-grid-selection'
 import { cn } from '@/lib/utils'
+import { PAGE_WIDTH_CLASS } from "@/components/layout/Page"
 
 import { AddBar, type NonSongTrackType } from './AddBar'
 import { ChartBindDialog } from './ChartBindDialog'
@@ -164,12 +165,12 @@ function maybePropagate(
 // Tier 3 = lead / type / bpm (tertiary). Tier 4 = notes (quaternary).
 // HEADER_TITLE = smallcaps banner used inside type='header' / 'section' rows.
 const TIER1_TITLE = 'text-sm font-semibold text-foreground'
-const TIER2_KEY = 'text-sm font-medium tabular-nums text-indigo-200'
+const TIER2_KEY = 'text-sm font-bold tabular-nums text-foreground'
 const TIER3 = 'text-[13px] font-normal text-muted-foreground'
 const TIER3_NUM = 'text-[13px] font-normal tabular-nums text-muted-foreground'
 const TIER4_NOTES = 'text-xs font-normal text-muted-foreground/75'
 const HEADER_TITLE =
-    'text-xs font-bold uppercase tracking-[0.1em] text-indigo-100'
+    'text-xs font-bold uppercase tracking-[0.08em] text-foreground'
 
 // TrackType union (src/types/models.ts) defines 'header'; the TypeCell
 // picker writes 'section' for the user-facing "Section header" option.
@@ -587,13 +588,12 @@ function SortableRow({
                     onPointerLeave={handlePointerEnd}
                     onPointerCancel={handlePointerEnd}
                     className={cn(
-                        'border-b border-white/10 last:border-b-0 hover:bg-white/[0.02]',
-                        isHeaderRow &&
-                            'bg-indigo-500/[0.08] border-s-2 border-s-indigo-400/50 border-t border-t-indigo-500/25',
-                        isSelected && 'bg-indigo-500/[0.08]',
-                        isSelected &&
-                            'hover:bg-indigo-500/[0.10]',
-                        isDragging && 'shadow-lg ring-2 ring-indigo-400/40',
+                        'border-b border-rule last:border-b-0 hover:bg-accent/50',
+                        // Consistency pass: no coloured side rail, no tinted
+                        // glow; a section row is a quiet Wash band on the grid.
+                        isHeaderRow && 'bg-accent border-t border-rule',
+                        isSelected && 'bg-accent',
+                        isDragging && 'shadow-[0_8px_24px_rgb(24_32_46/0.10)] ring-2 ring-ring',
                     )}
                 >
                     {row.getVisibleCells().map((cell, idx) => {
@@ -652,7 +652,7 @@ function SortableRow({
                                 className={cn(
                                     'px-2.5 py-0.5 [@media(pointer:coarse)]:py-0.5 align-middle',
                                     isChartCell &&
-                                        'sticky end-0 z-[5] bg-card border-s border-white/10',
+                                        'sticky end-0 z-[5] bg-card border-s border-rule',
                                 )}
                             >
                                 {flexRender(
@@ -671,7 +671,7 @@ function SortableRow({
                     <>
                         <ContextMenuLabel
                             data-testid="row-context-menu-bulk-label"
-                            className="text-indigo-300"
+                            className="text-brand"
                         >
                             {t('setlistGrid.rowsSelected', { count: bulkSelectionCount })}
                         </ContextMenuLabel>
@@ -1664,7 +1664,7 @@ export function SetlistGrid({
                 }}
             />
 
-            <div className="w-full max-w-4xl mx-auto px-0 sm:px-4 pt-4 sm:pt-6 flex flex-col gap-6 flex-grow pb-40">
+            <div className={cn(PAGE_WIDTH_CLASS, "pt-4 sm:pt-6 flex flex-col gap-6 flex-grow pb-40")}>
                 {/* T1.1 (2026-05-12, Bug 4): BatchActionBar removed —
                     multi-select is no longer a feature. The grip icon on
                     each card is now a real drag handle (drag to reorder),

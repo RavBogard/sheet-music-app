@@ -42,7 +42,7 @@ export class SectionErrorBoundary extends Component<
 function SectionErrorFallback({ label, error, onRetry }: { label: string; error?: Error; onRetry: () => void }) {
     const t = useT()
     return (
-        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-6 text-center space-y-3">
+        <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-6 text-center space-y-3">
             <ShieldAlert className="w-8 h-8 text-red-500 mx-auto" />
             <h3 className="font-semibold text-red-600 dark:text-red-400">
                 {t("ui.sectionFailed", { label })}

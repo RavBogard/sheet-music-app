@@ -89,7 +89,7 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                 href={item.href}
                 onClick={() => onOpenChange(false)}
                 className={cn(
-                    "flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-colors",
+                    "flex items-center gap-3 px-4 py-3.5 rounded-lg text-sm font-medium transition-colors",
                     isActive
                         ? "bg-brand/10 text-foreground border-s-2 border-brand"
                         : "text-muted-foreground hover:bg-brand/5 hover:text-foreground"
@@ -168,7 +168,7 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                             <Button
                                 variant="ghost"
                                 onClick={() => { signOut(); onOpenChange(false) }}
-                                className="w-full justify-start gap-3 px-4 py-3 h-auto rounded-xl text-red-500 hover:bg-red-500/10 hover:text-red-500"
+                                className="w-full justify-start gap-3 px-4 py-3 h-auto rounded-lg text-red-500 hover:bg-red-500/10 hover:text-red-500"
                             >
                                 <LogOut className="w-5 h-5 shrink-0" />
                                 {t("nav.logOutDrawer")}

@@ -177,7 +177,7 @@ export function PDFHealthScanner({ files, onArchiveComplete }: PDFHealthScannerP
         ) : (
           <>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+              <AlertTriangle className="h-3.5 w-3.5 text-caution" />
               {t("libraryHealth.pdf.issuesSummary", { count: flaggedResults.length, healthy: healthyCount })}
             </div>
 

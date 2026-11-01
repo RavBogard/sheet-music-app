@@ -52,7 +52,7 @@ export function CalendarHeader({ monthLabel, mode, onPrev, onNext }: CalendarHea
                         <span className="w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-emerald-500/20" /> {t("calendar.legendFullyStaffed")}
                     </span>
                     <span className="flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-amber-500 ring-2 ring-amber-500/20" /> {t("calendar.legendNeedsAttention")}
+                        <span className="w-2 h-2 rounded-full bg-caution ring-2 ring-caution/20" /> {t("calendar.legendNeedsAttention")}
                     </span>
                     <span className="flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-red-500 ring-2 ring-red-500/20" /> {t("calendar.legendNoMusicians")}

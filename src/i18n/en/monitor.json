@@ -73,5 +73,7 @@
     "queue_one": "{count} command waiting",
     "queue_other": "{count} commands waiting",
     "queueEmpty": "No commands waiting",
-    "master": "Master"
+    "master": "Master",
+    "accessDeniedTitle": "No wedge mixer access yet",
+    "accessDeniedBody": "Ask the sound engineer or an admin to assign you a bus."
 }

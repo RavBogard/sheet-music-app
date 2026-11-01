@@ -69,7 +69,7 @@ describe.each([false, true])("PrintModal i18n (rtl=%s)", (rtl) => {
         expectNoUntranslatedText(document.body, { allow: DATA })
 
         // Full packet: track options list + transposition note (just-me mode, +2)
-        const buttons = document.querySelectorAll(".flex.rounded-lg.border button")
+        const buttons = document.querySelectorAll(".flex.rounded-lg.border:not(.flex-col) button")
         fireEvent.click(buttons[1])
         expect(document.querySelector('[data-testid="transpose-track-list"]')).not.toBeNull()
         expectNoUntranslatedText(document.body, { allow: DATA })
@@ -77,7 +77,7 @@ describe.each([false, true])("PrintModal i18n (rtl=%s)", (rtl) => {
         // Per-musician mode, both selected → "n selected → ZIP" + Download ZIP
         const radio = document.querySelector('input[value="select-musicians"]') as HTMLInputElement
         fireEvent.click(radio)
-        const boxes = document.querySelectorAll('input[type="checkbox"].accent-violet-600')
+        const boxes = document.querySelectorAll('input[type="checkbox"].accent-brand')
         boxes.forEach((b) => { if (!(b as HTMLInputElement).checked) fireEvent.click(b) })
         expectNoUntranslatedText(document.body, { allow: DATA })
     })
@@ -85,7 +85,7 @@ describe.each([false, true])("PrintModal i18n (rtl=%s)", (rtl) => {
     it("missing-chart warning (download and email) and the email step", async () => {
         renderPseudo(<PrintModal {...props} tracks={MISSING} />, { rtl })
         await waitFor(() => expect(document.querySelector('input[value="select-musicians"]')).not.toBeNull())
-        fireEvent.click(document.querySelectorAll(".flex.rounded-lg.border button")[1]) // full packet
+        fireEvent.click(document.querySelectorAll(".flex.rounded-lg.border:not(.flex-col) button")[1]) // full packet
         expectNoUntranslatedText(document.body, { allow: DATA }) // stats: songs without PDFs
         const footer = () => Array.from(document.querySelectorAll(".border-t button")) as HTMLElement[]
         fireEvent.click(footer()[0]) // Download

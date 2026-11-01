@@ -11,7 +11,6 @@ import { getContextualGreeting } from "@/lib/greeting"
 import { DEFAULT_SHORT_NAME } from "@/lib/constants"
 import { TEMPLATE_LABELS } from "@/lib/liturgical-templates"
 import { UpcomingSetlistCard, SetlistCard, SetlistInfoLine, PlaceholderCard } from "./SetlistCards"
-import { RowDate } from "./RowDate"
 import { DeleteSetlistDialog, DuplicateSetlistDialog, TransferSetlistDialog } from "./SetlistDialogs"
 import { ImporterModal } from "./importer/ImporterModal"
 import { SetlistToolbar } from "./SetlistToolbar"
@@ -24,11 +23,14 @@ import { CreationWizard } from "./wizard/CreationWizard"
 import { foldSetlistVariants } from "@/lib/setlist-variant-fold"
 import { toDate } from "@/lib/firestore-helpers"
 import { SetlistMatrixView } from "./SetlistMatrixView"
+import { VariantGroupList } from "./VariantGroupList"
+import { PageContainer, PageHeader, GROUP_HEADING_CLASS } from "@/components/layout/Page"
+import { cn } from "@/lib/utils"
 
 // Lazy-load UnifiedCalendar
 const UnifiedCalendar = dynamic(
     () => import("@/components/calendar/UnifiedCalendar").then(m => m.UnifiedCalendar),
-    { ssr: false, loading: () => <Skeleton className="h-64 w-full rounded-xl" /> }
+    { ssr: false, loading: () => <Skeleton className="h-64 w-full rounded-lg" /> }
 )
 
 export function SetlistDashboard({ serverShortName, ...props }: UseSetlistDashboardProps & { serverShortName?: string }) {
@@ -72,16 +74,6 @@ export function SetlistDashboard({ serverShortName, ...props }: UseSetlistDashbo
         }),
         [pastOrNoDate],
     )
-    const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
-    const toggleGroup = useCallback((id: string) => {
-        setExpandedGroups(prev => {
-            const next = new Set(prev)
-            if (next.has(id)) next.delete(id)
-            else next.add(id)
-            return next
-        })
-    }, [])
-
     const greetingText = useMemo(() => {
         const firstName = user?.displayName?.split(' ')[0] || null
         return getContextualGreeting(
@@ -112,25 +104,23 @@ export function SetlistDashboard({ serverShortName, ...props }: UseSetlistDashbo
     )
 
     return (
-        <div className="flex min-h-[100dvh] bg-background text-foreground relative overflow-hidden">
-            {/* Main Content Area */}
-            <div className="flex-1 flex flex-col w-full">
-                <main className="flex-1 px-4 py-4 md:px-8 md:py-6 pb-32">
-                    <div className="max-w-4xl mx-auto space-y-6">
-                        <h1 className="sr-only">{t("nav.setlists")}</h1>
-                        {/* Welcome Section */}
-                        {/* Head row (web refresh): title, status line, one blue primary action. */}
-                        {user && (
-                            <section className="flex flex-wrap items-end justify-between gap-4 pt-2">
-                                <div className="min-w-0">
-                                    <h2 className="text-[1.6rem] font-extrabold leading-tight tracking-[-0.015em] text-foreground">
-                                        {greetingText}
-                                    </h2>
-                                    <p className="tnum mt-1 text-sm font-medium text-muted-foreground">
+        <div className="bg-background text-foreground">
+            {/* Consistency pass: the one page container and head row. */}
+            <div>
+                <div>
+                    <PageContainer className="space-y-6">
+                        {/* Head row: the page title matches its tab; the greeting
+                            and the upcoming count are the subtitle; one blue action. */}
+                        <PageHeader
+                                title={t("nav.setlists")}
+                                subtitle={user ? (
+                                    <>
+                                        <span data-testid="setlists-greeting">{greetingText}</span>
+                                        <span aria-hidden="true"> · </span>
                                         {t("setlist.upcomingScheduled", { count: upcoming.length })}
-                                    </p>
-                                </div>
-                                {isMember && (
+                                    </>
+                                ) : undefined}
+                                actions={user && isMember ? (
                                     <Button
                                         type="button"
                                         onClick={() => setShowWizard(true)}
@@ -140,9 +130,8 @@ export function SetlistDashboard({ serverShortName, ...props }: UseSetlistDashbo
                                         <Plus aria-hidden className="h-5 w-5 me-1.5" />
                                         {t("org.createNewSetlistHeading")}
                                     </Button>
-                                )}
-                            </section>
-                        )}
+                                ) : undefined}
+                            />
 
                         {/* Toolbar */}
                         <SetlistToolbar
@@ -183,7 +172,7 @@ export function SetlistDashboard({ serverShortName, ...props }: UseSetlistDashbo
                                     <>
                                         {hasUpcoming && (
                                             <section>
-                                                <h4 className="text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground px-1 mb-2">{t("org.upcomingSection")}</h4>
+                                                <h4 className={cn(GROUP_HEADING_CLASS, "mb-2")}>{t("org.upcomingSection")}</h4>
                                                 <div className="flex flex-col divide-y divide-rule border border-rule rounded-lg overflow-hidden bg-card">
                                                     {upcoming.map(setlist => (
                                                         <UpcomingSetlistCard
@@ -213,51 +202,15 @@ export function SetlistDashboard({ serverShortName, ...props }: UseSetlistDashbo
                                         )}
 
                                         <section>
-                                            <h4 className="text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground px-1 mb-2">{t("setlist.pastEventsSection")}</h4>
+                                            <h4 className={cn(GROUP_HEADING_CLASS, "mb-2")}>{t("setlist.pastEventsSection")}</h4>
                                             {pastOrNoDate.length === 0 ? (
                                                 <div className="text-muted-foreground py-10 text-center bg-card rounded-lg border border-rule">{t("setlist.noOtherSetlists")}</div>
                                             ) : (
-                                                <div className="flex flex-col divide-y divide-rule border border-rule rounded-lg overflow-hidden bg-card">
-                                                    {pastGroups.map(({ parent, baseName, variants }, gi) => {
-                                                        const groupId = parent ? parent.id : `group-${gi}-${variants[0]?.id ?? ""}`
-                                                        const open = expandedGroups.has(groupId)
-                                                        return (
-                                                            <div key={groupId}>
-                                                                {parent ? renderPastCard(parent) : (
-                                                                    // A group with no parent row keeps its siblings' date
-                                                                    // column, so the name lines up with every other row.
-                                                                    <div data-testid="setlist-group-head" className="flex items-center gap-3 sm:gap-4 px-3 sm:px-4 pt-3 pb-1 bg-card">
-                                                                        <RowDate date={toDate(variants[0]?.eventDate)} muted />
-                                                                        <div className="flex-1 min-w-0">
-                                                                            <p className="text-base font-semibold leading-snug text-foreground line-clamp-2">{baseName}</p>
-                                                                            {variants[0] ? <SetlistInfoLine setlist={variants[0]} /> : null}
-                                                                        </div>
-                                                                    </div>
-                                                                )}
-                                                                {variants.length > 0 && (
-                                                                    <div className="ps-[4.75rem] pe-3 pb-1 bg-card">
-                                                                        <button
-                                                                            type="button"
-                                                                            data-testid="setlist-variants-toggle"
-                                                                            aria-expanded={open}
-                                                                            onClick={() => toggleGroup(groupId)}
-                                                                            className="min-h-11 px-1 text-sm font-semibold text-brand hover:underline underline-offset-4"
-                                                                        >
-                                                                            {open
-                                                                                ? t("setlist.variantsHide")
-                                                                                : t("setlist.variantsShow", { count: variants.length })}
-                                                                        </button>
-                                                                        {open && (
-                                                                            <div className="flex flex-col divide-y divide-rule border-t border-rule -ms-[4.75rem] -me-3">
-                                                                                {variants.map(v => renderPastCard(v))}
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        )
-                                                    })}
-                                                </div>
+                                                <VariantGroupList
+                                                    groups={pastGroups}
+                                                    renderRow={renderPastCard}
+                                                    renderInfo={(v) => <SetlistInfoLine setlist={v} />}
+                                                />
                                             )}
                                             {nextCursor && (
                                                 <div className="mt-6 flex justify-center">
@@ -276,8 +229,8 @@ export function SetlistDashboard({ serverShortName, ...props }: UseSetlistDashbo
                                 )}
                             </div>
                         )}
-                    </div>
-                </main>
+                    </PageContainer>
+                </div>
             </div>
 
             {/* Modals */}

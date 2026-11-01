@@ -104,5 +104,6 @@
     "variantsShow_other": "הצג {count} גרסאות נוספות",
     "variantsHide": "הסתר גרסאות נוספות",
     "updatedAgo": "עודכן {when}",
-    "chartsBound": "{bound}/{total} תווים"
+    "chartsBound": "{bound}/{total} תווים",
+    "rabbiFilterGroupLabel": "סינון לפי רב/ה"
 }

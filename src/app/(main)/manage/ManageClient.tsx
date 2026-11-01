@@ -1,9 +1,7 @@
 "use client"
 
 import { useAuth } from "@/lib/auth-context"
-import { useRouter } from "next/navigation"
-import { ArrowLeft, Users, Database, Radio, History } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { Users, Database, Radio, History } from "lucide-react"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { SectionErrorBoundary } from "@/components/ui/SectionErrorBoundary"
 import { PeopleSection } from "@/components/admin/PeopleSection"
@@ -15,8 +13,14 @@ import { PDFHealthScanner } from "@/components/library/PDFHealthScanner"
 import { useLibrary } from "@/hooks/use-library"
 import { useLibraryStore } from "@/lib/library-store"
 import { useFeature } from "@/lib/org/use-feature"
-import { DirectionalIcon } from "@/components/i18n/DirectionalIcon"
 import { useT } from "@/i18n/client"
+import { PageContainer, PageHeader, CARD_CLASS } from "@/components/layout/Page"
+import { SEGMENTED_GROUP_CLASS, SEGMENTED_CHIP_CLASS } from "@/components/ui/segmented-chips"
+import { cn } from "@/lib/utils"
+
+// The (unstyled) tab trigger takes the segmented-chip classes as they are:
+// both key off data-state="active" | "inactive", which Radix sets.
+const MANAGE_TAB_CLASS = SEGMENTED_CHIP_CLASS
 
 export default function ManageClient({
     serverIsAdmin,
@@ -25,7 +29,6 @@ export default function ManageClient({
     serverIsAdmin: boolean
     adminOnlyNotice?: boolean
 }) {
-    const router = useRouter()
     const t = useT()
     const { refetch } = useLibrary()
     const allFiles = useLibraryStore(s => s.allFiles)
@@ -39,23 +42,10 @@ export default function ManageClient({
     )
 
     return (
-        <div className="min-h-screen bg-background text-foreground px-4 sm:px-6 pt-5 sm:pt-6 pb-24">
-            <div className="max-w-5xl mx-auto space-y-5">
-                {/* Head row (web refresh, blend E): the title large, the
-                    subtitle as its status line. */}
-                <div className="flex items-start gap-2 sm:gap-3">
-                    <Button variant="ghost" size="icon" aria-label={t("manage.back")} onClick={() => router.back()} className="h-11 w-11 rounded-md hover:bg-accent md:hidden shrink-0">
-                        <DirectionalIcon icon={ArrowLeft} className="w-5 h-5" />
-                    </Button>
-                    <div className="min-w-0 pt-1 md:pt-0">
-                        <h1 className="text-[1.35rem] sm:text-[1.6rem] font-extrabold leading-tight tracking-[-0.015em]">
-                            {t("manage.title")}
-                        </h1>
-                        <p className="text-muted-foreground text-sm font-medium mt-0.5">
-                            {t("manage.subtitle")}
-                        </p>
-                    </div>
-                </div>
+        <PageContainer className="space-y-5">
+            {/* Consistency pass: the one page head (title, subtitle); the tab
+                bar is the way out, so no back button. */}
+            <PageHeader title={t("manage.title")} subtitle={t("manage.subtitle")} />
 
                 {adminOnlyNotice && (
                     <p role="status" className="rounded-md border border-rule bg-accent px-4 py-3 text-sm font-medium">
@@ -64,23 +54,25 @@ export default function ManageClient({
                 )}
 
                 <Tabs defaultValue="people">
-                    <TabsList variant="line" className="w-full justify-start overflow-x-auto border-b border-rule pb-[5px] h-auto">
-                        <TabsTrigger value="people" className="min-h-11 flex-none gap-1.5 px-3 sm:px-4 text-[15px] font-semibold data-[state=active]:text-foreground after:bg-brand">
+                    {/* The section tabs use the shared segmented chips (they wrap, never
+                        scroll), keeping Radix tab semantics for the panels. */}
+                    <TabsList unstyled className={SEGMENTED_GROUP_CLASS}>
+                        <TabsTrigger unstyled value="people" className={MANAGE_TAB_CLASS}>
                             <Users className="w-4 h-4" />
                             {t("manage.tabPeople")}
                         </TabsTrigger>
-                        <TabsTrigger value="library" className="min-h-11 flex-none gap-1.5 px-3 sm:px-4 text-[15px] font-semibold data-[state=active]:text-foreground after:bg-brand">
+                        <TabsTrigger unstyled value="library" className={MANAGE_TAB_CLASS}>
                             <Database className="w-4 h-4" />
                             {t("manage.tabLibrary")}
                         </TabsTrigger>
                         {mixerOn && (
-                            <TabsTrigger value="sound" className="min-h-11 flex-none gap-1.5 px-3 sm:px-4 text-[15px] font-semibold data-[state=active]:text-foreground after:bg-brand">
+                            <TabsTrigger unstyled value="sound" className={MANAGE_TAB_CLASS}>
                                 <Radio className="w-4 h-4" />
                                 {t("manage.tabSound")}
                             </TabsTrigger>
                         )}
                         {serverIsAdmin && (
-                            <TabsTrigger value="audit" className="min-h-11 flex-none gap-1.5 px-3 sm:px-4 text-[15px] font-semibold data-[state=active]:text-foreground after:bg-brand">
+                            <TabsTrigger unstyled value="audit" className={MANAGE_TAB_CLASS}>
                                 <History className="w-4 h-4" />
                                 {t("manage.tabAudit")}
                             </TabsTrigger>
@@ -98,7 +90,7 @@ export default function ManageClient({
                             <LibraryDataSection />
                         </SectionErrorBoundary>
 
-                        <div className="border border-rule rounded-lg bg-card p-4 space-y-3">
+                        <div className={cn(CARD_CLASS, "p-4 space-y-3")}>
                             <h3 className="text-sm font-bold text-foreground">{t("manage.libraryToolsTitle")}</h3>
                             <div className="flex flex-wrap gap-3">
                                 <DuplicateScanner
@@ -132,7 +124,6 @@ export default function ManageClient({
                         </TabsContent>
                     )}
                 </Tabs>
-            </div>
-        </div>
+        </PageContainer>
     )
 }

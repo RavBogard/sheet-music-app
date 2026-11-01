@@ -90,5 +90,9 @@
     "testAccountsHidden_one": "חשבון בדיקה אחד מוסתר. הצג",
     "testAccountsHidden_two": "שני חשבונות בדיקה מוסתרים. הצג",
     "testAccountsHidden_other": "{count} חשבונות בדיקה מוסתרים. הצג",
-    "testAccountsHide": "הסתר חשבונות בדיקה"
+    "testAccountsHide": "הסתר חשבונות בדיקה",
+    "roleFilterLabel": "סינון לפי תפקיד",
+    "selectAll": "בחירת כל האנשים ברשימה",
+    "selectPerson": "בחירת {personName}",
+    "moreActions": "פעולות נוספות עבור {personName}"
 }

@@ -189,12 +189,12 @@ describe("SetlistDashboard welcome line names the host tenant", () => {
     it("uses the server's short name over the client store's fallback", () => {
         dash.value = dashboardValue({ user: { uid: "u", displayName: null } })
         render(<SetlistDashboard serverShortName="Brothers Lazaroff" />)
-        expect(screen.getByText("Welcome to Brothers Lazaroff").tagName).toBe("H2")
+        expect(screen.getByTestId("setlists-greeting").textContent).toBe("Welcome to Brothers Lazaroff")
     })
 
     it("falls back to the client store without a server short name", () => {
         dash.value = dashboardValue({ user: { uid: "u", displayName: null } })
         render(<SetlistDashboard />)
-        expect(screen.getByText("Welcome to CRC").tagName).toBe("H2")
+        expect(screen.getByTestId("setlists-greeting").textContent).toBe("Welcome to CRC")
     })
 })

@@ -198,7 +198,7 @@ export function QRSignIn() {
                     variant="link"
                     size="xs"
                     onClick={createSession}
-                    className="text-xs text-violet-500 hover:text-violet-400"
+                    className="text-xs text-brand hover:text-brand"
                 >
                     <RefreshCw className="h-3 w-3" /> {t("auth.qrTryAgain")}
                 </Button>
@@ -209,7 +209,7 @@ export function QRSignIn() {
     return (
         <div className="flex flex-col items-center justify-center gap-4 min-h-[15rem]">
             {/* QR Code — renders instantly from client-generated code */}
-            <div className="bg-white p-3 rounded-xl shadow-sm">
+            <div className="bg-white p-3 rounded-lg shadow-sm">
                 <QRCodeSVG
                     value={qrUrl}
                     size={160}

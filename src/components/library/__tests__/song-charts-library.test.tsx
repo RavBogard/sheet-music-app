@@ -263,9 +263,9 @@ describe("SongChartsLibrary", () => {
 
     // ── Rendering ──
 
-    it("renders header with title", () => {
+    it("renders header with the title that matches its tab", () => {
         render(<SongChartsLibrary />)
-        expect(screen.getByText("Song Charts")).toBeDefined()
+        expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Library")
     })
 
     it("renders file list from displayedFiles", () => {
@@ -343,16 +343,14 @@ describe("SongChartsLibrary", () => {
     it("calls onBack when provided", () => {
         const onBack = vi.fn()
         render(<SongChartsLibrary onBack={onBack} />)
-        const backBtn = screen.getAllByRole("button")[0]
-        fireEvent.click(backBtn)
+        fireEvent.click(screen.getByRole("button", { name: "Back to library" }))
         expect(onBack).toHaveBeenCalled()
     })
 
-    it("calls router.back when onBack not provided", () => {
+    // Consistency pass: the /library route has no back strip; the tab bar is the way out.
+    it("has no back button when no onBack is provided", () => {
         render(<SongChartsLibrary />)
-        const backBtn = screen.getAllByRole("button")[0]
-        fireEvent.click(backBtn)
-        expect(mockRouterBack).toHaveBeenCalled()
+        expect(screen.queryByRole("button", { name: "Back to library" })).toBeNull()
     })
 
     // ── File click ──

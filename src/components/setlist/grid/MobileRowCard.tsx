@@ -358,7 +358,7 @@ export function MobileRowCard({
                                 chip inline and muted; wraps to 2 lines before
                                 truncating. */}
                             <div className={cn(!isSection && 'min-[821px]:flex min-[821px]:items-baseline min-[821px]:gap-2')}>
-                            <p className={cn(isSection ? 'truncate' : 'line-clamp-2 break-words min-w-0', 'leading-snug')}>
+                            <p className={cn(isSection ? 'truncate' : 'line-clamp-2 min-w-0 [overflow-wrap:break-word] [word-break:normal] hyphens-none', 'leading-snug')}>
                                 <span
                                     data-testid={isSection ? `section-running-head-${track.id}` : undefined}
                                     className={cn(
@@ -367,7 +367,7 @@ export function MobileRowCard({
                                         // (foreground, non-italic); only an UNBONDED non-song row
                                         // keeps the passive dimmed-italic label.
                                         : !isSong ? (hasChart ? 'text-base font-medium text-foreground' : 'text-sm italic text-muted-foreground/80')
-                                        : 'text-lg font-semibold text-foreground',
+                                        : 'text-base sm:text-lg font-semibold text-foreground',
                                     )}
                                 >
                                     {displayChartTitle(track.title) || (
@@ -452,6 +452,9 @@ export function MobileRowCard({
                             </span>
                         ))}
 
+                        {/* Below sm the recordings control moves into the row's
+                            edit panel so the title keeps its width. */}
+                        <span className="hidden sm:contents">
                         {track.songId ? (
                             // Recording affordance — opens RecordingBindPopover.
                             // stopPropagation keeps the trigger click from
@@ -471,6 +474,7 @@ export function MobileRowCard({
                             // the affordance renders disabled (no popover).
                             <RecordingCell disabled />
                         )}
+                        </span>
 
                         {/* The page call sits in the margin: the far right edge,
                             after every control, so the numbers line up down
@@ -595,6 +599,13 @@ export function MobileRowCard({
                             <Music className="h-4 w-4" />
                             {t('setlistGrid.bindChartButton')}
                         </button>
+                        {track.songId ? (
+                            <span className="sm:hidden">
+                                <RecordingBindPopover songId={track.songId} songTitle={track.title}>
+                                    <RecordingCell disabled={false} className="h-11 w-11 rounded-md border border-border bg-background" />
+                                </RecordingBindPopover>
+                            </span>
+                        ) : null}
                         <button
                             type="button"
                             onClick={onDeleteRow}

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation"
 import { requestOrg } from "@/lib/org/request-org"
 import { hasFeature } from "@/lib/org/features"
 import { PerformClientLayout } from "./PerformClientLayout"
+import { getOrgBranding } from "@/lib/org/branding"
 
 /**
  * Multi-tenant phase 6: Perform mode is a tenant flag (`perform`). Every
@@ -16,5 +17,12 @@ import { PerformClientLayout } from "./PerformClientLayout"
 export default async function PerformLayout({ children }: { children: React.ReactNode }) {
     const { orgId } = await requestOrg()
     if (!(await hasFeature(orgId, "perform"))) notFound()
-    return <PerformClientLayout>{children}</PerformClientLayout>
+    const branding = getOrgBranding(orgId)
+    return (
+        <PerformClientLayout
+            branding={{ shortName: branding.shortName, logoUrl: branding.logoUrl, wordmarkUrl: branding.wordmarkUrl }}
+        >
+            {children}
+        </PerformClientLayout>
+    )
 }

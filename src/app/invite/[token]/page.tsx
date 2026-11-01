@@ -122,7 +122,7 @@ export default function InvitePage() {
     if (state === "unavailable" || state === "error") {
         return (
             <Shell>
-                <AlertCircle className="h-12 w-12 text-amber-500" />
+                <AlertCircle className="h-12 w-12 text-caution" />
                 <h1 className="text-xl font-bold text-foreground">{t("invite.unavailableTitle")}</h1>
                 <p className="text-muted-foreground text-sm text-center max-w-sm">{message ? ("key" in message ? t(message.key) : message.text) : t("invite.tryAgain")}</p>
                 <Button variant="outline" onClick={() => router.push("/")}>
@@ -157,7 +157,7 @@ export default function InvitePage() {
                     <p className="text-muted-foreground text-sm text-center max-w-sm">
                         {withBold(t("invite.signInForEmail", { email: SLOT }), peek.email)}
                     </p>
-                    <Button onClick={() => signIn()} className="w-full max-w-xs h-12 rounded-xl font-semibold text-base">
+                    <Button onClick={() => signIn()} className="w-full max-w-xs h-12 rounded-lg font-semibold text-base">
                         <LogIn className="h-5 w-5 me-2" />
                         {t("invite.signInWithGoogle")}
                     </Button>
@@ -170,7 +170,7 @@ export default function InvitePage() {
                     <Button
                         onClick={accept}
                         disabled={state === "accepting"}
-                        className="w-full max-w-xs h-12 rounded-xl font-semibold text-base"
+                        className="w-full max-w-xs h-12 rounded-lg font-semibold text-base"
                     >
                         {state === "accepting" ? <Loader2 className="h-5 w-5 me-2 animate-spin" /> : <CheckCircle2 className="h-5 w-5 me-2" />}
                         {t("invite.accept")}

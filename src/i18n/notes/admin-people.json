@@ -414,6 +414,36 @@
         "who": "admins, band leaders",
         "maxLength": 60
     },
-    "testAccountsHidden": { "where": "People tab: toggle shown when probe accounts are hidden; click shows them. Plural: count.", "who": "leaders", "maxLength": 44 },
-    "testAccountsHide": { "where": "People tab: toggle that hides probe accounts again.", "who": "leaders", "maxLength": 30 }
+    "testAccountsHidden": {
+        "where": "People tab: toggle shown when probe accounts are hidden; click shows them. Plural: count.",
+        "who": "leaders",
+        "maxLength": 44
+    },
+    "testAccountsHide": {
+        "where": "People tab: toggle that hides probe accounts again.",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "roleFilterLabel": {
+        "where": "Manage > People: screen-reader name of the row of role filter chips (All, Requests, Member...)",
+        "who": "band leaders, admins",
+        "maxLength": 30
+    },
+    "selectAll": {
+        "where": "Manage > People: screen-reader name of the select-all checkbox at the top of the people list",
+        "who": "band leaders, admins",
+        "maxLength": 40
+    },
+    "selectPerson": {
+        "where": "Manage > People: screen-reader name of the checkbox at the start of one person's row",
+        "who": "band leaders, admins",
+        "maxLength": 40,
+        "context": "{personName} is the person's display name or email"
+    },
+    "moreActions": {
+        "where": "Manage > People, on a phone: screen-reader name of the '...' button that opens a person's actions (sound engineer, remove)",
+        "who": "band leaders, admins",
+        "maxLength": 50,
+        "context": "{personName} is the person's display name or email"
+    }
 }

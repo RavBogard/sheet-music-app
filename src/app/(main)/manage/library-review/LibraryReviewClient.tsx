@@ -486,7 +486,7 @@ function CalibrationBanner({
     const thresholdNode = <code className="font-mono">{config.threshold.toFixed(2)}</code>
     if (!config.aiProviderConfigured) {
         return (
-            <div className="rounded-md border border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300 px-3 py-2 text-xs">
+            <div className="rounded-md border border-caution/30 bg-caution/10 text-caution dark:text-caution px-3 py-2 text-xs">
                 <strong>{t("manage-library-review.dormantTitle")}</strong>{" "}
                 {interpolateNodes(t("manage-library-review.dormantBody"), {
                     envVar: "GEMINI_API_KEY", // i18n-ignore: environment variable name
@@ -497,7 +497,7 @@ function CalibrationBanner({
     }
     if (!config.autoApplyEnabled) {
         return (
-            <div className="rounded-md border border-indigo-500/30 bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 px-3 py-2 text-xs">
+            <div className="rounded-md border border-brand/30 bg-brand/10 text-brand dark:text-brand px-3 py-2 text-xs">
                 <strong>{t("manage-library-review.calibrationTitle")}</strong>{" "}
                 {interpolateNodes(t("manage-library-review.calibrationBody"), {
                     flagName: <code>aiConfig/autoApplyEnabled</code>,
@@ -692,7 +692,7 @@ function ConfidenceCell({
         value >= threshold
             ? "text-emerald-600 dark:text-emerald-400"
             : value >= threshold - 0.1
-              ? "text-amber-600 dark:text-amber-400"
+              ? "text-caution dark:text-caution"
               : "text-rose-600 dark:text-rose-400"
     return (
         <span className={`text-[10px] font-mono ${color}`}>
@@ -908,7 +908,7 @@ function FieldColumn({
                         mark === "changed"
                             ? "text-foreground"
                             : mark === "warn"
-                              ? "text-amber-600 dark:text-amber-400"
+                              ? "text-caution dark:text-caution"
                               : "text-muted-foreground"
                     return (
                         <div

@@ -10,12 +10,12 @@ import { ROW_ESTIMATE_PX, ROW_GAP_PX, SKELETON_ROW_COUNT } from "./row-metrics"
  * It used to draw `p-6` cards about 90px tall against 64px rows, so the
  * whole list moved the instant the store hydrated. See `row-metrics.ts`.
  *
- * The container is `max-w-3xl mx-auto` to match the real list's wrapper, so
+ * The container fills the page-width list wrapper it sits in, so
  * the horizontal position does not move either.
  */
 export function LibrarySkeleton() {
     return (
-        <div className="flex-1 max-w-3xl mx-auto w-full pb-10">
+        <div className="flex-1 w-full pb-10">
             <div className="border border-rule rounded-lg overflow-hidden bg-card">
             {Array.from({ length: SKELETON_ROW_COUNT }, (_, i) => (
                 <div

@@ -101,7 +101,7 @@ export function DragHandleCell({
             className={cn(
                 'flex h-11 w-11 items-center justify-center rounded-sm cursor-pointer',
                 isSelected
-                    ? 'text-indigo-300 bg-indigo-500/10 ring-1 ring-indigo-400/40'
+                    ? 'text-brand bg-brand/10 ring-1 ring-brand/40'
                     : [
                           // Desktop: ghost until hovered
                           'text-muted-foreground/60 hover:text-muted-foreground',
@@ -110,7 +110,7 @@ export function DragHandleCell({
                           '[@media(pointer:coarse)]:text-muted-foreground',
                       ].join(' '),
                 'cursor-grab active:cursor-grabbing touch-none',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
                 'transition-colors duration-150 motion-reduce:transition-none',
             )}
         >

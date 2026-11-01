@@ -86,12 +86,6 @@
         "who": "everyone signed in",
         "maxLength": 12
     },
-    "performDarkHint": {
-        "where": "Settings page, Appearance card: small grey note under the theme buttons",
-        "who": "everyone signed in",
-        "maxLength": 90,
-        "context": "'Performance mode' = Perform mode, the on-stage chart view."
-    },
     "gigMode.title": {
         "where": "Settings page: heading of the Live Gig Mode toggle card",
         "who": "everyone signed in",
@@ -653,5 +647,11 @@
         "who": "everyone signed in",
         "maxLength": 100,
         "context": "{community} is the community's short name. It reads 'CRC' on CRC and on Brothers Lazaroff exactly as before phase 7; other tenants get their own short name."
+    },
+    "performThemeHint": {
+        "where": "Settings page, Appearance card: small grey note under the theme buttons",
+        "who": "everyone signed in",
+        "maxLength": 90,
+        "context": "'Perform mode' is the on-stage setlist and chart view. 'Dark' is the theme button label above (settings.theme.dark); use the same word."
     }
 }

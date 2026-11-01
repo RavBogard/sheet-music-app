@@ -9,11 +9,13 @@ import { useCongregation } from "@/lib/congregation-store"
 import { MobileMenuDrawer } from "@/components/nav/MobileMenuDrawer"
 import { OrgLogo } from "@/components/nav/OrgLogo"
 import { useT } from "@/i18n/client"
+import { useAuth } from "@/lib/auth-context"
 
 export function MobileHeader({
     serverOrgShortName,
     serverLogoUrl,
     serverWordmarkUrl,
+    serverIsAuthed,
 }: {
     // v11.1-01: server-resolved host-org branding (from (main)/layout.tsx) so the
     // mobile nav is host-correct on first paint; congregation store is the fallback.
@@ -21,10 +23,16 @@ export function MobileHeader({
     serverLogoUrl?: string
     // v11.1-05: when set, render this wordmark lockup instead of monogram+text.
     serverWordmarkUrl?: string
+    serverIsAuthed?: boolean
 } = {}) {
     const t = useT()
     const congregation = useCongregation()
     const [drawerOpen, setDrawerOpen] = useState(false)
+    // Signed-out visitors (the public Perform pages) get a Sign in button on
+    // the bar's end, as on desktop; during auth loading a remembered user is
+    // treated as signed in so the button never flashes for them.
+    const { user, loading, cachedUser, signIn } = useAuth()
+    const showSignIn = !user && !serverIsAuthed && !(loading && cachedUser) && !loading
 
     return (
         <>
@@ -66,8 +74,19 @@ export function MobileHeader({
                     )}
                 </Link>
 
-                {/* End: spacer for symmetry */}
-                <div className="w-11" />
+                {/* End: Sign in when signed out, else a spacer for symmetry */}
+                {showSignIn ? (
+                    <Button
+                        onClick={async () => { try { await signIn() } catch { } }}
+                        variant="outline"
+                        data-testid="mobile-header-sign-in"
+                        className="h-10 px-3 border-white/40 bg-transparent text-shell-foreground hover:bg-white/10 hover:text-shell-foreground"
+                    >
+                        {t("nav.signIn")}
+                    </Button>
+                ) : (
+                    <div className="w-11" />
+                )}
             </header>
 
             <MobileMenuDrawer open={drawerOpen} onOpenChange={setDrawerOpen} />

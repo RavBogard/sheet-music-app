@@ -58,8 +58,8 @@ export function ScheduleCard({ assignment, otherMusicians, className }: Schedule
 
     return (
         <div className={cn(
-            "group relative rounded-xl border bg-card p-5 transition-all hover:shadow-md",
-            isPending && "border-amber-500/30 bg-amber-500/5",
+            "group relative rounded-lg border bg-card p-5 transition-all hover:shadow-md",
+            isPending && "border-caution/30 bg-caution/5",
             isConfirmed && "border-emerald-500/30",
             isDeclined && "border-red-500/30 opacity-60",
             className,
@@ -98,7 +98,7 @@ export function ScheduleCard({ assignment, otherMusicians, className }: Schedule
                                 <span key={i} className={cn(
                                     "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs",
                                     m.status === 'confirmed' ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" :
-                                        m.status === 'pending' ? "bg-amber-500/10 text-amber-700 dark:text-amber-300" :
+                                        m.status === 'pending' ? "bg-caution/10 text-caution dark:text-caution" :
                                             "bg-muted text-muted-foreground"
                                 )}>
                                     {m.instrument ? t("schedule.musicianWithInstrument", { musicianName: m.name, instrument: m.instrument }) : m.name}
@@ -169,7 +169,7 @@ function StatusBadge({ status, autoConfirmed }: { status: string; autoConfirmed?
             )
         case 'pending':
             return (
-                <Badge variant="outline" className="bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30 animate-pulse">
+                <Badge variant="outline" className="bg-caution/10 text-caution dark:text-caution border-caution/30 animate-pulse">
                     <Clock className="h-3 w-3 me-1" />
                     {t("schedule.badgePending")}
                 </Badge>

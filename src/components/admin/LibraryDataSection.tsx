@@ -132,7 +132,7 @@ export function LibraryDataSection() {
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {/* Sync Status Card */}
-                    <div className="bg-card border border-border p-5 rounded-xl space-y-3">
+                    <div className="bg-card border border-border p-5 rounded-lg space-y-3">
                         <h3 className="font-semibold text-foreground text-sm">{t("admin-library.syncStatusTitle")}</h3>
                         <div className="flex items-center gap-2">
                             {statusIcon}
@@ -169,7 +169,7 @@ export function LibraryDataSection() {
             )}
 
             {/* Archived Songs Section */}
-            <div className="bg-card border border-border rounded-xl overflow-hidden">
+            <div className="bg-card border border-border rounded-lg overflow-hidden">
                 <button
                     onClick={() => {
                         setArchivedExpanded(!archivedExpanded)

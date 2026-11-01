@@ -313,7 +313,7 @@ export function ChartPickerList({
                     role="group"
                     aria-label={t('setlistGrid.pickerCollectionAria')}
                     data-testid="picker-scope-bar"
-                    className="flex flex-wrap items-center gap-1 border-b border-white/10 px-2 py-1.5"
+                    className="flex flex-wrap items-center gap-1 border-b border-rule px-2 py-1.5"
                 >
                     {chips.map((c) => {
                         const active = activeCollection === c
@@ -325,7 +325,7 @@ export function ChartPickerList({
                                 data-collection={c}
                                 // Tapping the active chip lifts the filter.
                                 onClick={() => setCollection(active ? null : c)}
-                                className="rounded-full border border-white/10 px-2.5 py-0.5 text-xs text-muted-foreground hover:text-foreground aria-pressed:border-indigo-400/50 aria-pressed:bg-indigo-500/15 aria-pressed:text-foreground [@media(pointer:coarse)]:py-1.5"
+                                className="rounded-full border border-rule px-2.5 py-0.5 text-xs text-muted-foreground hover:text-foreground aria-pressed:border-brand/50 aria-pressed:bg-brand/15 aria-pressed:text-foreground [@media(pointer:coarse)]:py-1.5"
                             >
                                 {collectionLabel(hostOrg, c)}
                             </button>
@@ -341,7 +341,7 @@ export function ChartPickerList({
                             data-testid="picker-shared-chip"
                             data-shared-collection={c.id}
                             onClick={() => shared.toggle(c.id)}
-                            className="rounded-full border border-dashed border-white/15 px-2.5 py-0.5 text-xs text-muted-foreground hover:text-foreground aria-pressed:border-solid aria-pressed:border-indigo-400/50 aria-pressed:bg-indigo-500/15 aria-pressed:text-foreground [@media(pointer:coarse)]:py-1.5"
+                            className="rounded-full border border-dashed border-rule px-2.5 py-0.5 text-xs text-muted-foreground hover:text-foreground aria-pressed:border-solid aria-pressed:border-brand/50 aria-pressed:bg-brand/15 aria-pressed:text-foreground [@media(pointer:coarse)]:py-1.5"
                         >
                             {c.label}
                         </button>
@@ -353,7 +353,7 @@ export function ChartPickerList({
                             aria-checked={otherSitesOn}
                             data-testid="picker-other-sites"
                             onClick={() => setOtherSitesOn((v) => !v)}
-                            className="ms-auto rounded-full border border-white/10 px-2.5 py-0.5 text-xs text-muted-foreground hover:text-foreground aria-checked:border-indigo-400/50 aria-checked:text-foreground [@media(pointer:coarse)]:py-1.5"
+                            className="ms-auto rounded-full border border-rule px-2.5 py-0.5 text-xs text-muted-foreground hover:text-foreground aria-checked:border-brand/50 aria-checked:text-foreground [@media(pointer:coarse)]:py-1.5"
                         >
                             {otherSitesOn ? t('setlistGrid.otherSitesOn') : t('setlistGrid.otherSitesOff')}
                         </button>
@@ -386,7 +386,7 @@ export function ChartPickerList({
                                         song={{ id: row.id, title, normalizedTitle: title.toLowerCase() }}
                                         mimeType={row.mimeType}
                                     />
-                                    <span className="ms-auto shrink-0 rounded border border-white/10 px-1.5 text-[10px] text-muted-foreground">
+                                    <span className="ms-auto shrink-0 rounded border border-rule px-1.5 text-[10px] text-muted-foreground">
                                         {owner}
                                     </span>
                                 </CommandItem>

@@ -80,7 +80,7 @@ export function MusicianProfileSettings() {
         return (
             <div className="animate-pulse space-y-4">
                 <div className="h-6 bg-muted rounded w-48" />
-                <div className="h-32 bg-muted rounded-xl" />
+                <div className="h-32 bg-muted rounded-lg" />
             </div>
         )
     }
@@ -93,7 +93,7 @@ export function MusicianProfileSettings() {
         <div className="space-y-6">
             {/* Section Header */}
             <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-brand/10 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-lg bg-brand/10 flex items-center justify-center">
                     <Guitar className="w-5 h-5 text-brand" />
                 </div>
                 <div>
@@ -106,9 +106,9 @@ export function MusicianProfileSettings() {
 
             {/* Nudge: no instrument configured yet */}
             {!profile.instrument && (
-                <div className="flex items-start gap-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-caution/10 border border-caution/20">
                     <span className="text-lg mt-0.5">🎵</span>
-                    <p className="text-sm text-amber-700 dark:text-amber-400">
+                    <p className="text-sm text-caution dark:text-caution">
                         {nudgeBefore}<strong>{t("settings.profile.nudgeEmphasis")}</strong>{nudgeAfter}
                     </p>
                 </div>
@@ -123,7 +123,7 @@ export function MusicianProfileSettings() {
                             key={key}
                             onClick={() => selectInstrument(key)}
                             className={`
-                                relative px-3 py-2.5 rounded-xl text-start transition-all duration-200 text-sm
+                                relative px-3 py-2.5 rounded-lg text-start transition-all duration-200 text-sm
                                 ${profile.instrument === key
                                     ? 'bg-brand/10 border-brand/50 text-foreground ring-1 ring-brand/30'
                                     : 'bg-muted/50 border-border text-muted-foreground hover:bg-muted hover:text-foreground'
@@ -150,7 +150,7 @@ export function MusicianProfileSettings() {
 
             {/* Transposition Details (shown when instrument selected) */}
             {currentPreset && (
-                <div className="space-y-4 p-4 rounded-xl bg-muted/30 border border-border">
+                <div className="space-y-4 p-4 rounded-lg bg-muted/30 border border-border">
                     <p className="text-sm text-muted-foreground">{profile.instrument && profile.instrument in INSTRUMENT_NOTE ? t(INSTRUMENT_NOTE[profile.instrument]) : currentPreset.description}</p>
 
                     {/* Custom Transposition Override */}
@@ -248,7 +248,7 @@ export function MusicianProfileSettings() {
             {/* ─── Scheduling Settings ─── */}
             <div className="space-y-5 pt-6 border-t border-border/60">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-brand/10 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-lg bg-brand/10 flex items-center justify-center">
                         <CalendarDays className="w-5 h-5 text-brand" />
                     </div>
                     <div>
@@ -258,7 +258,7 @@ export function MusicianProfileSettings() {
                 </div>
 
                 {/* Phone Number */}
-                <div className="space-y-2 p-4 rounded-xl bg-muted/20 border border-border/40">
+                <div className="space-y-2 p-4 rounded-lg bg-muted/20 border border-border/40">
                     <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
                         <Phone className="h-3.5 w-3.5 text-muted-foreground" />
                         {t("settings.scheduling.phone")}
@@ -274,7 +274,7 @@ export function MusicianProfileSettings() {
                 </div>
 
                 {/* Notification Preferences */}
-                <div className="space-y-3 p-4 rounded-xl bg-muted/20 border border-border/40">
+                <div className="space-y-3 p-4 rounded-lg bg-muted/20 border border-border/40">
                     <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
                         <Bell className="h-3.5 w-3.5 text-muted-foreground" />
                         {t("settings.scheduling.notifications")}
@@ -316,7 +316,7 @@ export function MusicianProfileSettings() {
                 </div>
 
                 {/* Calendar Feed URL */}
-                <div className="space-y-2 p-4 rounded-xl bg-muted/20 border border-border/40">
+                <div className="space-y-2 p-4 rounded-lg bg-muted/20 border border-border/40">
                     <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
                         <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
                         {t("settings.scheduling.calendarTitle")}
@@ -385,7 +385,7 @@ export function MusicianProfileSettings() {
                     <Button
                         onClick={handleSave}
                         disabled={saving}
-                        className="w-full h-11 rounded-xl bg-brand hover:bg-brand/90 text-brand-foreground font-semibold fluid-interaction shadow-sm shadow-brand/20"
+                        className="w-full h-11 rounded-lg bg-brand hover:bg-brand/90 text-brand-foreground font-semibold fluid-interaction shadow-sm shadow-brand/20"
                     >
                         {saving ? t("settings.profile.saving") : t("settings.profile.save")}
                     </Button>

@@ -36,10 +36,6 @@ export const ALLOWLIST: readonly AllowEntry[] = [
         "Monitor Config Restricted",
         "Only Sound Engineers can configure monitor buses.",
     ]),
-    ...exempt("src/app/(main)/monitor/page.tsx", MIXER_CRC_ONLY, [
-        "Monitor Access Denied",
-        "You don't have monitor access. Ask a sound engineer or admin to assign you a bus.",
-    ]),
     ...exempt("src/components/monitor/BusAssignmentPanel.tsx", MIXER_CRC_ONLY, [
         "Failed to update bus assignment",
         "Added to Bus",

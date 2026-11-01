@@ -28,7 +28,7 @@ export function MobileTabBar(props: AppNavigationProps) {
     const t = useT()
     const pathname = usePathname()
     const router = useRouter()
-    const { user, isMember: authIsMember, isBandLeader: authIsBandLeader } = useAuth()
+    const { user, loading: authLoading, cachedUser, isMember: authIsMember, isBandLeader: authIsBandLeader } = useAuth()
     // Server flags first, so the tabs don't flash in after hydration.
     const isMember = !!authIsMember || !!props.serverIsMember
     const isBandLeader = !!authIsBandLeader || !!props.serverIsBandLeader
@@ -161,6 +161,10 @@ export function MobileTabBar(props: AppNavigationProps) {
     }, [router, isAuthed, org, performOn])
 
     if (isPdfView) return null
+    // Signed-out visitors only get the tabs they can use: Setlist (the public
+    // listing). Search reads the library, which needs an account. A
+    // remembered user keeps every tab while auth resolves.
+    const canSearch = isAuthed || !!(authLoading && cachedUser)
 
     // Web refresh (blend E): below lg (iPad portrait and phones) the top bar's
     // tabs live here. The Setlist tab keeps its smart target (tonight's setlist
@@ -207,6 +211,7 @@ export function MobileTabBar(props: AppNavigationProps) {
                 )}
 
                 {/* Search */}
+                {canSearch && (
                 <Popover open={searchOpen} onOpenChange={setSearchOpen}>
                     <PopoverTrigger asChild>
                         <button type="button" aria-label={t("nav.searchSongs")} className={tabClass(searchOpen)}>
@@ -247,6 +252,7 @@ export function MobileTabBar(props: AppNavigationProps) {
                         )}
                     </PopoverContent>
                 </Popover>
+                )}
 
                 {/* Wedge mixer */}
                 {showMonitor && (

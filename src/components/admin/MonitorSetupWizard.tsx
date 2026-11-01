@@ -40,7 +40,7 @@ export function MonitorSetupWizard({
     ]
 
     return (
-        <div className="bg-card border border-border rounded-xl overflow-hidden">
+        <div className="bg-card border border-border rounded-lg overflow-hidden">
             {/* Progress */}
             <div className="flex border-b border-border">
                 {STEPS.map((s, i) => {

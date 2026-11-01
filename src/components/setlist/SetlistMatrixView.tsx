@@ -74,7 +74,7 @@ export function SetlistMatrixView() {
                 {!hideLiturgical && <select 
                     value={type} 
                     onChange={(e) => setType(e.target.value as any)}
-                    className="bg-black/20 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand"
+                    className="bg-black/20 border border-rule rounded-lg px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand"
                 >
                     <option value="friday_night">{t("setlist.serviceTypeFridayNight")}</option>
                     <option value="shabbat_morning">{t("setlist.serviceTypeShabbatMorning")}</option>
@@ -82,29 +82,29 @@ export function SetlistMatrixView() {
             </div>
 
             {error && (
-                <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400">
+                <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">
                     {error}
                 </div>
             )}
 
             {loading && !matrixData ? (
-                <div className="h-96 flex items-center justify-center bg-black/20 rounded-2xl border border-white/5">
+                <div className="h-96 flex items-center justify-center bg-black/20 rounded-lg border border-rule">
                     <Loader2 className="w-8 h-8 animate-spin text-brand" />
                 </div>
             ) : matrixData && (
-                <div className="relative border border-white/5 rounded-2xl overflow-hidden bg-black/20">
+                <div className="relative border border-rule rounded-lg overflow-hidden bg-black/20">
                     <div className="overflow-x-auto w-full pb-4">
                         <table className="w-full text-start border-collapse min-w-max">
                             <thead>
                                 <tr>
-                                    <th className="sticky start-0 z-20 bg-black/80 backdrop-blur-md p-4 border-b border-white/10 min-w-[150px]">
+                                    <th className="sticky start-0 z-20 bg-black/80 backdrop-blur-md p-4 border-b border-rule min-w-[150px]">
                                         <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("setlist.matrixSlotHeader")}</span>
                                     </th>
                                     {matrixData.columns.map(col => {
                                         const d = new Date(col.date)
                                         const isPast = d.getTime() < Date.now() - 24 * 60 * 60 * 1000
                                         return (
-                                            <th key={col.id} className="p-4 border-b border-white/10 min-w-[180px] align-top bg-white/[0.01]">
+                                            <th key={col.id} className="p-4 border-b border-rule min-w-[180px] align-top bg-muted/50">
                                                 <div className="flex flex-col gap-1">
                                                     <span className={`text-sm font-bold ${isPast ? 'text-muted-foreground' : 'text-foreground'}`}>
                                                         {fmt.date(d, { month: 'short', day: 'numeric' })}
@@ -128,8 +128,8 @@ export function SetlistMatrixView() {
                             </thead>
                             <tbody>
                                 {matrixData.rows.map((row, rowIndex) => (
-                                    <tr key={row.id} className="group hover:bg-white/[0.02] transition-colors border-b border-white/5 last:border-0">
-                                        <td className="sticky start-0 z-10 bg-black/60 backdrop-blur-md group-hover:bg-black p-4 text-sm font-medium border-e border-white/5">
+                                    <tr key={row.id} className="group hover:bg-accent/50 transition-colors border-b border-rule last:border-0">
+                                        <td className="sticky start-0 z-10 bg-black/60 backdrop-blur-md group-hover:bg-black p-4 text-sm font-medium border-e border-rule">
                                             {row.label}
                                         </td>
                                         {matrixData.columns.map(col => {
@@ -140,16 +140,16 @@ export function SetlistMatrixView() {
                                             return (
                                                 <td key={col.id} className="p-3">
                                                     {track ? (
-                                                        <div className="bg-white/[0.05] border border-white/10 rounded-lg p-2 flex flex-col gap-1 hover:border-brand/50 transition-colors cursor-pointer shadow-sm">
+                                                        <div className="bg-muted/50 border border-rule rounded-lg p-2 flex flex-col gap-1 hover:border-brand/50 transition-colors cursor-pointer shadow-sm">
                                                             <span className="text-xs font-semibold text-foreground truncate" title={track.title}>{track.title}</span>
                                                             {track.key && <span className="text-[10px] text-brand">{track.key}</span>}
                                                         </div>
                                                     ) : isFuture ? (
-                                                        <div className="h-full min-h-[48px] rounded-lg border border-dashed border-white/10 hover:border-brand/40 bg-transparent flex items-center justify-center cursor-pointer transition-colors opacity-0 group-hover:opacity-100 group-hover:bg-brand/5">
+                                                        <div className="h-full min-h-[48px] rounded-lg border border-dashed border-rule hover:border-brand/40 bg-transparent flex items-center justify-center cursor-pointer transition-colors opacity-0 group-hover:opacity-100 group-hover:bg-brand/5">
                                                             <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">{t("setlist.matrixPlan")}</span>
                                                         </div>
                                                     ) : (
-                                                        <div className="h-full min-h-[48px] rounded-lg border border-white/5 bg-transparent"></div>
+                                                        <div className="h-full min-h-[48px] rounded-lg border border-rule bg-transparent"></div>
                                                     )}
                                                 </td>
                                             )

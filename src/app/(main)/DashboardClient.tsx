@@ -15,7 +15,7 @@ import { NextServiceCard } from "@/components/home/NextServiceCard"
 import { CompactSetlistRow } from "@/components/dashboard"
 import { OnboardingCard } from "@/components/dashboard/OnboardingCard"
 import { isNonTestSetlist } from "@/components/performance/public-setlist-order"
-import { OrgLogo } from "@/components/nav/OrgLogo"
+import { PageContainer, PageHeader, GROUP_HEADING_CLASS, LIST_GROUP_CLASS } from "@/components/layout/Page"
 import { cn } from "@/lib/utils"
 import { formatError } from "@/lib/format-error"
 import { useI18n } from "@/i18n/client"
@@ -42,7 +42,7 @@ export interface DashboardServerProps {
     serverUid?: string | null
 }
 
-export default function DashboardClient({ serverGreeting, serverShortName, serverLogoUrl = null, serverIsMember = false, serverIsBandLeader = false, serverIsAdmin = false, serverUid = null }: DashboardServerProps) {
+export default function DashboardClient({ serverGreeting, serverShortName, serverIsMember = false, serverIsBandLeader = false, serverIsAdmin = false, serverUid = null }: DashboardServerProps) {
     const router = useRouter()
     const { t, lang } = useI18n()
     const fmt = useFormat()
@@ -52,7 +52,6 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
     // v11.2-05-01 (BUG-6): host-resolved hero brand. Server value wins (flash-free,
     // host-correct on broslaz); congregation store is the live-update fallback.
     const heroShortName = serverShortName || congregation.shortName || DEFAULT_SHORT_NAME
-    const heroLogoUrl = serverLogoUrl ?? congregation.logoUrl ?? ""
 
     const isMember = authIsMember || serverIsMember
     const effectiveUid = authUser?.uid || serverUid
@@ -266,59 +265,23 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
         shouldAnimate ? `dash-stagger dash-stagger-${n}` : ''
 
     return (
-        <div className={cn("flex flex-col w-full pb-28", !shouldAnimate && "dash-no-animate")}>
-
-            {/* ══════════════════════════════════════════
-                ATMOSPHERIC HERO ZONE -- renders immediately,
-                no data dependency. Greeting is computed client-side.
-               ══════════════════════════════════════════ */}
-            {/* Web refresh (blend E): a plain light ground, no atmospheric
-                gradient; the greeting is the large head, the date its status line. */}
-            <div className="px-4 md:px-6 pt-5 pb-2">
-                <div className="max-w-2xl mx-auto w-full">
-
-                    {/* Branding — v11.2-05-01 (BUG-6): host-resolved (flash-free,
-                        server-first), so broslaz shows its own brand instead of the
-                        CRC "/logo.jpg" + "CRC MUSIC" lockup. Server value wins (same
-                        precedence as the nav header); the congregation store is the
-                        live-update fallback. CRC stays byte-identical: serverLogoUrl
-                        "/logo.jpg" → the same <img className="border-brand/20"> +
-                        alt "CRC Music". Empty logoUrl (broslaz) → OrgLogo "BL" monogram. */}
-                    <div className="flex items-center gap-2.5 mb-5">
-                        {heroLogoUrl ? (
-
-                            <img
-                                src={heroLogoUrl}
-                                alt={heroShortName}
-                                width={32}
-                                height={32}
-                                className="w-8 h-8 rounded-full border border-rule"
-                            />
-                        ) : (
-                            <OrgLogo logoUrl="" shortName={heroShortName} sizeClass="w-8 h-8" />
+        <PageContainer className={cn("flex flex-col gap-4", !shouldAnimate && "dash-no-animate")}>
+            {/* Consistency pass: one page container and head row. The brand
+                lives in the shell's top bar only (no second in-page logo); the
+                greeting is the title, the Hebrew date its subtitle. */}
+            <PageHeader
+                className="mb-1"
+                title={greeting.text}
+                subtitle={greeting.hebrewDate.split(' ').map((part, i, arr) => (
+                    <span key={i}>
+                        {part}
+                        {i < arr.length - 1 && (i === arr.length - 2
+                            ? <span aria-hidden="true" className="mx-1.5 text-muted-foreground">{'·'}</span>
+                            : ' '
                         )}
-                        <span className="text-sm font-bold text-foreground">
-                            {heroShortName}
-                        </span>
-                    </div>
-
-                    {/* Greeting */}
-                    <div className="mb-5">
-                        <h1 className="text-[1.6rem] sm:text-[1.85rem] font-extrabold tracking-[-0.015em] leading-tight text-foreground">
-                            {greeting.text}
-                        </h1>
-                        <p className="text-sm text-muted-foreground mt-1 font-medium">
-                            {greeting.hebrewDate.split(' ').map((part, i, arr) => (
-                                <span key={i}>
-                                    {part}
-                                    {i < arr.length - 1 && (i === arr.length - 2
-                                        ? <span aria-hidden="true" className="mx-1.5 text-muted-foreground">{'\u00B7'}</span>
-                                        : ' '
-                                    )}
-                                </span>
-                            ))}
-                        </p>
-                    </div>
+                    </span>
+                ))}
+            />
 
                     {/* ══════════════════════════════════════════
                         HERO CARD: Single focused card -- one card, one action.
@@ -383,13 +346,6 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
                             </div>
                         )}
                     </div>
-                </div>
-            </div>
-
-            {/* ══════════════════════════════════════════
-                BELOW HERO -- content area
-               ══════════════════════════════════════════ */}
-            <div className="flex flex-col gap-6 px-4 md:px-6 pt-6 max-w-2xl mx-auto w-full">
 
                 {/* ── Onboarding (pending or approved — mutually exclusive) ── */}
                 {user && (
@@ -406,15 +362,17 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
                 {/* ── Recent Public Setlists (non-member / no upcoming) ── */}
                 {setlistsReady && !tonightSetlist && recentSetlists.length > 0 && (
                     <div className={cn("flex flex-col gap-2", stagger(3))}>
-                        <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-[0.08em] px-1">
+                        <h2 className={GROUP_HEADING_CLASS}>
                             {t("dashboard.recentSetlists")}
                         </h2>
-                        {recentSetlists.slice(0, 4).map(s => (
-                            <CompactSetlistRow
-                                key={s.id}
-                                setlist={s}
-                            />
-                        ))}
+                        <div className={LIST_GROUP_CLASS}>
+                            {recentSetlists.slice(0, 4).map(s => (
+                                <CompactSetlistRow
+                                    key={s.id}
+                                    setlist={s}
+                                />
+                            ))}
+                        </div>
                     </div>
                 )}
 
@@ -435,7 +393,6 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
                         </Button>
                     </div>
                 )}
-            </div>
-        </div>
+        </PageContainer>
     )
 }

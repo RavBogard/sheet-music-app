@@ -48,7 +48,9 @@ describe("multi-tenant P1 golden: CRC Music page titles and skeleton brand", () 
         })
         it(`${org}: skeleton brand`, async () => {
             const out = await skeletonHeading(org)
-            expect(out.heading).toBe("CRC Music")
+            // Consistency pass: the brand moved to the shell's top bar; the
+            // skeleton head is the page title, matching the listing.
+            expect(out.heading).toBe("Setlists")
             expect(out.html).toMatchSnapshot()
         })
     }
@@ -62,6 +64,6 @@ describe("multi-tenant P1: titles and skeleton brand follow the tenant", () => {
         expect(await unauthorizedTitle("testshul")).toBe("אין הרשאה | Test Shul Tehila")
     })
     it("testshul: skeleton brand", async () => {
-        expect((await skeletonHeading("testshul", makeTestOrgConfig())).heading).toBe("Test Shul Music")
+        expect((await skeletonHeading("testshul", makeTestOrgConfig())).heading).toBe("Setlists")
     })
 })

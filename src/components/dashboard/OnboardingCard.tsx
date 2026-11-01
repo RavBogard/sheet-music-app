@@ -10,6 +10,7 @@ import { NudgeAdminButton } from "@/components/people/NudgeAdminButton"
 import { ONBOARDING_INSTRUMENT_KEYS } from "@/lib/musician-profile"
 import { instrumentLabel } from "@/lib/instrument-labels"
 import { cn } from "@/lib/utils"
+import { CARD_CLASS } from "@/components/layout/Page"
 import { useT } from "@/i18n/client"
 
 interface Props {
@@ -84,7 +85,7 @@ export function OnboardingCard({ role, isMember, profile, congregationShortName,
                 id={selectId}
                 value={selectedInstrument}
                 onChange={e => setSelectedInstrument(e.target.value)}
-                className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm"
+                className="w-full h-11 px-3 bg-card border border-input rounded-md text-sm"
             >
                 <option value="">{t("dashboard.onboardingSelectInstrument")}</option>
                 {ONBOARDING_INSTRUMENT_KEYS.map(key => (
@@ -117,11 +118,11 @@ export function OnboardingCard({ role, isMember, profile, congregationShortName,
 
     if (variant === "pending") {
         return (
-            <div className={cn("bg-card border border-brand/15 rounded-2xl p-6 space-y-4", staggerClass)}>
+            <div className={cn(CARD_CLASS, "p-5 space-y-4", staggerClass)}>
                 <div className="flex flex-col items-center text-center gap-3">
                     <PendingAccountIllustration className="w-20 h-20 text-muted-foreground" />
                     <div>
-                        <h2 className="text-lg font-semibold">{t("dashboard.onboardingWelcome", { congregation: congregationShortName })}</h2>
+                        <h2 className="text-[17px] font-bold">{t("dashboard.onboardingWelcome", { congregation: congregationShortName })}</h2>
                         <p className="text-sm text-muted-foreground mt-1">
                             {t("dashboard.onboardingPendingBody")}
                         </p>
@@ -144,21 +145,22 @@ export function OnboardingCard({ role, isMember, profile, congregationShortName,
 
     // approved
     return (
-        <div className={cn("bg-card border-2 border-brand/30 rounded-2xl p-6 space-y-4", staggerClass)}>
-            <div className="text-center">
-                <span className="text-2xl">{"\u{1F389}"}</span>
-                <h2 className="text-lg font-semibold mt-2">{t("dashboard.onboardingApprovedTitle")}</h2>
+        <div className={cn(CARD_CLASS, "p-5 space-y-4", staggerClass)}>
+            {/* Consistency pass: the system card (hairline border, no confetti),
+                and an outline action so the dashboard keeps one blue button. */}
+            <div>
+                <h2 className="text-[17px] font-bold">{t("dashboard.onboardingApprovedTitle")}</h2>
                 <p className="text-sm text-muted-foreground mt-1">
                     {t("dashboard.onboardingApprovedBody")}
                 </p>
             </div>
             {!showQuickSetup ? (
-                <div className="flex gap-2">
-                    <Button className="flex-1 gap-2" onClick={() => setShowQuickSetup(true)}>
+                <div className="flex flex-wrap gap-2">
+                    <Button variant="outline" className="h-11 gap-2" onClick={() => setShowQuickSetup(true)}>
                         <Music2 className="w-4 h-4" />
                         {t("dashboard.onboardingSetUpInstrument")}
                     </Button>
-                    <Button variant="ghost" className="text-muted-foreground" onClick={dismissWelcome}>
+                    <Button variant="ghost" className="h-11 text-muted-foreground" onClick={dismissWelcome}>
                         {t("dashboard.onboardingSkip")}
                     </Button>
                 </div>

@@ -41,8 +41,8 @@ const VISUALS: Record<SyncState, VisualSpec> = {
         icon: Check,
         label: (_q, t) => t('setlistGrid.syncSaved'),
         announce: (_q, t) => t('setlistGrid.syncSaved'),
-        iconClass: 'text-emerald-500',
-        dotClass: 'bg-emerald-500',
+        iconClass: 'text-success',
+        dotClass: 'bg-success',
     },
     dirty: {
         icon: CircleDashed,
@@ -55,23 +55,23 @@ const VISUALS: Record<SyncState, VisualSpec> = {
         icon: Loader2,
         label: (_q, t) => t('setlistGrid.syncSaving'),
         announce: (_q, t) => t('setlistGrid.syncSavingAnnounce'),
-        iconClass: 'text-indigo-400',
-        dotClass: 'bg-indigo-400',
+        iconClass: 'text-brand',
+        dotClass: 'bg-brand',
         spin: true,
     },
     conflict: {
         icon: AlertTriangle,
         label: (_q, t) => t('setlistGrid.syncConflict'),
         announce: (_q, t) => t('setlistGrid.syncConflictAnnounce'),
-        iconClass: 'text-red-500',
-        dotClass: 'bg-red-500',
+        iconClass: 'text-destructive',
+        dotClass: 'bg-destructive',
     },
     failed: {
         icon: XCircle,
         label: (_q, t) => t('setlistGrid.syncFailed'),
         announce: (_q, t) => t('setlistGrid.syncFailedAnnounce'),
-        iconClass: 'text-red-500',
-        dotClass: 'bg-red-500',
+        iconClass: 'text-destructive',
+        dotClass: 'bg-destructive',
     },
     offline: {
         icon: CloudOff,
@@ -80,8 +80,8 @@ const VISUALS: Record<SyncState, VisualSpec> = {
             q > 0
                 ? t('setlistGrid.syncOfflineQueuedAnnounce', { count: q })
                 : t('setlistGrid.syncOffline'),
-        iconClass: 'text-amber-500',
-        dotClass: 'bg-amber-500',
+        iconClass: 'text-caution',
+        dotClass: 'bg-caution',
     },
 }
 
@@ -193,10 +193,10 @@ export function SyncIndicator({
                 type={isAction ? 'button' : undefined}
                 className={cn(
                     'inline-flex items-center gap-2 rounded-md px-2 py-1 text-sm font-medium',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2',
                     'transition-colors duration-200 motion-reduce:transition-none',
                     isAction
-                        ? 'cursor-pointer hover:bg-red-500/10'
+                        ? 'cursor-pointer hover:bg-destructive/10'
                         : 'cursor-default',
                 )}
                 data-state={state}
@@ -217,11 +217,14 @@ export function SyncIndicator({
                         visual.spin && 'animate-spin motion-reduce:animate-none',
                     )}
                 />
-                <span>{label}</span>
+                {/* On a phone the settled "Saved" state is the icon alone (the
+                    label stays for screen readers); every other state keeps
+                    its words, because a warning is written, not coloured. */}
+                <span className={state === 'idle' ? 'sr-only sm:not-sr-only' : undefined}>{label}</span>
             </Element>
             {inlineError && (
                 <span
-                    className="text-[11px] leading-tight text-red-400/90 max-w-[280px] break-words"
+                    className="text-[11px] leading-tight text-destructive max-w-[280px] break-words"
                     data-testid="sync-indicator-error-detail"
                 >
                     {inlineError}
@@ -241,13 +244,13 @@ export function SyncIndicator({
                     className={cn(
                         'mt-1.5 inline-flex items-center self-start',
                         'text-[12px] font-medium underline underline-offset-2',
-                        'text-zinc-300 hover:text-white',
+                        'text-muted-foreground hover:text-foreground',
                         'rounded-sm px-1 py-0.5',
                         // v50-05-04 ≥44px floor on touch — pad enough so the
                         // tap target meets the rule even though the visible
                         // text is small.
                         '[@media(pointer:coarse)]:min-h-[44px] [@media(pointer:coarse)]:py-2',
-                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400',
+                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
                         'transition-colors duration-200 motion-reduce:transition-none',
                     )}
                 >

@@ -3,6 +3,7 @@
 import Link from "next/link"
 import buildInfo from "@/build-info.json"
 import { useT } from "@/i18n/client"
+import { PAGE_WIDTH_CLASS } from "@/components/layout/Page"
 
 // The author's name is a proper name: it stays as written in every language.
 const AUTHOR = "Rabbi Daniel Bogard"
@@ -15,7 +16,7 @@ export function Footer() {
     const [creditBefore, creditAfter = ""] = t("shell.footerCredit", { author: AUTHOR_SLOT }).split(AUTHOR_SLOT)
     return (
         <footer className="py-5 border-t border-rule mt-auto bg-card text-sm text-muted-foreground">
-            <div className="max-w-5xl mx-auto px-6 flex flex-col sm:flex-row items-center sm:justify-between gap-2">
+            <div className={`${PAGE_WIDTH_CLASS} flex flex-col sm:flex-row items-center sm:justify-between gap-2`}>
                 <p>
                     {creditBefore}<a href="https://danielbogard.com" target="_blank" rel="noopener noreferrer" className="text-foreground hover:text-brand transition-colors underline decoration-rule decoration-1 underline-offset-4">{AUTHOR}</a>{creditAfter}
                 </p>

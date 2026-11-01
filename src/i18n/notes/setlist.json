@@ -522,5 +522,10 @@
         "where": "Setlists list and editor head: when the setlist was last changed, e.g. Updated 3 days ago",
         "who": "leaders",
         "maxLength": 32
+    },
+    "rabbiFilterGroupLabel": {
+        "where": "Setlists page: screen-reader name of the row of rabbi filter chips",
+        "who": "leaders, musicians",
+        "maxLength": 30
     }
 }

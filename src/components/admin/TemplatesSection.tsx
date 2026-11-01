@@ -161,7 +161,7 @@ export function TemplatesSection() {
             {/* Import from Setlist picker dialog */}
             {showImportPicker && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowImportPicker(false)}>
-                    <div className="bg-background border border-border rounded-xl p-6 w-full max-w-md max-h-[70vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                    <div className="bg-background border border-border rounded-lg p-6 w-full max-w-md max-h-[70vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
                         <h3 className="text-lg font-semibold mb-4">{t("admin-templates.importFromSetlist")}</h3>
                         <p className="text-sm text-muted-foreground mb-4">
                             {t("admin-templates.importPickerHint", { templateLabel: serviceTypeLabel(org, selectedKey!) })}
@@ -235,7 +235,7 @@ function TemplateGroup({
                             <div className="flex items-center justify-between">
                                 <span>{serviceTypeLabel(org, key)}</span>
                                 {isCustomized && (
-                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-medium">
+                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-caution/20 text-caution font-medium">
                                         {t("admin-templates.customBadge")}
                                     </span>
                                 )}

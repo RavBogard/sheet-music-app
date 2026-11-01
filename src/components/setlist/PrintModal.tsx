@@ -452,7 +452,7 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
 
     return createPortal(
         <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 sm:p-6 pb-safe" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
-            <div className="bg-card rounded-2xl w-full max-w-lg max-h-[90dvh] sm:max-h-[85dvh] flex flex-col shadow-2xl border border-border overflow-hidden">
+            <div className="bg-card rounded-lg w-full max-w-lg max-h-[90dvh] sm:max-h-[85dvh] flex flex-col shadow-2xl border border-border overflow-hidden">
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 sm:px-6 sm:py-5 border-b border-border shrink-0 bg-muted/30">
                     <h2 className="text-xl font-bold">{t("setlistPrint.title")}</h2>
@@ -465,8 +465,8 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
                 <div className="overflow-y-auto flex-1 p-4 space-y-3 min-h-0">
                     {pendingPacketAction ? (
                         <div className="space-y-4 pb-4" role="alert" aria-labelledby="missing-chart-title">
-                            <div className="flex items-start gap-3 rounded-lg border border-amber-500/50 bg-amber-500/10 p-4">
-                                <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden />
+                            <div className="flex items-start gap-3 rounded-lg border border-caution/50 bg-caution/10 p-4">
+                                <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-caution dark:text-caution" aria-hidden />
                                 <div className="min-w-0 space-y-1">
                                     <h3 id="missing-chart-title" className="font-semibold text-foreground">
                                         {t("setlistPrint.missingChartsTitle", { count: missingChartItems.length })}

@@ -5,6 +5,7 @@ import { ChevronLeft, Pencil, Play } from 'lucide-react'
 
 import { DirectionalIcon } from '@/components/i18n/DirectionalIcon'
 import { useT } from '@/i18n/client'
+import { PAGE_WIDTH_CLASS } from "@/components/layout/Page"
 import { cn } from '@/lib/utils'
 
 import { SyncIndicator, type SyncIndicatorProps } from './SyncIndicator'
@@ -46,13 +47,18 @@ export function SetlistGridTopBar({
             data-testid="setlist-grid-top-bar"
             className="sticky top-14 z-20 w-full bg-background/95 supports-[backdrop-filter]:bg-background/85 backdrop-blur-md border-b border-rule"
         >
-            <div className="max-w-4xl mx-auto flex items-center gap-2 sm:gap-3 px-2 sm:px-4 py-3">
+            {/* Consistency pass: the page container width, and a head that
+                wraps instead of crushing. Back + title (2 lines max) + status
+                take a full row on a phone; the sync state and Perform drop to
+                their own row under them. */}
+            <div className={cn(PAGE_WIDTH_CLASS, "flex flex-wrap items-center gap-x-3 gap-y-2 py-3")}>
+                <div className="flex min-w-0 flex-[1_1_22rem] items-start gap-1 sm:gap-2">
                 <button
                     type="button"
                     onClick={onBack}
                     aria-label={t('setlistGrid.back')}
                     className={cn(
-                        'inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-md',
+                        'inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-md -ms-2',
                         'text-foreground hover:bg-accent',
                         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                         'transition-colors',
@@ -96,8 +102,9 @@ export function SetlistGridTopBar({
                         </p>
                     ) : null}
                 </div>
+                </div>
 
-                <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                <div className="ms-auto flex items-center gap-2 sm:gap-3 flex-shrink-0">
                     <SyncIndicator {...syncProps} />
                     {performHref ? (
                         <Link

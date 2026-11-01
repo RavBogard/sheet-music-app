@@ -110,8 +110,8 @@ export function McpAccessSettings() {
     return (
         <div className="space-y-4">
             <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center">
-                    <KeyRound className="w-5 h-5 text-indigo-500" />
+                <div className="w-10 h-10 rounded-lg bg-brand/10 flex items-center justify-center">
+                    <KeyRound className="w-5 h-5 text-brand" />
                 </div>
                 <div>
                     <h3 className="font-semibold text-foreground">{t("settings.mcp.title")}</h3>
@@ -123,8 +123,8 @@ export function McpAccessSettings() {
 
             {/* One-time token reveal */}
             {newToken && (
-                <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 space-y-2">
-                    <p className="text-xs font-medium text-amber-600 dark:text-amber-400">
+                <div className="bg-caution/10 border border-caution/20 rounded-lg p-4 space-y-2">
+                    <p className="text-xs font-medium text-caution dark:text-caution">
                         {t("settings.mcp.revealWarning")}
                     </p>
                     <div className="flex items-center gap-2">
@@ -169,7 +169,7 @@ export function McpAccessSettings() {
                     type="submit"
                     size="sm"
                     disabled={creating || !label.trim()}
-                    className="gap-1.5 shrink-0 rounded-xl"
+                    className="gap-1.5 shrink-0 rounded-lg"
                 >
                     {creating ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -188,7 +188,7 @@ export function McpAccessSettings() {
             ) : tokens.length === 0 ? (
                 <p className="text-sm text-muted-foreground">{t("settings.mcp.empty")}</p>
             ) : (
-                <div className="border border-border rounded-xl divide-y divide-border">
+                <div className="border border-border rounded-lg divide-y divide-border">
                     {tokens.map((tok) => (
                         <div key={tok.id} className="flex items-center gap-3 px-3 py-2.5">
                             <div className="flex-1 min-w-0">

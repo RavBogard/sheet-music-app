@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import { useAuth } from "@/lib/auth-context"
-import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { MusicianProfileSettings } from "@/components/settings/MusicianProfileSettings"
@@ -14,14 +13,14 @@ import { useMusicStore } from "@/lib/store"
 import { Switch } from "@/components/ui/switch"
 import buildInfo from "@/build-info.json"
 import {
-    ArrowLeft, Loader2, User, Moon, Sun, Monitor,
+    Loader2, User, Moon, Sun, Monitor,
     LogOut, Pencil, Check, Lock,
 } from "lucide-react"
 import { Label } from "@/components/ui/label"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
+import { PageContainer, PageHeader, CARD_CLASS, GROUP_HEADING_CLASS } from "@/components/layout/Page"
 import { useT } from "@/i18n/client"
-import { DirectionalIcon } from "@/components/i18n/DirectionalIcon"
 import {
     EmailAuthProvider,
     reauthenticateWithCredential,
@@ -42,7 +41,6 @@ export default function SettingsPage() {
     const { user, profile, role, loading: authLoading, signOut } = useAuth()
     const t = useT()
     const { theme, setTheme } = useTheme()
-    const router = useRouter()
     const [editingName, setEditingName] = useState(false)
     const [nameValue, setNameValue] = useState("")
     const [savingName, setSavingName] = useState(false)
@@ -110,32 +108,23 @@ export default function SettingsPage() {
     )
 
     return (
-        <div className="min-h-screen bg-background text-foreground px-4 sm:px-6 pt-5 sm:pt-6 pb-24">
-            <div className="max-w-3xl mx-auto space-y-7">
-
-                {/* Header */}
-                <div className="flex items-start gap-2 sm:gap-3">
-                    <Button variant="ghost" size="icon" aria-label={t("settings.back")} onClick={() => router.back()} className="h-11 w-11 rounded-md hover:bg-accent md:hidden shrink-0">
-                        <DirectionalIcon icon={ArrowLeft} className="w-5 h-5" />
-                    </Button>
-                    <div>
-                        <h1 className="text-[1.35rem] sm:text-[1.6rem] font-extrabold leading-tight tracking-[-0.015em]">{t("settings.title")}</h1>
-                        <p className="text-muted-foreground text-sm font-medium mt-0.5">{t("settings.subtitle")}</p>
-                    </div>
-                </div>
+        <PageContainer className="space-y-7">
+                {/* Consistency pass: the one page head; the tab bar and the
+                    user menu are the way out, so no back button. */}
+                <PageHeader title={t("settings.title")} subtitle={t("settings.subtitle")} />
 
                 {/* Account */}
                 <section className="space-y-4">
-                    <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-[0.08em] px-1">{t("settings.account")}</h2>
+                    <h2 className={GROUP_HEADING_CLASS}>{t("settings.account")}</h2>
 
-                    <div className="bg-card border border-rule p-5 rounded-lg flex items-center gap-4">
+                    <div className={cn(CARD_CLASS, "p-4 sm:p-5 flex flex-wrap items-center gap-x-4 gap-y-2")}>
                         <Avatar className="h-14 w-14 border border-border">
                             <AvatarImage src={user?.photoURL ?? undefined} alt={t("settings.profilePhotoAlt")} />
                             <AvatarFallback className="bg-muted">
                                 <User className="w-7 h-7 text-muted-foreground" />
                             </AvatarFallback>
                         </Avatar>
-                        <div className="flex-1 min-w-0">
+                        <div className="flex-[1_1_12rem] min-w-0">
                             {editingName ? (
                                 <form
                                     className="flex items-center gap-2"
@@ -169,11 +158,11 @@ export default function SettingsPage() {
                                         setEditingName(true)
                                     }}
                                 >
-                                    <h3 className="text-[17px] font-bold text-foreground">{profile?.displayName || user?.displayName || t("settings.defaultDisplayName")}</h3>
-                                    <Pencil className="h-3 w-3 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors" />
+                                    <h3 className="text-[17px] font-bold text-foreground text-start break-words">{profile?.displayName || user?.displayName || t("settings.defaultDisplayName")}</h3>
+                                    <Pencil aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-muted-foreground group-hover:text-foreground transition-colors" />
                                 </button>
                             )}
-                            <p className="text-muted-foreground text-sm">{user?.email}</p>
+                            <p className="text-muted-foreground text-sm truncate" title={user?.email ?? undefined}>{user?.email}</p>
                         </div>
                         <div className="text-xs font-semibold bg-secondary px-2.5 py-1 rounded-md text-secondary-foreground border border-border">
                             {(() => {
@@ -185,9 +174,9 @@ export default function SettingsPage() {
                     </div>
 
                     {/* Appearance */}
-                    <div className="bg-card border border-rule p-5 rounded-lg">
-                        <h3 className="font-bold text-foreground mb-3">{t("settings.appearance")}</h3>
-                        <div className="flex gap-2">
+                    <div className={cn(CARD_CLASS, "p-4 sm:p-5")}>
+                        <h3 className="text-[15px] font-bold text-foreground mb-3">{t("settings.appearance")}</h3>
+                        <div className="flex flex-wrap gap-2">
                             {[
                                 { value: "light", icon: Sun, label: t("settings.theme.light") },
                                 { value: "dark", icon: Moon, label: t("settings.theme.dark") },
@@ -208,7 +197,7 @@ export default function SettingsPage() {
                             ))}
                         </div>
                         <p className="text-xs text-muted-foreground mt-3">
-                            {t("settings.performDarkHint")}
+                            {t("settings.performThemeHint")}
                         </p>
                     </div>
 
@@ -216,10 +205,10 @@ export default function SettingsPage() {
                     <LanguageSettings />
 
                     {/* Performance Modes */}
-                    <div className="bg-card border border-rule p-5 rounded-lg">
-                        <div className="flex items-center justify-between mb-3">
-                            <div>
-                                <h3 className="font-semibold text-foreground">{t("settings.gigMode.title")}</h3>
+                    <div className={cn(CARD_CLASS, "p-4 sm:p-5")}>
+                        <div className="flex items-center justify-between gap-4">
+                            <div className="min-w-0">
+                                <h3 className="text-[15px] font-bold text-foreground">{t("settings.gigMode.title")}</h3>
                                 <p className="text-sm text-muted-foreground mt-1">
                                     {t("settings.gigMode.description")}
                                 </p>
@@ -229,14 +218,14 @@ export default function SettingsPage() {
                     </div>
 
                     {/* Push Notifications */}
-                    <div className="bg-card border border-rule p-5 rounded-lg">
+                    <div className={cn(CARD_CLASS, "p-4 sm:p-5")}>
                         <PushNotificationSettings />
                     </div>
 
                     {/* Change Password (email/password users only) */}
                     {isEmailPasswordUser && (
-                        <div className="bg-card border border-rule p-5 rounded-lg">
-                            <h3 className="font-semibold text-foreground mb-1">{t("settings.password.title")}</h3>
+                        <div className={cn(CARD_CLASS, "p-4 sm:p-5")}>
+                            <h3 className="text-[15px] font-bold text-foreground mb-1">{t("settings.password.title")}</h3>
                             <p className="text-sm text-muted-foreground mb-4">
                                 {t("settings.password.description")}
                             </p>
@@ -308,16 +297,16 @@ export default function SettingsPage() {
 
                 {/* My Instrument */}
                 <section className="space-y-4">
-                    <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-[0.08em] px-1">{t("settings.myInstrument")}</h2>
-                    <div className="bg-card border border-rule p-5 rounded-lg">
+                    <h2 className={GROUP_HEADING_CLASS}>{t("settings.myInstrument")}</h2>
+                    <div className={cn(CARD_CLASS, "p-4 sm:p-5")}>
                         <MusicianProfileSettings />
                     </div>
                 </section>
 
                 {/* Integrations */}
                 <section className="space-y-4">
-                    <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-[0.08em] px-1">{t("settings.integrations")}</h2>
-                    <div className="bg-card border border-rule p-5 rounded-lg">
+                    <h2 className={GROUP_HEADING_CLASS}>{t("settings.integrations")}</h2>
+                    <div className={cn(CARD_CLASS, "p-4 sm:p-5")}>
                         <McpAccessSettings />
                     </div>
                 </section>
@@ -336,7 +325,6 @@ export default function SettingsPage() {
                         {t("settings.version", { version: buildInfo.version, commit: buildInfo.commit?.slice(0, 7) })}
                     </div>
                 </div>
-            </div>
-        </div>
+        </PageContainer>
     )
 }

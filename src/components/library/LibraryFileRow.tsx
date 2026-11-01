@@ -159,7 +159,7 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
                         with its setting, then a quiet meta line (format ·
                         library · tempo · topics · recency), and the key tag in
                         its own column on the right. */}
-                    <div className="flex items-center gap-3 py-2 px-3 sm:px-4 min-h-11 w-full list-cell">
+                    <div data-slot="library-row-cell" className="flex items-center gap-3 py-1.5 px-3 sm:px-4 min-h-12 w-full">
                         {/* Select mode checkbox */}
                         {selectMode && !isFolder && (
                             <div className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${isSelected ? 'bg-brand border-brand' : 'border-muted-foreground/40'

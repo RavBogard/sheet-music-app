@@ -73,7 +73,7 @@ export const CalendarDayCell = React.memo(function CalendarDayCell({
                             className={cn(
                                 "w-full h-auto min-h-11 text-start p-1.5 rounded-lg text-[11px] border active:scale-[0.97] whitespace-normal flex-col items-start",
                                 mode === 'planning' && coverage === 'full' && "bg-emerald-500/10 border-emerald-500/25 hover:bg-emerald-500/20 hover:border-emerald-500/40",
-                                mode === 'planning' && coverage === 'partial' && "bg-amber-500/10 border-amber-500/25 hover:bg-amber-500/20 hover:border-amber-500/40",
+                                mode === 'planning' && coverage === 'partial' && "bg-caution/10 border-caution/25 hover:bg-caution/20 hover:border-caution/40",
                                 mode === 'planning' && coverage === 'empty' && "bg-red-500/10 border-red-500/25 hover:bg-red-500/20 hover:border-red-500/40",
                                 mode === 'viewer' && "bg-muted hover:bg-accent border-border/50",
                             )}
@@ -88,7 +88,7 @@ export const CalendarDayCell = React.memo(function CalendarDayCell({
                                         </span>
                                     )}
                                     {pending > 0 && (
-                                        <span className="flex items-center gap-0.5 text-amber-600 dark:text-amber-400">
+                                        <span className="flex items-center gap-0.5 text-caution dark:text-caution">
                                             <Clock className="h-2.5 w-2.5" />{pending}
                                         </span>
                                     )}

@@ -36,13 +36,13 @@ export const ChartCell = forwardRef<HTMLButtonElement, ChartCellProps>(
                     'flex h-10 w-10 items-center justify-center rounded-sm',
                     '[@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11',
                     'cursor-pointer',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
                     // Unbound state ghost is muted on desktop (hover
                     // affordance via cell row hover), but bumped to a
                     // higher contrast on touch since there's no hover
                     // state to communicate "click me".
                     hasChart
-                        ? 'text-indigo-400'
+                        ? 'text-brand'
                         : [
                               // Desktop: ghost until hover affordance
                               'text-muted-foreground/40',
