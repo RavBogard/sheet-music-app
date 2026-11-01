@@ -26,7 +26,7 @@ import Link from "next/link"
 import { Loader2, ArrowLeft, Music, Users, Pencil, Printer, ListCollapse, List } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useSetlistPerformance } from "@/hooks/use-setlist-performance"
-import { usePerformEntryPrecache } from "@/hooks/use-perform-entry-precache"
+import { PERFORM_PRECACHE_DONE_EVENT, usePerformEntryPrecache } from "@/hooks/use-perform-entry-precache"
 import { requestPerformCacheUrl } from "@/components/performance/perform-shell-sw-register"
 import { useAuth } from "@/lib/auth-context"
 import { useLibrary } from "@/hooks/use-library"
@@ -312,6 +312,29 @@ export function SetlistPerformClient({
     // via `prefetchSetlistPDFs`'s `hasFile` short-circuit. Best-effort;
     // failures are swallowed.
     usePerformEntryPrecache(songFileIds, chartVersions)
+    // Perf audit P2-3: on a device that hasn't saved this setlist yet, every
+    // chart row grew a "not saved on this iPad" line as soon as the offline
+    // store was read, then lost it again as the entry precache saved each
+    // chart: the list jumped twice under a musician's finger (CLS 0.07-0.10).
+    // Hold the per-row lines until that first pass settles; after it, a line
+    // means the chart really didn't save. The head row's "N/M charts on this
+    // iPad" count shows progress meanwhile. Offline at entry (no pass runs) or
+    // a pass that never reports: the lines appear at once / after 30 s.
+    const [entryPassSettled, setEntryPassSettled] = useState(false)
+    useEffect(() => {
+        if (entryPassSettled) return
+        if (typeof navigator !== "undefined" && navigator.onLine === false) {
+            setEntryPassSettled(true)
+            return
+        }
+        const settle = () => setEntryPassSettled(true)
+        window.addEventListener(PERFORM_PRECACHE_DONE_EVENT, settle)
+        const fallback = setTimeout(settle, 30_000)
+        return () => {
+            window.removeEventListener(PERFORM_PRECACHE_DONE_EVENT, settle)
+            clearTimeout(fallback)
+        }
+    }, [entryPassSettled])
 
     // PERF-18: background chart refreshes wait while a chart is open, so they
     // never compete with the one being read. Saves of missing charts still run.
@@ -594,8 +617,8 @@ export function SetlistPerformClient({
                 serviceNotes={serviceNotes}
                 setlistId={setlistId}
                 collapseLiturgy={liturgyCollapsed}
-                savedFileIds={savedFileIds}
-                saveFailures={saveFailures}
+                savedFileIds={entryPassSettled ? savedFileIds : null}
+                saveFailures={entryPassSettled ? saveFailures : null}
                 onSwapTap={isLeader && user && serviceDay ? (index) => setSwapIndex(index) : undefined}
             />
 
