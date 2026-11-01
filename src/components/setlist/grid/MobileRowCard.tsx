@@ -23,6 +23,7 @@ import type { LocalTrack } from '@/lib/local/types'
 import { cn, parseFileId } from '@/lib/utils'
 import { KEY_OPTIONS_DATA } from './cells/KeyCell'
 import { RecordingCell } from './cells/RecordingCell'
+import { useFeaturedBySong } from '@/components/recordings/useFeaturedBySong'
 import { displayChartTitle } from '@/lib/format/chart-title'
 import { RecordingBindPopover } from './RecordingBindPopover'
 import { SECTION_BAND_CLASS as BAND_CLASS, SECTION_LABEL_META_CLASS, type SectionBand } from './section-bands'
@@ -126,6 +127,9 @@ export function MobileRowCard({
 
     const isSong = !track.type || track.type === 'song'
     const isSection = track.type === 'header' || track.type === 'section'
+    // A song shows its music note only when it has a take someone can play.
+    const featuredBySong = useFeaturedBySong()
+    const hasTake = Boolean(track.songId && featuredBySong[track.songId])
     // A bonded chart is keyed on songId (handleBindChart writes songId+fileId
     // for ANY row type, incl. prayer/reading). A bonded NON-song row must read
     // as a real chart-bearing row — full-prominence title, not the passive
@@ -562,17 +566,18 @@ export function MobileRowCard({
                         {/* Below sm the recordings control moves into the row's
                             edit panel so the title keeps its width. */}
                         <span className="hidden sm:contents">
-                        {track.songId ? (
+                        {hasTake ? (
                             // Recording affordance — opens RecordingBindPopover.
                             // stopPropagation keeps the trigger click from
                             // bubbling to the card's tap-to-edit handler
                             // (same gesture-isolation pattern as the chart link).
                             <RecordingBindPopover
-                                songId={track.songId}
+                                songId={String(track.songId)}
                                 songTitle={track.title}
                             >
                                 <RecordingCell
                                     disabled={false}
+                                    hasRecordings
                                     className="touch-hit h-9 w-9"
                                     onClick={(e) => e.stopPropagation()}
                                 />
@@ -723,10 +728,10 @@ export function MobileRowCard({
                             <Music className="h-4 w-4" />
                             {t('setlistGrid.bindChartButton')}
                         </button>
-                        {track.songId ? (
+                        {hasTake ? (
                             <span className="sm:hidden">
-                                <RecordingBindPopover songId={track.songId} songTitle={track.title}>
-                                    <RecordingCell disabled={false} className="h-11 w-11 rounded-md border border-border bg-background" />
+                                <RecordingBindPopover songId={String(track.songId)} songTitle={track.title}>
+                                    <RecordingCell disabled={false} hasRecordings className="h-11 w-11 rounded-md border border-border bg-background" />
                                 </RecordingBindPopover>
                             </span>
                         ) : null}

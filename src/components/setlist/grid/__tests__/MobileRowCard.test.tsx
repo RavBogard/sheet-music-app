@@ -19,6 +19,13 @@ vi.mock('../RecordingBindPopover', () => ({
     ),
 }))
 
+// The music note shows only for songs with a playable take; the shared
+// listener is stubbed with a fixed map.
+const { featured } = vi.hoisted(() => ({ featured: { map: {} as Record<string, unknown> } }))
+vi.mock('@/components/recordings/useFeaturedBySong', () => ({
+    useFeaturedBySong: () => featured.map,
+}))
+
 // jsdom shims (parity with the other grid tests).
 class ResizeObserverStub {
     observe(): void {}
@@ -199,8 +206,9 @@ describe('MobileRowCard — v70-03-01 chart click-through', () => {
     })
 })
 
-describe('MobileRowCard — v70-03-02 recording affordance', () => {
-    it('renders the recording affordance enabled when a song is bound', () => {
+describe('MobileRowCard — recording affordance', () => {
+    it('renders the recording affordance when the bound song has a playable take', () => {
+        featured.map = { 'song-abc': { id: 'r1', title: 'Take' } }
         render(<Harness track={makeTrack({ songId: 'song-abc' })} />)
 
         const cell = screen.getByTestId('recording-cell')
@@ -208,13 +216,22 @@ describe('MobileRowCard — v70-03-02 recording affordance', () => {
         expect(cell).not.toBeDisabled()
     })
 
-    it('offers no recording control when no song is bound (recordings attach to a song)', () => {
+    it('offers no music note when the song has no playable take', () => {
+        featured.map = {}
+        render(<Harness track={makeTrack({ songId: 'song-abc' })} />)
+
+        expect(screen.queryByTestId('recording-cell')).not.toBeInTheDocument()
+    })
+
+    it('offers no recording control when no song is bound', () => {
+        featured.map = { 'song-abc': { id: 'r1', title: 'Take' } }
         render(<Harness track={makeTrack({ songId: undefined })} />)
 
         expect(screen.queryByTestId('recording-cell')).not.toBeInTheDocument()
     })
 
     it('clicking the recording affordance does NOT toggle the card edit pane (stopPropagation)', () => {
+        featured.map = { 'song-abc': { id: 'r1', title: 'Take' } }
         const onTap = vi.fn()
         render(
             <Harness track={makeTrack({ songId: 'song-abc' })} onTap={onTap} />,

@@ -1,0 +1,15 @@
+{
+    "playAria": "Play {title}",
+    "pauseAria": "Pause {title}",
+    "seekAria": "Position in {title}",
+    "playFailed": "This recording won't play.",
+    "otherTakes": "Other takes ({count})",
+    "showThisTake": "Show this take",
+    "showThisTakeFailed": "Couldn't change the take. Try again.",
+    "libraryListenAria": "Listen to {title}",
+    "listen": "Listen",
+    "listenAria": "Listen to {name}",
+    "noRecordingYet": "No recording yet",
+    "listenIntro": "Listen to this service's songs in order.",
+    "listenEmpty": "There are no songs in this setlist yet."
+}

@@ -1,0 +1,74 @@
+{
+    "playAria": {
+        "where": "Recording player: screen-reader label of the play button",
+        "who": "musicians",
+        "maxLength": 60,
+        "context": "{title} is the take's title, e.g. 'Shir Shabbat, Nov 14, 2025'."
+    },
+    "pauseAria": {
+        "where": "Recording player: screen-reader label of the pause button",
+        "who": "musicians",
+        "maxLength": 60,
+        "context": "{title} is the take's title."
+    },
+    "seekAria": {
+        "where": "Recording player: screen-reader label of the position slider",
+        "who": "musicians",
+        "maxLength": 60,
+        "context": "{title} is the take's title."
+    },
+    "playFailed": {
+        "where": "Recording player: shown in place of the slider when the file will not play",
+        "who": "musicians",
+        "maxLength": 50
+    },
+    "otherTakes": {
+        "where": "Recording popover: summary of the collapsed list of other takes",
+        "who": "leaders",
+        "maxLength": 30,
+        "context": "{count} is how many other takes the song has."
+    },
+    "showThisTake": {
+        "where": "Recording popover: button on a take, makes it the take everyone sees",
+        "who": "leaders",
+        "maxLength": 24
+    },
+    "showThisTakeFailed": {
+        "where": "Recording popover: error under the takes when showing a take fails",
+        "who": "leaders",
+        "maxLength": 50
+    },
+    "libraryListenAria": {
+        "where": "Library row: screen-reader label of the music note button that opens the player",
+        "who": "musicians",
+        "maxLength": 60,
+        "context": "{title} is the chart's title."
+    },
+    "listen": {
+        "where": "Setlist list and editor: the Listen link text (editor header button, list menu item)",
+        "who": "musicians",
+        "maxLength": 14,
+        "context": "Opens a quiet page that plays each song's recording; not the performance view."
+    },
+    "listenAria": {
+        "where": "Setlist list and editor: screen-reader label of the Listen link",
+        "who": "musicians",
+        "maxLength": 60,
+        "context": "{name} is the setlist's name."
+    },
+    "noRecordingYet": {
+        "where": "Listen page: muted line on a song with no playable recording",
+        "who": "musicians",
+        "maxLength": 30
+    },
+    "listenIntro": {
+        "where": "Listen page: one line under the setlist name",
+        "who": "musicians",
+        "maxLength": 60
+    },
+    "listenEmpty": {
+        "where": "Listen page: shown when the setlist has no songs",
+        "who": "musicians",
+        "maxLength": 50
+    }
+}

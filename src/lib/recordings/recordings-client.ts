@@ -91,7 +91,15 @@ export async function uploadRecording(input: {
     return res.json() as Promise<{ recordingId: string; title: string }>
 }
 
-/** Playback URL for a recording — the auth-gated serving route. */
+/** Band leader: make this recording its song's one featured take. */
+export async function featureRecording(recordingId: string): Promise<void> {
+    const res = await apiFetch(`/api/recordings/${encodeURIComponent(recordingId)}/feature`, {
+        method: "POST",
+    })
+    if (!res.ok) throw new Error(`feature failed (${res.status})`)
+}
+
+/** Playback URL for a recording (the public serving route). */
 export function getRecordingPlaybackUrl(recording: Recording): string {
     return `/api/recordings/file/${recording.id}`
 }

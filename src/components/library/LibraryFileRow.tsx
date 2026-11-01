@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { ChevronRight, Folder, Loader2, Wand2, Play, Pause, Headphones, CloudOff, CheckCircle2, Pencil, ListPlus } from "lucide-react"
+import { AudioLines, ChevronRight, Folder, Loader2, Wand2, Play, Pause, Headphones, CloudOff, CheckCircle2, Pencil, ListPlus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu"
 import { DriveFile } from "@/types/models"
@@ -13,6 +13,8 @@ import type { T } from "@/i18n/core"
 import type { Formatter } from "@/i18n/format"
 import { DirectionalIcon } from "@/components/i18n/DirectionalIcon"
 import { cn } from "@/lib/utils"
+import { RecordingPlayer } from "@/components/recordings/RecordingPlayer"
+import { useFeaturedBySong } from "@/components/recordings/useFeaturedBySong"
 
 interface LibraryFileRowProps {
     item: DriveFile
@@ -69,6 +71,9 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
     const isFolder = item.mimeType?.includes('folder')
     const isAudio = isAudioMime(item)
     const [isCached, setIsCached] = useState(false)
+    // A chart's song is its file id; the music note appears only when that song has a playable take.
+    const take = useFeaturedBySong()[item.id]
+    const [listening, setListening] = useState(false)
 
     useEffect(() => {
         if (isFolder || !item.id) return
@@ -126,7 +131,7 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
         }
     }, [])
 
-    return (
+    const row = (
         <ContextMenu>
             <ContextMenuTrigger asChild>
                 <Button
@@ -349,6 +354,30 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
                 )}
             </ContextMenuContent>
         </ContextMenu>
+    )
+
+    if (isFolder || isAudio || !take) return row
+    return (
+        <div data-testid="library-row-with-take">
+            <div className="flex items-stretch bg-card">
+                <div className="min-w-0 flex-1">{row}</div>
+                <button
+                    type="button"
+                    onClick={() => setListening((v) => !v)}
+                    aria-expanded={listening}
+                    aria-label={t("recordings.libraryListenAria", { title: chartTitle })}
+                    data-testid="library-row-listen"
+                    className="touch-hit inline-flex w-11 shrink-0 items-center justify-center border-b border-rule text-foreground hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                >
+                    <AudioLines aria-hidden className="h-5 w-5" />
+                </button>
+            </div>
+            {listening && (
+                <div className="border-b border-rule bg-card px-3 py-1 sm:px-4">
+                    <RecordingPlayer recordingId={take.id} title={take.title} compact />
+                </div>
+            )}
+        </div>
     )
 }
 
