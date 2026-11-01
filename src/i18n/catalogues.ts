@@ -34,6 +34,7 @@ export const SERVER_ONLY_KEY_PREFIXES = [
     "terms.",
     "smsConsent.",
     "accessibility.",
+    "helpGuides.", // the /help guides render on the server only
     "api-",
 ] as const
 

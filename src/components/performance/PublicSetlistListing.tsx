@@ -385,6 +385,19 @@ export function PublicSetlistListing({ initialSetlists }: PublicSetlistListingPr
                     )}
                 </>
             )}
+            {/* Help guides (CRC only: other tenants get a 404 there). List page
+                only; the setlist and chart views stay untouched. */}
+            {org === "crc" && (
+                <div className="mt-4 flex justify-center">
+                    <Link
+                        href="/help"
+                        data-testid="perform-help-link"
+                        className="inline-flex min-h-11 min-w-11 items-center justify-center px-3 text-xs font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground"
+                    >
+                        {t("nav.help")}
+                    </Link>
+                </div>
+            )}
         </PageContainer>
     )
 }

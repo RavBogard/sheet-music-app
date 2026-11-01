@@ -1,0 +1,136 @@
+{
+    "$comment": "The in-app Help area (/help): four one-page guides. Source of truth for the wording is docs/guides/*.md. In a string, **double asterisks** mark a label the reader taps or sees on screen (shown bold) and `backticks` mark a file, folder or address (shown in a code font). Keep both markers around the translated label.",
+    "indexTitle": "Help",
+    "allGuides": "All guides",
+    "printGuide": "Print this guide",
+    "cardMichael": "Michael: iPads and studio PC",
+    "cardDrew": "Drew: wedges and recording",
+    "cardBefore": "Before every service",
+    "cardAfter": "After every service",
+    "michael": {
+        "title": "Michael — getting the band iPads and the studio PC ready",
+        "intro": "The six band iPads live at CRC on the charging cart. Any musician can use any iPad: they sign in with their own phone when they pick one up. Your job is to keep the iPads set up, charged and updated, and to turn the studio PC on before each service and off after.",
+        "once": {
+            "heading": "Once per iPad (about 10 minutes each)",
+            "step1": "**Update iPadOS**: Settings → General → Software Update. It needs to be **18.4 or newer**: the screen stays awake by itself during a service only from 18.4 on. Then turn **Automatic Updates** off on that same screen. You install updates yourself, midweek only.",
+            "step2": "**Name it**: Settings → General → About → Name → `CRC Band 1` (2, 3 and so on). Put the same number on the case.",
+            "step3": "**Wi-Fi**: join the CRC network with Auto-Join on. Forget any guest networks.",
+            "step4": "**Auto-Lock**: Settings → Display & Brightness → Auto-Lock → **15 minutes**. On an iPad that can't reach 18.4, choose **Never**.",
+            "step5": "**Notifications**: Settings → Focus → Do Not Disturb. Set it to turn on automatically on Friday 5:30–8:30 pm and Saturday 9:15 am–12:30 pm, or turn it on by hand before each service.",
+            "step6": "**Multitasking**: Settings → Multitasking & Gestures (the name varies by iPadOS version). Choose full-screen apps only, and turn off the swipe gestures, so a stray swipe can't shrink the music.",
+            "step7": "**Add the app**: in Safari, open **centralreform.live/perform**, tap Share, then **Add to Home Screen**, and name it `CRC Music`. Put it in the dock. From now on, always open the music from this icon.",
+            "step8": "**Low Power Mode** off: Settings → Battery."
+        },
+        "phone": {
+            "heading": "Once on your phone (so the bridge can reach you)",
+            "body": "Open **centralreform.live** in Safari and sign in with Google. Then tap Share → Add to Home Screen and open the app from that icon. Go to **Settings → Push Notifications**, turn it on and allow it. If the mixer bridge isn't running about 30 minutes before a service, you and Drew get a \"Monitor bridge needs attention\" alert."
+        },
+        "pc": {
+            "heading": "Once on the studio PC",
+            "item1": "The **CentralReform Bridge** starts by itself when someone signs in to Windows. Its icon sits in the tray by the clock: **green** means it's fine, **orange** means it reaches the mixer but is behind, and **red** means it can't reach the X32.",
+            "item2": "Ask Drew whether his engineer console says **\"Watchdog installed\"**. If it says \"not installed\", follow `bridge/watchdog/INSTALL.md` once (5 minutes), or text Daniel. The watchdog restarts the bridge within a minute if it ever closes.",
+            "item3": "Bridge updates install themselves when the PC shuts down. You don't need to do anything."
+        },
+        "midweek": {
+            "heading": "Midweek, about once a month",
+            "item1": "Install iPadOS updates (never on a Friday or Saturday). Open the CRC Music icon afterwards to make sure it still opens.",
+            "item2": "Wipe the screens, and check the chargers and cables."
+        },
+        "broken": {
+            "heading": "If something breaks",
+            "body": "Text Daniel what happened, when, and which iPad (`CRC Band 3`)."
+        }
+    },
+    "drew": {
+        "title": "Drew — wedges, limits and the recording",
+        "intro": "Mix front of house in Mixing Station, the way you already do. The wedges also run through **centralreform.live/monitor**: musicians on a bus ride their own wedge from their iPad, and you control who's on which bus and how loud any wedge can go. Both apps talk to the same X32, so a move in one shows up in the other.",
+        "once": {
+            "heading": "Once, on your iPad",
+            "step1": "In Safari, open **centralreform.live** and sign in with Google using your engineer account.",
+            "step2": "Tap Share, then **Add to Home Screen**. Open the app from that icon, then go to **Settings → Push Notifications**, turn it on and allow it. If the bridge isn't running about 30 minutes before a service, you and Michael get a \"Monitor bridge needs attention\" alert."
+        },
+        "pieces": {
+            "heading": "The pieces of /monitor you'll use",
+            "assign": "**Configure → bus assignments.** Each bus lists the people on it. Tap **Add** to put a musician on a bus, or tap the × to remove them. Right now Daniel is on bus 5 and David is on bus 2. A new musician has to sign in to centralreform.live once before they show up in the list. If their account says it's waiting for approval, text Daniel.",
+            "limits": "**Configure → Limits.** This is the loudest any wedge can go. It's set to about **−2 dB** for channel sends and the wedge master, for every bus, and you can give one bus its own limits. The bridge holds every move made from an iPad or from Claude to your limit, and the musician sees \"Limited to … by the sound engineer's limit\". Going above 0 dB asks you to confirm first. **Limits don't apply to Mixing Station or the desk.**",
+            "console": "**Engineer console** (`/monitor/engineer`). Shows every bus with the people on it and the loudest channels. Use **Ride this bus** to take over someone's wedge: for example, when David says the bass is low in his wedge. The **Bridge** card says Running or Not running, when the bridge was last heard from, and whether the watchdog is installed.",
+            "saved": "**Saved mixes.** Musicians can save a mix and recall it next week. The app also keeps an \"End of service\" mix for each musician, under \"After recent services\". A double-tap on a fader puts it back at that person's last saved level. If they have no saved level, it goes to −6 dB, and never above your limit."
+        },
+        "before": {
+            "heading": "Before the service (with Michael's checklist)",
+            "item1": "The engineer console says the bridge is **Running**, and a musician's Monitor screen says **Connected**.",
+            "item2": "The limits are where you want them."
+        },
+        "after": {
+            "heading": "After the service: the recording",
+            "intro": "Put the service mix in the **Dropbox SERVICES** folder:",
+            "item1": "Make a new folder named with the date and the service, for example `11.07_SAT MORNING` or `11.13_FRI NIGHT`.",
+            "item2": "Save the mix as an **MP3** ending in `_V1` (a WAV is fine too). For a second pass, use `_V2`.",
+            "outro": "Claude cuts the full service into one clip per song and attaches each clip to its chart. Recordings are public. Nothing plays during Perform."
+        },
+        "down": {
+            "heading": "If the bridge is down",
+            "intro": "Musicians see \"Controls are paused. Your wedge sounds the same as before.\" Their wedges keep the last levels, and you can still mix everything in Mixing Station. To bring the bridge back:",
+            "step1": "Check that the studio PC is on and signed in to Windows.",
+            "step2": "Right-click the bridge's tray icon → **Quit Bridge**, then open **CentralReform Bridge** from the Start menu.",
+            "step3": "If the icon stays red, check that the X32 is on and on the network.",
+            "outro": "Text Daniel what happened."
+        }
+    },
+    "before": {
+        "title": "Before every service — Michael's checklist",
+        "schedule": {
+            "friday": "Friday (service 6:15 pm)",
+            "saturday": "Saturday (service 10:00 am)",
+            "startsLabel": "Michael starts",
+            "startsFriday": "5:30 pm",
+            "startsSaturday": "9:15 am",
+            "arrivesLabel": "Band arrives",
+            "arrivesFriday": "5:45 pm",
+            "arrivesSaturday": "9:30 am"
+        },
+        "power": {
+            "heading": "45 minutes before: power and iPads",
+            "item1": "Make sure the **X32** is on.",
+            "item2": "Turn on the **studio PC** and sign in to Windows. The bridge starts by itself. Wait for its tray icon to turn **green** (about a minute).",
+            "item3": "Take the iPads off the cart. Each one should be **charged above 80%**. Charge any that aren't and give them to the musicians last.",
+            "item4": "Turn on **Do Not Disturb** on each iPad, unless it's scheduled.",
+            "item5": "On each iPad, open the **CRC Music** icon. Find tonight's service, marked **Today**, and tap **Perform** (or the service itself). Wait until the line in the header reads **\"N/N charts on this iPad\"** in green. If it's amber, tap **Save … charts offline** and wait."
+        },
+        "arrive": {
+            "heading": "30 minutes before: the band arrives",
+            "item1": "Each musician picks up any iPad and checks **Settings**, which shows the name of whoever is signed in. If it isn't their name: **Log Out** → **Set up this device — sign in with phone** → they scan the QR code with their own phone → **Approve Sign-In**. The code lasts 5 minutes, so tap for a fresh one if it runs out. Their phone has to be signed in to centralreform.live already. A brand-new musician who sees \"Your account is being reviewed\" plays signed out for today. Text Daniel to approve them.",
+            "item2": "They open tonight's setlist and play from the first song. Their transposition (Bb/Eb) follows their own account.",
+            "item3": "Musicians on a wedge bus (Daniel on 5, David on 2) tap **Monitor**. It should say **Connected**, not \"Bridge offline\".",
+            "item4": "Drew checks the engineer console: Bridge **Running**, and the limits are set."
+        },
+        "five": {
+            "heading": "5 minutes before",
+            "item1": "Every iPad is on its stand, at the first song, with the screen on."
+        },
+        "wrong": {
+            "heading": "If something's wrong",
+            "youSee": "You see",
+            "doThis": "Do this",
+            "row1Sees": "\"Bridge offline\" or \"Controls are paused\"",
+            "row1Does": "Check the studio PC is on and signed in. Right-click the tray icon → **Quit Bridge**, then open **CentralReform Bridge** from the Start menu. If the icon is red, check the X32.",
+            "row2Sees": "Amber \"charts on this iPad\"",
+            "row2Does": "Check the Wi-Fi, then tap **Save … charts offline**.",
+            "row3Sees": "A musician can't sign in",
+            "row3Does": "Open the setlist signed out from the CRC Music icon. It works, but it won't follow live changes: tap **\"Setlist updated — tap to refresh\"** if it appears.",
+            "row4Sees": "The screen goes to sleep",
+            "row4Does": "Settings → Display & Brightness → Auto-Lock → **Never** for this service.",
+            "row5Sees": "Anything else",
+            "row5Does": "Text Daniel what happened, when, and which iPad."
+        }
+    },
+    "after": {
+        "title": "After every service — Michael's checklist",
+        "item1": "Collect the six iPads. **Leave them signed in**, put them back on the cart and plug every one in.",
+        "item2": "Count them: six iPads, six chargers.",
+        "item3": "Ask Drew whether the recording is in Dropbox (a SERVICES folder named like `11.07_SAT MORNING`, MP3 ending in `_V1`).",
+        "item4": "Shut down the **studio PC**: Start → Power → **Shut down**. Wedge mixes are already saved by then, and any bridge update installs during shutdown.",
+        "item5": "Anything go wrong today? Text Daniel what happened, when, and which iPad (`CRC Band 3`).",
+        "outro": "Changes made \"for tonight\" (a swapped song or key) clear themselves after the service day. You don't need to undo them."
+    }
+}

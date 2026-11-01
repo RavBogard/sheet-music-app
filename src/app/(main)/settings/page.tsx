@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import { useAuth } from "@/lib/auth-context"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -14,13 +15,14 @@ import { Switch } from "@/components/ui/switch"
 import buildInfo from "@/build-info.json"
 import {
     Loader2, User, Moon, Sun, Monitor,
-    LogOut, Pencil, Check, Lock,
+    LogOut, Pencil, Check, Lock, LifeBuoy, ChevronRight,
 } from "lucide-react"
 import { Label } from "@/components/ui/label"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 import { PageContainer, PageHeader, CARD_CLASS, GROUP_HEADING_CLASS } from "@/components/layout/Page"
 import { useT } from "@/i18n/client"
+import { useOrg } from "@/lib/org/org-context"
 import {
     EmailAuthProvider,
     reauthenticateWithCredential,
@@ -40,6 +42,7 @@ const ROLE_LABEL = {
 export default function SettingsPage() {
     const { user, profile, role, loading: authLoading, signOut } = useAuth()
     const t = useT()
+    const org = useOrg()
     const { theme, setTheme } = useTheme()
     const [editingName, setEditingName] = useState(false)
     const [nameValue, setNameValue] = useState("")
@@ -318,6 +321,24 @@ export default function SettingsPage() {
                         <McpAccessSettings />
                     </div>
                 </section>
+
+                {/* Help: the in-app guides are CRC's (other tenants get a 404 there) */}
+                {org === "crc" && (
+                    <section className="space-y-2">
+                        <Link
+                            href="/help"
+                            data-testid="settings-help-link"
+                            className={cn(CARD_CLASS, "flex min-h-11 items-center gap-3 p-3 sm:p-4 transition-colors hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring")}
+                        >
+                            <LifeBuoy aria-hidden="true" className="h-5 w-5 shrink-0 text-muted-foreground" />
+                            <span className="min-w-0 flex-1">
+                                <span className="block text-sm font-bold text-foreground">{t("nav.help")}</span>
+                                <span className="block text-xs text-muted-foreground">{t("settings.helpDescription")}</span>
+                            </span>
+                            <ChevronRight aria-hidden="true" className="h-4 w-4 shrink-0 text-muted-foreground rtl:-scale-x-100" />
+                        </Link>
+                    </section>
+                )}
 
                 {/* Footer */}
                 <div className="pt-3 pb-8 flex flex-col items-center gap-2">

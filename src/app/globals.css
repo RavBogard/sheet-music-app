@@ -633,6 +633,60 @@
   }
 }
 
+/* ── Help guides (/help/*): one or two clean sheets ──
+   Black on white at 11.5pt. The app chrome (nav, footer, buttons, the back
+   link) is already hidden by the print block above; the page padding that
+   cleared the fixed top bar is dropped here. Tick boxes print as empty boxes
+   to tick with a pen. */
+@media print {
+  body:has(.help-guide) main {
+    padding-top: 0 !important;
+  }
+
+  .help-guide,
+  .help-guide * {
+    color: black !important;
+    background: transparent !important;
+    border-color: black !important;
+  }
+
+  .help-guide {
+    max-width: none !important;
+    font-size: 11.5pt !important;
+    line-height: 1.4 !important;
+  }
+
+  .help-guide .help-h1 {
+    font-size: 16pt !important;
+  }
+
+  .help-guide .help-h2 {
+    margin-top: 12pt !important;
+    font-size: 12.5pt !important;
+    break-after: avoid;
+  }
+
+  .help-guide .help-item,
+  .help-guide .help-table tr {
+    break-inside: avoid;
+  }
+
+  .help-guide label {
+    min-height: 0 !important;
+    padding-block: 2pt !important;
+  }
+
+  .help-guide .help-check {
+    width: 12pt !important;
+    height: 12pt !important;
+  }
+
+  .help-guide .help-table {
+    overflow: visible !important;
+    border-radius: 0 !important;
+  }
+}
+
 /* ── Single-chart print (desktop "Print this chart" action) ──
    print-pipeline.ts has NO MusicXML branch, so the only way to print a
    MusicXML chart today is the browser's own print of the live-rendered OSMD
