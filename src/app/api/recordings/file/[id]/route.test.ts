@@ -134,6 +134,23 @@ describe("v11.5-02-01 · GET /api/recordings/file/[id] · seekable audio (H3)", 
         expect(mockDownload).not.toHaveBeenCalled()
     })
 
+    it("404 for a storagePath outside recordings/, download never reached", async () => {
+        for (const storagePath of ["charts/crc/other.pdf", "recordings/../charts/x.pdf", "recordings/sub/x.mp3"]) {
+            mockGetDoc.mockResolvedValue({ exists: true, data: () => ({ storagePath, mimeType: "audio/mpeg" }) })
+            const res = await GET(makeReq("/api/recordings/file/rec1"), { params: Promise.resolve({ id: "rec1" }) })
+            expect(res.status).toBe(404)
+        }
+        expect(mockDownload).not.toHaveBeenCalled()
+    })
+
+    it("a non-audio mimeType is served as application/octet-stream with nosniff", async () => {
+        mockGetDoc.mockResolvedValue({ exists: true, data: () => ({ storagePath: "recordings/rec1.mp3", mimeType: "text/html" }) })
+        const res = await GET(makeReq("/api/recordings/file/rec1"), { params: Promise.resolve({ id: "rec1" }) })
+        expect(res.status).toBe(200)
+        expect(res.headers.get("content-type")).toBe("application/octet-stream")
+        expect(res.headers.get("x-content-type-options")).toBe("nosniff")
+    })
+
     it("keeps the rate limit", async () => {
         mockRateLimit.mockReturnValue(new Response(null, { status: 429 }))
         const res = await GET(makeReq("/api/recordings/file/rec1"), { params: Promise.resolve({ id: "rec1" }) })

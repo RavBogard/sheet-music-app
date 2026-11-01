@@ -11,10 +11,15 @@ vi.mock("@/lib/firebase-admin", () => ({ initAdmin: () => true, getFirestore: ()
 vi.mock("@/lib/rate-limit", () => ({ checkRateLimit: () => null }))
 vi.mock("@/lib/logger", () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() } }))
 
-// The caller: role in the host tenant, from x-test-role / x-org-id.
-vi.mock("@/lib/api-auth", () => ({
-    withAuth: async (req: Request) => {
-        const role = req.headers.get("x-test-role") ?? "member"
+// The caller: role in the host tenant, from x-test-role / x-org-id. With no
+// x-test-role the real withAuth runs (a signed-out request).
+vi.mock("@/lib/api-auth", async () => ({
+    withAuth: async (req: Request, ...rest: unknown[]) => {
+        const role = req.headers.get("x-test-role")
+        if (!role) {
+            const actual = await vi.importActual<typeof import("@/lib/api-auth")>("@/lib/api-auth")
+            return (actual.withAuth as (...a: unknown[]) => unknown)(req, ...rest)
+        }
         const orgId = req.headers.get("x-org-id") ?? "crc"
         return {
             uid: "u1", email: undefined, token: {}, role,
@@ -62,6 +67,15 @@ describe("POST /api/recordings/[id]/feature", () => {
 
     it("other-org leader gets 404", async () => {
         expect((await call("b", "band_leader", "brotherslazaroff")).status).toBe(404)
+        expect(db.store.recordings.b.featured).toBeUndefined()
+    })
+
+    it("a signed-out POST gets 401", async () => {
+        const res = await POST(
+            new NextRequest("http://localhost/api/recordings/b/feature", { method: "POST" }),
+            { params: Promise.resolve({ id: "b" }) },
+        )
+        expect(res.status).toBe(401)
         expect(db.store.recordings.b.featured).toBeUndefined()
     })
 

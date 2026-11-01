@@ -61,6 +61,15 @@ describe("list_recordings", () => {
         expect(r.recordings.map((x) => x.id)).not.toContain("r-bl")
     })
 
+    it("with no filter lists this tenant's takes; a legacy take with no orgId is CRC's only", async () => {
+        db.store.recordings["r-legacy"] = { songId: "s-oseh", title: "legacy", storagePath: "recordings/l.mp3", createdBy: "u", createdAt: "2025-01-01T00:00:00Z" }
+        const crc = (await listRecordingsTool("mus", { status: "all" }, "crc")) as { recordings: Array<{ id: string }>; counts: Record<string, number> }
+        expect(crc.recordings.map((x) => x.id).sort()).toEqual(["r-held", "r-hi", "r-hidden", "r-legacy", "r-lo"])
+        expect(crc.counts).toEqual({ live: 3, held: 1, hidden: 1 })
+        const bl = (await listRecordingsTool("bl", { status: "all" }, "brotherslazaroff")) as { recordings: Array<{ id: string }> }
+        expect(bl.recordings.map((x) => x.id)).toEqual(["r-bl"])
+    })
+
     it("defaults to live takes", async () => {
         const r = (await listRecordingsTool("mus", { songId: "s-oseh" }, "crc")) as { recordings: unknown[] }
         expect(r.recordings).toEqual([])
@@ -109,6 +118,11 @@ describe("update_recording", () => {
         const r = await updateRecordingTool("lead", { recordingId: "r-hidden", status: "live", dryRun: false }, "crc")
         expect(r).toMatchObject({ applied: true, before: { status: "hidden" }, after: { status: "live" } })
         expect(db.store.recordings["r-hidden"].status).toBe("live")
+    })
+
+    it("hiding always writes featured: false, even when the read saw it unfeatured", async () => {
+        await updateRecordingTool("lead", { recordingId: "r-lo", status: "hidden", dryRun: false }, "crc")
+        expect(db.store.recordings["r-lo"]).toMatchObject({ status: "hidden", featured: false })
     })
 
     it("hiding the featured take un-features it", async () => {

@@ -130,9 +130,14 @@ export async function listRecordingsTool(
         } else if (songId) {
             recs = [...(await loadRecordingsForSongs(db, org, [songId])).values()].flat()
         } else {
+            // A legacy doc with no orgId belongs to crc (rowOrg), and a query on
+            // orgId cannot match a missing field: crc reads the whole collection
+            // and filters in memory; another tenant queries its orgId.
             const q = serviceDate
                 ? db.collection(COLLECTION).where("source.serviceDate", "==", serviceDate)
-                : db.collection(COLLECTION).where("orgId", "==", org)
+                : org === DEFAULT_ORG_ID
+                  ? db.collection(COLLECTION)
+                  : db.collection(COLLECTION).where("orgId", "==", org)
             const snap = await q.get()
             recs = snap.docs
                 .filter((d) => rowOrg((d.data() as Record<string, unknown>).orgId) === org)
@@ -319,7 +324,9 @@ export async function updateRecordingTool(
         const patch: Record<string, unknown> = {}
         if (after.status !== before.status) patch.status = after.status
         if (reattach) patch.songId = after.songId
-        if (before.featured && !after.featured) patch.featured = false
+        // A take that is not live, or just moved to another song, is never
+        // featured: written in the same update, whatever `featured` read as.
+        if (after.status !== "live" || reattach) patch.featured = false
         if (Object.keys(patch).length > 0) await ref.update(patch)
         let unset: string[] | undefined
         if (args.featured === true) unset = (await setFeaturedRecording(db, org, recordingId)).unset

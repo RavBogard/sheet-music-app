@@ -360,9 +360,11 @@ service cloud.firestore {
     match /recordings/{recordingId} {
       allow get: if atLeast(docOrg(), 'me');
       allow list: if atLeast(listOrg(), 'me');
-      allow create: if newOrgSet() && atLeast(newOrg(), 'bl');
-      allow update: if atLeast(docOrg(), 'bl') && orgKept();
-      allow delete: if atLeast(strictDocOrg(), 'bl');
+      // Recordings 2026-11: writes are server-only. The public file route
+      // serves `storagePath` / `mimeType` from this doc, so a client write could
+      // point a public URL at any Storage object. Uploads go through
+      // /api/recordings/upload and changes through the server (admin SDK).
+      allow create, update, delete: if false;
     }
     // library_index: read by the same visibility as songs (P5; server-only
     // before). Writes stay server-only.

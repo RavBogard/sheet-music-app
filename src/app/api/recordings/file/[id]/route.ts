@@ -10,6 +10,13 @@ import { logger } from "@/lib/logger"
 
 export const dynamic = 'force-dynamic'
 
+const RECORDING_PATH_RE = /^recordings\/[A-Za-z0-9._-]+$/
+
+/** Audio types only; anything else is served as an opaque download type. */
+function audioContentType(type: unknown): string {
+    return typeof type === 'string' && type.toLowerCase().startsWith('audio/') ? type : 'application/octet-stream'
+}
+
 /**
  * GET /api/recordings/file/[id]
  *
@@ -49,7 +56,9 @@ export const GET = createApiHandler(async (ctx) => {
 
     const data = docSnap.data()!
     const storagePath = data.storagePath as string | undefined
-    if (!storagePath) {
+    // The route is public and CDN-cached: it serves only objects under
+    // recordings/, never another path a doc might name (another tenant's chart).
+    if (!storagePath || !RECORDING_PATH_RE.test(storagePath)) {
         const t = await getT()
         return NextResponse.json(
             { error: t("api-recordings.noStoredFile") },
@@ -77,10 +86,11 @@ export const GET = createApiHandler(async (ctx) => {
     // scrubber can seek a streamed recording. No-Range GETs are byte-identical
     // (plus Accept-Ranges); the 404/502 gates above are untouched.
     return byteRangeResponse(new Uint8Array(result.data.buffer), {
-        contentType: (data.mimeType as string) || result.data.contentType,
+        contentType: audioContentType(data.mimeType || result.data.contentType),
         rangeHeader: ctx.req.headers.get('range'),
         headers: {
             'Content-Disposition': 'inline',
+            'X-Content-Type-Options': 'nosniff',
             'Cache-Control': 'public, max-age=86400, s-maxage=604800',
         },
     })

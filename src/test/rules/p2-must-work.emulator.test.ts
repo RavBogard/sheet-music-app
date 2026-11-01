@@ -1,4 +1,4 @@
-import { assertSucceeds, type RulesTestEnvironment } from "@firebase/rules-unit-testing"
+import { assertFails, assertSucceeds, type RulesTestEnvironment } from "@firebase/rules-unit-testing"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
 import { A, B, busCmd, dbOf, EVENT_DAY, makeEnv, matrixCmd, pendingCmds, seedFixtures, type Db, type Persona } from "./personas"
@@ -171,7 +171,6 @@ describe("P2 §7.5 — CRC and BL parity (must still work)", () => {
             await assertSucceeds(d.doc("setlists/me1").delete())
         })
         it("cannot touch tracks (parity: members never could)", async () => {
-            const { assertFails } = await import("@firebase/rules-unit-testing")
             await assertFails(db("aMe").doc("tracks/meT").set({ setlistId: "sA", title: "T", order: 9, type: "song", orgId: A }))
             await assertFails(db("aMe").doc("tracks/tA").update({ key: "D" }))
         })
@@ -210,9 +209,9 @@ describe("P2 §7.5 — CRC and BL parity (must still work)", () => {
             await assertSucceeds(db("aBL").doc("setlists/sA").update({ name: "Renamed by leader" }))
             await assertSucceeds(db("aBL").doc("songs/songA").update({ defaults: { key: "D" } }))
         })
-        it("creates a song and a recording stamped A", async () => {
+        it("creates a song stamped A; a client recording create is denied (server-only, 2026-11)", async () => {
             await assertSucceeds(db("aBL").doc("songs/blSong").set({ title: "New", orgId: A }))
-            await assertSucceeds(db("aBL").doc("recordings/blRec").set({ songId: "blSong", title: "R", orgId: A, createdAt: 2 }))
+            await assertFails(db("aBL").doc("recordings/blRec").set({ songId: "blSong", title: "R", orgId: A, createdAt: 2 }))
         })
         it("saves a custom template (saveCustomTemplate, bare key = crc)", async () => {
             await assertSucceeds(db("aBL").doc("templates/friday_night").set({ orgId: A, rows: [] }))
