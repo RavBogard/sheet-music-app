@@ -1,12 +1,13 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useId } from "react"
 import { useAuth } from "@/lib/auth-context"
 import { MusicianProfile } from "@/types/models"
 import { saveMusicianProfile, subscribeToMusicianProfile, INSTRUMENT_PRESETS } from "@/lib/musician-profile"
 import { INSTRUMENT_LABEL_KEYS as INSTRUMENT_LABEL, INSTRUMENT_NOTE_KEYS as INSTRUMENT_NOTE } from "@/lib/instrument-labels"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Switch } from "@/components/ui/switch"
 import { Guitar, Check, Phone, CalendarDays, Bell, Shield, Users, Star, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import type { SchedulingTier } from "@/types/models"
@@ -29,6 +30,7 @@ export function MusicianProfileSettings() {
     const [generatingCal, setGeneratingCal] = useState(false)
     const [hasChanges, setHasChanges] = useState(false)
     const [loaded, setLoaded] = useState(false)
+    const fieldId = useId()
 
     // Subscribe to current profile
     useEffect(() => {
@@ -123,7 +125,7 @@ export function MusicianProfileSettings() {
                             key={key}
                             onClick={() => selectInstrument(key)}
                             className={`
-                                relative px-3 py-2.5 rounded-lg text-start transition-all duration-200 text-sm
+                                relative min-h-11 px-3 py-2.5 rounded-lg text-start transition-all duration-200 text-sm
                                 ${profile.instrument === key
                                     ? 'bg-brand/10 border-brand/50 text-foreground ring-1 ring-brand/30'
                                     : 'bg-muted/50 border-border text-muted-foreground hover:bg-muted hover:text-foreground'
@@ -161,7 +163,7 @@ export function MusicianProfileSettings() {
                         <div className="flex items-center gap-3">
                             <button
                                 onClick={() => updateField('defaultTransposition', (profile.defaultTransposition || 0) - 1)}
-                                className="w-9 h-9 rounded-lg bg-muted border border-border flex items-center justify-center text-foreground hover:bg-accent transition-colors font-bold"
+                                className="size-11 rounded-lg bg-muted border border-border flex items-center justify-center text-foreground hover:bg-accent transition-colors font-bold"
                             >
                                 −
                             </button>
@@ -170,7 +172,7 @@ export function MusicianProfileSettings() {
                             </div>
                             <button
                                 onClick={() => updateField('defaultTransposition', (profile.defaultTransposition || 0) + 1)}
-                                className="w-9 h-9 rounded-lg bg-muted border border-border flex items-center justify-center text-foreground hover:bg-accent transition-colors font-bold"
+                                className="size-11 rounded-lg bg-muted border border-border flex items-center justify-center text-foreground hover:bg-accent transition-colors font-bold"
                             >
                                 +
                             </button>
@@ -181,34 +183,27 @@ export function MusicianProfileSettings() {
                     {currentPreset?.suggestCapo && (
                         <div className="space-y-3 pt-2 border-t border-border">
                             <div className="flex items-center justify-between">
-                                <label className="text-sm font-medium text-foreground">
+                                <label htmlFor={`${fieldId}-capo`} className="text-sm font-medium text-foreground">
                                     {t("settings.profile.showCapo")}
                                 </label>
-                                <button
-                                    onClick={() => updateField('preferCapo', !profile.preferCapo)}
-                                    className={`
-                                        w-11 h-6 rounded-full transition-all duration-200 relative
-                                        ${profile.preferCapo ? 'bg-brand' : 'bg-muted border border-border'}
-                                    `}
-                                >
-                                    <div className={`
-                                        w-5 h-5 rounded-full bg-white shadow-sm absolute top-0.5 transition-all duration-200
-                                        ${profile.preferCapo ? 'translate-x-5 rtl:-translate-x-5' : 'translate-x-0.5 rtl:-translate-x-0.5'}
-                                    `} />
-                                </button>
+                                <Switch
+                                    id={`${fieldId}-capo`}
+                                    checked={!!profile.preferCapo}
+                                    onCheckedChange={(on) => updateField('preferCapo', on)}
+                                />
                             </div>
                             {profile.preferCapo && (
                                 <div className="space-y-2">
                                     <label className="text-sm text-muted-foreground">
                                         {t("settings.profile.defaultCapoFret")}
                                     </label>
-                                    <div className="flex gap-1.5">
+                                    <div className="grid grid-cols-8 gap-1.5">
                                         {[0, 1, 2, 3, 4, 5, 6, 7].map(fret => (
                                             <button
                                                 key={fret}
                                                 onClick={() => updateField('preferredCapoFret', fret)}
                                                 className={`
-                                                    w-9 h-9 rounded-lg text-sm font-medium transition-all duration-200
+                                                    h-11 min-w-0 rounded-lg text-sm font-medium transition-all duration-200
                                                     ${profile.preferredCapoFret === fret
                                                         ? 'bg-brand text-brand-foreground'
                                                         : 'bg-muted border border-border text-muted-foreground hover:text-foreground'
@@ -226,21 +221,14 @@ export function MusicianProfileSettings() {
 
                     {/* Flat/Sharp Preference */}
                     <div className="flex items-center justify-between pt-2 border-t border-border">
-                        <label className="text-sm font-medium text-foreground">
+                        <label htmlFor={`${fieldId}-flats`} className="text-sm font-medium text-foreground">
                             {t("settings.profile.preferFlats")}
                         </label>
-                        <button
-                            onClick={() => updateField('preferFlats', !profile.preferFlats)}
-                            className={`
-                                w-11 h-6 rounded-full transition-all duration-200 relative
-                                ${profile.preferFlats ? 'bg-brand' : 'bg-muted border border-border'}
-                            `}
-                        >
-                            <div className={`
-                                w-5 h-5 rounded-full bg-white shadow-sm absolute top-0.5 transition-all duration-200
-                                ${profile.preferFlats ? 'translate-x-5 rtl:-translate-x-5' : 'translate-x-0.5 rtl:-translate-x-0.5'}
-                            `} />
-                        </button>
+                        <Switch
+                            id={`${fieldId}-flats`}
+                            checked={!!profile.preferFlats}
+                            onCheckedChange={(on) => updateField('preferFlats', on)}
+                        />
                     </div>
                 </div>
             )}
@@ -259,16 +247,17 @@ export function MusicianProfileSettings() {
 
                 {/* Phone Number */}
                 <div className="space-y-2 p-4 rounded-lg bg-muted/20 border border-border/40">
-                    <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                    <label htmlFor={`${fieldId}-phone`} className="text-sm font-medium text-foreground flex items-center gap-1.5">
                         <Phone className="h-3.5 w-3.5 text-muted-foreground" />
                         {t("settings.scheduling.phone")}
                     </label>
                     <Input
+                        id={`${fieldId}-phone`}
                         type="tel"
                         placeholder={t("settings.scheduling.phonePlaceholder")}
                         value={profile.phone || ''}
                         onChange={(e) => updateField('phone', e.target.value)}
-                        className="h-10 text-sm rounded-lg"
+                        className="h-11 text-sm rounded-lg"
                     />
                     <p className="text-xs text-muted-foreground">{t("settings.scheduling.phoneHint")}</p>
                 </div>
@@ -285,31 +274,23 @@ export function MusicianProfileSettings() {
                             { key: 'sms' as const, label: t("settings.scheduling.sms"), desc: t("settings.scheduling.smsDescription") },
                             { key: 'push' as const, label: t("settings.scheduling.push"), desc: t("settings.scheduling.pushDescription") },
                         ]).filter(({ key }) => key !== 'email' || schedulingEmailsOn).map(({ key, label, desc }) => (
-                            <div key={key} className="flex items-center justify-between py-1">
+                            <div key={key} className="flex items-center justify-between gap-3 py-1">
                                 <div>
-                                    <span className="text-sm font-medium text-foreground">{label}</span>
-                                    <p className="text-xs text-muted-foreground">{desc}</p>
+                                    <label htmlFor={`${fieldId}-notify-${key}`} className="text-sm font-medium text-foreground">{label}</label>
+                                    <p id={`${fieldId}-notify-${key}-desc`} className="text-xs text-muted-foreground">{desc}</p>
                                 </div>
-                                <button
-                                    onClick={() => {
+                                <Switch
+                                    id={`${fieldId}-notify-${key}`}
+                                    aria-describedby={`${fieldId}-notify-${key}-desc`}
+                                    checked={profile.notificationPreferences?.[key] ?? (key === 'email' || key === 'push')}
+                                    onCheckedChange={() => {
                                         const current = profile.notificationPreferences || { email: true, sms: false, push: true }
                                         updateField('notificationPreferences', {
                                             ...current,
                                             [key]: !current[key],
                                         })
                                     }}
-                                    className={`
-                                        w-11 h-6 rounded-full transition-all duration-200 relative
-                                        ${(profile.notificationPreferences?.[key] ?? (key === 'email' || key === 'push'))
-                                            ? 'bg-brand' : 'bg-muted border border-border'}
-                                    `}
-                                >
-                                    <div className={`
-                                        w-5 h-5 rounded-full bg-white shadow-sm absolute top-0.5 transition-all duration-200
-                                        ${(profile.notificationPreferences?.[key] ?? (key === 'email' || key === 'push'))
-                                            ? 'translate-x-5 rtl:-translate-x-5' : 'translate-x-0.5 rtl:-translate-x-0.5'}
-                                    `} />
-                                </button>
+                                />
                             </div>
                         ))}
                     </div>
@@ -327,12 +308,12 @@ export function MusicianProfileSettings() {
                                 <Input
                                     readOnly
                                     value={`${typeof window !== 'undefined' ? window.location.origin : ''}/api/scheduling/calendar-feed/${profile.calendarFeedToken}`}
-                                    className="h-9 text-xs font-mono bg-muted rounded-lg"
+                                    className="h-11 text-xs font-mono bg-muted rounded-lg"
                                 />
                                 <Button
                                     size="sm"
                                     variant="outline"
-                                    className="h-9 shrink-0 text-xs rounded-lg"
+                                    className="h-11 shrink-0 text-xs rounded-lg"
                                     onClick={() => {
                                         const url = `${window.location.origin}/api/scheduling/calendar-feed/${profile.calendarFeedToken}`
                                         navigator.clipboard.writeText(url)
@@ -351,7 +332,7 @@ export function MusicianProfileSettings() {
                             <Button
                                 size="sm"
                                 variant="outline"
-                                className="text-xs gap-1.5 rounded-lg fluid-interaction"
+                                className="h-auto min-h-11 whitespace-normal text-start text-xs gap-1.5 rounded-lg fluid-interaction"
                                 disabled={generatingCal}
                                 onClick={async () => {
                                     if (!user) return

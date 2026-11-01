@@ -104,6 +104,8 @@
     "overlay.unknownTitle": {"where": "Perform chart view: heading when the file type can't be shown", "who": "musicians", "maxLength": 40},
     "overlay.unknownBody": {"where": "Perform chart view: explanation under 'Can't render this file type yet'", "who": "musicians", "maxLength": 200, "context": "{songName} is the setlist row's title (data, shown in a monospace font)"},
     "overlay.liveSetlist": {"where": "Print dialog opened from Perform mode: default title of the printout", "who": "musicians", "maxLength": 30},
+    "overlay.dialogLabel": {"where": "Perform chart view: screen-reader name of the full-screen chart dialog", "who": "musicians (screen readers)", "maxLength": 120, "context": "{songName} is the song title (data)"},
+    "overlay.scrollRegion": {"where": "Perform chart view: screen-reader name of the scrollable chart area, with how to scroll it from a keyboard", "who": "musicians (screen readers)", "maxLength": 120, "context": "Page Up and Page Down are key names; keep them as printed on the keyboard"},
     "saveOffline.saving": {"where": "Perform setlist header: save-offline button label while saving", "who": "musicians", "maxLength": 16, "context": "{progress} of {total} charts saved so far"},
     "saveOffline.saved": {"where": "Perform setlist header: save-offline button label when every chart is saved on this device", "who": "musicians", "maxLength": 16, "context": "{total} is the number of charts (appears twice: N/N)"},
     "saveOffline.partial": {"where": "Perform setlist header: save-offline button label when some charts are saved", "who": "musicians", "maxLength": 16, "context": "{ready} of {total} charts are saved"},

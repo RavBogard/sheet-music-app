@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto'
 import '@testing-library/jest-dom'
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { axe, toHaveNoViolations } from 'jest-axe'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -175,9 +175,32 @@ describe('SetlistGrid card DOM — WCAG AA audit', () => {
         const list = await screen.findByTestId('mobile-card-list')
         expect(list).toHaveAttribute('role', 'list')
 
-        const card = screen.getByTestId('mobile-card-t-0')
-        expect(card).toHaveAccessibleName(/avinu malkeinu/i)
-        expect(card).toHaveAccessibleName(/tap to edit/i)
+        const edit = screen.getByTestId('mobile-card-edit-t-0')
+        expect(edit).toHaveAttribute('role', 'button')
+        expect(edit).toHaveAttribute('tabindex', '0')
+        expect(edit).toHaveAccessibleName(/avinu malkeinu/i)
+        expect(edit).toHaveAttribute('aria-expanded', 'false')
         expect(within(list).getAllByRole('listitem').length).toBeGreaterThan(0)
+    })
+
+    it('Enter and Space on the row button open and close the inline editor', async () => {
+        await seedTracks('set-a', [{ id: 't-0', order: 0, title: 'Avinu Malkeinu' }])
+        renderGrid()
+
+        const edit = await screen.findByTestId('mobile-card-edit-t-0')
+        edit.focus()
+        fireEvent.keyDown(edit, { key: 'Enter' })
+        await waitFor(() => expect(screen.getByTestId('mobile-card-edit-t-0')).toHaveAttribute('aria-expanded', 'true'))
+        fireEvent.keyDown(screen.getByTestId('mobile-card-edit-t-0'), { key: ' ' })
+        await waitFor(() => expect(screen.getByTestId('mobile-card-edit-t-0')).toHaveAttribute('aria-expanded', 'false'))
+    })
+
+    it('a key pressed on the drag handle stays with the handle', async () => {
+        await seedTracks('set-a', [{ id: 't-0', order: 0, title: 'Avinu Malkeinu' }])
+        renderGrid()
+
+        const handle = await screen.findByTestId('mobile-card-handle-t-0')
+        fireEvent.keyDown(handle, { key: 'Enter' })
+        expect(screen.getByTestId('mobile-card-edit-t-0')).toHaveAttribute('aria-expanded', 'false')
     })
 })

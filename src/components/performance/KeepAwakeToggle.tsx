@@ -131,7 +131,7 @@ export function KeepAwakeToggle({
                     // header so Daniel can see at a glance that the lock holds.
                     // Uses the existing theme `primary` token (indigo OKLCH).
                     engaged
-                        ? "text-primary bg-primary/10 hover:bg-primary/15"
+                        ? "text-brand bg-brand/10 hover:bg-brand/15"
                         : "text-muted-foreground",
                     // M3-001: a failed attempt tints the toggle so peripheral
                     // vision picks up the problem even before the alert text
@@ -146,7 +146,11 @@ export function KeepAwakeToggle({
                 )}
                 <span
                     className={cn(
-                        "text-[11px] font-medium",
+                        "text-xs font-semibold",
+                        // WCAG 1.4.3: the brand blue on its own tint is ~4.2:1
+                        // in light, so the engaged label reads in ink there;
+                        // dark lifts to the night brand (DESIGN.md), 4.5:1+.
+                        engaged && !lastError && "text-foreground dark:text-brand",
                         compact ? "hidden sm:inline" : "inline",
                     )}
                 >
@@ -159,7 +163,7 @@ export function KeepAwakeToggle({
                     <span
                         aria-hidden="true"
                         data-testid="keep-awake-pulse"
-                        className="pointer-events-none absolute top-1 end-1 h-1.5 w-1.5 rounded-full bg-primary animate-pulse"
+                        className="pointer-events-none absolute top-1 end-1 h-1.5 w-1.5 rounded-full bg-brand animate-pulse"
                     />
                 )}
             </Button>

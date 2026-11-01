@@ -454,8 +454,8 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint, onPrintC
                 <div className="w-full h-14 flex items-center gap-2 px-2">
                     {/* Far Left: Exit X */}
                     <div className="shrink-0">
-                        <Button variant="ghost" onClick={onHome} className="h-12 px-4 glass-card text-foreground/80 hover:text-foreground fluid-interaction rounded-xl flex items-center gap-2">
-                            <X className="h-5 w-5" />
+                        <Button variant="ghost" onClick={onHome} aria-label={t("perform.toolbar.exit")} title={t("perform.toolbar.exitTitle")} data-testid="perform-exit-mobile" className="h-12 px-4 glass-card text-foreground/80 hover:text-foreground fluid-interaction rounded-xl flex items-center gap-2">
+                            <X className="h-5 w-5" aria-hidden="true" />
                             <span className="text-xs font-bold uppercase tracking-wider hidden sm:inline">{t("perform.toolbar.exit")}</span>
                         </Button>
                     </div>

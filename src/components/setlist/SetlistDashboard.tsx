@@ -172,7 +172,7 @@ export function SetlistDashboard({ serverShortName, ...props }: UseSetlistDashbo
                                     <>
                                         {hasUpcoming && (
                                             <section>
-                                                <h4 className={cn(GROUP_HEADING_CLASS, "mb-2")}>{t("org.upcomingSection")}</h4>
+                                                <h2 className={cn(GROUP_HEADING_CLASS, "mb-2")}>{t("org.upcomingSection")}</h2>
                                                 <div className="flex flex-col divide-y divide-rule border border-rule rounded-lg overflow-hidden bg-card">
                                                     {upcoming.map(setlist => (
                                                         <UpcomingSetlistCard
@@ -202,7 +202,7 @@ export function SetlistDashboard({ serverShortName, ...props }: UseSetlistDashbo
                                         )}
 
                                         <section>
-                                            <h4 className={cn(GROUP_HEADING_CLASS, "mb-2")}>{t("setlist.pastEventsSection")}</h4>
+                                            <h2 className={cn(GROUP_HEADING_CLASS, "mb-2")}>{t("setlist.pastEventsSection")}</h2>
                                             {pastOrNoDate.length === 0 ? (
                                                 <div className="text-muted-foreground py-10 text-center bg-card rounded-lg border border-rule">{t("setlist.noOtherSetlists")}</div>
                                             ) : (

@@ -408,7 +408,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
                 ) : undefined}
                 actions={<>
                 {canUpload && (
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                         <UploadDialog 
                             setlists={addToSetlist.editableSetlists}
                             onAddToSetlist={addToSetlist.addDirectlyToSetlist}

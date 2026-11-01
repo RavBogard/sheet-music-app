@@ -278,6 +278,17 @@ export function MobileRowCard({
         onTap()
     }
 
+    // Keyboard parity with the tap (WCAG 2.1.1): Enter and Space on the row
+    // itself open or close the inline editor. Keys pressed on a control inside
+    // the row (the drag handle, the key tag, the chart link) stay with it.
+    const handleCardKeyDown: React.KeyboardEventHandler<HTMLDivElement> = (e) => {
+        if (e.target !== e.currentTarget) return
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            onTap()
+        }
+    }
+
     const inputBase =
         'w-full h-11 px-3 rounded-md border border-input bg-background text-sm ' +
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ' +
@@ -307,15 +318,11 @@ export function MobileRowCard({
                         onPointerLeave={handlePointerEnd}
                         onPointerCancel={handlePointerEnd}
                         style={{ touchAction: 'pan-y' }}
-                        tabIndex={0}
-                        aria-label={
-                            track.title
-                                ? t('setlistGrid.cardAria', { title: track.title })
-                                : t('setlistGrid.cardUntitledAria')
-                        }
                         className={cn(
                             'group relative flex items-center gap-1.5 sm:gap-2 cursor-pointer',
-                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
+                            // The row's keyboard stop is its title button
+                            // (data-row-edit); the whole row shows the ring.
+                            'has-[[data-row-edit]:focus-visible]:ring-2 has-[[data-row-edit]:focus-visible]:ring-inset has-[[data-row-edit]:focus-visible]:ring-ring',
                             'transition-colors duration-150 motion-reduce:transition-none',
                             // Dense, track-list rows (~48px): the 44px hit areas
                             // come from the controls themselves, not row height.
@@ -353,55 +360,85 @@ export function MobileRowCard({
                             </span>
                         )}
 
-                        <div className="min-w-0 flex-1 py-1">
-                            {/* One line where the width allows: the title, then the
-                                chip inline and muted; wraps to 2 lines before
-                                truncating. */}
-                            <div className={cn(!isSection && 'min-[821px]:flex min-[821px]:items-baseline min-[821px]:gap-2')}>
-                            <p className={cn(isSection ? 'truncate' : 'line-clamp-2 min-w-0 [overflow-wrap:break-word] [word-break:normal] hyphens-none', 'leading-snug')}>
-                                <span
-                                    data-testid={isSection ? `section-running-head-${track.id}` : undefined}
-                                    className={cn(
-                                        isSection ? 'text-[13px] font-extrabold uppercase tracking-[0.08em]'
-                                        // Bonded prayer/reading reads as a full chart-bearing row
-                                        // (foreground, non-italic); only an UNBONDED non-song row
-                                        // keeps the passive dimmed-italic label.
-                                        : !isSong ? (hasChart ? 'text-base font-medium text-foreground' : 'text-sm italic text-muted-foreground/80')
-                                        : 'text-base sm:text-lg font-semibold text-foreground',
-                                    )}
-                                >
-                                    {displayChartTitle(track.title) || (
-                                        <span className={isSection ? 'opacity-80' : 'text-muted-foreground font-medium'}>
-                                            {isSection
-                                                ? t('setlistGrid.untitledSection')
-                                                : isSong
-                                                  ? t('setlistGrid.untitledTrack')
-                                                  : UNTITLED_BY_TYPE[String(track.type)]
-                                                    ? t(UNTITLED_BY_TYPE[String(track.type)])
-                                                    : t('setlistGrid.untitledOther', { type: String(track.type) })}
-                                        </span>
-                                    )}
-                                </span>
-                            </p>
-                            {!isSection && chipParts.length > 0 && (
-                                // Own line under the title on 820px and narrower;
-                                // inline beside it on desktop.
-                                <p data-testid={`chart-chip-${track.id}`} className="text-xs font-medium text-muted-foreground min-[821px]:whitespace-nowrap min-[821px]:shrink-0">
-                                    {chipParts.join(' · ')}
+                        {/* The row's edit button (WCAG 2.1.1, 4.1.2): the title
+                            region is a real button so Enter and Space open the
+                            inline editor. It sits beside the drag handle and the
+                            chart link rather than around them, so no control is
+                            nested in another. A tap anywhere on the row still
+                            opens the editor through the row's onClick. */}
+                        {(() => {
+                            const editRegion = (
+                            <div
+                                role="button"
+                                tabIndex={0}
+                                data-row-edit=""
+                                data-testid={`mobile-card-edit-${track.id}`}
+                                aria-expanded={!!isEditing}
+                                aria-label={
+                                    track.title
+                                        ? t('setlistGrid.cardAria', { title: track.title })
+                                        : t('setlistGrid.cardUntitledAria')
+                                }
+                                onKeyDown={handleCardKeyDown}
+                                className="min-w-0 flex-1 py-1 outline-none"
+                            >
+                                {/* One line where the width allows: the title, then the
+                                    chip inline and muted; wraps to 2 lines before
+                                    truncating. */}
+                                <div className={cn(!isSection && 'min-[821px]:flex min-[821px]:items-baseline min-[821px]:gap-2')}>
+                                <p className={cn(isSection ? 'truncate' : 'line-clamp-2 min-w-0 [overflow-wrap:break-word] [word-break:normal] hyphens-none', 'leading-snug')}>
+                                    <span
+                                        data-testid={isSection ? `section-running-head-${track.id}` : undefined}
+                                        className={cn(
+                                            isSection ? 'text-[13px] font-extrabold uppercase tracking-[0.08em]'
+                                            // Bonded prayer/reading reads as a full chart-bearing row
+                                            // (foreground, non-italic); only an UNBONDED non-song row
+                                            // keeps the passive dimmed-italic label.
+                                            : !isSong ? (hasChart ? 'text-base font-medium text-foreground' : 'text-sm italic text-muted-foreground/80')
+                                            : 'text-base sm:text-lg font-semibold text-foreground',
+                                        )}
+                                    >
+                                        {displayChartTitle(track.title) || (
+                                            <span className={isSection ? 'opacity-80' : 'text-muted-foreground font-medium'}>
+                                                {isSection
+                                                    ? t('setlistGrid.untitledSection')
+                                                    : isSong
+                                                      ? t('setlistGrid.untitledTrack')
+                                                      : UNTITLED_BY_TYPE[String(track.type)]
+                                                        ? t(UNTITLED_BY_TYPE[String(track.type)])
+                                                        : t('setlistGrid.untitledOther', { type: String(track.type) })}
+                                            </span>
+                                        )}
+                                    </span>
                                 </p>
-                            )}
+                                {!isSection && chipParts.length > 0 && (
+                                    // Own line under the title on 820px and narrower;
+                                    // inline beside it on desktop.
+                                    <p data-testid={`chart-chip-${track.id}`} className="text-xs font-medium text-muted-foreground min-[821px]:whitespace-nowrap min-[821px]:shrink-0">
+                                        {chipParts.join(' · ')}
+                                    </p>
+                                )}
+                                </div>
+                                {isSong && !hasChart && (
+                                    <p data-testid={`row-no-chart-${track.id}`} className="text-xs font-semibold text-warning-line">
+                                        {t('setlistGrid.rowNoChart')}
+                                    </p>
+                                )}
+                                {tonightTitle && (
+                                    <p data-testid="tonight-edit-note" className="truncate text-xs font-semibold text-warning-line">
+                                        {t('setlistGrid.tonightNote', { tonight: tonightTitle, planned: track.title })}
+                                    </p>
+                                )}
                             </div>
-                            {isSong && !hasChart && (
-                                <p data-testid={`row-no-chart-${track.id}`} className="text-xs font-semibold text-warning-line">
-                                    {t('setlistGrid.rowNoChart')}
-                                </p>
-                            )}
-                            {tonightTitle && (
-                                <p data-testid="tonight-edit-note" className="truncate text-xs font-semibold text-warning-line">
-                                    {t('setlistGrid.tonightNote', { tonight: tonightTitle, planned: track.title })}
-                                </p>
-                            )}
-                        </div>
+                            )
+                            // A section band is the section's heading (WCAG 1.3.1):
+                            // rotor users jump section to section.
+                            return isSection ? (
+                                <div role="heading" aria-level={2} data-testid={`section-heading-${track.id}`} className="min-w-0 flex-1 flex">
+                                    {editRegion}
+                                </div>
+                            ) : editRegion
+                        })()}
 
                         {!isSection && isSong && track.key ? (
                             <span className="tnum shrink-0 inline-flex items-center justify-center min-w-[2.5rem] h-7 px-2 rounded-md border border-border bg-secondary text-sm font-bold text-secondary-foreground">
@@ -488,7 +525,7 @@ export function MobileRowCard({
                         ) : (
                             <span
                                 data-testid={folio !== undefined ? `page-call-${track.id}` : undefined}
-                                className="tnum shrink-0 w-14 sm:w-16 text-end leading-none whitespace-nowrap"
+                                className="tnum shrink-0 min-w-14 sm:min-w-16 text-end leading-none whitespace-nowrap"
                             >
                                 {folio !== undefined ? (
                                     <>

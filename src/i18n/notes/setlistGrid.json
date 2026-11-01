@@ -1057,37 +1057,37 @@
         "where": "Setlist editor: screen-reader announcement when a row is picked up to reorder",
         "who": "leaders",
         "maxLength": 80,
-        "context": "{id} is the row's internal id"
+        "context": "{title} is the song title (data); {position} of {total} is its place in the list"
     },
     "dndMovedOver": {
         "where": "Setlist editor: screen-reader announcement while reordering",
         "who": "leaders",
         "maxLength": 120,
-        "context": "{id} and {overId} are internal row ids"
+        "context": "{title} is the song title (data); {position} of {total} is its place in the list (the place it would land)"
     },
     "dndNotOver": {
         "where": "Setlist editor: screen-reader announcement while reordering",
         "who": "leaders",
         "maxLength": 100,
-        "context": "{id} is the row's internal id"
+        "context": "{title} is the song title (data)"
     },
     "dndDroppedOver": {
         "where": "Setlist editor: screen-reader announcement when a row is dropped",
         "who": "leaders",
         "maxLength": 120,
-        "context": "{id} and {overId} are internal row ids (no final full stop in English)"
+        "context": "{title} is the song title (data); {position} of {total} is its place in the list (no final full stop in English)"
     },
     "dndDropped": {
         "where": "Setlist editor: screen-reader announcement when a row is dropped outside the list",
         "who": "leaders",
         "maxLength": 80,
-        "context": "{id} is the row's internal id"
+        "context": "{title} is the song title (data)"
     },
     "dndCancelled": {
         "where": "Setlist editor: screen-reader announcement when reordering is cancelled",
         "who": "leaders",
         "maxLength": 100,
-        "context": "{id} is the row's internal id"
+        "context": "{title} is the song title (data); {position} of {total} is its place in the list (where it started)"
     },
     "performLink": {
         "where": "Setlist editor header: link to the band view (Perform) of this setlist.",
