@@ -69,6 +69,10 @@ export async function setMembership(
         actorEmail?: string
         /** Added P2: extra non-identity claims merged before the rebuild (e.g. admin_test). */
         extraClaims?: Record<string, unknown>
+        /** Free-text reason the actor gave; recorded on the audit row. */
+        note?: string
+        /** Where the change came from when not the web app (e.g. "mcp"); recorded on the audit row. */
+        via?: string
     },
     d?: Deps,
 ): Promise<{ before: Membership | null; after: Membership | null; claims: Record<string, unknown> }> {
@@ -120,6 +124,8 @@ export async function setMembership(
             reason: a.reason,
             actorUid: a.actorUid,
             actorEmail: a.actorEmail ?? "unknown",
+            ...(a.note ? { note: a.note } : {}),
+            ...(a.via ? { via: a.via } : {}),
             timestamp: FieldValue.serverTimestamp(),
         })
         return { before, after }

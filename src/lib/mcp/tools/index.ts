@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { registerPeopleAccessTools } from "./people-access"
 import { DurationSecSchema, GigPatchSchema, SingerKeysSchema, TranspositionSchema } from "@/lib/gig/model"
 import { KNOWN_COLLECTIONS, LIBRARY_DISPLAY_ORDER } from "@/lib/library/collections"
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
@@ -4478,6 +4479,9 @@ export function registerRosterTools(server: McpServer): void {
         async (args, extra) =>
             jsonResult(await respondToAssignment(uidFrom(extra), args)),
     )
+
+    // People and access (the /manage People tab): list_access_requests, set_member_role.
+    registerPeopleAccessTools(server)
 }
 
 /**

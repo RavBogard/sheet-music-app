@@ -1,13 +1,10 @@
 import { NextResponse } from "next/server"
-import { getAuth, getFirestore } from "@/lib/firebase-admin"
-import { logger } from "@/lib/logger"
 import { createApiHandler, apiError } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { httpError } from "@/lib/http/error-envelope"
 import { orgExists } from "@/lib/org/org-exists"
-import { getTenantAccess, hasTenantRole, listTenantMembers, type TenantAccess } from "@/lib/org/access"
-import { membershipId } from "@/lib/org/membership-types"
-import { ensureMembershipsMigrated, setMembership } from "@/lib/org/memberships-write"
+import { getTenantAccess, hasTenantRole, type TenantAccess } from "@/lib/org/access"
+import { changeTenantRole } from "@/lib/org/tenant-role-change"
 import { z } from "zod"
 
 /**
@@ -21,7 +18,7 @@ import { z } from "zod"
  * Auth: platform owner, or admin IN `tenant`. Refusals: own membership (unless
  * po) → 400 SELF_CHANGE; demoting/removing a tenant's last admin (unless po) →
  * 409 LAST_ADMIN; unknown tenant → 400 UNKNOWN_TENANT.
- * Effect: setMembership (audit row with orgId, claims rebuilt incl. legacy
+ * Effect (changeTenantRole, src/lib/org/tenant-role-change.ts): setMembership (audit row with orgId, claims rebuilt incl. legacy
  * mirrors, refresh tokens revoked on removal) + a "role changed" notification.
  * Response: { success, tenant, role, claimsUpdated, orgIdsIgnored? }
  */
@@ -54,55 +51,21 @@ export const POST = createApiHandler(
                 tenant,
             })
         }
-        const po = callerAccess.po
-        if (targetUserId === ctx.auth.uid && !po) {
-            return apiError("You cannot change your own role", 400, "SELF_CHANGE")
-        }
-
-        try {
-            await getAuth().getUser(targetUserId)
-        } catch {
-            return apiError("User not found", 404, "USER_NOT_FOUND")
-        }
-
-        // Last-admin guard (counts legacy, unmigrated admins too).
-        if (!po && newRole !== "admin") {
-            await ensureMembershipsMigrated(targetUserId)
-            const db = getFirestore()
-            const cur = await db.collection("memberships").doc(membershipId(tenant, targetUserId)).get()
-            if (cur.exists && cur.get("role") === "admin") {
-                const admins = await listTenantMembers(tenant, { roles: ["admin"] })
-                if (admins.filter((a) => a.uid !== targetUserId).length === 0) {
-                    return apiError("This is the last admin of this tenant", 409, "LAST_ADMIN")
-                }
-            }
-        }
-
-        const { after } = await setMembership({
+        // Shared with the MCP set_member_role tool: refusals, setMembership
+        // (audit row, claims rebuild) and the in-app notification.
+        const result = await changeTenantRole({
             orgId: tenant,
-            uid: targetUserId,
-            role: newRole,
+            targetUid: targetUserId,
+            newRole,
             actorUid: ctx.auth.uid,
             actorEmail: ctx.auth.email ?? "unknown",
-            reason: newRole === null ? "remove" : "set-role",
+            po: callerAccess.po,
         })
-
-        // Server-side "role changed" notification (replaces the browser write).
-        if (newRole !== null) {
-            try {
-                const { FieldValue } = await import("firebase-admin/firestore")
-                await getFirestore().collection("users").doc(targetUserId).collection("notifications").add({
-                    type: "role_changed",
-                    title: "Role updated",
-                    body: `Your role has been changed to ${newRole}`,
-                    orgId: tenant,
-                    read: false,
-                    createdAt: FieldValue.serverTimestamp(),
-                })
-            } catch (e) {
-                logger.warn("[Set Role] role-change notification failed:", e)
-            }
+        if (!result.ok) {
+            const status = result.code === "SELF_CHANGE" ? 400 : result.code === "USER_NOT_FOUND" ? 404 : 409
+            return apiError(result.message, status, result.code)
         }
+        const after = result.after
 
         return NextResponse.json({
             success: true,
