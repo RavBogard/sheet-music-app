@@ -51,10 +51,22 @@ async function approve(request: EnsureRequest, resource = false) {
         resources: resource ? [{ rowId: "source-row", resourceId: "score-grant", kind: "score", label: "Score", fileId: "source-file", rightsBasis: "Synthetic test license for assigned family" }] : [],
     })
 }
+// The Firestore emulator can answer INVALID_ARGUMENT "Transaction is invalid or closed" to a
+// transaction it aborted under heavy same-document contention (seen once on a slow CI runner).
+// The code under test runs everything inside one runTransaction callback that is safe to
+// re-run, so a caller retrying the whole ensureService call is correct. Only that emulator
+// error is retried; every other failure still surfaces.
+async function ensureWithEmulatorRetry(...args: Parameters<typeof ensureService>) {
+    for (let attempt = 1; ; attempt++) {
+        try { return await ensureService(...args) } catch (error) {
+            if (attempt >= 5 || !/Transaction is invalid or closed/.test(String((error as Error)?.message))) throw error
+        }
+    }
+}
 describe("transactional ceremony setup", () => {
     it("creates configured native rows once across concurrent joint ceremonies and retries", async () => {
         const request = make()
-        const results = await Promise.all([ensureService(db, request), ensureService(db, request), ...Array.from({ length: 4 }, () => ensureService(db, make()))])
+        const results = await Promise.all([ensureWithEmulatorRetry(db, request), ensureWithEmulatorRetry(db, request), ...Array.from({ length: 4 }, () => ensureWithEmulatorRetry(db, make()))])
         expect(new Set(results.map(result => result.setlistId)).size).toBe(1)
         expect((await db.collection("setlists").get()).size).toBe(1)
         const rows = await db.collection("tracks").get()
