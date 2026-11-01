@@ -122,44 +122,43 @@ describe('v70-02-01 firestore.rules recordings/{recordingId}', () => {
         )
     })
 
-    it('Scenario H: band-leader CAN create — existing-shape regression check', async () => {
-        const leader = testEnv
-            .authenticatedContext('leader-uid', { role: 'band_leader' })
-            .firestore()
-        await assertSucceeds(
-            leader.collection('recordings').doc('leader-rec').set({
-                songId: 'song-1',
-                title: 'Leader Take',
-                storagePath: 'recordings/leader-rec.mp3',
-                createdAt: Date.now(),
-                createdBy: 'leader-uid',
-                orgId: 'crc',
-            }),
-        )
+    // Recordings 2026-11: writes are server-only for everyone, both tenants
+    // (the public file route trusts storagePath and mimeType on the doc).
+    const take = (org: string) => ({
+        songId: 'song-1',
+        title: 'Leader Take',
+        storagePath: 'recordings/leader-rec.mp3',
+        createdAt: Date.now(),
+        createdBy: 'leader-uid',
+        orgId: org,
     })
 
-    it('Scenario I: band-leader CAN update and delete', async () => {
-        const leader = testEnv
-            .authenticatedContext('leader-uid', { role: 'band_leader' })
-            .firestore()
-        await assertSucceeds(
-            leader.collection('recordings').doc('rec-1').update({ notes: 'updated note' }),
-        )
-        await assertSucceeds(leader.collection('recordings').doc('rec-1').delete())
+    it('Scenario H: a band leader of either tenant CANNOT create', async () => {
+        const crc = testEnv.authenticatedContext('leader-uid', { role: 'band_leader' }).firestore()
+        await assertFails(crc.collection('recordings').doc('leader-rec').set(take('crc')))
+        const bl = testEnv.authenticatedContext('bl-leader', { m: { brotherslazaroff: 'bl' } }).firestore()
+        await assertFails(bl.collection('recordings').doc('bl-rec').set(take('brotherslazaroff')))
     })
 
-    it('Scenario J: admin CAN create', async () => {
+    it('Scenario I: a band leader CANNOT update (storagePath, featured) or delete, in either tenant', async () => {
+        await testEnv.withSecurityRulesDisabled(async (ctx) => {
+            await ctx.firestore().collection('recordings').doc('rec-bl').set(take('brotherslazaroff'))
+        })
+        const crc = testEnv.authenticatedContext('leader-uid', { role: 'band_leader' }).firestore()
+        await assertFails(crc.collection('recordings').doc('rec-1').update({ notes: 'updated note' }))
+        await assertFails(crc.collection('recordings').doc('rec-1').update({ storagePath: 'charts/other.pdf' }))
+        await assertFails(crc.collection('recordings').doc('rec-1').update({ featured: true }))
+        await assertFails(crc.collection('recordings').doc('rec-1').delete())
+        const bl = testEnv.authenticatedContext('bl-leader', { m: { brotherslazaroff: 'bl' } }).firestore()
+        await assertFails(bl.collection('recordings').doc('rec-bl').update({ mimeType: 'text/html' }))
+        await assertFails(bl.collection('recordings').doc('rec-bl').delete())
+    })
+
+    it('Scenario J: admin and platform owner CANNOT create', async () => {
         const admin = testEnv.authenticatedContext('admin-uid', { role: 'admin' }).firestore()
-        await assertSucceeds(
-            admin.collection('recordings').doc('admin-rec').set({
-                songId: 'song-1',
-                title: 'Admin Take',
-                storagePath: 'recordings/admin-rec.mp3',
-                createdAt: Date.now(),
-                createdBy: 'admin-uid',
-                orgId: 'crc',
-            }),
-        )
+        await assertFails(admin.collection('recordings').doc('admin-rec').set(take('crc')))
+        const po = testEnv.authenticatedContext('po-uid', { po: true }).firestore()
+        await assertFails(po.collection('recordings').doc('po-rec').set(take('crc')))
     })
 
     // Multi-tenant P2: creates must stamp orgId; tenant admin is not a bypass.

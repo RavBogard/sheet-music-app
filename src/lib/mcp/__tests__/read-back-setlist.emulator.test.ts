@@ -60,7 +60,7 @@ describe("read_back_setlist (emulator)", () => {
     })
 
     beforeEach(async () => {
-        for (const coll of ["setlists", "tracks", "library_index", "standing_choices", "setlistTemplates", "users", "memberships"]) {
+        for (const coll of ["setlists", "tracks", "library_index", "standing_choices", "setlistTemplates", "users", "memberships", "recordings"]) {
             const snap = await db().collection(coll).get()
             await Promise.all(snap.docs.map((d) => d.ref.delete()))
         }
@@ -125,6 +125,18 @@ describe("read_back_setlist (emulator)", () => {
         expect(r.readback.exceptions).toEqual([{ kind: "no_chart", index: 2, text: "Mi Chamocha: no chart yet" }])
         expect(r.readback.rest).toMatch(/^1 other song/)
         expect(r.readback.text).not.toMatch(/usual|standard|last time/)
+    })
+
+    it("each song row carries its featured recording, this tenant's only", async () => {
+        await db().collection("recordings").doc("rec-barchu").set({ orgId: CRC, songId: "f-barchu", title: "Barchu, Oct 17", storagePath: "recordings/rec-barchu.mp3", createdBy: ADMIN, createdAt: "2026-10-18T00:00:00Z" })
+        await db().collection("recordings").doc("rec-held").set({ orgId: CRC, songId: "f-oseh", title: "held", status: "held", storagePath: "recordings/rec-held.mp3", createdBy: ADMIN, createdAt: "2026-10-18T00:00:00Z" })
+        await db().collection("recordings").doc("rec-bl").set({ orgId: BL, songId: "f-oseh", title: "BL take", storagePath: "recordings/rec-bl.mp3", createdBy: BL_LEAD, createdAt: "2026-10-18T00:00:00Z" })
+        await setlist("sl-now", CRC, randy, [{ type: "header", title: "Shacharit" }, barchu, oseh])
+        const r = (await readBackSetlistTool(ADMIN, { setlistId: "sl-now" }, CRC)) as Out & {
+            recordings: Array<{ index: number; recording: { id: string; url: string } | null }>
+        }
+        expect(r.recordings.map((x) => [x.index, x.recording?.id ?? null])).toEqual([[1, "rec-barchu"], [2, null]])
+        expect(r.recordings[0].recording!.url).toMatch(/^https?:\/\/.+\/api\/recordings\/file\/rec-barchu$/)
     })
 
     it("BrosLaz setlist works and never reads CRC data", async () => {

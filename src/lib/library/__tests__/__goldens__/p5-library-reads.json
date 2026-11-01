@@ -890,7 +890,8 @@
       "enrichmentConfidence": null,
       "aiSuggestion": null,
       "retryQueued": false,
-      "enrichmentRanAt": null
+      "enrichmentRanAt": null,
+      "recording": null
     },
     "c-core-2": {
       "id": "c-core-2",
@@ -903,7 +904,8 @@
       "enrichmentConfidence": null,
       "aiSuggestion": null,
       "retryQueued": false,
-      "enrichmentRanAt": null
+      "enrichmentRanAt": null,
+      "recording": null
     },
     "c-core-arch": {
       "id": "c-core-arch",
@@ -915,7 +917,8 @@
       "enrichmentConfidence": null,
       "aiSuggestion": null,
       "retryQueued": false,
-      "enrichmentRanAt": null
+      "enrichmentRanAt": null,
+      "recording": null
     },
     "c-core-dup": {
       "id": "c-core-dup",
@@ -927,7 +930,8 @@
       "enrichmentConfidence": null,
       "aiSuggestion": null,
       "retryQueued": false,
-      "enrichmentRanAt": null
+      "enrichmentRanAt": null,
+      "recording": null
     },
     "c-core-mp3": {
       "id": "c-core-mp3",
@@ -939,7 +943,8 @@
       "enrichmentConfidence": null,
       "aiSuggestion": null,
       "retryQueued": false,
-      "enrichmentRanAt": null
+      "enrichmentRanAt": null,
+      "recording": null
     },
     "c-sup-1": {
       "id": "c-sup-1",
@@ -952,7 +957,8 @@
       "enrichmentConfidence": null,
       "aiSuggestion": null,
       "retryQueued": false,
-      "enrichmentRanAt": null
+      "enrichmentRanAt": null,
+      "recording": null
     },
     "c-nava-1": {
       "id": "c-nava-1",
@@ -965,7 +971,8 @@
       "enrichmentConfidence": null,
       "aiSuggestion": null,
       "retryQueued": false,
-      "enrichmentRanAt": null
+      "enrichmentRanAt": null,
+      "recording": null
     },
     "c-nava-2": {
       "id": "c-nava-2",
@@ -978,7 +985,8 @@
       "enrichmentConfidence": null,
       "aiSuggestion": null,
       "retryQueued": false,
-      "enrichmentRanAt": null
+      "enrichmentRanAt": null,
+      "recording": null
     },
     "c-nava-arch": {
       "id": "c-nava-arch",
@@ -990,7 +998,8 @@
       "enrichmentConfidence": null,
       "aiSuggestion": null,
       "retryQueued": false,
-      "enrichmentRanAt": null
+      "enrichmentRanAt": null,
+      "recording": null
     },
     "c-up-1": {
       "id": "c-up-1",
@@ -1003,7 +1012,8 @@
       "enrichmentConfidence": null,
       "aiSuggestion": null,
       "retryQueued": false,
-      "enrichmentRanAt": null
+      "enrichmentRanAt": null,
+      "recording": null
     },
     "b-core-1": null,
     "b-up-1": null
@@ -1448,7 +1458,8 @@
       "enrichmentConfidence": null,
       "aiSuggestion": null,
       "retryQueued": false,
-      "enrichmentRanAt": null
+      "enrichmentRanAt": null,
+      "recording": null
     },
     "b-up-1": {
       "id": "b-up-1",
@@ -1461,7 +1472,8 @@
       "enrichmentConfidence": null,
       "aiSuggestion": null,
       "retryQueued": false,
-      "enrichmentRanAt": null
+      "enrichmentRanAt": null,
+      "recording": null
     }
   },
   "brotherslazaroff.search_chart_text.metadata": {

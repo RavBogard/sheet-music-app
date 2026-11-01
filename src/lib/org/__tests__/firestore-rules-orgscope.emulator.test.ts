@@ -156,12 +156,14 @@ describe("v11-01-04 firestore.rules org-scope", () => {
         )
     })
 
-    it("AC-1: claimless CRC leader can write songs + recordings (orgId=crc)", async () => {
+    // Recordings 2026-11: recordings writes are server-only, so a leader's
+    // client create is denied (songs stay leader-writable).
+    it("AC-1: claimless CRC leader can write songs (orgId=crc); recordings are server-only", async () => {
         const db = crcLeader()
         await assertSucceeds(
             db.collection("songs").doc("song-new").set({ title: "S", orgId: "crc" }),
         )
-        await assertSucceeds(
+        await assertFails(
             db.collection("recordings").doc("rec-new").set({
                 songId: "song-crc", title: "R", orgId: "crc",
             }),

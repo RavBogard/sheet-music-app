@@ -33,6 +33,8 @@ import { isNonChartArtifactShape } from "@/lib/library/junk-filter"
 import { libraryDisplayName } from "@/lib/library/display-name"
 import { isAllowedChartMime } from "@/lib/chart-heal"
 import { readTenantRole } from "@/lib/org/access"
+import { featuredLinksFor } from "./recordings"
+import type { FeaturedRecording } from "@/lib/recordings/featured"
 
 export { isNonChartArtifactShape }
 /**
@@ -847,7 +849,7 @@ export async function getSong(
     _uid: string,
     args: GetSongArgs,
     org: OrgId = DEFAULT_ORG_ID,
-): Promise<SongRecord | null> {
+): Promise<(SongRecord & { recording: FeaturedRecording | null }) | null> {
     const song = await getSongById(args.id)
     if (!song) return null
     // Phase 5: the library_index twin may carry the visibility stamp the
@@ -878,7 +880,16 @@ export async function getSong(
             err,
         )
     }
-    return { ...song, ...projection, ownerOrgId: ownerOf(idxVis ?? songVis) }
+    // Recordings 2026-11: the song's featured take (this org's only), or null.
+    // Fail-soft: a read miss says no recording rather than failing get_song.
+    let recording: FeaturedRecording | null = null
+    try {
+        initAdmin()
+        recording = (await featuredLinksFor(getFirestore(), org, [args.id]))[args.id] ?? null
+    } catch (err) {
+        logger.warn(`[mcp] get_song recording read failed for ${args.id}:`, err)
+    }
+    return { ...song, ...projection, ownerOrgId: ownerOf(idxVis ?? songVis), recording }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
