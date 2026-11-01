@@ -132,6 +132,16 @@ export function MobileCardList({
         return out
     }, [tracks])
 
+    // Option B: the page column is reserved on every row when any row on
+    // the setlist has a printed page, so the pages line up.
+    const pageColumn = useMemo(
+        () => tracks.some((tr) => {
+            const f = (tr.liturgyRef as { folio?: unknown } | undefined)?.folio
+            return typeof f === 'number' && Number.isFinite(f)
+        }),
+        [tracks],
+    )
+
     // The library each bonded chart lives in (the song's collection), for the chip.
     const songIdsKey = useMemo(
         () => [...new Set(tracks.map((tr) => tr.songId).filter((id): id is string => Boolean(id)))].sort().join('|'),
@@ -295,7 +305,7 @@ export function MobileCardList({
                 <ul
                     role="list"
                     data-testid="mobile-card-list"
-                    className="flex flex-col"
+                    className="flex flex-col bg-card border-t border-rule"
                 >
                     {tracks.map((track, idx) => (
                         <CardRow
@@ -311,6 +321,7 @@ export function MobileCardList({
                             isBand={isBand}
                             showTiming={showTiming}
                             setTotal={setTotalsByHeaderId?.[track.id]}
+                            pageColumn={pageColumn}
                         />
                     ))}
                 </ul>
@@ -341,6 +352,7 @@ interface CardRowProps {
     isBand: boolean
     showTiming: boolean
     setTotal?: SetTotal
+    pageColumn: boolean
 }
 
 /**
@@ -359,6 +371,7 @@ const CardRow = memo(function CardRow({
     isBand,
     showTiming,
     setTotal,
+    pageColumn,
 }: CardRowProps) {
     const onTap = useCallback(() => actions.toggleEditing(track.id), [actions, track.id])
     const onContextEditRow = useCallback(() => actions.editRow(index), [actions, index])
@@ -383,6 +396,7 @@ const CardRow = memo(function CardRow({
             isBand={isBand}
             showTiming={showTiming}
             setTotal={setTotal}
+            pageColumn={pageColumn}
             onTap={onTap}
             onContextEditRow={onContextEditRow}
             onContextBindChart={onContextBindChart}

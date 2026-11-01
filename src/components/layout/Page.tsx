@@ -15,16 +15,18 @@ export function PageContainer({
     ...rest
 }: { children: ReactNode; className?: string } & React.HTMLAttributes<HTMLDivElement>) {
     return (
-        <div className={cn(PAGE_WIDTH_CLASS, "pt-5 sm:pt-6 pb-10", className)} {...rest}>
+        <div className={cn(PAGE_WIDTH_CLASS, "pt-3 sm:pt-4 pb-10", className)} {...rest}>
             {children}
         </div>
     )
 }
 
 /**
- * The one page head row: the title at the DESIGN.md headline scale, an
- * optional one-line subtitle under it, the actions on the right. Below 600px
- * the actions wrap under the title instead of crushing it.
+ * The one page head row (Option B, 2026-11-01): the title at 1rem/800, ONE
+ * small meta line under it, the actions on the right. No tall area. The
+ * actions share the title's row on a phone (Daniel 2026-11-01: too much
+ * space above the content); the title and meta line truncate first, and
+ * the actions wrap under only when they cannot fit beside 8rem of title.
  */
 export function PageHeader({
     title,
@@ -45,15 +47,15 @@ export function PageHeader({
     titleClassName?: string
 }) {
     return (
-        <div className={cn("flex flex-wrap items-end justify-between gap-x-4 gap-y-3", className)}>
-            <div className="flex min-w-0 flex-[1_1_18rem] items-start gap-2">
+        <div className={cn("flex flex-wrap items-center justify-between gap-x-4 gap-y-2", className)}>
+            <div className="flex min-w-0 flex-[1_1_8rem] items-center gap-2">
                 {leading}
                 <div className="min-w-0">
-                    <Title className={cn("text-[1.35rem] sm:text-[1.6rem] font-extrabold leading-tight tracking-[-0.015em] text-foreground", titleClassName)}>
+                    <Title className={cn("truncate text-base font-extrabold leading-tight text-foreground", titleClassName)}>
                         {title}
                     </Title>
                     {subtitle ? (
-                        <p className="tnum mt-1 text-sm font-medium text-muted-foreground">{subtitle}</p>
+                        <p className="tnum truncate text-xs font-medium text-muted-foreground">{subtitle}</p>
                     ) : null}
                 </div>
             </div>

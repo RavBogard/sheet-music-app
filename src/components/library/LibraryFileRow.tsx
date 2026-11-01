@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { ChevronRight, FileMusic, Folder, Loader2, Wand2, Play, Pause, Headphones, CloudOff, CheckCircle2, Pencil, ListPlus } from "lucide-react"
+import { ChevronRight, Folder, Loader2, Wand2, Play, Pause, Headphones, CloudOff, CheckCircle2, Pencil, ListPlus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu"
 import { DriveFile } from "@/types/models"
@@ -149,17 +149,17 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
                     // EQUALLY on both sides, clipping the leading character
                     // ("Adonai Oz …" → "donai Oz …") at iPad-Mini viewport.
                     className={cn(
-                        "w-full h-auto text-start justify-start rounded-none whitespace-normal group relative active:scale-100",
+                        "w-full h-auto p-0 text-start justify-start rounded-none whitespace-normal group relative active:scale-100",
                         "bg-card hover:bg-accent/60 border-b border-rule focus-visible:ring-inset",
                         (isSelected || (isAudio && isPlaying)) && "bg-accent",
                         isChart && isDigitizing && "bg-accent cursor-wait",
                     )}
                 >
-                    {/* Web refresh (blend E): one dense hairline row — the title
-                        with its setting, then a quiet meta line (format ·
-                        library · tempo · topics · recency), and the key tag in
-                        its own column on the right. */}
-                    <div data-slot="library-row-cell" className="flex items-center gap-3 py-1.5 px-3 sm:px-4 min-h-12 w-full">
+                    {/* Option B: one dense hairline row — the title with its
+                        setting, then a quiet meta line (format · library ·
+                        tempo · topics · recency), and a small outlined key tag
+                        in its own column on the right. */}
+                    <div data-slot="library-row-cell" className="flex items-center gap-3 py-1 px-3 sm:px-4 min-h-11 w-full">
                         {/* Select mode checkbox */}
                         {selectMode && !isFolder && (
                             <div className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${isSelected ? 'bg-brand border-brand' : 'border-muted-foreground/40'
@@ -169,7 +169,7 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
                         )}
 
                         {isFolder ? (
-                            <Folder className="h-5 w-5 text-section-ochre shrink-0" />
+                            <Folder className="h-4 w-4 text-section-ochre-ink shrink-0" />
                         ) : isAudio ? (
                             <div className="h-8 w-8 shrink-0 rounded-full bg-accent flex items-center justify-center">
                                 {isPlaying ? (
@@ -182,26 +182,24 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
                             </div>
                         ) : isDigitizing ? (
                             <Loader2 className="h-5 w-5 text-brand shrink-0 animate-spin" />
-                        ) : (
-                            <FileMusic className="h-5 w-5 text-muted-foreground shrink-0 group-hover:text-brand transition-colors" />
-                        )}
+                        ) : null /* Option B: no repeated file glyph; the format is in the meta line. */}
 
                         <div className="flex-1 min-w-0">
                             <p className="line-clamp-2 break-words leading-snug">
-                                <span className="font-medium text-[16px] text-foreground">
+                                <span className="font-medium text-[0.95rem] text-foreground">
                                     {isChart ? chartTitle : displayName}
                                 </span>
                                 {/* v11.7-05: composer/arrangement (the setting) as a
                                     dimmed sub-label — subordinate to the title,
                                     never competing; omitted when absent (text-only). */}
                                 {composer && (
-                                    <span className="ms-2 text-sm font-medium text-muted-foreground">
+                                    <span className="ms-2 text-xs font-medium text-muted-foreground">
                                         {composer}
                                     </span>
                                 )}
                             </p>
 
-                            <div className="tnum mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs font-medium text-muted-foreground">
+                            <div className="tnum flex flex-wrap items-center gap-x-2 text-xs font-medium text-muted-foreground [&>*]:whitespace-nowrap">
                                 {isAudio && (
                                     <span className="inline-flex items-center gap-1">
                                         <Headphones className="w-3 h-3" aria-hidden="true" />
@@ -275,13 +273,17 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
                             </div>
                         </div>
 
-                        {isChart && item.metadata?.key && (
-                            <span className="tnum shrink-0 inline-flex items-center justify-center min-w-[2.5rem] h-7 px-2 rounded-md border border-border bg-secondary text-sm font-bold text-secondary-foreground">
-                                <span className="sr-only">{t("setlistGrid.columnKey")} </span>
-                                {item.metadata.key}
-                            </span>
-                        )}
-                        {!isAudio && <DirectionalIcon icon={ChevronRight} className="h-5 w-5 shrink-0 text-muted-foreground/60 group-hover:text-foreground" />}
+                        {/* The key in its own fixed column (empty when none), so the
+                            tags line up down the list. */}
+                        <span className="w-10 shrink-0 flex justify-center">
+                            {isChart && item.metadata?.key ? (
+                                <span className="tnum inline-flex items-center justify-center px-1.5 rounded-[3px] border border-input text-xs font-bold leading-[1.125rem] text-foreground">
+                                    <span className="sr-only">{t("setlistGrid.columnKey")} </span>
+                                    {item.metadata.key}
+                                </span>
+                            ) : null}
+                        </span>
+                        {!isAudio && <DirectionalIcon icon={ChevronRight} className="h-4 w-4 shrink-0 text-muted-foreground/60 group-hover:text-foreground" />}
                     </div>
                 </Button>
             </ContextMenuTrigger>

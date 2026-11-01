@@ -119,7 +119,7 @@ export function KeepAwakeToggle({
                 aria-describedby={errorText ? "keep-awake-error" : undefined}
                 title={
                     isSupported
-                        ? undefined
+                        ? (errorText ?? ariaLabel)
                         : t("perform.keepAwake.unavailableTitle")
                 }
                 size="sm"
@@ -130,13 +130,15 @@ export function KeepAwakeToggle({
                     // Active state: subtle dark-OKLCH-indigo glow on the glass
                     // header so Daniel can see at a glance that the lock holds.
                     // Uses the existing theme `primary` token (indigo OKLCH).
+                    // Option B redo: the same neutral tile as every header
+                    // tool; colour marks the state on the glyph only.
                     engaged
-                        ? "text-brand bg-brand/10 hover:bg-brand/15"
-                        : "text-muted-foreground",
-                    // M3-001: a failed attempt tints the toggle so peripheral
+                        ? "text-brand hover:bg-accent"
+                        : "text-muted-foreground hover:text-foreground hover:bg-accent",
+                    // M3-001: a failed attempt colours the glyph so peripheral
                     // vision picks up the problem even before the alert text
                     // is read.
-                    lastError && "text-destructive bg-destructive/10 hover:bg-destructive/15",
+                    lastError && "text-destructive hover:text-destructive",
                 )}
             >
                 {engaged ? (
@@ -151,7 +153,7 @@ export function KeepAwakeToggle({
                         // in light, so the engaged label reads in ink there;
                         // dark lifts to the night brand (DESIGN.md), 4.5:1+.
                         engaged && !lastError && "text-foreground dark:text-brand",
-                        compact ? "hidden sm:inline" : "inline",
+                        compact ? "hidden lg:inline" : "inline",
                     )}
                 >
                     {engaged ? t("perform.keepAwake.screenOn") : t("perform.keepAwake.keepOn")}

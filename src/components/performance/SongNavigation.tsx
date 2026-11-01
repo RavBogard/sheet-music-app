@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react"
 import { DirectionalIcon } from "@/components/i18n/DirectionalIcon"
 import { useT } from "@/i18n/client"
 import { playedKey } from "@/lib/performance/played-key"
+import { displayChartTitle } from "@/lib/format/chart-title"
 
 // Phase 7 ruling: song-to-song previous/next follows the reading direction.
 // The buttons sit in a flex row, so on a right-to-left page "previous" lands
@@ -48,7 +49,7 @@ export function SongNavigation() {
 
             <div className="flex flex-col items-center overflow-hidden min-w-0 flex-1 px-2">
                 <span className="text-xl sm:text-3xl font-bold truncate text-center w-full leading-tight text-foreground drop-shadow-md">
-                    {currentTrack?.name || t("perform.nav.noSongSelected")}
+                    {displayChartTitle(currentTrack?.name) || t("perform.nav.noSongSelected")}
                 </span>
                 {/* PERF-11: the next song shares the position line (the toolbar
                     row is 56px tall — a third line would not fit on the iPad). */}
@@ -65,8 +66,8 @@ export function SongNavigation() {
                         >
                             <span aria-hidden="true">· </span>
                             {nextKey
-                                ? t("perform.nav.nextUp", { title: nextTrack.name, key: nextKey })
-                                : t("perform.nav.nextUpNoKey", { title: nextTrack.name })}
+                                ? t("perform.nav.nextUp", { title: displayChartTitle(nextTrack.name), key: nextKey })
+                                : t("perform.nav.nextUpNoKey", { title: displayChartTitle(nextTrack.name) })}
                         </span>
                     )}
                 </div>

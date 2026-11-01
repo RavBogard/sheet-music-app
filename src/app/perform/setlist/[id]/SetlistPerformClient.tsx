@@ -49,8 +49,6 @@ import { logger } from "@/lib/logger"
 import { TonightSwapSheet } from "@/components/performance/TonightSwapSheet"
 import { DirectionalIcon } from "@/components/i18n/DirectionalIcon"
 import { useT } from "@/i18n/client"
-import { useFormat } from "@/i18n/format-client"
-import { formatUpdatedWhen } from "@/lib/format/updated-when"
 import { cn } from "@/lib/utils"
 import { PAGE_WIDTH_CLASS } from "@/components/layout/Page"
 import { GigPanel } from "@/components/setlist/gig/GigPanel"
@@ -110,7 +108,6 @@ export function SetlistPerformClient({
     chartVersions,
 }: SetlistPerformClientProps) {
     const t = useT()
-    const fmt = useFormat()
     const {
         tracks: liveTracks,
         plannedTracks,
@@ -133,7 +130,6 @@ export function SetlistPerformClient({
         setlistUpdatedSinceLoad,
         setlistLiveStamp,
         setlistVersion,
-        setlistUpdatedAt,
         isWakeLockActive,
         isWakeLockSupported,
         wakeLockError,
@@ -650,15 +646,15 @@ export function SetlistPerformClient({
                 time); an explicit disarm via the toggle is remembered and is
                 NOT overridden here. Renders nothing. */}
             <KeepAwakeAutoArm />
-            {/* Head row (web refresh, blend E): the title large, the status
-                line under it ("Updated … · N/M charts on this iPad"), and the
-                tools on the right with Edit as the one blue action. */}
+            {/* Head row (Option B): the title at 1rem/800 and ONE meta line
+                under it ("Updated … · N/M charts on this iPad", the book after
+                it), the tools on the right with Edit as the one blue action. */}
             <div className="z-20 relative bg-background border-b border-rule">
-                {/* Consistency pass: the page container width, and a head that
-                    wraps instead of crushing: back + title (2 lines) + status on
-                    a full row on a phone, the toolbar in one row under them. */}
-                <div className={cn(PAGE_WIDTH_CLASS, "flex flex-wrap items-start gap-x-3 gap-y-2 py-3")}>
-                <div className="flex min-w-0 flex-[1_1_22rem] items-start gap-1 sm:gap-2">
+                {/* ONE row at every width (Daniel 2026-11-01: the head took too
+                    much of a phone before the first song). The title and meta
+                    line truncate; Print hides below sm. */}
+                <div className={cn(PAGE_WIDTH_CLASS, "flex items-center gap-x-2 sm:gap-x-3 py-1")}>
+                <div className="flex min-w-0 flex-1 items-center gap-1 sm:gap-2">
                 <Link
                     href={backHref}
                     aria-label={isPublicView ? t("performSetlist.backToHomeLabel") : t("performSetlist.backToSetlistsLabel")}
@@ -666,9 +662,10 @@ export function SetlistPerformClient({
                 >
                     <DirectionalIcon icon={ArrowLeft} className="h-5 w-5 text-foreground" />
                 </Link>
-                <div className="flex-1 min-w-0 pt-1">
-                    <h1 className="line-clamp-2 break-words text-[1.35rem] sm:text-[1.6rem] font-extrabold leading-tight tracking-[-0.015em]">{name}</h1>
-                    <p data-testid="perform-status-line" className="tnum mt-0.5 text-sm font-medium text-muted-foreground">
+                <div className="flex-1 min-w-0">
+                    <h1 className="truncate text-base font-extrabold leading-tight" title={name}>{name}</h1>
+                    {/* Option B: ONE meta line. It never wraps; it truncates. */}
+                    <p data-testid="perform-status-line" className="tnum truncate text-xs font-medium text-muted-foreground">
                         <span>
                             {totalCount > songCount
                                 ? t("performSetlist.header.songsAndItems", { count: songCount, totalCount })
@@ -680,19 +677,13 @@ export function SetlistPerformClient({
                                 <span data-testid="perform-status-total">{t("gig.statusTotal", { total: formatDuration(gigSeconds) })}</span>
                             </>
                         )}
-                        {setlistUpdatedAt && (
-                            <>
-                                <span aria-hidden="true"> · </span>
-                                <span>{t("performSetlist.status.updated", { when: formatUpdatedWhen(fmt, setlistUpdatedAt) })}</span>
-                            </>
-                        )}
                         {deviceReady !== null && deviceTotal > 0 && (
                             <>
                                 <span aria-hidden="true"> · </span>
                                 <span
                                     data-testid="perform-status-device"
                                     data-complete={deviceReady >= deviceTotal ? "true" : "false"}
-                                    className={cn(deviceReady < deviceTotal && "text-caution font-semibold")}
+                                    className={cn("font-bold", deviceReady < deviceTotal ? "text-caution" : "text-success")}
                                 >
                                     {t("performSetlist.status.chartsOnDevice", { ready: deviceReady, total: deviceTotal })}
                                 </span>
@@ -711,16 +702,22 @@ export function SetlistPerformClient({
                                 <span>{t("performSetlist.status.chartsOnDevice", { ready: reservedChartCount, total: reservedChartCount })}</span>
                             </span>
                         )}
+                        {/* Option B: the book joins the one meta line. */}
+                        {bookName && (
+                            <>
+                                <span aria-hidden="true"> · </span>
+                                <span data-testid="perform-status-book">{bookName}</span>
+                            </>
+                        )}
+                        {/* BET-6: the parasha joins the meta line (CRC only). */}
+                        <SetlistFamilyHead part="parasha" setlistId={setlistId} setlist={initialSetlist as unknown as Record<string, unknown> | null} />
                     </p>
-                    {bookName && (
-                        <p className="text-sm text-muted-foreground truncate">{bookName}</p>
-                    )}
-                    {isBand && <GigPanel gig={gig} className="mt-0.5" />}
-                    {/* BET-6: parasha line and Beit Mitzvah card (CRC only). */}
-                    <SetlistFamilyHead setlistId={setlistId} setlist={initialSetlist as unknown as Record<string, unknown> | null} />
+                    {isBand && <GigPanel gig={gig} />}
+                    {/* BET-6: a Beit Mitzvah service's one line (CRC only). */}
+                    <SetlistFamilyHead part="ceremony" setlistId={setlistId} setlist={initialSetlist as unknown as Record<string, unknown> | null} />
                 </div>
                 </div>
-                <div className="ms-auto flex flex-wrap items-center justify-end gap-1 shrink-0">
+                <div className="flex items-center justify-end gap-0.5 sm:gap-1 shrink-0">
                     {/* "Keep screen on" — now a MANUAL OVERRIDE, not the only
                         way in (2026-08-31). <KeepAwakeAutoArm/> above already
                         armed the lock on mount; this toggle exists so a
@@ -741,7 +738,14 @@ export function SetlistPerformClient({
                     {/* F1: pre-arm the whole setlist for offline use (idle auto-precache
                         runs on mount; this CTA force-caches with progress). Shown to
                         everyone performing — offline resilience isn't role-gated. */}
-                    {songFileIds.length > 0 && <SaveOfflineButton fileIds={songFileIds} onReadyChange={onDeviceReady} versions={chartVersions} />}
+                    {/* Mounted always (it reports readiness to the meta line);
+                        drawn only while something is left to save, since
+                        "N/N charts on this iPad" already says when all are. */}
+                    {songFileIds.length > 0 && (
+                        <span data-testid="perform-save-slot" className={deviceReady !== null && deviceTotal > 0 && deviceReady >= deviceTotal ? "hidden" : "contents"}>
+                            <SaveOfflineButton fileIds={songFileIds} onReadyChange={onDeviceReady} versions={chartVersions} />
+                        </span>
+                    )}
                     {foldableLiturgyRows > 0 && (
                         <Button
                             onClick={() => setLiturgyCollapsed(!liturgyCollapsed)}
@@ -753,6 +757,11 @@ export function SetlistPerformClient({
                                     ? t("performSetlist.toolbar.showLiturgyRows", { count: foldableLiturgyRows })
                                     : t("performSetlist.toolbar.hideLiturgyRows", { count: foldableLiturgyRows })
                             }
+                            title={
+                                liturgyCollapsed
+                                    ? t("performSetlist.toolbar.showLiturgyRows", { count: foldableLiturgyRows })
+                                    : t("performSetlist.toolbar.hideLiturgyRows", { count: foldableLiturgyRows })
+                            }
                             className="h-11 min-w-11 gap-1.5 text-muted-foreground hover:text-foreground cursor-pointer"
                         >
                             {liturgyCollapsed ? (
@@ -760,7 +769,7 @@ export function SetlistPerformClient({
                             ) : (
                                 <ListCollapse className="h-4 w-4" />
                             )}
-                            <span className="text-xs font-semibold hidden sm:inline">
+                            <span className="text-xs font-semibold hidden lg:inline">
                                 {liturgyCollapsed ? t("performSetlist.toolbar.liturgy") : t("performSetlist.toolbar.songsOnly")}
                             </span>
                         </Button>
@@ -773,23 +782,24 @@ export function SetlistPerformClient({
                             aria-pressed={reordering}
                             data-testid="perform-reorder-toggle"
                             aria-label={reordering ? t("performSetlist.reorder.done") : t("performSetlist.reorder.startLabel")}
+                            title={reordering ? t("performSetlist.reorder.done") : t("performSetlist.reorder.startLabel")}
                             className="h-11 min-w-11 gap-1.5 text-muted-foreground hover:text-foreground cursor-pointer"
                         >
                             {reordering ? <Check className="h-4 w-4" /> : <ArrowUpDown className="h-4 w-4" />}
-                            <span className={cn("text-xs font-semibold", !reordering && "hidden sm:inline")}>
+                            <span className={cn("text-xs font-semibold", !reordering && "hidden lg:inline")}>
                                 {reordering ? t("performSetlist.reorder.done") : t("performSetlist.reorder.start")}
                             </span>
                         </Button>
                     )}
                     {canPrint && (
-                        <Button onClick={() => setShowPrintModal(true)} size="sm" variant="ghost" aria-label={t("performSetlist.toolbar.printSetlist")} className="h-11 min-w-11 gap-1.5 text-muted-foreground hover:text-foreground cursor-pointer">
+                        <Button onClick={() => setShowPrintModal(true)} size="sm" variant="ghost" aria-label={t("performSetlist.toolbar.printSetlist")} title={t("performSetlist.toolbar.printSetlist")} className="hidden sm:inline-flex h-11 min-w-11 gap-1.5 text-muted-foreground hover:text-foreground cursor-pointer">
                             <Printer className="h-4 w-4" />
-                            <span className="text-xs font-semibold hidden sm:inline">{t("performSetlist.toolbar.print")}</span>
+                            <span className="text-xs font-semibold hidden lg:inline">{t("performSetlist.toolbar.print")}</span>
                         </Button>
                     )}
                     {isLeader && (
                         <Button asChild size="sm" className="h-11 min-w-11 gap-1.5 rounded-md px-3 sm:px-4 bg-primary text-primary-foreground hover:bg-primary/90 font-bold">
-                            <Link href={`/setlists/${setlistId}`} aria-label={t("performSetlist.toolbar.editSetlist")}>
+                            <Link href={`/setlists/${setlistId}`} aria-label={t("performSetlist.toolbar.editSetlist")} title={t("performSetlist.toolbar.editSetlist")}>
                                 <Pencil className="h-4 w-4" />
                                 <span className="text-sm hidden sm:inline">{t("performSetlist.toolbar.edit")}</span>
                             </Link>

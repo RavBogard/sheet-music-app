@@ -19,6 +19,7 @@ import { useEdgeTapZones } from "./use-edge-tap-zones"
 import { useDeviceTranspositionPrefs } from "@/hooks/use-musician-transposition"
 import { useModalSurface } from "./use-modal-surface"
 import { useChartKeyScroll } from "./use-chart-key-scroll"
+import { displayChartTitle } from "@/lib/format/chart-title"
 // Shared import sites with the Perform warm-up: same chunks offline (PR #48 S1).
 import {
     loadAudioViewer,
@@ -519,7 +520,7 @@ export function PDFOverlay({
             ref={overlayRootRef}
             role="dialog"
             aria-modal="true"
-            aria-label={t("perform.overlay.dialogLabel", { songName: track.title ?? "" })}
+            aria-label={t("perform.overlay.dialogLabel", { songName: displayChartTitle(track.title) })}
             tabIndex={-1}
             data-testid="chart-overlay"
             data-tap-zone-surface=""

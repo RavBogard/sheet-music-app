@@ -43,8 +43,8 @@ export default async function MonitorPage() {
         return (
             <PageContainer className="space-y-4">
                 <PageHeader title={t("nav.monitor")} />
-                <div className="rounded-lg border border-rule bg-card p-5">
-                    <h2 className="text-[17px] font-bold">{t("monitor.accessDeniedTitle")}</h2>
+                <div className="rounded-lg border border-rule bg-card p-3 sm:p-4">
+                    <h2 className="text-sm font-bold text-foreground">{t("monitor.accessDeniedTitle")}</h2>
                     <p className="mt-1 text-sm text-muted-foreground">{t("monitor.accessDeniedBody")}</p>
                 </div>
             </PageContainer>

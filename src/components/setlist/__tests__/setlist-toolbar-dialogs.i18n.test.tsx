@@ -21,7 +21,6 @@ import { AudioFilePicker } from "../AudioFilePicker"
 import SetlistEditorError from "@/app/(main)/setlists/[id]/error"
 
 const NAME = "Test Setlist A"
-const RABBI = "Testrabbi"
 const noop = () => {}
 
 function toolbar() {
@@ -29,9 +28,6 @@ function toolbar() {
         <SetlistToolbar
             searchQuery=""
             onSearchChange={noop}
-            rabbiFilter=""
-            onRabbiFilterChange={noop}
-            availableRabbis={[RABBI]}
         />
     )
 }
@@ -43,7 +39,7 @@ function dashboardValue(over: Record<string, unknown> = {}) {
         router: { push: noop }, user: { uid: "u", displayName: "Test User" }, signIn: noop,
         isMember: true, isBandLeader: true, isAdmin: false, onBack: noop, onCreateNew: noop,
         loading: false, error: null, activeTab: "personal", setActiveTab: noop,
-        searchQuery: "", setSearchQuery: noop, rabbiFilter: "", setRabbiFilter: noop, navigatingTo: null,
+        searchQuery: "", setSearchQuery: noop, navigatingTo: null,
         deleteConfirmOpen: false, setDeleteConfirmOpen: noop, setlistToDelete: null,
         duplicateConfirmOpen: false, setDuplicateConfirmOpen: noop, setlistToDuplicate: null,
         showTransferDialog: false, setShowTransferDialog: noop,
@@ -53,7 +49,7 @@ function dashboardValue(over: Record<string, unknown> = {}) {
         handleDuplicateClick: noop, confirmDuplicate: noop, handleCloneNextWeekClick: noop,
         handleSaveAsTemplateClick: noop, handleSaveAsDefaultClick: noop, handleTransfer: noop, transferring: false,
         handleCreateFromTemplate: noop, handleDownload: noop,
-        availableRabbis: [], displayedSetlists: [upcomingSetlist, pastSetlist],
+        displayedSetlists: [upcomingSetlist, pastSetlist],
         upcoming: [upcomingSetlist], pastOrNoDate: [pastSetlist], placeholders: [{ date: new Date(2026, 9, 16) }],
         hasUpcoming: true, isDownloading: false,
         nextCursor: "c1", loadMore: noop, loadingMore: false,
@@ -64,11 +60,11 @@ function dashboardValue(over: Record<string, unknown> = {}) {
 describe.each([false, true])("setlist toolbar + dialogs i18n (rtl=%s)", (rtl) => {
     afterEach(() => cleanup())
 
-    it("SetlistToolbar: rabbi chips, open search", () => {
+    it("SetlistToolbar: open search", () => {
         const r = renderPseudo(toolbar(), { rtl })
         if (rtl) expect(r.container.querySelector('[dir="rtl"]')).not.toBeNull()
         expectNoUntranslatedText(document.body)
-        fireEvent.click(document.querySelector("button") as HTMLElement) // search toggle
+        fireEvent.click(document.querySelector("button[title]") as HTMLElement) // the search toggle
         expect(document.querySelector("input")).not.toBeNull()
         expectNoUntranslatedText(document.body, { attributes: ["title", "aria-label", "placeholder"] })
     })
@@ -142,8 +138,10 @@ describe("toolbar + dialogs English output is unchanged", () => {
 
     it("renders today's English", () => {
         render(toolbar())
-        expect(screen.getByText("All Setlists")).toBeDefined()
-        expect(screen.getByText(`Rabbi ${RABBI}`)).toBeDefined()
+        // Option B redo: no "All setlists" label over the chip row.
+        expect(screen.queryByText("All Setlists")).toBeNull()
+        // Daniel 2026-11-01: the rabbi filter chips are cut.
+        expect(screen.queryByRole("group")).toBeNull()
         expect(screen.getByLabelText("Search setlists").getAttribute("title")).toBe("Search")
         cleanup()
 
@@ -161,7 +159,7 @@ describe("toolbar + dialogs English output is unchanged", () => {
 
         dash.value = dashboardValue()
         render(<SetlistDashboard />)
-        expect(screen.getByText("1 upcoming setlists scheduled.")).toBeDefined()
+        expect(screen.getByText("1 upcoming setlist scheduled.")).toBeDefined()
         expect(screen.getByText("Create New Setlist")).toBeDefined()
         expect(screen.getByText("Upcoming Services")).toBeDefined()
         expect(screen.getByText("Library & Past Events")).toBeDefined()

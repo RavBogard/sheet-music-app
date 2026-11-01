@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react"
-import { rabbiNames, rabbiMatches } from "@/lib/format/rabbi-names"
+import { rabbiNames } from "@/lib/format/rabbi-names"
 import { formatError } from "@/lib/format-error"
 import { useRouter } from "next/navigation"
 import { createSetlistService, Setlist } from "@/lib/setlist-firebase"
@@ -119,7 +119,6 @@ export function useSetlistDashboard({
     }
     const [activeTab, setActiveTab] = useState<'personal' | 'public'>('public')
     const [searchQuery, setSearchQuery] = useState("")
-    const [rabbiFilter, setRabbiFilter] = useState("")
     const [navigatingTo, setNavigatingTo] = useState<string | null>(null)
 
     // Dialog state
@@ -353,14 +352,6 @@ export function useSetlistDashboard({
         return [...setlists, ...trailing]
     }, [setlists, extraSetlists])
 
-    const availableRabbis = useMemo(() => {
-        const rabbis = new Set<string>()
-        setlists.forEach(s => {
-            rabbiNames(s.rabbi).forEach(n => rabbis.add(n))
-        })
-        return Array.from(rabbis).sort()
-    }, [setlists])
-
     const displayedSetlists = useMemo(() => {
         // v11.5-05-03 (Q4): drop test fixtures for ALL viewers (parity with
         // /perform + DashboardClient); additionally hide empty drafts from ANON
@@ -372,6 +363,8 @@ export function useSetlistDashboard({
             const q = searchQuery.toLowerCase()
             filtered = filtered.filter(s => {
                 if (s.name.toLowerCase().includes(q)) return true
+                // The rabbi filter chips are gone (Daniel 2026-11-01); search finds a rabbi instead.
+                if (rabbiNames(s.rabbi).some(n => n.toLowerCase().includes(q))) return true
                 if (s.eventDate) {
                     const d = toDateHelper(s.eventDate)
                     if (d) {
@@ -385,11 +378,8 @@ export function useSetlistDashboard({
                 return false
             })
         }
-        if (rabbiFilter) {
-            filtered = filtered.filter(s => rabbiMatches(s.rabbi, rabbiFilter))
-        }
         return filtered
-    }, [allSetlists, searchQuery, rabbiFilter, user])
+    }, [allSetlists, searchQuery, user])
 
     const today = new Date()
     today.setHours(0, 0, 0, 0)
@@ -430,7 +420,7 @@ export function useSetlistDashboard({
     return {
         router, user, signIn, isMember, isBandLeader, isAdmin, onBack, onCreateNew,
         loading, error, activeTab, setActiveTab,
-        searchQuery, setSearchQuery, rabbiFilter, setRabbiFilter, navigatingTo,
+        searchQuery, setSearchQuery, navigatingTo,
         deleteConfirmOpen, setDeleteConfirmOpen, setlistToDelete,
         duplicateConfirmOpen, setDuplicateConfirmOpen, setlistToDuplicate,
         showTransferDialog, setShowTransferDialog,
@@ -441,7 +431,7 @@ export function useSetlistDashboard({
         handleDuplicateClick, confirmDuplicate, handleCloneNextWeekClick,
         handleSaveAsTemplateClick, handleSaveAsDefaultClick, handleTransfer, transferring,
         handleCreateFromTemplate, handleDownload,
-        availableRabbis, displayedSetlists,
+        displayedSetlists,
         upcoming, pastOrNoDate, placeholders, hasUpcoming, isDownloading,
         // P2-004 cursor pagination
         nextCursor, loadMore, loadingMore,

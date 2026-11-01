@@ -176,11 +176,13 @@ describe('MobileRowCard — v70-03-01 chart click-through', () => {
         ).toHaveAttribute('href', '/api/library/file/db-xyz')
     })
 
-    it('renders a plain, non-interactive indicator when no chart is bound', () => {
+    it('draws no chart control when no chart is bound; the row says "No chart" in words', () => {
+        // Option B redo (re-audit 2 V10): a faded icon read as a broken
+        // control. The column stays (an empty cell) and the line says it.
         render(<Harness track={makeTrack({ songId: undefined })} />)
 
         expect(screen.queryByRole('link')).not.toBeInTheDocument()
-        expect(screen.getByLabelText('No chart bound')).toBeInTheDocument()
+        expect(screen.getByTestId('row-no-chart-t-1')).toBeInTheDocument()
     })
 
     it('clicking the chart link does NOT toggle the card edit pane (stopPropagation)', () => {
@@ -206,10 +208,10 @@ describe('MobileRowCard — v70-03-02 recording affordance', () => {
         expect(cell).not.toBeDisabled()
     })
 
-    it('renders the recording affordance disabled when no song is bound', () => {
+    it('offers no recording control when no song is bound (recordings attach to a song)', () => {
         render(<Harness track={makeTrack({ songId: undefined })} />)
 
-        expect(screen.getByTestId('recording-cell')).toBeDisabled()
+        expect(screen.queryByTestId('recording-cell')).not.toBeInTheDocument()
     })
 
     it('clicking the recording affordance does NOT toggle the card edit pane (stopPropagation)', () => {
@@ -253,19 +255,18 @@ describe('MobileRowCard — bonded non-song chart affordance (cowork #6b)', () =
         ).toBeInTheDocument()
     })
 
-    it('an UNBONDED prayer row stays a passive dimmed-italic label', () => {
+    it('an UNBONDED prayer row stays a passive muted label', () => {
         render(
             <Harness
                 track={makeTrack({ type: 'prayer', songId: undefined, title: 'Silent Meditation' })}
             />,
         )
         const title = screen.getByText('Silent Meditation')
-        expect(title.className).toContain('italic')
-        // Full muted ink, no alpha: the /80 read 3.99:1 on white (re-audit P2).
+        // Option B: de-emphasis is the muted ink alone (no italic), as in
+        // the mock. Full muted ink, no alpha: the /80 read 3.99:1 on white (re-audit P2).
         expect(title.className).toContain('text-muted-foreground')
         expect(title.className).not.toContain('text-muted-foreground/')
         expect(screen.queryByRole('link')).not.toBeInTheDocument()
-        expect(screen.getByLabelText('No chart bound')).toBeInTheDocument()
     })
 
     it('a reading row with a bonded chart also reads as full + openable', () => {
@@ -280,15 +281,14 @@ describe('MobileRowCard — bonded non-song chart affordance (cowork #6b)', () =
         ).toBeInTheDocument()
     })
 
-    it('a bonded SONG row is unchanged (text-lg font-semibold foreground)', () => {
+    it('a bonded SONG row reads in full ink at the one row-title weight', () => {
         render(
             <Harness
                 track={makeTrack({ type: 'song', songId: 'song-z', title: 'Amazing Grace' })}
             />,
         )
         const title = screen.getByText('Amazing Grace')
-        expect(title.className).toContain('text-lg')
-        expect(title.className).toContain('font-semibold')
+        expect(title.className).toContain('font-medium')
         expect(title.className).toContain('text-foreground')
     })
 

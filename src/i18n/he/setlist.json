@@ -31,8 +31,6 @@
     "searchSetlists": "חיפוש רשימות שירים",
     "search": "חיפוש",
     "searchPlaceholder": "חיפוש רשימות שירים…",
-    "rabbiFilterAll": "הכול",
-    "rabbiFilterChip": "הרב/ה {name}",
     "stageReady": "הבמה מוכנה.",
     "upcomingScheduled_one": "מתוכננת רשימת שירים אחת קרובה.",
     "upcomingScheduled_two": "מתוכננות שתי רשימות שירים קרובות.",
@@ -92,7 +90,9 @@
     "variantsShow_two": "הצג שתי גרסאות נוספות",
     "variantsShow_other": "הצג {count} גרסאות נוספות",
     "variantsHide": "הסתר גרסאות נוספות",
+    "variantsChip_one": "+גרסה אחת",
+    "variantsChip_two": "+2 גרסאות",
+    "variantsChip_other": "+{count} גרסאות",
     "updatedAgo": "עודכן {when}",
-    "chartsBound": "{bound}/{total} תווים",
-    "rabbiFilterGroupLabel": "סינון לפי רב/ה"
+    "chartsBound": "{bound}/{total} תווים"
 }

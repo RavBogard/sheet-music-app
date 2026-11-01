@@ -64,7 +64,7 @@
     },
     "push": {
         "title": "Push Notifications",
-        "description": "Get notified when setlists are published or updated",
+        "description": "Get notified when setlists are updated",
         "enabled": "Push notifications enabled",
         "disabled": "Push notifications disabled",
         "blockedToast": "Notifications blocked by browser. Check your browser settings.",

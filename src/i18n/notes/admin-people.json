@@ -311,7 +311,7 @@
         "where": "Manage > People: amber badge above the list",
         "who": "admins, band leaders",
         "maxLength": 25,
-        "context": "{count} is a number of people waiting for approval. English uses one form for every count; Hebrew may add plural variants."
+        "context": "{count} is a number of people waiting for approval. Plural: count (English one/other; Hebrew one/two/other)."
     },
     "selectedCount": {
         "where": "Manage > People: bulk-action bar",

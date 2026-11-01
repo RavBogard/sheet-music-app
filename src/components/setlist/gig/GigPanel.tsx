@@ -21,8 +21,8 @@ export function useGigTimeParts(gig: Gig | null | undefined): string[] {
 
 /**
  * BET-5: the gig in one compact line under the setlist title, band tenants
- * only: venue and address, then the times. Tabular, quiet ink (DESIGN.md:
- * metadata is small and quiet). In the editor it carries one icon button that
+ * only: venue and address, then the times. Option B: one small single line,
+ * truncated, quiet ink (DESIGN.md: metadata is small and quiet). In the editor it carries one icon button that
  * opens the setlist details sheet, where the gig is edited; Perform shows the
  * line read-only.
  */
@@ -54,17 +54,17 @@ export function GigPanel({
                     onClick={onEdit}
                     data-testid="gig-panel-add"
                     className={cn(
-                        'inline-flex min-h-11 items-center gap-2 rounded-md -ms-2 px-2',
-                        'text-sm font-semibold text-brand hover:bg-accent cursor-pointer',
+                        'touch-hit inline-flex min-h-6 items-center gap-1.5 rounded-sm -ms-1 px-1',
+                        'text-xs font-semibold text-brand hover:bg-accent cursor-pointer',
                         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors',
                     )}
                 >
-                    <MapPin aria-hidden className="h-4 w-4" />
+                    <MapPin aria-hidden className="h-3.5 w-3.5" />
                     {t('gig.panelEmpty')}
                 </button>
             ) : (
                 <>
-                    <p className="tnum min-w-0 flex-1 text-sm font-medium text-muted-foreground">
+                    <p className="tnum min-w-0 flex-1 truncate text-xs font-medium text-muted-foreground">
                         {place.length > 0 ? (
                             <span data-testid="gig-panel-place" className="font-semibold text-foreground">
                                 {place.join(' · ')}
@@ -84,12 +84,12 @@ export function GigPanel({
                             aria-label={t('gig.panelEdit')}
                             data-testid="gig-panel-edit"
                             className={cn(
-                                'inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-md cursor-pointer',
+                                'touch-hit inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-sm cursor-pointer',
                                 'text-muted-foreground hover:text-foreground hover:bg-accent',
                                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors',
                             )}
                         >
-                            <Pencil aria-hidden className="h-4 w-4" />
+                            <Pencil aria-hidden className="h-3.5 w-3.5" />
                         </button>
                     ) : null}
                 </>

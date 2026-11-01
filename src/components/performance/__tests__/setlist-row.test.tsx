@@ -182,15 +182,16 @@ describe("SetlistRow", () => {
         expect(screen.getByTestId("key-badge").textContent).toBe("Bb")
     })
 
-    it("cue-notes use the full-strength caution token (not a faded amber)", () => {
+    it("cue-notes are a quiet second line in the oxblood section ink (Option B), never a faded amber", () => {
         const trackWithNotes: SetlistTrack = {
             ...baseSong,
             notes: "Cue in after Amen",
         }
         render(<SetlistRow track={trackWithNotes} {...defaultProps} />)
         const notes = screen.getByText("Cue in after Amen")
-        expect(notes.className).toContain("text-caution")
+        expect(notes.className).toContain("text-section-oxblood-ink")
         expect(notes.className).not.toContain("text-amber-400/70")
+        expect(notes.className).not.toContain("font-medium")
     })
 
     it("leader header renders as a ≥44px button that fires onLeaderSetPosition", () => {

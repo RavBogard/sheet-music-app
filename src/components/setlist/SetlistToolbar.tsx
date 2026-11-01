@@ -5,77 +5,68 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useState } from "react"
 import { useT } from "@/i18n/client"
-import { SegmentedChips } from "@/components/ui/segmented-chips"
+import { cn } from "@/lib/utils"
 
-interface SetlistToolbarProps {
-    /** @deprecated No longer used — kept for backward compat */
-    activeTab?: 'personal' | 'public'
-    /** @deprecated No longer used — kept for backward compat */
-    onTabChange?: (tab: 'personal' | 'public') => void
-    /** @deprecated No longer used */
-    showPersonalTab?: boolean
-    searchQuery: string
+/**
+ * The search toggle. On /setlists it sits in the head row beside "New
+ * setlist" (Daniel 2026-11-01: no filter row above the list; the rabbi chips
+ * are gone and search matches a rabbi's name instead).
+ */
+export function SetlistSearchButton({
+    open, onOpenChange, onSearchChange,
+}: {
+    open: boolean
+    onOpenChange: (open: boolean) => void
     onSearchChange: (query: string) => void
-    rabbiFilter: string
-    onRabbiFilterChange: (rabbi: string) => void
-    availableRabbis: string[]
+}) {
+    const t = useT()
+    return (
+        <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => { onOpenChange(!open); if (open) onSearchChange("") }}
+            className={cn("touch-hit shrink-0", open ? "text-brand" : "text-muted-foreground")}
+            aria-label={open ? t("setlist.closeSearch") : t("setlist.searchSetlists")}
+            title={open ? t("setlist.closeSearch") : t("setlist.search")}
+        >
+            {open ? <X className="h-4 w-4" /> : <Search className="h-4 w-4" />}
+        </Button>
+    )
 }
 
-export function SetlistToolbar({
+export function SetlistSearchField({
     searchQuery, onSearchChange,
-    rabbiFilter, onRabbiFilterChange, availableRabbis,
-}: SetlistToolbarProps) {
+}: {
+    searchQuery: string
+    onSearchChange: (query: string) => void
+}) {
     const t = useT()
-    const [searchOpen, setSearchOpen] = useState(!!searchQuery)
-
     return (
-        <div className="shrink-0 space-y-3">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-                <h2 className="text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground px-1">
-                    {t("setlist.allSetlists")}
-                </h2>
+        <Input
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+            placeholder={t("setlist.searchPlaceholder")}
+            aria-label={t("setlist.searchSetlists")}
+            className="h-11 text-sm"
+            autoFocus
+        />
+    )
+}
 
-                <div className="flex items-center gap-2">
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => { setSearchOpen(!searchOpen); if (searchOpen) onSearchChange("") }}
-                        className={`h-11 w-11 ${searchOpen ? "text-brand" : "text-muted-foreground"}`}
-                        aria-label={searchOpen ? t("setlist.closeSearch") : t("setlist.searchSetlists")}
-                        title={searchOpen ? t("setlist.closeSearch") : t("setlist.search")}
-                    >
-                        {searchOpen ? <X className="h-4 w-4" /> : <Search className="h-4 w-4" />}
-                    </Button>
+interface SetlistToolbarProps {
+    searchQuery: string
+    onSearchChange: (query: string) => void
+}
 
-                </div>
+/** The toggle and the field together, for callers without a head row. */
+export function SetlistToolbar({ searchQuery, onSearchChange }: SetlistToolbarProps) {
+    const [searchOpen, setSearchOpen] = useState(!!searchQuery)
+    return (
+        <div className="shrink-0 space-y-2">
+            <div className="flex justify-end">
+                <SetlistSearchButton open={searchOpen} onOpenChange={setSearchOpen} onSearchChange={onSearchChange} />
             </div>
-
-            {/* Search bar + rabbi filter chips */}
-            {searchOpen && (
-                <div className="flex items-center gap-2">
-                    <Input
-                        value={searchQuery}
-                        onChange={(e) => onSearchChange(e.target.value)}
-                        placeholder={t("setlist.searchPlaceholder")}
-                        aria-label={t("setlist.searchSetlists")}
-                        className="h-11 text-[15px]"
-                        autoFocus
-                    />
-                </div>
-            )}
-
-            {availableRabbis.length > 0 && (
-                <SegmentedChips
-                    ariaLabel={t("setlist.rabbiFilterGroupLabel")}
-                    value={rabbiFilter}
-                    // Tapping the active rabbi again clears the filter, as before.
-                    onChange={(v) => onRabbiFilterChange(v === rabbiFilter ? "" : v)}
-                    options={[
-                        { value: "", label: t("setlist.rabbiFilterAll") },
-                        ...availableRabbis.map((r) => ({ value: r, label: t("setlist.rabbiFilterChip", { name: r }) })),
-                    ]}
-                />
-            )}
+            {searchOpen && <SetlistSearchField searchQuery={searchQuery} onSearchChange={onSearchChange} />}
         </div>
     )
 }

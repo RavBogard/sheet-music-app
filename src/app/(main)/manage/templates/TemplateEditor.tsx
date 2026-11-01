@@ -33,12 +33,13 @@ function slotTypeKey(type: string | undefined): string {
 }
 
 const TYPE_COLORS: Record<string, string> = {
-    song: "bg-brand/20 text-brand",
-    prayer: "bg-brand/20 text-brand",
-    reading: "bg-success/20 text-success",
-    transition: "bg-caution/20 text-caution",
-    note: "bg-muted-foreground/20 text-muted-foreground",
-    header: "bg-brand/20 text-brand",
+    // Option B: outlined tags in ink; the type keeps a quiet hue in its text.
+    song: "text-foreground",
+    prayer: "text-section-blue-ink",
+    reading: "text-section-green-ink",
+    transition: "text-section-ochre-ink",
+    note: "text-muted-foreground",
+    header: "text-section-oxblood-ink",
 }
 
 interface TemplateEditorProps {
@@ -155,20 +156,20 @@ export function TemplateEditor({ templateKey, defaultSlots, customSlots, importe
     return (
         <div className="space-y-4">
             {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h2 className="text-lg font-semibold">
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+                <div className="min-w-0">
+                    <h2 className="text-sm font-bold leading-tight text-foreground">
                         {serviceTypeLabel(org, templateKey)}
                     </h2>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="tnum flex items-center text-xs text-muted-foreground">
                         {t("manage-templates.slotCount", { count: slots.length })}
                         {isCustomized && (
-                            <span className="ms-2 px-1.5 py-0.5 rounded bg-caution/20 text-caution font-medium">
+                            <span className="ms-2 rounded-[3px] border border-input px-1.5 text-xs font-bold leading-[1.125rem] text-foreground">
                                 {t("manage-templates.customizedBadge")}
                             </span>
                         )}
                         {!isCustomized && (
-                            <span className="ms-2 px-1.5 py-0.5 rounded bg-muted-foreground/20 text-muted-foreground font-medium">
+                            <span className="ms-2 rounded-[3px] border border-rule px-1.5 text-xs font-semibold leading-[1.125rem] text-muted-foreground">
                                 {t("manage-templates.defaultBadge")}
                             </span>
                         )}
@@ -176,12 +177,12 @@ export function TemplateEditor({ templateKey, defaultSlots, customSlots, importe
                 </div>
                 <div className="flex items-center gap-2">
                     {isCustomized && (
-                        <Button variant="outline" size="sm" onClick={handleReset} disabled={saving}>
+                        <Button variant="outline" size="sm" onClick={handleReset} disabled={saving} className="touch-hit h-9">
                             <RotateCcw className="h-3.5 w-3.5 me-1.5" />
                             {t("manage-templates.resetToDefault")}
                         </Button>
                     )}
-                    <Button size="sm" onClick={handleSave} disabled={saving || !dirty}>
+                    <Button size="sm" onClick={handleSave} disabled={saving || !dirty} className="touch-hit h-9 font-bold">
                         {saving ? (
                             <Loader2 className="h-3.5 w-3.5 animate-spin me-1.5" />
                         ) : (
@@ -193,7 +194,7 @@ export function TemplateEditor({ templateKey, defaultSlots, customSlots, importe
             </div>
 
             {/* Slot list */}
-            <div className="space-y-1 border border-border/50 rounded-lg p-2">
+            <div className="space-y-1 border border-rule bg-card rounded-lg p-2">
                 {slots.map((slot, index) => (
                     <SlotRow
                         key={index}
@@ -265,7 +266,7 @@ function SlotRow({
         <div className={cn("rounded-lg border transition-colors", expanded ? "border-brand/30 bg-brand/5" : "border-transparent hover:bg-accent/50")}>
             {/* Collapsed row */}
             <div
-                className="flex items-center gap-2 px-3 py-2 cursor-pointer"
+                className="flex flex-wrap items-center gap-x-2 gap-y-1 px-3 py-1.5 cursor-pointer"
                 onClick={onToggleExpand}
             >
                 {/* Reorder buttons */}
@@ -287,15 +288,15 @@ function SlotRow({
                 </div>
 
                 {/* Index */}
-                <span className="text-xs text-muted-foreground w-6 text-end">{index + 1}</span>
+                <span className="tnum text-xs text-muted-foreground w-6 text-end">{index + 1}</span>
 
                 {/* Type badge */}
-                <span className={cn("text-xs px-1.5 py-0.5 rounded font-medium", typeColor)}>
+                <span className={cn("shrink-0 rounded-[3px] border border-input px-1.5 text-xs font-bold leading-[1.125rem]", typeColor)}>
                     {t(slotTypeKey(slot.type))}
                 </span>
 
                 {/* Label */}
-                <span className="flex-1 text-sm truncate">{slot.label}</span>
+                <span className="min-w-0 flex-[1_1_8rem] text-sm truncate">{slot.label}</span>
 
                 {/* Linked file indicator */}
                 {slot.fileId && (

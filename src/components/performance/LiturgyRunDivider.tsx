@@ -81,14 +81,14 @@ export function LiturgyRunDivider({
                     expanded ? "rotate-0" : "-rotate-90",
                 )}
             />
-            <span className="text-sm font-medium text-muted-foreground truncate min-w-0">
+            <span className="text-xs font-medium text-muted-foreground truncate min-w-0">
                 {expanded ? hideLabel : label}
             </span>
             <span className="flex-1" />
             {pages && (
                 // Same fixed right-hand column the rows use, so a folded run's
                 // pages land under the folios above and below it.
-                <span className="tnum shrink-0 w-20 text-end text-sm font-semibold text-muted-foreground">
+                <span className="tnum shrink-0 w-14 text-end text-xs font-semibold text-muted-foreground">
                     {pages}
                 </span>
             )}

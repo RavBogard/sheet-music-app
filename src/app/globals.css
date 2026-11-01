@@ -18,7 +18,6 @@
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
   --font-display: var(--font-display), sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
@@ -70,6 +69,11 @@
   --color-section-ochre-foreground: var(--section-ochre-foreground);
   --color-section-blue: var(--section-blue);
   --color-section-blue-foreground: var(--section-blue-foreground);
+  --color-section-green-ink: var(--section-green-ink);
+  --color-section-oxblood-ink: var(--section-oxblood-ink);
+  --color-section-ochre-ink: var(--section-ochre-ink);
+  --color-section-blue-ink: var(--section-blue-ink);
+  --color-page-call: var(--page-call);
   --color-warning-line: var(--warning-line);
   --color-caution: var(--caution);
   --radius-sm: calc(var(--radius) - 4px);
@@ -168,6 +172,17 @@
   --section-blue: #23356B;
   --section-blue-foreground: #FFFFFF;
 
+  /* Option B (2026-11-01): a section is a thin coloured underline with a small
+     label, never a filled band. These inks draw the label and its 2px rule;
+     each keeps 4.5:1 on white and on the ground. The fills above stay for the
+     few non-section uses (offline pill, badge). */
+  --section-green-ink: #1F7A6E;
+  --section-oxblood-ink: #8E2E3B;
+  --section-ochre-ink: #8F6210;
+  --section-blue-ink: #23356B;
+  /* Page numbers: normal size, bold, in book-blue. */
+  --page-call: #23356B;
+
   /* Warnings on a chart chip (differs from last, not cached). */
   --warning-line: #8E2E3B;
   /* Amber caution text (some songs have no chart): 5.9:1 on white. */
@@ -245,6 +260,15 @@
   --section-ochre-foreground: #12161F;
   --section-blue: #2B4080;
   --section-blue-foreground: #FFFFFF;
+
+  /* Option B: section labels and their 2px rule draw in these, lifted so the
+     small uppercase label keeps 4.5:1 on the night ground and on cards. */
+  --section-green-ink: #5CC0B0;
+  --section-oxblood-ink: #EC8F9B;
+  --section-ochre-ink: #E2B04A;
+  --section-blue-ink: #9DB3F0;
+  /* Page numbers in a lifted book-blue. */
+  --page-call: #9DB3F0;
 
   --warning-line: #E07A86;
   --caution: #E2B04A;
@@ -337,6 +361,11 @@
      White ink on it is about 7:1. */
   --section-blue: oklch(0.42 0.03 255);
   --section-blue-foreground: #FFFFFF;
+
+  /* Option B: the slate section label's ink and rule, lifted for the teal
+     ground; the page number takes BL's own teal brand. */
+  --section-blue-ink: oklch(0.80 0.03 255);
+  --page-call: oklch(0.80 0.10 208);
 }
 
 /* v11.1-05: broslaz headings echo the vintage slab wordmark. Zilla Slab is
@@ -355,8 +384,13 @@
     @apply border-border outline-ring/50;
   }
 
+  /* The UI face. next/font sets --font-sans on <body> (Assistant, or the
+     tenant's body face), so the family is applied here, on body, where the
+     variable lives. Tabular numerals keep page and count columns aligned. */
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+    font-variant-numeric: tabular-nums;
     caret-color: var(--brand);
   }
 
@@ -688,4 +722,12 @@
   background-size: cover, cover, cover, cover;
   background-position: center;
   background-repeat: no-repeat;
+}
+/* Horizontal chip rows and strips that scroll sideways on a phone: no
+   scrollbar drawn (the row is swiped, and its edge shows there is more). */
+@utility scrollbar-hide {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }

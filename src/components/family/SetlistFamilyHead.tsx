@@ -10,13 +10,14 @@ import { useOrg } from '@/lib/org/org-context'
 /**
  * BET-6 — the family week in a setlist's head: a quiet parasha line
  * ("Parashat Bereshit") and, on a service linked to a Beit Mitzvah ceremony,
- * a read-only card (student names, slot, reading reference names, rehearsal
+ * a read-only line (student names, slot, reading reference names, rehearsal
  * dates). CRC only; renders nothing for any other tenant, for a stale or
  * missing week, or when the card cannot be read.
  *
- * Inserted into the editor head and the Perform setlist head. Text-first, per
- * DESIGN.md: Quiet Ink metadata, one Paper block with a hairline, no pill and
- * no shadow.
+ * Inserted into the editor head and the Perform setlist head. Option B: each
+ * is one compact line of small Quiet Ink metadata, no block, no pill, no
+ * shadow. The full Beit Mitzvah line is in the title attribute when it
+ * truncates.
  */
 
 interface CeremonyCardData {
@@ -34,13 +35,36 @@ export interface SetlistFamilyHeadProps {
     /** The live setlist (raw, serialized or local); only the BET-6 fields are read. */
     setlist: Record<string, unknown> | null | undefined
     className?: string
+    /**
+     * Option B: the parasha can join the head's one meta line ('parasha',
+     * an inline span led by a middle dot) while the Beit Mitzvah line stays
+     * its own line ('ceremony'). 'all' (the default) draws both as lines.
+     */
+    part?: 'all' | 'parasha' | 'ceremony'
 }
 
-export function SetlistFamilyHead({ setlistId, setlist, className }: SetlistFamilyHeadProps) {
+export function SetlistFamilyHead({ setlistId, setlist, className, part = 'all' }: SetlistFamilyHeadProps) {
     const org = useOrg()
     const family = isFamilyOrg(org)
     const week = family ? storedWeek(setlist ?? null, org) : null
     const ceremonyId = family && typeof setlist?.ceremonyId === 'string' ? setlist.ceremonyId : null
+    if (part === 'parasha') {
+        if (!week?.parasha) return null
+        return (
+            <span data-testid="setlist-family-head" className={className}>
+                <span aria-hidden="true"> · </span>
+                <ParashaLine name={week.parasha.name} inline />
+            </span>
+        )
+    }
+    if (part === 'ceremony') {
+        if (!ceremonyId) return null
+        return (
+            <div className={className} data-testid="setlist-family-head">
+                <CeremonyCard setlistId={setlistId} ceremonyId={ceremonyId} />
+            </div>
+        )
+    }
     if (!week?.parasha && !ceremonyId) return null
     return (
         <div className={className} data-testid="setlist-family-head">
@@ -50,10 +74,13 @@ export function SetlistFamilyHead({ setlistId, setlist, className }: SetlistFami
     )
 }
 
-export function ParashaLine({ name }: { name: string }) {
+export function ParashaLine({ name, inline = false }: { name: string; inline?: boolean }) {
     const t = useT()
+    if (inline) {
+        return <span data-testid="family-parasha">{t('familyWeek.parasha', { name })}</span>
+    }
     return (
-        <p data-testid="family-parasha" className="text-sm font-medium text-muted-foreground truncate">
+        <p data-testid="family-parasha" className="text-xs font-medium text-muted-foreground truncate">
             {t('familyWeek.parasha', { name })}
         </p>
     )
@@ -88,27 +115,36 @@ function CeremonyCard({ setlistId, ceremonyId }: { setlistId: string; ceremonyId
     if (card.torahRef) rows.push(['torah', t('familyWeek.torah'), card.torahRef])
     if (card.haftarahRef) rows.push(['haftarah', t('familyWeek.haftarah'), card.haftarahRef])
     if (card.rehearsals.length > 0) rows.push(['rehearsals', t('familyWeek.rehearsals'), card.rehearsals.map(day).join(' · ')])
+    const full = [
+        t('familyWeek.cardTitle'),
+        card.students.join(' · '),
+        ...rows.map(([id, label, value]) => (id === 'service' ? value : `${label} ${value}`)),
+    ].filter(Boolean).join(' · ')
 
+    // Option B: one compact line. The title stays a heading (screen readers
+    // jump to it); each field keeps its label and its test id.
     return (
         <section
             data-testid="family-ceremony-card"
             aria-label={t('familyWeek.cardLabel')}
-            className="mt-2 rounded-[10px] border border-rule bg-card px-4 py-3 text-sm"
+            title={full}
+            className="tnum flex min-w-0 items-baseline gap-x-1.5 text-xs font-medium text-muted-foreground"
         >
-            <h2 className="text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground">{t('familyWeek.cardTitle')}</h2>
-            {card.students.length > 0 && (
-                <p data-testid="family-ceremony-students" className="mt-1 text-base font-bold text-foreground">
-                    {card.students.join(' · ')}
-                </p>
-            )}
-            <dl className="mt-1 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5">
-                {rows.map(([id, label, value]) => (
-                    <div key={id} className="contents" data-testid={`family-ceremony-${id}`}>
-                        <dt className="font-medium text-muted-foreground">{label}</dt>
-                        <dd className="tnum font-medium text-foreground">{value}</dd>
-                    </div>
+            <h2 className="shrink-0 text-xs font-bold text-foreground">{t('familyWeek.cardTitle')}</h2>
+            <p className="min-w-0 truncate">
+                {card.students.length > 0 && (
+                    <span data-testid="family-ceremony-students" className="font-semibold text-foreground">
+                        {card.students.join(' · ')}
+                    </span>
+                )}
+                {rows.map(([id, label, value], i) => (
+                    <span key={id} data-testid={`family-ceremony-${id}`}>
+                        {card.students.length > 0 || i > 0 ? <span aria-hidden="true"> · </span> : null}
+                        {id !== 'service' && <span>{label} </span>}
+                        <span className="text-foreground">{value}</span>
+                    </span>
                 ))}
-            </dl>
+            </p>
         </section>
     )
 }

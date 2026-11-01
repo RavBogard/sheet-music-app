@@ -112,12 +112,17 @@ describe("setlist cards English output is unchanged", () => {
     it("renders today's English", async () => {
         render(upcoming())
         expect(screen.getByText("3 songs")).toBeDefined()
-        expect(screen.getByText("Oct 3, 2026")).toBeDefined()
+        // Option B redo: the date is in the date column only, never repeated
+        // in the meta line.
+        expect(screen.queryByText("Oct 3, 2026")).toBeNull()
         expect(screen.getByLabelText("Open setlist — Test Setlist A")).toBeDefined()
-        expect(screen.getByLabelText("Download setlist for offline — Test Setlist A").getAttribute("title")).toBe("Download for Offline")
+        // Every row: a pencil and a kebab, at every width.
+        expect(screen.getByLabelText("Edit setlist — Test Setlist A")).toBeDefined()
         // Web refresh: the list says how many songs have a chart, as the editor does.
         expect(screen.getByText("1/3 charts")).toBeDefined()
         await openMenu()
+        // Download lives in the kebab.
+        expect(screen.getByText("Download for Offline")).toBeDefined()
         expect(screen.getByText("Save as Default for Shabbat Morning")).toBeDefined()
         expect(screen.getByText("Clone for Next Week")).toBeDefined()
         cleanup()

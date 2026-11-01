@@ -4,6 +4,7 @@ import { useState, useCallback } from "react"
 import { Loader2, Import } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import { GROUP_HEADING_CLASS, LIST_GROUP_CLASS } from "@/components/layout/Page"
 import { collection, query, where, orderBy, limit, getDocs } from "firebase/firestore"
 import { getDb } from "@/lib/firebase"
 import { getDefaultTemplate, TEMPLATE_LABELS, convertSetlistToTemplate, type TemplateSlot } from "@/lib/liturgical-templates"
@@ -112,18 +113,12 @@ export function TemplatesSection() {
     const holidayKeys = templateKeys.filter(k => TEMPLATE_LABELS[k]?.category === "holiday")
 
     return (
-        <div className="space-y-4">
-            {/* Import button */}
-            <div className="flex justify-end">
-                <Button variant="outline" size="sm" onClick={openImportPicker} disabled={!selectedKey || loadingSetlists} className="min-h-11">
-                    {loadingSetlists ? <Loader2 className="h-4 w-4 me-1.5 animate-spin" /> : <Import className="h-4 w-4 me-1.5" />}
-                    {loadingSetlists ? t("admin-templates.loading") : t("admin-templates.importFromSetlist")}
-                </Button>
-            </div>
-
-            <div className="flex gap-6">
+        <div>
+            {/* Option B: the template list and the editor side by side from
+                md; stacked on a phone (list first). */}
+            <div className="flex flex-col md:flex-row gap-5 md:gap-6">
                 {/* Sidebar: template list */}
-                <div className="w-64 shrink-0 space-y-4">
+                <div className="md:w-64 shrink-0 space-y-4">
                     <TemplateGroup
                         title={t("admin-templates.regularServices")}
                         keys={regularKeys}
@@ -141,7 +136,15 @@ export function TemplatesSection() {
                 </div>
 
                 {/* Main: editor */}
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 space-y-3">
+                    {selectedKey ? (
+                        <div className="flex justify-end">
+                            <Button variant="outline" size="sm" onClick={openImportPicker} disabled={loadingSetlists} className="touch-hit h-9">
+                                {loadingSetlists ? <Loader2 className="h-4 w-4 animate-spin" /> : <Import className="h-4 w-4" />}
+                                {loadingSetlists ? t("admin-templates.loading") : t("admin-templates.importFromSetlist")}
+                            </Button>
+                        </div>
+                    ) : null}
                     {selectedKey ? (
                         <TemplateEditor
                             templateKey={selectedKey}
@@ -151,7 +154,7 @@ export function TemplatesSection() {
                             onImportConsumed={handleImportConsumed}
                         />
                     ) : (
-                        <div className="flex items-center justify-center h-64 text-muted-foreground">
+                        <div className="flex items-center justify-center h-40 md:h-64 rounded-lg border border-dashed border-rule text-sm text-muted-foreground">
                             {t("admin-templates.selectToEdit")}
                         </div>
                     )}
@@ -214,9 +217,9 @@ function TemplateGroup({
     const t = useT()
     const org = useOrg()
     return (
-        <div>
-            <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">{title}</h3>
-            <div className="space-y-1">
+        <section>
+            <h2 className={cn(GROUP_HEADING_CLASS, "mb-2")}>{title}</h2>
+            <div className={LIST_GROUP_CLASS}>
                 {keys.map(key => {
                     const meta = TEMPLATE_LABELS[key]
                     const isSelected = selectedKey === key
@@ -225,26 +228,27 @@ function TemplateGroup({
                         <button
                             key={key}
                             onClick={() => onSelect(key)}
+                            aria-current={isSelected ? "true" : undefined}
                             className={cn(
-                                "w-full text-start px-3 py-2 rounded-lg text-sm transition-colors min-h-11",
-                                isSelected
-                                    ? "bg-brand/10 text-foreground border border-brand/30"
-                                    : "hover:bg-accent border border-transparent"
+                                "w-full text-start px-3 py-1.5 min-h-12 transition-colors cursor-pointer",
+                                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                                isSelected ? "bg-accent" : "bg-card hover:bg-accent/50",
                             )}
                         >
-                            <div className="flex items-center justify-between">
-                                <span>{serviceTypeLabel(org, key)}</span>
+                            <div className="flex items-center justify-between gap-2">
+                                <span className={cn("text-[0.95rem] leading-snug text-foreground", isSelected ? "font-semibold" : "font-medium")}>{serviceTypeLabel(org, key)}</span>
                                 {isCustomized && (
-                                    <span className="text-xs px-1.5 py-0.5 rounded bg-caution/20 text-caution font-medium">
+                                    // An outlined tag in ink, like the key tag (full contrast).
+                                    <span className="shrink-0 rounded-[3px] border border-input px-1.5 text-xs font-bold leading-[1.125rem] text-foreground">
                                         {t("admin-templates.customBadge")}
                                     </span>
                                 )}
                             </div>
-                            <div className="text-xs text-muted-foreground">{t("admin-templates.slotCount", { count: meta?.slotCount ?? 0 })}</div>
+                            <div className="tnum text-xs text-muted-foreground">{t("admin-templates.slotCount", { count: meta?.slotCount ?? 0 })}</div>
                         </button>
                     )
                 })}
             </div>
-        </div>
+        </section>
     )
 }

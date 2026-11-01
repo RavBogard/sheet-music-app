@@ -114,7 +114,7 @@ describe("SetlistRow — liturgy outline rendering", () => {
         expect(screen.queryByText("Should not appear on a song row")).toBeNull()
     })
 
-    // The folioBadge comment calls the fixed `w-20 text-end` column out as the
+    // The folioBadge comment calls the fixed `w-14 text-end` column out as the
     // reason folios line up down the list. A bonded prayer/reading row rendered
     // {folioBadge} BEFORE its trailing ChevronRight, which pushed that row's
     // folio ~30px (h-5 icon + gap-2.5) left of every other row type's — the one
@@ -130,7 +130,7 @@ describe("SetlistRow — liturgy outline rendering", () => {
             }
         }
 
-        it("bonded prayer/reading row draws the chevron BEFORE the folio", () => {
+        it("bonded prayer/reading row draws the chevron with its title, before the key and page columns", () => {
             const track: SetlistTrack = {
                 id: "b1",
                 title: "Adonai S'fatai",
@@ -140,12 +140,14 @@ describe("SetlistRow — liturgy outline rendering", () => {
             }
             render(<SetlistRow track={track} {...defaultProps} />)
 
-            const { next, prev } = lastOnItsLine()
+            const { badge, next, prev } = lastOnItsLine()
             // Nothing after the badge → it owns the right edge of the line.
             expect(next).toBeNull()
-            // …and the affordance chevron is what precedes it.
+            // The key column precedes it (always drawn, empty here), and the
+            // chevron sits inside the title cell, not between the columns.
             expect(prev).not.toBeNull()
-            expect(prev!.tagName.toLowerCase()).toBe("svg")
+            expect(prev!.querySelector("svg")).toBeNull()
+            expect(badge.parentElement!.querySelector("svg")).not.toBeNull()
         })
 
         it.each([
@@ -186,7 +188,7 @@ describe("SetlistRow — liturgy outline rendering", () => {
             expect(next).toBeNull()
             // Same fixed-width right-aligned column on every row type — this is
             // what makes the right edge identical without measuring layout.
-            expect(badge.className).toContain("w-20")
+            expect(badge.className).toContain("w-11")
             expect(badge.className).toContain("text-end")
         })
 

@@ -6,6 +6,7 @@ import { PlayCircle, Clock, Pencil } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useT } from "@/i18n/client"
 import { useFormat } from "@/i18n/format-client"
+import { cn } from "@/lib/utils"
 
 /**
  * NextServiceCard -- single focused card for the home screen.
@@ -57,70 +58,74 @@ export function NextServiceCard({
     const musicians = setlist.musicians || []
     const songCount = setlist.songCount ?? 0
 
-    // Web refresh (blend E): one white card on the hairline. The date and
-    // song count make the status line, the name is large, and the one blue
-    // action is Perform (a quiet outline Practice for a past setlist).
+    // Option B: one compact white card on the hairline. The name at
+    // 1rem/800 with ONE meta line under it (date · songs · who's playing), and
+    // the one blue action, Perform, on the right (a quiet outline Practice for
+    // a past setlist).
     const meta = (
-        <p className="tnum flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
-            <Clock aria-hidden="true" className="h-3.5 w-3.5" />
-            <span className={isPastSetlist ? undefined : "font-bold text-brand"}>{dateLabel}</span>
+        <p className="tnum flex min-w-0 items-center gap-1.5 text-xs font-medium text-muted-foreground">
+            <Clock aria-hidden="true" className="h-3 w-3 shrink-0" />
+            <span className={cn("shrink-0", !isPastSetlist && "font-bold text-brand")}>{dateLabel}</span>
             <span aria-hidden="true">·</span>
-            <span>{t("home.songCount", { count: songCount })}</span>
+            <span className="shrink-0">{t("home.songCount", { count: songCount })}</span>
+            {musicians.length > 0 ? (
+                <span className="min-w-0 truncate">
+                    {musicians.map((m, i) => (
+                        <span key={m.uid || `musician-${i}`}>
+                            <span aria-hidden="true">{i === 0 ? " · " : ", "}</span>
+                            <span>{m.name}</span>
+                        </span>
+                    ))}
+                </span>
+            ) : null}
         </p>
     )
-    const musicianChips = musicians.length > 0 ? (
-        <div className="flex flex-wrap gap-1.5 mt-3">
-            {musicians.map((m, i) => (
-                <span
-                    key={m.uid || `musician-${i}`}
-                    className="inline-flex items-center px-2 py-0.5 rounded-md text-sm font-medium bg-secondary text-secondary-foreground"
-                >
-                    {m.name}
-                </span>
-            ))}
-        </div>
-    ) : null
 
     return (
         <div
             onClick={onPerform}
-            className="rounded-lg border border-rule bg-card p-5 shadow-[0_2px_12px_rgb(24_32_46/0.06)] cursor-pointer hover:border-brand/40 transition-colors duration-200 group"
+            className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-rule bg-card ps-3 pe-2 sm:ps-4 py-2 cursor-pointer hover:border-brand/40 transition-colors duration-200 group"
         >
-            {meta}
-            <h2 className="mt-1 text-[1.35rem] font-extrabold leading-tight tracking-[-0.015em] text-foreground line-clamp-2">
-                {setlist.name}
-            </h2>
-            {musicianChips}
+            <div className="min-w-0 flex-[1_1_14rem]">
+                <h2 className="text-[0.95rem] font-bold leading-snug text-foreground line-clamp-2">
+                    {setlist.name}
+                </h2>
+                {meta}
+            </div>
 
             {/* Primary CTA. Band leaders get an adjacent Edit shortcut;
                 musicians/members see Perform-only. */}
-            <div className="flex items-center gap-2 mt-4">
+            <div className="ms-auto flex shrink-0 items-center gap-1">
+                {isBandLeader && onEdit && (
+                    // The one row-edit control: a ghost pencil, as on /setlists.
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => { e.stopPropagation(); onEdit() }}
+                        aria-label={t("home.editSetlistAria")}
+                        title={t("home.edit")}
+                        className="touch-hit h-9 w-9 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent"
+                    >
+                        <Pencil className="h-4 w-4" />
+                    </Button>
+                )}
                 {isPastSetlist ? (
                     <Button
                         variant="outline"
-                        className="flex-1 h-12 rounded-md font-bold border-border bg-card text-foreground group-hover:bg-accent transition-colors"
+                        size="sm"
+                        className="touch-hit h-9 rounded-md px-3.5 text-sm font-bold border-border bg-card text-foreground group-hover:bg-accent transition-colors"
                     >
-                        <PlayCircle className="h-4 w-4" />
+                        <PlayCircle className="h-3.5 w-3.5" />
                         {t("home.practice")}
                     </Button>
                 ) : (
                     <Button
                         variant="ghost"
-                        className="flex-1 h-12 rounded-md text-[15px] font-bold bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground group-hover:bg-primary/90 transition-colors"
+                        size="sm"
+                        className="touch-hit h-9 rounded-md px-3.5 text-sm font-bold bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground group-hover:bg-primary/90 transition-colors"
                     >
-                        <PlayCircle className="h-4 w-4" />
+                        <PlayCircle className="h-3.5 w-3.5" />
                         {t("home.perform")}
-                    </Button>
-                )}
-                {isBandLeader && onEdit && (
-                    <Button
-                        variant="ghost"
-                        onClick={(e) => { e.stopPropagation(); onEdit() }}
-                        aria-label={t("home.editSetlistAria")}
-                        className="h-12 px-4 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent"
-                    >
-                        <Pencil className="h-4 w-4" />
-                        <span className="text-sm font-semibold">{t("home.edit")}</span>
                     </Button>
                 )}
             </div>

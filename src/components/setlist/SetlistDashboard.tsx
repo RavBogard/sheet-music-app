@@ -1,5 +1,5 @@
 "use client"
-import { useState, useCallback, useMemo } from "react"
+import { useState, useCallback, useMemo, type ReactNode } from "react"
 import buildInfo from "@/build-info.json"
 import { ChevronLeft, Plus, LogIn, Calendar, Sparkles, FolderUp, Wand2, FileText, Menu, Bell, Music, Settings, Cloud, HelpCircle, Activity, Library, Mic } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -12,7 +12,7 @@ import { TEMPLATE_LABELS } from "@/lib/liturgical-templates"
 import { UpcomingSetlistCard, SetlistCard, SetlistInfoLine, PlaceholderCard } from "./SetlistCards"
 import { DeleteSetlistDialog, DuplicateSetlistDialog, TransferSetlistDialog } from "./SetlistDialogs"
 import { ImporterModal } from "./importer/ImporterModal"
-import { SetlistToolbar } from "./SetlistToolbar"
+import { SetlistSearchButton, SetlistSearchField } from "./SetlistToolbar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
 import { useCongregation } from "@/lib/congregation-store"
 import { useI18n } from "@/i18n/client"
@@ -41,8 +41,8 @@ export function SetlistDashboard({ serverShortName, ...props }: UseSetlistDashbo
 
     const {
         router, user, signIn, isMember, isBandLeader, isAdmin, onBack, onCreateNew,
-        loading, error, activeTab, setActiveTab,
-        searchQuery, setSearchQuery, rabbiFilter, setRabbiFilter, navigatingTo,
+        loading, error,
+        searchQuery, setSearchQuery, navigatingTo,
         deleteConfirmOpen, setDeleteConfirmOpen, setlistToDelete,
         duplicateConfirmOpen, setDuplicateConfirmOpen, setlistToDuplicate,
         showTransferDialog, setShowTransferDialog,
@@ -53,10 +53,11 @@ export function SetlistDashboard({ serverShortName, ...props }: UseSetlistDashbo
         handleDuplicateClick, confirmDuplicate, handleCloneNextWeekClick,
         handleSaveAsTemplateClick, handleSaveAsDefaultClick, handleTransfer, transferring,
         handleCreateFromTemplate, handleDownload,
-        availableRabbis, displayedSetlists,
+        displayedSetlists,
         upcoming, pastOrNoDate, placeholders, hasUpcoming, isDownloading,
         nextCursor, loadMore, loadingMore,
     } = useSetlistDashboard(props)
+    const [searchOpen, setSearchOpen] = useState(() => !!searchQuery)
 
     // WEB-05: per-instrument and (Copy) setlists fold under their parent service.
     const pastGroups = useMemo(
@@ -76,8 +77,11 @@ export function SetlistDashboard({ serverShortName, ...props }: UseSetlistDashbo
         ).text
     }, [user?.displayName, serverShortName, congregation.shortName, t, lang])
 
-    const renderPastCard = (setlist: (typeof pastOrNoDate)[number]) => (
+    const renderPastCard = (setlist: (typeof pastOrNoDate)[number], extra?: ReactNode) => (
         <SetlistCard
+                                                            extra={extra}
+                                                            onDownload={handleDownload}
+                                                            isDownloading={isDownloading}
                                                             key={setlist.id}
                                                             setlist={setlist}
                                                             onEdit={(e) => { e.stopPropagation(); handleSelect(setlist) }}
@@ -100,7 +104,7 @@ export function SetlistDashboard({ serverShortName, ...props }: UseSetlistDashbo
             {/* Consistency pass: the one page container and head row. */}
             <div>
                 <div>
-                    <PageContainer className="space-y-6">
+                    <PageContainer className="space-y-3">
                         {/* Head row: the page title matches its tab; the greeting
                             and the upcoming count are the subtitle; one blue action. */}
                         <PageHeader
@@ -112,36 +116,35 @@ export function SetlistDashboard({ serverShortName, ...props }: UseSetlistDashbo
                                         {t("setlist.upcomingScheduled", { count: upcoming.length })}
                                     </>
                                 ) : undefined}
-                                actions={user && isMember ? (
+                                actions={<>
+                                    <SetlistSearchButton open={searchOpen} onOpenChange={setSearchOpen} onSearchChange={setSearchQuery} />
+                                    {user && isMember ? (
                                     <Button
                                         type="button"
                                         onClick={() => setShowWizard(true)}
                                         data-testid="setlists-new-setlist"
-                                        className="h-11 px-5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 font-bold text-[15px]"
+                                        size="sm"
+                                        className="h-9 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 font-bold text-sm"
                                     >
-                                        <Plus aria-hidden className="h-5 w-5 me-1.5" />
+                                        <Plus aria-hidden className="h-4 w-4" />
                                         {t("org.createNewSetlistHeading")}
                                     </Button>
-                                ) : undefined}
+                                    ) : null}
+                                </>}
                             />
 
-                        {/* Toolbar */}
-                        <SetlistToolbar
-                            activeTab={activeTab} onTabChange={setActiveTab}
-                            showPersonalTab={!!user}
-                            searchQuery={searchQuery} onSearchChange={setSearchQuery}
-                            rabbiFilter={rabbiFilter} onRabbiFilterChange={setRabbiFilter}
-                            availableRabbis={availableRabbis}
-                        />
+                        {/* Search opens under the head row; there is no filter row
+                            (Daniel 2026-11-01: the rabbi chips are cut). */}
+                        {searchOpen && <SetlistSearchField searchQuery={searchQuery} onSearchChange={setSearchQuery} />}
 
-                            <div className="space-y-8">
+                            <div className="space-y-5">
                                 {!loading && error && (
                                     <ErrorState title={t("setlist.loadErrorTitle")} description={error} retryLabel={t("setlist.tryAgain")} onRetry={() => window.location.reload()} />
                                 )}
 
                                 {loading && (
                                     <div className="flex flex-col divide-y divide-rule border border-rule rounded-lg overflow-hidden bg-card">
-                                        {[1, 2, 3].map(i => <Skeleton key={i} className="h-[72px] rounded-none bg-muted/60" />)}
+                                        {[1, 2, 3].map(i => <Skeleton key={i} className="h-11 rounded-none bg-muted/60" />)}
                                     </div>
                                 )}
 
@@ -186,7 +189,7 @@ export function SetlistDashboard({ serverShortName, ...props }: UseSetlistDashbo
                                                 <VariantGroupList
                                                     groups={pastGroups}
                                                     renderRow={renderPastCard}
-                                                    renderInfo={(v) => <SetlistInfoLine setlist={v} />}
+                                                    renderInfo={(v, extra) => <SetlistInfoLine setlist={v} extra={extra} />}
                                                 />
                                             )}
                                             {nextCursor && (

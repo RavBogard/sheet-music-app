@@ -102,7 +102,7 @@ export function KeepAwakeBanner() {
                 role="status"
                 aria-live="polite"
                 className={cn(
-                    "fixed inset-x-0 bottom-0 z-40 pointer-events-none",
+                    "fixed inset-x-0 bottom-[var(--tabbar-h)] z-40 pointer-events-none",
                     "flex justify-center px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]",
                 )}
             >
@@ -141,7 +141,7 @@ export function KeepAwakeBanner() {
             role="status"
             aria-live="polite"
             className={cn(
-                "fixed inset-x-0 bottom-0 z-40 pointer-events-none",
+                "fixed inset-x-0 bottom-[var(--tabbar-h)] z-40 pointer-events-none",
                 "flex justify-center px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]",
             )}
         >
