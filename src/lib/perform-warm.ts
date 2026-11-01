@@ -128,10 +128,21 @@ async function waitWhilePaused(opts: WarmOptions, pollMs: number): Promise<void>
     while (!opts.signal.aborted && opts.isPaused()) await sleep(pollMs, opts.signal)
 }
 
-/** True when the page already has this script (a chart opened it). */
+/**
+ * True when the page has already requested this file (a chart opened, or
+ * something imported it). Webpack removes its <script> tags once they load,
+ * so the resource timeline is checked as well as the DOM.
+ */
 function alreadyLoaded(url: string): boolean {
     try {
         const path = url.split("?")[0]
+        if (
+            typeof performance !== "undefined" &&
+            typeof performance.getEntriesByType === "function" &&
+            performance.getEntriesByType("resource").some((e) => e.name.includes(path))
+        ) {
+            return true
+        }
         return Array.from(document.querySelectorAll<HTMLScriptElement | HTMLLinkElement>("script[src], link[href]")).some(
             (el) => ("src" in el ? el.src : el.href).includes(path),
         )

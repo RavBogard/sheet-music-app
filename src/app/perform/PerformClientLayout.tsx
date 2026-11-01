@@ -74,7 +74,7 @@ function PerformWarmUp() {
                     await new Promise((r) => setTimeout(r, 1000))
                 }
                 if (ac.signal.aborted) return
-                await primeOfflineWorker(process.env.NEXT_PUBLIC_PDFJS_VERSION || undefined)
+                await primeOfflineWorker()
                 await warmViewerCode({ signal: ac.signal, isPaused: chartIsOpen })
             })()
         }

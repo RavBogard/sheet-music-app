@@ -64,10 +64,13 @@ export function desiredWorkerSrc(version: string): string {
 export async function primeOfflineWorker(knownVersion?: string): Promise<void> {
     try {
         if (typeof window === "undefined" || isOffline()) return
-        // Perf audit P1-2: the Perform warm-up passes the build-time version so
-        // it doesn't import react-pdf (which evaluates all of pdf.js) just to
-        // read it. Other callers still read it from the library.
-        const version = knownVersion || (await import("react-pdf")).pdfjs.version
+        // Perf audit P1-2: use the build-time version (next.config `env`) so
+        // priming doesn't import react-pdf, which evaluates all of pdf.js, just
+        // to read it. Falls back to the library when the build didn't set it.
+        const version =
+            knownVersion ||
+            process.env.NEXT_PUBLIC_PDFJS_VERSION ||
+            (await import("react-pdf")).pdfjs.version
         const key = workerKey(version)
         if (await hasFile(key)) return
         const res = await fetch(staticWorkerSrc(version), { cache: "force-cache" })
