@@ -179,13 +179,13 @@ export function SetlistHistoryPanel({ setlistId, onRestore, onClose }: Props) {
                                     {diff && (diff.added.length > 0 || diff.removed.length > 0 || diff.reordered) && (
                                         <div className="mt-1.5 space-y-0.5 text-xs">
                                             {diff.added.map((s, i) => (
-                                                <div key={`a-${i}`} className="flex items-center gap-1 text-green-500">
+                                                <div key={`a-${i}`} className="flex items-center gap-1 text-success">
                                                     <Plus className="w-3 h-3" />
                                                     {s.title}
                                                 </div>
                                             ))}
                                             {diff.removed.map((s, i) => (
-                                                <div key={`r-${i}`} className="flex items-center gap-1 text-red-500">
+                                                <div key={`r-${i}`} className="flex items-center gap-1 text-destructive">
                                                     <Minus className="w-3 h-3" />
                                                     {s.title}
                                                 </div>

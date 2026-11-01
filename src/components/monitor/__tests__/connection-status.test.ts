@@ -80,7 +80,7 @@ describe("getConnectionDisplayState", () => {
     it("returns connected/green when status=connected and bridge is fully online", () => {
         const result = getConnectionDisplayState("connected", makeBridge())
         expect(result.label).toBe("Connected")
-        expect(result.color).toContain("green")
+        expect(result.color).toBe("bg-success")
     })
 
     it("returns bridge offline/red when bridge heartbeat is stale", () => {
@@ -88,31 +88,31 @@ describe("getConnectionDisplayState", () => {
         const bridge = makeBridge({ lastSeen: { toDate: () => staleDate } })
         const result = getConnectionDisplayState("connected", bridge)
         expect(result.label).toBe("Bridge offline")
-        expect(result.color).toContain("red")
+        expect(result.color).toBe("bg-destructive")
     })
 
     it("returns mixer disconnected/yellow when bridge online but x32 not connected", () => {
         const bridge = makeBridge({ x32Connected: false })
         const result = getConnectionDisplayState("connected", bridge)
         expect(result.label).toBe("Mixer disconnected")
-        expect(result.color).toContain("yellow")
+        expect(result.color).toBe("bg-caution")
     })
 
     it("returns connecting/yellow when status=connecting", () => {
         const result = getConnectionDisplayState("connecting")
         expect(result.label).toBe("Connecting...")
-        expect(result.color).toContain("yellow")
+        expect(result.color).toBe("bg-caution")
     })
 
     it("returns offline/gray when status=disconnected", () => {
         const result = getConnectionDisplayState("disconnected")
         expect(result.label).toBe("Offline")
-        expect(result.color).toContain("gray") // muted/gray
+        expect(result.color).toBe("bg-muted-foreground")
     })
 
     it("returns offline/gray when status=error", () => {
         const result = getConnectionDisplayState("error")
         expect(result.label).toBe("Offline")
-        expect(result.color).toContain("gray")
+        expect(result.color).toBe("bg-muted-foreground")
     })
 })

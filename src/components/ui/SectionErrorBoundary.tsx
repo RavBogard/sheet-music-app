@@ -42,20 +42,20 @@ export class SectionErrorBoundary extends Component<
 function SectionErrorFallback({ label, error, onRetry }: { label: string; error?: Error; onRetry: () => void }) {
     const t = useT()
     return (
-        <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-6 text-center space-y-3">
-            <ShieldAlert className="w-8 h-8 text-red-500 mx-auto" />
-            <h3 className="font-semibold text-red-600 dark:text-red-400">
+        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-6 text-center space-y-3">
+            <ShieldAlert className="w-8 h-8 text-destructive mx-auto" />
+            <h3 className="font-semibold text-destructive">
                 {t("ui.sectionFailed", { label })}
             </h3>
             {error && (
-                <pre className="text-xs text-red-400/80 bg-red-500/5 rounded-lg p-3 overflow-auto max-h-32 text-start">
+                <pre className="text-xs text-destructive bg-destructive/5 rounded-lg p-3 overflow-auto max-h-32 text-start">
                     {error.message}
                 </pre>
             )}
             <Button
                 variant="link"
                 onClick={onRetry}
-                className="text-sm font-medium text-red-500 hover:text-red-400"
+                className="text-sm font-medium text-destructive hover:text-destructive/80"
             >
                 {t("ui.retry")}
             </Button>

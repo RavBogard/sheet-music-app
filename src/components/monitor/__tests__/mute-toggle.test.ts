@@ -44,7 +44,7 @@ describe("VerticalFaderStrip mute toggle", () => {
         }))
         const muteBtn = container.querySelector("[data-testid='mute-toggle']")
         expect(muteBtn).toBeTruthy()
-        expect(muteBtn!.className).toContain("red")
+        expect(muteBtn!.getAttribute("aria-label")).toBe("Unmute Bass")
     })
 
     it("shows unmuted visual state when on=true", () => {
@@ -57,6 +57,6 @@ describe("VerticalFaderStrip mute toggle", () => {
         }))
         const muteBtn = container.querySelector("[data-testid='mute-toggle']")
         expect(muteBtn).toBeTruthy()
-        expect(muteBtn!.className).toContain("green")
+        expect(muteBtn!.getAttribute("aria-label")).toBe("Mute Guitar")
     })
 })

@@ -23,7 +23,8 @@ export interface NewTenantValues {
     copyLiturgyFrom: string
 }
 
-const DEFAULT_COLOUR = "#4f46e5"
+// A neutral ink default (not a brand hue); the tenant sets its own colour later.
+const DEFAULT_COLOUR = "#2B3445"
 
 function initials(s: string): string {
     const w = s.trim().split(/\s+/).filter(Boolean)

@@ -64,7 +64,8 @@ export const CODE_BRANDING: Record<OrgId, OrgBranding> = {
         metaTitleTemplate: "%s | CRC Music",
         metaDescription: "Digital Sheet Music Library for Central Reform Congregation",
         ogTitle: "Central Reform Congregation — Music",
-        themeColor: "#0e0d18",
+        // The web-refresh book-cloth top bar (DESIGN.md), not the retired indigo.
+        themeColor: "#23356B",
         logoUrl: "/logo.jpg",
         wordmarkUrl: "",
         manifestPath: "/manifest.json",
@@ -84,7 +85,7 @@ export const CODE_BRANDING: Record<OrgId, OrgBranding> = {
         ogTitle: "Brothers Lazaroff",
         // v11.1-05: dark teal-black ≈ the band's own background asset (#002020,
         // sampled from brotherslazaroff.com) + the new teal canvas
-        // oklch(0.16 0.028 198); distinct from CRC's indigo #0e0d18.
+        // oklch(0.16 0.028 198); distinct from CRC's book-cloth blue.
         themeColor: "#04201f",
         // Empty → OrgLogo renders the "BL" monogram (used anywhere the wordmark
         // path isn't wired). The authed nav + login now prefer `wordmarkUrl`.
@@ -129,7 +130,7 @@ export function getOrgBranding(orgId: OrgId): OrgBranding {
  * SEPARATE from `OrgBranding` (the browser-chrome seam) on purpose: the
  * email's CRC values must be BYTE-IDENTICAL to the strings hardcoded in
  * `email.ts` today, and those differ from the browser theme (e.g. the email
- * header is `#1a1a2e`, not `OrgBranding.themeColor` `#0e0d18`). A new tenant is
+ * header is `#1a1a2e`, not `OrgBranding.themeColor` `#23356B`). A new tenant is
  * one entry here. Emails need ABSOLUTE image URLs — callers compose
  * `getOrgBranding(org).baseUrl + headerImagePath` for the header image.
  */

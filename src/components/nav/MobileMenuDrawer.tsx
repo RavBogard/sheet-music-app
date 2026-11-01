@@ -168,7 +168,7 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                             <Button
                                 variant="ghost"
                                 onClick={() => { signOut(); onOpenChange(false) }}
-                                className="w-full justify-start gap-3 px-4 py-3 h-auto rounded-lg text-red-500 hover:bg-red-500/10 hover:text-red-500"
+                                className="w-full justify-start gap-3 px-4 py-3 h-auto rounded-lg text-destructive hover:bg-destructive/10 hover:text-destructive"
                             >
                                 <LogOut className="w-5 h-5 shrink-0" />
                                 {t("nav.logOutDrawer")}

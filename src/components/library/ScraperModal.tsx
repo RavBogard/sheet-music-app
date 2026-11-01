@@ -240,8 +240,8 @@ export function ScraperModal({ onUploadComplete, setlists = [], onAddToSetlist }
 
                 {step === 'success' ? (
                     <div className="flex flex-col items-center gap-3 py-8">
-                        <CheckCircle className="h-12 w-12 text-green-400" />
-                        <p className="text-sm text-zinc-300">{t("libraryScraper.importedSuccess")}</p>
+                        <CheckCircle className="h-12 w-12 text-success" />
+                        <p className="text-sm text-foreground">{t("libraryScraper.importedSuccess")}</p>
                     </div>
                 ) : step === 'input' ? (
                     <div className="space-y-4 py-4">
@@ -278,11 +278,11 @@ export function ScraperModal({ onUploadComplete, setlists = [], onAddToSetlist }
                                     ) : (
                                         chatMessages.map((msg, i) => (
                                             <div key={i} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                                                <div className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${msg.role === 'user' ? 'bg-brand text-white' : 'bg-zinc-800 text-zinc-300'}`}>
+                                                <div className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${msg.role === 'user' ? 'bg-brand text-brand-foreground' : 'bg-muted text-foreground'}`}>
                                                     {msg.role === 'user' ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
                                                 </div>
                                                 <div className={`flex flex-col gap-2 max-w-[85%] ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
-                                                    <div className={`p-3 rounded-lg text-sm ${msg.role === 'user' ? 'bg-brand text-white rounded-se-sm' : 'bg-zinc-800/80 text-zinc-100 rounded-ss-sm'}`}>
+                                                    <div className={`p-3 rounded-lg text-sm ${msg.role === 'user' ? 'bg-brand text-brand-foreground rounded-se-sm' : 'bg-muted/80 text-foreground rounded-ss-sm'}`}>
                                                         {msg.content}
                                                     </div>
                                                     
@@ -319,10 +319,10 @@ export function ScraperModal({ onUploadComplete, setlists = [], onAddToSetlist }
                                     )}
                                     {searching && (
                                         <div className="flex gap-3">
-                                            <div className="shrink-0 w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-300">
+                                            <div className="shrink-0 w-8 h-8 rounded-full bg-muted flex items-center justify-center text-foreground">
                                                 <Bot className="h-4 w-4" />
                                             </div>
-                                            <div className="p-3 rounded-lg bg-zinc-800/80 text-zinc-100 rounded-ss-sm flex items-center gap-2">
+                                            <div className="p-3 rounded-lg bg-muted/80 text-foreground rounded-ss-sm flex items-center gap-2">
                                                 <Loader2 className="h-3 w-3 animate-spin" />
                                                 <span className="text-xs">{t("libraryScraper.thinking")}</span>
                                             </div>
@@ -393,7 +393,7 @@ export function ScraperModal({ onUploadComplete, setlists = [], onAddToSetlist }
                             <Button
                                 onClick={() => handleScrape()}
                                 disabled={scraping || (mode === 'url' ? !url.trim() : !rawText.trim())}
-                                className="w-full bg-brand hover:bg-brand/80 text-white"
+                                className="w-full bg-brand hover:bg-brand/90 text-brand-foreground"
                             >
                                 {scraping ? (
                                     <>
@@ -484,7 +484,7 @@ export function ScraperModal({ onUploadComplete, setlists = [], onAddToSetlist }
                             <Button 
                                 onClick={handleSave} 
                                 disabled={uploading}
-                                className="bg-brand hover:bg-brand/80 text-white"
+                                className="bg-brand hover:bg-brand/90 text-brand-foreground"
                             >
                                 {uploading ? (
                                     <>

@@ -152,7 +152,7 @@ export function LibraryFilters({ allFiles, filters, onFiltersChange, usageMap }:
                         variant="ghost"
                         size="sm"
                         onClick={clearAll}
-                        className="shrink-0 rounded-full text-xs font-medium text-red-500 hover:bg-red-500/10"
+                        className="shrink-0 rounded-full text-xs font-medium text-destructive hover:bg-destructive/10"
                     >
                         <X className="w-3 h-3" />
                         {t("library.filters.clear")}
@@ -171,7 +171,7 @@ export function LibraryFilters({ allFiles, filters, onFiltersChange, usageMap }:
                             className={cn(
                                 "w-10 h-10 rounded-lg text-xs font-bold px-0",
                                 filters.keys.has(key)
-                                    ? "bg-brand text-white shadow-md hover:bg-brand/90"
+                                    ? "bg-brand text-brand-foreground shadow-md hover:bg-brand/90"
                                     : "bg-muted hover:bg-accent text-foreground border border-border"
                             )}
                         >
@@ -192,7 +192,7 @@ export function LibraryFilters({ allFiles, filters, onFiltersChange, usageMap }:
                             className={cn(
                                 "rounded-full text-xs font-medium",
                                 filters.topics.has(topic)
-                                    ? "bg-brand text-white shadow-md hover:bg-brand/90"
+                                    ? "bg-brand text-brand-foreground shadow-md hover:bg-brand/90"
                                     : "bg-muted hover:bg-accent text-foreground border border-border"
                             )}
                         >
@@ -218,7 +218,7 @@ export function LibraryFilters({ allFiles, filters, onFiltersChange, usageMap }:
                             className={cn(
                                 "rounded-full text-xs font-medium",
                                 filters.recency === option.value
-                                    ? "bg-brand text-white shadow-md hover:bg-brand/90"
+                                    ? "bg-brand text-brand-foreground shadow-md hover:bg-brand/90"
                                     : "bg-muted hover:bg-accent text-foreground border border-border"
                             )}
                         >

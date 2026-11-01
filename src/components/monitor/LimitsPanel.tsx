@@ -193,7 +193,7 @@ export function LimitsPanel() {
             </ul>
 
             {raised.length > 0 && (
-                <p data-testid="limits-above-unity" role="alert" className="text-sm font-medium text-amber-700 dark:text-amber-400">
+                <p data-testid="limits-above-unity" role="alert" className="text-sm font-medium text-caution">
                     {t("monitor.limitsAboveUnity")}
                 </p>
             )}

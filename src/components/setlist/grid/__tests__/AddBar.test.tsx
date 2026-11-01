@@ -179,8 +179,8 @@ describe('AddBar v53-03-01: chevron tile-grid popover', () => {
         const expectations: Array<[NonSongTrackType, RegExp]> = [
             ['section', /text-muted-foreground/],
             ['reading', /text-caution/],
-            ['prayer', /text-blue-300/],
-            ['transition', /text-emerald-300/],
+            ['prayer', /text-brand/],
+            ['transition', /text-success/],
             ['note', /text-muted-foreground/],
         ]
 

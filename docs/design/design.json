@@ -528,6 +528,21 @@
           "oklch(0.82 0.03 200)",
           "oklch(0.95 0.03 200)"
         ]
+      },
+      "bl-section-slate": {
+        "role": "accent",
+        "displayName": "Lazaroff Section Slate",
+        "canonical": "oklch(0.42 0.03 255)",
+        "tonalRamp": [
+          "oklch(0.15 0.03 255)",
+          "oklch(0.26 0.03 255)",
+          "oklch(0.37 0.03 255)",
+          "oklch(0.48 0.03 255)",
+          "oklch(0.59 0.03 255)",
+          "oklch(0.70 0.03 255)",
+          "oklch(0.82 0.03 255)",
+          "oklch(0.95 0.03 255)"
+        ]
       }
     },
     "typographyMeta": {

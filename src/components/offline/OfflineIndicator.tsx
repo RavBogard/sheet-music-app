@@ -33,7 +33,7 @@ export function OfflineIndicator() {
     if (isOnline) return null
 
     return (
-        <div className="fixed bottom-4 start-4 z-50 flex items-center gap-2 bg-caution/90 text-white px-3 py-1.5 rounded-full text-sm font-medium shadow-lg backdrop-blur-sm">
+        <div className="fixed bottom-4 start-4 z-50 flex items-center gap-2 bg-caution text-caution-foreground px-3 py-1.5 rounded-full text-sm font-medium shadow-lg backdrop-blur-sm">
             <WifiOff className="h-3.5 w-3.5" />
             <span>{t("offline.usingCachedData")}</span>
         </div>
@@ -62,7 +62,7 @@ export function OfflineDownloadButton({
                 type="button"
                 variant="ghost"
                 size="xs"
-                className="text-green-600 dark:text-green-400 bg-green-500/10"
+                className="text-success bg-success/10"
                 disabled
             >
                 <Check className="h-3 w-3" />

@@ -213,13 +213,13 @@ export function QuickMonitorPanel({ onClose }: QuickMonitorPanelProps = {}) {
                     ) : stale ? (
                         // C-6: honest staleness — don't show a green "Live" over a frozen desk.
                         <div className="flex items-center gap-1.5">
-                            <Clock className="w-3 h-3 text-yellow-500" />
-                            <span className="text-[10px] text-yellow-500">Stale</span>
+                            <Clock className="w-3 h-3 text-caution" />
+                            <span className="text-[10px] text-caution">Stale</span>
                         </div>
                     ) : (
                         <div className="flex items-center gap-1.5">
-                            <Wifi className="w-3 h-3 text-green-500" />
-                            <span className="text-[10px] text-green-500">Live</span>
+                            <Wifi className="w-3 h-3 text-success" />
+                            <span className="text-[10px] text-success">Live</span>
                         </div>
                     )}
                     {onClose ? (
@@ -238,7 +238,7 @@ export function QuickMonitorPanel({ onClose }: QuickMonitorPanelProps = {}) {
             {/* Vertical faders in horizontal row — gap-6 + px-6 py-4 spread; flex-1 fills remaining height.
                 C-6: HARD-offline → overlay (last known levels). */}
             {bridgeDown && (
-                <p data-testid="monitor-paused" role="status" className="px-6 pt-3 text-sm text-amber-700 dark:text-amber-400">
+                <p data-testid="monitor-paused" role="status" className="px-6 pt-3 text-sm text-caution">
                     {t("monitor.pausedLine")}
                 </p>
             )}

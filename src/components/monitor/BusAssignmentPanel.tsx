@@ -171,7 +171,7 @@ export function BusAssignmentPanel({ config }: BusAssignmentPanelProps) {
                                             e.stopPropagation()
                                             setOpenDropdown(isOpen ? null : busIdx)
                                         }}
-                                        className="px-2.5 py-1 rounded-lg border border-dashed border-zinc-600 text-zinc-400 hover:text-zinc-200 hover:border-zinc-400"
+                                        className="px-2.5 py-1 rounded-lg border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-muted-foreground"
                                     >
                                         Add
                                         <ChevronDown className="w-3 h-3" />

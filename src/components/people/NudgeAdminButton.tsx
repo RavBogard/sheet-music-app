@@ -34,7 +34,7 @@ export function NudgeAdminButton() {
 
     if (nudged) {
         return (
-            <Button variant="outline" className="w-full gap-2 border-green-500/20 text-green-600 bg-green-50 hover:bg-green-50" disabled>
+            <Button variant="outline" className="w-full gap-2 border-success/20 text-success bg-success/10 hover:bg-success/10" disabled>
                 <CheckCircle2 className="w-4 h-4" />
                 {t("people.adminNotified")}
             </Button>

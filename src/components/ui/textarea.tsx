@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils"
 import { cva, type VariantProps } from "class-variance-authority"
 
 const textareaVariants = cva(
-    "flex min-h-[80px] w-full rounded-md border text-sm ring-offset-zinc-950 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 disabled:cursor-not-allowed disabled:opacity-50 text-foreground",
+    "flex min-h-[80px] w-full rounded-md border text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 disabled:cursor-not-allowed disabled:opacity-50 text-foreground",
     {
         variants: {
             variant: {

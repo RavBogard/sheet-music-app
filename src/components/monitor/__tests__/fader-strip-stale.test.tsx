@@ -9,13 +9,13 @@ describe("FaderStrip stale cue (C-6)", () => {
         expect(screen.getByTestId("fader-stale-cue")).toBeTruthy()
         expect(screen.getByLabelText(/may be out of date/i)).toBeTruthy()
         // % readout tinted amber
-        expect(screen.getByText("50%").className).toContain("text-yellow-500")
+        expect(screen.getByText("50%").className).toContain("text-caution")
     })
 
     it("shows no cue and a normal readout when fresh", () => {
         render(<FaderStrip label="Kick" value={0.5} on={true} stale={false} onChange={vi.fn()} />)
         expect(screen.queryByTestId("fader-stale-cue")).toBeNull()
-        expect(screen.getByText("50%").className).toContain("text-zinc-400")
+        expect(screen.getByText("50%").className).toContain("text-muted-foreground")
     })
 
     it("stays interactive (non-blocking) when stale — the slider is not disabled", () => {

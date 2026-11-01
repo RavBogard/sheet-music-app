@@ -168,7 +168,7 @@ export function PDFHealthScanner({ files, onArchiveComplete }: PDFHealthScannerP
           </div>
         ) : flaggedResults.length === 0 ? (
           <div className="flex flex-col items-center gap-3 py-8">
-            <CheckCircle2 className="h-12 w-12 text-green-500" />
+            <CheckCircle2 className="h-12 w-12 text-success" />
             <p className="text-sm text-foreground font-medium">{t("libraryHealth.pdf.allHealthy")}</p>
             <p className="text-xs text-muted-foreground">
               {t("libraryHealth.pdf.noIssues", { count: healthyCount })}

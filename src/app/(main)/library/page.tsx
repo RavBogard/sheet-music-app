@@ -21,7 +21,7 @@ export default async function LibraryPage() {
     if (!user.isMember) {
         return (
             <div className="flex flex-col items-center justify-center h-[calc(100dvh-80px)] text-center p-6">
-                <h2 className="text-xl font-semibold mb-3 text-yellow-600 dark:text-yellow-500">{t("library.page.pendingTitle")}</h2>
+                <h2 className="text-xl font-semibold mb-3 text-caution">{t("library.page.pendingTitle")}</h2>
                 <p className="text-muted-foreground mb-6 max-w-md text-sm">
                     {t("library.page.pendingBody")}
                 </p>

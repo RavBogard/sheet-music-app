@@ -709,7 +709,8 @@ function SortableRow({
                 <ContextMenuItem
                     onSelect={() => onContextDelete(row.original)}
                     data-testid="row-context-menu-delete"
-                    className="cursor-pointer text-red-300 focus:text-red-200 focus:bg-red-500/15"
+                    variant="destructive"
+                    className="cursor-pointer"
                 >
                     <Trash2 aria-hidden className="me-2 h-4 w-4" />
                     {t('setlistGrid.menuDeleteRow')}

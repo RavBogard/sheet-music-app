@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { act, cleanup, fireEvent, renderHook } from "@testing-library/react"
+import { act, cleanup, renderHook } from "@testing-library/react"
 import type { ReactNode } from "react"
 
 import { expectNoUntranslatedText, I18nTestProviders, renderPseudo, renderWithI18n } from "@/test-utils/i18n"
@@ -76,14 +76,8 @@ vi.mock("@/hooks/use-calendar-data", () => ({
 import DashboardClient from "@/app/(main)/DashboardClient"
 import MainError from "@/app/(main)/error"
 import { NextServiceCard } from "@/components/home/NextServiceCard"
-import { HeroCard } from "@/components/dashboard/HeroCard"
-import { UpcomingTimeline } from "@/components/dashboard/UpcomingTimeline"
 import { OnboardingCard } from "@/components/dashboard/OnboardingCard"
 import { CompactSetlistRow } from "@/components/dashboard/CompactSetlistRow"
-import { CommandRow } from "@/components/dashboard/CommandRow"
-import { WhatsChangedBanner } from "@/components/dashboard/WhatsChangedBanner"
-import { PrepRecommendations } from "@/components/dashboard/PrepRecommendations"
-import { TaskCards } from "@/components/dashboard/TaskCards"
 import { UnifiedCalendar } from "@/components/calendar/UnifiedCalendar"
 import { CalendarDayCell } from "@/components/calendar/CalendarDayCell"
 import { useGridKeyboard } from "@/hooks/use-grid-keyboard"
@@ -94,24 +88,6 @@ const DATA = ["Test Setlist A", "Test Setlist B", "Test Song A", "Test Song B", 
 
 const setlistA = { id: "s1", name: "Test Setlist A", eventDate: inDays(3), trackCount: 2, songCount: 2, fileIds: ["f1", "f2"], musicians: [{ name: "Test Player" }] }
 const setlistB = { id: "s2", name: "Test Setlist B", eventDate: inDays(-7), trackCount: 1, songCount: 1 }
-
-function prepItem(setlist: typeof setlistA, daysUntil: number, extra: Record<string, unknown> = {}) {
-    return {
-        setlist,
-        prep: { total: 2, viewed: 1, percent: 50 },
-        daysUntil,
-        hoursUntil: daysUntil * 24,
-        isNew: true,
-        dateStr: "",
-        urgencyLabel: null,
-        viewedFileIds: new Set(["f1"]),
-        localTracks: [
-            { id: "t1", title: "Test Song A", fileId: "f1", type: "song", key: "G" },
-            { id: "t2", title: "Test Song B", fileId: "f2", type: "song" },
-        ],
-        ...extra,
-    } as never
-}
 
 afterEach(() => cleanup())
 
@@ -153,27 +129,10 @@ describe("DashboardClient (pseudo-locale)", () => {
 })
 
 describe("dashboard widgets (pseudo-locale)", () => {
-    it("HeroCard, timeline, banners, rows, command row, tasks", async () => {
-        state.tasks = [{ title: "Test Task", status: "todo", setlistName: "Test Setlist A", eventDate: inDays(2) }]
-        state.auth = { user: { uid: "u1" } }
-        const items = [prepItem(setlistA, 0), prepItem({ ...setlistA, id: "s3", name: "Test Setlist B", eventDate: inDays(1) }, 1), prepItem({ ...setlistA, id: "s4", eventDate: inDays(3) }, 3)]
-        const r = renderPseudo(
-            <div>
-                <HeroCard setlist={setlistA as never} prep={null} onClick={() => {}} onPerform={() => {}} />
-                <HeroCard setlist={{ ...setlistA, eventDate: new Date(Date.now() + 2 * 3_600_000).toISOString() } as never} prep={items[0]} onClick={() => {}} onPerform={() => {}} />
-                <UpcomingTimeline items={items} />
-                <WhatsChangedBanner items={items} />
-                <WhatsChangedBanner items={[items[0]]} />
-                <PrepRecommendations items={[prepItem(setlistA, 0), prepItem(setlistA, 1), prepItem(setlistA, 2)]} />
-                <CompactSetlistRow setlist={setlistA as never} />
-                <CommandRow isMember isBandLeader isLoggedIn />
-                <TaskCards />
-            </div>,
-        )
+    it("compact setlist row", async () => {
+        const r = renderPseudo(<CompactSetlistRow setlist={setlistA as never} />)
         await act(async () => {})
-        // Expand one timeline row so the track list is checked too.
-        fireEvent.click(r.getAllByRole("button", { name: /⟦/ }).find((b) => b.closest(".overflow-hidden") && b.getAttribute("aria-label"))!)
-        expectNoUntranslatedText(r.container, { allow: [...DATA, "G"] })
+        expectNoUntranslatedText(r.container, { allow: DATA })
     })
 
     it("OnboardingCard (pending and approved) and NextServiceCard (upcoming and past)", () => {

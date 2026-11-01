@@ -628,7 +628,7 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
                             />
 
                             {error && (
-                                <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-3 text-red-600 dark:text-red-400 text-sm mt-2">
+                                <div className="bg-destructive/10 border border-destructive/50 rounded-lg p-3 text-destructive text-sm mt-2">
                                     {error}
                                 </div>
                             )}

@@ -121,7 +121,7 @@ export function AudioPlayer({ src, title, onEnded }: AudioPlayerProps) {
                     max={duration || 0}
                     value={currentTime}
                     onChange={handleSeek}
-                    className="flex-1 h-2 bg-border rounded-lg appearance-none cursor-pointer accent-blue-500"
+                    className="flex-1 h-2 bg-border rounded-lg appearance-none cursor-pointer accent-primary"
                 />
                 <span className="text-xs text-muted-foreground w-10">{formatTime(duration)}</span>
             </div>
@@ -146,7 +146,7 @@ export function AudioPlayer({ src, title, onEnded }: AudioPlayerProps) {
                     size="icon"
                     aria-label={isPlaying ? t("audio.pause") : t("audio.play")}
                     onClick={togglePlay}
-                    className="h-14 w-14 rounded-full bg-blue-600 hover:bg-blue-500"
+                    className="h-14 w-14 rounded-full bg-primary hover:bg-primary/90"
                 >
                     {isPlaying ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6 ml-1" />}
                 </Button>
@@ -176,7 +176,7 @@ export function AudioPlayer({ src, title, onEnded }: AudioPlayerProps) {
                         step="0.1"
                         value={isMuted ? 0 : volume}
                         onChange={handleVolumeChange}
-                        className="w-20 h-1 bg-border rounded-lg appearance-none cursor-pointer accent-blue-500"
+                        className="w-20 h-1 bg-border rounded-lg appearance-none cursor-pointer accent-primary"
                     />
                 </div>
             </div>

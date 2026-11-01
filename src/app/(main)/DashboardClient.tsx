@@ -25,8 +25,6 @@ import { useFormat } from "@/i18n/format-client"
 // Retained for potential use in Phase 4 (template management) or Phase 6 (notifications).
 // import { useMusicStore } from "@/lib/store"
 // import { buildPerformQueue } from "@/lib/queue-utils"
-// import { useUpcomingPrep } from "@/hooks/use-upcoming-prep"
-// import { HeroCard, CommandRow, UpcomingTimeline, WhatsChangedBanner, TaskCards, PrepRecommendations } from "@/components/dashboard"
 
 export interface DashboardServerProps {
     /** Pre-computed greeting from the server (avoids blank flash before JS boots) */

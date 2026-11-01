@@ -49,13 +49,13 @@ export function CalendarHeader({ monthLabel, mode, onPrev, onNext }: CalendarHea
             {mode === 'planning' && (
                 <div className="flex flex-wrap items-center gap-x-5 gap-y-1 px-4 sm:px-5 py-2.5 border-b border-border/40 text-xs text-muted-foreground bg-muted/20">
                     <span className="flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-emerald-500/20" /> {t("calendar.legendFullyStaffed")}
+                        <span className="w-2 h-2 rounded-full bg-success ring-2 ring-success/20" /> {t("calendar.legendFullyStaffed")}
                     </span>
                     <span className="flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-caution ring-2 ring-caution/20" /> {t("calendar.legendNeedsAttention")}
                     </span>
                     <span className="flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-red-500 ring-2 ring-red-500/20" /> {t("calendar.legendNoMusicians")}
+                        <span className="w-2 h-2 rounded-full bg-destructive ring-2 ring-destructive/20" /> {t("calendar.legendNoMusicians")}
                     </span>
                 </div>
             )}

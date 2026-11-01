@@ -283,17 +283,14 @@ export function SetlistRow({
             </div>
             {track.notes && (
                 // Notes sit on their own line under the title, two lines at most.
-                // text-amber-800 in light mode (text-amber-300 fails WCAG AA
-                // contrast on the light-theme row backgrounds); dark mode keeps
-                // the vivid amber-300.
+                // The caution token: 5.9:1 on white, and it lifts in dark mode.
                 <p className="text-sm font-medium text-caution line-clamp-2 break-words mt-0.5">
                     {track.notes}
                 </p>
             )}
             {hasSecondLine && (
-                // text-blue-700 in light mode (text-blue-400 fails WCAG AA
-                // contrast on the light-theme row backgrounds — axe color-
-                // contrast, 2.18:1); dark mode keeps the lighter blue-400.
+                // The brand token keeps AA contrast on the row in both themes
+                // (a pale blue here measured 2.18:1 on light rows).
                 <p className="text-sm font-medium text-brand truncate mt-0.5">
                     {track.leadMusician || track.performer}
                 </p>

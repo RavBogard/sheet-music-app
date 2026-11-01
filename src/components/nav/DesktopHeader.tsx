@@ -267,7 +267,7 @@ export function DesktopHeader(props: AppNavigationProps) {
                                     </DropdownMenuItem>
                                 )}
                                 <DropdownMenuSeparator className="bg-border" />
-                                <DropdownMenuItem className="text-red-500 hover:bg-red-500/10 cursor-pointer" onClick={() => signOut()}>
+                                <DropdownMenuItem variant="destructive" className="cursor-pointer" onClick={() => signOut()}>
                                     <LogOut className="me-2 h-4 w-4" /> {t("nav.logOut")}
                                 </DropdownMenuItem>
                             </DropdownMenuContent>

@@ -170,11 +170,11 @@ export function VerticalFaderStrip({ label, value, on, isMaster, onChange, onMut
     // R5: only while showing the desk's own (fabricated) value.
     const showUnconfirmed = unconfirmed && phase === "idle"
     const outcomeRing = outcome === "confirmed"
-        ? "ring-2 ring-emerald-400/60"
+        ? "ring-2 ring-success/60"
         : outcome === "rejected"
-            ? "ring-2 ring-red-400/60"
+            ? "ring-2 ring-destructive/60"
             : outcome === "reverted"
-                ? "ring-2 ring-amber-400/60"
+                ? "ring-2 ring-caution/60"
                 : "ring-0 ring-transparent"
 
     return (
@@ -260,21 +260,21 @@ export function VerticalFaderStrip({ label, value, on, isMaster, onChange, onMut
                             data-testid="vfader-confirmed-cue"
                             role="img"
                             aria-label="Level confirmed by the mixer"
-                            className="w-3.5 h-3.5 text-emerald-400"
+                            className="w-3.5 h-3.5 text-success"
                         />
                     ) : outcome === "rejected" ? (
                         <Ban
                             data-testid="vfader-rejected-cue"
                             role="img"
                             aria-label="Refused by the mixer"
-                            className="w-3.5 h-3.5 text-red-400"
+                            className="w-3.5 h-3.5 text-destructive"
                         />
                     ) : outcome === "reverted" ? (
                         <Undo2
                             data-testid="vfader-reverted-cue"
                             role="img"
                             aria-label="No confirmation — reset to the mixer's level"
-                            className="w-3.5 h-3.5 text-amber-400"
+                            className="w-3.5 h-3.5 text-caution"
                         />
                     ) : showUnconfirmed ? (
                         <HelpCircle
@@ -288,7 +288,7 @@ export function VerticalFaderStrip({ label, value, on, isMaster, onChange, onMut
                             data-testid="vfader-stale-cue"
                             role="img"
                             aria-label="Level may be out of date — showing last known value"
-                            className="w-3 h-3 text-yellow-500"
+                            className="w-3 h-3 text-caution"
                         />
                     ) : null}
                 </div>
@@ -299,7 +299,7 @@ export function VerticalFaderStrip({ label, value, on, isMaster, onChange, onMut
                 className={`text-[10px] font-mono font-bold mt-1 mb-0.5 ${showUnconfirmed
                     ? "text-muted-foreground/60 italic"
                     : showStale
-                        ? "text-yellow-500/90"
+                        ? "text-caution"
                         : "text-muted-foreground/70"}`}
                 title={showUnconfirmed ? "Could not read this level from the desk" : undefined}
             >
@@ -311,7 +311,7 @@ export function VerticalFaderStrip({ label, value, on, isMaster, onChange, onMut
             {outcome === "rejected" && (
                 <div
                     data-testid="vfader-rejection-reason"
-                    className="text-[9px] leading-tight text-center text-red-400 max-w-[56px] mb-0.5"
+                    className="text-[9px] leading-tight text-center text-destructive max-w-[56px] mb-0.5"
                 >
                     {humanizeRejection(machine.rejectionReason ?? undefined)}
                 </div>
@@ -327,8 +327,8 @@ export function VerticalFaderStrip({ label, value, on, isMaster, onChange, onMut
                 onClick={onMuteToggle}
                 className={`mt-0.5 ${
                     on
-                        ? "bg-green-900/40 text-green-400 hover:bg-green-800/60"
-                        : "bg-red-900/40 text-red-400 hover:bg-red-800/60"
+                        ? "bg-success/15 text-success hover:bg-success/25"
+                        : "bg-destructive/15 text-destructive hover:bg-destructive/25"
                 }`}
                 title={on ? "Mute" : "Unmute"}
                 aria-label={on ? `Mute ${label}` : `Unmute ${label}`}

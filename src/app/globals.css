@@ -38,6 +38,9 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-caution-foreground: var(--caution-foreground);
+  --color-scrim: var(--scrim);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -131,8 +134,12 @@
   --accent-foreground: #18202E;
 
   --destructive: #B4232F;
+  --destructive-foreground: #FFFFFF;
   --success: #1F7A4D;
   --success-foreground: #FFFFFF;
+
+  /* Dialog and sheet backdrop: ink at 60%, not pure black. */
+  --scrim: rgb(15 20 32 / 0.6);
 
   /* Brand = the action blue: links, focus, active tab marks. */
   --brand: #2563EB;
@@ -165,6 +172,8 @@
   --warning-line: #8E2E3B;
   /* Amber caution text (some songs have no chart): 5.9:1 on white. */
   --caution: #8A5A00;
+  /* Ink on a solid caution fill (the view-as banner): 5.9:1. */
+  --caution-foreground: #FFFFFF;
 
   --chart-1: #2563EB;
   --chart-2: #1F7A6E;
@@ -208,8 +217,11 @@
   --accent-foreground: #E8ECF4;
 
   --destructive: #E5636E;
+  --destructive-foreground: #0F1420;
   --success: #3FB27F;
   --success-foreground: #0F1420;
+
+  --scrim: rgb(0 0 0 / 0.7);
 
   --brand: #7AA2FF;
   --brand-foreground: #0F1420;
@@ -236,6 +248,7 @@
 
   --warning-line: #E07A86;
   --caution: #E2B04A;
+  --caution-foreground: #0F1420;
 
   --sidebar: #161C2A;
   --sidebar-foreground: #E8ECF4;
@@ -252,8 +265,8 @@
    from the Edge `x-org-id` header). BL is forced dark (forcedTheme), so
    the dark canvas tokens live under `.dark[data-org="brotherslazaroff"]`
    — higher specificity than `.dark`, placed after it to win on equal
-   specificity too. Navy hue ~252/255 (true blue), distinct from CRC's
-   indigo ~275. CRC (:root / .dark) is untouched.
+   specificity too. The BL hues are teal (~198-210). CRC (:root / .dark)
+   is untouched.
    ───────────────────────────────────────────────────────────────── */
 [data-org="brotherslazaroff"] {
   /* v11.1-05: teal/cyan brand accent sampled from the band's own wordmark
@@ -261,6 +274,10 @@
   --brand: oklch(0.70 0.11 210);
   --brand-foreground: oklch(0.99 0.01 200);
   --ring: oklch(0.70 0.11 210 / 0.5);
+  /* BL's own action colour if the tenant is ever shown light (it is forced
+     dark today): deep teal with white ink, never CRC's action blue. */
+  --primary: oklch(0.45 0.09 210);
+  --primary-foreground: oklch(0.99 0.01 200);
   /* The login hero composites this performance photo UNDER the bl-hero gradient
      (see @utility bl-hero). Sourced from brotherslazaroff.com (Joe's Cafe). */
   --bl-hero-image: url('/brands/brotherslazaroff/hero.jpg');
@@ -313,6 +330,13 @@
   --shell-muted: oklch(0.80 0.03 200);
   --shell-active: oklch(0.85 0.10 205);
   --rule: oklch(0.30 0.03 200);
+
+  /* The fourth section band. CRC's is book-cloth blue, which would put a CRC
+     colour on the teal ground (DESIGN.md: no CRC colour in the BL theme), so
+     BL takes a slate band instead. Green, oxblood and ochre stay shared.
+     White ink on it is about 7:1. */
+  --section-blue: oklch(0.42 0.03 255);
+  --section-blue-foreground: #FFFFFF;
 }
 
 /* v11.1-05: broslaz headings echo the vintage slab wordmark. Zilla Slab is
