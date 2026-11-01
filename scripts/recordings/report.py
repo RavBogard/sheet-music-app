@@ -50,7 +50,11 @@ def setlist_line(r: dict) -> str:
 
 def render_md(manifest: list[dict], day: str) -> str:
     lines = [f"# Recordings ingest report, {day}", ""]
-    for folder, rows in group(manifest).items():
+    groups = group(manifest)
+    skipped = [(f, rows[0]) for f, rows in groups.items() if rows[0]["status"] == "skipped"]
+    for folder, rows in groups.items():
+        if rows[0]["status"] == "skipped":
+            continue
         c = counts(rows)
         r0 = rows[0]
         files = sorted({r["file"] for r in rows})
@@ -75,6 +79,10 @@ def render_md(manifest: list[dict], day: str) -> str:
         if dropped:
             lines.append(f"\nDropped (not songs or no match): {len(dropped)} stretches, {fmt_t(sum(r['endSec'] - r['startSec'] for r in dropped))} total.")
         lines.append("")
+    if skipped:
+        lines += ["## Skipped", ""]
+        lines += [f"- {f} ({r['serviceDate'] or 'undated'}): {r['reason']}" for f, r in skipped]
+        lines.append("")
     return "\n".join(lines)
 
 
@@ -96,7 +104,11 @@ def render_html(manifest: list[dict], day: str) -> str:
     parts = [f"<!doctype html><html lang=en><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'>"
              f"<title>Recordings spot-check</title><style>{CSS}</style><main><h1>Recordings spot-check</h1>"
              f"<p class=meta>{e(day)} · held clips first · nothing here is published yet</p>"]
-    for folder, rows in group(manifest).items():
+    groups = group(manifest)
+    skipped = [(f, rows[0]) for f, rows in groups.items() if rows[0]["status"] == "skipped"]
+    for folder, rows in groups.items():
+        if rows[0]["status"] == "skipped":
+            continue
         c = counts(rows)
         r0 = rows[0]
         parts.append(f"<h2>{e(r0['label'])}</h2><p class=meta>{e(folder)} · {e(setlist_line(r0))}<br>"
@@ -114,6 +126,10 @@ def render_html(manifest: list[dict], day: str) -> str:
             for r in dropped:
                 parts.append(f"<div class=why>{fmt_t(r['startSec'])}–{fmt_t(r['endSec'])} · {e(r['reason'])}</div>")
             parts.append("</details>")
+    if skipped:
+        parts.append("<h2>Skipped</h2><p class=meta>Services without a setlist in the app are not cut (Daniel, 2026-11-01).</p>")
+        for f, r in skipped:
+            parts.append(f"<div class=why>{e(f)} ({e(r['serviceDate'] or 'undated')}): {e(r['reason'])}</div>")
     parts.append("</main></html>")
     return "".join(parts)
 

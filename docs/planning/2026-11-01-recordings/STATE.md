@@ -59,3 +59,38 @@ Nothing published. Audio, transcripts, manifest and the spot-check page live in 
   archive can go live.
 - `export_catalog.ts` (admin) and the real `publish.ts` wait for PR A; the vitest
   `publish skips rows whose ingestKey exists` comes with the real publisher.
+
+## 2026-11-01 — rulings and round 2
+
+### Daniel's rulings
+
+1. **"Skip services without setlists."** Only services with a real (non-empty) setlist in the
+   app are cut. `pilot.py` writes one `skipped` row per other folder ("skipped: no setlist"; an
+   ambiguous date is "skipped: ambiguous setlist"), the report lists them, and `publish.ts`
+   refuses any row whose service didn't match a setlist. The library-only matcher stays in
+   `cut.py` (cheap) but publishes nothing.
+2. **Several charts for one tune → "the one we play most":** the songId used in the most CRC
+   setlists of the catalog. A tie, or no usage at all, is held. (With a setlist the row's own
+   songId is used, so this only applies to library matches.)
+
+### Round-2 changes
+
+| change | why |
+|---|---|
+| Title evidence only from sung or unclear lines; a line of 4+ words with median word ≤ 0.36 s is spoken (`SPOKEN_MAX_WORD_SEC`), > 0.40 s is sung (`SUNG_MIN_WORD_SEC`). | 6.19's Shema went live on "when we say the words of Shema" in the rabbi's teaching (34:02), read slowly over the piano. A title only spoken now places by order and is held as "title only spoken (an introduction?)". |
+| `TITLE_PARTLY` 0.70 | Labels "title partly sung" vs "placed by setlist order only; the transcript doesn't name it; check by ear". Status is unchanged: anything short of a sung title is held. |
+| `trim_talk`, `TRIM_MIN_SEC` 15, `TRIM_PAD_SEC` 2 | Talk before the first / after the last sung line is cut off the clip (6.19 Lechu lost a 46 s introduction; Adonai sfatai lost 149 s of Kaddish names). Shorter talk stays, so lead-ins survive. |
+| 4.18 Psukei d'Zimra (3:29, single-song file) matched its setlist row by file name | `SHORT_FILE_SEC` 600 unchanged; candidates are the setlist's rows. |
+
+Shema on 6.19: the sung Shema is most likely around 35:05–36:05 (after "we cover our eyes")
+with V'ahavta after it, but whisper heard nothing sung there. The cutter now holds Shema at
+36:46–38:09 by setlist order; it needs an ear.
+
+### Round-2 results
+
+- 6.19 Shir Shabbat: 4 live / 9 held / 31 dropped.
+- 4.18 Saturday morning (Psukei d'Zimra file): 1 live / 0 held / 0 dropped.
+- 13 folders skipped: no setlist.
+- `publish.ts --dry-run` (no credentials, so not checked against Firestore): 14 docs (5 live,
+  9 held) and 14 files, 45.1 MB; 5 songs get a featured take. Saved to
+  `.recordings-work/publish-plan.txt`.

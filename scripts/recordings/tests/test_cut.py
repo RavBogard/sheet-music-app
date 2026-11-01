@@ -47,7 +47,7 @@ def test_order_only_match_is_held():
     segs = cut.segments_with_setlist(blocks, {"id": "x"}, SONGS[:3])
     by = {s.songId: s for s in segs if s.songId}
     assert by["ld"].status == "live" and by["sl"].status == "live"
-    assert by["mg"].status == "held" and by["mg"].reason.startswith("setlist order only")
+    assert by["mg"].status == "held" and by["mg"].reason.startswith("placed by setlist order only")
 
 
 def test_no_setlist_requires_high_score():
@@ -79,3 +79,37 @@ def test_merge_short_blocks():
         fill(b)
     blocks = cut._merge_short(raw, fill)
     assert [(b.start, b.end) for b in blocks] == [(0, 110), (110, 300)]
+
+
+def test_title_only_spoken_is_held():
+    """A rabbi naming the song in a teaching ("when we say the words of Shema") is not the
+    song being sung: placement falls back to setlist order and is held."""
+    words = [{"start": 0.0 + i * 0.3, "end": 0.25 + i * 0.3, "word": f" {w}", "kind": "spoken"}
+             for i, w in enumerate("when we say the words of shema there is divine unification".split())]
+    b = Block(0, 200, 1.0, "when we say the words of shema there is divine unification", 10)
+    b.wlist = words
+    b.sung_text = ""
+    segs = cut.segments_with_setlist([b], {"id": "x"}, [{"order": 1, "title": "Shema (major).pdf", "songId": "sh"}])
+    s = next(x for x in segs if x.songId == "sh")
+    assert s.status == "held" and s.reason.startswith("title only spoken")
+
+
+def test_trim_talk_at_the_start():
+    spoken = [{"start": 10 + i * 0.3, "end": 10.25 + i * 0.3, "word": " w", "kind": "spoken"} for i in range(60)]
+    sung = [{"start": 60 + i, "end": 60.9 + i, "word": " la", "kind": "sung"} for i in range(30)]
+    b = Block(0, 200, 1.0, "x", 90)
+    b.wlist = spoken + sung
+    a, z, note = cut.trim_talk([b])
+    assert 28 < a < 60 and z == 200 and note.startswith("trimmed")
+
+
+def test_several_charts_one_tune_pick_the_most_played():
+    lib = [
+        {"songId": "a", "title": "Mississippi Goddam.pdf", "uses": 1},
+        {"songId": "b", "title": "Mississippi Goddam (Nina Simone)", "uses": 4},
+    ]
+    segs = cut.segments_without_setlist([_b(0, 200, "this is mississippi goddam")], lib)
+    assert segs[0].songId == "b" and "most-played" in segs[0].reason
+    tie = [dict(x, uses=2) for x in lib]
+    segs = cut.segments_without_setlist([_b(0, 200, "this is mississippi goddam")], tie)
+    assert segs[0].status == "held" and "none played most" in segs[0].reason

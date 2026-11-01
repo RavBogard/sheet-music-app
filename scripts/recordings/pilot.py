@@ -54,15 +54,36 @@ def service_label(kind: str | None, day: date | None) -> str:
     return f"{KIND_LABEL.get(kind, 'Service')}, {when}"
 
 
+def song_uses(catalog: dict) -> dict[str, int]:
+    """How many CRC setlists use each chart (songId): the "one we play most" rule."""
+    uses: dict[str, int] = {}
+    for sl in catalog.get("setlists", []):
+        for sid in {t.get("songId") for t in sl.get("tracks", []) if t.get("songId")}:
+            uses[sid] = uses.get(sid, 0) + 1
+    return uses
+
+
 def run_folder(folder: str, inventory: list[dict], catalog: dict) -> list[dict]:
     entry = next(e for e in inventory if e["folder"] == folder)
     svc = next(s for s in S.resolve_services([entry], catalog))
+    uses = song_uses(catalog)
+    songs = [{"songId": s["songId"], "title": s["title"], "uses": uses.get(s["songId"], 0)} for s in catalog["songs"] if s.get("songId")]
+    setlist = svc.setlist
+    if not isinstance(setlist, dict):
+        # Daniel 2026-11-01: "Skip services without setlists." Nothing is cut or published.
+        why = "ambiguous setlist" if setlist == "ambiguous" else "no setlist"
+        print(f"{folder}: skipped: {why}")
+        return [{
+            "folder": folder, "file": None, "mix": None, "serviceDate": svc.day.isoformat() if svc.day else None,
+            "kind": svc.kind, "label": service_label(svc.kind, svc.day), "setlistId": None, "setlistName": None,
+            "setlistState": setlist or "none", "whisperSec": None, "whisperModel": None, "sourceSec": None, "clip": None,
+            "songId": None, "title": "", "startSec": 0, "endSec": 0, "confidence": 0, "reason": f"skipped: {why}",
+            "status": "skipped",
+        }]
     src_dir = WORK / "src" / safe_name(folder)
     mp3s = sorted(src_dir.glob("*.mp3"))
     if not mp3s:
         raise SystemExit(f"no downloaded MP3 in {src_dir}; run fetch_dropbox.mjs download first")
-    songs = [{"songId": s["songId"], "title": s["title"]} for s in catalog["songs"] if s.get("songId")]
-    setlist = svc.setlist
     rows_ = S.song_rows(setlist) if isinstance(setlist, dict) else None
     rows: list[dict] = []
     shutil.rmtree(WORK / "clips" / safe_name(folder), ignore_errors=True)  # a re-run re-cuts
@@ -107,8 +128,11 @@ def run_folder(folder: str, inventory: list[dict], catalog: dict) -> list[dict]:
 def main(folders: list[str]) -> None:
     inventory = json.loads((WORK / "inventory.json").read_text(encoding="utf-8"))
     catalog = json.loads((WORK / "catalog.json").read_text(encoding="utf-8"))
+    if folders == ["--all"]:
+        folders = [e["folder"] for e in inventory if any(f["name"].lower().endswith(".mp3") for f in e["files"])]
     mpath = WORK / "manifest.json"
     manifest = json.loads(mpath.read_text(encoding="utf-8")) if mpath.exists() else []
+    manifest = [r for r in manifest if r["folder"] in folders or r["status"] == "skipped"]
     for f in folders:
         manifest = [r for r in manifest if r["folder"] != f] + run_folder(f, inventory, catalog)
     mpath.write_text(json.dumps(manifest, ensure_ascii=False, indent=1), encoding="utf-8")
