@@ -255,7 +255,7 @@ export function SetlistRow({
                         {sectionPages}
                     </span>
                 )}
-                {swapColumn && <span aria-hidden="true" className="shrink-0 w-11" />}
+                {swapColumn && <span aria-hidden="true" className="shrink-0 w-8 sm:w-11" />}
             </>
         )
         if (isLeader) {
@@ -292,7 +292,7 @@ export function SetlistRow({
     // title (with its second lines under it), then two fixed columns that
     // always render, key and page, so neither ever floats.
     const keyCell = (
-        <span className="shrink-0 w-12 flex justify-center">
+        <span className="shrink-0 w-10 sm:w-12 flex justify-center">
             {displayKey ? (
                 // A small outlined key tag in full ink.
                 <span
@@ -325,7 +325,7 @@ export function SetlistRow({
     )
     // Second lines sit under the title, past the number column, and stop
     // short of the key and page columns.
-    const below = (children: React.ReactNode) => <div className="ps-8 pe-[6.25rem] min-w-0">{children}</div>
+    const below = (children: React.ReactNode) => <div className="ps-8 sm:pe-[6.25rem] min-w-0">{children}</div>
 
     const notesLine = track.notes ? (
         // Notes: a small quiet second line (the mock's oxblood), two lines at most.
@@ -485,7 +485,7 @@ export function SetlistRow({
         return (
             <div className="flex items-stretch bg-card">
                 <div className="flex-1 min-w-0">{rowEl}</div>
-                <span aria-hidden="true" className="shrink-0 w-14 border-b border-rule" />
+                <span aria-hidden="true" className="shrink-0 w-11 sm:w-14 border-s border-b border-rule" />
             </div>
         )
     }
@@ -500,10 +500,10 @@ export function SetlistRow({
                     e.stopPropagation()
                     onSwapTap()
                 }}
-                className="shrink-0 w-14 min-h-11 flex flex-col items-center justify-center gap-0 text-[11px] font-semibold text-muted-foreground hover:bg-accent hover:text-foreground active:bg-accent border-s border-b border-rule cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring [touch-action:manipulation]"
+                className="shrink-0 w-11 sm:w-14 min-h-11 flex flex-col items-center justify-center gap-0 text-[11px] font-semibold text-muted-foreground hover:bg-accent hover:text-foreground active:bg-accent border-s border-b border-rule cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring [touch-action:manipulation]"
             >
                 <Replace className="h-4 w-4" aria-hidden="true" />
-                {t("performSetlist.row.swap")}
+                <span className="hidden sm:inline">{t("performSetlist.row.swap")}</span>
             </button>
         </div>
     )
