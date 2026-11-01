@@ -90,20 +90,21 @@ function PerformWarmUp() {
             started = true
             clearTriggers()
             void (async () => {
-                // Worker first: it is what the first PDF needs soonest.
                 while (!ac.signal.aborted && chartIsOpen()) {
                     await new Promise((r) => setTimeout(r, 1000))
                 }
                 if (ac.signal.aborted) return
-                await primeOfflineWorker()
-                await warmViewerCode({ signal: ac.signal, isPaused: chartIsOpen })
                 // The overlay SHELL only (toolbar, stores, gestures; no pdf.js,
                 // no OSMD) is evaluated ahead of the first tap, as the old
-                // warm-up did, so a later first open doesn't pay for it. Only
-                // when the page is really quiet: an idle callback, or (iPad
-                // Safari) 8 s with no input, never while a chart is open.
-                await whenQuiet(ac.signal, () => lastInput)
-                if (!ac.signal.aborted && !chartIsOpen()) await loadPDFOverlay().catch(() => {})
+                // warm-up did, so a first open doesn't pay for it. Only when
+                // the page is really quiet: an idle callback, or (iPad Safari)
+                // 8 s with no input, never while a chart is open.
+                void whenQuiet(ac.signal, () => lastInput).then(() => {
+                    if (!ac.signal.aborted && !chartIsOpen()) void loadPDFOverlay().catch(() => {})
+                })
+                // Worker first: it is what the first PDF needs soonest.
+                await primeOfflineWorker()
+                await warmViewerCode({ signal: ac.signal, isPaused: chartIsOpen })
             })()
         }
 

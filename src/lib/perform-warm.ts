@@ -77,7 +77,9 @@ export function chunkUrlsFor(loader: WarmLoader): string[] | null {
     const urls = new Set<string>()
     for (const id of ids) {
         try {
-            urls.add(base + r.u(id))
+            const js = r.u(id)
+            // A CSS-only chunk has no JS file; webpack names it "<id>.undefined.js".
+            if (typeof js === "string" && !js.includes("undefined")) urls.add(base + js)
         } catch {
             return null
         }
