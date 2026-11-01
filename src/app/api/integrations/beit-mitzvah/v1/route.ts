@@ -15,7 +15,7 @@ export async function POST(request: Request): Promise<Response> {
         const db = getFirestore()
         const body = parsed.data
         if (body.operation === "resource") return Response.json(await resourceURL(db, body.ceremonyId, body.rowId, body.resourceId), { headers: privateHeaders })
-        if (body.operation === "details") await saveDetails(db, body)
+        if (body.operation === "details") await saveDetails(db, body) // an older send is a no-op ack
         if (body.operation === "ensure") {
             const ensured = await ensureService(db, body)
             if (ensured.status === "ambiguous") return Response.json(ensured, { headers: privateHeaders })

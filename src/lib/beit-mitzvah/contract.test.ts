@@ -38,6 +38,7 @@ const GOLDEN_REQUESTS = {
         orgId: "crc",
         ceremonyId: CEREMONY,
         operation: "details",
+        sentAt: "2026-10-31T12:00:00.000Z",
         students: ["Avery Example"],
         slot: "Saturday morning",
         torahRef: "Genesis 1:1–2:3",
@@ -90,10 +91,22 @@ describe("Beit Mitzvah contract v1 golden pair", () => {
             // BET-6: a reference is a name, never verse text.
             { ...GOLDEN_REQUESTS.details, torahRef: "בראשית" },
             { ...GOLDEN_REQUESTS.details, haftarahRef: "Thus says God the LORD, who created the heavens and stretched them out, who spread forth the earth and what comes from it, who gives breath" },
+            { ...GOLDEN_REQUESTS.details, torahRef: "In the beginning God created the heaven and the earth" },
+            { ...GOLDEN_REQUESTS.details, torahRef: "Genesis 1:1 In the beginning God created" },
+            { ...GOLDEN_REQUESTS.details, students: ["12345"] },
+            { ...GOLDEN_REQUESTS.details, slot: "In the beginning 1:1" },
+            { ...GOLDEN_REQUESTS.details, sentAt: undefined },
             { ...GOLDEN_REQUESTS.details, students: [] },
             { ...GOLDEN_REQUESTS.details, rehearsals: ["soon"] },
         ]
         for (const body of bad) expect(bridgeRequest.safeParse(body).success, JSON.stringify(body)).toBe(false)
+    })
+
+    it("a reference is a citation: these pass", () => {
+        for (const ref of ["Genesis 1:1–2:3", "1 Samuel 20:18-42", "Isaiah 42:5–43:10", "Song of Songs 2:8"]) {
+            expect(bridgeRequest.safeParse({ ...GOLDEN_REQUESTS.details, torahRef: ref }).success, ref).toBe(true)
+        }
+        expect(bridgeRequest.safeParse({ ...GOLDEN_REQUESTS.details, students: ["Avery O’Neil-Cohen", "Sam & Jo"] }).success).toBe(true)
     })
 
     it("every projection row in the golden response satisfies the row schema", () => {

@@ -214,6 +214,8 @@ export interface Setlist {
     occasion?: 'bnei-mitzvah' | 'holiday' | 'guest' | 'regular'
     /** BET-6: the Beit Mitzvah portal's opaque ceremony UUID (no names). */
     ceremonyId?: string
+    /** BET-6: every ceremony linked to this setlist (two families on one service). */
+    ceremonyIds?: string[]
     transferredAt?: string
     previousOwnerId?: string
     assignedUids?: string[]

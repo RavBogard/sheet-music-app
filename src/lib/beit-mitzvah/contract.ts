@@ -6,8 +6,16 @@ export const localDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(value =>
     const date = new Date(`${value}T12:00:00Z`)
     return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value
 })
-/** A reading's reference name, e.g. "Genesis 1:1–2:3". No Hebrew, no verse text. */
-export const referenceName = z.string().trim().min(1).max(120).regex(/^[A-Za-z0-9 .,:;'’()–—-]+$/)
+/**
+ * A reading's citation, e.g. "Genesis 1:1–2:3" or "1 Samuel 20:18-42": an
+ * optional book number, a book name of letters, then chapter:verse and an
+ * optional range to verse or chapter:verse. Nothing else fits, so verse text
+ * cannot ride along.
+ */
+export const referenceName = z.string().trim().max(60)
+    .regex(/^(?:[1-3] )?[A-Za-z]+(?: [A-Za-z]+)* \d{1,3}:\d{1,3}(?:[–-]\d{1,3}(?::\d{1,3})?)?$/)
+/** A person's name or a slot label: Latin letters, spaces, apostrophes, hyphens, ampersands, periods. */
+const nameLike = (max: number) => z.string().trim().min(1).max(max).regex(/^[A-Za-zÀ-ɏ][A-Za-zÀ-ɏ '’&.-]*$/)
 export type DetailsRequest = Extract<BridgeRequest, { operation: "details" }>
 const base = { version: z.literal(1), orgId: z.literal("crc"), ceremonyId }
 export const bridgeRequest = z.discriminatedUnion("operation", [
@@ -20,11 +28,12 @@ export const bridgeRequest = z.discriminatedUnion("operation", [
     }).strict(),
     z.object({ ...base, operation: z.literal("projection") }).strict(),
     // BET-6: what the setlist's read-only ceremony card shows. Names and
-    // reference NAMES only ("Genesis 1:1–2:3"), never verse text: a reference
-    // is Latin letters, digits and punctuation, so text cannot ride along.
+    // citations only ("Genesis 1:1–2:3"), never verse text: see referenceName.
     z.object({ ...base, operation: z.literal("details"),
-        students: z.array(z.string().trim().min(1).max(120)).min(1).max(6),
-        slot: z.string().trim().min(1).max(80).optional(),
+        // Ordering fence: details older than (or as old as) the stored ones are a no-op.
+        sentAt: z.iso.datetime(),
+        students: z.array(nameLike(120)).min(1).max(6),
+        slot: nameLike(80).optional(),
         torahRef: referenceName.optional(),
         haftarahRef: referenceName.optional(),
         rehearsals: z.array(localDate).max(12).optional(),

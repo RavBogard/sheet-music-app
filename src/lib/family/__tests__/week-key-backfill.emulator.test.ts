@@ -4,7 +4,7 @@ import { initializeApp, deleteApp, getApps, type App } from "firebase-admin/app"
 import { getFirestore } from "firebase-admin/firestore"
 
 import { backfillWeekKeys } from "@/lib/mcp/tools/week-key-backfill"
-import { clearCeremonyCardCache, readCeremonyCard } from "@/lib/family/ceremony-card"
+import { ceremonyCardCacheSize, clearCeremonyCardCache, readCeremonyCard } from "@/lib/family/ceremony-card"
 import { collections, linkId, saveDetails } from "@/lib/beit-mitzvah/service"
 import type { WeekInfo } from "@/lib/family/week-key"
 
@@ -103,7 +103,7 @@ describe("BET-6 back-fill and ceremony card (emulator)", () => {
             const bare = await readCeremonyCard(db(), "bm", "crc")
             expect(bare).toMatchObject({ ceremonyType: "morning", localDate: "2026-11-07", students: [], torahRef: null })
             await saveDetails(db(), {
-                version: 1, orgId: "crc", ceremonyId: CEREMONY, operation: "details",
+                version: 1, orgId: "crc", ceremonyId: CEREMONY, operation: "details", sentAt: "2026-10-31T12:00:00.000Z",
                 students: ["Avery Example"], slot: "Saturday morning", torahRef: "Genesis 1:1–2:3", haftarahRef: "Isaiah 42:5–43:10", rehearsals: ["2026-11-05", "2026-11-03"],
             })
             clearCeremonyCardCache()
@@ -119,9 +119,34 @@ describe("BET-6 back-fill and ceremony card (emulator)", () => {
             expect(await readCeremonyCard(db(), "orphan", "crc")).toBeNull()
         })
 
+        it("an older or replayed details send is a no-op ack", async () => {
+            const send = (sentAt: string, name: string) => saveDetails(db(), { version: 1, orgId: "crc", ceremonyId: CEREMONY, operation: "details", sentAt, students: [name] })
+            expect(await send("2026-10-31T12:00:00.000Z", "Newer Name")).toEqual({ applied: true })
+            expect(await send("2026-10-30T12:00:00.000Z", "Older Name")).toEqual({ applied: false })
+            expect(await send("2026-10-31T12:00:00.000Z", "Replayed Name")).toEqual({ applied: false })
+            clearCeremonyCardCache()
+            expect((await readCeremonyCard(db(), "bm", "crc"))?.students).toEqual(["Newer Name"])
+        })
+
+        it("a setlist two ceremonies link to shows both families on one card", async () => {
+            const second = "33333333-3333-4333-8333-333333333333"
+            await db().collection("setlists").doc("bm").set({ ceremonyIds: [CEREMONY, second] }, { merge: true })
+            await db().collection(collections.links).doc(linkId(second)).set({ orgId: "crc", ceremonyId: second, setlistId: "bm", localDate: "2026-11-07", ceremonyType: "morning" })
+            const at = "2026-10-31T12:00:00.000Z"
+            await saveDetails(db(), { version: 1, orgId: "crc", ceremonyId: CEREMONY, operation: "details", sentAt: at, students: ["Avery Example"], torahRef: "Genesis 1:1-2:3" })
+            await saveDetails(db(), { version: 1, orgId: "crc", ceremonyId: second, operation: "details", sentAt: at, students: ["Blake Example"], torahRef: "Genesis 1:1-2:3" })
+            clearCeremonyCardCache()
+            expect(await readCeremonyCard(db(), "bm", "crc")).toMatchObject({ students: ["Avery Example", "Blake Example"], torahRef: "Genesis 1:1-2:3" })
+        })
+
+        it("the cache stays bounded", async () => {
+            for (let i = 0; i < 230; i++) await readCeremonyCard(db(), `missing-${i}`, "crc")
+            expect(ceremonyCardCacheSize()).toBeLessThanOrEqual(200)
+        })
+
         it("details for an unknown ceremony are refused", async () => {
             await expect(saveDetails(db(), {
-                version: 1, orgId: "crc", ceremonyId: "22222222-2222-4222-8222-222222222222", operation: "details", students: ["X"],
+                version: 1, orgId: "crc", ceremonyId: "22222222-2222-4222-8222-222222222222", operation: "details", sentAt: "2026-10-31T12:00:00.000Z", students: ["X"],
             })).rejects.toThrow("not_found")
         })
     })
