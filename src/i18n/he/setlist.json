@@ -92,6 +92,10 @@
     "variantsShow_two": "הצג שתי גרסאות נוספות",
     "variantsShow_other": "הצג {count} גרסאות נוספות",
     "variantsHide": "הסתר גרסאות נוספות",
+    "variantsChip_one": "+גרסה אחת",
+    "variantsChip_two": "+2 גרסאות",
+    "variantsChip_other": "+{count} גרסאות",
+
     "updatedAgo": "עודכן {when}",
     "chartsBound": "{bound}/{total} תווים",
     "rabbiFilterGroupLabel": "סינון לפי רב/ה"

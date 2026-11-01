@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, type ReactNode } from "react"
+import { cn } from "@/lib/utils"
 import Link from "next/link"
 import { Music, Play, ChevronRight } from "lucide-react"
 import { createSetlistService, Setlist } from "@/lib/setlist-firebase"
@@ -151,19 +152,22 @@ export function PublicSetlistListing({ initialSetlists }: PublicSetlistListingPr
     // rows as /setlists: a date column, the name large, then date and songs.
     // Every row is a full-width link, at least 72px tall, for a musician
     // tapping an iPad on a stand.
-    const renderCard = (setlist: Setlist, muted = false) => {
+    const renderCard = (setlist: Setlist, muted = false, extra?: ReactNode) => {
         const eventDate = toDate(setlist.eventDate)
         const songCount = setlist.songCount ?? 0
 
-        return (
+        const link = (
             <Link
                 key={setlist.id}
                 href={`/perform/setlist/${setlist.id}`}
-                className="group flex items-center gap-3 px-3 sm:px-4 py-1 min-h-11 bg-card hover:bg-accent/60 active:bg-accent transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                className={cn(
+                    "group flex items-center gap-3 px-3 sm:px-4 py-1.5 min-h-12 bg-card hover:bg-accent/60 active:bg-accent transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                    extra ? "pe-32" : undefined,
+                )}
             >
                 <RowDate date={eventDate} muted={muted} />
                 <div className="min-w-0 flex-1">
-                    <h3 className={muted ? "text-[0.95rem] font-semibold leading-snug line-clamp-2" : "text-[0.95rem] font-bold leading-snug line-clamp-2"}>
+                    <h3 className="text-[0.95rem] font-semibold leading-snug text-foreground line-clamp-2">
                         {setlist.name}
                     </h3>
                     <p className="tnum text-xs font-medium text-muted-foreground">
@@ -183,8 +187,17 @@ export function PublicSetlistListing({ initialSetlists }: PublicSetlistListingPr
                         <span data-testid="perform-card-song-count">{t("performSetlist.songCount", { count: songCount })}</span>
                     </p>
                 </div>
-                <DirectionalIcon icon={ChevronRight} aria-hidden="true" className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-foreground" />
+                {!extra && <DirectionalIcon icon={ChevronRight} aria-hidden="true" className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-foreground" />}
             </Link>
+        )
+        if (!extra) return link
+        // A family group's versions toggle can't sit inside the link, so it
+        // floats over the row's end, beside the chevron.
+        return (
+            <div key={setlist.id} className="relative">
+                {link}
+                <div className="absolute inset-y-0 end-3 sm:end-4 flex items-center">{extra}</div>
+            </div>
         )
     }
 
@@ -366,7 +379,7 @@ export function PublicSetlistListing({ initialSetlists }: PublicSetlistListingPr
                             </h2>
                             <VariantGroupList
                                 groups={pastGroups}
-                                renderRow={(s) => renderCard(s, true)}
+                                renderRow={(s, extra) => renderCard(s, true, extra)}
                             />
                         </section>
                     )}

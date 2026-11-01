@@ -161,7 +161,7 @@ export default function SettingsPage() {
                                         setEditingName(true)
                                     }}
                                 >
-                                    <span className="text-base font-extrabold text-foreground text-start break-words">{profile?.displayName || user?.displayName || t("settings.defaultDisplayName")}</span>
+                                    <span className="text-sm font-bold text-foreground text-start break-words">{profile?.displayName || user?.displayName || t("settings.defaultDisplayName")}</span>
                                     <Pencil aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-muted-foreground group-hover:text-foreground transition-colors" />
                                 </button>
                             )}

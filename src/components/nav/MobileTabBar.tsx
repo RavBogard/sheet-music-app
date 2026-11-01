@@ -169,7 +169,8 @@ export function MobileTabBar(props: AppNavigationProps) {
     // Web refresh (blend E): below lg (iPad portrait and phones) the top bar's
     // tabs live here. The Setlist tab keeps its smart target (tonight's setlist
     // in Perform); Search and the wedge mixer stay where they were.
-    const setlistActive = pathname.startsWith("/setlists") || pathname.startsWith("/perform/setlist")
+    // Home and the /perform listing belong to the Setlist tab (re-audit 2 V13).
+    const setlistActive = pathname === "/" || pathname === "/perform" || pathname.startsWith("/setlists") || pathname.startsWith("/perform/setlist")
     const libraryActive = pathname.startsWith("/library")
     const manageActive = pathname.startsWith("/manage")
 

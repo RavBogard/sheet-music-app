@@ -18,7 +18,6 @@
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
   --font-display: var(--font-display), sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
@@ -385,8 +384,13 @@
     @apply border-border outline-ring/50;
   }
 
+  /* The UI face. next/font sets --font-sans on <body> (Assistant, or the
+     tenant's body face), so the family is applied here, on body, where the
+     variable lives. Tabular numerals keep page and count columns aligned. */
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+    font-variant-numeric: tabular-nums;
     caret-color: var(--brand);
   }
 
@@ -718,4 +722,12 @@
   background-size: cover, cover, cover, cover;
   background-position: center;
   background-repeat: no-repeat;
+}
+/* Horizontal chip rows and strips that scroll sideways on a phone: no
+   scrollbar drawn (the row is swiped, and its edge shows there is more). */
+@utility scrollbar-hide {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }

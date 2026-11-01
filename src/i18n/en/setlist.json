@@ -34,7 +34,7 @@
     "rabbiFilterAll": "All",
     "rabbiFilterChip": "Rabbi {name}",
     "stageReady": "Your stage is ready.",
-    "upcomingScheduled_one": "{count} upcoming setlists scheduled.",
+    "upcomingScheduled_one": "{count} upcoming setlist scheduled.",
     "upcomingScheduled_other": "{count} upcoming setlists scheduled.",
     "loadErrorTitle": "Unable to Load Setlists",
     "createCardHint": "Start fresh or build from a template",
@@ -89,6 +89,9 @@
     "variantsShow_one": "Show {count} other version",
     "variantsShow_other": "Show {count} other versions",
     "variantsHide": "Hide other versions",
+    "variantsChip_one": "+{count} version",
+    "variantsChip_other": "+{count} versions",
+
     "updatedAgo": "Updated {when}",
     "chartsBound": "{bound}/{total} charts",
     "rabbiFilterGroupLabel": "Filter by rabbi"

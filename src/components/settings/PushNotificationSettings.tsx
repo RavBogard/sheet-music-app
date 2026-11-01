@@ -87,17 +87,12 @@ export function PushNotificationSettings() {
 
     return (
         <div className="space-y-3">
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-caution/10 flex items-center justify-center">
-                        <Bell className="w-5 h-5 text-caution" />
-                    </div>
-                    <div>
-                        <h3 id="push-notifications-title" className="font-semibold text-foreground">{t("settings.push.title")}</h3>
-                        <p id="push-notifications-desc" className="text-sm text-muted-foreground">
-                            {t("settings.push.description")}
-                        </p>
-                    </div>
+            <div className="flex items-center justify-between gap-4">
+                <div className="min-w-0">
+                    <h3 id="push-notifications-title" className="text-sm font-bold text-foreground">{t("settings.push.title")}</h3>
+                    <p id="push-notifications-desc" className="text-xs text-muted-foreground mt-0.5">
+                        {t("settings.push.description")}
+                    </p>
                 </div>
                 <div className="flex items-center gap-2">
                     {loading && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
@@ -112,7 +107,7 @@ export function PushNotificationSettings() {
             </div>
 
             {permStatus === 'denied' && (
-                <p className="text-xs text-caution ps-[52px]">
+                <p className="text-xs text-caution">
                     {t("settings.push.blockedHint")}
                 </p>
             )}

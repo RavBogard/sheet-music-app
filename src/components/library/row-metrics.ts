@@ -16,14 +16,16 @@
 
 /**
  * Estimated row height in px. Option B: rows are a dense hairline list with
- * no gap — a title line (~20px) and a meta line (~16px) inside py-1 (8px),
- * at least the 44px hit floor, plus the 1px rule: 45px when nothing wraps. Only a seed for
+ * no gap and no Button padding — a 0.95rem title line (~21px) and a meta line
+ * (~16px) inside py-1 (8px),
+ * at least the 44px hit floor, plus the 1px rule: 46px when nothing wraps
+ * (measured 61px before the ghost Button's own py-2/px-4 were zeroed). Only a seed for
  * the virtualizer — every mounted row is measured for real via
  * `measureElement`, so wrapped long titles keep their true height — but it is
  * exactly what the skeleton must draw, because the skeleton is what the
  * measurement replaces.
  */
-export const ROW_ESTIMATE_PX = 45
+export const ROW_ESTIMATE_PX = 46
 
 /** No gap: rows sit on the 1px hairline grid (web refresh). */
 export const ROW_GAP_PX = 0

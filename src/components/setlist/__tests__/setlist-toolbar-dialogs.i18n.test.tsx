@@ -68,7 +68,7 @@ describe.each([false, true])("setlist toolbar + dialogs i18n (rtl=%s)", (rtl) =>
         const r = renderPseudo(toolbar(), { rtl })
         if (rtl) expect(r.container.querySelector('[dir="rtl"]')).not.toBeNull()
         expectNoUntranslatedText(document.body)
-        fireEvent.click(document.querySelector("button") as HTMLElement) // search toggle
+        fireEvent.click(document.querySelector("button[title]") as HTMLElement) // search toggle (the one titled button; the chips come first)
         expect(document.querySelector("input")).not.toBeNull()
         expectNoUntranslatedText(document.body, { attributes: ["title", "aria-label", "placeholder"] })
     })
@@ -142,7 +142,8 @@ describe("toolbar + dialogs English output is unchanged", () => {
 
     it("renders today's English", () => {
         render(toolbar())
-        expect(screen.getByText("All Setlists")).toBeDefined()
+        // Option B redo: no "All setlists" label over the chip row.
+        expect(screen.queryByText("All Setlists")).toBeNull()
         expect(screen.getByText(`Rabbi ${RABBI}`)).toBeDefined()
         expect(screen.getByLabelText("Search setlists").getAttribute("title")).toBe("Search")
         cleanup()
@@ -161,7 +162,7 @@ describe("toolbar + dialogs English output is unchanged", () => {
 
         dash.value = dashboardValue()
         render(<SetlistDashboard />)
-        expect(screen.getByText("1 upcoming setlists scheduled.")).toBeDefined()
+        expect(screen.getByText("1 upcoming setlist scheduled.")).toBeDefined()
         expect(screen.getByText("Create New Setlist")).toBeDefined()
         expect(screen.getByText("Upcoming Services")).toBeDefined()
         expect(screen.getByText("Library & Past Events")).toBeDefined()

@@ -92,50 +92,48 @@ export function MusicianProfileSettings() {
     const [nudgeBefore, nudgeAfter = ""] = t("settings.profile.nudge").split("{emphasis}")
 
     return (
-        <div className="space-y-6">
-            {/* Section Header */}
-            <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-brand/10 flex items-center justify-center">
-                    <Guitar className="w-5 h-5 text-brand" />
-                </div>
-                <div>
-                    <h3 className="text-lg font-semibold text-foreground">{t("settings.profile.title")}</h3>
-                    <p className="text-sm text-muted-foreground">
-                        {t("settings.profile.description")}
-                    </p>
-                </div>
+        <div className="space-y-4">
+            {/* Section header: the one settings-card anatomy (Option B):
+                a 0.875rem/700 title over a muted line; no icon tile. */}
+            <div>
+                <h3 className="text-sm font-bold text-foreground">{t("settings.profile.title")}</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                    {t("settings.profile.description")}
+                </p>
             </div>
 
             {/* Nudge: no instrument configured yet */}
             {!profile.instrument && (
-                <div className="flex items-start gap-3 p-3 rounded-lg bg-caution/10 border border-caution/20">
-                    <span className="text-lg mt-0.5">🎵</span>
-                    <p className="text-sm text-caution dark:text-caution">
+                <div className="flex items-start gap-2 rounded-md border border-rule bg-muted px-3 py-2">
+                    <Guitar aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                    <p className="text-sm text-foreground">
                         {nudgeBefore}<strong>{t("settings.profile.nudgeEmphasis")}</strong>{nudgeAfter}
                     </p>
                 </div>
             )}
 
             {/* Instrument Selection */}
-            <div className="space-y-3">
-                <label className="text-sm font-medium text-foreground">{t("settings.profile.instrument")}</label>
+            <div className="space-y-2">
+                <label className="text-xs font-bold text-muted-foreground">{t("settings.profile.instrument")}</label>
+                {/* Outlined chips, the same as the Appearance control. */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {Object.entries(INSTRUMENT_PRESETS).map(([key, preset]) => (
                         <button
                             key={key}
                             onClick={() => selectInstrument(key)}
+                            aria-pressed={profile.instrument === key}
                             className={`
-                                relative min-h-11 px-3 py-2.5 rounded-lg text-start transition-all duration-200 text-sm
+                                relative min-h-11 px-3 py-1.5 rounded-md text-start transition-colors text-[13px] border cursor-pointer
+                                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
                                 ${profile.instrument === key
-                                    ? 'bg-brand/10 border-brand/50 text-foreground ring-1 ring-brand/30'
-                                    : 'bg-muted/50 border-border text-muted-foreground hover:bg-muted hover:text-foreground'
+                                    ? 'bg-accent border-brand text-foreground'
+                                    : 'bg-card border-border text-muted-foreground hover:text-foreground'
                                 }
-                                border
                             `}
                         >
-                            <div className="font-medium">{key in INSTRUMENT_LABEL ? t(INSTRUMENT_LABEL[key]) : preset.label}</div>
+                            <div className="font-semibold">{key in INSTRUMENT_LABEL ? t(INSTRUMENT_LABEL[key]) : preset.label}</div>
                             {preset.transposition !== 0 && (
-                                <div className="text-xs opacity-60 mt-0.5">
+                                <div className="text-xs text-muted-foreground">
                                     {t("settings.profile.semitones", {
                                         count: Math.abs(preset.transposition),
                                         offset: `${preset.transposition > 0 ? '+' : ''}${preset.transposition}`,
@@ -152,7 +150,7 @@ export function MusicianProfileSettings() {
 
             {/* Transposition Details (shown when instrument selected) */}
             {currentPreset && (
-                <div className="space-y-4 p-4 rounded-lg bg-muted/30 border border-border">
+                <div className="space-y-4 p-3 rounded-md border border-rule">
                     <p className="text-sm text-muted-foreground">{profile.instrument && profile.instrument in INSTRUMENT_NOTE ? t(INSTRUMENT_NOTE[profile.instrument]) : currentPreset.description}</p>
 
                     {/* Custom Transposition Override */}
@@ -203,10 +201,10 @@ export function MusicianProfileSettings() {
                                                 key={fret}
                                                 onClick={() => updateField('preferredCapoFret', fret)}
                                                 className={`
-                                                    h-11 min-w-0 rounded-lg text-sm font-medium transition-all duration-200
+                                                    tnum h-11 min-w-0 rounded-md border text-sm font-semibold transition-colors
                                                     ${profile.preferredCapoFret === fret
-                                                        ? 'bg-brand text-brand-foreground'
-                                                        : 'bg-muted border border-border text-muted-foreground hover:text-foreground'
+                                                        ? 'bg-accent border-brand text-foreground'
+                                                        : 'bg-card border-border text-muted-foreground hover:text-foreground'
                                                     }
                                                 `}
                                             >
@@ -236,17 +234,14 @@ export function MusicianProfileSettings() {
             {/* ─── Scheduling Settings ─── */}
             <div className="space-y-5 pt-6 border-t border-border/60">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-brand/10 flex items-center justify-center">
-                        <CalendarDays className="w-5 h-5 text-brand" />
-                    </div>
                     <div>
-                        <h4 className="text-base font-semibold text-foreground">{t("settings.scheduling.title")}</h4>
-                        <p className="text-sm text-muted-foreground">{t("settings.scheduling.description")}</p>
+                        <h4 className="text-sm font-bold text-foreground">{t("settings.scheduling.title")}</h4>
+                        <p className="text-xs text-muted-foreground mt-0.5">{t("settings.scheduling.description")}</p>
                     </div>
                 </div>
 
                 {/* Phone Number */}
-                <div className="space-y-2 p-4 rounded-lg bg-muted/20 border border-border/40">
+                <div className="space-y-2 p-3 rounded-md border border-rule">
                     <label htmlFor={`${fieldId}-phone`} className="text-sm font-medium text-foreground flex items-center gap-1.5">
                         <Phone className="h-3.5 w-3.5 text-muted-foreground" />
                         {t("settings.scheduling.phone")}
@@ -263,7 +258,7 @@ export function MusicianProfileSettings() {
                 </div>
 
                 {/* Notification Preferences */}
-                <div className="space-y-3 p-4 rounded-lg bg-muted/20 border border-border/40">
+                <div className="space-y-3 p-3 rounded-md border border-rule">
                     <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
                         <Bell className="h-3.5 w-3.5 text-muted-foreground" />
                         {t("settings.scheduling.notifications")}
@@ -297,7 +292,7 @@ export function MusicianProfileSettings() {
                 </div>
 
                 {/* Calendar Feed URL */}
-                <div className="space-y-2 p-4 rounded-lg bg-muted/20 border border-border/40">
+                <div className="space-y-2 p-3 rounded-md border border-rule">
                     <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
                         <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
                         {t("settings.scheduling.calendarTitle")}

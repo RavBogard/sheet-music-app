@@ -10,7 +10,7 @@ import { liturgyRuns, runFolios } from "./liturgy-runs"
 import { useT } from "@/i18n/client"
 import { cn } from "@/lib/utils"
 import { PAGE_WIDTH_CLASS } from "@/components/layout/Page"
-import { sectionBands } from "@/components/setlist/grid/section-bands"
+import { isSectionRow, sectionBands } from "@/components/setlist/grid/section-bands"
 import { isSegue, setTotalsByHeader } from "@/lib/gig/display"
 import type { Gig } from "@/lib/gig/model"
 import { SegueMark } from "./SegueMark"
@@ -94,6 +94,24 @@ export function SetlistView({
         () => (showTiming ? setTotalsByHeader(tracks, gig).byHeaderId : null),
         [showTiming, tracks, gig],
     )
+    // Display numbers, as the editor draws them: songs and other rows count
+    // 1, 2, 3 in the author's order; section labels get none. Display only.
+    const positions = useMemo(() => {
+        const out: number[] = []
+        let n = 0
+        for (const track of tracks) {
+            out.push(isSectionRow(track) ? 0 : ++n)
+        }
+        return out
+    }, [tracks])
+    // Swap can apply to chart-bearing rows only; when any row can, every row
+    // reserves the column so the key and page columns stay in one line.
+    const canSwap = (track: SetlistTrack) =>
+        !!onSwapTap && isLeader && !!track.id && track.type !== "header" && !!track.fileId
+    const swapColumn = useMemo(
+        () => !!onSwapTap && isLeader && tracks.some((tr) => !!tr.id && tr.type !== "header" && !!tr.fileId),
+        [onSwapTap, isLeader, tracks],
+    )
     const [openRuns, setOpenRuns] = useState<Set<number>>(() => new Set())
     const runByStart = useMemo(() => new Map(runs.map((r) => [r.start, r])), [runs])
     const toggleRun = (start: number) =>
@@ -130,10 +148,7 @@ export function SetlistView({
         const gestureEligible =
             isLeader && !!setlistId && !!track.id && track.type !== "header"
         // Swap is for chart-bearing rows only, and only when the page wired it.
-        const swapTap =
-            onSwapTap && isLeader && !!track.id && track.type !== "header" && !!track.fileId
-                ? () => onSwapTap(index)
-                : undefined
+        const swapTap = canSwap(track) && onSwapTap ? () => onSwapTap(index) : undefined
         if (!gestureEligible) {
             return (
                 <SetlistRow
@@ -152,6 +167,8 @@ export function SetlistView({
                     savedOffline={savedOfflineFor(track)}
                     saveFailure={saveFailureFor(track)}
                     highlighted={!!track.id && !!highlightIds?.has(track.id)}
+                    position={positions[index] || undefined}
+                    swapColumn={swapColumn}
                 />
             )
         }
@@ -181,6 +198,8 @@ export function SetlistView({
                         savedOffline={savedOfflineFor(track)}
                         saveFailure={saveFailureFor(track)}
                         highlighted={!!highlightIds?.has(track.id)}
+                        position={positions[index] || undefined}
+                        swapColumn={swapColumn}
                     />
                 )}
             </LiveDirectorGesture>
@@ -189,15 +208,18 @@ export function SetlistView({
 
     return (
         <div className="flex-1 overflow-y-auto w-full">
-            <div className={cn(PAGE_WIDTH_CLASS, "flex flex-col pb-24 pt-2")}>
+            <div className={cn(PAGE_WIDTH_CLASS, "flex flex-col pb-24 pt-3 max-sm:px-0")}>
                 {/* Service notes banner */}
                 {serviceNotes && (
-                    <div className="mx-3 sm:mx-0 mt-2 mb-3 px-4 py-3 bg-accent border border-rule rounded-md">
-                        <p className="text-base text-foreground whitespace-pre-wrap">{serviceNotes}</p>
+                    <div className="mx-4 sm:mx-0 mb-3 px-4 py-2.5 bg-card border border-rule rounded-lg">
+                        <p className="text-sm text-foreground whitespace-pre-wrap">{serviceNotes}</p>
                     </div>
                 )}
 
-                {/* Single flat scrollable list */}
+                {/* One continuous card (Option B): sections are thin labelled
+                    rules inside it, never separate cards. */}
+                {tracks.length > 0 && (
+                <div data-testid="perform-list" className="flex flex-col bg-card border-y sm:border border-rule sm:rounded-lg overflow-hidden">
                 {(() => {
                     const out: React.ReactNode[] = []
                     for (let index = 0; index < tracks.length; index++) {
@@ -237,6 +259,8 @@ export function SetlistView({
                     }
                     return out
                 })()}
+                </div>
+                )}
 
                 {tracks.length === 0 && (
                     <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">

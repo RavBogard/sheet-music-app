@@ -35,13 +35,36 @@ export interface SetlistFamilyHeadProps {
     /** The live setlist (raw, serialized or local); only the BET-6 fields are read. */
     setlist: Record<string, unknown> | null | undefined
     className?: string
+    /**
+     * Option B: the parasha can join the head's one meta line ('parasha',
+     * an inline span led by a middle dot) while the Beit Mitzvah line stays
+     * its own line ('ceremony'). 'all' (the default) draws both as lines.
+     */
+    part?: 'all' | 'parasha' | 'ceremony'
 }
 
-export function SetlistFamilyHead({ setlistId, setlist, className }: SetlistFamilyHeadProps) {
+export function SetlistFamilyHead({ setlistId, setlist, className, part = 'all' }: SetlistFamilyHeadProps) {
     const org = useOrg()
     const family = isFamilyOrg(org)
     const week = family ? storedWeek(setlist ?? null, org) : null
     const ceremonyId = family && typeof setlist?.ceremonyId === 'string' ? setlist.ceremonyId : null
+    if (part === 'parasha') {
+        if (!week?.parasha) return null
+        return (
+            <span data-testid="setlist-family-head" className={className}>
+                <span aria-hidden="true"> · </span>
+                <ParashaLine name={week.parasha.name} inline />
+            </span>
+        )
+    }
+    if (part === 'ceremony') {
+        if (!ceremonyId) return null
+        return (
+            <div className={className} data-testid="setlist-family-head">
+                <CeremonyCard setlistId={setlistId} ceremonyId={ceremonyId} />
+            </div>
+        )
+    }
     if (!week?.parasha && !ceremonyId) return null
     return (
         <div className={className} data-testid="setlist-family-head">
@@ -51,8 +74,11 @@ export function SetlistFamilyHead({ setlistId, setlist, className }: SetlistFami
     )
 }
 
-export function ParashaLine({ name }: { name: string }) {
+export function ParashaLine({ name, inline = false }: { name: string; inline?: boolean }) {
     const t = useT()
+    if (inline) {
+        return <span data-testid="family-parasha">{t('familyWeek.parasha', { name })}</span>
+    }
     return (
         <p data-testid="family-parasha" className="text-xs font-medium text-muted-foreground truncate">
             {t('familyWeek.parasha', { name })}

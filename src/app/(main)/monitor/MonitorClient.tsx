@@ -198,7 +198,7 @@ export default function MonitorClient() {
         return (
             <div className="max-w-lg mx-auto p-4 space-y-6">
                 <div className="flex items-center justify-between mb-2">
-                    <h1 className="text-2xl font-bold">Sound Engineer</h1>
+                    <h1 className="text-base font-extrabold leading-tight">Sound Engineer</h1>
                     <div className="flex items-center gap-2">
                         <Link
                             href="/monitor/engineer"

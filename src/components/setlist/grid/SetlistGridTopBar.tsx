@@ -28,6 +28,10 @@ export interface SetlistGridTopBarProps {
     performHref?: string
     /** BET-5: the gig line under the status line (band tenants). */
     gigSlot?: ReactNode
+    /** BET-6: the parasha, joined to the meta line (an inline node). */
+    metaSlot?: ReactNode
+    /** BET-6: a Beit Mitzvah service's line under the meta line. */
+    familySlot?: ReactNode
 }
 
 /**
@@ -44,6 +48,8 @@ export function SetlistGridTopBar({
     onEditMeta,
     performHref,
     gigSlot,
+    metaSlot,
+    familySlot,
 }: SetlistGridTopBarProps) {
     const t = useT()
     const status = statusParts.filter((p): p is string => Boolean(p))
@@ -74,7 +80,7 @@ export function SetlistGridTopBar({
 
                 <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1 min-w-0">
-                        <h1 className="line-clamp-2 break-words text-base font-extrabold leading-tight text-foreground">
+                        <h1 className="line-clamp-2 sm:line-clamp-1 break-words text-base font-extrabold leading-tight text-foreground" title={name || undefined}>
                             {name || t('setlistGrid.newSetlist')}
                         </h1>
                         {onEditMeta ? (
@@ -93,10 +99,11 @@ export function SetlistGridTopBar({
                             </button>
                         ) : null}
                     </div>
-                    {status.length > 0 ? (
+                    {status.length > 0 || metaSlot ? (
+                        // Option B: ONE meta line; it truncates, never wraps.
                         <p
                             data-testid="setlist-status-line"
-                            className="tnum line-clamp-2 break-words text-xs font-medium text-muted-foreground"
+                            className="tnum truncate text-xs font-medium text-muted-foreground"
                         >
                             {status.map((part, i) => (
                                 <span key={i}>
@@ -104,8 +111,10 @@ export function SetlistGridTopBar({
                                     <span>{part}</span>
                                 </span>
                             ))}
+                            {metaSlot}
                         </p>
                     ) : null}
+                    {familySlot}
                     {gigSlot}
                 </div>
                 </div>
@@ -117,8 +126,8 @@ export function SetlistGridTopBar({
                             href={performHref}
                             data-testid="setlist-grid-perform-link"
                             className={cn(
-                                'touch-hit inline-flex h-8 items-center gap-1.5 rounded-md px-3',
-                                'bg-primary text-primary-foreground text-[13px] font-bold',
+                                'touch-hit inline-flex h-9 items-center gap-1.5 rounded-md px-3.5',
+                                'bg-primary text-primary-foreground text-sm font-bold',
                                 'hover:bg-primary/90 active:bg-primary/85 transition-colors',
                                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
                             )}

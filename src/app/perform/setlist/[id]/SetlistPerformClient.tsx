@@ -49,8 +49,6 @@ import { logger } from "@/lib/logger"
 import { TonightSwapSheet } from "@/components/performance/TonightSwapSheet"
 import { DirectionalIcon } from "@/components/i18n/DirectionalIcon"
 import { useT } from "@/i18n/client"
-import { useFormat } from "@/i18n/format-client"
-import { formatUpdatedWhen } from "@/lib/format/updated-when"
 import { cn } from "@/lib/utils"
 import { PAGE_WIDTH_CLASS } from "@/components/layout/Page"
 import { GigPanel } from "@/components/setlist/gig/GigPanel"
@@ -110,7 +108,6 @@ export function SetlistPerformClient({
     chartVersions,
 }: SetlistPerformClientProps) {
     const t = useT()
-    const fmt = useFormat()
     const {
         tracks: liveTracks,
         plannedTracks,
@@ -133,7 +130,6 @@ export function SetlistPerformClient({
         setlistUpdatedSinceLoad,
         setlistLiveStamp,
         setlistVersion,
-        setlistUpdatedAt,
         isWakeLockActive,
         isWakeLockSupported,
         wakeLockError,
@@ -667,8 +663,9 @@ export function SetlistPerformClient({
                     <DirectionalIcon icon={ArrowLeft} className="h-5 w-5 text-foreground" />
                 </Link>
                 <div className="flex-1 min-w-0">
-                    <h1 className="line-clamp-2 break-words text-base font-extrabold leading-tight">{name}</h1>
-                    <p data-testid="perform-status-line" className="tnum text-xs font-medium text-muted-foreground">
+                    <h1 className="line-clamp-2 sm:line-clamp-1 break-words text-base font-extrabold leading-tight" title={name}>{name}</h1>
+                    {/* Option B: ONE meta line. It never wraps; it truncates. */}
+                    <p data-testid="perform-status-line" className="tnum truncate text-xs font-medium text-muted-foreground">
                         <span>
                             {totalCount > songCount
                                 ? t("performSetlist.header.songsAndItems", { count: songCount, totalCount })
@@ -678,12 +675,6 @@ export function SetlistPerformClient({
                             <>
                                 <span aria-hidden="true"> · </span>
                                 <span data-testid="perform-status-total">{t("gig.statusTotal", { total: formatDuration(gigSeconds) })}</span>
-                            </>
-                        )}
-                        {setlistUpdatedAt && (
-                            <>
-                                <span aria-hidden="true"> · </span>
-                                <span>{t("performSetlist.status.updated", { when: formatUpdatedWhen(fmt, setlistUpdatedAt) })}</span>
                             </>
                         )}
                         {deviceReady !== null && deviceTotal > 0 && (
@@ -718,10 +709,12 @@ export function SetlistPerformClient({
                                 <span data-testid="perform-status-book">{bookName}</span>
                             </>
                         )}
+                        {/* BET-6: the parasha joins the meta line (CRC only). */}
+                        <SetlistFamilyHead part="parasha" setlistId={setlistId} setlist={initialSetlist as unknown as Record<string, unknown> | null} />
                     </p>
                     {isBand && <GigPanel gig={gig} />}
-                    {/* BET-6: parasha line and Beit Mitzvah card (CRC only). */}
-                    <SetlistFamilyHead setlistId={setlistId} setlist={initialSetlist as unknown as Record<string, unknown> | null} />
+                    {/* BET-6: a Beit Mitzvah service's one line (CRC only). */}
+                    <SetlistFamilyHead part="ceremony" setlistId={setlistId} setlist={initialSetlist as unknown as Record<string, unknown> | null} />
                 </div>
                 </div>
                 <div className="ms-auto flex flex-wrap items-center justify-end gap-1 shrink-0">
@@ -764,7 +757,7 @@ export function SetlistPerformClient({
                             ) : (
                                 <ListCollapse className="h-4 w-4" />
                             )}
-                            <span className="text-xs font-semibold hidden sm:inline">
+                            <span className="text-xs font-semibold hidden lg:inline">
                                 {liturgyCollapsed ? t("performSetlist.toolbar.liturgy") : t("performSetlist.toolbar.songsOnly")}
                             </span>
                         </Button>
@@ -780,7 +773,7 @@ export function SetlistPerformClient({
                             className="h-11 min-w-11 gap-1.5 text-muted-foreground hover:text-foreground cursor-pointer"
                         >
                             {reordering ? <Check className="h-4 w-4" /> : <ArrowUpDown className="h-4 w-4" />}
-                            <span className={cn("text-xs font-semibold", !reordering && "hidden sm:inline")}>
+                            <span className={cn("text-xs font-semibold", !reordering && "hidden lg:inline")}>
                                 {reordering ? t("performSetlist.reorder.done") : t("performSetlist.reorder.start")}
                             </span>
                         </Button>
@@ -788,7 +781,7 @@ export function SetlistPerformClient({
                     {canPrint && (
                         <Button onClick={() => setShowPrintModal(true)} size="sm" variant="ghost" aria-label={t("performSetlist.toolbar.printSetlist")} className="h-11 min-w-11 gap-1.5 text-muted-foreground hover:text-foreground cursor-pointer">
                             <Printer className="h-4 w-4" />
-                            <span className="text-xs font-semibold hidden sm:inline">{t("performSetlist.toolbar.print")}</span>
+                            <span className="text-xs font-semibold hidden lg:inline">{t("performSetlist.toolbar.print")}</span>
                         </Button>
                     )}
                     {isLeader && (

@@ -84,10 +84,10 @@ export function NextServiceCard({
     return (
         <div
             onClick={onPerform}
-            className="flex items-center gap-3 rounded-lg border border-rule bg-card px-3 sm:px-4 py-2 cursor-pointer hover:border-brand/40 transition-colors duration-200 group"
+            className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-rule bg-card ps-3 pe-2 sm:ps-4 py-2 cursor-pointer hover:border-brand/40 transition-colors duration-200 group"
         >
-            <div className="min-w-0 flex-1">
-                <h2 className="text-base font-extrabold leading-tight text-foreground line-clamp-2">
+            <div className="min-w-0 flex-[1_1_14rem]">
+                <h2 className="text-[0.95rem] font-bold leading-snug text-foreground line-clamp-2">
                     {setlist.name}
                 </h2>
                 {meta}
@@ -95,24 +95,25 @@ export function NextServiceCard({
 
             {/* Primary CTA. Band leaders get an adjacent Edit shortcut;
                 musicians/members see Perform-only. */}
-            <div className="flex shrink-0 items-center gap-1.5">
+            <div className="ms-auto flex shrink-0 items-center gap-1">
                 {isBandLeader && onEdit && (
+                    // The one row-edit control: a ghost pencil, as on /setlists.
                     <Button
                         variant="ghost"
-                        size="sm"
+                        size="icon"
                         onClick={(e) => { e.stopPropagation(); onEdit() }}
                         aria-label={t("home.editSetlistAria")}
-                        className="rounded-md text-muted-foreground hover:text-foreground hover:bg-accent"
+                        title={t("home.edit")}
+                        className="touch-hit h-9 w-9 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent"
                     >
-                        <Pencil className="h-3.5 w-3.5" />
-                        <span className="text-[13px] font-semibold">{t("home.edit")}</span>
+                        <Pencil className="h-4 w-4" />
                     </Button>
                 )}
                 {isPastSetlist ? (
                     <Button
                         variant="outline"
                         size="sm"
-                        className="rounded-md text-[13px] font-bold border-border bg-card text-foreground group-hover:bg-accent transition-colors"
+                        className="touch-hit h-9 rounded-md px-3.5 text-sm font-bold border-border bg-card text-foreground group-hover:bg-accent transition-colors"
                     >
                         <PlayCircle className="h-3.5 w-3.5" />
                         {t("home.practice")}
@@ -121,7 +122,7 @@ export function NextServiceCard({
                     <Button
                         variant="ghost"
                         size="sm"
-                        className="rounded-md text-[13px] font-bold bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground group-hover:bg-primary/90 transition-colors"
+                        className="touch-hit h-9 rounded-md px-3.5 text-sm font-bold bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground group-hover:bg-primary/90 transition-colors"
                     >
                         <PlayCircle className="h-3.5 w-3.5" />
                         {t("home.perform")}

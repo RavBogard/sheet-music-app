@@ -1,5 +1,5 @@
 "use client"
-import { useState, useCallback, useMemo } from "react"
+import { useState, useCallback, useMemo, type ReactNode } from "react"
 import buildInfo from "@/build-info.json"
 import { ChevronLeft, Plus, LogIn, Calendar, Sparkles, FolderUp, Wand2, FileText, Menu, Bell, Music, Settings, Cloud, HelpCircle, Activity, Library, Mic } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -76,8 +76,11 @@ export function SetlistDashboard({ serverShortName, ...props }: UseSetlistDashbo
         ).text
     }, [user?.displayName, serverShortName, congregation.shortName, t, lang])
 
-    const renderPastCard = (setlist: (typeof pastOrNoDate)[number]) => (
+    const renderPastCard = (setlist: (typeof pastOrNoDate)[number], extra?: ReactNode) => (
         <SetlistCard
+                                                            extra={extra}
+                                                            onDownload={handleDownload}
+                                                            isDownloading={isDownloading}
                                                             key={setlist.id}
                                                             setlist={setlist}
                                                             onEdit={(e) => { e.stopPropagation(); handleSelect(setlist) }}
@@ -118,7 +121,7 @@ export function SetlistDashboard({ serverShortName, ...props }: UseSetlistDashbo
                                         onClick={() => setShowWizard(true)}
                                         data-testid="setlists-new-setlist"
                                         size="sm"
-                                        className="rounded-md bg-primary text-primary-foreground hover:bg-primary/90 font-bold text-[13px]"
+                                        className="h-9 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 font-bold text-sm"
                                     >
                                         <Plus aria-hidden className="h-4 w-4" />
                                         {t("org.createNewSetlistHeading")}
@@ -187,7 +190,7 @@ export function SetlistDashboard({ serverShortName, ...props }: UseSetlistDashbo
                                                 <VariantGroupList
                                                     groups={pastGroups}
                                                     renderRow={renderPastCard}
-                                                    renderInfo={(v) => <SetlistInfoLine setlist={v} />}
+                                                    renderInfo={(v, extra) => <SetlistInfoLine setlist={v} extra={extra} />}
                                                 />
                                             )}
                                             {nextCursor && (

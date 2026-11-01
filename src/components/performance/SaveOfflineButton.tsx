@@ -317,7 +317,7 @@ export function SaveOfflineButton({ fileIds, onReadyChange, versions }: Props) {
             ) : (
                 <Download className="h-4 w-4" />
             )}
-            <span className={needsSave ? "tnum text-sm font-bold" : "tnum text-xs font-semibold hidden sm:inline"} aria-live="polite">
+            <span className={needsSave ? "tnum text-sm font-bold" : "tnum text-xs font-semibold hidden lg:inline"} aria-live="polite">
                 {visibleLabel}
             </span>
         </Button>

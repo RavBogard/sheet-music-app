@@ -202,13 +202,8 @@ export function SyncIndicator({
                 data-state={state}
                 data-testid="sync-indicator"
             >
-                <span
-                    aria-hidden
-                    className={cn(
-                        'inline-block h-2 w-2 rounded-full',
-                        visual.dotClass,
-                    )}
-                />
+                {/* Option B: one status glyph (the icon); the dot that sat
+                    beside it is gone. */}
                 <Icon
                     aria-hidden
                     className={cn(

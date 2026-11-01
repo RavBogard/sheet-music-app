@@ -2,9 +2,8 @@
 
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
-import { ArrowLeft, Loader2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { PageHeader } from "@/components/layout/Page"
+import { ChevronLeft, Loader2 } from "lucide-react"
+import { PageContainer, PageHeader } from "@/components/layout/Page"
 import { TemplatesSection } from "@/components/admin/TemplatesSection"
 import { UnauthorizedState } from "@/components/ui/unauthorized-state"
 import { DirectionalIcon } from "@/components/i18n/DirectionalIcon"
@@ -33,19 +32,22 @@ export default function TemplatesPage() {
     }
 
     return (
-        <div className="min-h-screen bg-background text-foreground p-6 pb-24">
-            <div className="max-w-5xl mx-auto">
-                <PageHeader
-                    className="mb-6"
-                    leading={
-                        <Button variant="ghost" size="icon" aria-label={t("manage-templates.backToManage")} onClick={() => router.push("/manage")} className="rounded-full hover:bg-accent">
-                            <DirectionalIcon icon={ArrowLeft} className="w-5 h-5" />
-                        </Button>
-                    }
-                    title={t("manage-templates.pageTitle")}
-                />
-                <TemplatesSection />
-            </div>
-        </div>
+        // Option B: the one page container and head row, as Manage.
+        <PageContainer className="space-y-4 pb-24">
+            <PageHeader
+                leading={
+                    <button
+                        type="button"
+                        aria-label={t("manage-templates.backToManage")}
+                        onClick={() => router.push("/manage")}
+                        className="-ms-2 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-foreground hover:bg-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                        <DirectionalIcon icon={ChevronLeft} aria-hidden className="h-5 w-5" />
+                    </button>
+                }
+                title={t("manage-templates.pageTitle")}
+            />
+            <TemplatesSection />
+        </PageContainer>
     )
 }

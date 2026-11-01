@@ -61,7 +61,6 @@
     "bulkFailed_one": "עדכון משתמש אחד נכשל",
     "bulkFailed_two": "עדכון שני משתמשים נכשל",
     "bulkFailed_other": "עדכון {count} משתמשים נכשל",
-    "pendingRequests": "{count} בקשות ממתינות",
     "pendingRequests_one": "בקשה אחת ממתינה",
     "pendingRequests_two": "שתי בקשות ממתינות",
     "pendingRequests_other": "{count} בקשות ממתינות",

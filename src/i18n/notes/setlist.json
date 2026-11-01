@@ -452,6 +452,11 @@
         "who": "leaders",
         "maxLength": 34
     },
+    "variantsChip": {
+        "where": "/setlists and /perform past lists: a small chip in a service row's meta line that shows how many per-instrument or copy setlists are folded under it; tapping expands them. Plural: count. Keep it short, it sits beside the song count.",
+        "who": "leaders",
+        "maxLength": 14
+    },
     "variantsHide": {
         "where": "/setlists past list: button that collapses the folded setlists.",
         "who": "leaders",

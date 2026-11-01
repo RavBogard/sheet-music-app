@@ -122,7 +122,7 @@ export function OnboardingCard({ role, isMember, profile, congregationShortName,
                 <div className="flex flex-col items-center text-center gap-3">
                     <PendingAccountIllustration className="w-20 h-20 text-muted-foreground" />
                     <div>
-                        <h2 className="text-base font-extrabold">{t("dashboard.onboardingWelcome", { congregation: congregationShortName })}</h2>
+                        <h2 className="text-sm font-bold text-foreground">{t("dashboard.onboardingWelcome", { congregation: congregationShortName })}</h2>
                         <p className="text-sm text-muted-foreground mt-1">
                             {t("dashboard.onboardingPendingBody")}
                         </p>
@@ -149,7 +149,7 @@ export function OnboardingCard({ role, isMember, profile, congregationShortName,
             {/* Consistency pass: the system card (hairline border, no confetti),
                 and an outline action so the dashboard keeps one blue button. */}
             <div>
-                <h2 className="text-base font-extrabold">{t("dashboard.onboardingApprovedTitle")}</h2>
+                <h2 className="text-sm font-bold text-foreground">{t("dashboard.onboardingApprovedTitle")}</h2>
                 <p className="text-sm text-muted-foreground mt-1">
                     {t("dashboard.onboardingApprovedBody")}
                 </p>

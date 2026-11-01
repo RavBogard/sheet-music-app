@@ -47,7 +47,7 @@ export default async function MainLayout({
                         {children}
                     </PageTransition>
                 </main>
-                <div className="bg-card" style={{ paddingBottom: "var(--tabbar-h)" }}>
+                <div className="bg-background" style={{ paddingBottom: "var(--tabbar-h)" }}>
                     <Footer />
                 </div>
                 <LazyClientComponents />

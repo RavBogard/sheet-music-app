@@ -447,15 +447,17 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
             ) : null}
 
             {showRequestControls ? (
-                <div className="flex items-center gap-2 flex-wrap basis-full sm:basis-auto justify-end shrink-0">
+                <div className="flex items-center gap-2 flex-wrap basis-full sm:basis-auto max-sm:ps-24 max-sm:pb-1 sm:justify-end shrink-0">
                     {requestControls("touch-hit w-[7.5rem] h-8 text-[13px] font-medium bg-card border-border")}
                 </div>
             ) : !isSelf ? (
-                <div className="shrink-0">
+                // Below sm the role select drops under the name (aligned with
+                // it), so the name gets the row's full width.
+                <div className="shrink-0 max-sm:basis-full max-sm:ps-24 max-sm:pb-1">
                     {roleSelect("touch-hit w-[7.5rem] h-8 text-[13px] font-medium bg-card border-border")}
                 </div>
             ) : (
-                <span className="shrink-0 text-xs font-semibold text-muted-foreground px-3 py-1.5 border border-border rounded-md bg-muted">
+                <span className="shrink-0 max-sm:ms-24 max-sm:mb-1 text-xs font-semibold text-muted-foreground px-3 py-1.5 border border-border rounded-md bg-muted">
                     {roleLabel(effectiveRole)}
                 </span>
             )}

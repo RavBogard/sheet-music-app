@@ -118,7 +118,7 @@ export function MonitorTabs({
         <div className="max-w-lg mx-auto p-4 pb-24">
             {/* Header */}
             <div className="flex items-center justify-between mb-2">
-                <h1 className="text-2xl font-bold truncate pr-4">
+                <h1 className="text-base font-extrabold leading-tight truncate pe-4">
                     {myBus.name && myBus.name !== `Bus ${myBusIndex}` ? myBus.name : "My Monitor"}
                 </h1>
                 <div className="flex items-center gap-2">

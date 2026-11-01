@@ -151,7 +151,7 @@ export function KeepAwakeToggle({
                         // in light, so the engaged label reads in ink there;
                         // dark lifts to the night brand (DESIGN.md), 4.5:1+.
                         engaged && !lastError && "text-foreground dark:text-brand",
-                        compact ? "hidden sm:inline" : "inline",
+                        compact ? "hidden lg:inline" : "inline",
                     )}
                 >
                     {engaged ? t("perform.keepAwake.screenOn") : t("perform.keepAwake.keepOn")}

@@ -15,19 +15,19 @@ export function Footer() {
     // at the {author} slot so the word order stays the translator's.
     const [creditBefore, creditAfter = ""] = t("shell.footerCredit", { author: AUTHOR_SLOT }).split(AUTHOR_SLOT)
     return (
-        <footer className="py-5 border-t border-rule mt-auto bg-card text-sm text-muted-foreground">
-            <div className={`${PAGE_WIDTH_CLASS} flex flex-col sm:flex-row items-center sm:justify-between gap-2`}>
+        <footer className="py-2 border-t border-rule mt-auto bg-background text-xs text-muted-foreground">
+            <div className={`${PAGE_WIDTH_CLASS} flex flex-col sm:flex-row items-center sm:justify-between gap-x-2`}>
                 <p>
-                    {creditBefore}<a href="https://danielbogard.com" target="_blank" rel="noopener noreferrer" className="text-foreground hover:text-brand transition-colors underline decoration-rule decoration-1 underline-offset-4">{AUTHOR}</a>{creditAfter}
+                    {creditBefore}<a href="https://danielbogard.com" target="_blank" rel="noopener noreferrer" className="inline-flex items-center min-h-11 text-foreground hover:text-brand transition-colors underline decoration-rule decoration-1 underline-offset-4">{AUTHOR}</a>{creditAfter}
                 </p>
                 <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
                     <span className="tnum" title={t("shell.commitTitle", { commit: buildInfo.commit })}>{t("shell.version", { version: buildInfo.version })}</span>
                     <span aria-hidden="true">•</span>
-                    <Link href="/privacy" className="inline-flex items-center min-h-11 hover:text-foreground transition-colors">
+                    <Link href="/privacy" className="inline-flex items-center justify-center min-h-11 min-w-11 hover:text-foreground transition-colors">
                         {t("shell.privacy")}
                     </Link>
                     <span aria-hidden="true">•</span>
-                    <Link href="/terms" className="inline-flex items-center min-h-11 hover:text-foreground transition-colors">
+                    <Link href="/terms" className="inline-flex items-center justify-center min-h-11 min-w-11 hover:text-foreground transition-colors">
                         {t("shell.terms")}
                     </Link>
                     <span aria-hidden="true">•</span>
