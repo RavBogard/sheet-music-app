@@ -392,6 +392,17 @@ describe('AddRowPlaceholder variant="fab" (the round + in the editor)', () => {
         expect(trigger.className).toMatch(/rounded-full/)
     })
 
+    it('renders into document.body, outside any transformed ancestor, so it stays on screen', () => {
+        const { container } = render(
+            <div style={{ transform: 'translateZ(0)' }}>
+                <AddRowPlaceholder variant="fab" onPickSong={vi.fn()} onCreateFreeText={vi.fn()} />
+            </div>,
+        )
+        const fab = screen.getByTestId('add-song-fab')
+        expect(container.contains(fab)).toBe(false)
+        expect(fab.parentElement).toBe(document.body)
+    })
+
     it('opens the song picker and adds the picked song', async () => {
         await seedSongs([{ id: 's-1', title: 'Adon Olam' }])
         const onPickSong = vi.fn()

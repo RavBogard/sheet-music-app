@@ -3,6 +3,7 @@
 import { CommandGroup, CommandItem } from 'cmdk'
 import { Plus } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 import { useMediaQuery } from '@/hooks/use-media-query'
 import { useVirtualKeyboardOpen } from '@/hooks/use-virtual-keyboard-open'
@@ -39,6 +40,13 @@ export function AddRowPlaceholder({
 }: AddRowPlaceholderProps) {
     const t = useT()
     const fab = variant === 'fab'
+    // The fab renders into document.body: an ancestor of the editor makes a
+    // containing block for `position: fixed` (a transform/filter), so inline
+    // the + scrolled with the list instead of staying on screen (2026-11-01).
+    const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null)
+    useEffect(() => {
+        if (fab) setPortalTarget(document.body)
+    }, [fab])
     const isCoarse = useMediaQuery('(pointer: coarse)')
     const keyboardOpen = useVirtualKeyboardOpen()
     const [open, setOpen] = useState(false)
@@ -69,7 +77,7 @@ export function AddRowPlaceholder({
         close()
     }
 
-    return (
+    const node = (
         <div
             data-testid={fab ? 'add-song-fab' : 'add-row-placeholder'}
             className={cn(
@@ -177,4 +185,7 @@ export function AddRowPlaceholder({
             </TouchOrPopover>
         </div>
     )
+
+    if (!fab) return node
+    return portalTarget ? createPortal(node, portalTarget) : null
 }
