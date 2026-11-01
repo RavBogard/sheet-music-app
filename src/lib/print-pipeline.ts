@@ -27,6 +27,11 @@ import { getTransposedKeyName } from "@/lib/music-math"
 import { initAdmin, getFirestore, getStorage } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
 import { createHash } from "crypto"
+import { readGig, type Gig } from "@/lib/gig/model"
+import { displayKeyOf, formatDuration, rowDuration, setTotalsByHeader, type GigRow } from "@/lib/gig/display"
+import type { SetTotal } from "@/lib/gig/set-totals"
+import { getOrgBranding } from "@/lib/org/branding"
+import type { T } from "@/i18n/core"
 import type { ExtractionResult, PageChords, ExtractedChord } from "@/lib/pdf-chord-extractor"
 import { congregationDocId, coerceOrgId, DEFAULT_ORG_ID } from "@/lib/org/registry"
 import { orgString } from "@/lib/org/strings"
@@ -60,6 +65,14 @@ export interface PrintTrack {
      *  packet needs this for the same reason the rabbi's sheet does. */
     liturgyRef?: { book: string; unitId?: string; folio: number }
     honors?: Array<{ name: string; note?: string }>
+    /** BET-5: a header row's id (sent only when the gig has set targets). */
+    id?: string
+    /** BET-5: the row's length in seconds. */
+    durationSec?: number
+    /** BET-5: runs straight into the next song. */
+    segue?: boolean
+    /** BET-5: the key per singer, as the author recorded it. */
+    singerKeys?: Array<{ musician: string; key: string }>
 }
 
 /** v70-01-01 Task 3: detects image-typed tracks for the print-pipeline skip
@@ -110,6 +123,75 @@ export interface PrintRequest {
     org?: OrgId
     /** User explicitly reviewed the omission list and chose to continue. */
     allowOmissions?: boolean
+    /**
+     * BET-5: the one-page show sheet (band tenants) instead of the packet:
+     * venue, times, the sets with songs, keys, segues, singers and lengths.
+     */
+    showSheet?: boolean
+    /** BET-5: the gig (venue, times, set targets). Read defensively. */
+    gig?: Gig
+}
+
+// ── BET-5: band timing on the cover and the show sheet ──
+
+/** The request's gig, read defensively (the print route passes the body through). */
+function requestGig(req: PrintRequest): Gig | null {
+    return readGig(req.gig)
+}
+
+/**
+ * Whether a print shows set lengths: a gig is attached (a band tenant's
+ * print) or a row carries a length. A CRC packet without lengths is drawn
+ * exactly as before.
+ */
+function printShowsTiming(req: PrintRequest): boolean {
+    return requestGig(req) !== null || req.tracks.some((t) => rowDuration(t as GigRow) !== null)
+}
+
+/** Whether a request carries any band field (and so must key the result cache on them). */
+function requestHasBandFields(req: PrintRequest): boolean {
+    return (
+        !!req.showSheet ||
+        requestGig(req) !== null ||
+        req.tracks.some((t) => t.durationSec !== undefined || t.segue === true || (t.singerKeys?.length ?? 0) > 0)
+    )
+}
+
+/** "38:20 · target 45:00 · 2 untimed", and the overrun ("3:20 over") on its own. */
+function setTotalParts(total: SetTotal, t: T): { base: string; over: string } {
+    const parts = [formatDuration(total.seconds)]
+    if (total.targetMinutes !== undefined) {
+        parts.push(t("pdf.showSheet.target", { target: formatDuration(total.targetMinutes * 60) }))
+    }
+    if (total.untimed > 0) parts.push(t("pdf.showSheet.untimed", { count: total.untimed }))
+    const over =
+        total.overUnderSec !== undefined && total.overUnderSec > 0
+            ? t("pdf.showSheet.over", { amount: formatDuration(total.overUnderSec) })
+            : ""
+    return { base: parts.join(" · "), over }
+}
+
+/**
+ * A small "→" drawn with lines, so it never depends on a font having the
+ * glyph (Helvetica's WinAnsi does not). Points along the reading direction.
+ */
+function drawSegueArrow(page: PDFPage, x: number, y: number, rtl: boolean, pageW: number, color: Color): void {
+    const w = 8
+    const left = rtl ? pageW - x - w : x
+    const tip = rtl ? left : left + w
+    const tail = rtl ? left + w : left
+    const back = rtl ? tip + 3 : tip - 3
+    const mid = y + 3
+    page.drawLine({ start: { x: tail, y: mid }, end: { x: tip, y: mid }, thickness: 1.2, color })
+    page.drawLine({ start: { x: back, y: mid + 3 }, end: { x: tip, y: mid }, thickness: 1.2, color })
+    page.drawLine({ start: { x: back, y: mid - 3 }, end: { x: tip, y: mid }, thickness: 1.2, color })
+}
+
+/** "#04201f" → a pdf-lib colour; anything else → the fallback. */
+function hexColor(hex: string, fallback: Color): Color {
+    const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex.trim())
+    if (!m) return fallback
+    return rgb(parseInt(m[1], 16) / 255, parseInt(m[2], 16) / 255, parseInt(m[3], 16) / 255)
 }
 
 export interface PrintProgress {
@@ -190,6 +272,24 @@ function computeContentHash(req: PrintRequest, i18n?: PdfI18n): string {
     // when present, so all-Latin keys (CRC/BL's usual packets) are unchanged
     // while a cached '?' packet with Hebrew in it is not served again.
     if (requestHasHebrew(req)) significant.hebrewGlyphs = 1
+    // BET-5: the show sheet and the cover's set lengths are drawn from these.
+    // Keyed only when present, so a request without them keeps its key.
+    if (requestHasBandFields(req)) {
+        significant.band = {
+            showSheet: !!req.showSheet,
+            gig: requestGig(req),
+            tracks: req.tracks.map((t) => ({
+                id: t.id ?? null,
+                type: t.type ?? null,
+                title: t.title,
+                key: t.key,
+                lead: t.leadMusician ?? null,
+                durationSec: t.durationSec ?? null,
+                segue: t.segue === true,
+                singerKeys: t.singerKeys ?? null,
+            })),
+        }
+    }
     return createHash('sha256').update(JSON.stringify(significant)).digest('hex').slice(0, 16)
 }
 
@@ -391,6 +491,9 @@ interface TextOpts {
 function requestHasHebrew(req: PrintRequest): boolean {
     const strings: unknown[] = [req.title, req.date, req.musicianName, req.eventName, req.rabbi, req.bookTitle]
     for (const t of req.tracks) strings.push(t.title, t.key, t.notes, t.leadMusician, t.performer)
+    const gig = requestGig(req)
+    if (gig) strings.push(gig.venue, gig.address, gig.contact, gig.notes)
+    for (const t of req.tracks) for (const k of t.singerKeys ?? []) strings.push(k.musician)
     return strings.some((s) => typeof s === "string" && hasHebrew(s))
 }
 
@@ -664,6 +767,15 @@ async function buildCoverPage(
 
     drawColumnHeaders()
 
+    // BET-5: set lengths on the header rows and the gig total in the footer,
+    // only when the print shows timing (see printShowsTiming).
+    const timing = printShowsTiming(req)
+    const coverTotals = timing ? setTotalsByHeader(req.tracks as GigRow[], requestGig(req)) : null
+    const rtlPage = unicode && pdfDirection(i18n) === "rtl"
+    // Index into coverTotals.totals: rows before the first header (if any)
+    // are set 0 with no header line, so the first header is then set 1.
+    let coverSetIndex = coverTotals?.totals[0]?.header === null ? 0 : -1
+
     // Rows — show all items in the order of service (songs, readings, prayers, headers)
     const printableTracks = req.tracks
     let rowNum = 0
@@ -777,6 +889,21 @@ async function buildCoverPage(
             yOffset -= 4 // Extra space before header
             draw(page, songTitle, { x: colTitle, y: yOffset, size: finalTitleSize, font: helveticaBold, color: rgb(0.3, 0.3, 0.3) })
             if (rowFolio) drawFolio(rowFolio, yOffset)
+            // BET-5: the set's length after its title, when there is room
+            // before the folio column. The rows before the first header (if
+            // any) form a set with no header line, so the index skips it.
+            if (coverTotals) {
+                coverSetIndex++
+                const total = coverTotals.totals[coverSetIndex]
+                if (total) {
+                    const { base, over } = setTotalParts(total, t)
+                    const text = cl(over ? `${base} · ${over}` : base)
+                    const x = colTitle + helveticaBold.widthOfTextAtSize(songTitle, finalTitleSize) + 12
+                    if (text && x + helvetica.widthOfTextAtSize(text, 9) <= rowRight) {
+                        draw(page, text, { x, y: yOffset, size: 9, font: helvetica, color: over ? rgb(0.54, 0.35, 0) : rgb(0.4, 0.4, 0.4) })
+                    }
+                }
+            }
             yOffset -= 16
             return
         }
@@ -785,6 +912,11 @@ async function buildCoverPage(
 
         draw(page, `${songNum}.`, { x: colNum, y: yOffset, size: 10, font: helvetica, color: rgb(0.3, 0.3, 0.3) })
         draw(page, songTitle, { x: colTitle, y: yOffset, size: finalTitleSize, font: titleFont, color: titleColor })
+        // BET-5: "→" after the title of a song that runs into the next one.
+        if (track.segue === true && trackIdx < printableTracks.length - 1) {
+            const arrowX = colTitle + titleFont.widthOfTextAtSize(songTitle, finalTitleSize) + 4
+            drawSegueArrow(page, arrowX, yOffset, rtlPage, width, rgb(0.2, 0.4, 0.8))
+        }
         if (leadDisplay) draw(page, leadDisplay, { x: colLead, y: yOffset, size: 10, font: helvetica, color: rgb(0.3, 0.3, 0.3) })
         if (key) draw(page, key, { x: colKey, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.2, 0.4, 0.8) })
         if (hasTranspositions && transKey) {
@@ -801,12 +933,214 @@ async function buildCoverPage(
     const songCount = printableTracks.filter(t => !t.type || t.type === 'song').length
     const footerParts = [t("pdf.packet.songCount", { count: songCount })]
     if (hasTranspositions) footerParts.push(t("pdf.packet.transposed"))
+    if (coverTotals && coverTotals.seconds > 0) {
+        footerParts.push(t("pdf.showSheet.gigTotal", { total: formatDuration(coverTotals.seconds) }))
+    }
     footerParts.push(cl(printFooter))
     const footerText = cl(footerParts.join(" • "))
     for (const tablePage of tablePages) {
         draw(tablePage, footerText, {
             x: 50, y: 30, size: 9, font: helvetica, color: rgb(0.6, 0.6, 0.6),
         })
+    }
+}
+
+// ── BET-5: Show Sheet ──
+
+/**
+ * One US Letter page for the band: the tenant's name on a bar in its own
+ * colour, the title and date, venue and address, the times and the contact,
+ * then every row in the author's order. Header rows open a set and carry its
+ * length ("38:20 · target 45:00", the overrun stated in words); song rows
+ * carry the number, the title (with "→" when it runs into the next one), who
+ * sings it, the key (the lead singer's key when recorded) and the length. The
+ * footer holds the gig total. Rows shrink to fit; past the smallest size the
+ * rest is counted ("+3 more songs"), never drawn off the page.
+ */
+async function buildShowSheet(
+    doc: PDFDocument,
+    req: PrintRequest,
+    org: OrgId,
+    printFooter: string,
+    i18n?: PdfI18n,
+): Promise<void> {
+    const W = 612
+    const H = 792
+    const M = 40
+    const page = doc.addPage([W, H])
+    const t = pdfT(i18n)
+    const gig = requestGig(req)
+    const unicode = pdfNeedsUnicode(i18n) || requestHasHebrew(req) || hasHebrew(printFooter)
+    let bold: Face
+    let regular: Face
+    let italic: Face
+    if (unicode) {
+        const faces = await unicodeFacesFor(doc)
+        bold = faces.bold
+        regular = faces.regular
+        italic = faces.regular
+    } else {
+        bold = await doc.embedFont(StandardFonts.HelveticaBold)
+        regular = await doc.embedFont(StandardFonts.Helvetica)
+        italic = await doc.embedFont(StandardFonts.HelveticaOblique)
+    }
+    const rtl = unicode && pdfDirection(i18n) === "rtl"
+    const draw = textDrawer(unicode, rtl, W)
+    const cl = unicode
+        ? (s: unknown) => cleanForTtf(regular as EmbeddedTtf, typeof s === "string" ? s.replace(/•/g, "·") : s)
+        : clean
+    const fit = (text: string, font: Face, size: number, maxW: number): string => {
+        if (maxW <= 0) return ""
+        if (font.widthOfTextAtSize(text, size) <= maxW) return text
+        let n = text.length
+        while (n > 1 && font.widthOfTextAtSize(text.substring(0, n) + "...", size) > maxW) n--
+        const out = text.substring(0, n) + "..."
+        return font.widthOfTextAtSize(out, size) <= maxW ? out : ""
+    }
+    const rightX = (text: string, font: Face, size: number, right: number) => right - font.widthOfTextAtSize(text, size)
+
+    const branding = getOrgBranding(org)
+    const ink = rgb(0.09, 0.13, 0.18)
+    const quiet = rgb(0.36, 0.4, 0.46)
+    const caution = rgb(0.54, 0.35, 0)
+    const barColor = hexColor(branding.themeColor, ink)
+    const accent = org === "brotherslazaroff" ? rgb(0.16, 0.6, 0.7) : barColor
+
+    // Brand bar.
+    page.drawRectangle({ x: 0, y: H - 40, width: W, height: 40, color: barColor })
+    const brand = cl(branding.shortName)
+    draw(page, fit(brand, bold, 13, W / 2 - M), { x: M, y: H - 26, size: 13, font: bold, color: rgb(1, 1, 1) })
+    const dateText = fit(cl(req.date), regular, 10, W / 2 - M)
+    if (dateText) draw(page, dateText, { x: rightX(dateText, regular, 10, W - M), y: H - 25, size: 10, font: regular, color: rgb(1, 1, 1) })
+
+    let y = H - 68
+    const title = fit(cl(req.title), bold, 18, W - 2 * M)
+    draw(page, title, { x: M, y, size: 18, font: bold, color: ink })
+    y -= 18
+
+    const place = [gig?.venue, gig?.address].filter((p): p is string => Boolean(p)).map(cl).join(" · ")
+    if (place) {
+        draw(page, fit(place, bold, 10.5, W - 2 * M), { x: M, y, size: 10.5, font: bold, color: ink })
+        y -= 14
+    }
+    const times: string[] = []
+    if (gig?.loadIn) times.push(t("pdf.showSheet.loadIn", { time: gig.loadIn }))
+    if (gig?.soundcheck) times.push(t("pdf.showSheet.soundcheck", { time: gig.soundcheck }))
+    if (gig?.start && gig?.end) times.push(t("pdf.showSheet.show", { start: gig.start, end: gig.end }))
+    else if (gig?.start) times.push(t("pdf.showSheet.start", { start: gig.start }))
+    else if (gig?.end) times.push(t("pdf.showSheet.end", { end: gig.end }))
+    if (gig?.contact) times.push(t("pdf.showSheet.contact", { contact: cl(gig.contact) }))
+    if (times.length > 0) {
+        draw(page, fit(cl(times.join(" · ")), regular, 10, W - 2 * M), { x: M, y, size: 10, font: regular, color: ink })
+        y -= 14
+    }
+    if (gig?.notes) {
+        draw(page, fit(cl(gig.notes), italic, 9, W - 2 * M), { x: M, y, size: 9, font: italic, color: quiet })
+        y -= 13
+    }
+    y -= 4
+    page.drawLine({ start: { x: M, y }, end: { x: W - M, y }, thickness: 1.5, color: accent })
+    y -= 16
+
+    // Columns.
+    const colNum = M
+    const colTitle = M + 22
+    const colSings = 352
+    const colKey = 462
+    const right = W - M
+    const head = (label: string, x: number, alignRight = false) => {
+        const text = cl(label)
+        draw(page, text, { x: alignRight ? rightX(text, bold, 8.5, x) : x, y, size: 8.5, font: bold, color: quiet })
+    }
+    head(t("pdf.showSheet.columnSong"), colTitle)
+    head(t("pdf.showSheet.columnSings"), colSings)
+    head(t("pdf.showSheet.columnKey"), colKey)
+    head(t("pdf.showSheet.columnLength"), right, true)
+    y -= 6
+    page.drawLine({ start: { x: M, y }, end: { x: right, y }, thickness: 0.5, color: rgb(0.85, 0.86, 0.9) })
+    y -= 13
+
+    // Rows shrink to fit the page above the footer (y = 34).
+    const rows = req.tracks
+    const isHeader = (r: PrintTrack) => r.type === "header" || r.type === "section"
+    const floor = 50
+    const headers = rows.filter(isHeader).length
+    let lineH = 15
+    let size = 10
+    const need = () => (rows.length - headers) * lineH + headers * (lineH + 6)
+    while (need() > y - floor && lineH > 10.5) {
+        lineH -= 0.5
+        size = Math.max(7.5, size - 0.25)
+    }
+
+    const totals = setTotalsByHeader(rows as GigRow[], gig)
+    let setIndex = totals.totals[0]?.header === null ? 0 : -1
+    let songNum = 0
+    let drawn = 0
+    for (const row of rows) {
+        const rowNeed = isHeader(row) ? lineH + 6 : lineH
+        if (y - rowNeed < floor) break
+        drawn++
+        if (isHeader(row)) {
+            setIndex++
+            y -= 4
+            const total = totals.totals[setIndex]
+            let totalText = ""
+            let overText = ""
+            if (total) {
+                const parts = setTotalParts(total, t)
+                totalText = cl(parts.base)
+                overText = cl(parts.over)
+            }
+            const overW = overText ? bold.widthOfTextAtSize(overText, size) + 8 : 0
+            const totalW = totalText ? regular.widthOfTextAtSize(totalText, size) + 8 : 0
+            const headTitle = fit(cl(String(row.title ?? "").toUpperCase()), bold, size + 0.5, right - colNum - overW - totalW)
+            draw(page, headTitle, { x: colNum, y, size: size + 0.5, font: bold, color: accent })
+            if (overText) draw(page, overText, { x: rightX(overText, bold, size, right), y, size, font: bold, color: caution })
+            if (totalText) {
+                draw(page, totalText, { x: rightX(totalText, regular, size, right - overW), y, size, font: regular, color: quiet })
+            }
+            y -= 3
+            page.drawLine({ start: { x: M, y }, end: { x: right, y }, thickness: 0.75, color: accent })
+            y -= lineH
+            continue
+        }
+        const isSong = !row.type || row.type === "song"
+        if (isSong) {
+            songNum++
+            draw(page, `${songNum}.`, { x: colNum, y, size, font: regular, color: quiet })
+        }
+        const titleFont = isSong ? bold : italic
+        const titleW = colSings - colTitle - 18
+        const songTitle = fit(cl(row.title), titleFont, size, titleW)
+        draw(page, songTitle, { x: colTitle, y, size, font: titleFont, color: isSong ? ink : quiet })
+        if (row.segue === true && drawn < rows.length) {
+            drawSegueArrow(page, colTitle + titleFont.widthOfTextAtSize(songTitle, size) + 4, y, rtl, W, accent)
+        }
+        if (isSong) {
+            const sings = fit(cl(row.leadMusician), regular, size, colKey - colSings - 8)
+            if (sings) draw(page, sings, { x: colSings, y, size, font: regular, color: ink })
+            const key = cl(displayKeyOf(row as GigRow) ?? "")
+            if (key) draw(page, key, { x: colKey, y, size, font: bold, color: ink })
+        }
+        const d = rowDuration(row as GigRow)
+        if (d !== null) {
+            const len = formatDuration(d)
+            draw(page, len, { x: rightX(len, regular, size, right), y, size, font: regular, color: ink })
+        }
+        y -= lineH
+    }
+    const left = rows.slice(drawn).filter((r) => !isHeader(r)).length
+    if (left > 0) {
+        draw(page, cl(t("pdf.showSheet.more", { count: left })), { x: colTitle, y, size: 9, font: italic, color: quiet })
+    }
+
+    // Footer: the tenant line, and the gig total on the right.
+    const footer = fit(cl(printFooter), regular, 8.5, W / 2)
+    if (footer) draw(page, footer, { x: M, y: 30, size: 8.5, font: regular, color: quiet })
+    if (totals.seconds > 0) {
+        const total = cl(t("pdf.showSheet.gigTotal", { total: formatDuration(totals.seconds) }))
+        draw(page, total, { x: rightX(total, bold, 11, right), y: 30, size: 11, font: bold, color: ink })
     }
 }
 
@@ -1147,6 +1481,16 @@ export async function generatePrintPdf(
             printFooter = configSnap.data()?.printFooter || printFooter
         }
     } catch { /* default footer */ }
+
+    // ── BET-5: the one-page show sheet, instead of the packet ──
+    if (req.showSheet) {
+        const sheetPdf = await PDFDocument.create()
+        await buildShowSheet(sheetPdf, req, org, printFooter, i18n)
+        const pdf = new Uint8Array(await sheetPdf.save())
+        cacheResult(contentHash, pdf).catch(err => logger.warn("[PrintPipeline] Result cache write failed:", err))
+        logger.info(`[PrintPipeline] Show sheet complete for "${req.title}"`)
+        return { pdf, stats }
+    }
 
     // ── Step 1: Build merged PDF with cover page ──
     const mergedPdf = await PDFDocument.create()

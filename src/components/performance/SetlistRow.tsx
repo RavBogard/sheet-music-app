@@ -11,6 +11,9 @@ import { useT } from "@/i18n/client"
 import type { SaveFailureReason } from "@/lib/prefetch"
 import { DirectionalIcon } from "@/components/i18n/DirectionalIcon"
 import { SECTION_BAND_CLASS, type SectionBand } from "@/components/setlist/grid/section-bands"
+import { SetTotalText } from "@/components/setlist/gig/SetTotalText"
+import { leadSingerKey } from "@/lib/gig/display"
+import type { SetTotal } from "@/lib/gig/set-totals"
 
 export interface SetlistRowProps {
     track: WithTonight<SetlistTrack>
@@ -39,6 +42,8 @@ export interface SetlistRowProps {
     onSwapTap?: () => void
     /** Web refresh: a header row's band (hue + the pages under it). */
     band?: SectionBand
+    /** BET-5: a header row's set length (band tenants, or once any row has a length). */
+    setTotal?: SetTotal
     /**
      * Whether this row's chart is saved on this device. `undefined` means the
      * device store hasn't been read yet, so nothing is claimed either way.
@@ -62,6 +67,7 @@ export function SetlistRow({
     gestureHandlers,
     onSwapTap,
     band,
+    setTotal,
     savedOffline,
     saveFailure,
 }: SetlistRowProps) {
@@ -77,10 +83,14 @@ export function SetlistRow({
     // Compute display key. Precedence mirrors use-musician-transposition:
     // per-track override (track.transposition) wins over the musician's profile
     // default. Public view always shows the original key.
+    // BET-5: when the author recorded the lead singer's key, the tag shows it
+    // (in place of the row's key), with the same transposition rules.
+    const sungKey = isSong ? leadSingerKey(track) : null
+    const baseKey = sungKey ?? track.key
     const displayKey = (() => {
-        if (!isSong || !track.key) return null
-        if (isPublicView) return track.key
-        return playedKey(track.key, track.transposition, defaultTransposition)
+        if (!isSong || !baseKey) return null
+        if (isPublicView) return baseKey
+        return playedKey(baseKey, track.transposition, defaultTransposition)
     })()
 
     // A bonded chart is openable for ANY non-header track (song, prayer,
@@ -215,6 +225,7 @@ export function SetlistRow({
                 <span className="flex-1 min-w-0 truncate text-sm font-extrabold uppercase tracking-[0.08em]">
                     {track.title}
                 </span>
+                {setTotal && <SetTotalText total={setTotal} className="text-sm" />}
                 {sectionPages && (
                     <span data-testid="perform-section-pages" className="tnum shrink-0 text-sm font-bold tracking-[0.04em]">
                         {sectionPages}
@@ -266,8 +277,12 @@ export function SetlistRow({
                     // L 0.985 → ~6.5:1 AA. Dark: bg L 0.55 vs fg L 0.97 → ~5.5:1 AA.
                     <span
                         data-testid="key-badge"
+                        data-lead-key={sungKey ? "" : undefined}
                         className="tnum shrink-0 inline-flex items-center justify-center min-w-[2.75rem] h-8 px-2 self-center rounded-md border border-border bg-secondary text-base font-bold text-secondary-foreground"
                     >
+                        {sungKey && track.leadMusician ? (
+                            <span className="sr-only">{t("gig.leadKeyHint", { name: track.leadMusician })} </span>
+                        ) : null}
                         {displayKey}
                     </span>
                 )}
