@@ -191,7 +191,7 @@ export function AddBar({
                         aria-label={t('setlistGrid.addOtherTypeAria')}
                         onContextMenu={(e) => e.preventDefault()}
                         className={cn(
-                            'flex h-11 items-center justify-center px-3 border-s border-rule',
+                            'flex h-11 min-w-11 items-center justify-center px-3 border-s border-rule',
                             '[@media(pointer:coarse)]:h-12 [@media(pointer:coarse)]:px-4',
                             'text-muted-foreground hover:text-foreground hover:bg-accent/50',
                             'cursor-pointer',

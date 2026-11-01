@@ -1,5 +1,6 @@
 'use client'
 
+import { displayChartTitle } from '@/lib/format/chart-title'
 import {
     DndContext,
     type DragEndEvent,
@@ -145,27 +146,34 @@ export function MobileCardList({
     )
 
     // dnd-kit's screen-reader instructions and live announcements (its
-    // defaults are English); ids are the rows' machine ids, as before.
-    const dndAccessibility = useMemo(
-        () => ({
+    // defaults are English and read machine ids). They name the song and its
+    // place in the list: "Picked up Modah Ani, position 3 of 31".
+    const dndAccessibility = useMemo(() => {
+        type DndId = { id: string | number }
+        const total = tracks.length
+        const titleOf = (id: string | number) => {
+            const track = tracks.find((tr) => tr.id === String(id))
+            return displayChartTitle(track?.title) || t('setlistGrid.untitledTrack')
+        }
+        const positionOf = (id: string | number) => tracks.findIndex((tr) => tr.id === String(id)) + 1
+        return {
             screenReaderInstructions: { draggable: t('setlistGrid.dndInstructions') },
             announcements: {
-                onDragStart: ({ active }: { active: { id: string | number } }) =>
-                    t('setlistGrid.dndPickedUp', { id: String(active.id) }),
-                onDragOver: ({ active, over }: { active: { id: string | number }; over: { id: string | number } | null }) =>
+                onDragStart: ({ active }: { active: DndId }) =>
+                    t('setlistGrid.dndPickedUp', { title: titleOf(active.id), position: positionOf(active.id), total }),
+                onDragOver: ({ active, over }: { active: DndId; over: DndId | null }) =>
                     over
-                        ? t('setlistGrid.dndMovedOver', { id: String(active.id), overId: String(over.id) })
-                        : t('setlistGrid.dndNotOver', { id: String(active.id) }),
-                onDragEnd: ({ active, over }: { active: { id: string | number }; over: { id: string | number } | null }) =>
+                        ? t('setlistGrid.dndMovedOver', { title: titleOf(active.id), position: positionOf(over.id), total })
+                        : t('setlistGrid.dndNotOver', { title: titleOf(active.id) }),
+                onDragEnd: ({ active, over }: { active: DndId; over: DndId | null }) =>
                     over
-                        ? t('setlistGrid.dndDroppedOver', { id: String(active.id), overId: String(over.id) })
-                        : t('setlistGrid.dndDropped', { id: String(active.id) }),
-                onDragCancel: ({ active }: { active: { id: string | number } }) =>
-                    t('setlistGrid.dndCancelled', { id: String(active.id) }),
+                        ? t('setlistGrid.dndDroppedOver', { title: titleOf(active.id), position: positionOf(over.id), total })
+                        : t('setlistGrid.dndDropped', { title: titleOf(active.id) }),
+                onDragCancel: ({ active }: { active: DndId }) =>
+                    t('setlistGrid.dndCancelled', { title: titleOf(active.id), position: positionOf(active.id), total }),
             },
-        }),
-        [t],
-    )
+        }
+    }, [t, tracks])
 
     const handleDragEnd = async (e: DragEndEvent) => {
         const { active, over } = e

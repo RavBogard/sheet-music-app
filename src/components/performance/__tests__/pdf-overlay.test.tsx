@@ -212,6 +212,17 @@ describe("PDFOverlay", () => {
         expect(screen.getAllByTestId("song-nav").length).toBeGreaterThanOrEqual(1)
     })
 
+    it("is a named modal dialog with a focusable chart region that takes focus", () => {
+        render(<PDFOverlay {...defaultProps} />)
+        const dialog = screen.getByRole("dialog")
+        expect(dialog.getAttribute("aria-modal")).toBe("true")
+        expect(dialog.getAttribute("aria-label")).toContain("Ma Tovu")
+        const region = screen.getByTestId("chart-scroll-region")
+        expect(region.getAttribute("tabindex")).toBe("0")
+        expect(region.getAttribute("aria-label")).toBeTruthy()
+        expect(document.activeElement).toBe(region)
+    })
+
     it("renders Exit button from PerformanceToolbar", () => {
         render(<PDFOverlay {...defaultProps} />)
         // Mobile + desktop layouts each render an Exit button

@@ -162,14 +162,15 @@ export function McpAccessSettings() {
                     value={label}
                     onChange={(e) => setLabel(e.target.value)}
                     placeholder={t("settings.mcp.labelPlaceholder")}
+                    aria-label={t("settings.mcp.labelPlaceholder")}
                     maxLength={80}
-                    className="h-9 text-sm"
+                    className="h-11 text-sm"
                 />
                 <Button
                     type="submit"
                     size="sm"
                     disabled={creating || !label.trim()}
-                    className="gap-1.5 shrink-0 rounded-lg"
+                    className="h-11 gap-1.5 shrink-0 rounded-lg"
                 >
                     {creating ? (
                         <Loader2 className="h-4 w-4 animate-spin" />

@@ -370,6 +370,26 @@
 }
 
 /* The 1px hairline rule between rows. */
+/* A 44px hit area around a control that is drawn smaller (DESIGN.md: every
+   target at least 44px). The visual box keeps its size; an invisible ::after,
+   centred on it, takes the taps. Used by the small button sizes and the switch. */
+@utility touch-hit {
+  /* Positioned so the ::after centres on it, unless the call site already
+     positions the control itself. */
+  &:not(.absolute, .fixed, .sticky) {
+    position: relative;
+  }
+  &::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: max(100%, 44px);
+    height: max(100%, 44px);
+    transform: translate(-50%, -50%);
+  }
+}
+
 @utility hairline {
   border-color: var(--rule);
   border-bottom-width: 1px;

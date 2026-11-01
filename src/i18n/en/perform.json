@@ -121,7 +121,9 @@
         "chart": "Chart",
         "unknownTitle": "Can't render this file type yet",
         "unknownBody": "The chart bonded to {songName} isn't a recognized format. Try re-binding it from the library, or open the original file directly.",
-        "liveSetlist": "Live Setlist"
+        "liveSetlist": "Live Setlist",
+        "dialogLabel": "{songName} chart",
+        "scrollRegion": "Chart pages. Arrow keys, Page Up, Page Down and Space scroll."
     },
     "saveOffline": {
         "saving": "Saving {progress}/{total}",
