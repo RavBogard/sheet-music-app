@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { render, screen, fireEvent } from "@testing-library/react"
+import { render, screen, fireEvent, waitFor } from "@testing-library/react"
 import { SetlistTrack } from "@/types/models"
 
 // Mock SmartScoreViewer before dynamic mock (so dynamic loader can resolve it)
@@ -210,6 +210,56 @@ describe("PDFOverlay", () => {
         render(<PDFOverlay {...defaultProps} />)
         // PerformanceToolbar renders mobile + desktop layouts (both visible in jsdom)
         expect(screen.getAllByTestId("song-nav").length).toBeGreaterThanOrEqual(1)
+    })
+
+    it("is a named modal dialog with a focusable chart region that takes focus", () => {
+        render(<PDFOverlay {...defaultProps} />)
+        const dialog = screen.getByRole("dialog")
+        expect(dialog.getAttribute("aria-modal")).toBe("true")
+        expect(dialog.getAttribute("aria-label")).toContain("Ma Tovu")
+        const region = screen.getByTestId("chart-scroll-region")
+        expect(region.getAttribute("tabindex")).toBe("0")
+        expect(region.getAttribute("aria-label")).toBeTruthy()
+        expect(document.activeElement).toBe(region)
+    })
+
+    it("a right-third tap on the chart turns the page inside the dialog (tap zones are not swallowed by role=dialog)", async () => {
+        const state = mockStoreState as Record<string, unknown>
+        state.tapZonesEnabled = true
+        try {
+            render(<PDFOverlay {...defaultProps} />)
+            expect(screen.getByRole("dialog")).toBeTruthy()
+            const region = screen.getByTestId("chart-scroll-region")
+            region.getBoundingClientRect = () =>
+                ({ left: 0, width: 900, top: 0, height: 1000, right: 900, bottom: 1000, x: 0, y: 0, toJSON: () => ({}) }) as DOMRect
+            // A painted PDF scroller, as PDFViewer renders it.
+            const scroller = document.createElement("div")
+            scroller.setAttribute("data-pdf-scroll", "")
+            const page = document.createElement("div")
+            page.setAttribute("data-pdf-page", "1")
+            page.appendChild(document.createElement("canvas"))
+            scroller.appendChild(page)
+            Object.defineProperty(scroller, "clientHeight", { value: 1000, configurable: true })
+            Object.defineProperty(scroller, "scrollHeight", { value: 3000, configurable: true })
+            Object.defineProperty(scroller, "clientWidth", { value: 900, configurable: true })
+            Object.defineProperty(scroller, "scrollWidth", { value: 900, configurable: true })
+            const scrollTo = vi.fn()
+            scroller.scrollTo = scrollTo as unknown as typeof scroller.scrollTo
+            region.appendChild(scroller)
+
+            const pointer = (type: string, time: number) => {
+                const e = new MouseEvent(type, { bubbles: true, cancelable: true, clientX: 850, clientY: 400, button: 0 })
+                Object.defineProperty(e, "pointerId", { value: 1 })
+                Object.defineProperty(e, "pointerType", { value: "touch" })
+                Object.defineProperty(e, "timeStamp", { value: time })
+                return e
+            }
+            page.dispatchEvent(pointer("pointerdown", 1000))
+            page.dispatchEvent(pointer("pointerup", 1060))
+            await waitFor(() => expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ top: 850 })))
+        } finally {
+            delete state.tapZonesEnabled
+        }
     })
 
     it("renders Exit button from PerformanceToolbar", () => {

@@ -208,12 +208,17 @@ export default function SettingsPage() {
                     <div className={cn(CARD_CLASS, "p-4 sm:p-5")}>
                         <div className="flex items-center justify-between gap-4">
                             <div className="min-w-0">
-                                <h3 className="text-[15px] font-bold text-foreground">{t("settings.gigMode.title")}</h3>
-                                <p className="text-sm text-muted-foreground mt-1">
+                                <h3 id="gig-mode-title" className="text-[15px] font-bold text-foreground">{t("settings.gigMode.title")}</h3>
+                                <p id="gig-mode-desc" className="text-sm text-muted-foreground mt-1">
                                     {t("settings.gigMode.description")}
                                 </p>
                             </div>
-                            <Switch checked={gigModeActive} onCheckedChange={setGigModeActive} />
+                            <Switch
+                                checked={gigModeActive}
+                                onCheckedChange={setGigModeActive}
+                                aria-labelledby="gig-mode-title"
+                                aria-describedby="gig-mode-desc"
+                            />
                         </div>
                     </div>
 

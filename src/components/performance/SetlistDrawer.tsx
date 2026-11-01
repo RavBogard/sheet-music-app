@@ -301,12 +301,14 @@ export function SetlistDrawer() {
             <SheetTrigger asChild>
                 <button
                     className={cn(
-                        "h-10 w-10 lg:h-12 lg:w-12 flex items-center justify-center rounded-xl transition-all",
+                        "h-11 w-11 lg:h-12 lg:w-12 flex items-center justify-center rounded-xl transition-all",
                         "hover:bg-muted text-muted-foreground hover:text-foreground"
                     )}
                     title={triggerLabel}
+                    aria-label={triggerLabel}
+                    data-testid="setlist-drawer-trigger"
                 >
-                    <TriggerIcon className="h-5 w-5 lg:h-6 lg:w-6" />
+                    <TriggerIcon className="h-5 w-5 lg:h-6 lg:w-6" aria-hidden="true" />
                 </button>
             </SheetTrigger>
             <SheetContent side="bottom" className="h-[80vh] bg-background border-t border-border p-0 flex flex-col sm:max-w-4xl sm:mx-auto sm:rounded-t-2xl sm:shadow-2xl sm:border-x">

@@ -93,8 +93,8 @@ export function PushNotificationSettings() {
                         <Bell className="w-5 h-5 text-caution" />
                     </div>
                     <div>
-                        <h3 className="font-semibold text-foreground">{t("settings.push.title")}</h3>
-                        <p className="text-sm text-muted-foreground">
+                        <h3 id="push-notifications-title" className="font-semibold text-foreground">{t("settings.push.title")}</h3>
+                        <p id="push-notifications-desc" className="text-sm text-muted-foreground">
                             {t("settings.push.description")}
                         </p>
                     </div>
@@ -105,6 +105,8 @@ export function PushNotificationSettings() {
                         checked={enabled}
                         onCheckedChange={handleToggle}
                         disabled={loading || permStatus === 'denied'}
+                        aria-labelledby="push-notifications-title"
+                        aria-describedby="push-notifications-desc"
                     />
                 </div>
             </div>

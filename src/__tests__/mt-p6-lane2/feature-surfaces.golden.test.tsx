@@ -202,7 +202,9 @@ async function fingerprint(config: OrgConfig, v: Viewer): Promise<Record<string,
 
         const settings = inOrg(config, <MusicianProfileSettings />)
         await waitFor(() => expect(settings.container.textContent).toContain("Scheduling Notifications"))
-        const prefs = Array.from(settings.container.querySelectorAll("span"))
+        // The toggle names are <label htmlFor> on their switches since the
+        // 2026-10-31 a11y fix (they were <span>); the capture is the same text.
+        const prefs = Array.from(settings.container.querySelectorAll("span, label"))
             .map((s) => (s.textContent ?? "").trim())
             .filter((t) => t === "Email" || t === "SMS" || t === "Push")
         out.schedulingNotificationToggles = prefs
