@@ -39,9 +39,17 @@ function loadQRSignIn() {
             let reloaded = true
             try { reloaded = sessionStorage.getItem(QR_RELOAD_KEY) === "1" } catch { /* storage blocked */ }
             if (!reloaded) {
-                try { sessionStorage.setItem(QR_RELOAD_KEY, "1") } catch { /* storage blocked */ }
-                window.location.reload()
-                return new Promise<never>(() => {})
+                // Reload only once the flag is provably stored (a full or
+                // blocked store would otherwise reload forever).
+                let flagged = false
+                try {
+                    sessionStorage.setItem(QR_RELOAD_KEY, "1")
+                    flagged = sessionStorage.getItem(QR_RELOAD_KEY) === "1"
+                } catch { /* storage full or blocked */ }
+                if (flagged) {
+                    window.location.reload()
+                    return new Promise<never>(() => {})
+                }
             }
             throw err
         })
