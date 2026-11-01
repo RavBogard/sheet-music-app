@@ -20,7 +20,7 @@
  * ship in the initial setlist-page bundle. It lazy-loads on first song tap.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import dynamic from "next/dynamic"
 import Link from "next/link"
 import { Loader2, ArrowLeft, Music, Users, Pencil, Printer, ListCollapse, List } from "lucide-react"
@@ -301,12 +301,21 @@ export function SetlistPerformClient({
     const isLeaderRole = isBandLeader || isAdmin
 
     // Song fileIds for the offline indicator's IDB ground-truth count.
-    const songFileIds = tracks
+    // Re-audit P1 (render loop): keyed on content, so the array keeps its
+    // identity across renders. A fresh array each render made
+    // SaveOfflineButton re-count the offline store, whose report re-rendered
+    // this page, without end (~320 IndexedDB opens a second while idle).
+    const songFileIdsKey = tracks
         // PERF-03: every openable row (bonded prayers and readings open as
         // charts too), not song rows only.
         .filter(t => !!t.fileId)
         .map(t => t.fileId as string)
         .filter((id, i, all) => all.indexOf(id) === i)
+        .join("\n")
+    const songFileIds = useMemo(
+        () => (songFileIdsKey ? songFileIdsKey.split("\n") : []),
+        [songFileIdsKey],
+    )
     // The count SaveOfflineButton will report (it drops `flow-` pseudo ids),
     // used only to reserve the status line's width before it reports.
     const reservedChartCount = songFileIds.filter((id) => !id.startsWith("flow-")).length

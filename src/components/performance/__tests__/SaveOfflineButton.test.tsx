@@ -25,6 +25,7 @@ vi.mock('@/lib/prefetch', () => ({
 }))
 vi.mock('@/lib/offline-idb', () => ({
     listFileIds: () => mockListFileIds(),
+    OFFLINE_STORE_CHANGED_EVENT: 'crc-offline-store-changed',
 }))
 
 import { SaveOfflineButton } from '@/components/performance/SaveOfflineButton'
@@ -279,20 +280,22 @@ describe('SaveOfflineButton', () => {
         // (the Dexie liveQuery shape on first delivery of an SSR-seeded set).
         rerender(<SaveOfflineButton fileIds={[...ids1]} />)
 
-        // The previous rIC handle was cancelled by cleanup — expected.
-        expect(cancelled).toContain(1)
-
-        // CRITICAL: after the re-render, the precache must still have a
-        // PENDING rIC. Pre-fix this assertion fails: only `scheduled.length === 1`
-        // (the original handle 1, now cancelled), so nothing will ever fire.
+        // CRITICAL: after the re-render, an idle kick must still be PENDING
+        // (scheduled and not cancelled). Pre-F-4 the only handle was cancelled
+        // and never replaced. Since the re-audit render-loop fix the effect is
+        // keyed on content, so a same-content re-render keeps the original
+        // kick instead of cancelling and re-issuing it; either shape passes.
+        const pending = scheduled
+            .map((cb, i) => ({ cb, handle: i + 1 }))
+            .filter(({ handle }) => !cancelled.includes(handle))
         expect(
-            scheduled.length,
-            'idle auto-precache must re-schedule after a same-content re-render (else iPad-WebKit F-4)',
-        ).toBeGreaterThan(1)
+            pending.length,
+            'idle auto-precache must stay scheduled after a same-content re-render (else iPad-WebKit F-4)',
+        ).toBeGreaterThan(0)
 
         // Fire the latest still-pending rIC and confirm prefetch lands.
         await act(async () => {
-            scheduled[scheduled.length - 1]({
+            pending[pending.length - 1].cb({
                 didTimeout: false,
                 timeRemaining: () => 0,
             } as IdleDeadline)
@@ -355,19 +358,16 @@ describe('SaveOfflineButton', () => {
             // Parent re-renders with a new array reference, same content.
             rerender(<SaveOfflineButton fileIds={[...ids]} />)
 
-            // Cleanup cleared the first fallback timer — expected.
-            expect(cleared).toContain(firstId)
-
-            // CRITICAL: a fresh 2s timer must be pending after the re-render.
-            // Pre-fix this fails (scheduled2s.length stays 1, both cancelled
-            // and unreplaced); post-fix it is 2 with the latest one still
-            // alive (not in `cleared`).
+            // CRITICAL: a 2s timer must still be pending after the re-render
+            // (the original one, kept because the effect is keyed on content,
+            // or a re-issued one). Pre-F-4 both were cancelled and unreplaced.
+            const alive = scheduled2s.filter((t) => !cleared.includes(t.id))
             expect(
-                scheduled2s.length,
-                'setTimeout fallback must be re-scheduled after a same-content re-render',
-            ).toBeGreaterThan(1)
-            const latest = scheduled2s[scheduled2s.length - 1]
-            expect(cleared).not.toContain(latest.id)
+                alive.length,
+                'setTimeout fallback must stay scheduled after a same-content re-render',
+            ).toBeGreaterThan(0)
+            expect(firstId).toBeGreaterThan(0)
+            const latest = alive[alive.length - 1]
 
             // Fire the latest still-pending timer and confirm prefetch lands.
             await act(async () => {

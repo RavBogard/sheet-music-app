@@ -10,7 +10,7 @@ import {
     type SaveFailureReason,
 } from "@/lib/prefetch"
 import type { ChartVersions } from "@/lib/offline/chart-version"
-import { listFileIds } from "@/lib/offline-idb"
+import { listFileIds, OFFLINE_STORE_CHANGED_EVENT } from "@/lib/offline-idb"
 import { logger } from "@/lib/logger"
 import { PERFORM_PRECACHE_DONE_EVENT } from "@/hooks/use-perform-entry-precache"
 import { useT } from "@/i18n/client"
@@ -33,6 +33,18 @@ interface Props {
 }
 
 type Phase = "idle" | "saving"
+
+function sameSet(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
+    if (a.size !== b.size) return false
+    for (const v of a) if (!b.has(v)) return false
+    return true
+}
+
+function sameMap<V>(a: ReadonlyMap<string, V>, b: ReadonlyMap<string, V>): boolean {
+    if (a.size !== b.size) return false
+    for (const [k, v] of a) if (!b.has(k) || b.get(k) !== v) return false
+    return true
+}
 
 /**
  * F1 (offline-precache) — "Save offline" CTA + idle auto-precache.
@@ -61,12 +73,11 @@ export function SaveOfflineButton({ fileIds, onReadyChange, versions }: Props) {
     const t = useT()
     // Dedupe + drop pseudo (`flow-`) items and falsy ids; `prefetchSetlistPDFs`
     // guards these too, but the count/fraction must reflect only real charts.
-    const cacheable = useMemo(
-        () => [...new Set(fileIds.filter((id) => id && !id.startsWith("flow-")))],
-        [fileIds],
-    )
+    // Keyed on content, not array identity: a caller that passes a fresh
+    // array each render must not re-run the count (re-audit P1 render loop).
+    const sig = [...new Set(fileIds.filter((id) => id && !id.startsWith("flow-")))].join(",")
+    const cacheable = useMemo(() => (sig ? sig.split(",") : []), [sig])
     const total = cacheable.length
-    const sig = cacheable.join(",")
 
     const [phase, setPhase] = useState<Phase>("idle")
     const [readyCount, setReadyCount] = useState(0)
@@ -89,7 +100,7 @@ export function SaveOfflineButton({ fileIds, onReadyChange, versions }: Props) {
             const f = all.get(id)
             if (f && !have.has(id)) mine.set(id, f.reason)
         }
-        setFailures(mine)
+        setFailures((prev) => (sameMap(prev, mine) ? prev : mine))
     }, [cacheable])
 
     // How many cacheable charts are already in the offline store.
@@ -101,7 +112,9 @@ export function SaveOfflineButton({ fileIds, onReadyChange, versions }: Props) {
             const mine = new Set<string>()
             for (const id of cacheable) if (have.has(id)) { n++; mine.add(id) }
             setReadyCount(n)
-            setSavedIds(mine)
+            // Keep the old object when nothing changed, so the report to
+            // the parent (onReadyChange) doesn't fire and re-render it.
+            setSavedIds((prev) => (sameSet(prev, mine) ? prev : mine))
             readFailures(mine)
             return n
         } catch (e) {
@@ -132,6 +145,8 @@ export function SaveOfflineButton({ fileIds, onReadyChange, versions }: Props) {
     // re-render re-schedule cleanly; once the kick actually runs, the ref
     // flips and subsequent re-renders correctly return early (no double-fire).
     // See `.paul/research/ipad-idle-auto-precache-fix/DIAGNOSIS.md`.
+    // Since the re-audit render-loop fix, `cacheable` is keyed on `sig`, so a
+    // same-content re-render no longer re-runs this effect at all.
     const idleKickedRef = useRef<string | null>(null)
     useEffect(() => {
         if (total === 0) return
@@ -210,7 +225,11 @@ export function SaveOfflineButton({ fileIds, onReadyChange, versions }: Props) {
         }
         window.addEventListener(PERFORM_PRECACHE_DONE_EVENT, handler)
         window.addEventListener(SAVE_FAILURES_CHANGED_EVENT, handler)
+        // A chart saved or removed outside these passes (opening it in the
+        // viewer saves it too) still moves the N/M count.
+        window.addEventListener(OFFLINE_STORE_CHANGED_EVENT, handler)
         return () => {
+            window.removeEventListener(OFFLINE_STORE_CHANGED_EVENT, handler)
             window.removeEventListener(PERFORM_PRECACHE_DONE_EVENT, handler)
             window.removeEventListener(SAVE_FAILURES_CHANGED_EVENT, handler)
         }
