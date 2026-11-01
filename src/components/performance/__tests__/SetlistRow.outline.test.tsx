@@ -114,7 +114,7 @@ describe("SetlistRow — liturgy outline rendering", () => {
         expect(screen.queryByText("Should not appear on a song row")).toBeNull()
     })
 
-    // The folioBadge comment calls the fixed `w-20 text-end` column out as the
+    // The folioBadge comment calls the fixed `w-14 text-end` column out as the
     // reason folios line up down the list. A bonded prayer/reading row rendered
     // {folioBadge} BEFORE its trailing ChevronRight, which pushed that row's
     // folio ~30px (h-5 icon + gap-2.5) left of every other row type's — the one
@@ -186,7 +186,7 @@ describe("SetlistRow — liturgy outline rendering", () => {
             expect(next).toBeNull()
             // Same fixed-width right-aligned column on every row type — this is
             // what makes the right edge identical without measuring layout.
-            expect(badge.className).toContain("w-20")
+            expect(badge.className).toContain("w-14")
             expect(badge.className).toContain("text-end")
         })
 

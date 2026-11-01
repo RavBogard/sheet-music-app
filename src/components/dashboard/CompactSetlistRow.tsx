@@ -42,13 +42,13 @@ export function CompactSetlistRow({ setlist, onSelect }: { setlist: Setlist; onS
         <>
             <Music2 aria-hidden="true" className="w-4 h-4 text-muted-foreground shrink-0" />
             <div className="flex-1 min-w-0">
-                <div className="font-semibold text-base text-foreground truncate">{setlist.name}</div>
-                <div className="tnum text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <div className="font-semibold text-[0.95rem] leading-snug text-foreground truncate">{setlist.name}</div>
+                <div className="tnum text-xs font-medium text-muted-foreground flex items-center gap-1.5">
                     {dateStr && <span>{dateStr}</span>}
                     <span>{t("dashboard.compactSongCount", { count: setlist.trackCount ?? 0 })}</span>
                 </div>
             </div>
-            <DirectionalIcon icon={ChevronRight} className="w-5 h-5 text-muted-foreground/60 group-hover:text-foreground transition-colors shrink-0" />
+            <DirectionalIcon icon={ChevronRight} className="w-4 h-4 text-muted-foreground/60 group-hover:text-foreground transition-colors shrink-0" />
         </>
     )
 
@@ -57,7 +57,7 @@ export function CompactSetlistRow({ setlist, onSelect }: { setlist: Setlist; onS
             <Button
                 variant="ghost"
                 onClick={handleSelect}
-                className={`w-full h-auto min-h-14 flex items-center gap-3 bg-card hover:bg-accent/60 rounded-none px-4 py-2.5 text-start group active:scale-100 ${navigatingTo ? 'opacity-50 pointer-events-none' : ''}`}
+                className={`w-full h-auto min-h-11 flex items-center gap-3 bg-card hover:bg-accent/60 rounded-none px-4 py-1 text-start group active:scale-100 ${navigatingTo ? 'opacity-50 pointer-events-none' : ''}`}
             >
                 {content}
             </Button>
@@ -67,7 +67,7 @@ export function CompactSetlistRow({ setlist, onSelect }: { setlist: Setlist; onS
     return (
         <Link
             href={href}
-            className="w-full min-h-14 flex items-center gap-3 bg-card hover:bg-accent/60 px-4 py-2.5 transition-colors text-start group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+            className="w-full min-h-11 flex items-center gap-3 bg-card hover:bg-accent/60 px-4 py-1 transition-colors text-start group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
         >
             {content}
         </Link>

@@ -159,14 +159,14 @@ export function PublicSetlistListing({ initialSetlists }: PublicSetlistListingPr
             <Link
                 key={setlist.id}
                 href={`/perform/setlist/${setlist.id}`}
-                className="group flex items-center gap-3 sm:gap-4 px-3 sm:px-4 py-3 min-h-[72px] bg-card hover:bg-accent/60 active:bg-accent transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                className="group flex items-center gap-3 px-3 sm:px-4 py-1 min-h-11 bg-card hover:bg-accent/60 active:bg-accent transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
             >
                 <RowDate date={eventDate} muted={muted} />
                 <div className="min-w-0 flex-1">
-                    <h3 className={muted ? "text-base font-semibold leading-snug line-clamp-2" : "text-[17px] font-bold leading-snug line-clamp-2"}>
+                    <h3 className={muted ? "text-[0.95rem] font-semibold leading-snug line-clamp-2" : "text-[0.95rem] font-bold leading-snug line-clamp-2"}>
                         {setlist.name}
                     </h3>
-                    <p className="tnum mt-0.5 text-sm font-medium text-muted-foreground">
+                    <p className="tnum text-xs font-medium text-muted-foreground">
                         {eventDate && (
                             <>
                                 <span>
@@ -183,19 +183,18 @@ export function PublicSetlistListing({ initialSetlists }: PublicSetlistListingPr
                         <span data-testid="perform-card-song-count">{t("performSetlist.songCount", { count: songCount })}</span>
                     </p>
                 </div>
-                <DirectionalIcon icon={ChevronRight} aria-hidden="true" className="h-5 w-5 shrink-0 text-muted-foreground group-hover:text-foreground" />
+                <DirectionalIcon icon={ChevronRight} aria-hidden="true" className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-foreground" />
             </Link>
         )
     }
 
     return (
-        <PageContainer className="flex flex-col gap-4">
+        <PageContainer className="flex flex-col gap-3">
             {/* Head row (consistency pass): the brand lives in the shell's top
                 bar now, so the page head is the title that matches the tab,
                 the public-listing subtitle, and the viewer's controls on the
                 right. */}
             <PageHeader
-                className="mb-2"
                 title={t("nav.setlists")}
                 subtitle={label(org, 'publicListingSubtitle')}
                 actions={user && !authLoading ? (
@@ -238,12 +237,12 @@ export function PublicSetlistListing({ initialSetlists }: PublicSetlistListingPr
                     <Link
                         href={`/perform/setlist/${next.id}`}
                         aria-label={t("performSetlist.goToNextService", { setlistName: next.name })}
-                        className="group flex items-center gap-3 sm:gap-4 rounded-lg border border-rule bg-card px-3 sm:px-4 py-4 min-h-[88px] cursor-pointer transition-colors hover:bg-accent/60 active:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                        className="group flex items-center gap-3 rounded-lg border border-rule bg-card px-3 sm:px-4 py-1.5 min-h-11 cursor-pointer transition-colors hover:bg-accent/60 active:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                     >
                         <RowDate date={nextDate} />
                         <div className="min-w-0 flex-1">
-                            <h2 className="line-clamp-2 text-[1.35rem] font-extrabold leading-tight tracking-[-0.015em]">{next.name}</h2>
-                            <p className="tnum mt-0.5 text-sm font-medium text-muted-foreground">
+                            <h2 className="line-clamp-2 text-base font-extrabold leading-tight">{next.name}</h2>
+                            <p className="tnum text-xs font-medium text-muted-foreground">
                                 <span className="font-bold text-brand">{nextDate && clientNow && isSameLocalDay(nextDate, clientNow) ? t("performSetlist.today") : t("performSetlist.nextService")}</span>
                                 {nextDate && (
                                     <>
@@ -259,8 +258,8 @@ export function PublicSetlistListing({ initialSetlists }: PublicSetlistListingPr
                                 )}
                             </p>
                         </div>
-                        <span className="shrink-0 inline-flex items-center gap-2 h-11 rounded-md bg-primary px-4 sm:px-5 text-[15px] font-bold text-primary-foreground group-hover:bg-primary/90 transition-colors">
-                            <Play aria-hidden="true" className="h-4 w-4 fill-current" />
+                        <span className="shrink-0 inline-flex items-center gap-1.5 h-8 rounded-md bg-primary px-3 text-[13px] font-bold text-primary-foreground group-hover:bg-primary/90 transition-colors">
+                            <Play aria-hidden="true" className="h-3.5 w-3.5 fill-current" />
                             <span className="hidden sm:inline">{t("performSetlist.perform")}</span>
                         </span>
                     </Link>

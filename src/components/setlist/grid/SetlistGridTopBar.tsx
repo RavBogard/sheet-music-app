@@ -31,9 +31,10 @@ export interface SetlistGridTopBarProps {
 }
 
 /**
- * The setlist editor's head row (web refresh, blend E): the title large, the
- * status line under it, and the one blue Perform button on the right. It
- * sticks just under the shell's top bar so Perform is always one tap away.
+ * The setlist editor's head row (Option B, 2026-11-01): the title at 1rem/800,
+ * ONE meta line under it, and the one blue Perform button on the right, drawn
+ * small with a 44px hit area. It sticks just under the shell's top bar so
+ * Perform is always one tap away.
  */
 export function SetlistGridTopBar({
     name,
@@ -55,8 +56,8 @@ export function SetlistGridTopBar({
                 wraps instead of crushing. Back + title (2 lines max) + status
                 take a full row on a phone; the sync state and Perform drop to
                 their own row under them. */}
-            <div className={cn(PAGE_WIDTH_CLASS, "flex flex-wrap items-center gap-x-3 gap-y-2 py-3")}>
-                <div className="flex min-w-0 flex-[1_1_22rem] items-start gap-1 sm:gap-2">
+            <div className={cn(PAGE_WIDTH_CLASS, "flex flex-wrap items-center gap-x-3 gap-y-1 py-1.5")}>
+                <div className="flex min-w-0 flex-[1_1_22rem] items-center gap-1 sm:gap-2">
                 <button
                     type="button"
                     onClick={onBack}
@@ -68,12 +69,12 @@ export function SetlistGridTopBar({
                         'transition-colors',
                     )}
                 >
-                    <DirectionalIcon icon={ChevronLeft} aria-hidden className="h-6 w-6" />
+                    <DirectionalIcon icon={ChevronLeft} aria-hidden className="h-5 w-5" />
                 </button>
 
                 <div className="min-w-0 flex-1">
-                    <div className="flex items-start gap-1 min-w-0">
-                        <h1 className="line-clamp-2 break-words text-[1.35rem] sm:text-[1.6rem] font-extrabold leading-tight tracking-[-0.015em] text-foreground">
+                    <div className="flex items-center gap-1 min-w-0">
+                        <h1 className="line-clamp-2 break-words text-base font-extrabold leading-tight text-foreground">
                             {name || t('setlistGrid.newSetlist')}
                         </h1>
                         {onEditMeta ? (
@@ -82,20 +83,20 @@ export function SetlistGridTopBar({
                                 onClick={onEditMeta}
                                 aria-label={t('setlistGrid.editSetlistDetails')}
                                 className={cn(
-                                    'inline-flex min-h-[44px] min-w-[44px] -my-1.5 items-center justify-center rounded-md flex-shrink-0',
+                                    'touch-hit inline-flex h-7 w-7 items-center justify-center rounded-md flex-shrink-0',
                                     'text-muted-foreground hover:text-foreground hover:bg-accent',
                                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                                     'transition-colors',
                                 )}
                             >
-                                <Pencil aria-hidden className="h-4 w-4" />
+                                <Pencil aria-hidden className="h-3.5 w-3.5" />
                             </button>
                         ) : null}
                     </div>
                     {status.length > 0 ? (
                         <p
                             data-testid="setlist-status-line"
-                            className="tnum line-clamp-2 break-words text-sm font-medium text-muted-foreground"
+                            className="tnum line-clamp-2 break-words text-xs font-medium text-muted-foreground"
                         >
                             {status.map((part, i) => (
                                 <span key={i}>
@@ -116,13 +117,13 @@ export function SetlistGridTopBar({
                             href={performHref}
                             data-testid="setlist-grid-perform-link"
                             className={cn(
-                                'inline-flex min-h-11 items-center gap-2 rounded-md px-4 sm:px-5',
-                                'bg-primary text-primary-foreground text-[15px] font-bold',
+                                'touch-hit inline-flex h-8 items-center gap-1.5 rounded-md px-3',
+                                'bg-primary text-primary-foreground text-[13px] font-bold',
                                 'hover:bg-primary/90 active:bg-primary/85 transition-colors',
                                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
                             )}
                         >
-                            <Play aria-hidden className="h-4 w-4 fill-current" />
+                            <Play aria-hidden className="h-3.5 w-3.5 fill-current" />
                             {t('setlistGrid.performLink')}
                         </Link>
                     ) : null}

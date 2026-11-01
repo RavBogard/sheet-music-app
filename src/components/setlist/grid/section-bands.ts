@@ -7,8 +7,11 @@ export interface BandRow {
 }
 
 /**
- * Web refresh (blend E): section header rows draw as full-hue bands that
- * carry a running head and the printed-page range of the rows under them.
+ * Web refresh, Option B (2026-11-01, "E, much quieter"): a section header
+ * row draws as a thin coloured underline with a small uppercase label and
+ * the printed-page range of the rows under it, muted, at the right. No
+ * filled band. The hue is still the section's identity, now carried by the
+ * label ink and its 2px rule.
  *
  * Pure, display-only. It reads the rows in the author's order and never
  * reorders, inserts or drops one.
@@ -19,13 +22,20 @@ export type SectionHue = 'green' | 'oxblood' | 'ochre' | 'blue'
 /** Hue order used when a header's name is not a known section. */
 export const HUE_CYCLE: readonly SectionHue[] = ['green', 'oxblood', 'ochre', 'blue']
 
-/** Full-hue band classes. Each hue carries its own ink. Shared by the editor and Perform. */
+/**
+ * Section label classes: the label ink and its 2px underline in the hue.
+ * Shared by the editor and Perform. (The name is kept from blend E, when
+ * these were filled bands.)
+ */
 export const SECTION_BAND_CLASS: Record<SectionHue, string> = {
-    green: 'bg-section-green text-section-green-foreground',
-    oxblood: 'bg-section-oxblood text-section-oxblood-foreground',
-    ochre: 'bg-section-ochre text-section-ochre-foreground',
-    blue: 'bg-section-blue text-section-blue-foreground',
+    green: 'text-section-green-ink border-section-green-ink',
+    oxblood: 'text-section-oxblood-ink border-section-oxblood-ink',
+    ochre: 'text-section-ochre-ink border-section-ochre-ink',
+    blue: 'text-section-blue-ink border-section-blue-ink',
 }
+
+/** The quiet part of a section label row: the page range and set totals. */
+export const SECTION_LABEL_META_CLASS = 'tnum shrink-0 text-xs font-bold normal-case tracking-[0.02em] text-muted-foreground'
 
 export interface SectionBand {
     hue: SectionHue
