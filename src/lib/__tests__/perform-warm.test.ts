@@ -115,3 +115,29 @@ describe("warmViewerCode", () => {
         expect(fetchMock).not.toHaveBeenCalled()
     })
 })
+
+describe("createOpeningTracker (review S2)", () => {
+    it("pauses only while a chart is opening, not while it stays open", async () => {
+        const { createOpeningTracker, OPENING_MIN_MS, OPENING_MAX_MS } = await import("@/lib/perform-warm")
+        let open = false
+        let rendered = false
+        let t = 0
+        const opening = createOpeningTracker(() => open, () => rendered, () => t)
+        expect(opening()).toBe(false)
+        open = true
+        expect(opening()).toBe(true) // just tapped
+        t = OPENING_MIN_MS + 1
+        expect(opening()).toBe(true) // not painted yet
+        rendered = true
+        expect(opening()).toBe(false) // painted: prefetch resumes while open
+        // A chart that never reports painting stops pausing at the cap.
+        open = false
+        expect(opening()).toBe(false)
+        open = true
+        rendered = false
+        t = 10_000
+        expect(opening()).toBe(true)
+        t = 10_000 + OPENING_MAX_MS
+        expect(opening()).toBe(false)
+    })
+})

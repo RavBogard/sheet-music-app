@@ -8,7 +8,7 @@ import { registerPerformShellSW } from "@/components/performance/perform-shell-s
 import { KeepAwakeProvider } from "@/components/performance/keep-awake-context"
 import { KeepAwakeBanner } from "@/components/performance/KeepAwakeBanner"
 import { primeOfflineWorker } from "@/lib/pdf-worker-offline"
-import { isChartOpenPath, warmViewerCode } from "@/lib/perform-warm"
+import { CHART_RENDERED_SELECTOR, createOpeningTracker, isChartOpenPath, warmViewerCode } from "@/lib/perform-warm"
 import { loadPDFOverlay } from "@/lib/perform-chart-loaders"
 import { AppNavigation } from "@/components/nav/AppNavigation"
 
@@ -33,8 +33,9 @@ import { AppNavigation } from "@/components/nav/AppNavigation"
  * - It starts when the browser is idle (`requestIdleCallback`), or where
  *   that's missing (iPad Safari) after the first interaction or about 8 s
  *   without input — never on a fixed short timer.
- * - It waits while a chart is opening or open, and cancels an in-flight fetch
- *   so the chart's own requests have the network.
+ * - It waits while a chart is OPENING, and cancels an in-flight fetch so the
+ *   chart's own requests have the network. Once the chart has painted, the
+ *   fetches carry on (one at a time) so every format is cached mid-service.
  */
 const IDLE_FALLBACK_MS = 8000
 const AFTER_INTERACTION_MS = 1500
@@ -69,6 +70,13 @@ function PerformWarmUp() {
         if (typeof window === "undefined") return
         const ac = new AbortController()
         let started = false
+        const chartOpening = createOpeningTracker(chartIsOpen, () => {
+            try {
+                return document.querySelector(CHART_RENDERED_SELECTOR) !== null
+            } catch {
+                return true
+            }
+        })
         let lastInput = performance.now()
         const markInput = () => { lastInput = performance.now() }
         for (const ev of INTERACTION_EVENTS) window.addEventListener(ev, markInput, { capture: true, passive: true })
@@ -90,7 +98,7 @@ function PerformWarmUp() {
             started = true
             clearTriggers()
             void (async () => {
-                while (!ac.signal.aborted && chartIsOpen()) {
+                while (!ac.signal.aborted && chartOpening()) {
                     await new Promise((r) => setTimeout(r, 1000))
                 }
                 if (ac.signal.aborted) return
@@ -104,7 +112,10 @@ function PerformWarmUp() {
                 })
                 // Worker first: it is what the first PDF needs soonest.
                 await primeOfflineWorker()
-                await warmViewerCode({ signal: ac.signal, isPaused: chartIsOpen })
+                // Pauses only while a chart is opening; once it has painted the
+                // fetches resume (fetch only, one at a time) so every format is
+                // cached during a service (review S2).
+                await warmViewerCode({ signal: ac.signal, isPaused: chartOpening, pollMs: 500 })
             })()
         }
 

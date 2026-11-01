@@ -8,10 +8,11 @@
  * lazily loaded chunk is a fraction of that. It is only ever reached through
  * `loadSentryBrowser()` in `sentry-lazy.ts`.
  *
- * `@sentry/browser` is pinned to the exact version `@sentry/nextjs` resolves
- * to, so both share one `@sentry/core` and one client: server code and the
- * sync engine's `@sentry/nextjs` captures land on the client started here.
- * Bump them together.
+ * `@sentry/browser` and `@sentry/nextjs` are pinned to the SAME exact version
+ * in package.json, so both share one `@sentry/core` and one client: server
+ * code and the sync engine's `@sentry/nextjs` captures land on the client
+ * started here. Bump them together; `sentry-version-lockstep.test.ts` fails
+ * if they differ.
  *
  * What the Next wrapper added and this drops: route-named navigation spans
  * (traces are named by URL instead) and its SDK metadata tag. Error capture,

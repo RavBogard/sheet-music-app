@@ -34,7 +34,15 @@ if (dsn && typeof window !== "undefined") {
     window.addEventListener("error", onError)
     window.addEventListener("unhandledrejection", onRejection)
 
-    const start = () => {
+    // Offline when the start comes due (an iPad that lost the shul WiFi), or
+    // the chunk fails to load: try again when the connection returns, with
+    // the buffer still listening meanwhile.
+    const retryWhenOnline = () => window.addEventListener("online", start, { once: true })
+    function start() {
+        if (navigator.onLine === false) {
+            retryWhenOnline()
+            return
+        }
         const p = loadSentryBrowser()
         if (!p) return
         void p.then((m) => {
@@ -42,9 +50,7 @@ if (dsn && typeof window !== "undefined") {
             window.removeEventListener("error", onError)
             window.removeEventListener("unhandledrejection", onRejection)
             for (const err of early.splice(0)) m.captureException(err)
-        }).catch(() => {
-            // Chunk failed to load (offline): leave the buffer listening.
-        })
+        }).catch(retryWhenOnline)
     }
 
     const whenIdle = () => {

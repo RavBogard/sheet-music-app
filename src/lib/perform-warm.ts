@@ -24,9 +24,15 @@
  * readiness never depends on the fast path.
  */
 
-declare const __webpack_require__: any
+import {
+    loadImageScoreViewer,
+    loadPDFOverlay,
+    loadPDFViewer,
+    loadSmartScoreViewer,
+    loadTextScoreViewer,
+} from "@/lib/perform-chart-loaders"
 
-import { loadPDFOverlay } from "@/lib/perform-chart-loaders"
+declare const __webpack_require__: any
 
 export type WarmLoader = () => Promise<unknown>
 
@@ -37,10 +43,10 @@ export type WarmLoader = () => Promise<unknown>
  */
 export const VIEWER_LOADERS: readonly WarmLoader[] = [
     loadPDFOverlay,
-    () => import("@/components/music/PDFViewer"),
-    () => import("@/components/music/TextScoreViewer"),
-    () => import("@/components/music/ImageScoreViewer"),
-    () => import("@/components/music/SmartScoreViewer"),
+    loadPDFViewer,
+    loadTextScoreViewer,
+    loadImageScoreViewer,
+    loadSmartScoreViewer,
 ]
 
 /** Webpack's runtime, when this module was bundled by webpack. */
@@ -105,8 +111,9 @@ export function chunkUrlsFor(loader: WarmLoader): string[] | null {
 export interface WarmOptions {
     /** Aborts the whole warm-up (unmount). */
     signal: AbortSignal
-    /** True while a chart is opening or open: the warm-up waits, and an
-     *  in-flight fetch is cancelled and retried later. */
+    /** True while a chart is opening (its first render): the warm-up waits,
+     *  and an in-flight fetch is cancelled and retried later. Fetches run one
+     *  at a time, so never more than one competes with an open chart. */
     isPaused: () => boolean
     loaders?: readonly WarmLoader[]
     /** Poll interval while paused / watching an in-flight fetch. */
@@ -226,6 +233,40 @@ export function isChartOpenPath(pathname: string): boolean {
     if (/^\/perform\/setlist\/[^/]+\/track\//.test(pathname)) return true
     const m = pathname.match(/^\/perform\/([^/]+)\/?$/)
     return Boolean(m && m[1] !== "setlist")
+}
+
+/** The opening chart has painted: a PDF page canvas, or OSMD's key header. */
+export const CHART_RENDERED_SELECTOR = 'canvas.react-pdf__Page__canvas, [data-testid="musicxml-key-header"]'
+/** Never treat a chart as still "opening" for longer than this. */
+export const OPENING_MAX_MS = 6000
+/** Always give a fresh open at least this long before prefetching resumes. */
+export const OPENING_MIN_MS = 1000
+
+/**
+ * Review S2 on PR #48: the warm-up pauses only while a chart is OPENING (its
+ * first render), not for as long as it stays open, so every format still
+ * gets cached during a service. "Opening" is from the first poll that sees a
+ * chart URL until the chart has painted (or OPENING_MAX_MS), and at least
+ * OPENING_MIN_MS.
+ */
+export function createOpeningTracker(
+    isOpen: () => boolean,
+    hasRendered: () => boolean,
+    now: () => number = () => performance.now(),
+): () => boolean {
+    let openSince: number | null = null
+    return () => {
+        if (!isOpen()) {
+            openSince = null
+            return false
+        }
+        const t = now()
+        if (openSince === null) openSince = t
+        const elapsed = t - openSince
+        if (elapsed < OPENING_MIN_MS) return true
+        if (elapsed >= OPENING_MAX_MS) return false
+        return !hasRendered()
+    }
 }
 
 /** Test-only: forget which URLs were warmed. */
