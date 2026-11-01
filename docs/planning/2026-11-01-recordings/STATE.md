@@ -103,3 +103,17 @@ with V'ahavta after it, but whisper heard nothing sung there. The cutter now hol
 - #69 fixed #62's + scrolling with the list (portal to body); measured pinned at 708–764 px both before and after scrolling.
 - Work dir moved to `sheet-music-app/.recordings-work/` (gitignored) for the next runs.
 - Open for Daniel: whether Perform keeps playing legacy audio-file charts (`AudioViewer`, the one exempt path in `perform-no-audio.test.ts`); the 9 held clips (list them with `list_recordings status:"held"`).
+
+## Clip review applied (2026-11-01)
+Daniel marked all 14 clips on the review artifact (claude.ai/artifact/LdPj541R8kMTU8GkFQ4WdK). Applied with an admin script (dry run first; the temp ADC was deleted afterwards). Every changed doc carries a `notes` line.
+- Kept and made live and featured: Lechu Goldman, Mi Chamocha Ana B'Koach. The five clips that were already live stay live.
+- The Shir Shabbat clips were one song off. The "Mizmor Shiru Ladonai" clip is really Shiru L'Adonai, and the "Mizmor l'David D" clip is really Mizmor Shiru Ladonai. Both clips moved to the right charts and are now live and featured. Mizmor l'David D now has no clip.
+- Moved by Daniel's notes, choosing the most-played chart (his rule):
+  - "erev shel lcha dodi" moved to L'Cha Dodi (Nava) (4 plays; the other Nava chart has 0).
+  - "Shema (major)" moved to V'Ahavta (Silver) (4 plays against 1 for Friedman).
+  - "Adonai sfatai" moved to Aleinu Shur (5 plays; the others have 0).
+  - All three are live and featured.
+  - GATE: proceeded because these follow his "the one we play most" ruling. He can swap them.
+- Hidden (not deleted): the Shiru L'Adonai intro clip (mostly talk and poems; the song itself is the moved clip above), Twilight, and the old Psukei take.
+- Psukei d'Zimrah: re-cut from 0:30 so it skips Randy's intro. It is a new doc, 1k633gqlJcrGfZzHiMIN, so the cached copy under the old id can't serve the old audio.
+- Verified: the new file returns 206 audio/mpeg, and the 6.19 listen page lists 8 clips.
