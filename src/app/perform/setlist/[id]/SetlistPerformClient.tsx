@@ -57,10 +57,11 @@ import { GigPanel } from "@/components/setlist/gig/GigPanel"
 import { useOrg } from "@/lib/org/org-context"
 import { isBandTenant } from "@/lib/org/vocab"
 import { formatDuration, setTotalsByHeader, showsTiming } from "@/lib/gig/display"
-import { applyOrder, moveRow, sameOrder } from "@/lib/performance/live-reorder"
+import { applyOrder, moveRow, reapplyMove, sameOrder, type IntendedMove } from "@/lib/performance/live-reorder"
 import { commitLiveReorder, type LiveReorderFailure } from "@/lib/performance/live-reorder-client"
 import { PerformReorderList } from "@/components/performance/PerformReorderList"
 import { useMovedRowHighlight } from "@/components/performance/use-moved-row-highlight"
+import { ServerOrderContext } from "@/components/performance/live-order-context"
 
 const PrintModal = dynamic(
     () => import("@/components/setlist/PrintModal").then(m => m.PrintModal),
@@ -131,6 +132,7 @@ export function SetlistPerformClient({
         eventDate,
         setlistUpdatedSinceLoad,
         setlistLiveStamp,
+        setlistVersion,
         setlistUpdatedAt,
         isWakeLockActive,
         isWakeLockSupported,
@@ -145,38 +147,75 @@ export function SetlistPerformClient({
 
     // LIVE REORDER (Daniel, 2026-10-31). A leader's move shows at once as a
     // pending order laid over the live rows, and is written through the
-    // server reorder path. It clears when the live rows arrive in that order,
-    // or when the write fails (the rows fall back to what the server has).
+    // server reorder path. It clears only when the live rows arrive in the
+    // latest order the leader asked for (no flicker through older orders), or
+    // when the write fails (the rows fall back to what the server has).
     // Everything below reads `tracks`, the order on screen.
     const [pendingOrder, setPendingOrder] = useState<string[] | null>(null)
+    const pendingOrderRef = useRef<string[] | null>(null)
+    pendingOrderRef.current = pendingOrder
+    const liveIdsKey = liveTracks.map((t) => t.id ?? "").join("\n")
+
+    // Receivers: an incoming reorder waits while a finger is on the list
+    // (touchstart through touchend + 300 ms), so a row never jumps out from
+    // under a tap. Refs, not state: a touch costs no render unless a change
+    // is actually held.
+    const touchingRef = useRef(false)
+    const touchReleaseRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+    const shownLiveOrderRef = useRef<string[] | null>(null)
+    const heldRef = useRef(false)
+    const [holdReleaseTick, setHoldReleaseTick] = useState(0)
+    const onListTouchStart = useCallback(() => {
+        if (touchReleaseRef.current) clearTimeout(touchReleaseRef.current)
+        touchReleaseRef.current = null
+        touchingRef.current = true
+    }, [])
+    const onListTouchEnd = useCallback(() => {
+        if (touchReleaseRef.current) clearTimeout(touchReleaseRef.current)
+        touchReleaseRef.current = setTimeout(() => {
+            touchReleaseRef.current = null
+            touchingRef.current = false
+            if (heldRef.current) {
+                heldRef.current = false
+                setHoldReleaseTick((n) => n + 1)
+            }
+        }, 300)
+    }, [])
+    useEffect(() => () => {
+        if (touchReleaseRef.current) clearTimeout(touchReleaseRef.current)
+    }, [])
+    const shownLive = useMemo(() => {
+        const shown = shownLiveOrderRef.current
+        if (touchingRef.current && shown) {
+            const ids = liveIdsKey.split("\n")
+            const before = new Set(shown)
+            // Only a pure reorder is held; a row arriving or leaving shows at once.
+            if (!sameOrder(ids, shown) && ids.length === shown.length && ids.every((id) => before.has(id))) {
+                heldRef.current = true
+                return applyOrder(liveTracks, shown) as typeof liveTracks
+            }
+        }
+        shownLiveOrderRef.current = liveIdsKey.split("\n")
+        return liveTracks
+        // holdReleaseTick: re-run when a held order is let go.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [liveTracks, liveIdsKey, holdReleaseTick])
+
     const tracks = useMemo(
-        () => applyOrder(liveTracks, pendingOrder) as typeof liveTracks,
-        [liveTracks, pendingOrder],
+        () => applyOrder(shownLive, pendingOrder) as typeof liveTracks,
+        [shownLive, pendingOrder],
     )
     const tracksRef = useRef(tracks)
     tracksRef.current = tracks
-    const liveIdsKey = liveTracks.map((t) => t.id ?? "").join("\n")
-    const liveIdsKeyRef = useRef(liveIdsKey)
-    liveIdsKeyRef.current = liveIdsKey
-    // Set once the server took the newest pending order; the next change in
-    // the live rows after that is the server's answer, whatever it says.
-    const pendingConfirmedAtRef = useRef<string | null>(null)
+    const liveTracksRef = useRef(liveTracks)
+    liveTracksRef.current = liveTracks
     useEffect(() => {
-        if (!pendingOrder) return
-        const live = liveIdsKey.split("\n")
-        if (sameOrder(live, pendingOrder)) {
-            pendingConfirmedAtRef.current = null
-            setPendingOrder(null)
-            return
-        }
-        if (pendingConfirmedAtRef.current !== null && pendingConfirmedAtRef.current !== liveIdsKey) {
-            pendingConfirmedAtRef.current = null
-            setPendingOrder(null)
-        }
+        if (pendingOrder && sameOrder(liveIdsKey.split("\n"), pendingOrder)) setPendingOrder(null)
     }, [liveIdsKey, pendingOrder])
     // A moved row (this leader's move, or another leader's arriving live)
-    // is highlighted for two seconds.
-    const highlightIds = useMovedRowHighlight(tracks.map((t) => t.id))
+    // is highlighted for two seconds. A rollback is not a move.
+    const { highlighted: highlightIds, suppressNext: suppressMoveHighlight } =
+        useMovedRowHighlight(tracks.map((t) => t.id))
 
     // PERF-01: the SW may answer an offline /track/<id> reload with the BASE
     // setlist page (no initialTrackId), leaving the track only in the address
@@ -231,12 +270,27 @@ export function SetlistPerformClient({
     })
     const activeSongIndex: number | null = useMemo(() => {
         if (!activeRow) return null
+        // A row that is gone closes the chart (below); never a stale index.
         if (activeRow.id) {
             const i = tracks.findIndex((t) => t.id === activeRow.id)
-            if (i >= 0) return i
+            return i >= 0 ? i : null
         }
         return activeRow.index < tracks.length ? activeRow.index : null
     }, [activeRow, tracks])
+    // The open row was removed (by a leader, mid-service): back to the list,
+    // with a short line saying why.
+    const [openRowRemoved, setOpenRowRemoved] = useState(false)
+    useEffect(() => {
+        if (activeRow?.id && activeSongIndex === null && tracks.length > 0) {
+            setActiveRow(null)
+            setOpenRowRemoved(true)
+        }
+    }, [activeRow, activeSongIndex, tracks.length])
+    useEffect(() => {
+        if (!openRowRemoved) return
+        const timer = setTimeout(() => setOpenRowRemoved(false), 6000)
+        return () => clearTimeout(timer)
+    }, [openRowRemoved])
     const setActiveSongIndex = useCallback((index: number | null) => {
         if (index === null) {
             setActiveRow(null)
@@ -339,7 +393,8 @@ export function SetlistPerformClient({
         }
     })()
     const showUpdatedStrip = setlistUpdatedSinceLoad && online && !authLoading && !alreadyRefreshed
-    const [swapIndex, setSwapIndex] = useState<number | null>(null)
+    // Keyed by row id: a reorder while the sheet is open must not retarget it.
+    const [swapRowId, setSwapRowId] = useState<string | null>(null)
     const [resetBusy, setResetBusy] = useState(false)
     // Printing is NOT a privilege (Daniel, 2026-09-10) — not by role, and not
     // by having an account. The old `isMusician || isBandLeader || isAdmin`
@@ -362,11 +417,20 @@ export function SetlistPerformClient({
     const canReorder = isLeader && !!user && tracks.length > 1 && tracks.every((t) => !!t.id)
     const [reordering, setReordering] = useState(false)
     const [reorderFailure, setReorderFailure] = useState<LiveReorderFailure | null>(null)
-    const writeChainRef = useRef<Promise<void>>(Promise.resolve())
-    const moveSeqRef = useRef(0)
-    // A failed write drops the moves queued behind it: they were made on top
-    // of an order the server never took.
-    const writeGenRef = useRef(0)
+    // The setlist version each write is gated on: the live version when a
+    // move starts from the server's order, else the version our own last
+    // write produced (each write bumps it by one).
+    const setlistVersionRef = useRef(setlistVersion)
+    setlistVersionRef.current = setlistVersion
+    const baseVersionRef = useRef<number>(setlistVersion)
+    const inFlightRef = useRef(false)
+    // Moves made while a write is in flight coalesce: only the newest order
+    // (and the move that made it) goes next.
+    const queuedRef = useRef<{ order: string[]; move: IntendedMove } | null>(null)
+    const settleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+    useEffect(() => () => {
+        if (settleTimerRef.current) clearTimeout(settleTimerRef.current)
+    }, [])
     useEffect(() => {
         if (!reorderFailure) return
         const timer = setTimeout(() => setReorderFailure(null), 6000)
@@ -375,6 +439,71 @@ export function SetlistPerformClient({
     useEffect(() => {
         if (reordering && !canReorder) setReordering(false)
     }, [reordering, canReorder])
+
+    const dropPending = useCallback(() => {
+        if (!pendingOrderRef.current) return
+        suppressMoveHighlight()
+        pendingOrderRef.current = null
+        setPendingOrder(null)
+    }, [suppressMoveHighlight])
+
+    const rollBack = useCallback(
+        (reason: LiveReorderFailure, code?: string) => {
+            logger.warn("[perform] live reorder failed", { setlistId, reason, code })
+            queuedRef.current = null
+            dropPending()
+            setReorderFailure(reason)
+        },
+        [setlistId, dropPending],
+    )
+
+    const pumpWrites = useCallback(async () => {
+        if (inFlightRef.current) return
+        inFlightRef.current = true
+        if (settleTimerRef.current) clearTimeout(settleTimerRef.current)
+        try {
+            for (let job = queuedRef.current; job; job = queuedRef.current) {
+                queuedRef.current = null
+                let res = await commitLiveReorder(setlistId, job.order, baseVersionRef.current)
+                if (!res.ok && res.reason === "stale") {
+                    // Someone changed the setlist first. Take the server's order,
+                    // re-apply the leader's latest move on it once, and retry.
+                    // (a move made while this write was in flight is the newer one)
+                    const queuedNow = queuedRef.current as { move: IntendedMove } | null
+                    const latest = queuedNow?.move ?? job.move
+                    queuedRef.current = null
+                    const retry = reapplyMove(res.currentOrder, latest)
+                    if (!retry) {
+                        rollBack("conflict")
+                        return
+                    }
+                    baseVersionRef.current = res.currentVersion
+                    suppressMoveHighlight()
+                    pendingOrderRef.current = retry
+                    setPendingOrder(retry)
+                    res = await commitLiveReorder(setlistId, retry, baseVersionRef.current)
+                    if (!res.ok) {
+                        rollBack(res.reason === "stale" ? "conflict" : res.reason)
+                        return
+                    }
+                }
+                if (!res.ok) {
+                    rollBack(res.reason, "code" in res ? res.code : undefined)
+                    return
+                }
+                baseVersionRef.current += 1
+            }
+            // Written. The pending order clears when the live rows arrive in it;
+            // if they never do (a listener that stalled), let it go after 10 s.
+            settleTimerRef.current = setTimeout(() => {
+                settleTimerRef.current = null
+                if (!inFlightRef.current && !queuedRef.current) dropPending()
+            }, 10_000)
+        } finally {
+            inFlightRef.current = false
+        }
+    }, [setlistId, rollBack, dropPending, suppressMoveHighlight])
+
     const moveTrack = useCallback(
         (from: number, to: number) => {
             if (typeof navigator !== "undefined" && navigator.onLine === false) {
@@ -384,29 +513,17 @@ export function SetlistPerformClient({
             const ids = tracksRef.current.map((t) => t.id)
             const next = moveRow(ids, from, to)
             if (sameOrder(ids, next)) return
-            const seq = ++moveSeqRef.current
-            const gen = writeGenRef.current
-            pendingConfirmedAtRef.current = null
+            // A move from the server's own order is gated on the live version.
+            if (!pendingOrderRef.current && !inFlightRef.current) {
+                baseVersionRef.current = setlistVersionRef.current
+            }
             setReorderFailure(null)
+            pendingOrderRef.current = next
             setPendingOrder(next)
-            // One write at a time, in the order the leader made the moves.
-            writeChainRef.current = writeChainRef.current.then(async () => {
-                if (gen !== writeGenRef.current) return
-                const res = await commitLiveReorder(setlistId, next)
-                if (!res.ok) {
-                    writeGenRef.current++
-                    logger.warn("[perform] live reorder failed", { setlistId, reason: res.reason, code: res.code })
-                    pendingConfirmedAtRef.current = null
-                    setPendingOrder(null)
-                    setReorderFailure(res.reason)
-                    return
-                }
-                if (seq === moveSeqRef.current) {
-                    pendingConfirmedAtRef.current = liveIdsKeyRef.current
-                }
-            })
+            queuedRef.current = { order: next, move: { rowId: ids[from], to } }
+            void pumpWrites()
         },
-        [setlistId],
+        [pumpWrites],
     )
 
     // Song fileIds for the offline indicator's IDB ground-truth count.
@@ -524,6 +641,7 @@ export function SetlistPerformClient({
     }
 
     return (
+        <ServerOrderContext.Provider value={pendingOrder ? liveTracks : null}>
         <div className="flex flex-col min-h-[calc(100dvh-5rem)] pt-14 bg-background text-foreground overflow-hidden">
             {/* 2026-08-31: opening a setlist to perform IS the intent to keep
                 the screen awake — no one should have to remember a toggle
@@ -769,7 +887,20 @@ export function SetlistPerformClient({
                     data-reason={reorderFailure}
                     className="w-full min-h-11 px-4 py-2.5 text-[15px] font-semibold bg-card text-warning-line border-b border-rule"
                 >
-                    {reorderFailure === "offline" ? t("performSetlist.reorder.offline") : t("performSetlist.reorder.failed")}
+                    {reorderFailure === "offline"
+                        ? t("performSetlist.reorder.offline")
+                        : reorderFailure === "conflict"
+                          ? t("performSetlist.reorder.conflict")
+                          : t("performSetlist.reorder.failed")}
+                </p>
+            )}
+            {openRowRemoved && (
+                <p
+                    role="status"
+                    data-testid="perform-open-row-removed"
+                    className="w-full min-h-11 px-4 py-2.5 text-[15px] font-semibold bg-card text-warning-line border-b border-rule"
+                >
+                    {t("performSetlist.reorder.openRowRemoved")}
                 </p>
             )}
 
@@ -782,6 +913,9 @@ export function SetlistPerformClient({
                     <PerformReorderList tracks={tracks} onMove={moveTrack} highlightIds={highlightIds} />
                 </>
             ) : (
+            // `contents`: a touch listener with no box of its own, so the
+            // list's layout is unchanged.
+            <div className="contents" onTouchStart={onListTouchStart} onTouchEnd={onListTouchEnd} onTouchCancel={onListTouchEnd}>
             <SetlistView
                 tracks={tracks}
                 currentTrackIndex={currentTrackIndex}
@@ -795,20 +929,21 @@ export function SetlistPerformClient({
                 collapseLiturgy={liturgyCollapsed}
                 savedFileIds={entryPassSettled ? savedFileIds : null}
                 saveFailures={entryPassSettled ? saveFailures : null}
-                onSwapTap={isLeader && user && serviceDay ? (index) => setSwapIndex(index) : undefined}
+                onSwapTap={isLeader && user && serviceDay ? (index) => setSwapRowId(tracks[index]?.id ?? null) : undefined}
                 showTiming={showTiming}
                 gig={gig}
                 highlightIds={highlightIds}
             />
+            </div>
             )}
 
-            {swapIndex !== null && tracks[swapIndex] && serviceDay && (() => {
-                const shown = tracks[swapIndex]
+            {swapRowId !== null && serviceDay && tracks.some((t) => t.id === swapRowId) && (() => {
+                const shown = tracks.find((t) => t.id === swapRowId)!
                 const planned = plannedTracks.find((t) => t.id === shown.id) ?? shown
                 return (
                     <TonightSwapSheet
                         open
-                        onOpenChange={(o) => { if (!o) setSwapIndex(null) }}
+                        onOpenChange={(o) => { if (!o) setSwapRowId(null) }}
                         setlistId={setlistId}
                         track={shown}
                         planned={planned}
@@ -870,6 +1005,7 @@ export function SetlistPerformClient({
                 />
             )}
         </div>
+        </ServerOrderContext.Provider>
     )
 }
 

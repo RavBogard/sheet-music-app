@@ -5,6 +5,9 @@
  *  - a failed write rolls the order back and says so
  *  - a receiving iPad with a chart open keeps that chart; its queue follows
  *    the new order, and the list highlights the moved row
+ *  - a stale write re-applies the move on the server's order and retries once
+ *  - the Swap sheet stays on its row through a reorder
+ *  - an open row that is removed closes to the list with a note
  */
 import 'fake-indexeddb/auto'
 import React from 'react'
@@ -58,6 +61,9 @@ vi.mock('@/lib/prefetch', async (orig) => ({
     prefetchSetlistPDFs: vi.fn(async () => {}),
 }))
 vi.mock('@/lib/performance/live-reorder-client', () => ({ commitLiveReorder: commit }))
+vi.mock('@/components/performance/TonightSwapSheet', () => ({
+    TonightSwapSheet: ({ track }: { track: { id: string } }) => <div data-testid="stub-swap-sheet" data-track-id={track.id} />,
+}))
 
 // The chart viewer stands in as a stub that shows which row is open and what
 // Next would be (the queue is every row with a chart, in setlist order).
@@ -130,7 +136,8 @@ describe('Perform live reorder', () => {
         fireEvent.click(within(first).getByTestId('perform-reorder-down'))
 
         expect(reorderOrder()).toEqual(['t2', 't1', 't3'])
-        await waitFor(() => expect(commit).toHaveBeenCalledWith(ID, ['t2', 't1', 't3']))
+        // Gated on the version this page saw (the server frame's, here).
+        await waitFor(() => expect(commit).toHaveBeenCalledWith(ID, ['t2', 't1', 't3'], 1))
 
         // Done returns to the list, still in the new order.
         fireEvent.click(screen.getByTestId('perform-reorder-toggle'))
@@ -193,4 +200,81 @@ describe('Perform live reorder', () => {
         await wait(2100)
         expect(screen.getAllByTestId('perform-row').some((el) => el.hasAttribute('data-moved'))).toBe(false)
     }, 10_000)
+
+    it('re-applies the move on the server order and retries once when the setlist changed first', async () => {
+        who.role = 'band_leader'
+        commit
+            .mockResolvedValueOnce({ ok: false, reason: 'stale', currentVersion: 4, currentOrder: ['t1', 't3', 't2'] })
+            .mockResolvedValueOnce({ ok: true })
+        await seedLive(['t1', 't2', 't3'])
+        render(<SetlistPerformClient setlistId={ID} initialSetlist={ssr} initialTracks={rows} />)
+        fireEvent.click(await screen.findByTestId('perform-reorder-toggle'))
+
+        // Move Adonai Sfatai down one; meanwhile someone else swapped t2 and t3.
+        fireEvent.click(within(screen.getAllByTestId('perform-reorder-row')[0]).getByTestId('perform-reorder-down'))
+
+        await waitFor(() => expect(commit).toHaveBeenCalledTimes(2))
+        expect(commit.mock.calls[0]).toEqual([ID, ['t2', 't1', 't3'], 1])
+        expect(commit.mock.calls[1]).toEqual([ID, ['t3', 't1', 't2'], 4])
+        await waitFor(() => expect(reorderOrder()).toEqual(['t3', 't1', 't2']))
+        expect(screen.queryByTestId('perform-reorder-error')).toBeNull()
+    })
+
+    it('says the setlist changed when the retry is stale too, and rolls back without a highlight', async () => {
+        who.role = 'band_leader'
+        commit.mockResolvedValue({ ok: false, reason: 'stale', currentVersion: 5, currentOrder: ['t1', 't2', 't3'] })
+        await seedLive(['t1', 't2', 't3'])
+        render(<SetlistPerformClient setlistId={ID} initialSetlist={ssr} initialTracks={rows} />)
+        fireEvent.click(await screen.findByTestId('perform-reorder-toggle'))
+        await wait(1600)
+
+        fireEvent.click(within(screen.getAllByTestId('perform-reorder-row')[2]).getByTestId('perform-reorder-up'))
+
+        const alert = await screen.findByTestId('perform-reorder-error')
+        expect(alert.getAttribute('data-reason')).toBe('conflict')
+        expect(commit).toHaveBeenCalledTimes(2)
+        expect(reorderOrder()).toEqual(['t1', 't2', 't3'])
+        expect(screen.getAllByTestId('perform-reorder-row').some((el) => el.hasAttribute('data-moved'))).toBe(false)
+    })
+
+    it('keeps the Swap sheet on its row when the order changes under it', async () => {
+        who.role = 'band_leader'
+        await seedLive(['t1', 't2', 't3'])
+        render(<SetlistPerformClient setlistId={ID} initialSetlist={ssr} initialTracks={rows} />)
+        await waitFor(() => expect(screen.getAllByTestId('tonight-swap-button')).toHaveLength(3))
+        fireEvent.click(screen.getAllByTestId('tonight-swap-button')[1])
+        expect(screen.getByTestId('stub-swap-sheet').getAttribute('data-track-id')).toBe('t2')
+
+        await act(async () => { await seedLive(['t3', 't1', 't2']) })
+        await waitFor(() => expect(rowOrder()).toEqual(['t3', 't1', 't2']))
+        expect(screen.getByTestId('stub-swap-sheet').getAttribute('data-track-id')).toBe('t2')
+    })
+
+    it('closes an open chart whose row was removed, and says so', async () => {
+        who.role = 'musician'
+        await seedLive(['t1', 't2', 't3'])
+        render(<SetlistPerformClient setlistId={ID} initialSetlist={ssr} initialTracks={rows} initialTrackId="t2" />)
+        expect((await screen.findByTestId('stub-overlay')).getAttribute('data-track-id')).toBe('t2')
+
+        await act(async () => { await getDb().tracks.delete('t2') })
+
+        await waitFor(() => expect(screen.queryByTestId('stub-overlay')).toBeNull())
+        expect(screen.getByTestId('perform-open-row-removed')).toBeTruthy()
+        expect(rowOrder()).toEqual(['t1', 't3'])
+    })
+
+    it('holds an incoming reorder while a finger is on the list, then applies it', async () => {
+        who.role = 'musician'
+        await seedLive(['t1', 't2', 't3'])
+        render(<SetlistPerformClient setlistId={ID} initialSetlist={ssr} initialTracks={rows} />)
+        await waitFor(() => expect(rowOrder()).toEqual(['t1', 't2', 't3']))
+
+        fireEvent.touchStart(screen.getAllByTestId('perform-row')[0])
+        await act(async () => { await seedLive(['t3', 't1', 't2']) })
+        await wait(200)
+        expect(rowOrder()).toEqual(['t1', 't2', 't3'])
+
+        fireEvent.touchEnd(screen.getAllByTestId('perform-row')[0])
+        await waitFor(() => expect(rowOrder()).toEqual(['t3', 't1', 't2']))
+    })
 })

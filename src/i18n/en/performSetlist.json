@@ -119,6 +119,8 @@
         "moveUp": "Move {rowTitle} up",
         "moveDown": "Move {rowTitle} down",
         "failed": "Couldn't save that move. The order is back as it was.",
-        "offline": "You're offline. The order wasn't changed."
+        "offline": "You're offline. The order wasn't changed.",
+        "conflict": "Setlist changed. Try again.",
+        "openRowRemoved": "That song was removed from the setlist."
     }
 }

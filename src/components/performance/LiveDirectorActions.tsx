@@ -32,6 +32,8 @@ import {
     type InsertPlacement,
 } from "@/lib/live-director"
 import type { DriveFile, SetlistTrack } from "@/types/models"
+import { rebaseOnServerOrder } from "@/lib/performance/live-reorder"
+import { useServerOrder } from "./live-order-context"
 
 const SEARCH_RESULT_CAP = 60
 
@@ -176,6 +178,7 @@ export function InsertSongAction({
     const allFiles = useLibraryStore((s) => s.allFiles)
     const [query, setQuery] = useState("")
     const [placement, setPlacement] = useState<InsertPlacement>("after")
+    const serverOrder = useServerOrder()
     const [busy, setBusy] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
@@ -191,12 +194,13 @@ export function InsertSongAction({
         setBusy(true)
         setError(null)
         try {
+            // Live reorder: while a reorder is pending, number the insert from
+            // the order the server has, not the one on screen.
             await insertTrack({
                 setlistId,
                 song,
                 placement,
-                currentIndex,
-                currentTracks: setlistTracks,
+                ...rebaseOnServerOrder(setlistTracks, currentIndex, serverOrder),
             })
             onDone()
         } catch (err) {

@@ -90,3 +90,37 @@ export function movedRowIds(prev: readonly string[], next: readonly string[]): s
     }
     return common.filter((_, i) => !keep.has(i))
 }
+
+/** A leader's move, kept so it can be re-applied on a fresher order. */
+export interface IntendedMove {
+    rowId: string
+    to: number
+}
+
+/**
+ * Re-apply a move on the server's current order (after a stale write).
+ * Returns null when the moved row is gone from the setlist.
+ */
+export function reapplyMove(current: readonly string[], move: IntendedMove): string[] | null {
+    const from = current.indexOf(move.rowId)
+    if (from < 0) return null
+    return moveRow(current, from, Math.max(0, Math.min(move.to, current.length - 1)))
+}
+
+/**
+ * Live-director insert while a reorder is pending: positions must come from
+ * the order the server has, not from the order on screen. Finds the anchor
+ * row (the one at `index` on screen) in the server order. Falls back to the
+ * screen when there is no server order or the anchor isn't in it.
+ */
+export function rebaseOnServerOrder<T extends { id?: string }>(
+    shown: readonly T[],
+    index: number,
+    server: readonly T[] | null | undefined,
+): { currentIndex: number; currentTracks: T[] } {
+    if (!server) return { currentIndex: index, currentTracks: shown.slice() }
+    const anchorId = shown[index]?.id
+    const at = anchorId ? server.findIndex((t) => t.id === anchorId) : -1
+    if (at < 0) return { currentIndex: index, currentTracks: shown.slice() }
+    return { currentIndex: at, currentTracks: server.slice() }
+}

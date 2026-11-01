@@ -89,5 +89,7 @@
     "reorder.moveUp": {"where": "Perform setlist view, reorder mode: screen-reader label of a row's Move up button", "who": "band leaders", "maxLength": 50, "context": "{rowTitle} is the row title (data)"},
     "reorder.moveDown": {"where": "Perform setlist view, reorder mode: screen-reader label of a row's Move down button", "who": "band leaders", "maxLength": 50, "context": "{rowTitle} is the row title (data)"},
     "reorder.failed": {"where": "Perform setlist view: short error when a reorder could not be saved; the list has gone back", "who": "band leaders", "maxLength": 70},
-    "reorder.offline": {"where": "Perform setlist view: short error when the leader tries to reorder with no connection", "who": "band leaders", "maxLength": 60}
+    "reorder.offline": {"where": "Perform setlist view: short error when the leader tries to reorder with no connection", "who": "band leaders", "maxLength": 60},
+    "reorder.conflict": {"where": "Perform setlist view: short error when a reorder could not be saved because someone else changed the setlist at the same time", "who": "band leaders", "maxLength": 40},
+    "reorder.openRowRemoved": {"where": "Perform setlist view: short line shown after the song a musician had open was removed from the setlist by a leader; the chart closed back to the list", "who": "musicians and leaders", "maxLength": 60}
 }

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { movedRowIds } from "@/lib/performance/live-reorder"
 
 const NONE: ReadonlySet<string> = new Set()
@@ -18,13 +18,27 @@ export const MOVED_HIGHLIGHT_QUIET_MS = 1500
  * only when the same rows come back in a different order; a row arriving or
  * leaving is not a move. One state update when a move lands and one when the
  * highlight ends, so a remote reorder settles in a bounded number of renders.
+ *
+ * `suppressNext()` ends any highlight and skips the next order change: a
+ * rolled-back move is not a move, so it gets no highlight.
  */
-export function useMovedRowHighlight(ids: readonly (string | undefined)[]): ReadonlySet<string> {
+export function useMovedRowHighlight(ids: readonly (string | undefined)[]): {
+    highlighted: ReadonlySet<string>
+    suppressNext: () => void
+} {
     const key = ids.map((id) => id ?? "").join("\n")
     const prevRef = useRef<string | null>(null)
     const mountedAtRef = useRef<number>(0)
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const [highlighted, setHighlighted] = useState<ReadonlySet<string>>(NONE)
+    // Skips an order change landing within 500 ms (the rollback's own render).
+    const suppressUntilRef = useRef(0)
+    const suppressNext = useCallback(() => {
+        suppressUntilRef.current = Date.now() + 500
+        if (timerRef.current) clearTimeout(timerRef.current)
+        timerRef.current = null
+        setHighlighted(NONE)
+    }, [])
 
     useEffect(() => {
         mountedAtRef.current = Date.now()
@@ -37,6 +51,10 @@ export function useMovedRowHighlight(ids: readonly (string | undefined)[]): Read
         const prev = prevRef.current
         prevRef.current = key
         if (prev === null || prev === key) return
+        if (Date.now() < suppressUntilRef.current) {
+            suppressUntilRef.current = 0
+            return
+        }
         if (Date.now() - mountedAtRef.current < MOVED_HIGHLIGHT_QUIET_MS) return
         const before = prev.split("\n")
         const after = key.split("\n")
@@ -53,5 +71,5 @@ export function useMovedRowHighlight(ids: readonly (string | undefined)[]): Read
         }, MOVED_HIGHLIGHT_MS)
     }, [key])
 
-    return highlighted
+    return { highlighted, suppressNext }
 }

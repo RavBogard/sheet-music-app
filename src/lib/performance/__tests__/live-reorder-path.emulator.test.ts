@@ -14,6 +14,7 @@ import { reorderSetlist } from "@/lib/mcp/tools/setlist-write"
  *  - a band leader can, in their own tenant: rows renumber and versions bump
  *  - a leader of the other tenant gets "not found", in both directions
  *  - a stale id list (a row added meanwhile) is refused
+ *  - a write gated on an older setlist version is refused as stale
  */
 describe("live reorder write path (emulator)", () => {
     let app: App
@@ -100,5 +101,14 @@ describe("live reorder write path (emulator)", () => {
         const r = await reorderSetlist(CRC_LEADER, { setlistId: "crc-set", orderedTrackIds: ["crc-set-b", "crc-set-a"] }, CRC)
         expect(code(r)).toBe("reorder_failed")
         expect(await orderOf("crc-set")).toEqual(["crc-set-a", "crc-set-b", "crc-set-c"])
+    })
+
+    it("refuses a write gated on a version someone else has moved past", async () => {
+        const first = await reorderSetlist(CRC_LEADER, { setlistId: "crc-set", orderedTrackIds: ["crc-set-b", "crc-set-a", "crc-set-c"], lastSeenVersion: 1 }, CRC)
+        expect(first).toEqual({ ok: true })
+        const stale = await reorderSetlist(CRC_LEADER, { setlistId: "crc-set", orderedTrackIds: ["crc-set-c", "crc-set-a", "crc-set-b"], lastSeenVersion: 1 }, CRC)
+        expect(code(stale)).toBe("stale_version")
+        expect((stale as { currentVersion?: number }).currentVersion).toBe(2)
+        expect(await orderOf("crc-set")).toEqual(["crc-set-b", "crc-set-a", "crc-set-c"])
     })
 })
