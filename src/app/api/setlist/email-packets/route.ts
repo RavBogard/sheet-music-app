@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { crossTenantSetlist } from "@/lib/org/setlist-tenant"
+import { isHostTenantDoc } from "@/lib/org/setlist-tenant"
 import { getT } from "@/i18n/server"
 import { createApiHandler } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
@@ -44,8 +44,11 @@ export const POST = createApiHandler(
         const setlist = setlistDoc.data()!
         // BET-5 fix round: only the host tenant's setlist, or its roster gets mail
         // from another tenant's leader. Nothing is sent.
-        const foreign = crossTenantSetlist(setlist, ctx.auth.orgId, setlistId)
-        if (foreign) return foreign
+        // Another tenant's setlist answers exactly as a missing one.
+        if (!isHostTenantDoc(setlist, ctx.auth.orgId)) {
+            const t = await getT()
+            return NextResponse.json({ error: t("api-setlist.setlistNotFound") }, { status: 404 })
+        }
         // v11.4-02 (D8 item 4): brand the packet email by the setlist's org.
         const org = rowOrg(setlist.orgId)
 

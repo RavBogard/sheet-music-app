@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server"
+import { isHostTenantDoc } from "@/lib/org/setlist-tenant"
+import { getT } from "@/i18n/server"
 import { getFirestore } from "@/lib/firebase-admin"
 import { createApiHandler } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
@@ -28,6 +30,14 @@ export const POST = createApiHandler(
 
         const { setlistId, setlistName, eventDate, serviceType, musicians } = ctx.body!
         const db = getFirestore()
+
+        // BET-5 fix round: only the host tenant's setlist; another tenant's
+        // (or a missing one) is not found, before any write or send.
+        const setlistSnap = await db.collection("setlists").doc(setlistId).get()
+        if (!isHostTenantDoc(setlistSnap.exists ? setlistSnap.data() : null, ctx.auth.orgId)) {
+            const t = await getT()
+            return NextResponse.json({ error: t("api-setlist.setlistNotFound") }, { status: 404 })
+        }
 
         // Cycle-3 c1: shared service module — same logic the MCP `assign_musician`
         // tool calls. Wire response shape is unchanged.

@@ -127,7 +127,12 @@ describe("roster listings use the tenant membership role", () => {
             ctx("brotherslazaroff", "/api/setlist/email-packets", { setlistId: "crcSet" }),
         )
         expect(res.status).toBe(404)
-        expect((await res.json()).error.machine_code).toBe("setlist_not_found")
+        // The same answer as a setlist that does not exist.
+        const missing = await (POST as unknown as (c: unknown) => Promise<Response>)(
+            ctx("brotherslazaroff", "/api/setlist/email-packets", { setlistId: "no-such-setlist" }),
+        )
+        expect(missing.status).toBe(404)
+        expect(await res.json()).toEqual(await missing.json())
         expect(sent).toEqual([])
     })
 

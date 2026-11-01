@@ -1,4 +1,5 @@
 import { getT } from "@/i18n/server"
+import { isHostTenantDoc } from "@/lib/org/setlist-tenant"
 import { NextResponse } from "next/server"
 import { getFirestore } from "@/lib/firebase-admin"
 import { createApiHandler } from "@/lib/api-wrapper"
@@ -30,6 +31,14 @@ export const POST = createApiHandler(
 
         const { assignmentId } = ctx.body!
         const db = getFirestore()
+
+        // BET-5 fix round: an assignment of another tenant answers exactly as a
+        // missing one, before any write or send.
+        const assignmentSnap = await db.collection("scheduling_assignments").doc(assignmentId).get()
+        if (!isHostTenantDoc(assignmentSnap.exists ? assignmentSnap.data() : null, ctx.auth.orgId)) {
+            const t = await getT()
+            return NextResponse.json({ error: t("api-scheduling.assignmentNotFound") }, { status: 404 })
+        }
 
         // Cycle-3 c1: shared service module — same logic the MCP `unassign_musician`
         // tool calls. Wire response shape is unchanged.

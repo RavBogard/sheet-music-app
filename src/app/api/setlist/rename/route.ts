@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { crossTenantSetlist } from "@/lib/org/setlist-tenant"
+import { isHostTenantDoc } from "@/lib/org/setlist-tenant"
 import { getT } from "@/i18n/server"
 import { getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
@@ -32,8 +32,11 @@ export const POST = createApiHandler(
         }
 
         const setlist = setlistSnap.data()!
-        const foreign = crossTenantSetlist(setlist, ctx.auth.orgId, setlistId)
-        if (foreign) return foreign
+        // Another tenant's setlist answers exactly as a missing one.
+        if (!isHostTenantDoc(setlist, ctx.auth.orgId)) {
+            const t = await getT()
+            return NextResponse.json({ error: t("api-setlist.setlistNotFound") }, { status: 404 })
+        }
         const isOwner = setlist.ownerId === ctx.auth.uid
         if (!isOwner && !ctx.auth.isBandLeader && !ctx.auth.isAdmin) {
             const t = await getT()

@@ -9,7 +9,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { crossTenantSetlist } from "@/lib/org/setlist-tenant"
+import { isHostTenantDoc } from "@/lib/org/setlist-tenant"
 import { getFormat, getT } from '@/i18n/server'
 import { withAuth } from '@/lib/api-auth'
 import { checkRateLimit } from '@/lib/rate-limit'
@@ -60,8 +60,11 @@ export async function POST(request: NextRequest) {
         }
 
         const setlist = setlistDoc.data()!
-        const foreign = crossTenantSetlist(setlist, auth.orgId, setlistId)
-        if (foreign) return foreign
+        // Another tenant's setlist answers exactly as a missing one.
+        if (!isHostTenantDoc(setlist, auth.orgId)) {
+            const t = await getT()
+            return NextResponse.json({ error: t("api-setlist.setlistNotFound") }, { status: 404 })
+        }
 
         // Authorization: owner, band leader, or admin
         const isOwner = setlist.ownerId === auth.uid

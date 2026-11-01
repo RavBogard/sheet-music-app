@@ -201,6 +201,23 @@ describe('POST /api/scheduling/assign', () => {
         setlistMusicians = []
     })
 
+    it("another tenant's setlist answers 404 like a missing one; nothing written or sent", async () => {
+        mockAuth('band_leader')
+        setlistData = { tracks: [], orgId: 'brotherslazaroff' }
+        const foreign = await POST(makeReq('/api/scheduling/assign', { method: 'POST', token: 'valid', body: validBody }))
+        expect(foreign.status).toBe(404)
+        setlistData = { tracks: [] }
+        setlistExists = false
+        const missing = await POST(makeReq('/api/scheduling/assign', { method: 'POST', token: 'valid', body: validBody }))
+        expect(missing.status).toBe(404)
+        expect(await foreign.json()).toEqual(await missing.json())
+        expect(mockSet).not.toHaveBeenCalled()
+        expect(mockUpdate).not.toHaveBeenCalled()
+        expect(mockSendEmail).not.toHaveBeenCalled()
+        expect(mockSendSMS).not.toHaveBeenCalled()
+        expect(mockSendPush).not.toHaveBeenCalled()
+    })
+
     it('assigns one musician with pending status and returns success', async () => {
         mockAuth('band_leader')
         const req = makeReq('/api/scheduling/assign', { method: 'POST', token: 'valid', body: validBody })
