@@ -112,7 +112,7 @@ export function KeepAwakeBanner() {
                     className={cn(
                         "pointer-events-auto flex items-start gap-2 max-w-md text-start",
                         "rounded-lg border border-caution/30 bg-background/90 backdrop-blur",
-                        "px-3 py-2 text-[11px] leading-snug text-muted-foreground shadow-lg",
+                        "px-3 py-2 text-xs leading-snug text-muted-foreground shadow-lg",
                         "[touch-action:manipulation]",
                     )}
                 >
@@ -154,7 +154,7 @@ export function KeepAwakeBanner() {
                     // h-11 keeps the iOS HIG 44px touch floor even though the
                     // strip itself is visually slim.
                     "h-11 rounded-full border border-border/40 bg-background/90 backdrop-blur",
-                    "px-4 text-[11px] font-medium text-muted-foreground shadow-lg",
+                    "px-4 text-xs font-medium text-muted-foreground shadow-lg",
                     "[touch-action:manipulation]",
                 )}
             >

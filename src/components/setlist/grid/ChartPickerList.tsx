@@ -386,7 +386,7 @@ export function ChartPickerList({
                                         song={{ id: row.id, title, normalizedTitle: title.toLowerCase() }}
                                         mimeType={row.mimeType}
                                     />
-                                    <span className="ms-auto shrink-0 rounded border border-rule px-1.5 text-[10px] text-muted-foreground">
+                                    <span className="ms-auto shrink-0 rounded border border-rule px-1.5 text-xs text-muted-foreground">
                                         {owner}
                                     </span>
                                 </CommandItem>
@@ -412,7 +412,7 @@ export function ChartPickerList({
                                     song={{ id: row.id, title: row.title, normalizedTitle: row.title.toLowerCase() }}
                                     mimeType={row.mimeType}
                                 />
-                                <span className="shrink-0 text-[10px] text-muted-foreground">
+                                <span className="shrink-0 text-xs text-muted-foreground">
                                     {getOrg(row.orgId)?.name ?? row.orgId}
                                 </span>
                             </CommandItem>

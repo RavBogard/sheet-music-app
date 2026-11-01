@@ -25,5 +25,7 @@
     "unsupportedType": "אפשר להעלות רק קובצי PDF, MusicXML, MuseScore וטקסט.",
     "uploadFailed": "ההעלאה נכשלה",
     "uploadFailedStatus": "ההעלאה נכשלה ({status})",
-    "uploadedToast": "הקובץ הועלה בהצלחה"
+    "uploadedToast": "הקובץ הועלה בהצלחה",
+    "addToNext": "הוספה לרשימה {setlistName}",
+    "done": "סיום"
 }

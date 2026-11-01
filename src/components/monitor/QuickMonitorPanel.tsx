@@ -195,7 +195,7 @@ export function QuickMonitorPanel({ onClose }: QuickMonitorPanelProps = {}) {
                     <div className="text-sm font-semibold text-foreground truncate pr-2 max-w-[180px]">
                         {myBus.name && myBus.name !== `Bus ${myBusIndex}` ? myBus.name : "My Monitor"}
                     </div>
-                    <div className="text-[10px] text-muted-foreground">
+                    <div className="text-xs text-muted-foreground">
                         Bus {myBusIndex}
                     </div>
                 </div>
@@ -208,18 +208,18 @@ export function QuickMonitorPanel({ onClose }: QuickMonitorPanelProps = {}) {
                     {syncing ? (
                         <div className="flex items-center gap-1.5">
                             <Server className="w-3 h-3 text-muted-foreground" />
-                            <span className="text-[10px] text-muted-foreground">Syncing…</span>
+                            <span className="text-xs text-muted-foreground">Syncing…</span>
                         </div>
                     ) : stale ? (
                         // C-6: honest staleness — don't show a green "Live" over a frozen desk.
                         <div className="flex items-center gap-1.5">
                             <Clock className="w-3 h-3 text-caution" />
-                            <span className="text-[10px] text-caution">Stale</span>
+                            <span className="text-xs text-caution">Stale</span>
                         </div>
                     ) : (
                         <div className="flex items-center gap-1.5">
                             <Wifi className="w-3 h-3 text-success" />
-                            <span className="text-[10px] text-success">Live</span>
+                            <span className="text-xs text-success">Live</span>
                         </div>
                     )}
                     {onClose ? (
@@ -271,7 +271,7 @@ export function QuickMonitorPanel({ onClose }: QuickMonitorPanelProps = {}) {
 
                     {/* Channel sends */}
                     {visibleSends.length === 0 ? (
-                        <div className="flex items-center justify-center flex-1 text-[10px] text-muted-foreground">
+                        <div className="flex items-center justify-center flex-1 text-xs text-muted-foreground">
                             No channels starred
                         </div>
                     ) : (

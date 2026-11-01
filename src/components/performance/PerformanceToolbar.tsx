@@ -454,7 +454,7 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint, onPrintC
                 <div className="w-full h-14 flex items-center gap-2 px-2">
                     {/* Far Left: Exit X */}
                     <div className="shrink-0">
-                        <Button variant="ghost" onClick={onHome} aria-label={t("perform.toolbar.exit")} title={t("perform.toolbar.exitTitle")} data-testid="perform-exit-mobile" className="h-12 px-4 glass-card text-foreground/80 hover:text-foreground fluid-interaction rounded-xl flex items-center gap-2">
+                        <Button variant="ghost" onClick={onHome} aria-label={t("perform.toolbar.exit")} title={t("perform.toolbar.exitTitle")} data-testid="perform-exit-mobile" className="h-12 min-w-12 px-4 glass-card text-foreground/80 hover:text-foreground fluid-interaction rounded-xl flex items-center gap-2">
                             <X className="h-5 w-5" aria-hidden="true" />
                             <span className="text-xs font-bold uppercase tracking-wider hidden sm:inline">{t("perform.toolbar.exit")}</span>
                         </Button>
@@ -526,7 +526,7 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint, onPrintC
                                     id="print-chart-error"
                                     role="alert"
                                     data-testid="print-chart-error"
-                                    className="absolute bottom-full start-0 mb-2 z-50 w-56 whitespace-normal rounded-md border border-destructive/40 bg-destructive/95 px-2.5 py-1.5 text-[11px] font-medium text-destructive-foreground shadow-lg"
+                                    className="absolute bottom-full start-0 mb-2 z-50 w-56 whitespace-normal rounded-md border border-destructive/40 bg-destructive/95 px-2.5 py-1.5 text-xs font-medium text-destructive-foreground shadow-lg"
                                 >
                                     {printChartError}
                                 </div>

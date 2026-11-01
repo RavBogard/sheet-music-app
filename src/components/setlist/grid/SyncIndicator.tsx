@@ -224,7 +224,7 @@ export function SyncIndicator({
             </Element>
             {inlineError && (
                 <span
-                    className="text-[11px] leading-tight text-destructive max-w-[280px] break-words"
+                    className="text-xs leading-tight text-destructive max-w-[280px] break-words"
                     data-testid="sync-indicator-error-detail"
                 >
                     {inlineError}

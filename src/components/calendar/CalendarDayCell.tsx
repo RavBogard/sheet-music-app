@@ -71,7 +71,7 @@ export const CalendarDayCell = React.memo(function CalendarDayCell({
                             variant="ghost"
                             onClick={() => onSelectSetlist(setlist)}
                             className={cn(
-                                "w-full h-auto min-h-11 text-start p-1.5 rounded-lg text-[11px] border active:scale-[0.97] whitespace-normal flex-col items-start",
+                                "w-full h-auto min-h-11 text-start p-1.5 rounded-lg text-xs border active:scale-[0.97] whitespace-normal flex-col items-start",
                                 mode === 'planning' && coverage === 'full' && "bg-success/10 border-success/25 hover:bg-success/20 hover:border-success/40",
                                 mode === 'planning' && coverage === 'partial' && "bg-caution/10 border-caution/25 hover:bg-caution/20 hover:border-caution/40",
                                 mode === 'planning' && coverage === 'empty' && "bg-destructive/10 border-destructive/25 hover:bg-destructive/20 hover:border-destructive/40",
@@ -108,7 +108,7 @@ export const CalendarDayCell = React.memo(function CalendarDayCell({
                             variant="ghost"
                             size="xs"
                             onClick={() => onCreateSetlist(date, isSaturday ? 'shabbat_morning' : undefined)}
-                            className="w-full h-auto text-start p-1 rounded-md text-[10px] text-muted-foreground/40 hover:text-muted-foreground border border-dashed border-border/40 hover:border-brand/30 hover:bg-brand/5 justify-start"
+                            className="w-full h-auto text-start p-1 rounded-md text-xs text-muted-foreground/40 hover:text-muted-foreground border border-dashed border-border/40 hover:border-brand/30 hover:bg-brand/5 justify-start"
                         >
                             <Plus className="h-2.5 w-2.5" />
                             {isSaturday ? t("calendar.createShabbatMorning") : t("calendar.createFridayEvening")}

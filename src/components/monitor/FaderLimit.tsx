@@ -60,8 +60,8 @@ export function ClampNote({ notice, compact = false }: { notice: ClampNotice; co
             role="status"
             className={
                 compact
-                    ? "block text-[9px] leading-tight text-center text-caution max-w-[56px] mb-0.5"
-                    : "flex items-center gap-1 text-[10px] font-medium text-caution shrink-0"
+                    ? "block text-xs leading-tight text-center text-caution max-w-[56px] mb-0.5"
+                    : "flex items-center gap-1 text-xs font-medium text-caution shrink-0"
             }
         >
             {!compact && <ShieldAlert aria-hidden className="w-3.5 h-3.5" />}

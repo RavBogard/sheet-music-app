@@ -315,9 +315,9 @@ export default function LibraryReviewClient({ initial, initialError }: Props) {
                 <PageHeader
                     title={t("manage-library-review.title")}
                     subtitle={interpolateNodes(t("manage-library-review.subtitle"), {
-                        navKeys: <kbd className="px-1 py-0.5 rounded border text-[10px] font-mono">j/k</kbd>,
-                        reviewKeys: <kbd className="px-1 py-0.5 rounded border text-[10px] font-mono">a/r/e</kbd>,
-                        retryKeys: <kbd className="px-1 py-0.5 rounded border text-[10px] font-mono">y/n</kbd>,
+                        navKeys: <kbd className="px-1 py-0.5 rounded border text-xs font-mono">j/k</kbd>,
+                        reviewKeys: <kbd className="px-1 py-0.5 rounded border text-xs font-mono">a/r/e</kbd>,
+                        retryKeys: <kbd className="px-1 py-0.5 rounded border text-xs font-mono">y/n</kbd>,
                     })}
                     actions={
                         <div className="flex items-center gap-2">
@@ -365,23 +365,23 @@ export default function LibraryReviewClient({ initial, initialError }: Props) {
                 >
                     <TabsList className="w-full">
                         <TabsTrigger value="review" className="flex-1 min-h-9 gap-2 text-xs">
-                            <span className="text-[10px] font-mono opacity-60">1</span>
+                            <span className="text-xs font-mono opacity-60">1</span>
                             {t("manage-library-review.tabAiReview")}
-                            <Badge variant="secondary" className="h-4 px-1.5 text-[10px] font-mono">
+                            <Badge variant="secondary" className="h-4 px-1.5 text-xs font-mono">
                                 {counts.review}
                             </Badge>
                         </TabsTrigger>
                         <TabsTrigger value="failed" className="flex-1 min-h-9 gap-2 text-xs">
-                            <span className="text-[10px] font-mono opacity-60">2</span>
+                            <span className="text-xs font-mono opacity-60">2</span>
                             {t("manage-library-review.tabAiFailed")}
-                            <Badge variant="secondary" className="h-4 px-1.5 text-[10px] font-mono">
+                            <Badge variant="secondary" className="h-4 px-1.5 text-xs font-mono">
                                 {counts.failed}
                             </Badge>
                         </TabsTrigger>
                         <TabsTrigger value="import" className="flex-1 min-h-9 gap-2 text-xs">
-                            <span className="text-[10px] font-mono opacity-60">3</span>
+                            <span className="text-xs font-mono opacity-60">3</span>
                             {t("manage-library-review.tabImportFailures")}
-                            <Badge variant="secondary" className="h-4 px-1.5 text-[10px] font-mono">
+                            <Badge variant="secondary" className="h-4 px-1.5 text-xs font-mono">
                                 {counts.import}
                             </Badge>
                         </TabsTrigger>
@@ -611,7 +611,7 @@ function ReviewSplit({
                 ) : (
                     <div className="border rounded-md p-4 text-xs text-muted-foreground">
                         {interpolateNodes(t("manage-library-review.selectRowHint"), {
-                            enterKey: <kbd className="px-1 py-0.5 rounded border text-[10px] font-mono">Enter</kbd>,
+                            enterKey: <kbd className="px-1 py-0.5 rounded border text-xs font-mono">Enter</kbd>,
                         })}
                     </div>
                 )}
@@ -662,10 +662,10 @@ function ReviewRow({
                         </span>
                     )}
                 </span>
-                <span className="text-[10px] font-mono text-muted-foreground truncate">
+                <span className="text-xs font-mono text-muted-foreground truncate">
                     {row.collection}
                 </span>
-                <span className="text-[10px] font-mono text-muted-foreground">
+                <span className="text-xs font-mono text-muted-foreground">
                     {shortMime(row.mimeType)}
                 </span>
                 <ConfidenceCell value={confidence} threshold={threshold} />
@@ -682,7 +682,7 @@ function ConfidenceCell({
     threshold: number
 }) {
     if (value === null) {
-        return <span className="text-[10px] font-mono text-muted-foreground">—</span>
+        return <span className="text-xs font-mono text-muted-foreground">—</span>
     }
     const color =
         value >= threshold
@@ -691,7 +691,7 @@ function ConfidenceCell({
               ? "text-caution dark:text-caution"
               : "text-destructive"
     return (
-        <span className={`text-[10px] font-mono ${color}`}>
+        <span className={`text-xs font-mono ${color}`}>
             {(value * 100).toFixed(0)}%
         </span>
     )
@@ -704,7 +704,7 @@ function TriggerChip({ trigger }: { trigger: string }) {
     return (
         <Badge
             variant="outline"
-            className="h-4 px-1 text-[9px] font-mono leading-none"
+            className="h-4 px-1 text-xs font-mono leading-none"
         >
             {label}
         </Badge>
@@ -733,7 +733,7 @@ function ReviewDetail({
             <div className="px-3 py-2 border-b bg-muted/30 flex items-center justify-between gap-2">
                 <div className="min-w-0">
                     <div className="text-sm font-medium truncate">{row.title}</div>
-                    <div className="text-[10px] font-mono text-muted-foreground truncate">
+                    <div className="text-xs font-mono text-muted-foreground truncate">
                         {row.rowId} · {shortMime(row.mimeType)} ·{" "}
                         {formatBytes(row.sizeBytes)} · {row.source}
                         {row.subfolder && ` · ${t("manage-library-review.subfolderMeta", { subfolder: row.subfolder.slice(0, 12) })}`}
@@ -851,7 +851,7 @@ function ReviewDetail({
             {sug && (sug.concerns.length > 0 || row.duplicateCandidates.length > 0) && (
                 <div className="px-3 py-2 border-t bg-muted/20 space-y-1">
                     {sug.concerns.length > 0 && (
-                        <div className="text-[11px]">
+                        <div className="text-xs">
                             <span className="font-mono text-muted-foreground me-1">
                                 {t("manage-library-review.concernsLabel")}
                             </span>
@@ -859,7 +859,7 @@ function ReviewDetail({
                         </div>
                     )}
                     {row.duplicateCandidates.length > 0 && (
-                        <div className="text-[11px]">
+                        <div className="text-xs">
                             <span className="font-mono text-muted-foreground me-1">
                                 {t("manage-library-review.duplicatesLabel")}
                             </span>
@@ -894,7 +894,7 @@ function FieldColumn({
     const t = useT()
     return (
         <div>
-            <div className="px-3 py-1 bg-muted/40 text-[10px] font-mono uppercase tracking-wide text-muted-foreground flex items-center justify-between">
+            <div className="px-3 py-1 bg-muted/40 text-xs font-mono uppercase tracking-wide text-muted-foreground flex items-center justify-between">
                 <span>{title}</span>
                 {confidence}
             </div>
@@ -911,7 +911,7 @@ function FieldColumn({
                             key={k}
                             className="grid grid-cols-[64px_minmax(0,1fr)] gap-2"
                         >
-                            <dt className="text-[10px] font-mono uppercase text-muted-foreground self-center">
+                            <dt className="text-xs font-mono uppercase text-muted-foreground self-center">
                                 {t(FIELD_LABEL[k])}
                             </dt>
                             <dd className={`text-xs truncate ${tone}`}>
@@ -1106,7 +1106,7 @@ function Field({
         <label
             className={`${full ? "col-span-2" : ""} grid grid-cols-[64px_minmax(0,1fr)] items-center gap-2`}
         >
-            <span className="text-[10px] font-mono uppercase text-muted-foreground">
+            <span className="text-xs font-mono uppercase text-muted-foreground">
                 {label}
             </span>
             {children}
@@ -1169,14 +1169,14 @@ function FailedList({
                         >
                             <div className="min-w-0">
                                 <div className="text-xs truncate">{row.title}</div>
-                                <div className="text-[10px] font-mono text-destructive truncate">
+                                <div className="text-xs font-mono text-destructive truncate">
                                     {row.lastError}
                                 </div>
                             </div>
-                            <div className="text-[10px] font-mono text-muted-foreground truncate">
+                            <div className="text-xs font-mono text-muted-foreground truncate">
                                 {row.collection}
                             </div>
-                            <div className="text-[10px] font-mono text-muted-foreground">
+                            <div className="text-xs font-mono text-muted-foreground">
                                 {t("manage-library-review.attemptsTried", { count: row.attempts })}
                             </div>
                             <div className="flex items-center gap-1">
@@ -1192,7 +1192,7 @@ function FailedList({
                                         )
                                     }}
                                     disabled={busy}
-                                    className="h-6 text-[10px] px-2"
+                                    className="h-6 text-xs px-2"
                                 >
                                     {t("manage-library-review.retryButton")}
                                 </Button>
@@ -1208,7 +1208,7 @@ function FailedList({
                                         )
                                     }}
                                     disabled={busy}
-                                    className="h-6 text-[10px] px-2"
+                                    className="h-6 text-xs px-2"
                                 >
                                     {t("manage-library-review.dismissButton")}
                                 </Button>
@@ -1278,17 +1278,17 @@ function ImportList({
                                 <div className="text-xs truncate">
                                     {row.driveName ?? row.driveFileId}
                                 </div>
-                                <div className="text-[10px] font-mono text-destructive truncate">
+                                <div className="text-xs font-mono text-destructive truncate">
                                     {row.errorMessage}
                                 </div>
                             </div>
                             <Badge
                                 variant="outline"
-                                className="h-4 px-1.5 text-[9px] font-mono"
+                                className="h-4 px-1.5 text-xs font-mono"
                             >
                                 {row.status}
                             </Badge>
-                            <div className="text-[10px] font-mono text-muted-foreground">
+                            <div className="text-xs font-mono text-muted-foreground">
                                 {row.attemptCount}×
                             </div>
                             <div className="flex items-center gap-1">
@@ -1304,7 +1304,7 @@ function ImportList({
                                         )
                                     }}
                                     disabled={busy}
-                                    className="h-6 text-[10px] px-2"
+                                    className="h-6 text-xs px-2"
                                 >
                                     {t("manage-library-review.retryButton")}
                                 </Button>
@@ -1320,7 +1320,7 @@ function ImportList({
                                         )
                                     }}
                                     disabled={busy}
-                                    className="h-6 text-[10px] px-2"
+                                    className="h-6 text-xs px-2"
                                 >
                                     {t("manage-library-review.dismissButton")}
                                 </Button>
@@ -1352,7 +1352,7 @@ function ActionBar({
     const enabled = (cond: boolean) => (cond ? lit : dim)
     return (
         <footer className="fixed bottom-0 inset-x-0 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/70 z-40">
-            <div className="max-w-7xl mx-auto px-4 h-10 flex items-center justify-between gap-4 text-[11px] text-muted-foreground">
+            <div className="max-w-7xl mx-auto px-4 h-10 flex items-center justify-between gap-4 text-xs text-muted-foreground">
                 <div className="flex items-center gap-3">
                     <Hint k="j/k">{t("manage-library-review.hintNavigate")}</Hint>
                     <Hint k="↵">{t("manage-library-review.hintExpand")}</Hint>
@@ -1414,7 +1414,7 @@ function Hint({
 }) {
     return (
         <span className={`inline-flex items-center gap-1 ${className ?? ""}`}>
-            <kbd className="px-1 py-0.5 rounded border text-[10px] font-mono leading-none">
+            <kbd className="px-1 py-0.5 rounded border text-xs font-mono leading-none">
                 {k}
             </kbd>
             {children}

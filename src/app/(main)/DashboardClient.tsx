@@ -315,7 +315,7 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
                             <div className="rounded-lg border border-destructive/30 bg-card p-4 space-y-2">
                                 <p className="text-sm font-semibold text-destructive">{t("dashboard.loadErrorTitle")}</p>
                                 <p className="text-xs text-muted-foreground break-words">{subscriptionError}</p>
-                                <p className="text-[10px] text-muted-foreground">{t("dashboard.loadErrorHint")}</p>
+                                <p className="text-xs text-muted-foreground">{t("dashboard.loadErrorHint")}</p>
                             </div>
                         ) : (
                             <div className="space-y-2">
@@ -326,7 +326,7 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
                                     setlist + no error; tells us whether the subscription
                                     truly returned 0 docs or never fired at all. */}
                                 {diagInfo && (
-                                    <p className="text-[10px] text-muted-foreground text-center font-mono">
+                                    <p className="text-xs text-muted-foreground text-center font-mono">
                                         {t("dashboard.diagSubscriptionReturned", {
                                             count: diagInfo.count,
                                             fromCache: String(diagInfo.fromCache),
@@ -337,7 +337,7 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
                                     </p>
                                 )}
                                 {!diagInfo && (
-                                    <p className="text-[10px] text-muted-foreground text-center font-mono">
+                                    <p className="text-xs text-muted-foreground text-center font-mono">
                                         {t("dashboard.diagSubscriptionPending")}
                                     </p>
                                 )}
@@ -380,7 +380,7 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
                         <QRSignIn />
                         <div className="flex items-center gap-3">
                             <div className="h-px flex-1 bg-border" />
-                            <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">{t("dashboard.signInOr")}</span>
+                            <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{t("dashboard.signInOr")}</span>
                             <div className="h-px flex-1 bg-border" />
                         </div>
                         <Button

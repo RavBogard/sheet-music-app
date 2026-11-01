@@ -309,7 +309,22 @@ export function MobileRowCard({
         if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault()
             onTap()
+        } else if (e.key === 'Escape' && isEditing) {
+            e.preventDefault()
+            onTap()
         }
+    }
+
+    // Escape inside the open editor closes it: drafts commit first (as on
+    // blur), then focus returns to the row's edit button. Keys from portalled
+    // layers (a popover or dialog opened from the panel) are theirs to handle.
+    const handlePanelKeyDown: React.KeyboardEventHandler<HTMLElement> = (e) => {
+        if (e.key !== 'Escape' || e.defaultPrevented) return
+        if (!e.currentTarget.contains(e.target as Node)) return
+        e.preventDefault()
+        flushRef.current()
+        onTap()
+        cardElRef.current?.querySelector<HTMLElement>('[data-row-edit]')?.focus()
     }
 
     const inputBase =
@@ -351,7 +366,11 @@ export function MobileRowCard({
                             // come from the controls themselves, not row height.
                             isSection
                                 ? cn('min-h-11 ps-0.5 pe-3 sm:pe-4 rounded-sm', BAND_CLASS[band?.hue ?? 'blue'])
-                                : 'min-h-12 ps-0.5 pe-2 sm:pe-3 bg-card hover:bg-accent/50 border-b border-rule',
+                                // Below sm the row may wrap: at 200% text on a phone the
+                                // rem-sized controls and page call drop to a second line
+                                // instead of pushing the page sideways. At 100% the
+                                // title's 4rem floor is never reached on a 375px phone.
+                                : 'min-h-12 ps-0.5 pe-2 sm:pe-3 max-sm:flex-wrap bg-card hover:bg-accent/50 border-b border-rule',
                             isDragging && 'shadow-[0_8px_24px_rgb(24_32_46/0.18)] ring-2 ring-ring/60 z-10',
                         )}
                     >
@@ -403,7 +422,12 @@ export function MobileRowCard({
                                         : t('setlistGrid.cardUntitledAria')
                                 }
                                 onKeyDown={handleCardKeyDown}
-                                className="min-w-0 flex-1 py-1 outline-none"
+                                // min-h-11: the edit target is 44px tall on every row,
+                                // section bands and unbonded labels included.
+                                className={cn(
+                                    'min-w-0 flex-1 min-h-11 flex flex-col justify-center py-1 outline-none',
+                                    !isSection && 'max-sm:min-w-16',
+                                )}
                             >
                                 {/* One line where the width allows: the title, then the
                                     chip inline and muted; wraps to 2 lines before
@@ -417,7 +441,7 @@ export function MobileRowCard({
                                             // Bonded prayer/reading reads as a full chart-bearing row
                                             // (foreground, non-italic); only an UNBONDED non-song row
                                             // keeps the passive dimmed-italic label.
-                                            : !isSong ? (hasChart ? 'text-base font-medium text-foreground' : 'text-sm italic text-muted-foreground/80')
+                                            : !isSong ? (hasChart ? 'text-base font-medium text-foreground' : 'text-sm italic text-muted-foreground')
                                             : 'text-base sm:text-lg font-semibold text-foreground',
                                         )}
                                     >
@@ -624,7 +648,7 @@ export function MobileRowCard({
 
             {/* Inline Editor Panel */}
             {isEditing && (
-                <aside className="bg-card rounded-lg p-4 sm:p-6 my-2 ms-8 sm:ms-14 border border-border shadow-[0_8px_24px_rgb(24_32_46/0.10)] animate-in fade-in slide-in-from-top-2 duration-200">
+                <aside onKeyDown={handlePanelKeyDown} className="bg-card rounded-lg p-4 sm:p-6 my-2 ms-8 sm:ms-14 border border-border shadow-[0_8px_24px_rgb(24_32_46/0.10)] animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="flex justify-between items-start mb-4">
                         <div>
                             <h2 className="text-lg font-bold text-foreground mb-1">

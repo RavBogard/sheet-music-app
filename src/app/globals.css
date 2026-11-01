@@ -455,7 +455,7 @@
 }
 
 @utility text-eyebrow {
-  @apply text-[11px] font-semibold uppercase tracking-widest text-muted-foreground;
+  @apply text-xs font-semibold uppercase tracking-widest text-muted-foreground;
 }
 
 @utility text-title {
@@ -659,7 +659,12 @@
     opacity: 1 !important;
   }
 
-  .animate-spin,
+  /* .animate-spin is left running, slowed: a frozen spinner reads as a hung
+     app, and a loading indicator is essential motion (re-audit P3). */
+  .animate-spin {
+    animation-duration: 2s !important;
+  }
+
   .animate-pulse,
   .animate-ping,
   .animate-bounce {

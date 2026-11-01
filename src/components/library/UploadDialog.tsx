@@ -1,10 +1,10 @@
 "use client"
 
-import { useState, useRef, useCallback, useEffect } from "react"
+import { useState, useRef, useCallback, useEffect, useMemo } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Upload, FileUp, X, Loader2, CheckCircle, Music } from "lucide-react"
+import { Upload, FileUp, X, Loader2, CheckCircle, Music, ListPlus } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import { apiFetch } from "@/lib/api-client"
 import { useQueryClient } from "@tanstack/react-query"
@@ -27,6 +27,7 @@ const KEY_OPTIONS = [
 ]
 
 import { type Setlist } from "@/lib/setlist-firebase"
+import { splitPublicSetlists } from "@/components/performance/public-setlist-order"
 
 interface UploadDialogProps {
     onUploadComplete?: (fileId: string, title: string) => void
@@ -53,6 +54,8 @@ export function UploadDialog({ onUploadComplete, setlists = [], onAddToSetlist }
     const [selectedSetlistId, setSelectedSetlistId] = useState("")
     const [uploading, setUploading] = useState(false)
     const [success, setSuccess] = useState(false)
+    // The uploaded file, kept for the success screen's "Add to <next service>".
+    const [uploaded, setUploaded] = useState<{ id: string, name: string, mimeType: string, metadata?: { key: string } } | null>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
     const dropZoneRef = useRef<HTMLDivElement>(null)
     const abortControllerRef = useRef<AbortController | null>(null)
@@ -76,7 +79,20 @@ export function UploadDialog({ onUploadComplete, setlists = [], onAddToSetlist }
         setSelectedSetlistId("")
         setUploading(false)
         setSuccess(false)
+        setUploaded(null)
     }, [])
+
+    // The picker lists upcoming services first (soonest first), then the
+    // rest in the caller's order, so the service the chart is for is at the
+    // top instead of somewhere in a long recently-edited list.
+    const { orderedSetlists, nextService } = useMemo(() => {
+        const { upcoming } = splitPublicSetlists(setlists)
+        const upcomingIds = new Set(upcoming.map((s) => s.id))
+        return {
+            orderedSetlists: [...upcoming, ...setlists.filter((s) => !upcomingIds.has(s.id))],
+            nextService: upcoming[0] ?? null,
+        }
+    }, [setlists])
 
     const handleFileSelect = useCallback((selectedFile: File) => {
         if (selectedFile.size > MAX_SIZE_MB * 1024 * 1024) {
@@ -148,6 +164,16 @@ export function UploadDialog({ onUploadComplete, setlists = [], onAddToSetlist }
             const data = await res.json()
             if (controller.signal.aborted) return
             setSuccess(true)
+            const lower = file.name.toLowerCase()
+            const uploadedMime = /\.(xml|musicxml|mxl)$/.test(lower)
+                ? "application/xml"
+                : lower.endsWith('.txt')
+                  ? "text/plain"
+                  : file.type || "application/pdf"
+            const uploadedFile = data.fileId
+                ? { id: data.fileId as string, name: title || file.name, mimeType: uploadedMime, metadata: { key } }
+                : null
+            setUploaded(uploadedFile)
             toast.success(data.message || t("libraryUpload.uploadedToast"))
 
             // v45-07: invalidate the react-query library cache locally so the new
@@ -157,27 +183,18 @@ export function UploadDialog({ onUploadComplete, setlists = [], onAddToSetlist }
             broadcastCacheInvalidation()
 
             // Auto-add to Setlist if selected
-            if (selectedSetlistId && onAddToSetlist && data.fileId) {
-                // Determine mock mimeType from file name extension
-                let mimeType = file.type || "application/pdf"
-                if (file.name.toLowerCase().endsWith('.xml') || file.name.toLowerCase().endsWith('.musicxml') || file.name.toLowerCase().endsWith('.mxl')) {
-                    mimeType = "application/xml"
-                } else if (file.name.toLowerCase().endsWith('.txt')) {
-                    mimeType = "text/plain"
-                }
-                
-                onAddToSetlist(selectedSetlistId, [{
-                    id: data.fileId,
-                    name: title || file.name,
-                    mimeType,
-                    metadata: { key }
-                }])
+            if (selectedSetlistId && onAddToSetlist && uploadedFile) {
+                onAddToSetlist(selectedSetlistId, [uploadedFile])
             }
 
             // Notify parent
             onUploadComplete?.(data.fileId, data.title)
 
-            // Close after a moment — track timer so unmount can clear it.
+            // When no setlist was picked and a service is coming up, the
+            // success screen offers "Add to <next service>" and stays open
+            // until the leader answers. Otherwise close after a moment —
+            // track timer so unmount can clear it.
+            if (!selectedSetlistId && onAddToSetlist && uploadedFile && nextService) return
             if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
             closeTimerRef.current = setTimeout(() => {
                 setOpen(false)
@@ -212,9 +229,33 @@ export function UploadDialog({ onUploadComplete, setlists = [], onAddToSetlist }
                 </DialogHeader>
 
                 {success ? (
-                    <div className="flex flex-col items-center gap-3 py-8">
-                        <CheckCircle className="h-12 w-12 text-success" />
-                        <p className="text-sm text-foreground">{t("libraryUpload.uploadedSuccess")}</p>
+                    <div className="flex flex-col items-center gap-3 py-8" data-testid="upload-success">
+                        <CheckCircle aria-hidden="true" className="h-12 w-12 text-success" />
+                        <p role="status" className="text-sm text-foreground">{t("libraryUpload.uploadedSuccess")}</p>
+                        {!selectedSetlistId && onAddToSetlist && uploaded && nextService && (
+                            <div className="mt-2 flex w-full flex-col gap-2">
+                                <Button
+                                    data-testid="upload-add-to-next"
+                                    onClick={() => {
+                                        onAddToSetlist(nextService.id, [uploaded])
+                                        setOpen(false)
+                                        reset()
+                                    }}
+                                    className="w-full h-11 bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
+                                >
+                                    <ListPlus aria-hidden="true" className="h-4 w-4 me-2" />
+                                    <span className="truncate">{t("libraryUpload.addToNext", { setlistName: nextService.name })}</span>
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    data-testid="upload-done"
+                                    onClick={() => { setOpen(false); reset() }}
+                                    className="w-full h-11"
+                                >
+                                    {t("libraryUpload.done")}
+                                </Button>
+                            </div>
+                        )}
                     </div>
                 ) : (
                     <div className="space-y-4">
@@ -253,7 +294,7 @@ export function UploadDialog({ onUploadComplete, setlists = [], onAddToSetlist }
                                     <p className="text-sm font-medium truncate">{file.name}</p>
                                     <p className="text-xs text-muted-foreground">{t("libraryUpload.fileSizeKb", { size: (file.size / 1024).toFixed(0) })}</p>
                                 </div>
-                                <button onClick={() => setFile(null)} className="text-muted-foreground hover:text-foreground" aria-label={t("libraryUpload.removeFile")}>
+                                <button type="button" onClick={() => setFile(null)} className="-me-2 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label={t("libraryUpload.removeFile")}>
                                     <X className="h-4 w-4" />
                                 </button>
                             </div>
@@ -281,7 +322,7 @@ export function UploadDialog({ onUploadComplete, setlists = [], onAddToSetlist }
                                             id="upload-key"
                                             value={key}
                                             onChange={(e) => setKey(e.target.value)}
-                                            className="w-full h-9 px-3 rounded-md bg-muted/30 border border-border text-foreground text-sm focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
+                                            className="w-full h-11 px-3 rounded-md bg-muted/30 border border-border text-foreground text-sm focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
                                         >
                                             <option value="">—</option>
                                             {KEY_OPTIONS.filter(k => k).map(k => (
@@ -321,7 +362,7 @@ export function UploadDialog({ onUploadComplete, setlists = [], onAddToSetlist }
                                         id="upload-collection"
                                         value={collection}
                                         onChange={(e) => setCollection(e.target.value)}
-                                        className="w-full h-9 px-3 rounded-md bg-muted/30 border border-border text-foreground text-sm focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
+                                        className="w-full h-11 px-3 rounded-md bg-muted/30 border border-border text-foreground text-sm focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
                                     >
                                         <option value="crc">{coreSectionLabel(org)}</option>
                                         {/* i18n-ignore: songbook collection name (data) */}
@@ -340,10 +381,10 @@ export function UploadDialog({ onUploadComplete, setlists = [], onAddToSetlist }
                                             id="upload-setlist"
                                             value={selectedSetlistId}
                                             onChange={(e) => setSelectedSetlistId(e.target.value)}
-                                            className="w-full h-9 px-3 rounded-md bg-brand/10 border border-brand/30 text-foreground text-sm focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
+                                            className="w-full h-11 px-3 rounded-md bg-brand/10 border border-brand/30 text-foreground text-sm focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
                                         >
                                             <option value="">{t("libraryUpload.dontAddToSetlist")}</option>
-                                            {setlists.map(s => (
+                                            {orderedSetlists.map(s => (
                                                 <option key={s.id} value={s.id}>{s.name}</option>
                                             ))}
                                         </select>

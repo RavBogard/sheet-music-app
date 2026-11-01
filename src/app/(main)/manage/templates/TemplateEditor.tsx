@@ -290,7 +290,7 @@ function SlotRow({
                 <span className="text-xs text-muted-foreground w-6 text-end">{index + 1}</span>
 
                 {/* Type badge */}
-                <span className={cn("text-[10px] px-1.5 py-0.5 rounded font-medium", typeColor)}>
+                <span className={cn("text-xs px-1.5 py-0.5 rounded font-medium", typeColor)}>
                     {t(slotTypeKey(slot.type))}
                 </span>
 

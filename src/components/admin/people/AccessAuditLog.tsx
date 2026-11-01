@@ -101,7 +101,7 @@ export function AccessAuditLog() {
                                             {log.newRole ?? '—'}
                                         </span>
                                     </div>
-                                    <p className="text-[10px] text-muted-foreground/60 uppercase">
+                                    <p className="text-xs text-muted-foreground/60 uppercase">
                                         {log.timestamp?.toDate ? fmt.dateTime(log.timestamp) : t("admin-people.auditJustNow")}
                                     </p>
                                 </div>

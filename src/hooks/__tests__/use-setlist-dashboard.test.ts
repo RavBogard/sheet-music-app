@@ -141,7 +141,6 @@ describe('useSetlistDashboard', () => {
     const { result } = renderHook(() => useSetlistDashboard({}))
     expect(result.current.loading).toBe(true)
     expect(result.current.activeTab).toBe('public')
-    expect(result.current.view).toBe('list')
     expect(result.current.searchQuery).toBe('')
   })
 

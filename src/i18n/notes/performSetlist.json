@@ -9,6 +9,7 @@
     "noPublicSetlists": {"where": "Public setlist listing: empty state when no setlists are listed", "who": "everyone", "maxLength": 50},
     "goToNextService": {"where": "Public setlist listing: screen-reader label of the big 'Next service' card", "who": "everyone", "maxLength": 80, "context": "{setlistName} is the setlist's name (data, not translated)"},
     "nextService": {"where": "Public setlist listing: small eyebrow heading on the big card for the soonest upcoming service (CSS uppercase)", "who": "everyone", "maxLength": 20},
+    "today": {"where": "Public setlist listing: label on the big next-service card when that service is today, shown instead of 'Next service'", "who": "everyone", "maxLength": 20},
     "perform": {"where": "Public setlist listing: call-to-action word at the end of the 'Next service' card (opens Perform mode)", "who": "everyone", "maxLength": 12},
     "upcoming": {"where": "Public setlist listing: section heading above upcoming setlists (CSS uppercase)", "who": "everyone", "maxLength": 20},
     "publicSetlists": {"where": "Public setlist listing loading skeleton: subtitle under the brand name", "who": "everyone", "maxLength": 30},

@@ -240,7 +240,7 @@ export function DesktopHeader(props: AppNavigationProps) {
                                     <div className="flex flex-col space-y-1">
                                         <p className="text-sm font-medium leading-none">{user?.displayName || t("nav.musicianFallback")}</p>
                                         <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
-                                        <p className="text-[11px] uppercase font-bold tracking-[0.06em] text-brand mt-1">{roleText}</p>
+                                        <p className="text-xs uppercase font-bold tracking-[0.06em] text-brand mt-1">{roleText}</p>
                                     </div>
                                 </DropdownMenuLabel>
                                 <DropdownMenuSeparator className="bg-border" />

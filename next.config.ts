@@ -84,7 +84,8 @@ const nextConfig: NextConfig = {
         headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
       },
       {
-        source: '/:file(logo-\\d+\\.(?:avif|webp|jpg))',
+        // `logo.jpg` (the /login LCP source, re-audit P3 #11) rides the same rule.
+        source: '/:file(logo(?:-\\d+)?\\.(?:avif|webp|jpg))',
         headers: [{ key: 'Cache-Control', value: 'public, max-age=604800, stale-while-revalidate=86400' }],
       },
       {

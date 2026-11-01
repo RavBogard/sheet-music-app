@@ -239,7 +239,7 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
     const canRemove = isCurrentAdmin && !isSelf && !isPending
 
     const roleBadges = (size: "sm" | "xs") => {
-        const cls = size === "sm" ? "text-[10px] h-5 px-1.5" : "text-[9px] h-4 px-1.5"
+        const cls = size === "sm" ? "text-xs h-5 px-1.5" : "text-xs h-4 px-1.5"
         return (
             <>
                 {effectiveRole === 'admin' && <Badge variant="default" className={cn("bg-accent text-brand border-brand/40", cls)}>{t("admin-people.badgeAdmin")}</Badge>}
@@ -395,7 +395,7 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
             <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5 min-w-0">
                     <p className="font-semibold text-foreground text-[15px] leading-snug truncate">{user.displayName}</p>
-                    {isSelf && <Badge variant="outline" className="border-border text-muted-foreground text-[10px] h-4 px-1 shrink-0">{t("admin-people.youBadge")}</Badge>}
+                    {isSelf && <Badge variant="outline" className="border-border text-muted-foreground text-xs h-4 px-1 shrink-0">{t("admin-people.youBadge")}</Badge>}
                 </div>
                 <div className="tnum flex items-center gap-x-2 gap-y-0.5 flex-wrap text-xs font-medium text-muted-foreground min-w-0">
                     <span className="truncate max-w-full" title={user.email ?? undefined}>{user.email}</span>

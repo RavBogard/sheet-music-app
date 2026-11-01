@@ -353,7 +353,7 @@ function LibraryResultsList({
                                 {song.displayName ?? song.name}
                             </span>
                             {song.metadata?.key && (
-                                <span className="block text-[11px] font-mono text-muted-foreground">
+                                <span className="block text-xs font-mono text-muted-foreground">
                                     {song.metadata.key}
                                 </span>
                             )}

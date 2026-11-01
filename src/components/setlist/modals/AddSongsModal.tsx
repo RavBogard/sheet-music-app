@@ -175,7 +175,7 @@ export function AddSongsModal({
                                                     <Sparkles className="h-3 w-3 text-success" />
                                                 )}
                                                 <span className="truncate max-w-[150px]">{s.file.name}</span>
-                                                <span className="text-[10px] text-muted-foreground/60 hidden sm:inline">{
+                                                <span className="text-xs text-muted-foreground/60 hidden sm:inline">{
                                                     s.reason.kind === 'staple'
                                                         ? t("setlistModals.suggestionStaple", { count: s.reason.uses, setlistName: s.reason.setlistName })
                                                         : s.reason.kind === 'stale'
@@ -214,7 +214,7 @@ export function AddSongsModal({
                                         <div className="flex-1 min-w-0">
                                             <div className="text-sm font-medium truncate">{file.name}</div>
                                             <div className={cn(
-                                                "text-[10px] uppercase tracking-wider",
+                                                "text-xs uppercase tracking-wider",
                                                 isSelected ? "text-primary-foreground/80" : "text-muted-foreground"
                                             )}>
                                                 {file.mimeType.split('/').pop()?.replace('vnd.google-apps.', '')}

@@ -127,7 +127,7 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                                 </div>
                             </div>
                             <div className="mt-2">
-                                <span className="inline-block text-[10px] font-bold text-foreground uppercase tracking-wider bg-brand/10 px-2 py-0.5 rounded-md">
+                                <span className="inline-block text-xs font-bold text-foreground uppercase tracking-wider bg-brand/10 px-2 py-0.5 rounded-md">
                                     {roleLabels[role ?? 'pending'] || t("nav.roleBadge.member")}
                                 </span>
                             </div>
@@ -174,7 +174,7 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                                 {t("nav.logOutDrawer")}
                             </Button>
                         )}
-                        <p className="text-center text-[10px] text-muted-foreground/40 mt-2">
+                        <p className="text-center text-xs text-muted-foreground/40 mt-2">
                             {t("nav.versionLine", { version: buildInfo.version, commit: buildInfo.commit?.slice(0, 7) })}
                         </p>
                     </div>

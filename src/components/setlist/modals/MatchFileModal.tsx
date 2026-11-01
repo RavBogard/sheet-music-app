@@ -137,7 +137,7 @@ export function MatchFileModal({
                                                 <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
                                                     {getCleanName(file.name)}
                                                 </p>
-                                                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                                                <p className="text-xs text-muted-foreground uppercase tracking-wider">
                                                     {file.mimeType.split('/').pop()?.replace('vnd.google-apps.', '')}
                                                 </p>
                                             </div>
@@ -174,7 +174,7 @@ export function MatchFileModal({
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="text-sm font-medium truncate">{file.name}</div>
-                                        <div className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                                        <div className="text-xs text-muted-foreground uppercase tracking-wider">
                                             {file.mimeType.split('/').pop()?.replace('vnd.google-apps.', '')}
                                         </div>
                                     </div>
