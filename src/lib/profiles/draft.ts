@@ -36,6 +36,10 @@ const TRACK_FIELDS = [
     "liturgyRefs",
     "momentId",
     "fixed",
+    // BET-5: a band's row keeps its length, segue and singer keys (present only when set).
+    "durationSec",
+    "segue",
+    "singerKeys",
 ] as const
 
 /** Fields that belong to the chart; an open slot carries none of them. */

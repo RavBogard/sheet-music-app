@@ -5,6 +5,7 @@ import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 import { logger } from "@/lib/logger"
 import { readTenantRole } from "@/lib/org/access"
 import type { OrgId } from "@/lib/org/types"
+import { rowOrg } from "@/lib/mcp/org-context"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 
 /**
@@ -329,7 +330,8 @@ export async function reviewChartBonds(
         )
 
     const setlistDoc = await db.collection("setlists").doc(args.setlistId).get()
-    if (!setlistDoc.exists)
+    // BET-5 fix round: another tenant's setlist answers exactly as a missing one.
+    if (!setlistDoc.exists || rowOrg((setlistDoc.data() as Record<string, unknown>).orgId) !== org)
         return richError(
             "setlist_not_found",
             `Setlist '${args.setlistId}' was not found.`,

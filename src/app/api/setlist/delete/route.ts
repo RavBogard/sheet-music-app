@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { crossTenantSetlist } from "@/lib/org/setlist-tenant"
 import { getT } from "@/i18n/server"
 import { z } from "zod"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
@@ -73,6 +74,8 @@ export const POST = createApiHandler(
         // ownership or admin to delete. Prevents a compromised/rogue band
         // leader from destroying another leader's work.
         const setlistData = setlistSnap.data()
+        const foreign = crossTenantSetlist(setlistData, ctx.auth.orgId, setlistId)
+        if (foreign) return foreign
         const isOwner = setlistData?.ownerId === ctx.auth.uid
         if (!isOwner && !ctx.auth.isAdmin) {
             const t = await getT()

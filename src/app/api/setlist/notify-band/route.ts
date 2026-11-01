@@ -30,6 +30,7 @@
  */
 
 import { NextResponse } from 'next/server'
+import { crossTenantSetlist } from "@/lib/org/setlist-tenant"
 import { getFormat, getT } from '@/i18n/server'
 import { createApiHandler } from '@/lib/api-wrapper'
 import { checkRateLimit } from '@/lib/rate-limit'
@@ -109,6 +110,8 @@ export const POST = createApiHandler(
         }
 
         const setlist = setlistDoc.data()!
+        const foreign = crossTenantSetlist(setlist, ctx.auth.orgId, setlistId)
+        if (foreign) return foreign
 
         // Auth check: owner, band leader, or admin
         const isOwner = setlist.ownerId === ctx.auth.uid

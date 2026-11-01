@@ -13,7 +13,7 @@ describe("band draft from a past gig (TF-05)", () => {
             chartName: "Tune A",
         },
         {
-            track: { type: "song", title: "Tune B", fileId: "f-b", key: "D", segue: true },
+            track: { type: "song", title: "Tune B", fileId: "f-b", key: "D", segue: true, durationSec: 200, singerKeys: [{ musician: "Ben", key: "D" }] },
             slotKey: "song:pg-b",
             standing: null,
             chartName: "Tune B",
@@ -33,6 +33,9 @@ describe("band draft from a past gig (TF-05)", () => {
         expect(rows[2].fileId).toBeUndefined()
         expect(rows[2].track.fileId).toBeUndefined()
         expect(rows[2].track.key).toBeUndefined()
+        // The band fields travel with the open row.
+        expect(rows[2].track).toMatchObject({ segue: true, durationSec: 200, singerKeys: [{ musician: "Ben", key: "D" }] })
+        expect(rows[1].track).not.toHaveProperty("segue")
         expect(rows[2].recall).toEqual({ fileId: "f-b", chartName: "Tune B", key: "D", date: "2026-10-03", service: "Pageant show" })
 
         expect(rows[3]).toMatchObject({ tier: "new", filled: false })

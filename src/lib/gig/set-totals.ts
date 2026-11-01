@@ -1,5 +1,5 @@
 import { isSongType } from "@/lib/setlist-derived-counts"
-import type { Gig } from "./model"
+import { gigCrossesMidnight, type Gig } from "./model"
 
 /**
  * BET-5: the running length of each set. Pure.
@@ -29,13 +29,16 @@ export interface SetTotal {
     targetMinutes?: number
     /** seconds minus the target; positive is over. */
     overUnderSec?: number
+    /** The gig's end is before its start: the show runs past midnight. */
+    crossesMidnight?: true
 }
 
+/** A row's length; 0 (or none) is untimed. */
 function duration(v: unknown): number | null {
-    return typeof v === "number" && Number.isFinite(v) && v >= 0 ? v : null
+    return typeof v === "number" && Number.isFinite(v) && v > 0 ? v : null
 }
 
-export function setTotals(tracks: readonly SetTotalsRow[], gig?: Pick<Gig, "setTargets"> | null): SetTotal[] {
+export function setTotals(tracks: readonly SetTotalsRow[], gig?: Pick<Gig, "setTargets" | "start" | "end"> | null): SetTotal[] {
     const sets: Array<SetTotal & { rows: number }> = []
     let current: (SetTotal & { rows: number }) | null = null
     for (const t of tracks) {
@@ -68,17 +71,18 @@ export function setTotals(tracks: readonly SetTotalsRow[], gig?: Pick<Gig, "setT
         } else positional.push(t.minutes)
     }
     let next = 0
+    const midnight = gigCrossesMidnight(gig)
     return sets.map(({ rows: _rows, ...s }) => {
         const id = s.header?.id ?? null
         let minutes: number | undefined
         if (id && byId.has(id)) minutes = byId.get(id)
         else if (next < positional.length) minutes = positional[next++]
-        if (minutes === undefined) return s
-        return { ...s, targetMinutes: minutes, overUnderSec: s.seconds - minutes * 60 }
+        const out: SetTotal = minutes === undefined ? s : { ...s, targetMinutes: minutes, overUnderSec: s.seconds - minutes * 60 }
+        return midnight ? { ...out, crossesMidnight: true } : out
     })
 }
 
-/** True when any row carries a duration: CRC shows totals only then. */
+/** True when any row carries a length above 0: CRC shows totals only then. */
 export function anyDuration(tracks: readonly SetTotalsRow[]): boolean {
     return tracks.some((t) => duration(t.durationSec) !== null)
 }

@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { DurationSecSchema, GigPatchSchema, SingerKeySchema, TranspositionSchema } from "@/lib/gig/model"
+import { DurationSecSchema, GigPatchSchema, SingerKeysSchema, TranspositionSchema } from "@/lib/gig/model"
 import { KNOWN_COLLECTIONS, LIBRARY_DISPLAY_ORDER } from "@/lib/library/collections"
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import {
@@ -468,9 +468,7 @@ const trackPatchFields = {
         .optional()
         .describe("The row's length in whole seconds (e.g. 245 for 4:05). null clears it. Set totals add these up; a song with none is counted as untimed."),
     segue: z.boolean().optional().describe("True when the song runs straight into the next one."),
-    singerKeys: z
-        .array(SingerKeySchema)
-        .max(12)
+    singerKeys: SingerKeysSchema
         .optional()
         .describe("The key each singer sings this in, as the author says it: [{musician, key}]. Replaces the list; [] clears it. Never choose a key for anyone."),
 } as const
@@ -2143,7 +2141,7 @@ export function registerWriteTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await waitForSetlistChange(uidFrom(extra), args)),
+            jsonResult(await waitForSetlistChange(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(

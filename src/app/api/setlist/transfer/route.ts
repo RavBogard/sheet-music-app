@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { crossTenantSetlist } from "@/lib/org/setlist-tenant"
 import { getT } from "@/i18n/server"
 import { getAuth, getFirestore } from "@/lib/firebase-admin"
 import { checkRateLimit } from "@/lib/rate-limit"
@@ -21,6 +22,9 @@ export const POST = createApiHandler(
             const t = await getT()
             return new NextResponse(t("api-setlist.setlistNotFound"), { status: 404 })
         }
+
+        const foreign = crossTenantSetlist(setlistSnap.data(), auth.orgId, setlistId)
+        if (foreign) return foreign
 
         // Find Target User
         let targetUser

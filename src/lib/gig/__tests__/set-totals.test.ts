@@ -41,7 +41,21 @@ describe("setTotals", () => {
     it("an empty setlist has no sets; anyDuration sees only numeric lengths", () => {
         expect(setTotals([])).toEqual([])
         expect(anyDuration([{ type: "song" }, { type: "song", durationSec: null }])).toBe(false)
-        expect(anyDuration([{ type: "song", durationSec: 0 }])).toBe(true)
+        expect(anyDuration([{ type: "song", durationSec: 0 }])).toBe(false)
+        expect(anyDuration([{ type: "song", durationSec: 1 }])).toBe(true)
+    })
+
+    it("a length of 0 is untimed", () => {
+        expect(setTotals([{ type: "song", durationSec: 0 }, { type: "song", durationSec: 30 }])).toEqual([
+            { header: null, seconds: 30, untimed: 1 },
+        ])
+    })
+
+    it("an end before the start crosses midnight and is flagged, not refused", () => {
+        expect(parseGigArg({ start: "22:00", end: "01:30" }).ok).toBe(true)
+        const late = setTotals(rows, { start: "22:00", end: "01:30" })
+        expect(late.every((t) => t.crossesMidnight === true)).toBe(true)
+        expect(setTotals(rows, { start: "20:00", end: "23:00" }).some((t) => "crossesMidnight" in t)).toBe(false)
     })
 })
 
@@ -68,6 +82,11 @@ describe("gig validation", () => {
         expect(parseTrackGigPatch({ durationSec: -1 }).ok).toBe(false)
         expect(parseTrackGigPatch({ durationSec: 1.5 }).ok).toBe(false)
         expect(parseTrackGigPatch({ singerKeys: [{ musician: "", key: "G" }] }).ok).toBe(false)
+        for (const key of ["G", "Bb", "F#m", "Ebm"]) expect(parseTrackGigPatch({ singerKeys: [{ musician: "Ben", key }] }).ok, key).toBe(true)
+        for (const key of ["H", "g", "Bbb", "C major", "Dm7"]) expect(parseTrackGigPatch({ singerKeys: [{ musician: "Ben", key }] }).ok, key).toBe(false)
+        expect(
+            parseTrackGigPatch({ singerKeys: [{ musician: "Ben", key: "G" }, { musician: "ben", key: "A" }] }).ok,
+        ).toBe(false)
     })
 
     it("readGig keeps only well-typed fields", () => {

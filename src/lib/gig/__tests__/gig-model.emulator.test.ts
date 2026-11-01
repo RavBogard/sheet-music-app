@@ -28,6 +28,8 @@ import { createContact } from "@/lib/mcp/tools/contacts"
 import { generateGigPacket } from "@/lib/mcp/tools/library-download"
 import { createSetlistFromDraftTool, draftServiceTool } from "@/lib/mcp/tools/draft-service"
 import { setStandingChoiceTool } from "@/lib/mcp/tools/standing"
+import { reviewChartBonds } from "@/lib/mcp/tools/chart-bond-audit"
+import { waitForSetlistChange } from "@/lib/mcp/tools/wait-for-setlist-change"
 
 /**
  * BET-5 PR B5a: the gig model's writes, both tenants. A CRC setlist without
@@ -41,6 +43,7 @@ describe("gig model (emulator)", () => {
     const BL = "brotherslazaroff"
     const CRC_ADMIN = "u-crc-admin"
     const BL_LEAD = "u-bl-lead"
+    const BL_MUSICIAN = "u-bl-musician"
 
     type Err = { ok: false; error: { machine_code: string } }
     const db = () => getFirestore(app)
@@ -62,6 +65,7 @@ describe("gig model (emulator)", () => {
         for (const [uid, org, role] of [
             [CRC_ADMIN, CRC, "admin"],
             [BL_LEAD, BL, "band_leader"],
+            [BL_MUSICIAN, BL, "musician"],
         ]) {
             await db().collection("users").doc(uid).set({ displayName: uid, membershipsMigratedAt: new Date() })
             await db().collection("memberships").doc(`${org}__${uid}`).set({ uid, tenantId: org, role })
@@ -76,7 +80,7 @@ describe("gig model (emulator)", () => {
         const blRows = [
             { id: "bl-h1", type: "header", title: "Set 1" },
             { id: "bl-a", type: "song", title: "Tune A", fileId: "f-bl-a", key: "G" },
-            { id: "bl-b", type: "song", title: "Tune B", fileId: "f-bl-b", key: "D" },
+            { id: "bl-b", type: "song", title: "Tune B", fileId: "f-bl-b", key: "D", segue: true },
             { id: "bl-h2", type: "header", title: "Set 2" },
             { id: "bl-c", type: "song", title: "Tune C" },
         ]
@@ -168,6 +172,10 @@ describe("gig model (emulator)", () => {
             "setlist_not_found",
         )
         expect(((await generateGigPacket(BL_LEAD, { setlistId: "crc-svc" }, BL)) as Err).error.machine_code).toBe("setlist_not_found")
+        expect(((await reviewChartBonds(BL_LEAD, { setlistId: "crc-svc" }, BL)) as Err).error.machine_code).toBe("setlist_not_found")
+        expect(((await waitForSetlistChange(BL_LEAD, { setlistId: "crc-svc", sinceVersion: 0, timeoutSec: 1 }, BL)) as Err).error.machine_code).toBe(
+            "setlist_not_found",
+        )
         // And CRC cannot write BL's.
         expect(((await updateSetlist(CRC_ADMIN, { id: "bl-gig", gig: { venue: "x" } }, CRC)) as Err).ok).toBe(false)
         expect((await db().collection("setlists").doc("bl-gig").get()).data()!.gig).toBeUndefined()
@@ -216,6 +224,11 @@ describe("gig model (emulator)", () => {
         expect(req.tracks.find((t) => t.title === "Tune A")?.transposition).toBe(3)
         expect(req.tracks.find((t) => t.title === "Tune B")?.transposition).toBe(2)
 
+        // A musician cannot read the address book through a part.
+        const musician = (await generateGigPacket(BL_MUSICIAN, { setlistId: "bl-gig", contactId: c.contact.id }, BL)) as Err
+        expect(musician.ok).toBe(false)
+        expect(printCalls).toHaveLength(1)
+
         // CRC cannot build a part from BL's contact.
         const cross = (await generateGigPacket(CRC_ADMIN, { setlistId: "crc-svc", contactId: c.contact.id }, CRC)) as Err
         expect(cross.error.machine_code).toBe("contact_not_found")
@@ -251,6 +264,7 @@ describe("gig model (emulator)", () => {
             .sort((a, b) => a.order - b.order)
         expect(tracks.map((t) => t.title)).toEqual(["Set 1", "Tune A", "Tune B", "Set 2", "Tune C"])
         expect(tracks[2].fileId).toBe("f-bl-b")
+        expect(tracks[2].segue).toBe(true)
         expect(tracks.every((t) => t.orgId === BL)).toBe(true)
         const setlist = (await db().collection("setlists").doc(created.setlistId).get()).data()!
         expect(setlist.orgId).toBe(BL)

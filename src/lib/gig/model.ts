@@ -80,18 +80,29 @@ export const MAX_DURATION_SEC = 7200
 
 export const DurationSecSchema = z.number().int().min(0).max(MAX_DURATION_SEC)
 
+/** A key as a singer gives it: A–G, an optional # or b, an optional m ("F#m", "Bb", "C"). */
+export const KEY_RE = /^[A-G](#|b)?m?$/
+
 export const SingerKeySchema = z.object({
     musician: z.string().trim().min(1).max(100),
-    key: z.string().trim().min(1).max(12),
+    key: z.string().trim().regex(KEY_RE, "a key such as 'G', 'Bb' or 'F#m'"),
 })
 
 export type SingerKey = z.infer<typeof SingerKeySchema>
+
+/** Up to 12 singer keys, one per musician (names compared without case). */
+export const SingerKeysSchema = z
+    .array(SingerKeySchema)
+    .max(12)
+    .refine((list) => new Set(list.map((e) => e.musician.toLowerCase())).size === list.length, {
+        message: "each musician appears once",
+    })
 
 /** The band fields `update_track` takes. `durationSec: null` clears the length. */
 export const TrackGigPatchSchema = z.object({
     durationSec: DurationSecSchema.nullable().optional(),
     segue: z.boolean().optional(),
-    singerKeys: z.array(SingerKeySchema).max(12).optional(),
+    singerKeys: SingerKeysSchema.optional(),
 })
 
 export type TrackGigPatch = z.infer<typeof TrackGigPatchSchema>
@@ -161,7 +172,7 @@ export function parseTrackGigPatch(
                 "patch",
                 "A band field on this row is not valid.",
                 parsed.error,
-                `durationSec is whole seconds, 0 to ${MAX_DURATION_SEC} (null clears it); segue is true/false; singerKeys is [{musician, key}], at most 12.`,
+                `durationSec is whole seconds, 0 to ${MAX_DURATION_SEC} (null clears it); segue is true/false; singerKeys is [{musician, key}], at most 12, one per musician, keys like 'G', 'Bb' or 'F#m'.`,
             ),
         }
     }
@@ -201,6 +212,15 @@ export function parseContactPart(
         }
     }
     return { ok: true, ...parsed.data }
+}
+
+/**
+ * True when the show ends after midnight: an `end` earlier than `start` is
+ * read that way rather than refused.
+ */
+export function gigCrossesMidnight(gig: Pick<Gig, "start" | "end"> | null | undefined): boolean {
+    if (!gig?.start || !gig.end || !HHMM_RE.test(gig.start) || !HHMM_RE.test(gig.end)) return false
+    return gig.end < gig.start
 }
 
 /** A stored gig, read defensively: only well-typed fields survive. */

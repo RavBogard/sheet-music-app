@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { crossTenantSetlist } from "@/lib/org/setlist-tenant"
 import { getT } from "@/i18n/server"
 import { getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
@@ -31,6 +32,8 @@ export const POST = createApiHandler(
         }
 
         const setlist = setlistSnap.data()!
+        const foreign = crossTenantSetlist(setlist, ctx.auth.orgId, setlistId)
+        if (foreign) return foreign
         const isOwner = setlist.ownerId === ctx.auth.uid
         if (!isOwner && !ctx.auth.isBandLeader && !ctx.auth.isAdmin) {
             const t = await getT()

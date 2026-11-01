@@ -18,6 +18,7 @@ import { orgString } from "@/lib/org/strings"
 import { readTenantRole } from "@/lib/org/access"
 import type { OrgId } from "@/lib/org/types"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
+import { assertEditor } from "@/lib/mcp/server-tracks-write"
 import { buildContactPartPdf, readContactPart, type ContactPartInfo } from "./contact-part"
 
 /**
@@ -615,6 +616,9 @@ async function generateContactPart(
     if (typeof contactId !== "string" || !contactId.trim()) {
         return richError("invalid_argument", "contactId must be a non-empty string.", { field: "contactId" }, "Get it from list_contacts.")
     }
+    // A contact's address book entry is leader data: admin or band leader only.
+    const editor = await assertEditor(db, uid, org)
+    if (!editor.ok) return editor as unknown as RichErrorEnvelope
     const part = await readContactPart(db, contactId.trim(), org)
     if ("ok" in part) return part
     const built = await buildContactPartPdf(db, setlistId, setlistData, part)
