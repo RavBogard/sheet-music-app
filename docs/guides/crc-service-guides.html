@@ -1,0 +1,290 @@
+<title>CRC Service Guides</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&display=swap">
+<style>
+/* Layout: one guide per tab, a single readable column; each tab is its own printed sheet.
+   Colors and type come from the app's DESIGN.md (book-cloth navy, section colors, Assistant). */
+:root {
+  --ground: #F6F7FB; --paper: #FFFFFF; --ink: #18202E; --quiet: #556072; --hair: #E3E6EE;
+  --tag: #EEF1F7; --navy: #23356B; --navy-soft: #C9D2EA;
+  --s-michael: #23356B; --s-drew: #1F7A6E; --s-before: #8F6210; --s-after: #8E2E3B;
+  --ok: #1F7A4D; --warn: #8A5A00; --bad: #B4232F;
+  --font: "Assistant", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --mono: ui-monospace, "SF Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --ground: #0F1420; --paper: #161C2A; --ink: #E8ECF4; --quiet: #9AA5B8; --hair: #273049;
+  --tag: #1C2438; --navy: #AFC0EE; --navy-soft: #2B3A63;
+  --s-michael: #AFC0EE; --s-drew: #6CC9BA; --s-before: #E2B24F; --s-after: #E68A97;
+  --ok: #5FCB8E; --warn: #E2B24F; --bad: #F08A92; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --ground: #0F1420; --paper: #161C2A; --ink: #E8ECF4; --quiet: #9AA5B8; --hair: #273049;
+  --tag: #1C2438; --navy: #AFC0EE; --navy-soft: #2B3A63;
+  --s-michael: #AFC0EE; --s-drew: #6CC9BA; --s-before: #E2B24F; --s-after: #E68A97;
+  --ok: #5FCB8E; --warn: #E2B24F; --bad: #F08A92; color-scheme: dark }
+
+* { box-sizing: border-box; }
+body { background: var(--ground); color: var(--ink); font: 400 17px/1.55 var(--font); }
+.wrap { max-width: 760px; margin: 0 auto; padding-block: 20px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+header.top { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 16px; margin-bottom: 14px; }
+header.top h1 { font-size: 15px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--navy); margin: 0; }
+header.top p { margin: 0; font-size: 14px; color: var(--quiet); }
+nav.tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-bottom: 18px; }
+nav.tabs button { font: 700 15px/1.2 var(--font); color: var(--ink); background: var(--paper); border: 1px solid var(--hair);
+  border-radius: 8px; padding: 10px 8px; min-height: 48px; cursor: pointer; text-align: left; border-top: 4px solid var(--c); }
+nav.tabs button small { display: block; font-weight: 400; font-size: 12.5px; color: var(--quiet); margin-top: 2px; }
+nav.tabs button[aria-selected="true"] { background: var(--tag); outline: 2px solid var(--c); outline-offset: -2px; }
+nav.tabs button:focus-visible, .clear:focus-visible, label.tick:focus-within { outline: 3px solid var(--navy); outline-offset: 2px; }
+@media (max-width: 560px) { nav.tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+article.guide { background: var(--paper); border: 1px solid var(--hair); border-radius: 10px; padding: 22px 24px 26px; border-top: 6px solid var(--c); }
+@media (max-width: 560px) { article.guide { padding: 18px 16px 22px; } }
+.eyebrow { font-size: 12.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--c); margin: 0 0 4px; }
+h2 { font-size: 28px; line-height: 1.15; font-weight: 800; margin: 0 0 10px; text-wrap: balance; }
+h3 { font-size: 18px; font-weight: 800; margin: 26px 0 8px; padding-top: 14px; border-top: 1px solid var(--hair); display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+h3 .when { font-size: 13px; font-weight: 600; color: var(--quiet); white-space: nowrap; }
+p { margin: 0 0 10px; max-width: 66ch; }
+.lede { font-size: 18px; color: var(--quiet); }
+ol, ul { margin: 0 0 10px; padding-left: 1.3em; }
+li { margin: 0 0 7px; }
+b, strong { font-weight: 700; }
+code, .k { font-family: var(--mono); font-size: .88em; background: var(--tag); padding: 1px 5px; border-radius: 4px; white-space: nowrap; }
+.path { font-weight: 600; }
+.note { background: var(--tag); border-radius: 8px; padding: 10px 14px; margin: 12px 0; font-size: 16px; }
+.note.limit { border-left: 4px solid var(--warn); }
+.dots { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 6px 0 12px; font-size: 15px; }
+.dot { display: inline-flex; align-items: center; gap: 6px; }
+.dot i { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+
+ul.check { list-style: none; padding: 0; }
+ul.check li { margin: 0; border-bottom: 1px solid var(--hair); }
+ul.check li:last-child { border-bottom: 0; }
+label.tick { display: grid; grid-template-columns: 26px 1fr; gap: 10px; align-items: start; padding: 10px 2px; cursor: pointer; min-height: 44px; border-radius: 6px; }
+label.tick input { width: 22px; height: 22px; margin: 2px 0 0; accent-color: var(--c); }
+label.tick input:checked + span { color: var(--quiet); text-decoration: line-through; text-decoration-color: var(--hair); }
+.clear { font: 600 14px var(--font); color: var(--quiet); background: none; border: 1px solid var(--hair); border-radius: 6px; padding: 6px 12px; min-height: 36px; cursor: pointer; }
+.row-end { display: flex; justify-content: flex-end; margin-top: 8px; }
+
+.times { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 12px 0 4px; }
+.times div { background: var(--tag); border-radius: 8px; padding: 10px 14px; }
+.times .day { font-size: 12.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--c); }
+.times .svc { font-size: 14px; color: var(--quiet); }
+.times dl { margin: 6px 0 0; display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; font-variant-numeric: tabular-nums; }
+.times dt { color: var(--quiet); font-size: 15px; } .times dd { margin: 0; font-weight: 700; }
+.tablewrap { overflow-x: auto; margin: 8px 0; }
+table { border-collapse: collapse; width: 100%; font-size: 16px; }
+th, td { text-align: left; vertical-align: top; padding: 9px 10px; border-bottom: 1px solid var(--hair); }
+th { font-size: 12.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--quiet); font-weight: 700; }
+td:first-child { font-weight: 600; width: 34%; min-width: 150px; }
+.foot { margin-top: 20px; padding-top: 12px; border-top: 1px solid var(--hair); font-size: 15px; color: var(--quiet); }
+
+@media print {
+  :root { --ground: #fff; --paper: #fff; --ink: #000; --quiet: #333; --tag: #f1f1f1; color-scheme: light; }
+  body { font-size: 11.5pt; } header.top p, nav.tabs, .clear, .row-end { display: none !important; }
+  article.guide { display: block !important; border: 0; border-top: 4px solid var(--c); border-radius: 0; padding: 8px 0 0; break-after: page; }
+  article.guide:last-of-type { break-after: auto; } h3 { break-after: avoid; } li, tr { break-inside: avoid; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <h1>Central Reform · Music</h1>
+    <p>Fri service 6:15 pm · Sat service 10:00 am · Problems: text Daniel</p>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Guides">
+    <button role="tab" id="tab-michael" aria-controls="michael" style="--c: var(--s-michael)">Michael<small>iPads and studio PC</small></button>
+    <button role="tab" id="tab-drew" aria-controls="drew" style="--c: var(--s-drew)">Drew<small>Wedges and recording</small></button>
+    <button role="tab" id="tab-before" aria-controls="before" style="--c: var(--s-before)">Before<small>Every service</small></button>
+    <button role="tab" id="tab-after" aria-controls="after" style="--c: var(--s-after)">After<small>Every service</small></button>
+  </nav>
+
+  <!-- MICHAEL -->
+  <article class="guide" id="michael" role="tabpanel" aria-labelledby="tab-michael" style="--c: var(--s-michael)">
+    <p class="eyebrow">For Michael</p>
+    <h2>Getting the band iPads and the studio PC ready</h2>
+    <p class="lede">The six band iPads live at CRC on the charging cart. Any musician can use any iPad: they sign in with their own phone when they pick one up. Your job is to keep the iPads set up, charged and updated, and to turn the studio PC on before each service and off after.</p>
+
+    <h3>Once per iPad <span class="when">about 10 minutes each</span></h3>
+    <ol>
+      <li><b>Update iPadOS</b>: <span class="path">Settings → General → Software Update</span>. It needs to be <b>18.4 or newer</b>: the screen stays awake by itself during a service only from 18.4 on. Then turn <b>Automatic Updates</b> off on that same screen. You install updates yourself, midweek only.</li>
+      <li><b>Name it</b>: <span class="path">Settings → General → About → Name</span> → <code>CRC Band 1</code> (2, 3 and so on). Put the same number on the case.</li>
+      <li><b>Wi-Fi</b>: join the CRC network with Auto-Join on. Forget any guest networks.</li>
+      <li><b>Auto-Lock</b>: <span class="path">Settings → Display &amp; Brightness → Auto-Lock</span> → <b>15 minutes</b>. On an iPad that can't reach 18.4, choose <b>Never</b>.</li>
+      <li><b>Notifications</b>: <span class="path">Settings → Focus → Do Not Disturb</span>. Set it to turn on automatically on Friday 5:30–8:30 pm and Saturday 9:15 am–12:30 pm, or turn it on by hand before each service.</li>
+      <li><b>Multitasking</b>: <span class="path">Settings → Multitasking &amp; Gestures</span> (the name varies by iPadOS version). Choose full-screen apps only, and turn off the swipe gestures, so a stray swipe can't shrink the music.</li>
+      <li><b>Add the app</b>: in Safari, open <b>centralreform.live/perform</b>, tap Share, then <b>Add to Home Screen</b>, and name it <code>CRC Music</code>. Put it in the dock. From now on, always open the music from this icon.</li>
+      <li><b>Low Power Mode</b> off: <span class="path">Settings → Battery</span>.</li>
+    </ol>
+
+    <h3>Once on your phone <span class="when">so the bridge can reach you</span></h3>
+    <p>Open <b>centralreform.live</b> in Safari and sign in with Google. Then tap Share → <b>Add to Home Screen</b> and open the app from that icon. Go to <span class="path">Settings → Push Notifications</span>, turn it on and allow it. If the mixer bridge isn't running about 30 minutes before a service, you and Drew get a <b>"Monitor bridge needs attention"</b> alert.</p>
+
+    <h3>Once on the studio PC</h3>
+    <p>The <b>CentralReform Bridge</b> starts by itself when someone signs in to Windows. Its icon sits in the tray by the clock:</p>
+    <div class="dots">
+      <span class="dot"><i style="background: var(--ok)"></i><b>Green</b>&nbsp;fine</span>
+      <span class="dot"><i style="background: var(--warn)"></i><b>Orange</b>&nbsp;reaches the mixer but is behind</span>
+      <span class="dot"><i style="background: var(--bad)"></i><b>Red</b>&nbsp;can't reach the X32</span>
+    </div>
+    <ul>
+      <li>Ask Drew whether his engineer console says <b>"Watchdog installed"</b>. If it says "not installed", follow <code>bridge/watchdog/INSTALL.md</code> once (5 minutes), or text Daniel. The watchdog restarts the bridge within a minute if it ever closes.</li>
+      <li>Bridge updates install themselves when the PC shuts down. You don't need to do anything.</li>
+    </ul>
+
+    <h3>Midweek <span class="when">about once a month</span></h3>
+    <ul>
+      <li>Install iPadOS updates (never on a Friday or Saturday). Open the CRC Music icon afterwards to make sure it still opens.</li>
+      <li>Wipe the screens, and check the chargers and cables.</li>
+    </ul>
+    <p class="foot">Something broke? Text Daniel what happened, when, and which iPad (<code>CRC Band 3</code>).</p>
+  </article>
+
+  <!-- DREW -->
+  <article class="guide" id="drew" role="tabpanel" aria-labelledby="tab-drew" style="--c: var(--s-drew)" hidden>
+    <p class="eyebrow">For Drew</p>
+    <h2>Wedges, limits and the recording</h2>
+    <p class="lede">Mix front of house in Mixing Station, the way you already do. The wedges also run through <b>centralreform.live/monitor</b>: musicians on a bus ride their own wedge from their iPad, and you control who's on which bus and how loud any wedge can go. Both apps talk to the same X32, so a move in one shows up in the other.</p>
+
+    <h3>Once, on your iPad</h3>
+    <ol>
+      <li>In Safari, open <b>centralreform.live</b> and sign in with Google using your engineer account.</li>
+      <li>Tap Share, then <b>Add to Home Screen</b>. Open the app from that icon, then go to <span class="path">Settings → Push Notifications</span>, turn it on and allow it. If the bridge isn't running about 30 minutes before a service, you and Michael get a "Monitor bridge needs attention" alert.</li>
+    </ol>
+
+    <h3>The pieces of /monitor you'll use</h3>
+    <ul>
+      <li><b>Configure → bus assignments.</b> Each bus lists the people on it. Tap <b>Add</b> to put a musician on a bus, or tap the × to remove them. Right now Daniel is on <b>bus 5</b> and David is on <b>bus 2</b>. A new musician has to sign in to centralreform.live once before they show up in the list. If their account says it's waiting for approval, text Daniel.</li>
+      <li><b>Configure → Limits.</b> This is the loudest any wedge can go. It's set to about <b>−2 dB</b> for channel sends and the wedge master, for every bus, and you can give one bus its own limits. The bridge holds every move made from an iPad or from Claude to your limit, and the musician sees "Limited to … by the sound engineer's limit". Going above 0 dB asks you to confirm first.</li>
+      <li><b>Engineer console</b> (<code>/monitor/engineer</code>). Shows every bus with the people on it and the loudest channels. Use <b>Ride this bus</b> to take over someone's wedge: for example, when David says the bass is low in his wedge. The <b>Bridge</b> card says Running or Not running, when the bridge was last heard from, and whether the watchdog is installed.</li>
+      <li><b>Saved mixes.</b> Musicians can save a mix and recall it next week. The app also keeps an "End of service" mix for each musician, under "After recent services". A double-tap on a fader puts it back at that person's last saved level. If they have no saved level, it goes to −6 dB, and never above your limit.</li>
+    </ul>
+    <p class="note limit"><b>Limits don't apply to Mixing Station or the desk.</b> They hold only the moves made from iPads and Claude.</p>
+
+    <h3>Before the service <span class="when">with Michael's checklist</span></h3>
+    <ul>
+      <li>The engineer console says the bridge is <b>Running</b>, and a musician's Monitor screen says <b>Connected</b>.</li>
+      <li>The limits are where you want them.</li>
+    </ul>
+
+    <h3>After the service: the recording</h3>
+    <p>Put the service mix in the <b>Dropbox SERVICES</b> folder:</p>
+    <ul>
+      <li>Make a new folder named with the date and the service, for example <code>11.07_SAT MORNING</code> or <code>11.13_FRI NIGHT</code>.</li>
+      <li>Save the mix as an <b>MP3</b> ending in <code>_V1</code> (a WAV is fine too). For a second pass, use <code>_V2</code>.</li>
+    </ul>
+    <p>Claude cuts the full service into one clip per song and attaches each clip to its chart. Recordings are public. Nothing plays during Perform.</p>
+
+    <h3>If the bridge is down</h3>
+    <p>Musicians see "Controls are paused. Your wedge sounds the same as before." Their wedges keep the last levels, and you can still mix everything in Mixing Station. To bring the bridge back:</p>
+    <ol>
+      <li>Check that the studio PC is on and signed in to Windows.</li>
+      <li>Right-click the bridge's tray icon → <b>Quit Bridge</b>, then open <b>CentralReform Bridge</b> from the Start menu.</li>
+      <li>If the icon stays red, check that the X32 is on and on the network.</li>
+    </ol>
+    <p class="foot">Text Daniel what happened.</p>
+  </article>
+
+  <!-- BEFORE -->
+  <article class="guide" id="before" role="tabpanel" aria-labelledby="tab-before" style="--c: var(--s-before)" hidden>
+    <p class="eyebrow">Michael runs it</p>
+    <h2>Before every service</h2>
+    <div class="times">
+      <div><span class="day">Friday</span> <span class="svc">service 6:15 pm</span><dl><dt>Michael starts</dt><dd>5:30 pm</dd><dt>Band arrives</dt><dd>5:45 pm</dd></dl></div>
+      <div><span class="day">Saturday</span> <span class="svc">service 10:00 am</span><dl><dt>Michael starts</dt><dd>9:15 am</dd><dt>Band arrives</dt><dd>9:30 am</dd></dl></div>
+    </div>
+
+    <h3>Power and iPads <span class="when">45 minutes before</span></h3>
+    <ul class="check" data-list="before-power">
+      <li><label class="tick"><input type="checkbox"><span>Make sure the <b>X32</b> is on.</span></label></li>
+      <li><label class="tick"><input type="checkbox"><span>Turn on the <b>studio PC</b> and sign in to Windows. The bridge starts by itself. Wait for its tray icon to turn <b>green</b> (about a minute).</span></label></li>
+      <li><label class="tick"><input type="checkbox"><span>Take the iPads off the cart. Each one should be <b>charged above 80%</b>. Charge any that aren't and give them to the musicians last.</span></label></li>
+      <li><label class="tick"><input type="checkbox"><span>Turn on <b>Do Not Disturb</b> on each iPad, unless it's scheduled.</span></label></li>
+      <li><label class="tick"><input type="checkbox"><span>On each iPad, open the <b>CRC Music</b> icon. Find tonight's service, marked <b>Today</b>, and tap <b>Perform</b> (or the service itself). Wait until the line in the header reads <b>"N/N charts on this iPad"</b> in green. If it's amber, tap <b>Save … charts offline</b> and wait.</span></label></li>
+    </ul>
+
+    <h3>The band arrives <span class="when">30 minutes before</span></h3>
+    <ul class="check" data-list="before-band">
+      <li><label class="tick"><input type="checkbox"><span>Each musician picks up any iPad and checks <b>Settings</b>, which shows the name of whoever is signed in. If it isn't their name: <b>Log Out</b> → <b>Set up this device — sign in with phone</b> → they scan the QR code with their own phone → <b>Approve Sign-In</b>. The code lasts 5 minutes, so tap for a fresh one if it runs out. Their phone has to be signed in to centralreform.live already. A brand-new musician who sees "Your account is being reviewed" plays signed out for today. Text Daniel to approve them.</span></label></li>
+      <li><label class="tick"><input type="checkbox"><span>They open tonight's setlist and play from the first song. Their transposition (Bb/Eb) follows their own account.</span></label></li>
+      <li><label class="tick"><input type="checkbox"><span>Musicians on a wedge bus (Daniel on 5, David on 2) tap <b>Monitor</b>. It should say <b>Connected</b>, not "Bridge offline".</span></label></li>
+      <li><label class="tick"><input type="checkbox"><span>Drew checks the engineer console: Bridge <b>Running</b>, and the limits are set.</span></label></li>
+    </ul>
+
+    <h3>Last check <span class="when">5 minutes before</span></h3>
+    <ul class="check" data-list="before-last">
+      <li><label class="tick"><input type="checkbox"><span>Every iPad is on its stand, at the first song, with the screen on.</span></label></li>
+    </ul>
+    <div class="row-end"><button class="clear" type="button" data-clear="before">Clear ticks for next time</button></div>
+
+    <h3>If something's wrong</h3>
+    <div class="tablewrap"><table>
+      <thead><tr><th>You see</th><th>Do this</th></tr></thead>
+      <tbody>
+        <tr><td>"Bridge offline" or "Controls are paused"</td><td>Check the studio PC is on and signed in. Right-click the tray icon → <b>Quit Bridge</b>, then open <b>CentralReform Bridge</b> from the Start menu. If the icon is red, check the X32.</td></tr>
+        <tr><td>Amber "charts on this iPad"</td><td>Check the Wi-Fi, then tap <b>Save … charts offline</b>.</td></tr>
+        <tr><td>A musician can't sign in</td><td>Open the setlist signed out from the CRC Music icon. It works, but it won't follow live changes: tap <b>"Setlist updated — tap to refresh"</b> if it appears.</td></tr>
+        <tr><td>The screen goes to sleep</td><td><span class="path">Settings → Display &amp; Brightness → Auto-Lock</span> → <b>Never</b> for this service.</td></tr>
+        <tr><td>Anything else</td><td>Text Daniel what happened, when, and which iPad.</td></tr>
+      </tbody>
+    </table></div>
+  </article>
+
+  <!-- AFTER -->
+  <article class="guide" id="after" role="tabpanel" aria-labelledby="tab-after" style="--c: var(--s-after)" hidden>
+    <p class="eyebrow">Michael runs it</p>
+    <h2>After every service</h2>
+    <ul class="check" data-list="after">
+      <li><label class="tick"><input type="checkbox"><span>Collect the six iPads. <b>Leave them signed in</b>, put them back on the cart and plug every one in.</span></label></li>
+      <li><label class="tick"><input type="checkbox"><span>Count them: six iPads, six chargers.</span></label></li>
+      <li><label class="tick"><input type="checkbox"><span>Ask Drew whether the recording is in Dropbox (a SERVICES folder named like <code>11.07_SAT MORNING</code>, MP3 ending in <code>_V1</code>).</span></label></li>
+      <li><label class="tick"><input type="checkbox"><span>Shut down the <b>studio PC</b>: Start → Power → <b>Shut down</b>. Wedge mixes are already saved by then, and any bridge update installs during shutdown.</span></label></li>
+      <li><label class="tick"><input type="checkbox"><span>Anything go wrong today? Text Daniel what happened, when, and which iPad (<code>CRC Band 3</code>).</span></label></li>
+    </ul>
+    <div class="row-end"><button class="clear" type="button" data-clear="after">Clear ticks for next time</button></div>
+    <p class="foot">Changes made "for tonight" (a swapped song or key) clear themselves after the service day. You don't need to undo them.</p>
+  </article>
+</div>
+
+<script>
+(function () {
+  var ids = ["michael", "drew", "before", "after"];
+  function show(id) {
+    if (ids.indexOf(id) < 0) id = "michael";
+    ids.forEach(function (k) {
+      document.getElementById(k).hidden = k !== id;
+      document.getElementById("tab-" + k).setAttribute("aria-selected", String(k === id));
+    });
+    try { history.replaceState(null, "", "#" + id); } catch (e) {}
+  }
+  ids.forEach(function (k) {
+    document.getElementById("tab-" + k).addEventListener("click", function () { show(k); window.scrollTo(0, 0); });
+  });
+  window.addEventListener("hashchange", function () { show(location.hash.slice(1)); });
+  show(location.hash.slice(1));
+
+  // Ticks are a per-viewer convenience only; the page works without storage.
+  var KEY = "crc-guides-ticks";
+  var state = {};
+  try { state = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (e) { state = {}; }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+  document.querySelectorAll("ul.check").forEach(function (ul) {
+    var name = ul.getAttribute("data-list");
+    ul.querySelectorAll("input").forEach(function (box, i) {
+      box.id = name + "-" + i;
+      box.checked = !!state[box.id];
+      box.addEventListener("change", function () { state[box.id] = box.checked; save(); });
+    });
+  });
+  document.querySelectorAll("[data-clear]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var art = document.getElementById(btn.getAttribute("data-clear"));
+      art.querySelectorAll("ul.check input").forEach(function (box) { box.checked = false; delete state[box.id]; });
+      save();
+    });
+  });
+})();
+</script>
