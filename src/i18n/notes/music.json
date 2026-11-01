@@ -441,5 +441,27 @@
         "where": "Perform mode, transpose menu: button that turns on chord editing",
         "who": "leaders",
         "maxLength": 20
+    },
+    "viewer.parts": {
+        "where": "Perform mode, MusicXML chart viewer: button that opens the list of instrument parts to show",
+        "who": "musicians",
+        "maxLength": 14,
+        "context": "'Parts' means the separate instrument parts of a score (bass, piano, vocals), not pieces of a service. A count like 2/5 follows it"
+    },
+    "viewer.partsLabel": {
+        "where": "Perform mode, MusicXML chart viewer: screen-reader name of the list of part checkboxes",
+        "who": "musicians",
+        "maxLength": 30
+    },
+    "viewer.partN": {
+        "where": "Perform mode, MusicXML chart viewer: label for a part that has no name in the file",
+        "who": "musicians",
+        "maxLength": 14,
+        "context": "{n} is a number such as 2"
+    },
+    "viewer.partsReset": {
+        "where": "Perform mode, MusicXML chart viewer: button that drops this iPad's own part choice and returns to the leader's default",
+        "who": "musicians",
+        "maxLength": 34
     }
 }

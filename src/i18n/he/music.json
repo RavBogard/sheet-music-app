@@ -58,7 +58,11 @@
         "wrap": "גלישה",
         "fit": "התאמה",
         "zoomOut": "הקטנה",
-        "zoomIn": "הגדלה"
+        "zoomIn": "הגדלה",
+        "parts": "קולות",
+        "partsLabel": "קולות להצגה",
+        "partN": "קול {n}",
+        "partsReset": "חזרה לקולות ברירת המחדל"
     },
     "transposer": {
         "errorTitle": "שגיאה בהעברת הסולם",

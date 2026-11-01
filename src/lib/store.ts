@@ -138,6 +138,16 @@ export interface MusicState {
      * a leader's per-track transposition always wins. Persisted.
      */
     chartTransposition: Record<string, number>
+    /**
+     * PERF-15: per-device MusicXML part pick per chart, keyed by `fileId`
+     * (indices of the visible parts). Signed in or out. Absent = no pick, so
+     * presets and then the full score apply. Persisted.
+     */
+    chartParts: Record<string, number[]>
+    setChartParts: (fileId: string, parts: number[] | null) => void
+    /** PERF-15: the instrument this iPad is for, if it knows (matches instrument presets). Persisted. */
+    deviceInstrument: string | null
+    setDeviceInstrument: (instrument: string | null) => void
     setChartTransposition: (fileId: string, semitones: number) => void
 
     /**
@@ -237,6 +247,8 @@ export const useMusicStore = create<MusicState>()(
             capoSemitones: 0,
             chartCapo: {},
             chartTransposition: {},
+            chartParts: {},
+            deviceInstrument: null,
             tapZonesEnabled: true,
             musicXmlKey: null,
 
@@ -387,6 +399,13 @@ export const useMusicStore = create<MusicState>()(
                 state.chartTransposition?.[fileId] === semitones
                     ? {}
                     : { chartTransposition: { ...state.chartTransposition, [fileId]: semitones } }),
+            setChartParts: (fileId, parts) => set((state) => {
+                const next = { ...(state.chartParts ?? {}) }
+                if (parts && parts.length > 0) next[fileId] = [...parts]
+                else delete next[fileId]
+                return { chartParts: next }
+            }),
+            setDeviceInstrument: (instrument) => set({ deviceInstrument: instrument?.trim() || null }),
             setTapZonesEnabled: (enabled) => set({ tapZonesEnabled: enabled }),
             setMusicXmlKey: (key) => set({ musicXmlKey: key }),
 
@@ -403,6 +422,7 @@ export const useMusicStore = create<MusicState>()(
                 chartZoom: {},
                 chartCapo: {},
                 chartTransposition: {},
+                chartParts: {},
                 tapZonesEnabled: true,
                 fitMode: 'width',
                 aiXmlContent: null,
@@ -428,6 +448,8 @@ export const useMusicStore = create<MusicState>()(
                 // PERF-14 / PERF-05: per-device chart prefs and the tap-zone switch.
                 chartCapo: state.chartCapo,
                 chartTransposition: state.chartTransposition,
+                chartParts: state.chartParts,
+                deviceInstrument: state.deviceInstrument,
                 tapZonesEnabled: state.tapZonesEnabled,
                 audio: { ...state.audio, isPlaying: false }, // Don't persist playing state
             })

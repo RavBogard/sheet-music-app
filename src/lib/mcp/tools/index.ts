@@ -156,6 +156,7 @@ import { updateSong } from "./song-metadata"
 import { listBooksTool, lookupBookPageTool } from "./books"
 import { getSongHistoryTool, exportSetlistsTool } from "./history"
 import { setStandingChoiceTool, clearStandingChoiceTool } from "./standing"
+import { setPartPresetTool, listPartPresetsTool } from "./part-presets"
 import { draftServiceTool, createSetlistFromDraftTool } from "./draft-service"
 import { addOpenItemTool, resolveOpenItemTool } from "./open-items"
 import { readBackSetlistTool } from "./read-back-setlist"
@@ -839,6 +840,38 @@ export function registerReadTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await setStandingChoiceTool(uidFrom(extra), args, orgFrom(extra))),
+    )
+
+    server.registerTool(
+        "set_part_preset",
+        {
+            description:
+                "Set which parts of a multi-part MusicXML chart open by default, for one person (`uid`) or one instrument (`instrument`, e.g. 'bass'). `patterns` are part names ('Bass', 'Piano'); they match case-insensitively and loosely ('Bass' matches 'Bass Guitar') when a musician opens a chart, and when nothing matches the full score shows, so it never guesses. A musician's own choice on their iPad always wins, then the person's preset, then the instrument's preset (only if that iPad knows its instrument), then the full score. An empty `patterns` list removes the preset. Pass `fileIds` to see, per chart, its parts and which the preset would select (charts with one part have no picker). Admin / band_leader. Tenant-scoped. F-05: `dryRun` defaults true and writes nothing; a real write needs `dryRun: false, force: true`. Returns `{ok, dryRun, scope, patterns, action, previous, preview:[{fileId, chartName, parts, selected, fullScore, note?}]}`.",
+            inputSchema: {
+                uid: z.string().optional().describe("The person the preset is for (from find_user). Pass this or `instrument`."),
+                instrument: z.string().optional().describe("The instrument the preset is for, e.g. 'bass'. Pass this or `uid`."),
+                patterns: z.array(z.string()).describe("Part names to show. Empty list removes the preset."),
+                fileIds: z.array(z.string()).optional().describe("Charts to preview the preset against (up to 25)."),
+                dryRun: z.boolean().optional().describe("When true (default), report without writing. F-05 standing rule: dryRun does NOT require force."),
+                force: z.boolean().optional().describe("Required for real writes. Pair with `dryRun: false`."),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await setPartPresetTool(uidFrom(extra), args, orgFrom(extra))),
+    )
+
+    server.registerTool(
+        "list_part_presets",
+        {
+            description:
+                "List this congregation's part presets (which MusicXML parts open by default), optionally for one person (`uid`) or instrument. Admin / band_leader. Tenant-scoped: another congregation's presets are never returned. Returns `{ok, presets:[{scope:{kind:'user',uid}|{kind:'instrument',instrument}, patterns, updatedAt}]}`.",
+            inputSchema: {
+                uid: z.string().optional().describe("Only the preset for this person."),
+                instrument: z.string().optional().describe("Only the preset for this instrument."),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await listPartPresetsTool(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
