@@ -12,7 +12,7 @@ import { TEMPLATE_LABELS } from "@/lib/liturgical-templates"
 import { UpcomingSetlistCard, SetlistCard, SetlistInfoLine, PlaceholderCard } from "./SetlistCards"
 import { DeleteSetlistDialog, DuplicateSetlistDialog, TransferSetlistDialog } from "./SetlistDialogs"
 import { ImporterModal } from "./importer/ImporterModal"
-import { SetlistToolbar } from "./SetlistToolbar"
+import { SetlistSearchButton, SetlistSearchField } from "./SetlistToolbar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
 import { useCongregation } from "@/lib/congregation-store"
 import { useI18n } from "@/i18n/client"
@@ -41,8 +41,8 @@ export function SetlistDashboard({ serverShortName, ...props }: UseSetlistDashbo
 
     const {
         router, user, signIn, isMember, isBandLeader, isAdmin, onBack, onCreateNew,
-        loading, error, activeTab, setActiveTab,
-        searchQuery, setSearchQuery, rabbiFilter, setRabbiFilter, navigatingTo,
+        loading, error,
+        searchQuery, setSearchQuery, navigatingTo,
         deleteConfirmOpen, setDeleteConfirmOpen, setlistToDelete,
         duplicateConfirmOpen, setDuplicateConfirmOpen, setlistToDuplicate,
         showTransferDialog, setShowTransferDialog,
@@ -53,10 +53,11 @@ export function SetlistDashboard({ serverShortName, ...props }: UseSetlistDashbo
         handleDuplicateClick, confirmDuplicate, handleCloneNextWeekClick,
         handleSaveAsTemplateClick, handleSaveAsDefaultClick, handleTransfer, transferring,
         handleCreateFromTemplate, handleDownload,
-        availableRabbis, displayedSetlists,
+        displayedSetlists,
         upcoming, pastOrNoDate, placeholders, hasUpcoming, isDownloading,
         nextCursor, loadMore, loadingMore,
     } = useSetlistDashboard(props)
+    const [searchOpen, setSearchOpen] = useState(() => !!searchQuery)
 
     // WEB-05: per-instrument and (Copy) setlists fold under their parent service.
     const pastGroups = useMemo(
@@ -115,7 +116,9 @@ export function SetlistDashboard({ serverShortName, ...props }: UseSetlistDashbo
                                         {t("setlist.upcomingScheduled", { count: upcoming.length })}
                                     </>
                                 ) : undefined}
-                                actions={user && isMember ? (
+                                actions={<>
+                                    <SetlistSearchButton open={searchOpen} onOpenChange={setSearchOpen} onSearchChange={setSearchQuery} />
+                                    {user && isMember ? (
                                     <Button
                                         type="button"
                                         onClick={() => setShowWizard(true)}
@@ -126,17 +129,13 @@ export function SetlistDashboard({ serverShortName, ...props }: UseSetlistDashbo
                                         <Plus aria-hidden className="h-4 w-4" />
                                         {t("org.createNewSetlistHeading")}
                                     </Button>
-                                ) : undefined}
+                                    ) : null}
+                                </>}
                             />
 
-                        {/* Toolbar */}
-                        <SetlistToolbar
-                            activeTab={activeTab} onTabChange={setActiveTab}
-                            showPersonalTab={!!user}
-                            searchQuery={searchQuery} onSearchChange={setSearchQuery}
-                            rabbiFilter={rabbiFilter} onRabbiFilterChange={setRabbiFilter}
-                            availableRabbis={availableRabbis}
-                        />
+                        {/* Search opens under the head row; there is no filter row
+                            (Daniel 2026-11-01: the rabbi chips are cut). */}
+                        {searchOpen && <SetlistSearchField searchQuery={searchQuery} onSearchChange={setSearchQuery} />}
 
                             <div className="space-y-5">
                                 {!loading && error && (

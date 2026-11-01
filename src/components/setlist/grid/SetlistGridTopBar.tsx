@@ -58,12 +58,11 @@ export function SetlistGridTopBar({
             data-testid="setlist-grid-top-bar"
             className="sticky top-14 z-20 w-full bg-background/95 supports-[backdrop-filter]:bg-background/85 backdrop-blur-md border-b border-rule"
         >
-            {/* Consistency pass: the page container width, and a head that
-                wraps instead of crushing. Back + title (2 lines max) + status
-                take a full row on a phone; the sync state and Perform drop to
-                their own row under them. */}
-            <div className={cn(PAGE_WIDTH_CLASS, "flex flex-wrap items-center gap-x-3 gap-y-1 py-1.5")}>
-                <div className="flex min-w-0 flex-[1_1_22rem] items-center gap-1 sm:gap-2">
+            {/* ONE row at every width (Daniel 2026-11-01: the head took too
+                much of a phone before the first song). The title and meta line
+                truncate; Perform is icon-only below sm. */}
+            <div className={cn(PAGE_WIDTH_CLASS, "flex items-center gap-x-2 sm:gap-x-3 py-1")}>
+                <div className="flex min-w-0 flex-1 items-center gap-1 sm:gap-2">
                 <button
                     type="button"
                     onClick={onBack}
@@ -80,7 +79,7 @@ export function SetlistGridTopBar({
 
                 <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1 min-w-0">
-                        <h1 className="line-clamp-2 sm:line-clamp-1 break-words text-base font-extrabold leading-tight text-foreground" title={name || undefined}>
+                        <h1 className="min-w-0 truncate text-base font-extrabold leading-tight text-foreground" title={name || undefined}>
                             {name || t('setlistGrid.newSetlist')}
                         </h1>
                         {onEditMeta ? (
@@ -119,21 +118,22 @@ export function SetlistGridTopBar({
                 </div>
                 </div>
 
-                <div className="ms-auto flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
                     <SyncIndicator {...syncProps} />
                     {performHref ? (
                         <Link
                             href={performHref}
                             data-testid="setlist-grid-perform-link"
+                            aria-label={t('setlistGrid.performLink')}
                             className={cn(
-                                'touch-hit inline-flex h-9 items-center gap-1.5 rounded-md px-3.5',
+                                'touch-hit inline-flex h-9 min-w-9 items-center justify-center gap-1.5 rounded-md px-2.5 sm:px-3.5',
                                 'bg-primary text-primary-foreground text-sm font-bold',
                                 'hover:bg-primary/90 active:bg-primary/85 transition-colors',
                                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
                             )}
                         >
                             <Play aria-hidden className="h-3.5 w-3.5 fill-current" />
-                            {t('setlistGrid.performLink')}
+                            <span className="hidden sm:inline">{t('setlistGrid.performLink')}</span>
                         </Link>
                     ) : null}
                 </div>

@@ -650,11 +650,11 @@ export function SetlistPerformClient({
                 under it ("Updated … · N/M charts on this iPad", the book after
                 it), the tools on the right with Edit as the one blue action. */}
             <div className="z-20 relative bg-background border-b border-rule">
-                {/* Consistency pass: the page container width, and a head that
-                    wraps instead of crushing: back + title (2 lines) + status on
-                    a full row on a phone, the toolbar in one row under them. */}
-                <div className={cn(PAGE_WIDTH_CLASS, "flex flex-wrap items-center gap-x-3 gap-y-1 py-1.5")}>
-                <div className="flex min-w-0 flex-[1_1_22rem] items-center gap-1 sm:gap-2">
+                {/* ONE row at every width (Daniel 2026-11-01: the head took too
+                    much of a phone before the first song). The title and meta
+                    line truncate; Print hides below sm. */}
+                <div className={cn(PAGE_WIDTH_CLASS, "flex items-center gap-x-2 sm:gap-x-3 py-1")}>
+                <div className="flex min-w-0 flex-1 items-center gap-1 sm:gap-2">
                 <Link
                     href={backHref}
                     aria-label={isPublicView ? t("performSetlist.backToHomeLabel") : t("performSetlist.backToSetlistsLabel")}
@@ -663,7 +663,7 @@ export function SetlistPerformClient({
                     <DirectionalIcon icon={ArrowLeft} className="h-5 w-5 text-foreground" />
                 </Link>
                 <div className="flex-1 min-w-0">
-                    <h1 className="line-clamp-2 sm:line-clamp-1 break-words text-base font-extrabold leading-tight" title={name}>{name}</h1>
+                    <h1 className="truncate text-base font-extrabold leading-tight" title={name}>{name}</h1>
                     {/* Option B: ONE meta line. It never wraps; it truncates. */}
                     <p data-testid="perform-status-line" className="tnum truncate text-xs font-medium text-muted-foreground">
                         <span>
@@ -717,7 +717,7 @@ export function SetlistPerformClient({
                     <SetlistFamilyHead part="ceremony" setlistId={setlistId} setlist={initialSetlist as unknown as Record<string, unknown> | null} />
                 </div>
                 </div>
-                <div className="ms-auto flex flex-wrap items-center justify-end gap-1 shrink-0">
+                <div className="flex items-center justify-end gap-0.5 sm:gap-1 shrink-0">
                     {/* "Keep screen on" — now a MANUAL OVERRIDE, not the only
                         way in (2026-08-31). <KeepAwakeAutoArm/> above already
                         armed the lock on mount; this toggle exists so a
@@ -792,7 +792,7 @@ export function SetlistPerformClient({
                         </Button>
                     )}
                     {canPrint && (
-                        <Button onClick={() => setShowPrintModal(true)} size="sm" variant="ghost" aria-label={t("performSetlist.toolbar.printSetlist")} title={t("performSetlist.toolbar.printSetlist")} className="h-11 min-w-11 gap-1.5 text-muted-foreground hover:text-foreground cursor-pointer">
+                        <Button onClick={() => setShowPrintModal(true)} size="sm" variant="ghost" aria-label={t("performSetlist.toolbar.printSetlist")} title={t("performSetlist.toolbar.printSetlist")} className="hidden sm:inline-flex h-11 min-w-11 gap-1.5 text-muted-foreground hover:text-foreground cursor-pointer">
                             <Printer className="h-4 w-4" />
                             <span className="text-xs font-semibold hidden lg:inline">{t("performSetlist.toolbar.print")}</span>
                         </Button>

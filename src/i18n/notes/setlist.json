@@ -165,17 +165,6 @@
         "who": "leaders, musicians",
         "maxLength": 30
     },
-    "rabbiFilterAll": {
-        "where": "Setlists dashboard toolbar: filter chip that clears the rabbi filter",
-        "who": "leaders, musicians",
-        "maxLength": 10
-    },
-    "rabbiFilterChip": {
-        "where": "Setlists dashboard toolbar: filter chip for one rabbi",
-        "who": "leaders, musicians",
-        "maxLength": 30,
-        "context": "{name} is the rabbi's name as entered on setlists"
-    },
     "stageReady": {
         "where": "Setlists dashboard: line under the greeting, first sentence",
         "who": "leaders, musicians",
@@ -471,10 +460,5 @@
         "where": "Setlists list and editor head: when the setlist was last changed, e.g. Updated 3 days ago",
         "who": "leaders",
         "maxLength": 32
-    },
-    "rabbiFilterGroupLabel": {
-        "where": "Setlists page: screen-reader name of the row of rabbi filter chips",
-        "who": "leaders, musicians",
-        "maxLength": 30
     }
 }

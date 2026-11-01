@@ -192,7 +192,7 @@ describe('useSetlistDashboard', () => {
   // v60-08-01: dropped — track-title search relied on setlist.tracks (legacy
   // embedded array). Production search now matches name + date only.
 
-  it('rabbi filter narrows displayed setlists', () => {
+  it('search matches a rabbi name (the rabbi chips are gone)', () => {
     const setlists = [
       makeSetlist({ id: '1', name: 'Service A', rabbi: 'Rabbi Daniel' }),
       makeSetlist({ id: '2', name: 'Service B', rabbi: 'Rabbi Randy' }),
@@ -202,7 +202,7 @@ describe('useSetlistDashboard', () => {
       initialPublicSetlists: setlists,
     }))
 
-    act(() => { result.current.setRabbiFilter('Rabbi Daniel') })
+    act(() => { result.current.setSearchQuery('daniel') })
     expect(result.current.displayedSetlists).toHaveLength(1)
     expect(result.current.displayedSetlists[0].rabbi).toBe('Rabbi Daniel')
   })
