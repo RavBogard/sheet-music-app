@@ -14,13 +14,13 @@ describe("VerticalFaderStrip stale cue (C-6 parity)", () => {
         render(<VerticalFaderStrip {...baseProps} stale={true} />)
         expect(screen.getByTestId("vfader-stale-cue")).toBeTruthy()
         expect(screen.getByLabelText(/may be out of date/i)).toBeTruthy()
-        expect(screen.getByText("50%").className).toContain("text-yellow-500")
+        expect(screen.getByText("50%").className).toContain("text-caution")
     })
 
     it("shows no cue and a normal readout when fresh", () => {
         render(<VerticalFaderStrip {...baseProps} stale={false} />)
         expect(screen.queryByTestId("vfader-stale-cue")).toBeNull()
-        expect(screen.getByText("50%").className).not.toContain("text-yellow-500")
+        expect(screen.getByText("50%").className).not.toContain("text-caution")
     })
 
     it("defaults to no cue when the stale prop is omitted (back-compat)", () => {

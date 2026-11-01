@@ -36,7 +36,7 @@ export function DeleteSetlistDialog({ open, onOpenChange, setlistName, onConfirm
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                     <AlertDialogCancel>{t("setlist.cancel")}</AlertDialogCancel>
-                    <AlertDialogAction onClick={onConfirm} className="bg-red-600 hover:bg-red-700">{t("setlist.delete")}</AlertDialogAction>
+                    <AlertDialogAction onClick={onConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{t("setlist.delete")}</AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>

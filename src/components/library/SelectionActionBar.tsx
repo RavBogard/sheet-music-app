@@ -67,7 +67,7 @@ export function SelectionActionBar({
                         <Button
                             size="sm"
                             variant="default"
-                            className="bg-brand hover:bg-brand/90 text-white"
+                            className="bg-brand hover:bg-brand/90 text-brand-foreground"
                             onClick={() => {
                                 const selectedItems = combinedItems.filter(i => selectedIds.has(i.id))
                                 onAddToSetlist(selectedItems)

@@ -33,7 +33,7 @@ export function AudioFilePicker({ currentFileId, onSelect, trigger }: AudioFileP
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
                 {trigger || (
-                    <Button variant="ghost" size="icon" aria-label={currentFileId ? t("setlist.audioChangeBackingTrack") : t("setlist.audioLinkBackingTrack")} className={currentFileId ? "text-blue-400" : "text-muted-foreground"}>
+                    <Button variant="ghost" size="icon" aria-label={currentFileId ? t("setlist.audioChangeBackingTrack") : t("setlist.audioLinkBackingTrack")} className={currentFileId ? "text-brand" : "text-muted-foreground"}>
                         <Music className="h-4 w-4" />
                     </Button>
                 )}
@@ -78,20 +78,20 @@ export function AudioFilePicker({ currentFileId, onSelect, trigger }: AudioFileP
                                     onSelect(file.id, file.name)
                                     setOpen(false)
                                 }}
-                                className={`w-full flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors text-start ${currentFileId === file.id ? 'bg-blue-500/10 border border-blue-500/30' : ''}`}
+                                className={`w-full flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors text-start ${currentFileId === file.id ? 'bg-brand/10 border border-brand/30' : ''}`}
                             >
                                 <div className="h-8 w-8 rounded bg-muted flex items-center justify-center shrink-0">
-                                    <Music className="h-4 w-4 text-blue-400" />
+                                    <Music className="h-4 w-4 text-brand" />
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <div className={`font-medium truncate ${currentFileId === file.id ? 'text-blue-400' : 'text-foreground'}`}>
+                                    <div className={`font-medium truncate ${currentFileId === file.id ? 'text-brand' : 'text-foreground'}`}>
                                         {file.name}
                                     </div>
                                     <div className="text-xs text-muted-foreground">
                                         {t("setlist.audioBackingTrackLabel")}
                                     </div>
                                 </div>
-                                {currentFileId === file.id && <LinkIcon className="h-4 w-4 text-blue-400" />}
+                                {currentFileId === file.id && <LinkIcon className="h-4 w-4 text-brand" />}
                             </button>
                         ))}
                     </div>

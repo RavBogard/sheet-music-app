@@ -111,13 +111,13 @@ export function KeepAwakeBanner() {
                     onClick={() => setDismissedOsWarning(true)}
                     className={cn(
                         "pointer-events-auto flex items-start gap-2 max-w-md text-start",
-                        "rounded-lg border border-amber-500/30 bg-background/90 backdrop-blur",
+                        "rounded-lg border border-caution/30 bg-background/90 backdrop-blur",
                         "px-3 py-2 text-[11px] leading-snug text-muted-foreground shadow-lg",
                         "[touch-action:manipulation]",
                     )}
                 >
                     <AlertTriangle
-                        className="h-4 w-4 shrink-0 mt-px text-amber-400"
+                        className="h-4 w-4 shrink-0 mt-px text-caution"
                         aria-hidden="true"
                     />
                     <span>

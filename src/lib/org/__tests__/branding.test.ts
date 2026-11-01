@@ -44,7 +44,7 @@ describe("getOrgBranding", () => {
         expect(b.metaTitleTemplate).toBe("%s | CRC Music")
         expect(b.metaDescription).toBe("Digital Sheet Music Library for Central Reform Congregation")
         expect(b.ogTitle).toBe("Central Reform Congregation — Music")
-        expect(b.themeColor).toBe("#0e0d18")
+        expect(b.themeColor).toBe("#23356B")
         expect(b.manifestPath).toBe("/manifest.json")
         // NEXT_PUBLIC_BASE_URL is unset in test/prod → the prior fallback origin.
         expect(b.baseUrl).toBe(process.env.NEXT_PUBLIC_BASE_URL || "https://centralreform.live")

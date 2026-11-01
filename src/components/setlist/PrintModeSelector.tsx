@@ -36,7 +36,7 @@ export function PrintModeSelector({
                     type="radio" name="printMode" value="standard"
                     checked={printMode === "standard"}
                     onChange={() => setPrintMode("standard")}
-                    className="accent-blue-500"
+                    className="accent-primary"
                 />
                 <div className="flex-1 min-w-0">
                     <span className="text-sm font-medium">{t("setlistPrint.modeGeneric")}</span>

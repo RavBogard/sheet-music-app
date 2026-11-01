@@ -155,7 +155,7 @@ export default function QRApprovePage() {
     if (state === "error") {
         return (
             <Shell>
-                <AlertCircle className="h-12 w-12 text-red-500" />
+                <AlertCircle className="h-12 w-12 text-destructive" />
                 <h1 className="text-xl font-bold text-foreground">{t("auth.approveErrorTitle")}</h1>
                 <p className="text-muted-foreground text-sm text-center">{error || t("auth.approveTryAgain")}</p>
                 <Button variant="outline" onClick={() => router.push("/")}>{t("auth.approveGoHome")}</Button>

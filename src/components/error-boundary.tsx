@@ -69,15 +69,15 @@ function CriticalErrorScreen({ error, onReload }: { error?: Error; onReload: () 
     const t = useT()
     return (
         <div className="h-screen w-full flex flex-col items-center justify-center bg-background text-foreground p-6 gap-6 text-center">
-            <div className="bg-red-500/20 p-6 rounded-full">
-                <AlertTriangle className="h-16 w-16 text-red-500" />
+            <div className="bg-destructive/20 p-6 rounded-full">
+                <AlertTriangle className="h-16 w-16 text-destructive" />
             </div>
             <h1 className="text-3xl font-bold">{t("shell.somethingWentWrong")}</h1>
             <p className="text-muted-foreground max-w-md">
                 {t("shell.criticalError")}
             </p>
             {error && (
-                <pre className="bg-card p-4 rounded text-xs text-red-400 max-w-lg overflow-auto text-start">
+                <pre className="bg-card p-4 rounded text-xs text-destructive max-w-lg overflow-auto text-start">
                     {error.message}
                 </pre>
             )}

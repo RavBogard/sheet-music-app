@@ -112,15 +112,15 @@ export function DefaultChannelPicker() {
                             className={`justify-start gap-2 px-3 py-2.5 h-auto rounded-lg text-left min-h-[44px] ${
                                 isSelected
                                     ? "bg-brand/10 border border-brand/30 text-foreground"
-                                    : "bg-zinc-900/40 border border-zinc-800 text-zinc-200 hover:text-white hover:bg-zinc-800/60"
+                                    : "bg-card/40 border border-border text-foreground hover:text-foreground hover:bg-accent"
                             }`}
                         >
                             <div className={`w-4 h-4 shrink-0 rounded border flex items-center justify-center ${
                                 isSelected
                                     ? "bg-brand border-brand"
-                                    : "border-zinc-600"
+                                    : "border-border"
                             }`}>
-                                {isSelected && <Check className="w-3 h-3 text-white" />}
+                                {isSelected && <Check className="w-3 h-3 text-primary-foreground" />}
                             </div>
                             <span className="truncate">{ch.name || `Ch ${ch.index}`}</span>
                         </Button>

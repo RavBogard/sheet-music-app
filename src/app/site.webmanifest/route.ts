@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server"
 import { coerceOrgId } from "@/lib/org/registry"
 import { getOrgConfig } from "@/lib/org/get-org-config"
 import { getOrgBranding } from "@/lib/org/branding"
+import { getOrgIdentity } from "@/lib/org/identity"
 
 /**
  * Multi-tenant: the PWA manifest for tenants created through config. crc and
@@ -13,14 +14,16 @@ export async function GET(req: NextRequest) {
     const orgId = coerceOrgId(req.headers.get("x-org-id"))
     await getOrgConfig(orgId).catch(() => null)
     const b = getOrgBranding(orgId)
+    const id = getOrgIdentity(orgId)
     const manifest = {
         name: b.appName,
         short_name: b.shortName,
         description: b.metaDescription,
         start_url: "/",
         display: "standalone",
-        background_color: "#0e0d18",
-        theme_color: b.themeColor || "#0e0d18",
+        // The splash paints the page ground, so it does not flash dark before a light app.
+        background_color: id.ground,
+        theme_color: b.themeColor || id.shell,
         orientation: "any",
         categories: ["music", "productivity"],
         icons: [

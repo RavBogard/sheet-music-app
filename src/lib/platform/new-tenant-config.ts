@@ -17,7 +17,7 @@ type DeepPartial<T> = T extends Array<infer _U> ? T : T extends object ? { [K in
 /** What createTenant accepts as `config`: the name is required, everything else optional. */
 export type NewTenantConfigInput = DeepPartial<Omit<OrgConfigInput, "id">> & { name: string }
 
-export const NEW_TENANT_THEME = "#4f46e5"
+export const NEW_TENANT_THEME = "#2B3445"
 
 function initials(name: string): string {
     const words = name

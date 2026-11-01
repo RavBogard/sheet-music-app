@@ -196,7 +196,7 @@ export function RecordingBindPopover({
                         {uploadError && (
                             <p
                                 role="alert"
-                                className="mt-2 text-xs text-red-300"
+                                className="mt-2 text-xs text-destructive"
                             >
                                 {uploadError}
                             </p>

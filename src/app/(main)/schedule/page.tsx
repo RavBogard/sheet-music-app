@@ -276,15 +276,15 @@ function MusicianStatusCard({ assignment }: { assignment: SchedulingAssignment }
     return (
         <div className={cn(
             "flex items-center gap-3 p-3 rounded-lg border bg-card/70 backdrop-blur-sm transition-all duration-200 hover:shadow-sm",
-            assignment.status === 'confirmed' && "border-emerald-500/20 hover:border-emerald-500/40",
+            assignment.status === 'confirmed' && "border-success/20 hover:border-success/40",
             assignment.status === 'pending' && "border-caution/20 hover:border-caution/40",
-            assignment.status === 'declined' && "border-red-500/20 opacity-60",
+            assignment.status === 'declined' && "border-destructive/20 opacity-60",
         )}>
             <div className={cn(
                 "w-2.5 h-2.5 rounded-full shrink-0 ring-2",
-                assignment.status === 'confirmed' && "bg-emerald-500 ring-emerald-500/20",
+                assignment.status === 'confirmed' && "bg-success ring-success/20",
                 assignment.status === 'pending' && "bg-caution ring-caution/20 animate-pulse",
-                assignment.status === 'declined' && "bg-red-500 ring-red-500/20",
+                assignment.status === 'declined' && "bg-destructive ring-destructive/20",
             )} />
             <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{assignment.musicianName}</p>
@@ -294,9 +294,9 @@ function MusicianStatusCard({ assignment }: { assignment: SchedulingAssignment }
             </div>
             <span className={cn(
                 "text-xs font-medium capitalize px-2 py-0.5 rounded-full",
-                assignment.status === 'confirmed' && "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+                assignment.status === 'confirmed' && "bg-success/10 text-success",
                 assignment.status === 'pending' && "bg-caution/10 text-caution dark:text-caution",
-                assignment.status === 'declined' && "bg-red-500/10 text-red-600 dark:text-red-400",
+                assignment.status === 'declined' && "bg-destructive/10 text-destructive",
             )}>{statusKey ? t(statusKey) : assignment.status}</span>
         </div>
     )

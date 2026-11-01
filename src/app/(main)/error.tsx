@@ -25,7 +25,7 @@ export default function MainError({
                 {t("dashboard.errorBody")}
             </p>
             {error?.message && (
-                <pre className="text-xs text-red-400/80 bg-red-500/5 border border-red-500/20 rounded-lg p-3 max-w-md overflow-auto text-start">
+                <pre className="text-xs text-destructive bg-destructive/5 border border-destructive/20 rounded-lg p-3 max-w-md overflow-auto text-start">
                     {error.message}
                 </pre>
             )}

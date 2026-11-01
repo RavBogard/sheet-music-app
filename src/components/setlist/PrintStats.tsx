@@ -23,13 +23,13 @@ export function PrintStats({
             {coverOnly ? (
                 <div className="flex justify-between">
                     <span className="text-muted-foreground">{t("setlistPrint.statOutput")}</span>
-                    <span className="font-medium text-blue-600 dark:text-blue-400">{t("setlistPrint.statOutputCoverOnly")}</span>
+                    <span className="font-medium text-brand">{t("setlistPrint.statOutputCoverOnly")}</span>
                 </div>
             ) : (
                 <>
                     <div className="flex justify-between">
                         <span className="text-muted-foreground">{t("setlistPrint.statPdfsIncluded")}</span>
-                        <span className="font-medium text-green-600 dark:text-green-400">{linkedPdfCount}</span>
+                        <span className="font-medium text-success">{linkedPdfCount}</span>
                     </div>
                     {showTranspositions && activeTranspositions > 0 && (
                         <div className="flex justify-between">
@@ -38,7 +38,7 @@ export function PrintStats({
                         </div>
                     )}
                     {linkedPdfCount < totalTracks && (
-                        <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
+                        <p className="text-xs text-caution mt-1">
                             {t("setlistPrint.songsWithoutPdfs", { count: totalTracks - linkedPdfCount })}
                         </p>
                     )}

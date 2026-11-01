@@ -64,7 +64,7 @@ export function QueueRow({
             className={cn(
                 "flex items-center gap-4 h-full px-4 rounded-xl transition-all text-start w-full",
                 isCurrent
-                    ? "bg-blue-600 text-white shadow-lg"
+                    ? "bg-primary text-primary-foreground shadow-lg"
                     : "hover:bg-card text-muted-foreground hover:text-foreground",
                 // Only a NON-openable flow item stays dimmed; an openable one
                 // reads as tappable at full opacity.
@@ -73,7 +73,7 @@ export function QueueRow({
         >
             <div className={cn(
                 "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0",
-                isCurrent ? "bg-white/20 text-white" : "bg-muted text-muted-foreground"
+                isCurrent ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-muted-foreground"
             )}>
                 {globalIndex + 1}
             </div>
@@ -83,13 +83,13 @@ export function QueueRow({
                         <FileMusic
                             aria-hidden="true"
                             data-testid="queue-row-chart-glyph"
-                            className={cn("h-4 w-4 shrink-0", isCurrent ? "text-white" : "text-brand")}
+                            className={cn("h-4 w-4 shrink-0", isCurrent ? "text-primary-foreground" : "text-brand")}
                         />
                     )}
                     <div className={cn(
                         "font-bold truncate",
                         isFlowItem ? "text-base" : "text-lg",
-                        isCurrent && "text-white"
+                        isCurrent && "text-primary-foreground"
                     )}>
                         {track.name}
                     </div>
@@ -97,7 +97,7 @@ export function QueueRow({
                         <span className={cn(
                             "px-2 py-0.5 rounded text-xs font-bold border shrink-0",
                             isCurrent
-                                ? "bg-transparent border-white/30 text-white"
+                                ? "bg-transparent border-primary-foreground/30 text-primary-foreground"
                                 : "bg-muted border-border text-muted-foreground"
                         )}>
                             {track.key}
@@ -107,13 +107,13 @@ export function QueueRow({
                 {isFlowItem && track.trackType && (
                     <div className={cn(
                         "text-xs uppercase tracking-wider mt-0.5",
-                        isCurrent ? "opacity-90 text-blue-100" : "opacity-70"
+                        isCurrent ? "text-primary-foreground/90" : "opacity-70"
                     )}>
                         {typeKey ? t(typeKey) : track.trackType}
                     </div>
                 )}
             </div>
-            {isCurrent && <PlayCircle className="h-6 w-6 fill-white text-blue-600 shrink-0" />}
+            {isCurrent && <PlayCircle className="h-6 w-6 fill-primary-foreground text-primary shrink-0" />}
         </button>
     )
 }
@@ -311,7 +311,7 @@ export function SetlistDrawer() {
             <SheetContent side="bottom" className="h-[80vh] bg-background border-t border-border p-0 flex flex-col sm:max-w-4xl sm:mx-auto sm:rounded-t-2xl sm:shadow-2xl sm:border-x">
                 <SheetHeader className="p-4 border-b border-border bg-muted sm:rounded-t-2xl">
                     <SheetTitle className="flex items-center gap-2 text-foreground">
-                        <TriggerIcon className="h-5 w-5 text-blue-500" />
+                        <TriggerIcon className="h-5 w-5 text-brand" />
                         {showPublicPicker ? t("performSetlist.drawer.joinSetlist") : t("performSetlist.drawer.currentSetlist")}
                     </SheetTitle>
                 </SheetHeader>
@@ -334,11 +334,11 @@ export function SetlistDrawer() {
                                     onClick={() => handleSelectSetlist(setlist)}
                                     className="bg-muted hover:bg-card border border-border hover:border-border rounded-xl p-4 text-start transition-all group flex items-start gap-4"
                                 >
-                                    <div className="h-10 w-10 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-400 shrink-0">
+                                    <div className="h-10 w-10 rounded-full bg-brand/10 flex items-center justify-center text-brand shrink-0">
                                         <PlayCircle className="h-6 w-6" />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <h3 className="font-bold text-lg text-foreground group-hover:text-blue-300 transition-colors truncate">
+                                        <h3 className="font-bold text-lg text-foreground group-hover:text-brand transition-colors truncate">
                                             {setlist.name}
                                         </h3>
                                         <div className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
@@ -346,7 +346,7 @@ export function SetlistDrawer() {
                                             {setlist.ownerName && <span>• {setlist.ownerName}</span>}
                                         </div>
                                         {setlist.eventDate && (
-                                            <div className="text-xs text-blue-400 mt-2 font-medium bg-blue-500/10 px-2 py-1 rounded w-fit">
+                                            <div className="text-xs text-muted-foreground mt-2 font-medium bg-muted px-2 py-1 rounded w-fit">
                                                 {fmt.date(toDateHelper(setlist.eventDate), { weekday: 'short', month: 'short', day: 'numeric' })}
                                             </div>
                                         )}

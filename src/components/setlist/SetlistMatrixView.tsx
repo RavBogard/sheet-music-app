@@ -74,7 +74,7 @@ export function SetlistMatrixView() {
                 {!hideLiturgical && <select 
                     value={type} 
                     onChange={(e) => setType(e.target.value as any)}
-                    className="bg-black/20 border border-rule rounded-lg px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand"
+                    className="bg-card border border-rule rounded-lg px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand"
                 >
                     <option value="friday_night">{t("setlist.serviceTypeFridayNight")}</option>
                     <option value="shabbat_morning">{t("setlist.serviceTypeShabbatMorning")}</option>
@@ -82,22 +82,22 @@ export function SetlistMatrixView() {
             </div>
 
             {error && (
-                <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">
+                <div className="p-4 bg-destructive/10 border border-destructive/30 rounded-lg text-destructive">
                     {error}
                 </div>
             )}
 
             {loading && !matrixData ? (
-                <div className="h-96 flex items-center justify-center bg-black/20 rounded-lg border border-rule">
+                <div className="h-96 flex items-center justify-center bg-card rounded-lg border border-rule">
                     <Loader2 className="w-8 h-8 animate-spin text-brand" />
                 </div>
             ) : matrixData && (
-                <div className="relative border border-rule rounded-lg overflow-hidden bg-black/20">
+                <div className="relative border border-rule rounded-lg overflow-hidden bg-card">
                     <div className="overflow-x-auto w-full pb-4">
                         <table className="w-full text-start border-collapse min-w-max">
                             <thead>
                                 <tr>
-                                    <th className="sticky start-0 z-20 bg-black/80 backdrop-blur-md p-4 border-b border-rule min-w-[150px]">
+                                    <th className="sticky start-0 z-20 bg-card p-4 border-b border-rule min-w-[150px]">
                                         <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("setlist.matrixSlotHeader")}</span>
                                     </th>
                                     {matrixData.columns.map(col => {
@@ -114,7 +114,7 @@ export function SetlistMatrixView() {
                                                             {col.context.holidays[0]}
                                                         </span>
                                                     ) : !hideLiturgical && col.context?.parasha ? (
-                                                        <span className="text-xs text-blue-400/80 truncate" title={col.context.parasha}>
+                                                        <span className="text-xs text-muted-foreground truncate" title={col.context.parasha}>
                                                             {col.context.parasha}
                                                         </span>
                                                     ) : (
@@ -129,7 +129,7 @@ export function SetlistMatrixView() {
                             <tbody>
                                 {matrixData.rows.map((row, rowIndex) => (
                                     <tr key={row.id} className="group hover:bg-accent/50 transition-colors border-b border-rule last:border-0">
-                                        <td className="sticky start-0 z-10 bg-black/60 backdrop-blur-md group-hover:bg-black p-4 text-sm font-medium border-e border-rule">
+                                        <td className="sticky start-0 z-10 bg-card text-card-foreground group-hover:bg-accent group-hover:text-accent-foreground p-4 text-sm font-medium border-e border-rule">
                                             {row.label}
                                         </td>
                                         {matrixData.columns.map(col => {

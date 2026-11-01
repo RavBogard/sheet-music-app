@@ -149,7 +149,7 @@ export function DeleteConfirmProvider({ children }: { children: ReactNode }) {
                             data-testid="delete-confirm-action"
                             onClick={() => settle(true)}
                             className={cn(
-                                'bg-red-600 hover:bg-red-700 text-white',
+                                'bg-destructive hover:bg-destructive/90 text-destructive-foreground',
                             )}
                         >
                             {t('setlistGrid.delete')}

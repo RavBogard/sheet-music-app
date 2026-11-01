@@ -63,12 +63,12 @@ const TILE_SPECS: TrackTypeTileSpec[] = [
     {
         type: 'prayer',
         labelKey: 'setlistGrid.trackTypePrayer',
-        icon: <Heart className="h-5 w-5 text-blue-300" aria-hidden />,
+        icon: <Heart className="h-5 w-5 text-brand" aria-hidden />,
     },
     {
         type: 'transition',
         labelKey: 'setlistGrid.trackTypeTransition',
-        icon: <DirectionalIcon icon={ArrowRight} className="h-5 w-5 text-emerald-300" aria-hidden />,
+        icon: <DirectionalIcon icon={ArrowRight} className="h-5 w-5 text-success" aria-hidden />,
     },
     {
         type: 'note',

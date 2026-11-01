@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { OrgProvider } from "@/lib/org/org-context"
 import { coerceOrgId } from "@/lib/org/registry"
 import { getOrgBranding } from "@/lib/org/branding"
+import { getOrgIdentity } from "@/lib/org/identity"
 import { getOrgConfig } from "@/lib/org/get-org-config"
 import { codeOrgConfig } from "@/lib/org/config-code"
 import type { FontKey } from "@/lib/org/config-schema"
@@ -141,16 +142,22 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#23356B" },
-    { media: "(prefers-color-scheme: dark)", color: "#141B30" },
-  ],
-  width: "device-width",
-  initialScale: 1,
-  maximumScale: 5,
-  viewportFit: "cover",
-};
+// Per-tenant browser chrome colour: the top-bar cloth in light and dark, so
+// iOS and the browser bar match the shell (CRC book-cloth blue, Brothers
+// Lazaroff teal). Colours from src/lib/org/identity.ts.
+export async function generateViewport(): Promise<Viewport> {
+  const id = getOrgIdentity(coerceOrgId((await headers()).get("x-org-id")));
+  return {
+    themeColor: [
+      { media: "(prefers-color-scheme: light)", color: id.shell },
+      { media: "(prefers-color-scheme: dark)", color: id.shellDark },
+    ],
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 5,
+    viewportFit: "cover",
+  };
+}
 
 export default async function RootLayout({
   children,
