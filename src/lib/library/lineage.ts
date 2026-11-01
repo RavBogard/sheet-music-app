@@ -31,6 +31,7 @@ import { findSetlistsReferencingChart } from "@/lib/mcp/tools/setlists"
 const LIBRARY = "library_index"
 const SONGS = "songs"
 const TEMPLATES = "setlistTemplates"
+const RECORDINGS = "recordings"
 
 export interface RevisionTarget {
     id: string
@@ -117,6 +118,8 @@ export interface RevisionReport {
      */
     otherOrgUpcomingRows: number
     standingMoved: number
+    /** Recordings of this org on the old fileId, moved to the new one (they follow the song). */
+    recordingsMoved: number
     profileRowsMoved: number
     previousArchived: boolean
     warnings: string[]
@@ -127,7 +130,8 @@ export interface RevisionReport {
  *   1. lineage fields on both rows; the new row takes the old row's partGroup
  *   2. rows of setlists dated today or later move to the new version, keeping
  *      their played key and title; past and undated setlists are untouched
- *   3. standing choices and profile rows on the old fileId move to the new one
+ *   3. standing choices, recordings and profile rows on the old fileId move to
+ *      the new one (recordings of this org only; featured and status kept)
  *   4. the old row is archived (still readable) with `supersededBy`
  * Step 1 is one transaction: it re-reads both rows and refuses (nothing else
  * is written) when the old row gained a newer version meanwhile, or when the
@@ -268,6 +272,30 @@ export async function applyRevision(
     } catch (err) {
         warnings.push(`standing choices not moved: ${err instanceof Error ? err.message : String(err)}`)
     }
+    // Recordings belong to the song (its fileId): they follow the new version so
+    // none is orphaned. This org's only; another tenant's stay where they are.
+    let recordingsMoved = 0
+    try {
+        const snap = await db.collection(RECORDINGS).where("songId", "==", previous.id).get()
+        const mine = snap.docs.filter((d) => rowOrg(d.data().orgId) === org)
+        // One featured take per song: if the new version already has one, it stays featured.
+        const target = mine.length > 0 ? await db.collection(RECORDINGS).where("songId", "==", newFileId).get() : null
+        const newHasFeatured = !!target?.docs.some((d) => rowOrg(d.data().orgId) === org && d.data().featured === true)
+        for (let i = 0; i < mine.length; i += 400) {
+            const batch = db.batch()
+            for (const d of mine.slice(i, i + 400)) {
+                batch.update(d.ref, {
+                    songId: newFileId,
+                    revisedFrom: previous.id,
+                    ...(newHasFeatured && d.data().featured === true ? { featured: false } : {}),
+                })
+            }
+            await batch.commit()
+            recordingsMoved += Math.min(400, mine.length - i)
+        }
+    } catch (err) {
+        warnings.push(`recordings not moved: ${err instanceof Error ? err.message : String(err)}`)
+    }
     let profileRowsMoved = 0
     try {
         const snap = await db.collection(TEMPLATES).where("orgId", "==", org).get()
@@ -334,6 +362,7 @@ export async function applyRevision(
         repointed: repointed.length,
         keptPast: keptPast.length,
         standingMoved,
+        recordingsMoved,
         profileRowsMoved,
     })
     return {
@@ -344,6 +373,7 @@ export async function applyRevision(
         keptUndated,
         otherOrgUpcomingRows,
         standingMoved,
+        recordingsMoved,
         profileRowsMoved,
         previousArchived,
         warnings,

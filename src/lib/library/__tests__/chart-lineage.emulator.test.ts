@@ -41,7 +41,7 @@ describe("chart lineage (emulator)", () => {
     })
 
     beforeEach(async () => {
-        for (const coll of ["setlists", "tracks", "songs", "library_index", "setlistTemplates", "users", "standing_choices", "library_signals"]) {
+        for (const coll of ["setlists", "tracks", "songs", "library_index", "setlistTemplates", "users", "standing_choices", "library_signals", "recordings"]) {
             const snap = await db().collection(coll).get()
             await Promise.all(snap.docs.map((d) => d.ref.delete()))
         }
@@ -158,6 +158,22 @@ describe("chart lineage (emulator)", () => {
 
         const blTrack = (await db().collection("tracks").doc("t-bl").get()).data()!
         expect(blTrack.fileId).toBe("old")
+    })
+
+    it("a revision moves the old chart's recordings to the new fileId (same org only)", async () => {
+        const rec = (id: string, org: string) =>
+            db().collection("recordings").doc(id).set({ orgId: org, songId: "old", title: id, storagePath: `recordings/${id}.mp3`, featured: true, createdBy: ADMIN, createdAt: "2026-10-01T00:00:00Z" })
+        await rec("rec-crc", CRC)
+        await rec("rec-bl", BL)
+
+        const report = await revise("old", "new")
+        expect(report.recordingsMoved).toBe(1)
+        expect(report.warnings.filter((w) => /recording/i.test(w))).toEqual([])
+
+        const crc = (await db().collection("recordings").doc("rec-crc").get()).data()!
+        expect(crc).toMatchObject({ songId: "new", featured: true })
+        const bl = (await db().collection("recordings").doc("rec-bl").get()).data()!
+        expect(bl.songId).toBe("old")
     })
 
     it("another tenant can neither see nor link the chart", async () => {
