@@ -23,7 +23,7 @@
         },
         "phone": {
             "heading": "Once on your phone (so the bridge can reach you)",
-            "body": "Open **centralreform.live** in Safari and sign in with Google. Then tap Share → Add to Home Screen and open the app from that icon. Go to **Settings → Notifications → Push**, turn it on and allow it. If the mixer bridge isn't running about 30 minutes before a service, you and Drew get a \"Monitor bridge needs attention\" alert."
+            "body": "Open **centralreform.live** in Safari and sign in with Google. Then tap Share → Add to Home Screen and open the app from that icon. Go to **Settings → Push Notifications**, turn it on and allow it. If the mixer bridge isn't running about 30 minutes before a service, you and Drew get a \"Monitor bridge needs attention\" alert."
         },
         "pc": {
             "heading": "Once on the studio PC",
@@ -47,7 +47,7 @@
         "once": {
             "heading": "Once, on your iPad",
             "step1": "In Safari, open **centralreform.live** and sign in with Google using your engineer account.",
-            "step2": "Tap Share, then **Add to Home Screen**. Open the app from that icon, then go to **Settings → Notifications → Push**, turn it on and allow it. If the bridge isn't running about 30 minutes before a service, you and Michael get a \"Monitor bridge needs attention\" alert."
+            "step2": "Tap Share, then **Add to Home Screen**. Open the app from that icon, then go to **Settings → Push Notifications**, turn it on and allow it. If the bridge isn't running about 30 minutes before a service, you and Michael get a \"Monitor bridge needs attention\" alert."
         },
         "pieces": {
             "heading": "The pieces of /monitor you'll use",

@@ -25,7 +25,7 @@ updated, and to turn the studio PC on before each service and off after.
 ## Once on your phone (so the bridge can reach you)
 
 Open **centralreform.live** in Safari and sign in with Google. Then tap Share → Add to Home Screen and
-open the app from that icon. Go to **Settings → Notifications → Push**, turn it on and allow it. If the
+open the app from that icon. Go to **Settings → Push Notifications**, turn it on and allow it. If the
 mixer bridge isn't running about 30 minutes before a service, you and Drew get a "Monitor bridge needs
 attention" alert.
 

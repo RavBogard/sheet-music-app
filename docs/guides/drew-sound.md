@@ -8,8 +8,7 @@ in one shows up in the other.
 ## Once, on your iPad
 
 1. In Safari, open **centralreform.live** and sign in with Google using your engineer account.
-2. Tap Share, then **Add to Home Screen**. Open the app from that icon, then go to **Settings →
-   Notifications → Push**, turn it on and allow it. If the bridge isn't running about 30 minutes
+2. Tap Share, then **Add to Home Screen**. Open the app from that icon, then go to **Settings → Push Notifications**, turn it on and allow it. If the bridge isn't running about 30 minutes
    before a service, you and Michael get a "Monitor bridge needs attention" alert.
 
 ## The pieces of /monitor you'll use
