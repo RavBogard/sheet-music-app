@@ -27,6 +27,7 @@ import { Loader2, ArrowLeft, Music, Users, Pencil, Printer, ListCollapse, List }
 import { Button } from "@/components/ui/button"
 import { useSetlistPerformance } from "@/hooks/use-setlist-performance"
 import { PERFORM_PRECACHE_DONE_EVENT, usePerformEntryPrecache } from "@/hooks/use-perform-entry-precache"
+import { loadPDFOverlay } from "@/lib/perform-chart-loaders"
 import { requestPerformCacheUrl } from "@/components/performance/perform-shell-sw-register"
 import { useAuth } from "@/lib/auth-context"
 import { useLibrary } from "@/hooks/use-library"
@@ -66,7 +67,8 @@ const PrintModal = dynamic(
 // graph. `ssr: false` matches the other dynamic viewer imports — PDFOverlay
 // reads `window.location` and Dexie at mount; no SSR value to gain.
 const PDFOverlay = dynamic(
-    () => import("@/components/performance/PDFOverlay").then(m => m.PDFOverlay),
+    // Shared import site with the Perform warm-up (perf audit P1-2).
+    () => loadPDFOverlay().then(m => m.PDFOverlay),
     { ssr: false },
 )
 

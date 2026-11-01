@@ -9,6 +9,7 @@ import { KeepAwakeProvider } from "@/components/performance/keep-awake-context"
 import { KeepAwakeBanner } from "@/components/performance/KeepAwakeBanner"
 import { primeOfflineWorker } from "@/lib/pdf-worker-offline"
 import { isChartOpenPath, warmViewerCode } from "@/lib/perform-warm"
+import { loadPDFOverlay } from "@/lib/perform-chart-loaders"
 import { AppNavigation } from "@/components/nav/AppNavigation"
 
 /**
@@ -20,9 +21,10 @@ import { AppNavigation } from "@/components/nav/AppNavigation"
  * offline-precache warms PDFOverlay and the viewers so a chart still opens
  * after WiFi drops. Both goals stay. What changed:
  *
- * - Nothing is evaluated. The viewers' chunks are fetched into the caches
- *   (`warmViewerCode`), not `import()`ed; the old warm-up evaluated OSMD
- *   (1.2 MB) and pdf.js and cost about 1.5 s of long tasks at 4x CPU.
+ * - pdf.js and OSMD are never evaluated ahead of a tap. The viewers' chunks
+ *   are fetched into the caches (`warmViewerCode`), not `import()`ed; the old
+ *   warm-up evaluated OSMD (1.2 MB) and pdf.js and cost about 1.5 s of long
+ *   tasks at 4x CPU. Only the overlay shell is evaluated, once quiet.
  * - The worker is fetched ONCE (`primeOfflineWorker`, which also copies it to
  *   IndexedDB for offline opens). The old `modulepreload` plus a second
  *   `fetch` downloaded the 295 KB file twice. The version comes from the build
@@ -38,6 +40,22 @@ const IDLE_FALLBACK_MS = 8000
 const AFTER_INTERACTION_MS = 1500
 const INTERACTION_EVENTS = ["pointerdown", "keydown", "touchstart"] as const
 
+/** Resolves when the page is quiet: an idle callback where the browser has
+ *  one, else IDLE_FALLBACK_MS since the last input with no chart open. */
+async function whenQuiet(signal: AbortSignal, lastInput: () => number): Promise<void> {
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+    if (typeof window.requestIdleCallback === "function") {
+        while (!signal.aborted && chartIsOpen()) await sleep(1000)
+        await new Promise<void>((r) => window.requestIdleCallback(() => r()))
+        return
+    }
+    while (!signal.aborted) {
+        const quietFor = performance.now() - lastInput()
+        if (quietFor >= IDLE_FALLBACK_MS && !chartIsOpen()) return
+        await sleep(Math.max(500, IDLE_FALLBACK_MS - quietFor))
+    }
+}
+
 function chartIsOpen(): boolean {
     try {
         return isChartOpenPath(window.location.pathname)
@@ -51,6 +69,9 @@ function PerformWarmUp() {
         if (typeof window === "undefined") return
         const ac = new AbortController()
         let started = false
+        let lastInput = performance.now()
+        const markInput = () => { lastInput = performance.now() }
+        for (const ev of INTERACTION_EVENTS) window.addEventListener(ev, markInput, { capture: true, passive: true })
         let idleHandle: number | null = null
         let fallbackTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -76,6 +97,13 @@ function PerformWarmUp() {
                 if (ac.signal.aborted) return
                 await primeOfflineWorker()
                 await warmViewerCode({ signal: ac.signal, isPaused: chartIsOpen })
+                // The overlay SHELL only (toolbar, stores, gestures; no pdf.js,
+                // no OSMD) is evaluated ahead of the first tap, as the old
+                // warm-up did, so a later first open doesn't pay for it. Only
+                // when the page is really quiet: an idle callback, or (iPad
+                // Safari) 8 s with no input, never while a chart is open.
+                await whenQuiet(ac.signal, () => lastInput)
+                if (!ac.signal.aborted && !chartIsOpen()) await loadPDFOverlay().catch(() => {})
             })()
         }
 
@@ -104,6 +132,7 @@ function PerformWarmUp() {
         return () => {
             ac.abort()
             clearTriggers()
+            for (const ev of INTERACTION_EVENTS) window.removeEventListener(ev, markInput, true)
         }
     }, [])
     return null

@@ -26,6 +26,8 @@
 
 declare const __webpack_require__: any
 
+import { loadPDFOverlay } from "@/lib/perform-chart-loaders"
+
 export type WarmLoader = () => Promise<unknown>
 
 /**
@@ -34,7 +36,7 @@ export type WarmLoader = () => Promise<unknown>
  * the PDF path already cached.
  */
 export const VIEWER_LOADERS: readonly WarmLoader[] = [
-    () => import("@/components/performance/PDFOverlay"),
+    loadPDFOverlay,
     () => import("@/components/music/PDFViewer"),
     () => import("@/components/music/TextScoreViewer"),
     () => import("@/components/music/ImageScoreViewer"),
