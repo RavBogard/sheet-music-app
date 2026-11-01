@@ -23,7 +23,7 @@ concurrency:
 jobs:
   changes:
     name: Classify Changes
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     outputs:
       substantive: ${{ steps.classify.outputs.substantive }}
@@ -80,7 +80,7 @@ jobs:
     name: Lint & Type Check
     needs: changes
     if: needs.changes.outputs.substantive == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
@@ -110,7 +110,7 @@ jobs:
     name: Unit & Integration Tests
     needs: changes
     if: needs.changes.outputs.substantive == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
@@ -146,7 +146,7 @@ jobs:
     name: Gated Unit Suite
     needs: changes
     if: needs.changes.outputs.substantive == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
@@ -194,7 +194,7 @@ jobs:
     name: Emulator Tests (Firestore + Auth)
     needs: changes
     if: needs.changes.outputs.substantive == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
@@ -226,7 +226,7 @@ jobs:
     name: Build Check
     needs: changes
     if: needs.changes.outputs.substantive == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
@@ -278,7 +278,7 @@ jobs:
     name: Books Agree With Producer
     needs: changes
     if: needs.changes.outputs.substantive == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
@@ -308,7 +308,7 @@ jobs:
 
   e2e-smoke:
     name: E2E Smoke (Playwright)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [changes, build-check]
     if: always() && needs.changes.outputs.substantive == 'true' && needs.build-check.result == 'success'
     timeout-minutes: 30
