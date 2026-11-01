@@ -195,6 +195,23 @@ describe('SetlistGrid card DOM — WCAG AA audit', () => {
         await waitFor(() => expect(screen.getByTestId('mobile-card-edit-t-0')).toHaveAttribute('aria-expanded', 'false'))
     })
 
+    it('Escape closes the open inline editor, from the row or from inside the panel', async () => {
+        await seedTracks('set-a', [{ id: 't-0', order: 0, title: 'Avinu Malkeinu' }])
+        renderGrid()
+
+        const edit = await screen.findByTestId('mobile-card-edit-t-0')
+        fireEvent.keyDown(edit, { key: 'Enter' })
+        await waitFor(() => expect(screen.getByTestId('mobile-card-edit-t-0')).toHaveAttribute('aria-expanded', 'true'))
+        fireEvent.keyDown(screen.getByTestId('mobile-card-edit-t-0'), { key: 'Escape' })
+        await waitFor(() => expect(screen.getByTestId('mobile-card-edit-t-0')).toHaveAttribute('aria-expanded', 'false'))
+
+        fireEvent.keyDown(screen.getByTestId('mobile-card-edit-t-0'), { key: 'Enter' })
+        const field = await screen.findByDisplayValue('Avinu Malkeinu')
+        fireEvent.keyDown(field, { key: 'Escape' })
+        await waitFor(() => expect(screen.getByTestId('mobile-card-edit-t-0')).toHaveAttribute('aria-expanded', 'false'))
+        expect(document.activeElement).toBe(screen.getByTestId('mobile-card-edit-t-0'))
+    })
+
     it('a key pressed on the drag handle stays with the handle', async () => {
         await seedTracks('set-a', [{ id: 't-0', order: 0, title: 'Avinu Malkeinu' }])
         renderGrid()

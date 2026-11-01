@@ -261,7 +261,9 @@ describe('MobileRowCard — bonded non-song chart affordance (cowork #6b)', () =
         )
         const title = screen.getByText('Silent Meditation')
         expect(title.className).toContain('italic')
-        expect(title.className).toContain('text-muted-foreground/80')
+        // Full muted ink, no alpha: the /80 read 3.99:1 on white (re-audit P2).
+        expect(title.className).toContain('text-muted-foreground')
+        expect(title.className).not.toContain('text-muted-foreground/')
         expect(screen.queryByRole('link')).not.toBeInTheDocument()
         expect(screen.getByLabelText('No chart bound')).toBeInTheDocument()
     })

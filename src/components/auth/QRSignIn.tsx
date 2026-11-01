@@ -231,12 +231,12 @@ export function QRSignIn() {
                     variant="link"
                     size="xs"
                     onClick={createSession}
-                    className="text-[10px] text-caution hover:text-caution/80"
+                    className="text-xs text-caution hover:text-caution/80"
                 >
                     <RefreshCw className="h-2.5 w-2.5" /> {t("auth.qrConnectionIssue")}
                 </Button>
             ) : (
-                <p className="text-[10px] text-muted-foreground/60 tabular-nums">
+                <p className="text-xs text-muted-foreground/60 tabular-nums">
                     {t("auth.qrExpiresIn", { minutes, seconds: seconds.toString().padStart(2, "0") })}
                 </p>
             )}

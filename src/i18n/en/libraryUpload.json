@@ -25,5 +25,7 @@
     "unsupportedType": "Only PDF, MusicXML, MuseScore, and Text files are supported.",
     "uploadFailed": "Upload failed",
     "uploadFailedStatus": "Upload failed ({status})",
-    "uploadedToast": "File uploaded successfully"
+    "uploadedToast": "File uploaded successfully",
+    "addToNext": "Add to {setlistName}",
+    "done": "Done"
 }

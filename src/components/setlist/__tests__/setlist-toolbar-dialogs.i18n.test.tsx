@@ -8,8 +8,6 @@ vi.mock("@/hooks/use-setlist-dashboard", () => ({ useSetlistDashboard: () => das
 vi.mock("@/lib/congregation-store", () => ({ useCongregation: () => ({ shortName: "CRC" }) }))
 vi.mock("../wizard/CreationWizard", () => ({ CreationWizard: () => null }))
 vi.mock("../importer/ImporterModal", () => ({ ImporterModal: () => null }))
-vi.mock("../SetlistMatrixView", () => ({ SetlistMatrixView: () => null }))
-vi.mock("@/components/calendar/UnifiedCalendar", () => ({ UnifiedCalendar: () => null }))
 vi.mock("@/lib/cache-utils", () => ({ isFileCached: vi.fn(async () => false) }))
 vi.mock("next/link", () => ({ default: ({ href, children }: { href: string; children: React.ReactNode }) => <a href={href}>{children}</a> }))
 const lib = vi.hoisted(() => ({ value: { allFiles: [] as Array<{ id: string; name: string; mimeType: string }>, loading: false } }))
@@ -29,8 +27,6 @@ const noop = () => {}
 function toolbar() {
     return (
         <SetlistToolbar
-            view="list"
-            onViewChange={noop}
             searchQuery=""
             onSearchChange={noop}
             rabbiFilter=""
@@ -46,7 +42,7 @@ function dashboardValue(over: Record<string, unknown> = {}) {
     return {
         router: { push: noop }, user: { uid: "u", displayName: "Test User" }, signIn: noop,
         isMember: true, isBandLeader: true, isAdmin: false, onBack: noop, onCreateNew: noop,
-        loading: false, error: null, activeTab: "personal", setActiveTab: noop, view: "list", setView: noop,
+        loading: false, error: null, activeTab: "personal", setActiveTab: noop,
         searchQuery: "", setSearchQuery: noop, rabbiFilter: "", setRabbiFilter: noop, navigatingTo: null,
         deleteConfirmOpen: false, setDeleteConfirmOpen: noop, setlistToDelete: null,
         duplicateConfirmOpen: false, setDuplicateConfirmOpen: noop, setlistToDuplicate: null,
@@ -68,7 +64,7 @@ function dashboardValue(over: Record<string, unknown> = {}) {
 describe.each([false, true])("setlist toolbar + dialogs i18n (rtl=%s)", (rtl) => {
     afterEach(() => cleanup())
 
-    it("SetlistToolbar: view switch, rabbi chips, open search", () => {
+    it("SetlistToolbar: rabbi chips, open search", () => {
         const r = renderPseudo(toolbar(), { rtl })
         if (rtl) expect(r.container.querySelector('[dir="rtl"]')).not.toBeNull()
         expectNoUntranslatedText(document.body)

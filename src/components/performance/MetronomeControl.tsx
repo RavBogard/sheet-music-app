@@ -31,7 +31,7 @@ export function MetronomeControl() {
                 The blink/tap button below stays visible at all sizes. */}
             <div className="hidden min-[1280px]:flex items-center gap-1 bg-background/40 rounded-lg ps-2 pe-1 h-11 border border-border">
                 {/* i18n-ignore: BPM is a musical unit, shown verbatim in every language */}
-                <span className="text-[10px] text-muted-foreground/60 font-bold uppercase tracking-wider">BPM</span>
+                <span className="text-xs text-muted-foreground/60 font-bold uppercase tracking-wider">BPM</span>
                 <Input
                     type="number"
                     value={currentBpm}

@@ -332,7 +332,7 @@ export function TonightSwapSheet({ open, onOpenChange, setlistId, track, planned
 function Section({ label, children }: { label: string; children: React.ReactNode }) {
     return (
         <section className="pt-3" aria-label={label}>
-            <h3 className="px-4 pb-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{label}</h3>
+            <h3 className="px-4 pb-1 text-xs font-bold uppercase tracking-wider text-muted-foreground">{label}</h3>
             <ul>{children}</ul>
         </section>
     )
@@ -378,7 +378,7 @@ function CandidateRow({
                 )}
             >
                 <span className="block text-sm font-semibold truncate">{title}</span>
-                <span className="block text-[11px] text-muted-foreground truncate">
+                <span className="block text-xs text-muted-foreground truncate">
                     {showing ? t("perform.tonight.showingNow") : detail}
                 </span>
             </button>

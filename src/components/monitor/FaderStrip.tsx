@@ -264,7 +264,7 @@ export function FaderStrip({ label, value, on, isMaster, onChange, onUnmuteCheck
                         {outcome === "rejected" && (
                             <span
                                 data-testid="fader-rejected-cue"
-                                className="flex items-center gap-1 text-[10px] font-medium text-destructive shrink-0"
+                                className="flex items-center gap-1 text-xs font-medium text-destructive shrink-0"
                             >
                                 <Ban role="img" aria-label="Refused by the mixer" className="w-3.5 h-3.5" />
                                 {humanizeRejection(machine.rejectionReason ?? undefined)}

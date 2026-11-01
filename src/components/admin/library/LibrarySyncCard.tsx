@@ -73,13 +73,13 @@ export function LibrarySyncCard() {
                         <div className="text-destructive space-y-0.5">
                             <div>{t("admin-library.syncCopyErrors", { count: lastStats.copyErrors })}</div>
                             {lastStats.copyFailedFiles?.map((name, i) => (
-                                <div key={i} className="ps-3 text-[10px] text-destructive/80 truncate">{name}</div>
+                                <div key={i} className="ps-3 text-xs text-destructive/80 truncate">{name}</div>
                             ))}
                         </div>
                     )}
                     {lastStats.addedFiles?.length ? (
                         <details className="mt-1">
-                            <summary className="text-muted-foreground cursor-pointer hover:text-foreground text-[10px]">
+                            <summary className="text-muted-foreground cursor-pointer hover:text-foreground text-xs">
                                 {t("admin-library.syncWhatChanged")}
                             </summary>
                             <div className="mt-1 space-y-1 max-h-32 overflow-y-auto">

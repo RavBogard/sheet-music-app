@@ -145,5 +145,16 @@
         "where": "Library > Upload dialog: success toast after upload",
         "who": "leaders",
         "maxLength": 50
+    },
+    "addToNext": {
+        "where": "Library > Upload dialog: button on the success screen that adds the chart just uploaded to the soonest upcoming service",
+        "who": "leaders",
+        "maxLength": 60,
+        "context": "{setlistName} is the service's setlist name, e.g. 'Shabbat Morning — Nov 7'. Hebrew follows the existing 'נוסף לרשימה {setlistName}' pattern."
+    },
+    "done": {
+        "where": "Library > Upload dialog: button on the success screen that closes the dialog without adding the chart to a setlist",
+        "who": "leaders",
+        "maxLength": 16
     }
 }

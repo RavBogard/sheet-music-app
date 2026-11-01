@@ -178,7 +178,7 @@ export function KeepAwakeToggle({
                     className={cn(
                         "absolute bottom-full end-0 mb-2 z-50 whitespace-nowrap",
                         "rounded-md border border-destructive/40 bg-destructive/95 text-destructive-foreground",
-                        "px-2.5 py-1.5 text-[11px] font-medium shadow-lg",
+                        "px-2.5 py-1.5 text-xs font-medium shadow-lg",
                     )}
                 >
                     {errorText}

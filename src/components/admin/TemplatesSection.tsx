@@ -235,7 +235,7 @@ function TemplateGroup({
                             <div className="flex items-center justify-between">
                                 <span>{serviceTypeLabel(org, key)}</span>
                                 {isCustomized && (
-                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-caution/20 text-caution font-medium">
+                                    <span className="text-xs px-1.5 py-0.5 rounded bg-caution/20 text-caution font-medium">
                                         {t("admin-templates.customBadge")}
                                     </span>
                                 )}

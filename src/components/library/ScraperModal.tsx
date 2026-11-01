@@ -271,9 +271,9 @@ export function ScraperModal({ onUploadComplete, setlists = [], onAddToSetlist }
                                 {/* Chat History Area */}
                                 <div className="flex-1 overflow-y-auto bg-muted/20 rounded-lg p-4 space-y-4 border border-border">
                                     {chatMessages.length === 0 ? (
-                                        <div className="h-full flex flex-col items-center justify-center text-muted-foreground opacity-50 space-y-2">
-                                            <Bot className="h-8 w-8" />
-                                            <p className="text-xs text-center max-w-[200px]">{t("libraryScraper.chatEmpty")}</p>
+                                        <div className="h-full flex flex-col items-center justify-center text-muted-foreground space-y-2">
+                                            <Bot aria-hidden="true" className="h-8 w-8 opacity-60" />
+                                            <p className="text-sm text-center max-w-[220px]">{t("libraryScraper.chatEmpty")}</p>
                                         </div>
                                     ) : (
                                         chatMessages.map((msg, i) => (
@@ -427,7 +427,7 @@ export function ScraperModal({ onUploadComplete, setlists = [], onAddToSetlist }
                         <div>
                             <div className="flex justify-between items-center mb-1">
                                 <label className="text-xs text-muted-foreground block">{t("libraryScraper.contentLabel")}</label>
-                                <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{t("libraryScraper.monospacedFont")}</span>
+                                <span className="text-xs text-muted-foreground uppercase tracking-wider">{t("libraryScraper.monospacedFont")}</span>
                             </div>
                             <Textarea
                                 value={content}
@@ -447,7 +447,7 @@ export function ScraperModal({ onUploadComplete, setlists = [], onAddToSetlist }
                                     id="scraper-collection"
                                     value={collection}
                                     onChange={(e) => setCollection(e.target.value)}
-                                    className="w-full h-9 px-3 rounded-md bg-muted/30 border border-border text-foreground text-sm focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
+                                    className="w-full h-11 px-3 rounded-md bg-muted/30 border border-border text-foreground text-sm focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
                                 >
                                     <option value="crc">{coreSectionLabel(org)}</option>
                                     {/* i18n-ignore: songbook collection name (data) */}
@@ -466,7 +466,7 @@ export function ScraperModal({ onUploadComplete, setlists = [], onAddToSetlist }
                                         id="scraper-setlist"
                                         value={selectedSetlistId}
                                         onChange={(e) => setSelectedSetlistId(e.target.value)}
-                                        className="w-full h-9 px-3 rounded-md bg-brand/10 border border-brand/30 text-foreground text-sm focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
+                                        className="w-full h-11 px-3 rounded-md bg-brand/10 border border-brand/30 text-foreground text-sm focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
                                     >
                                         <option value="">{t("libraryScraper.dontAddToSetlist")}</option>
                                         {setlists.map(s => (

@@ -406,7 +406,7 @@ export function SetlistDrawer() {
                                                         transform: `translateY(${virtualRow.start}px)`,
                                                     }}
                                                     className="bg-background/90 backdrop-blur-sm px-4 flex items-center
-                                                        text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground border-b border-border/50"
+                                                        text-xs font-bold uppercase tracking-[0.15em] text-muted-foreground border-b border-border/50"
                                                 >
                                                     {item.label}
                                                 </div>

@@ -118,7 +118,6 @@ export function useSetlistDashboard({
         }
     }
     const [activeTab, setActiveTab] = useState<'personal' | 'public'>('public')
-    const [view, setView] = useState<'list' | 'calendar' | 'matrix'>('list')
     const [searchQuery, setSearchQuery] = useState("")
     const [rabbiFilter, setRabbiFilter] = useState("")
     const [navigatingTo, setNavigatingTo] = useState<string | null>(null)
@@ -430,7 +429,7 @@ export function useSetlistDashboard({
 
     return {
         router, user, signIn, isMember, isBandLeader, isAdmin, onBack, onCreateNew,
-        loading, error, activeTab, setActiveTab, view, setView,
+        loading, error, activeTab, setActiveTab,
         searchQuery, setSearchQuery, rabbiFilter, setRabbiFilter, navigatingTo,
         deleteConfirmOpen, setDeleteConfirmOpen, setlistToDelete,
         duplicateConfirmOpen, setDuplicateConfirmOpen, setlistToDuplicate,

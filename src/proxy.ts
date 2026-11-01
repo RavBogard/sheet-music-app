@@ -85,6 +85,14 @@ const publicExactRoutes = [
     // so `/test-login-*` siblings stay gated. Without this, an unauth visit 307s
     // to /login before the page can read ?code. (BUG-9, run-2 §BUG-9.)
     '/test-login',
+    // The app icon, Apple touch icon and share cards (re-audit P3 #12). They
+    // are generated per tenant from the x-org-id this proxy sets, so they stay
+    // inside the matcher, but a signed-out browser must get the image, not a
+    // 307 to /login (it fell back to favicon.ico).
+    '/icon',
+    '/apple-icon',
+    '/opengraph-image',
+    '/twitter-image',
 ]
 
 // Prefix-match public routes — these serve public/unauthenticated content

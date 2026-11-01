@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
-import { render, screen, within } from "@testing-library/react"
+import { render, screen, waitFor, within } from "@testing-library/react"
 
 // Mock firebase modules before any component imports
 vi.mock("@/lib/firebase", () => ({
@@ -492,6 +492,40 @@ describe("Public View", () => {
                 hero.compareDocumentPosition(upcomingList) &
                     Node.DOCUMENT_POSITION_FOLLOWING,
             ).toBeTruthy()
+        })
+    })
+
+    describe("next-service card for a signed-out device (Polish 1, job 1)", () => {
+        it("sits above the sign-in card and says Today on the service's day", async () => {
+            const { PublicSetlistListing } = await import("@/components/performance/PublicSetlistListing")
+            mockSubscribeToPublicSetlists.mockImplementation(() => vi.fn())
+            const tonight = new Date()
+            tonight.setHours(23, 0, 0, 0)
+            render(
+                <PublicSetlistListing
+                    initialSetlists={[
+                        { id: "tonight-1", name: "Tonight Service", eventDate: tonight.toISOString(), isTest: false, trackCount: 3, songCount: 3 } as any,
+                    ]}
+                />,
+            )
+            const hero = screen.getByRole("link", { name: "Go to next service: Tonight Service" })
+            const signIn = screen.getByTestId("qr-signin")
+            expect(hero.compareDocumentPosition(signIn) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+            await waitFor(() => expect(within(hero).getByText("Today")).toBeDefined())
+        })
+
+        it("says Next service for a later day", async () => {
+            const { PublicSetlistListing } = await import("@/components/performance/PublicSetlistListing")
+            mockSubscribeToPublicSetlists.mockImplementation(() => vi.fn())
+            render(
+                <PublicSetlistListing
+                    initialSetlists={[
+                        { id: "later-2", name: "Later Service", eventDate: "2099-01-02T18:00:00Z", isTest: false, trackCount: 3, songCount: 3 } as any,
+                    ]}
+                />,
+            )
+            const hero = screen.getByRole("link", { name: "Go to next service: Later Service" })
+            expect(within(hero).getByText("Next service")).toBeDefined()
         })
     })
 

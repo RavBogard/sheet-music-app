@@ -457,6 +457,11 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
             <div
                 ref={containerRef}
                 data-pdf-scroll=""
+                // Focusable by script and pointer, not a Tab stop: the
+                // labelled chart region around it is the keyboard stop, and a
+                // second one would double the Tab path (re-audit P3 #8, axe
+                // scrollable-region-focusable on this inner scroller).
+                tabIndex={-1}
                 {...chartDir}
                 /* WAVE1 Bug 2 (2026-08-31) — THIS ELEMENT MUST CARRY NO PADDING.
                    It is the element the ResizeObserver below measures, and
@@ -472,7 +477,7 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
                    under the chart. Bottom clearance now lives INSIDE the scrolled
                    content (see the spacer below), so it costs scroll distance
                    instead of measured height. */
-                className="flex-1 overflow-auto bg-muted dark:bg-zinc-900 scrollbar-hide flex justify-start relative"
+                className="flex-1 overflow-auto bg-muted dark:bg-zinc-900 scrollbar-hide flex justify-start relative outline-none"
             >
                 <div data-pdf-scroll-content="" className="relative mx-auto">
                     {loading && (

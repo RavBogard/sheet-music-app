@@ -193,17 +193,17 @@ export function SearchOverlay({
                                             {cleanName || file.name}
                                         </span>
                                         {file.collection === 'supplemental' ? (
-                                            <span className="text-[10px] font-medium bg-caution/10 text-caution dark:text-caution px-1.5 py-0.5 rounded-md border border-caution/20 shrink-0 mt-0.5">
+                                            <span className="text-xs font-medium bg-caution/10 text-caution dark:text-caution px-1.5 py-0.5 rounded-md border border-caution/20 shrink-0 mt-0.5">
                                                 {/* i18n-ignore: collection (book) name, data — not translated */}
                                                 Shireinu
                                             </span>
                                         ) : file.collection === 'nava' ? (
-                                            <span className="text-[10px] font-medium bg-brand/10 text-brand dark:text-brand px-1.5 py-0.5 rounded-md border border-brand/20 shrink-0 mt-0.5">
+                                            <span className="text-xs font-medium bg-brand/10 text-brand dark:text-brand px-1.5 py-0.5 rounded-md border border-brand/20 shrink-0 mt-0.5">
                                                 {/* i18n-ignore: collection (book) name, data — not translated */}
                                                 Nava Tehilah
                                             </span>
                                         ) : (
-                                            <span className="text-[10px] font-medium bg-brand/10 text-brand px-1.5 py-0.5 rounded-md border border-brand/20 shrink-0 mt-0.5">
+                                            <span className="text-xs font-medium bg-brand/10 text-brand px-1.5 py-0.5 rounded-md border border-brand/20 shrink-0 mt-0.5">
                                                 {t("org.library.ownBadge")}
                                             </span>
                                         )}

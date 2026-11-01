@@ -296,7 +296,7 @@ export function VerticalFaderStrip({ label, value, on, isMaster, onChange, onMut
 
             {/* Percentage value */}
             <div
-                className={`text-[10px] font-mono font-bold mt-1 mb-0.5 ${showUnconfirmed
+                className={`text-xs font-mono font-bold mt-1 mb-0.5 ${showUnconfirmed
                     ? "text-muted-foreground/60 italic"
                     : showStale
                         ? "text-caution"
@@ -311,7 +311,7 @@ export function VerticalFaderStrip({ label, value, on, isMaster, onChange, onMut
             {outcome === "rejected" && (
                 <div
                     data-testid="vfader-rejection-reason"
-                    className="text-[9px] leading-tight text-center text-destructive max-w-[56px] mb-0.5"
+                    className="text-xs leading-tight text-center text-destructive max-w-[56px] mb-0.5"
                 >
                     {humanizeRejection(machine.rejectionReason ?? undefined)}
                 </div>

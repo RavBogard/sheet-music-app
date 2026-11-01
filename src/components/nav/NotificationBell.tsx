@@ -96,7 +96,7 @@ export function NotificationBell() {
             >
                 <Bell className="w-5 h-5" />
                 {unreadCount > 0 && (
-                    <span className="absolute -top-0.5 -end-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[var(--section-oxblood)] px-1 text-[10px] font-bold text-section-oxblood-foreground ring-2 ring-shell">
+                    <span className="absolute -top-0.5 -end-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[var(--section-oxblood)] px-1 text-xs font-bold text-section-oxblood-foreground ring-2 ring-shell">
                         {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                 )}
@@ -151,7 +151,7 @@ export function NotificationBell() {
                                                 {notif.body}
                                             </div>
                                             {timeAgo && (
-                                                <div className="text-[10px] text-muted-foreground/70 mt-1">
+                                                <div className="text-xs text-muted-foreground/70 mt-1">
                                                     {timeAgo}
                                                 </div>
                                             )}

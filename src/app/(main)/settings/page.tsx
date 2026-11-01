@@ -151,14 +151,17 @@ export default function SettingsPage() {
                                     </Button>
                                 </form>
                             ) : (
+                                // A 44px target, and a span rather than a heading:
+                                // a heading inside a button is invalid (re-audit P3 #9).
                                 <button
-                                    className="flex items-center gap-1.5 group"
+                                    type="button"
+                                    className="-ms-1 flex min-h-11 items-center gap-1.5 rounded-md px-1 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                     onClick={() => {
                                         setNameValue(profile?.displayName || user?.displayName || "")
                                         setEditingName(true)
                                     }}
                                 >
-                                    <h3 className="text-[17px] font-bold text-foreground text-start break-words">{profile?.displayName || user?.displayName || t("settings.defaultDisplayName")}</h3>
+                                    <span className="text-[17px] font-bold text-foreground text-start break-words">{profile?.displayName || user?.displayName || t("settings.defaultDisplayName")}</span>
                                     <Pencil aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-muted-foreground group-hover:text-foreground transition-colors" />
                                 </button>
                             )}

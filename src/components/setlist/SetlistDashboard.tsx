@@ -5,7 +5,6 @@ import { ChevronLeft, Plus, LogIn, Calendar, Sparkles, FolderUp, Wand2, FileText
 import { Button } from "@/components/ui/button"
 import { ErrorState } from "@/components/ui/error-state"
 import { Skeleton } from "@/components/ui/skeleton"
-import dynamic from "next/dynamic"
 
 import { getContextualGreeting } from "@/lib/greeting"
 import { DEFAULT_SHORT_NAME } from "@/lib/constants"
@@ -22,16 +21,9 @@ import { canEditSetlist } from "@/lib/setlist-permissions"
 import { CreationWizard } from "./wizard/CreationWizard"
 import { foldSetlistVariants } from "@/lib/setlist-variant-fold"
 import { toDate } from "@/lib/firestore-helpers"
-import { SetlistMatrixView } from "./SetlistMatrixView"
 import { VariantGroupList } from "./VariantGroupList"
 import { PageContainer, PageHeader, GROUP_HEADING_CLASS } from "@/components/layout/Page"
 import { cn } from "@/lib/utils"
-
-// Lazy-load UnifiedCalendar
-const UnifiedCalendar = dynamic(
-    () => import("@/components/calendar/UnifiedCalendar").then(m => m.UnifiedCalendar),
-    { ssr: false, loading: () => <Skeleton className="h-64 w-full rounded-lg" /> }
-)
 
 export function SetlistDashboard({ serverShortName, ...props }: UseSetlistDashboardProps & { serverShortName?: string }) {
     const congregation = useCongregation()
@@ -49,7 +41,7 @@ export function SetlistDashboard({ serverShortName, ...props }: UseSetlistDashbo
 
     const {
         router, user, signIn, isMember, isBandLeader, isAdmin, onBack, onCreateNew,
-        loading, error, activeTab, setActiveTab, view, setView,
+        loading, error, activeTab, setActiveTab,
         searchQuery, setSearchQuery, rabbiFilter, setRabbiFilter, navigatingTo,
         deleteConfirmOpen, setDeleteConfirmOpen, setlistToDelete,
         duplicateConfirmOpen, setDuplicateConfirmOpen, setlistToDuplicate,
@@ -115,7 +107,7 @@ export function SetlistDashboard({ serverShortName, ...props }: UseSetlistDashbo
                                 title={t("nav.setlists")}
                                 subtitle={user ? (
                                     <>
-                                        <span data-testid="setlists-greeting">{greetingText}</span>
+                                        <span data-testid="setlists-greeting" suppressHydrationWarning>{greetingText}</span>
                                         <span aria-hidden="true"> · </span>
                                         {t("setlist.upcomingScheduled", { count: upcoming.length })}
                                     </>
@@ -136,27 +128,12 @@ export function SetlistDashboard({ serverShortName, ...props }: UseSetlistDashbo
                         {/* Toolbar */}
                         <SetlistToolbar
                             activeTab={activeTab} onTabChange={setActiveTab}
-                            view={view} onViewChange={setView}
                             showPersonalTab={!!user}
                             searchQuery={searchQuery} onSearchChange={setSearchQuery}
                             rabbiFilter={rabbiFilter} onRabbiFilterChange={setRabbiFilter}
                             availableRabbis={availableRabbis}
                         />
 
-                        {view === 'matrix' ? (
-                            <div className="mt-4">
-                                <SetlistMatrixView />
-                            </div>
-                        ) : view === 'calendar' ? (
-                            <div className="mt-4 border border-rule rounded-lg overflow-hidden bg-card">
-                                <UnifiedCalendar
-                                    mode={isBandLeader ? 'planning' : 'viewer'}
-                                    setlists={displayedSetlists}
-                                    onSelectSetlist={handleSelect}
-                                    onCreateSetlist={openWizardForDate}
-                                />
-                            </div>
-                        ) : (
                             <div className="space-y-8">
                                 {!loading && error && (
                                     <ErrorState title={t("setlist.loadErrorTitle")} description={error} retryLabel={t("setlist.tryAgain")} onRetry={() => window.location.reload()} />
@@ -228,7 +205,6 @@ export function SetlistDashboard({ serverShortName, ...props }: UseSetlistDashbo
                                     </>
                                 )}
                             </div>
-                        )}
                     </PageContainer>
                 </div>
             </div>
