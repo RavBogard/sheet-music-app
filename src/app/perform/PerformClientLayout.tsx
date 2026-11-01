@@ -8,132 +8,102 @@ import { registerPerformShellSW } from "@/components/performance/perform-shell-s
 import { KeepAwakeProvider } from "@/components/performance/keep-awake-context"
 import { KeepAwakeBanner } from "@/components/performance/KeepAwakeBanner"
 import { primeOfflineWorker } from "@/lib/pdf-worker-offline"
+import { isChartOpenPath, warmViewerCode } from "@/lib/perform-warm"
 import { AppNavigation } from "@/components/nav/AppNavigation"
 
 /**
- * Pre-warm the PDF.js worker on Perform-route mount so the worker module is
- * already cached + executed by the time the first chart's <Document> mounts.
+ * Perform warm-up: cache the chart code and the pdf.js worker for offline use,
+ * without running any of it (perf audit P1-2 / P2-1).
  *
- * Cowork CF1 UAT (2026-05-15, §7.1) flagged a 30s+ event-loop wedge when
- * opening Perform mode for the first chart: the worker URL stayed "pending"
- * for the duration, and PDF.js fell back to main-thread parsing — that's
- * what locked the renderer (and timed out the Playwright screenshot call).
+ * History: the CF1 UAT (2026-05-15) wedge came from the worker fetch racing
+ * the first chart's parse, so the worker is warmed ahead of the first tap; F1
+ * offline-precache warms PDFOverlay and the viewers so a chart still opens
+ * after WiFi drops. Both goals stay. What changed:
  *
- * Lazy worker init is fine in theory, but `<Document file={src}>` mounts
- * the same tick the user navigates into Perform, so the worker fetch races
- * with PDF parsing. Pre-warming on the layout (which mounts the route
- * boundary BEFORE the chart's bytes are fetched) gives the worker a head
- * start.
+ * - Nothing is evaluated. The viewers' chunks are fetched into the caches
+ *   (`warmViewerCode`), not `import()`ed; the old warm-up evaluated OSMD
+ *   (1.2 MB) and pdf.js and cost about 1.5 s of long tasks at 4x CPU.
+ * - The worker is fetched ONCE (`primeOfflineWorker`, which also copies it to
+ *   IndexedDB for offline opens). The old `modulepreload` plus a second
+ *   `fetch` downloaded the 295 KB file twice. The version comes from the build
+ *   (`NEXT_PUBLIC_PDFJS_VERSION`) so react-pdf isn't imported to read it;
+ *   PDFViewer still sets `workerSrc` itself when a chart opens.
+ * - It starts when the browser is idle (`requestIdleCallback`), or where
+ *   that's missing (iPad Safari) after the first interaction or about 8 s
+ *   without input — never on a fixed short timer.
+ * - It waits while a chart is opening or open, and cancels an in-flight fetch
+ *   so the chart's own requests have the network.
  */
-function PdfWorkerPreload() {
+const IDLE_FALLBACK_MS = 8000
+const AFTER_INTERACTION_MS = 1500
+const INTERACTION_EVENTS = ["pointerdown", "keydown", "touchstart"] as const
+
+function chartIsOpen(): boolean {
+    try {
+        return isChartOpenPath(window.location.pathname)
+    } catch {
+        return false
+    }
+}
+
+function PerformWarmUp() {
     useEffect(() => {
-        if (typeof document === "undefined") return
-        let cancelled = false
-        let link: HTMLLinkElement | null = null
-        let scheduledHandle: number | null = null
-        let scheduledFallback: ReturnType<typeof setTimeout> | null = null
+        if (typeof window === "undefined") return
+        const ac = new AbortController()
+        let started = false
+        let idleHandle: number | null = null
+        let fallbackTimer: ReturnType<typeof setTimeout> | null = null
 
-        // UNAUTH-009 (cycle-4 supplement, 2026-05-18): on slow-3G the
-        // 1.05MB react-pdf + worker chunk competing with initial page
-        // hydration drove TTFC to 44s. Defer the preload until the
-        // browser is idle so it can't steal bandwidth from the SSR'd
-        // setlist's hydration + first-paint critical path. The CF1
-        // UAT 2026-05-15 wedge this preload was designed to fix still
-        // gets the warm-up (PDFOverlay's `<Document>` mounts only on
-        // user tap, by which point idle has fired on every realistic
-        // network); we just stop hogging the pre-hydration window.
-        const startPreload = () => {
-            if (cancelled) return
-            // Dynamic import — react-pdf pulls in pdfjs, which touches
-            // DOMMatrix at module-evaluation time. If we import at the
-            // top, Next's static-prerender for `/perform` (the route is
-            // statically exported) fails with `ReferenceError: DOMMatrix
-            // is not defined`.
-            void import("react-pdf").then(({ pdfjs }) => {
-                if (cancelled) return
-                const href = `/pdf.worker.min.${pdfjs.version}.mjs`
-
-                // Force-set workerSrc — react-pdf's barrel module assigns a
-                // bare-string placeholder (`'pdf.worker.mjs'`) at its own
-                // module-load time, so a `!workerSrc` guard would skip the
-                // override and fake-worker would later try to `import()` that
-                // unresolvable specifier. See PDFViewer.tsx for the full
-                // post-mortem on the 2026-05-15 prod incident.
-                pdfjs.GlobalWorkerOptions.workerSrc = href
-
-                // `modulepreload` tells the browser to fetch + compile + cache
-                // without executing — exactly the warm-up we want.
-                link = document.createElement("link")
-                link.rel = "modulepreload"
-                link.href = href
-                link.crossOrigin = "anonymous"
-                document.head.appendChild(link)
-
-                // Belt-and-suspenders: kick off a fetch so the response sits in
-                // HTTP cache even if the browser ignores modulepreload.
-                fetch(href, { cache: "force-cache" }).catch(() => {
-                    /* fallback path in PDFViewer handles a real worker failure */
-                })
-            })
-
-            // offline-perform-fix: copy the worker bytes into IndexedDB while
-            // online so a chart NOT-yet-opened still renders after wifi drops.
-            // The HTTP-cache warm above does NOT survive a true offline open
-            // (the worker fetch 404s with no SW); the IDB copy feeds PDFViewer a
-            // blob: workerSrc offline. Best-effort, fire-and-forget.
-            void primeOfflineWorker()
-
-            // F1 offline-precache: warm the lazily-imported overlay + per-format
-            // viewer chunks so a chart still OPENS offline even if it was never
-            // tapped while online. PDFOverlay + the viewers are dynamic-imported,
-            // so their JS can't be fetched once WiFi drops — without this a band
-            // member who hits "Save offline" then loses WiFi before tapping a
-            // chart hits a chunk-load error instead of the cached chart. The
-            // chart BYTES are cached separately in IndexedDB (SaveOfflineButton);
-            // this warms the CODE. Fire-and-forget; non-fatal (online tap still
-            // lazy-loads on demand).
-            void import("@/components/performance/PDFOverlay").catch(() => {})
-            void import("@/components/music/PDFViewer").catch(() => {})
-            void import("@/components/music/TextScoreViewer").catch(() => {})
-            void import("@/components/music/SmartScoreViewer").catch(() => {})
-            void import("@/components/music/ImageScoreViewer").catch(() => {})
+        const clearTriggers = () => {
+            if (idleHandle !== null && typeof window.cancelIdleCallback === "function") {
+                try { window.cancelIdleCallback(idleHandle) } catch { /* noop */ }
+            }
+            idleHandle = null
+            if (fallbackTimer !== null) clearTimeout(fallbackTimer)
+            fallbackTimer = null
+            for (const ev of INTERACTION_EVENTS) window.removeEventListener(ev, onInteraction, true)
         }
 
-        // Use requestIdleCallback where available with a 2s deadline (long
-        // enough for slow-3G FCP + first hydration tick; short enough that
-        // the preload always runs well before the user could realistically
-        // tap a chart). Fall back to setTimeout(2s) on Safari iOS, which
-        // omits rIC. Both honor the visibility of the tab — if the user
-        // hasn't focused us yet we don't bother warming.
-        const ric: typeof window.requestIdleCallback | undefined =
-            typeof window !== "undefined" ? window.requestIdleCallback : undefined
-        if (typeof ric === "function") {
-            scheduledHandle = ric(() => {
-                scheduledHandle = null
-                startPreload()
-            }, { timeout: 2000 })
+        const start = () => {
+            if (started || ac.signal.aborted) return
+            started = true
+            clearTriggers()
+            void (async () => {
+                // Worker first: it is what the first PDF needs soonest.
+                while (!ac.signal.aborted && chartIsOpen()) {
+                    await new Promise((r) => setTimeout(r, 1000))
+                }
+                if (ac.signal.aborted) return
+                await primeOfflineWorker(process.env.NEXT_PUBLIC_PDFJS_VERSION || undefined)
+                await warmViewerCode({ signal: ac.signal, isPaused: chartIsOpen })
+            })()
+        }
+
+        // Fallback (no requestIdleCallback): after the first interaction has
+        // settled, or after IDLE_FALLBACK_MS with no input at all.
+        const armIdleTimer = (ms: number) => {
+            if (fallbackTimer !== null) clearTimeout(fallbackTimer)
+            fallbackTimer = setTimeout(start, ms)
+        }
+        function onInteraction() {
+            armIdleTimer(AFTER_INTERACTION_MS)
+        }
+
+        if (typeof window.requestIdleCallback === "function") {
+            idleHandle = window.requestIdleCallback(() => {
+                idleHandle = null
+                start()
+            }, { timeout: IDLE_FALLBACK_MS })
         } else {
-            scheduledFallback = setTimeout(() => {
-                scheduledFallback = null
-                startPreload()
-            }, 2000)
+            armIdleTimer(IDLE_FALLBACK_MS)
+            for (const ev of INTERACTION_EVENTS) {
+                window.addEventListener(ev, onInteraction, { capture: true, passive: true })
+            }
         }
 
         return () => {
-            cancelled = true
-            if (scheduledHandle !== null && typeof window !== "undefined" && typeof window.cancelIdleCallback === "function") {
-                try { window.cancelIdleCallback(scheduledHandle) } catch { /* noop */ }
-            }
-            if (scheduledFallback !== null) {
-                clearTimeout(scheduledFallback)
-            }
-            if (link && link.parentNode) {
-                try {
-                    link.parentNode.removeChild(link)
-                } catch {
-                    /* link already gone — fine */
-                }
-            }
+            ac.abort()
+            clearTriggers()
         }
     }, [])
     return null
@@ -143,7 +113,7 @@ function PdfWorkerPreload() {
  * Register the perform-shell service worker on /perform/* mount.
  *
  * Fire-and-forget; the helper is idempotent (sessionStorage one-shot per
- * tab) and never throws. Lives as a sibling island next to <PdfWorkerPreload/>
+ * tab) and never throws. Lives as a sibling island next to <PerformWarmUp/>
  * so registration kicks in alongside the other perform-route bootstraps.
  *
  * See docs/superpowers/specs/2026-05-28-perform-shell-sw-design.md for the
@@ -211,7 +181,7 @@ export function PerformClientLayout({
                     className={isListing ? "min-h-screen pt-14" : "min-h-screen"}
                     style={isListing ? { paddingBottom: "var(--tabbar-h)" } : undefined}
                 >
-                    <PdfWorkerPreload />
+                    <PerformWarmUp />
                     <PerformShellSWBootstrap />
                     <LayoutOfflineIndicator />
                     {children}

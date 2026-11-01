@@ -3,13 +3,18 @@ import { render, screen } from "@testing-library/react"
 import { OrgLogo } from "@/components/nav/OrgLogo"
 
 describe("OrgLogo", () => {
-    it("renders an <img> with the CRC canonical alt when logoUrl is /logo.jpg (byte-identical)", () => {
+    it("renders the pre-sized CRC logo (never the 1000px source) with the canonical alt", () => {
         const { container } = render(
             <OrgLogo logoUrl="/logo.jpg" shortName="CRC Music" sizeClass="w-8 h-8" />,
         )
         const img = container.querySelector("img")
         expect(img).not.toBeNull()
-        expect(img!.getAttribute("src")).toBe("/logo.jpg")
+        // Perf audit P1-1: small files, AVIF/WebP sources, explicit size.
+        expect(img!.getAttribute("src")).toBe("/logo-64.jpg")
+        expect(img!.getAttribute("srcset")).not.toContain("/logo.jpg")
+        expect(img!.getAttribute("width")).toBe("32")
+        const types = [...container.querySelectorAll("picture source")].map((s) => s.getAttribute("type"))
+        expect(types).toEqual(["image/avif", "image/webp"])
         expect(img!.getAttribute("alt")).toBe("Central Reform Congregation logo")
         expect(img!.className).toContain("rounded-full")
         // No monogram in the image branch.

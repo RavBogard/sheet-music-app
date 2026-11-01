@@ -61,11 +61,13 @@ export function desiredWorkerSrc(version: string): string {
  * Idempotent + best-effort; a no-op when offline (can't fetch) or already cached.
  * Call on Perform entry (online idle) and on Save-offline.
  */
-export async function primeOfflineWorker(): Promise<void> {
+export async function primeOfflineWorker(knownVersion?: string): Promise<void> {
     try {
         if (typeof window === "undefined" || isOffline()) return
-        const { pdfjs } = await import("react-pdf")
-        const version = pdfjs.version
+        // Perf audit P1-2: the Perform warm-up passes the build-time version so
+        // it doesn't import react-pdf (which evaluates all of pdf.js) just to
+        // read it. Other callers still read it from the library.
+        const version = knownVersion || (await import("react-pdf")).pdfjs.version
         const key = workerKey(version)
         if (await hasFile(key)) return
         const res = await fetch(staticWorkerSrc(version), { cache: "force-cache" })

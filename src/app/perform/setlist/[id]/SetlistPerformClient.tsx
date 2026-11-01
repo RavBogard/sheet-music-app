@@ -299,6 +299,9 @@ export function SetlistPerformClient({
         .filter(t => !!t.fileId)
         .map(t => t.fileId as string)
         .filter((id, i, all) => all.indexOf(id) === i)
+    // The count SaveOfflineButton will report (it drops `flow-` pseudo ids),
+    // used only to reserve the status line's width before it reports.
+    const reservedChartCount = songFileIds.filter((id) => !id.startsWith("flow-")).length
 
     // F1 (perform-entry-precache): warm Dexie with every bonded chart the
     // moment the overlay mounts — `requestIdleCallback` (the SaveOfflineButton
@@ -415,6 +418,19 @@ export function SetlistPerformClient({
                                     {t("performSetlist.status.chartsOnDevice", { ready: deviceReady, total: deviceTotal })}
                                 </span>
                             </>
+                        )}
+                        {/* Perf audit P2-3: the device count arrives after
+                            hydration (the offline store is read on the
+                            client). Appearing late, it wrapped the status
+                            line onto a second line on a phone and pushed the
+                            whole list down a few px (CLS 0.07-0.10, right
+                            where a musician taps). Reserve its width with an
+                            invisible stand-in of the same text until then. */}
+                        {deviceReady === null && reservedChartCount > 0 && (
+                            <span aria-hidden="true" className="invisible" data-testid="perform-status-device-reserve">
+                                <span> · </span>
+                                <span>{t("performSetlist.status.chartsOnDevice", { ready: reservedChartCount, total: reservedChartCount })}</span>
+                            </span>
                         )}
                     </p>
                     {bookName && (

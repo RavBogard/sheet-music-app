@@ -144,7 +144,11 @@ export default async function LoginPage() {
                                 alt={shortName}
                                 width={96}
                                 height={96}
-                                priority
+                                // Perf audit P2-2: Next 16 maps `priority` to
+                                // `preload` only, so the LCP request went out at
+                                // Low. Ask for High explicitly.
+                                preload
+                                fetchPriority="high"
                                 sizes="96px"
                                 className="relative h-24 w-24 rounded-full border border-rule object-cover shadow-[0_4px_16px_rgb(24_32_46/0.12)]"
                             />

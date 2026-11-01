@@ -1,6 +1,6 @@
 "use client"
 
-import * as Sentry from "@sentry/nextjs"
+import { loadSentryBrowser } from "@/lib/sentry-lazy"
 import { useEffect } from "react"
 import { useT } from "@/i18n/client"
 
@@ -15,7 +15,8 @@ export default function GlobalError({
     // falls back to English here, which is acceptable for this last resort.
     const t = useT()
     useEffect(() => {
-        Sentry.captureException(error)
+        // Perf audit P2-6: the trimmed client, loaded (and started) on demand.
+        void loadSentryBrowser()?.then((s) => s.captureException(error)).catch(() => {})
     }, [error])
 
     return (
