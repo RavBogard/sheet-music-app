@@ -94,3 +94,12 @@ with V'ahavta after it, but whisper heard nothing sung there. The cutter now hol
 - `publish.ts --dry-run` (no credentials, so not checked against Firestore): 14 docs (5 live,
   9 held) and 14 files, 45.1 MB; 5 songs get a featured take. Saved to
   `.recordings-work/publish-plan.txt`.
+
+## 2026-11-01, lead: shipped
+
+- #63 (data, public serving, lineage, MCP tools) merged after an adversarial review. Its one Medium was fixed before merge: the public file route serves only `recordings/` paths and only `audio/*`, and recordings writes are server-only in the rules.
+- #67 (ingest pipeline) merged. GATE: published the first batch to prod (14 docs and files, 44.9 MB; 5 live and featured, 9 held). Proceeded because Daniel ruled "you do it" and spot-checks afterwards. A credentialed dry run came first (0 already published). The lead trimmed the What a Wonderful World start past the Hamotzi (by transcript). The temp ADC was deleted after the run.
+- #66 (player, editor and library icon, Listen page, Perform guard) merged after an adversarial review (one High: the leaders' upload button, fixed) and a lead screenshot pass (phone icon, titles, one-line rows without a take).
+- #69 fixed #62's + scrolling with the list (portal to body); measured pinned at 708–764 px both before and after scrolling.
+- Work dir moved to `sheet-music-app/.recordings-work/` (gitignored) for the next runs.
+- Open for Daniel: whether Perform keeps playing legacy audio-file charts (`AudioViewer`, the one exempt path in `perform-no-audio.test.ts`); the 9 held clips (list them with `list_recordings status:"held"`).
