@@ -219,6 +219,16 @@ describe('MobileRowCard — recording affordance', () => {
         expect(cell).not.toBeDisabled()
     })
 
+    it('the note is not inside a phone-hidden wrapper (phones can hear a take)', () => {
+        featured.map = { 'song-abc': { id: 'r1', title: 'Take' } }
+        render(<Harness track={makeTrack({ songId: 'song-abc' })} />)
+        let el: HTMLElement | null = screen.getByTestId('recording-cell')
+        while (el) {
+            expect(el.className.split(/\s+/)).not.toContain('hidden')
+            el = el.parentElement
+        }
+    })
+
     it('a leader or admin keeps the note with no take (the popover holds the upload); a member does not', () => {
         featured.map = {}
         authState.isBandLeader = true

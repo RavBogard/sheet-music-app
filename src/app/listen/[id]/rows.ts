@@ -6,6 +6,8 @@
  * bound to a song) gets its one take, or null. Readings, prayers and notes
  * with no song have nothing to hear and are left out.
  */
+import { displayChartTitle } from "@/lib/format/chart-title"
+
 export interface ListenTrackInput {
     id: string
     title?: unknown
@@ -28,7 +30,8 @@ export function buildListenRows(
 ): ListenRow[] {
     const rows: ListenRow[] = []
     for (const t of tracks) {
-        const title = typeof t.title === "string" ? t.title.trim() : ""
+        // The editor strips a stray file extension for display; so does this page.
+        const title = displayChartTitle(t.title)
         const songId = typeof t.songId === "string" && t.songId ? t.songId : null
         if (t.type === "header" || t.type === "section") {
             if (title) rows.push({ kind: "section", id: t.id, title })

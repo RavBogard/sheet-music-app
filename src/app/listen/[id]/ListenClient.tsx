@@ -43,24 +43,36 @@ export function ListenClient({ name, eventDate, rows }: ListenClientProps) {
                                 {row.title}
                             </h2>
                         ) : (
-                            <section
-                                key={row.id}
-                                data-testid="listen-song"
-                                className="flex flex-col gap-1 border-b border-rule py-2 sm:flex-row sm:items-center sm:gap-4"
-                            >
-                                <h3 className="min-w-0 flex-1 text-[0.95rem] font-bold leading-snug text-foreground sm:truncate">
-                                    {row.title}
-                                </h3>
-                                {row.take ? (
+                            row.take ? (
+                                <section
+                                    key={row.id}
+                                    data-testid="listen-song"
+                                    className="flex flex-col gap-1 border-b border-rule py-2 sm:flex-row sm:items-center sm:gap-4"
+                                >
+                                    <h3 className="min-w-0 flex-1 text-[0.95rem] font-bold leading-snug text-foreground sm:truncate">
+                                        {row.title}
+                                    </h3>
                                     <RecordingPlayer
                                         recordingId={row.take.id}
                                         title={row.take.title}
                                         className="sm:w-80"
                                     />
-                                ) : (
-                                    <p className="text-sm text-muted-foreground">{t("recordings.noRecordingYet")}</p>
-                                )}
-                            </section>
+                                </section>
+                            ) : (
+                                // One line: the title in muted ink (it truncates first),
+                                // "No recording yet" as small muted text at the end.
+                                <section
+                                    key={row.id}
+                                    data-testid="listen-song"
+                                    data-no-take
+                                    className="flex items-baseline gap-3 border-b border-rule py-2"
+                                >
+                                    <h3 className="min-w-0 flex-1 truncate text-[0.95rem] font-semibold leading-snug text-muted-foreground">
+                                        {row.title}
+                                    </h3>
+                                    <p className="shrink-0 text-xs text-muted-foreground">{t("recordings.noRecordingYet")}</p>
+                                </section>
+                            )
                         ),
                     )}
                 </div>

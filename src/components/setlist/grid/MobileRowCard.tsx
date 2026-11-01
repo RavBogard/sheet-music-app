@@ -567,9 +567,10 @@ export function MobileRowCard({
                             <span aria-hidden className="flex-none w-9" />
                         ))}
 
-                        {/* Below sm the recordings control moves into the row's
-                            edit panel so the title keeps its width. */}
-                        <span className="hidden sm:contents">
+                        {/* The recordings note sits beside the chart note at every
+                            width; on a phone it is a little narrower (32px drawn,
+                            44px to the touch) so the title keeps its room. */}
+                        <span className="contents">
                         {showRecordingNote ? (
                             // Recording affordance — opens RecordingBindPopover.
                             // stopPropagation keeps the trigger click from
@@ -582,7 +583,7 @@ export function MobileRowCard({
                                 <RecordingCell
                                     disabled={false}
                                     hasRecordings={hasTake}
-                                    className="touch-hit h-9 w-9"
+                                    className="touch-hit h-9 w-8 sm:w-9"
                                     onClick={(e) => e.stopPropagation()}
                                 />
                             </RecordingBindPopover>
@@ -732,13 +733,6 @@ export function MobileRowCard({
                             <Music className="h-4 w-4" />
                             {t('setlistGrid.bindChartButton')}
                         </button>
-                        {showRecordingNote ? (
-                            <span className="sm:hidden">
-                                <RecordingBindPopover songId={String(track.songId)} songTitle={track.title}>
-                                    <RecordingCell disabled={false} hasRecordings={hasTake} className="h-11 w-11 rounded-md border border-border bg-background" />
-                                </RecordingBindPopover>
-                            </span>
-                        ) : null}
                         <button
                             type="button"
                             onClick={onDeleteRow}
