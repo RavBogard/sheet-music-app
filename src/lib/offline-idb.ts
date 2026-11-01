@@ -43,6 +43,22 @@ export interface OfflineFileEntry {
     version?: string
 }
 
+/**
+ * Fired on `window` after a write adds or removes charts in the store, so a
+ * live count (Save offline's N/M) can re-read it. Replaces the refresh the
+ * Perform render loop used to give by accident (re-audit P1, 2026-10-31).
+ */
+export const OFFLINE_STORE_CHANGED_EVENT = 'crc-offline-store-changed'
+
+function notifyStoreChanged(): void {
+    if (typeof window === 'undefined') return
+    try {
+        window.dispatchEvent(new Event(OFFLINE_STORE_CHANGED_EVENT))
+    } catch {
+        /* noop */
+    }
+}
+
 function hasIDB(): boolean {
     return typeof indexedDB !== 'undefined'
 }
@@ -106,6 +122,7 @@ export async function putFile(fileId: string, blob: Blob, version?: string): Pro
     await withStore('readwrite', async (store) => {
         await reqPromise(store.put(entry))
     })
+    notifyStoreChanged()
 }
 
 export async function getFile(fileId: string): Promise<Blob | null> {
@@ -206,6 +223,7 @@ export async function deleteFile(fileId: string): Promise<void> {
     await withStore('readwrite', async (store) => {
         await reqPromise(store.delete(fileId))
     })
+    notifyStoreChanged()
 }
 
 export async function listFileIds(): Promise<string[]> {
@@ -224,6 +242,7 @@ export async function clearAll(): Promise<void> {
     await withStore('readwrite', async (store) => {
         await reqPromise(store.clear())
     })
+    notifyStoreChanged()
 }
 
 export async function totalBytes(): Promise<number> {
