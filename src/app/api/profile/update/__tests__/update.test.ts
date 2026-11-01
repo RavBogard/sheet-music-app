@@ -57,7 +57,7 @@ const mockFirestoreLocal = {
 
 vi.mock('@/lib/firebase-admin', () => ({
     initAdmin: vi.fn().mockReturnValue(true),
-    getFirestore: vi.fn(() => mockFirestoreLocal),
+    getFirestore: vi.fn(() => withMockMemberships(mockFirestoreLocal)),
     verifyIdToken: vi.fn(),
 }))
 
@@ -73,12 +73,15 @@ vi.mock('@/lib/logger', () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: 
 
 import { verifyIdToken } from '@/lib/firebase-admin'
 import type { NextRequest } from 'next/server'
+import { setMockMembershipRole, withMockMemberships } from '@/test-stubs/tenant-claims'
 
 function mockAuth(uid = 'u1') {
+    setMockMembershipRole('musician')
     vi.mocked(verifyIdToken).mockResolvedValue({
         uid,
         email: `${uid}@example.com`,
         role: 'musician',
+        m: { crc: 'mu' },
         isAdmin: false,
         isBandLeader: false,
         isMusician: true,

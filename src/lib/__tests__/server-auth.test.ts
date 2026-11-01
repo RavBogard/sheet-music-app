@@ -36,11 +36,11 @@ const mockDocGet = vi.fn(() => ({
 
 vi.mock('firebase-admin/firestore', () => ({
     getFirestore: vi.fn(() => ({
-        // Multi-tenant P2: memberships/platform docs are absent here, so the
-        // role comes from the users doc (legacy path, unmigrated person).
+        // SEC-02: the role comes from the membership only; the fixture's
+        // `role` answers the memberships read. No platform owner here.
         collection: vi.fn((name: string) => ({
             doc: vi.fn(() => ({
-                get: name === 'memberships' || name === 'platform'
+                get: name === 'platform'
                     ? vi.fn(async () => ({ exists: false, data: () => undefined }))
                     : mockDocGet,
             })),

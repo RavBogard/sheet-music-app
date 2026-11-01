@@ -183,59 +183,23 @@ export async function PUT(req: NextRequest) {
         // accounts can't device-approve and pending accounts can't participate
         // in device sign-in. Shared iPads are a band-only surface.
         //
-        // WS-21 (v11.6-04-02): resolve an EFFECTIVE role — the token `role` claim
-        // if it is already an allowed band role (fast path, no read), else fall
-        // back to the caller's users/{uid}.role Firestore field. This closes the
-        // claim-lag false-403: a recently-approved member (or one whose role was
-        // set via /api/admin/set-role with claimsUpdated=false) has the role in
-        // Firestore before it propagates to their ID token. The allowed set is
-        // unchanged — this fixes a false NEGATIVE, it does not widen access.
+        // The role is read server-side from the membership (below), so a
+        // claim that has not caught up yet never causes a false 403.
         const db = getFirestore()
         const allowedRoles = new Set(["musician", "band_leader", "admin"])
         // Multi-tenant P2 (design §3.4): the role that counts is the approver's
-        // role in the HOST tenant (membership; po → admin). While the person is
-        // unmigrated the pre-P2 rule below applies unchanged.
+        // role in the HOST tenant (membership; po → admin). SEC-02: membership
+        // only; the old unmigrated fallback (token `role` claim, then
+        // users/{uid}.role) is gone. A read failure degrades to "no role"
+        // (→ 403), never a 500.
         const hostOrg = coerceOrgId(req.headers.get("x-org-id"))
         let effectiveRole: string | undefined
-        let legacyDocRole: string | undefined
-        let decided = false
-        let accessRead = false
         try {
             const access = await getTenantAccess(decoded.uid, hostOrg, { db })
-            accessRead = true
-            if (access.po || access.source === "membership" || access.migrated) {
-                effectiveRole = access.effectiveRole ?? undefined
-                decided = true
-            } else {
-                legacyDocRole = access.role ?? undefined
-            }
+            effectiveRole = access.effectiveRole ?? undefined
         } catch (e) {
-            logger.warn("[QR] membership read failed; using the legacy rule:", e)
-        }
-        // WS-21 (v11.6-04-02), legacy path (unmigrated): the token `role` claim
-        // if it is already an allowed band role, else the caller's
-        // users/{uid}.role field. This closes the claim-lag false-403 (role in
-        // Firestore before it propagates to the ID token). It fixes a false
-        // NEGATIVE; it does not widen access.
-        if (!decided) {
-            const claimRole = decoded.role as string | undefined
-            effectiveRole = claimRole
-            if (!effectiveRole || !allowedRoles.has(effectiveRole)) {
-                if (accessRead) {
-                    effectiveRole = legacyDocRole
-                } else {
-                    // A read failure degrades to "no role" (→ 403), never a 500.
-                    try {
-                        const userSnap = await db.collection("users").doc(decoded.uid).get()
-                        effectiveRole = userSnap.exists
-                            ? (userSnap.data()?.role as string | undefined)
-                            : undefined
-                    } catch (e) {
-                        logger.warn("[QR] user-doc role fallback read failed:", e)
-                        effectiveRole = undefined
-                    }
-                }
-            }
+            logger.warn("[QR] membership read failed; refusing approval:", e)
+            effectiveRole = undefined
         }
         if (!effectiveRole || !allowedRoles.has(effectiveRole)) {
             return NextResponse.json(

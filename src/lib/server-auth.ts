@@ -45,7 +45,7 @@ export async function getServerUser(): Promise<ServerUser | null> {
         const decoded = await getAuth().verifySessionCookie(sessionCookie, true)
 
         // Multi-tenant P2 (design §3.4): the role in the HOST tenant, from the
-        // membership (legacy users-doc role while the person is unmigrated).
+        // membership only (SEC-02).
         const orgId = coerceOrgId((await headers()).get("x-org-id"))
         // Multi-tenant phase 3: prime the host tenant's config (cached, never throws).
         await primeTenantConfig(orgId)

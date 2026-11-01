@@ -61,6 +61,7 @@ vi.mock("@/lib/library/ai-enrichment", () => ({
 import { backfillHealMetadata } from "../tools/backfill-heal-metadata"
 import { enrichLibraryRow } from "@/lib/library/ai-enrichment"
 import { bareStem, titleSpecificity } from "@/lib/mcp/title-specificity"
+import { mirrorLegacyRoles } from "@/test-stubs/mirror-legacy-roles"
 
 describe("MCP backfill_heal_metadata — storage-recovery Lane B follow-up (emulator)", () => {
     let app: App
@@ -72,6 +73,7 @@ describe("MCP backfill_heal_metadata — storage-recovery Lane B follow-up (emul
     }
     async function seedUser(uid: string, role: string) {
         await db().collection("users").doc(uid).set({ role })
+        await mirrorLegacyRoles(db(), { migrate: true, uids: [uid], keepExisting: true })
     }
     async function seedIndex(id: string, data: Record<string, unknown>) {
         await db().collection("library_index").doc(id).set(data)
@@ -99,6 +101,10 @@ describe("MCP backfill_heal_metadata — storage-recovery Lane B follow-up (emul
     afterEach(() => {
         vi.clearAllMocks()
     })
+
+    // SEC-02: role gates read memberships only; give each seeded person the
+    // membership the people migration would have written.
+    beforeEach(async () => { await mirrorLegacyRoles(db(), { migrate: true }) })
 
     it("admin gate refuses non-admin callers", async () => {
         await seedUser(MUSICIAN, "musician")

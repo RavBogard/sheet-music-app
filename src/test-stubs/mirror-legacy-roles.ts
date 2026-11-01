@@ -12,6 +12,12 @@
  * for them, which the roster fixtures test. `uids` limits the mirror to those
  * people. Memberships this helper wrote earlier are replaced on every call,
  * so a fixture that clears `users` between tests never keeps a stale one.
+ *
+ * `migrate: true` instead does what the people migration did: every seeded
+ * person with a role becomes a member, with that role, of each tenant in the
+ * users doc's `orgIds`. With no `orgIds`, a leader is a member of every tenant
+ * in `orgs` (the old gate was tenant-blind for them) and anyone else of crc.
+ * Fixtures that test tenant walls or non-leader roles use this mode.
  */
 type DB = FirebaseFirestore.Firestore
 
@@ -20,7 +26,7 @@ const MARK = "mirror-legacy-roles"
 
 export async function mirrorLegacyRoles(
     db: DB,
-    opts: { orgs?: string[]; uids?: string[]; allRoles?: boolean; keepExisting?: boolean } = {},
+    opts: { orgs?: string[]; uids?: string[]; allRoles?: boolean; keepExisting?: boolean; migrate?: boolean } = {},
 ): Promise<void> {
     const orgs = opts.orgs ?? ["crc", "brotherslazaroff"]
     if (!opts.keepExisting) {
@@ -34,8 +40,15 @@ export async function mirrorLegacyRoles(
         if (opts.uids && !opts.uids.includes(d.id)) continue
         const u = d.data() ?? {}
         if (typeof u.role !== "string") continue
-        if (!opts.allRoles && !LEADER_ROLES.has(u.role)) continue
-        for (const org of orgs) {
+        if (!opts.migrate && !opts.allRoles && !LEADER_ROLES.has(u.role)) continue
+        const tenants = opts.migrate
+            ? Array.isArray(u.orgIds) && u.orgIds.length > 0
+                ? (u.orgIds as string[])
+                : LEADER_ROLES.has(u.role)
+                  ? orgs // a leader with no orgIds passed the old tenant-blind gate everywhere
+                  : ["crc"]
+            : orgs
+        for (const org of tenants) {
             batch.set(db.collection("memberships").doc(`${org}__${d.id}`), {
                 uid: d.id,
                 tenantId: org,

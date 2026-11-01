@@ -10,6 +10,7 @@ import { initializeApp, deleteApp, getApps, type App } from "firebase-admin/app"
 import { getFirestore } from "firebase-admin/firestore"
 
 import { getAiSpendSummary } from "../tools/ai-spend-summary"
+import { mirrorLegacyRoles } from "@/test-stubs/mirror-legacy-roles"
 
 /**
  * PGR-04 — admin-only AI-spend rollup MCP tool. Covers:
@@ -50,6 +51,10 @@ describe("get_ai_spend_summary (emulator)", () => {
         await db().collection("users").doc(LEADER).set({ role: "band_leader" })
         await db().collection("users").doc(MUSICIAN).set({ role: "musician" })
     })
+
+    // SEC-02: role gates read memberships only; give each seeded person the
+    // membership the people migration would have written.
+    beforeEach(async () => { await mirrorLegacyRoles(db(), { migrate: true }) })
 
     it("refuses non-admin (musician)", async () => {
         const r = await getAiSpendSummary(MUSICIAN, {})

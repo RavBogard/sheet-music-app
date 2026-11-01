@@ -47,19 +47,33 @@ vi.mock("@/lib/rate-limit", () => ({
     checkRateLimit: (...args: unknown[]) => mockCheckRateLimit(...args),
 }))
 
+// SEC-02: each fixture identity's membership role (any tenant).
+const MEMBER_ROLES: Record<string, string> = {
+    "admin-daniel": "admin",
+    "test-musician-abc": "musician",
+    "test-musician-self": "musician",
+    "test-band_leader-abc": "band_leader",
+}
+function memberDoc(id: string) {
+    const role = MEMBER_ROLES[id.split("__")[1] ?? ""]
+    return { exists: !!role, data: () => (role ? { role } : undefined) }
+}
+
 vi.mock("@/lib/firebase-admin", () => ({
     initAdmin: () => mockInitAdmin(),
     getFirestore: () => ({
         collection: (name: string) => ({
             doc: (id: string) => ({
-                // Multi-tenant P2: no memberships/platform docs here → the
-                // users-doc role decides (unmigrated, legacy path).
+                // SEC-02: the role is read from memberships/<org>__<uid> only
+                // (MEMBER_ROLES below); the users doc no longer decides it.
                 get: async () =>
                     name === "users"
                         ? mockGetUserDoc(id)
-                        : name === "memberships" || name === "platform"
-                          ? { exists: false, data: () => undefined }
-                          : mockGetTestUserDoc(id),
+                        : name === "memberships"
+                          ? memberDoc(id)
+                          : name === "platform"
+                            ? { exists: false, data: () => undefined }
+                            : mockGetTestUserDoc(id),
             }),
         }),
     }),

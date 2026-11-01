@@ -168,6 +168,7 @@ describe("chart lineage (emulator)", () => {
 
     it("a musician cannot file a new version, even of a chart they filed; nothing is written", async () => {
         await db().collection("users").doc("mus").set({ role: "musician", email: "m@crc.test" })
+        await mirrorLegacyRoles(db(), { migrate: true, uids: ["mus"], keepExisting: true })
         await db().collection("library_index").doc("old").update({ uploadedBy: "mus" })
         const musician = { role: "musician", canUpload: true, email: "m@crc.test" }
         const direct = await loadRevisionTarget(db(), "old", CRC, "mus", musician)

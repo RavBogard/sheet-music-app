@@ -21,6 +21,7 @@ import {
 } from "../tools/test-tokens"
 import { verifyBearer } from "../auth"
 import { checkUserRateLimit } from "@/lib/rate-limit"
+import { mirrorLegacyRoles } from "@/test-stubs/mirror-legacy-roles"
 
 // Storage isn't backed by the emulator; treat the best-effort purge as a no-op.
 vi.mock("@/lib/firebase-admin", async () => {
@@ -118,6 +119,10 @@ describe("MCP test tokens (emulator)", () => {
             .set({ role: "musician" })
     })
 
+    // SEC-02: role gates read memberships only; give each seeded person the
+    // membership the people migration would have written.
+    beforeEach(async () => { await mirrorLegacyRoles(db(), { migrate: true }) })
+
     it("admin can mint a band_leader test account, raw token verifies", async () => {
         const result = await provisionTestAccount(ADMIN_UID, {
             role: "band_leader",
@@ -174,6 +179,8 @@ describe("MCP test tokens (emulator)", () => {
 
     it("multi-tenant phase 2: a crc band leader cannot place a test account in another tenant", async () => {
         await db().collection("users").doc(LEADER_UID).set({ role: "band_leader", membershipsMigratedAt: new Date() })
+        // A crc-only leader: drop the brotherslazaroff membership the fixture mirror gave every leader.
+        await db().collection("memberships").doc(`brotherslazaroff__${LEADER_UID}`).delete()
         await db().collection("memberships").doc(`crc__${LEADER_UID}`).set({
             uid: LEADER_UID, tenantId: "crc", role: "band_leader", soundEngineer: false, addedBy: "test", addedAt: new Date(),
         })

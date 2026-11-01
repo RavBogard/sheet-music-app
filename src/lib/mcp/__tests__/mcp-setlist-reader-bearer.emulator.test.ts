@@ -10,6 +10,7 @@ import {
 import { verifyBearer } from "../auth"
 import { generateRawToken, hashToken } from "../tokens"
 import { SETLIST_READER_TOOLS } from "../scoped-bearer"
+import { mirrorLegacyRoles } from "@/test-stubs/mirror-legacy-roles"
 
 /**
  * Emulator coverage for the `setlist_reader` credential pack. Mirrors the
@@ -71,6 +72,10 @@ describe("MCP mint_setlist_reader_bearer (emulator)", () => {
     })
 
     // 1. Happy path — doc shape is the whole point of this test.
+    // SEC-02: role gates read memberships only; give each seeded person the
+    // membership the people migration would have written.
+    beforeEach(async () => { await mirrorLegacyRoles(db(), { migrate: true }) })
+
     it("root admin mints a read-only credential with the right doc shape", async () => {
         const root = await seedRootToken()
         const result = await mintSetlistReaderBearerCore(rootCaller(root.tokenId), {

@@ -73,12 +73,14 @@ vi.mock('@/lib/constants', () => ({
 // ── Import after mocks ──
 
 import { verifyIdToken } from '@/lib/firebase-admin'
+import { mClaim } from '@/test-stubs/tenant-claims'
 
 function mockAuth(role: string) {
     vi.mocked(verifyIdToken).mockResolvedValue({
         uid: 'leader-1',
         email: 'leader@example.com',
         role,
+        ...mClaim(role),
         isAdmin: role === 'admin',
         isBandLeader: role === 'band_leader' || role === 'admin',
         isMusician: ['musician', 'band_leader', 'admin'].includes(role),

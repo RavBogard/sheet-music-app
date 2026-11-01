@@ -124,19 +124,29 @@ describe("tenant identity routes (emulator)", () => {
             expect(bad.status).toBe(400)
         })
 
-        it("LAST_ADMIN: demoting or removing a tenant's only admin is refused (409); po is exempt", async () => {
-            await setMembership({ orgId: BL, uid: "dual", role: "musician", actorUid: "fixture", reason: "set-role" })
-            // An unmigrated legacy admin (claim role admin, tenant-blind) passes the
-            // gate without being counted as a BL admin — the guard must still hold.
+        it("SEC-02: an unmigrated legacy admin (tenant-blind claim, no membership) is refused (403)", async () => {
             await auth().createUser({ uid: "legacyAdmin" })
             await auth().setCustomUserClaims("legacyAdmin", { role: "admin" })
-            await db().collection("users").doc("legacyAdmin").set({ role: "member" })
+            await db().collection("users").doc("legacyAdmin").set({ role: "admin" })
             const asLegacy = (body: unknown) => req("/api/admin/set-role", "legacyAdmin", BL, body, "POST", { role: "admin" })
             const demote = await setRole(asLegacy({ targetUserId: "bAdmin", newRole: "member" }))
-            expect(demote.status).toBe(409)
-            expect((await demote.json()).code).toBe("LAST_ADMIN")
-            const remove = await setRole(req("/api/admin/set-role", "legacyAdmin", BL, { targetUserId: "bAdmin", newRole: null }, "POST", { role: "admin" }))
-            expect(remove.status).toBe(409)
+            expect(demote.status).toBe(403)
+            const promote = await setRole(asLegacy({ targetUserId: "bMu", newRole: "admin" }))
+            expect(promote.status).toBe(403)
+            expect(await roleIn(BL, "bAdmin")).toBe("admin")
+            expect(await roleIn(BL, "bMu")).toBe("musician")
+        })
+
+        // With membership-only gates (SEC-02) every non-owner caller who passes
+        // the admin check is a counted admin of that tenant, so the route can no
+        // longer reach LAST_ADMIN except through self-change, which it refuses
+        // first. The guard itself is covered in people-access.test.ts.
+        it("the only admin cannot demote or remove themself; po is exempt and may demote them", async () => {
+            await setMembership({ orgId: BL, uid: "dual", role: "musician", actorUid: "fixture", reason: "set-role" })
+            const demote = await setRole(req("/api/admin/set-role", "bAdmin", BL, { targetUserId: "bAdmin", newRole: "member" }))
+            expect(demote.status).toBe(400)
+            const remove = await setRole(req("/api/admin/set-role", "bAdmin", BL, { targetUserId: "bAdmin", newRole: null }))
+            expect(remove.status).toBe(400)
             expect(await roleIn(BL, "bAdmin")).toBe("admin")
             const po = await setRole(req("/api/admin/set-role", PO, BL, { targetUserId: "bAdmin", newRole: "member" }))
             expect(po.status).toBe(200)

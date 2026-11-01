@@ -10,6 +10,7 @@ import { initializeApp, deleteApp, getApps, type App } from "firebase-admin/app"
 import { getFirestore, Timestamp } from "firebase-admin/firestore"
 
 import { dumpCollectionSize } from "../tools/dump-collection-size"
+import { mirrorLegacyRoles } from "@/test-stubs/mirror-legacy-roles"
 
 /**
  * Cycle-5 C5D-013 — admin-only Firestore sizing probe. Covers:
@@ -50,6 +51,10 @@ describe("dump_collection_size (emulator)", () => {
         await db().collection("users").doc(LEADER).set({ role: "band_leader" })
         await db().collection("users").doc(MUSICIAN).set({ role: "musician" })
     })
+
+    // SEC-02: role gates read memberships only; give each seeded person the
+    // membership the people migration would have written.
+    beforeEach(async () => { await mirrorLegacyRoles(db(), { migrate: true }) })
 
     it("refuses non-admin (musician)", async () => {
         const r = await dumpCollectionSize(MUSICIAN, {

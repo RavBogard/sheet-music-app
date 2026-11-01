@@ -54,6 +54,7 @@ import {
 } from "../correction-signals"
 import { getCorrectionStats } from "../../mcp/tools/correction-stats"
 import type { EnrichmentOutput } from "../ai-enrichment"
+import { mirrorLegacyRoles } from "@/test-stubs/mirror-legacy-roles"
 
 const ADMIN = "rabbi-daniel"
 const BAND_LEADER = "david-band-leader"
@@ -200,6 +201,10 @@ describe("Correction-signal capture + aggregation (emulator)", () => {
     })
 
     // ─── Emit-from-review-queue ───────────────────────────────────────────
+
+    // SEC-02: role gates read memberships only; give each seeded person the
+    // membership the people migration would have written.
+    beforeEach(async () => { await mirrorLegacyRoles(db(), { migrate: true }) })
 
     it("acceptEnrichment emits an accept signal with fieldsAccepted derived from gap-fill", async () => {
         await seedReviewRow("upload-1")

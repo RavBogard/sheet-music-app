@@ -67,6 +67,7 @@ describe('requireAuth', () => {
             uid: 'user123',
             email: 'user@test.com',
             role: 'member',
+            m: { crc: 'me' },
         } as never)
 
         const result = await requireAuth(makeReq('good-token'))
@@ -127,6 +128,7 @@ describe('requireAuth', () => {
             uid: 'other-uid',
             email: 'a@test.com',
             role: 'admin',
+            m: { crc: 'ad' },
         } as never)
 
         const result = await requireAuth(makeReq('tok'), 'admin')
@@ -160,10 +162,19 @@ describe('requireAuth', () => {
             uid: 'user2',
             email: 'l@test.com',
             role: 'band_leader',
+            m: { crc: 'bl' },
         } as never)
 
         const result = await requireAuth(makeReq('tok'), 'member')
         expect(result.role).toBe('band_leader')
+    })
+
+    it('SEC-02: a legacy role claim without the per-tenant m map carries no role', async () => {
+        mockVerify.mockResolvedValue({ uid: 'legacy', email: 'l@test.com', role: 'admin' } as never)
+        const result = await requireAuth(makeReq('good-token'))
+        expect(result.isAdmin).toBe(false)
+        expect(result.isBandLeader).toBe(false)
+        await expect(requireAuth(makeReq('good-token'), 'admin')).rejects.toBeInstanceOf(Response)
     })
 
     it('blocks member from band_leader routes', async () => {

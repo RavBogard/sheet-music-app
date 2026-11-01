@@ -24,8 +24,30 @@ function GoogleIcon({ className }: { className?: string }) {
 
 // The QR sign-in panel (and the qrcode.react encoder it pulls in) shows only
 // after the person opts in, so it loads on that click, not on first paint.
+// An iPad left on /login across a deploy asks for a chunk that no longer
+// exists: reload once to pick up the new build (the session flag stops a
+// loop if the chunk is truly unreachable, e.g. offline).
+const QR_RELOAD_KEY = "crc:login-qr-chunk-reload"
+function loadQRSignIn() {
+    return import("@/components/auth/QRSignIn")
+        .then((m) => {
+            try { sessionStorage.removeItem(QR_RELOAD_KEY) } catch { /* storage blocked */ }
+            return m.QRSignIn
+        })
+        .catch((err: unknown) => {
+            // Storage blocked → no flag to stop a loop, so never reload.
+            let reloaded = true
+            try { reloaded = sessionStorage.getItem(QR_RELOAD_KEY) === "1" } catch { /* storage blocked */ }
+            if (!reloaded) {
+                try { sessionStorage.setItem(QR_RELOAD_KEY, "1") } catch { /* storage blocked */ }
+                window.location.reload()
+                return new Promise<never>(() => {})
+            }
+            throw err
+        })
+}
 const QRSignIn = dynamic(
-    () => import("@/components/auth/QRSignIn").then((m) => m.QRSignIn),
+    loadQRSignIn,
     { ssr: false, loading: () => <Loader2 className="mx-auto h-5 w-5 animate-spin text-muted-foreground" /> },
 )
 
