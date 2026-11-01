@@ -42,7 +42,7 @@ export default function ManageClient({
     )
 
     return (
-        <PageContainer className="space-y-5">
+        <PageContainer className="space-y-3">
             {/* Consistency pass: the one page head (title, subtitle); the tab
                 bar is the way out, so no back button. */}
             <PageHeader title={t("manage.title")} subtitle={t("manage.subtitle")} />
@@ -79,13 +79,13 @@ export default function ManageClient({
                         )}
                     </TabsList>
 
-                    <TabsContent value="people" className="mt-6">
+                    <TabsContent value="people" className="mt-3">
                         <SectionErrorBoundary label={t("manage.sectionPeople")}>
                             <PeopleSection />
                         </SectionErrorBoundary>
                     </TabsContent>
 
-                    <TabsContent value="library" className="mt-6 space-y-6">
+                    <TabsContent value="library" className="mt-3 space-y-4">
                         <SectionErrorBoundary label={t("manage.sectionLibrary")}>
                             <LibraryDataSection />
                         </SectionErrorBoundary>
@@ -109,7 +109,7 @@ export default function ManageClient({
                     </TabsContent>
 
                     {mixerOn && (
-                        <TabsContent value="sound" className="mt-6 space-y-8">
+                        <TabsContent value="sound" className="mt-3 space-y-5">
                             <SectionErrorBoundary label={t("manage.sectionSound")}>
                                 <SoundSystemSection />
                             </SectionErrorBoundary>
@@ -117,7 +117,7 @@ export default function ManageClient({
                     )}
 
                     {serverIsAdmin && (
-                        <TabsContent value="audit" className="mt-6">
+                        <TabsContent value="audit" className="mt-3">
                             <SectionErrorBoundary label={t("manage.sectionAudit")}>
                                 <AccessAuditLog />
                             </SectionErrorBoundary>

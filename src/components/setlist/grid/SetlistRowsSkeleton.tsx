@@ -20,9 +20,9 @@
  * shifts content up when the real list is shorter, which is the same bug
  * wearing a different hat.
  *
- * HEIGHT COMES FROM THE REAL CARD. These mirror `MobileRowCard`'s shell
- * classes — `min-h-[72px]`, the same rounded border, the same padding — and
- * sit in the same `gap-2 p-3` column `MobileCardList` uses. A single truncated
+ * HEIGHT COMES FROM THE REAL ROW. These mirror `MobileRowCard`'s Option B
+ * row shell — `min-h-10` on the hairline, no gap — and sit in the same plain
+ * column `MobileCardList` uses. A single truncated
  * title is the common row, and that row is exactly the shell's minimum height,
  * so the reservation is right by construction rather than by a copied
  * pixel constant that would drift the first time someone restyles a card.
@@ -45,7 +45,7 @@ export function SetlistRowsSkeleton({ trackCount }: { trackCount?: number }) {
 
     return (
         <div
-            className="flex flex-col gap-2 p-3"
+            className="flex flex-col"
             aria-busy="true"
             aria-live="polite"
             aria-label={t("setlistGrid.loadingRows")}
@@ -55,15 +55,13 @@ export function SetlistRowsSkeleton({ trackCount }: { trackCount?: number }) {
                 <div
                     key={i}
                     aria-hidden
-                    className="flex items-center gap-4 rounded-lg border px-4 py-4 min-h-[72px] bg-muted/50 border-rule"
+                    className="flex items-center gap-3 px-3 min-h-10 bg-card border-b border-rule"
                 >
-                    <div className="flex flex-col items-center gap-1 justify-center p-2 -ms-2">
-                        <div className="h-5 w-5 rounded bg-muted/40 animate-pulse" />
-                    </div>
+                    <div className="h-4 w-4 shrink-0 rounded bg-muted/40 animate-pulse" />
                     <div className="min-w-0 flex-1">
-                        <div className="h-5 w-2/3 rounded bg-muted/50 animate-pulse" />
+                        <div className="h-4 w-2/3 rounded bg-muted/50 animate-pulse" />
                     </div>
-                    <div className="h-8 w-12 shrink-0 rounded-lg bg-muted/30 animate-pulse" />
+                    <div className="h-4 w-8 shrink-0 rounded bg-muted/30 animate-pulse" />
                 </div>
             ))}
         </div>

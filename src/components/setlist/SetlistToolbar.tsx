@@ -29,7 +29,7 @@ export function SetlistToolbar({
     const [searchOpen, setSearchOpen] = useState(!!searchQuery)
 
     return (
-        <div className="shrink-0 space-y-3">
+        <div className="shrink-0 space-y-2">
             <div className="flex items-center justify-between flex-wrap gap-2">
                 <h2 className="text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground px-1">
                     {t("setlist.allSetlists")}
@@ -38,9 +38,9 @@ export function SetlistToolbar({
                 <div className="flex items-center gap-2">
                     <Button
                         variant="ghost"
-                        size="icon"
+                        size="icon-sm"
                         onClick={() => { setSearchOpen(!searchOpen); if (searchOpen) onSearchChange("") }}
-                        className={`h-11 w-11 ${searchOpen ? "text-brand" : "text-muted-foreground"}`}
+                        className={searchOpen ? "text-brand" : "text-muted-foreground"}
                         aria-label={searchOpen ? t("setlist.closeSearch") : t("setlist.searchSetlists")}
                         title={searchOpen ? t("setlist.closeSearch") : t("setlist.search")}
                     >
@@ -58,7 +58,7 @@ export function SetlistToolbar({
                         onChange={(e) => onSearchChange(e.target.value)}
                         placeholder={t("setlist.searchPlaceholder")}
                         aria-label={t("setlist.searchSetlists")}
-                        className="h-11 text-[15px]"
+                        className="h-11 text-sm"
                         autoFocus
                     />
                 </div>

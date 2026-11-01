@@ -1696,7 +1696,7 @@ export function SetlistGrid({
                 sets={metaSets}
             />
 
-            <div className={cn(PAGE_WIDTH_CLASS, "pt-4 sm:pt-6 flex flex-col gap-6 flex-grow pb-40")}>
+            <div className={cn(PAGE_WIDTH_CLASS, "pt-2 sm:pt-3 flex flex-col gap-3 flex-grow pb-40")}>
                 {/* BET-6: parasha line and Beit Mitzvah card (CRC only; renders nothing otherwise). */}
                 <SetlistFamilyHead setlistId={setlistId} setlist={liveSetlist as Record<string, unknown> | null | undefined} />
                 {/* T1.1 (2026-05-12, Bug 4): BatchActionBar removed —

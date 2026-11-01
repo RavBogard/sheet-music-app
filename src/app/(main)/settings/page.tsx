@@ -108,20 +108,20 @@ export default function SettingsPage() {
     )
 
     return (
-        <PageContainer className="space-y-7">
+        <PageContainer className="space-y-5">
                 {/* Consistency pass: the one page head; the tab bar and the
                     user menu are the way out, so no back button. */}
                 <PageHeader title={t("settings.title")} subtitle={t("settings.subtitle")} />
 
                 {/* Account */}
-                <section className="space-y-4">
+                <section className="space-y-2">
                     <h2 className={GROUP_HEADING_CLASS}>{t("settings.account")}</h2>
 
-                    <div className={cn(CARD_CLASS, "p-4 sm:p-5 flex flex-wrap items-center gap-x-4 gap-y-2")}>
-                        <Avatar className="h-14 w-14 border border-border">
+                    <div className={cn(CARD_CLASS, "p-3 sm:p-4 flex flex-wrap items-center gap-x-4 gap-y-2")}>
+                        <Avatar className="h-10 w-10 border border-border">
                             <AvatarImage src={user?.photoURL ?? undefined} alt={t("settings.profilePhotoAlt")} />
                             <AvatarFallback className="bg-muted">
-                                <User className="w-7 h-7 text-muted-foreground" />
+                                <User className="w-5 h-5 text-muted-foreground" />
                             </AvatarFallback>
                         </Avatar>
                         <div className="flex-[1_1_12rem] min-w-0">
@@ -161,11 +161,11 @@ export default function SettingsPage() {
                                         setEditingName(true)
                                     }}
                                 >
-                                    <span className="text-[17px] font-bold text-foreground text-start break-words">{profile?.displayName || user?.displayName || t("settings.defaultDisplayName")}</span>
+                                    <span className="text-base font-extrabold text-foreground text-start break-words">{profile?.displayName || user?.displayName || t("settings.defaultDisplayName")}</span>
                                     <Pencil aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-muted-foreground group-hover:text-foreground transition-colors" />
                                 </button>
                             )}
-                            <p className="text-muted-foreground text-sm truncate" title={user?.email ?? undefined}>{user?.email}</p>
+                            <p className="text-muted-foreground text-xs truncate" title={user?.email ?? undefined}>{user?.email}</p>
                         </div>
                         <div className="text-xs font-semibold bg-secondary px-2.5 py-1 rounded-md text-secondary-foreground border border-border">
                             {(() => {
@@ -177,8 +177,8 @@ export default function SettingsPage() {
                     </div>
 
                     {/* Appearance */}
-                    <div className={cn(CARD_CLASS, "p-4 sm:p-5")}>
-                        <h3 className="text-[15px] font-bold text-foreground mb-3">{t("settings.appearance")}</h3>
+                    <div className={cn(CARD_CLASS, "p-3 sm:p-4")}>
+                        <h3 className="text-sm font-bold text-foreground mb-2">{t("settings.appearance")}</h3>
                         <div className="flex flex-wrap gap-2">
                             {[
                                 { value: "light", icon: Sun, label: t("settings.theme.light") },
@@ -188,7 +188,7 @@ export default function SettingsPage() {
                                 <button
                                     key={value}
                                     onClick={() => setTheme(value)}
-                                    className={cn("flex items-center gap-2 min-h-11 px-4 rounded-md text-sm font-semibold border transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                    className={cn("touch-hit flex items-center gap-1.5 h-8 px-3 rounded-md text-[13px] font-semibold border transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                                         theme === value
                                             ? "bg-accent text-foreground border-brand"
                                             : "bg-card text-muted-foreground hover:text-foreground border-border"
@@ -199,7 +199,7 @@ export default function SettingsPage() {
                                 </button>
                             ))}
                         </div>
-                        <p className="text-xs text-muted-foreground mt-3">
+                        <p className="text-xs text-muted-foreground mt-2">
                             {t("settings.performThemeHint")}
                         </p>
                     </div>
@@ -208,11 +208,11 @@ export default function SettingsPage() {
                     <LanguageSettings />
 
                     {/* Performance Modes */}
-                    <div className={cn(CARD_CLASS, "p-4 sm:p-5")}>
+                    <div className={cn(CARD_CLASS, "p-3 sm:p-4")}>
                         <div className="flex items-center justify-between gap-4">
                             <div className="min-w-0">
-                                <h3 id="gig-mode-title" className="text-[15px] font-bold text-foreground">{t("settings.gigMode.title")}</h3>
-                                <p id="gig-mode-desc" className="text-sm text-muted-foreground mt-1">
+                                <h3 id="gig-mode-title" className="text-sm font-bold text-foreground">{t("settings.gigMode.title")}</h3>
+                                <p id="gig-mode-desc" className="text-xs text-muted-foreground mt-0.5">
                                     {t("settings.gigMode.description")}
                                 </p>
                             </div>
@@ -226,15 +226,15 @@ export default function SettingsPage() {
                     </div>
 
                     {/* Push Notifications */}
-                    <div className={cn(CARD_CLASS, "p-4 sm:p-5")}>
+                    <div className={cn(CARD_CLASS, "p-3 sm:p-4")}>
                         <PushNotificationSettings />
                     </div>
 
                     {/* Change Password (email/password users only) */}
                     {isEmailPasswordUser && (
-                        <div className={cn(CARD_CLASS, "p-4 sm:p-5")}>
-                            <h3 className="text-[15px] font-bold text-foreground mb-1">{t("settings.password.title")}</h3>
-                            <p className="text-sm text-muted-foreground mb-4">
+                        <div className={cn(CARD_CLASS, "p-3 sm:p-4")}>
+                            <h3 className="text-sm font-bold text-foreground mb-1">{t("settings.password.title")}</h3>
+                            <p className="text-xs text-muted-foreground mb-3">
                                 {t("settings.password.description")}
                             </p>
                             <form onSubmit={handleChangePassword} className="space-y-3">
@@ -304,23 +304,23 @@ export default function SettingsPage() {
                 </section>
 
                 {/* My Instrument */}
-                <section className="space-y-4">
+                <section className="space-y-2">
                     <h2 className={GROUP_HEADING_CLASS}>{t("settings.myInstrument")}</h2>
-                    <div className={cn(CARD_CLASS, "p-4 sm:p-5")}>
+                    <div className={cn(CARD_CLASS, "p-3 sm:p-4")}>
                         <MusicianProfileSettings />
                     </div>
                 </section>
 
                 {/* Integrations */}
-                <section className="space-y-4">
+                <section className="space-y-2">
                     <h2 className={GROUP_HEADING_CLASS}>{t("settings.integrations")}</h2>
-                    <div className={cn(CARD_CLASS, "p-4 sm:p-5")}>
+                    <div className={cn(CARD_CLASS, "p-3 sm:p-4")}>
                         <McpAccessSettings />
                     </div>
                 </section>
 
                 {/* Footer */}
-                <div className="pt-6 pb-8 flex flex-col items-center gap-3">
+                <div className="pt-3 pb-8 flex flex-col items-center gap-2">
                     <Button
                         onClick={() => signOut()}
                         variant="ghost"
