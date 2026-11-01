@@ -329,6 +329,23 @@ describe('Edge Middleware (proxy.ts) Auth Routing', () => {
     // to /login and both consumers silently fell back to their own calendars.
     // Caught against PRODUCTION on 2026-09-14, not by this suite, which is why
     // the case is written down here now.
+    // Perf audit P1-1: the pre-sized nav logos are public static images. Inside
+    // the matcher, a signed-out Perform visitor's logo request 307'd to /login.
+    describe('pre-sized logo matcher exclusion', () => {
+        const matchRe = new RegExp(`^${config.matcher[0]}$`)
+
+        it('excludes /logo-64.avif, /logo-128.webp and /logo-64.jpg', () => {
+            expect(matchRe.test('/logo-64.avif')).toBe(false)
+            expect(matchRe.test('/logo-128.webp')).toBe(false)
+            expect(matchRe.test('/logo-64.jpg')).toBe(false)
+        })
+
+        it('does not exclude look-alike routes', () => {
+            expect(matchRe.test('/logo-64.avif/x')).toBe(true)
+            expect(matchRe.test('/logo-abc.webp')).toBe(true)
+        })
+    })
+
     describe('today.json matcher exclusion', () => {
         const matchRe = new RegExp(`^${config.matcher[0]}$`)
 
