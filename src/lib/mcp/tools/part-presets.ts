@@ -10,6 +10,7 @@ import type { OrgId } from "@/lib/org/types"
 import { visibleTo } from "@/lib/library/visibility"
 import { logger } from "@/lib/logger"
 import {
+    hasVocalRangeName,
     matchPartIndices,
     normalizePartName,
     partPresetDocId,
@@ -34,13 +35,18 @@ const MAX_PATTERNS = 12
 const MAX_PATTERN_LEN = 60
 const MAX_PREVIEW_FILES = 25
 const MAX_XML_BYTES = 25 * 1024 * 1024
+const UID_RE = /^[A-Za-z0-9_-]{1,128}$/
+const FILE_ID_RE = /^[A-Za-z0-9_-]{1,128}$/
+const MAX_INSTRUMENT_LEN = 40
 
 export interface SetPartPresetArgs {
     /** Exactly one of `uid` / `instrument`. */
     uid?: string
     instrument?: string
-    /** Part-name patterns. An empty list removes the preset. */
-    patterns: string[]
+    /** Part-name patterns. At least one non-blank pattern unless `remove` is true. */
+    patterns?: string[]
+    /** Explicitly remove the preset for this scope (the only way to remove one). */
+    remove?: boolean
     /** Charts to preview the preset against (dry run only reports; nothing is written either way). */
     fileIds?: string[]
     dryRun?: boolean
@@ -55,6 +61,8 @@ export interface PartPreviewRow {
     /** True when nothing matched, so the chart opens as the full score. */
     fullScore: boolean
     note?: string
+    /** Set when a vocal-range word (Soprano/Alto/Tenor/Bass) is involved: check the match by hand. */
+    check?: string
 }
 
 function str(v: unknown): string | null {
@@ -120,6 +128,9 @@ function cleanPatterns(raw: unknown): string[] | RichErrorEnvelope {
     const seen = new Set<string>()
     const out: string[] = []
     for (const p of raw) {
+        if (typeof p !== "string") {
+            return richError("invalid_argument", "`patterns` must be a list of strings.", { field: "patterns" })
+        }
         const s = str(p)
         if (!s) continue
         if (s.length > MAX_PATTERN_LEN) {
@@ -129,6 +140,13 @@ function cleanPatterns(raw: unknown): string[] | RichErrorEnvelope {
         if (!key || seen.has(key)) continue
         seen.add(key)
         out.push(s)
+    }
+    if (raw.length > 0 && out.length === 0) {
+        return richError(
+            "invalid_argument",
+            "Every pattern is blank. Name at least one part, or pass `remove: true` to remove the preset.",
+            { field: "patterns" },
+        )
     }
     if (out.length > MAX_PATTERNS) {
         return richError("invalid_argument", `At most ${MAX_PATTERNS} patterns.`, { field: "patterns" })
@@ -143,7 +161,7 @@ async function previewRows(
     patterns: string[],
 ): Promise<PartPreviewRow[]> {
     const rows: PartPreviewRow[] = []
-    for (const fileId of fileIds.slice(0, MAX_PREVIEW_FILES)) {
+    for (const fileId of fileIds) {
         const snap = await db.collection("library_index").doc(fileId).get()
         const data = snap.exists ? (snap.data() as Record<string, unknown>) : null
         // A chart another tenant owns answers exactly like a missing one.
@@ -167,12 +185,17 @@ async function previewRows(
                 continue
             }
             const hit = matchPartIndices(parts, patterns)
+            const selected = hit.map((i) => parts[i])
+            const vocal = patterns.some(hasVocalRangeName) || selected.some(hasVocalRangeName)
             rows.push({
                 fileId,
                 chartName,
                 parts,
-                selected: hit.map((i) => parts[i]),
+                selected,
                 fullScore: hit.length === 0,
+                ...(vocal
+                    ? { check: "A vocal-range name (Soprano, Alto, Tenor or Bass) is involved: confirm it picks the part you mean, not the instrument of the same name." }
+                    : {}),
             })
         } catch (err) {
             logger.warn("[mcp] part preset preview failed", { fileId, err: err instanceof Error ? err.message : err })
@@ -202,56 +225,91 @@ export async function setPartPresetTool(
             "Use find_user to get a uid, or name an instrument such as 'bass'.",
         )
     }
-    const patterns = cleanPatterns(args.patterns)
-    if (!Array.isArray(patterns)) return patterns
+    if (targetUid && !UID_RE.test(targetUid)) {
+        return richError("invalid_argument", "`uid` has unexpected characters.", { field: "uid" }, "Use the uid from find_user.")
+    }
+    if (instrument && instrument.length > MAX_INSTRUMENT_LEN) {
+        return richError("invalid_argument", `\`instrument\` is longer than ${MAX_INSTRUMENT_LEN} characters.`, { field: "instrument" })
+    }
+    const remove = args.remove === true
+    let patterns: string[] = []
+    if (remove) {
+        if (Array.isArray(args.patterns) && args.patterns.length > 0) {
+            return richError("invalid_argument", "Pass `remove: true` without `patterns`.", { fields: ["remove", "patterns"] })
+        }
+    } else {
+        if (!Array.isArray(args.patterns) || args.patterns.length === 0) {
+            return richError(
+                "invalid_argument",
+                "Pass at least one part name in `patterns`, or `remove: true` to remove the preset.",
+                { field: "patterns" },
+            )
+        }
+        const cleaned = cleanPatterns(args.patterns)
+        if (!Array.isArray(cleaned)) return cleaned
+        patterns = cleaned
+    }
 
     const scope: PartPresetScope = targetUid
         ? { kind: "user", uid: targetUid }
         : { kind: "instrument", instrument: instrument as string }
     const docId = partPresetDocId(org, scope)
-    const ref = db.collection(COLLECTION).doc(docId)
-    const prior = await ref.get()
-    const priorData = prior.exists ? (prior.data() as Record<string, unknown>) : null
-    // A same-id doc stamped for another org is never touched.
-    if (priorData && priorData.orgId !== org) {
-        return richError("preset_not_found", "No preset to change in this congregation.", { docId })
-    }
 
-    const fileIds = Array.isArray(args.fileIds) ? args.fileIds.filter((f): f is string => typeof f === "string" && !!f) : []
-    const remove = patterns.length === 0
-    const preview = remove ? [] : await previewRows(db, org, fileIds, patterns)
-    const plan = {
-        scope,
-        patterns,
-        action: remove ? (priorData ? "remove" : "none") : priorData ? "replace" : "create",
-        previous: priorData ? (priorData.patterns ?? null) : null,
-        preview,
-    }
-
-    const dryRun = args.dryRun !== false
-    if (dryRun) return { ok: true, dryRun: true, ...plan }
-    if (args.force !== true) {
-        return richError(
-            "force_required",
-            "Pass force:true to write the part preset.",
-            { dryRunPlan: plan },
-            "Re-call with `dryRun: false, force: true` to commit, or `dryRun: true` to inspect.",
-        )
-    }
-
-    if (remove) {
-        if (priorData) await ref.delete()
-    } else {
-        await ref.set({
-            orgId: org,
+    try {
+        const rawIds = args.fileIds ?? []
+        if (!Array.isArray(rawIds) || rawIds.length > MAX_PREVIEW_FILES || rawIds.some((f) => typeof f !== "string" || !FILE_ID_RE.test(f))) {
+            return richError(
+                "invalid_argument",
+                `\`fileIds\` must be at most ${MAX_PREVIEW_FILES} plain chart ids.`,
+                { field: "fileIds" },
+                "Use fileIds from search_library or list_library.",
+            )
+        }
+        const fileIds = rawIds as string[]
+        const ref = db.collection(COLLECTION).doc(docId)
+        const prior = await ref.get()
+        const priorData = prior.exists ? (prior.data() as Record<string, unknown>) : null
+        // A same-id doc stamped for another org is never touched.
+        if (priorData && priorData.orgId !== org) {
+            return richError("preset_not_found", "No preset to change in this congregation.", { docId })
+        }
+        const preview = remove ? [] : await previewRows(db, org, fileIds, patterns)
+        const plan = {
             scope,
             patterns,
-            updatedAt: new Date().toISOString(),
-            updatedBy: uid,
-        })
+            action: remove ? (priorData ? "remove" : "none") : priorData ? "replace" : "create",
+            previous: priorData ? (priorData.patterns ?? null) : null,
+            preview,
+        }
+
+        const dryRun = args.dryRun !== false
+        if (dryRun) return { ok: true, dryRun: true, ...plan }
+        if (args.force !== true) {
+            return richError(
+                "force_required",
+                "Pass force:true to write the part preset.",
+                { dryRunPlan: plan },
+                "Re-call with `dryRun: false, force: true` to commit, or `dryRun: true` to inspect.",
+            )
+        }
+
+        if (remove) {
+            if (priorData) await ref.delete()
+        } else {
+            await ref.set({
+                orgId: org,
+                scope,
+                patterns,
+                updatedAt: new Date().toISOString(),
+                updatedBy: uid,
+            })
+        }
+        logger.info("[mcp] set_part_preset committed", { uid, org, docId, action: plan.action })
+        return { ok: true, dryRun: false, ...plan }
+    } catch (err) {
+        logger.error("[mcp] set_part_preset failed", { err: err instanceof Error ? err.message : err })
+        return richError("part_preset_failed", "Could not read or write the part preset.", {}, "Retry; nothing was written if this was a dry run.")
     }
-    logger.info("[mcp] set_part_preset committed", { uid, org, docId, action: plan.action })
-    return { ok: true, dryRun: false, ...plan }
 }
 
 export async function listPartPresetsTool(

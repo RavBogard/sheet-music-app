@@ -1,6 +1,9 @@
 import { describe, it, expect } from "vitest"
 import {
+    hasVocalRangeName,
+    instrumentPresetApplies,
     matchPartIndices,
+    pickPresets,
     partMatchesPattern,
     resolvePartSelection,
     sanitizeDevicePick,
@@ -18,8 +21,23 @@ describe("part matching", () => {
         expect(partMatchesPattern("Piano", "")).toBe(false)
     })
 
+    it("exact matches win over whole-word containment", () => {
+        const parts = ["Bass", "Bass Guitar", "Piano"]
+        expect(matchPartIndices(parts, ["bass"])).toEqual([0])
+        expect(matchPartIndices(parts, ["guitar"])).toEqual([1])
+    })
+
+    it("flags vocal-range names for a human look", () => {
+        expect(hasVocalRangeName("Tenor 1")).toBe(true)
+        expect(hasVocalRangeName("Piano")).toBe(false)
+    })
+
+    it("strips combining marks of any script when normalising", () => {
+        expect(partMatchesPattern("Cafe\u0301 Bass", "cafe bass")).toBe(true)
+    })
+
     it("returns the matching indices in score order", () => {
-        expect(matchPartIndices(PARTS, ["piano", "bass"])).toEqual([1, 2])
+        expect(matchPartIndices(PARTS, ["piano", "vocals"])).toEqual([0, 2])
         expect(matchPartIndices(PARTS, ["tuba"])).toEqual([])
     })
 })
@@ -33,7 +51,7 @@ describe("resolvePartSelection precedence", () => {
     })
 
     it("device pick beats the user preset, which beats the instrument preset", () => {
-        expect(resolvePartSelection({ partNames: PARTS, devicePick: [3], userPreset: user, instrumentPreset: instrument }))
+        expect(resolvePartSelection({ partNames: PARTS, devicePick: { names: PARTS, visible: [3] }, userPreset: user, instrumentPreset: instrument }))
             .toEqual({ source: "device", visible: [3] })
         expect(resolvePartSelection({ partNames: PARTS, userPreset: user, instrumentPreset: instrument }))
             .toEqual({ source: "user", visible: [2] })
@@ -46,9 +64,22 @@ describe("resolvePartSelection precedence", () => {
         expect(resolvePartSelection({ partNames: PARTS, userPreset: none }).source).toBe("full")
     })
 
-    it("ignores a stale or empty device pick", () => {
-        expect(sanitizeDevicePick([], 4)).toBeNull()
-        expect(sanitizeDevicePick([9], 4)).toBeNull()
-        expect(resolvePartSelection({ partNames: PARTS, devicePick: [9], userPreset: user }).source).toBe("user")
+    it("ignores a stale, empty or renamed device pick", () => {
+        expect(sanitizeDevicePick({ names: PARTS, visible: [] }, PARTS)).toBeNull()
+        expect(sanitizeDevicePick({ names: PARTS, visible: [9] }, PARTS)).toBeNull()
+        const renamed = [...PARTS.slice(0, 3), "Drums"]
+        expect(sanitizeDevicePick({ names: PARTS, visible: [1] }, renamed)).toBeNull()
+        expect(resolvePartSelection({ partNames: renamed, devicePick: { names: PARTS, visible: [1] } }).source).toBe("full")
+        expect(resolvePartSelection({ partNames: PARTS, devicePick: { names: PARTS, visible: [1, 2] } }))
+            .toEqual({ source: "device", visible: [1, 2] })
+    })
+
+    it("applies an instrument preset to a profile instrument slug, loosely", () => {
+        expect(instrumentPresetApplies("bass", "electric_bass")).toBe(true)
+        expect(instrumentPresetApplies("bass", "piano")).toBe(false)
+        const presets = [instrument, user]
+        expect(pickPresets(presets, "u1", "electric_bass")).toEqual({ userPreset: user, instrumentPreset: instrument })
+        expect(pickPresets(presets, null, "electric_bass")).toEqual({ userPreset: null, instrumentPreset: null })
+        expect(pickPresets(presets, "u1", null).instrumentPreset).toBeNull()
     })
 })

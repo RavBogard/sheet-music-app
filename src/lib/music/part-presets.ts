@@ -32,7 +32,7 @@ export interface PartSelection {
 export function normalizePartName(s: string): string {
     return s
         .normalize("NFKD")
-        .replace(/[̀-ͯ]/g, "")
+        .replace(/\p{M}/gu, "")
         .toLowerCase()
         .replace(/[^\p{L}\p{N}]+/gu, " ")
         .trim()
@@ -49,24 +49,74 @@ export function partMatchesPattern(partName: string, pattern: string): boolean {
     return ` ${n} `.includes(` ${p} `) || words.includes(p)
 }
 
-/** Indices of the parts any pattern matches. Empty when nothing matches. */
+/**
+ * Indices of the parts the patterns select. Exact (normalised) matches win:
+ * when any part equals a pattern, only those parts are used. Whole-word
+ * containment applies only when nothing matches exactly. Empty when nothing matches.
+ */
 export function matchPartIndices(partNames: readonly string[], patterns: readonly string[]): number[] {
-    const out: number[] = []
+    const wanted = new Set(patterns.map(normalizePartName).filter(Boolean))
+    const exact: number[] = []
+    const loose: number[] = []
     partNames.forEach((name, i) => {
-        if (patterns.some((p) => partMatchesPattern(name, p))) out.push(i)
+        if (wanted.has(normalizePartName(name))) exact.push(i)
+        else if (patterns.some((p) => partMatchesPattern(name, p))) loose.push(i)
     })
-    return out
+    return exact.length > 0 ? exact : loose
 }
 
-/** A device pick is usable only when every index is a real part and at least one is chosen. */
-export function sanitizeDevicePick(pick: unknown, partCount: number): number[] | null {
-    if (!Array.isArray(pick) || pick.length === 0) return null
+/** Words that name both a voice range and an instrument, so a loose match on them needs a human look. */
+const VOCAL_RANGE_WORDS = new Set(["soprano", "alto", "tenor", "bass"])
+export function hasVocalRangeName(s: string): boolean {
+    return normalizePartName(s).split(" ").some((w) => VOCAL_RANGE_WORDS.has(w))
+}
+
+/** A device's saved pick: the part names it was made against, and the visible indices. */
+export interface DevicePick {
+    names: string[]
+    visible: number[]
+}
+
+/**
+ * A device pick is usable only when it was made against this chart's current
+ * part names and every index is a real part with at least one chosen. Anything
+ * else is ignored, so a re-uploaded chart opens as the full score.
+ */
+export function sanitizeDevicePick(pick: unknown, partNames: readonly string[]): number[] | null {
+    const p = pick as Partial<DevicePick> | null | undefined
+    if (!p || !Array.isArray(p.names) || !Array.isArray(p.visible) || p.visible.length === 0) return null
+    if (p.names.length !== partNames.length || p.names.some((n, i) => n !== partNames[i])) return null
     const set = new Set<number>()
-    for (const v of pick) {
-        if (!Number.isInteger(v) || v < 0 || v >= partCount) return null
+    for (const v of p.visible) {
+        if (!Number.isInteger(v) || v < 0 || v >= partNames.length) return null
         set.add(v)
     }
     return [...set].sort((a, b) => a - b)
+}
+
+/**
+ * Does an instrument preset apply to a musician profile instrument? The profile
+ * stores a slug (electric_bass); a preset says "bass". Loose, by whole word,
+ * against the slug and its label.
+ */
+export function instrumentPresetApplies(presetInstrument: string, profileInstrument: string | null | undefined, label?: string | null): boolean {
+    if (!profileInstrument) return false
+    return [profileInstrument.replace(/_/g, " "), label ?? ""].some((c) => !!c && partMatchesPattern(c, presetInstrument))
+}
+
+/** The person's preset and the profile instrument's preset out of an org's presets. */
+export function pickPresets(
+    presets: readonly PartPreset[],
+    uid: string | null,
+    profileInstrument: string | null | undefined,
+    label?: string | null,
+): { userPreset: PartPreset | null; instrumentPreset: PartPreset | null } {
+    if (!uid) return { userPreset: null, instrumentPreset: null }
+    return {
+        userPreset: presets.find((p) => p.scope.kind === "user" && p.scope.uid === uid) ?? null,
+        instrumentPreset:
+            presets.find((p) => p.scope.kind === "instrument" && instrumentPresetApplies(p.scope.instrument, profileInstrument, label)) ?? null,
+    }
 }
 
 export function resolvePartSelection(input: {
@@ -77,7 +127,7 @@ export function resolvePartSelection(input: {
 }): PartSelection {
     const { partNames } = input
     const all = partNames.map((_, i) => i)
-    const device = sanitizeDevicePick(input.devicePick, partNames.length)
+    const device = sanitizeDevicePick(input.devicePick, partNames)
     if (device) return { source: "device", visible: device }
     for (const [source, preset] of [
         ["user", input.userPreset],

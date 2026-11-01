@@ -1,3 +1,4 @@
+import type { PartPreset } from "@/lib/music/part-presets"
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { ChordOverlay } from '@/lib/chord-cache'
@@ -139,15 +140,19 @@ export interface MusicState {
      */
     chartTransposition: Record<string, number>
     /**
-     * PERF-15: per-device MusicXML part pick per chart, keyed by `fileId`
-     * (indices of the visible parts). Signed in or out. Absent = no pick, so
-     * presets and then the full score apply. Persisted.
+     * PERF-15: per-device MusicXML part pick per chart, keyed by `fileId`:
+     * the part names the pick was made against and the visible indices. A pick
+     * whose names differ from the chart's current parts is ignored. Signed in
+     * or out. Persisted.
      */
-    chartParts: Record<string, number[]>
-    setChartParts: (fileId: string, parts: number[] | null) => void
-    /** PERF-15: the instrument this iPad is for, if it knows (matches instrument presets). Persisted. */
-    deviceInstrument: string | null
-    setDeviceInstrument: (instrument: string | null) => void
+    chartParts: Record<string, { names: string[]; visible: number[] }>
+    setChartParts: (fileId: string, names: string[], visible: number[] | null) => void
+    /**
+     * PERF-15: the last part presets read per org, so offline and slow-wifi
+     * opens still apply a leader's default. Persisted.
+     */
+    partPresetCache: Record<string, PartPreset[]>
+    setPartPresetCache: (org: string, presets: PartPreset[]) => void
     setChartTransposition: (fileId: string, semitones: number) => void
 
     /**
@@ -248,7 +253,7 @@ export const useMusicStore = create<MusicState>()(
             chartCapo: {},
             chartTransposition: {},
             chartParts: {},
-            deviceInstrument: null,
+            partPresetCache: {},
             tapZonesEnabled: true,
             musicXmlKey: null,
 
@@ -399,13 +404,15 @@ export const useMusicStore = create<MusicState>()(
                 state.chartTransposition?.[fileId] === semitones
                     ? {}
                     : { chartTransposition: { ...state.chartTransposition, [fileId]: semitones } }),
-            setChartParts: (fileId, parts) => set((state) => {
+            setChartParts: (fileId, names, visible) => set((state) => {
                 const next = { ...(state.chartParts ?? {}) }
-                if (parts && parts.length > 0) next[fileId] = [...parts]
+                if (visible && visible.length > 0) next[fileId] = { names: [...names], visible: [...visible] }
                 else delete next[fileId]
                 return { chartParts: next }
             }),
-            setDeviceInstrument: (instrument) => set({ deviceInstrument: instrument?.trim() || null }),
+            setPartPresetCache: (org, presets) => set((state) => ({
+                partPresetCache: { ...(state.partPresetCache ?? {}), [org]: presets },
+            })),
             setTapZonesEnabled: (enabled) => set({ tapZonesEnabled: enabled }),
             setMusicXmlKey: (key) => set({ musicXmlKey: key }),
 
@@ -449,7 +456,7 @@ export const useMusicStore = create<MusicState>()(
                 chartCapo: state.chartCapo,
                 chartTransposition: state.chartTransposition,
                 chartParts: state.chartParts,
-                deviceInstrument: state.deviceInstrument,
+                partPresetCache: state.partPresetCache,
                 tapZonesEnabled: state.tapZonesEnabled,
                 audio: { ...state.audio, isPlaying: false }, // Don't persist playing state
             })
