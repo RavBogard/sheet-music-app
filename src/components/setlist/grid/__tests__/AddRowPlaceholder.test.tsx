@@ -370,3 +370,47 @@ describe('AddRowPlaceholder v53-03-01: long-press disambiguation', () => {
         expect(event.defaultPrevented).toBe(true)
     })
 })
+
+describe('AddRowPlaceholder variant="fab" (the round + in the editor)', () => {
+    beforeEach(async () => {
+        await resetDbForTests()
+        vi.resetModules()
+    })
+    afterEach(async () => {
+        await resetDbForTests()
+        vi.resetModules()
+        vi.doUnmock('@/hooks/use-media-query')
+        vi.doUnmock('@/hooks/use-virtual-keyboard-open')
+    })
+
+    it('is a fixed, labelled round button with no visible text', () => {
+        render(<AddRowPlaceholder variant="fab" onPickSong={vi.fn()} onCreateFreeText={vi.fn()} />)
+        const wrapper = screen.getByTestId('add-song-fab')
+        expect(wrapper.className.split(/ +/)).toContain('fixed')
+        const trigger = screen.getByRole('button', { name: 'Add a song' })
+        expect(trigger).toHaveTextContent('')
+        expect(trigger.className).toMatch(/rounded-full/)
+    })
+
+    it('opens the song picker and adds the picked song', async () => {
+        await seedSongs([{ id: 's-1', title: 'Adon Olam' }])
+        const onPickSong = vi.fn()
+        render(<AddRowPlaceholder variant="fab" onPickSong={onPickSong} onCreateFreeText={vi.fn()} />)
+        await userEvent.click(screen.getByRole('button', { name: 'Add a song' }))
+        await userEvent.click(await screen.findByText('Adon Olam'))
+        expect(onPickSong).toHaveBeenCalledWith(expect.objectContaining({ id: 's-1', title: 'Adon Olam' }))
+    })
+
+    it('autoOpen opens the picker (EmptyState and tab-past-last-cell)', async () => {
+        render(<AddRowPlaceholder variant="fab" autoOpen onPickSong={vi.fn()} onCreateFreeText={vi.fn()} />)
+        expect(await screen.findByRole('combobox')).toBeInTheDocument()
+    })
+
+    it('hides while the phone keyboard is open for something else', async () => {
+        vi.doMock('@/hooks/use-media-query', () => ({ useMediaQuery: () => true }))
+        vi.doMock('@/hooks/use-virtual-keyboard-open', () => ({ useVirtualKeyboardOpen: () => true }))
+        const { AddRowPlaceholder: Mocked } = await import('../AddRowPlaceholder')
+        render(<Mocked variant="fab" onPickSong={vi.fn()} onCreateFreeText={vi.fn()} />)
+        expect(screen.getByTestId('add-song-fab').className.split(/\s+/)).toContain('hidden')
+    })
+})

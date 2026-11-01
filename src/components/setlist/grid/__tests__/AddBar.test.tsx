@@ -343,7 +343,7 @@ describe('AddBar v53-03-01: long-press disambiguation', () => {
     })
 })
 
-describe('AddBar v60-10-01: coarse-pointer sticky-bottom variant', () => {
+describe('AddBar position (in flow since 2026-11-01)', () => {
     beforeEach(async () => {
         await resetDbForTests()
         vi.resetModules()
@@ -358,11 +358,7 @@ describe('AddBar v60-10-01: coarse-pointer sticky-bottom variant', () => {
         vi.doUnmock('@/hooks/use-virtual-keyboard-open')
     })
 
-    it('wrapper carries the coarse-pointer sticky positioning class set (always — Tailwind gates via media query)', () => {
-        // Tailwind emits the rule wrapped in @media (pointer: coarse) so it
-        // applies only on real coarse-pointer devices. JSDOM cannot evaluate
-        // the media query — assert the class string is present so we know
-        // the rule will fire on iPad/phone.
+    it('sits in the list flow on every device: the round + is the pinned entry now', () => {
         render(
             <AddBar
                 onPickSong={vi.fn()}
@@ -370,89 +366,11 @@ describe('AddBar v60-10-01: coarse-pointer sticky-bottom variant', () => {
                 onAddTrackOfType={vi.fn()}
             />,
         )
-
         const wrapper = screen.getByTestId('add-bar')
-        // Positioning + offset
-        expect(wrapper.className).toMatch(/pointer:coarse\)\]:fixed/)
-        // Web refresh: sits on top of the bottom tab bar (0 where there is none).
-        expect(wrapper.className).toMatch(/pointer:coarse\)\]:bottom-\[var\(--tabbar-h,0px\)\]/)
-        expect(wrapper.className).toMatch(/pointer:coarse\)\]:left-0/)
-        expect(wrapper.className).toMatch(/pointer:coarse\)\]:right-0/)
-        // Z-index sits below Radix Dialog (z-50)
-        expect(wrapper.className).toMatch(/pointer:coarse\)\]:z-40/)
-        // Background opaque (don't bleed scrolled content through the bar)
-        expect(wrapper.className).toMatch(/pointer:coarse\)\]:bg-background/)
-        // iOS home-indicator safe-area padding
-        expect(wrapper.className).toMatch(
-            /pointer:coarse\)\]:pb-\[env\(safe-area-inset-bottom\)\]/,
-        )
-        // Elevation shadow (separation from scrolled content above)
-        expect(wrapper.className).toMatch(/pointer:coarse\)\]:shadow-/)
+        expect(wrapper.className).not.toMatch(/fixed/)
     })
 
-    it('does NOT carry the hidden class when keyboard is closed (default JSDOM state)', () => {
-        render(
-            <AddBar
-                onPickSong={vi.fn()}
-                onCreateFreeText={vi.fn()}
-                onAddTrackOfType={vi.fn()}
-            />,
-        )
-
-        const wrapper = screen.getByTestId('add-bar')
-        // Tailwind utility for display:none — not present when keyboard is closed
-        expect(wrapper.className.split(/\s+/)).not.toContain('hidden')
-    })
-
-    it('applies `hidden` (display:none) when coarse pointer AND virtual keyboard is open', async () => {
-        // Mock both hooks together for this scenario. Use dynamic import
-        // after the mocks so the rendered AddBar picks them up.
-        vi.doMock('@/hooks/use-media-query', () => ({
-            useMediaQuery: () => true,
-        }))
-        vi.doMock('@/hooks/use-virtual-keyboard-open', () => ({
-            useVirtualKeyboardOpen: () => true,
-        }))
-        const { AddBar: MockedAddBar } = await import('../AddBar')
-
-        render(
-            <MockedAddBar
-                onPickSong={vi.fn()}
-                onCreateFreeText={vi.fn()}
-                onAddTrackOfType={vi.fn()}
-            />,
-        )
-
-        const wrapper = screen.getByTestId('add-bar')
-        expect(wrapper.className.split(/\s+/)).toContain('hidden')
-    })
-
-    it('does NOT apply `hidden` when only the virtual keyboard opens on a fine pointer (defense-in-depth)', async () => {
-        // isCoarse=false, keyboardOpen=true → hideForKeyboard=false. Bar
-        // stays visible. Guards against false-positive viewport-resize
-        // events on desktop browsers (e.g. devtools resize, browser-chrome
-        // hide/reveal triggering a large visualViewport delta).
-        vi.doMock('@/hooks/use-media-query', () => ({
-            useMediaQuery: () => false,
-        }))
-        vi.doMock('@/hooks/use-virtual-keyboard-open', () => ({
-            useVirtualKeyboardOpen: () => true,
-        }))
-        const { AddBar: MockedAddBar } = await import('../AddBar')
-
-        render(
-            <MockedAddBar
-                onPickSong={vi.fn()}
-                onCreateFreeText={vi.fn()}
-                onAddTrackOfType={vi.fn()}
-            />,
-        )
-
-        const wrapper = screen.getByTestId('add-bar')
-        expect(wrapper.className.split(/\s+/)).not.toContain('hidden')
-    })
-
-    it('v53-03 split-button + tile-grid shape unchanged when sticky classes applied', () => {
+    it('v53-03 split-button + tile-grid shape unchanged', () => {
         // Regression: every v53-03-01 affordance still renders.
         render(
             <AddBar
