@@ -123,6 +123,23 @@ export async function readTenantRole(db: Firestore, uid: string, orgId: OrgId): 
     return a.effectiveRole ?? undefined
 }
 
+/**
+ * SEC-02: the caller's role IN THIS TENANT from its membership doc only — no
+ * legacy `users/{uid}.role` fallback, so a tenant-blind role can never pass a
+ * tenant gate. Platform owners still read as "admin" (a deliberate,
+ * cross-tenant grant, not the legacy path). No membership (or a membership
+ * without a valid role) → undefined, which every gate denies.
+ */
+export async function readMembershipRole(db: Firestore, uid: string, orgId: OrgId): Promise<string | undefined> {
+    const [memSnap, po] = await Promise.all([
+        db.collection("memberships").doc(membershipId(orgId, uid)).get(),
+        isPlatformOwner(uid, db),
+    ])
+    if (po) return "admin"
+    const mem = memSnap.exists ? ((memSnap.data() ?? {}) as Record<string, unknown>) : null
+    return (mem ? asTenantRole(mem.role) : null) ?? undefined
+}
+
 const OWNERS_TTL_MS = 60_000
 let ownersMemo: { at: number; db: Firestore; uids: ReadonlySet<string> } | null = null
 

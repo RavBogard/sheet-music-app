@@ -60,14 +60,15 @@ const batchSpy = vi.fn(() => ({
 const docGetSpy = vi.fn()
 const docSpy = vi.fn((_path: string) => ({ get: docGetSpy }))
 
-// User-role lookup. the tenant role read (org-access fake, legacy fallback) hits db.collection("users").doc(uid).get();
+// Role lookup. SEC-02: the admin gate reads ONLY the caller's membership,
+// db.collection("memberships").doc(`${org}__${uid}`).get();
 // we share collectionLimitGet's spy queue for the housekeeping collection
 // paths, so users/{uid}.get() needs its OWN spy returning the role doc.
 const userRoleGet = vi.fn()
 
 const collectionSpy = vi.fn((path: string) => {
-    // users/{uid} lookups go through .doc(uid).get()
-    if (path === "users") {
+    // memberships/{org}__{uid} lookups go through .doc(id).get()
+    if (path === "memberships") {
         return {
             doc: vi.fn(() => ({ get: userRoleGet })),
             limit: collectionLimitSpy,
@@ -104,7 +105,7 @@ import {
     bridgeGetLog,
 } from "../bridge-housekeeping"
 
-/** Stub the users/{uid}.get() role lookup. */
+/** Stub the caller's membership-role lookup. */
 function withRole(role: string | undefined): void {
     userRoleGet.mockReset().mockResolvedValue({
         exists: role !== undefined,

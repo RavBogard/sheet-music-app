@@ -18,7 +18,7 @@ vi.mock("@/lib/firebase-admin", () => ({
 }))
 const mockReadTenantRole = vi.fn(async () => ROLE)
 vi.mock("@/lib/org/access", () => ({
-    readTenantRole: (...a: unknown[]) => mockReadTenantRole(...(a as [])),
+    readMembershipRole: (...a: unknown[]) => mockReadTenantRole(...(a as [])),
 }))
 
 import { backfillLibraryKeys } from "../backfill-library-keys"

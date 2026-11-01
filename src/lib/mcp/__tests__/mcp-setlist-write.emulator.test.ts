@@ -26,6 +26,7 @@ import {
     swapChart,
 } from "../tools/setlist-write"
 import { getSetlist } from "../tools/setlists"
+import { mirrorLegacyRoles } from "@/test-stubs/mirror-legacy-roles"
 
 /**
  * MCP Phase 4b — write tools against the Firebase emulator.
@@ -114,6 +115,9 @@ describe("MCP setlist write tools (emulator)", () => {
         }
         return r.setlistId
     }
+
+    // SEC-02: role gates read memberships only; give each seeded person theirs.
+    beforeEach(async () => { await mirrorLegacyRoles(db()) })
 
     it("create_setlist makes an empty setlist owned by the creator and echoes owner (G-16) + version (v6 version-echo)", async () => {
         const result = (await createSetlist(ADMIN, {

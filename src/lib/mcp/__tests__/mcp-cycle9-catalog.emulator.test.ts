@@ -27,6 +27,7 @@ vi.mock("@/lib/file-fetcher", () => ({
 
 import { searchLibrary } from "../tools/library"
 import { addTrackToSetlist } from "../tools/setlist-write"
+import { mirrorLegacyRoles } from "@/test-stubs/mirror-legacy-roles"
 
 const OK = { status: "ok" as const, source: "firebase-storage" as const }
 const MISSING = {
@@ -90,6 +91,9 @@ describe("Cycle-9 F2 — catalog dead-byte guard (emulator)", () => {
     })
 
     // ─── search_library ──────────────────────────────────────────────────
+
+    // SEC-02: role gates read memberships only; give each seeded person theirs.
+    beforeEach(async () => { await mirrorLegacyRoles(db()) })
 
     it("search hides a dead-byte (missing) row by default; healthy row stays clean", async () => {
         await seedSong("chart-ok", "Lechu Neranena")

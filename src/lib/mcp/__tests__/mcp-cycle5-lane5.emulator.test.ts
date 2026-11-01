@@ -87,6 +87,12 @@ describe("Cycle-5 Lane 5 — list_setlists / publish / service-personnel / ai-co
             .collection("users")
             .doc(MEMBER)
             .set({ displayName: "Guest", role: "member", email: "guest@example.com" })
+        // SEC-02: role gates read only the tenant membership.
+        await db().collection("memberships").doc(`crc__${ADMIN}`).set({ uid: ADMIN, tenantId: "crc", role: "admin", soundEngineer: false, addedBy: "test-account" })
+        // SEC-02: role gates read only the tenant membership.
+        await db().collection("memberships").doc(`crc__${LEADER}`).set({ uid: LEADER, tenantId: "crc", role: "band_leader", soundEngineer: false, addedBy: "test-account" })
+        // SEC-02: role gates read only the tenant membership.
+        await db().collection("memberships").doc(`crc__${MEMBER}`).set({ uid: MEMBER, tenantId: "crc", role: "member", soundEngineer: false, addedBy: "test-account" })
         await db()
             .collection("songs")
             .doc("song-oseh")

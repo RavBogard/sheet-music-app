@@ -100,6 +100,13 @@ export async function readTenantRole(db: DB, uid: string, orgId: OrgId): Promise
     return (await getTenantAccess(uid, orgId, { db })).effectiveRole ?? undefined
 }
 
+/** SEC-02 twin of the real module: membership only (platform owner → admin). */
+export async function readMembershipRole(db: DB, uid: string, orgId: OrgId): Promise<string | undefined> {
+    if (await isPlatformOwner(uid, db)) return "admin"
+    const m = await readDoc(db, "memberships", `${orgId}__${uid}`)
+    return m && typeof m.role === "string" ? m.role : undefined
+}
+
 /**
  * Members of `orgId` (optionally filtered by role), each with its users/{uid}
  * profile. Membership docs first; unmigrated users (no membershipsMigratedAt)

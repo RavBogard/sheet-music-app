@@ -29,6 +29,7 @@ vi.mock("@/lib/performed/history-client", () => ({
 vi.mock("@/lib/rate-limit", () => ({ checkUserRateLimit: vi.fn().mockResolvedValue(null) }))
 
 import { reconcileService } from "../tools/performed"
+import { mirrorLegacyRoles } from "@/test-stubs/mirror-legacy-roles"
 
 describe("reconcile_service (emulator)", () => {
     let app: App
@@ -87,6 +88,9 @@ describe("reconcile_service (emulator)", () => {
             { seq: 2, at: "2026-09-13T14:25:00.000Z", action: "show", book: "crc-machzor-2008", folio: 52 },
         ]
     }
+
+    // SEC-02: role gates read memberships only; give each seeded person theirs.
+    beforeEach(async () => { await mirrorLegacyRoles(db()) })
 
     it("dryRun stages the diff and writes absolutely nothing", async () => {
         const before = (await db().collection("setlists").get()).size

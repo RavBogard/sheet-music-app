@@ -6,6 +6,7 @@ import { applyRevision, loadRevisionTarget, type RevisionReport, type RevisionTa
 import { backfillChartLineage } from "@/lib/mcp/tools/backfill-chart-lineage"
 import { applyInboxRevisions } from "@/lib/mcp/tools/inbox-revisions"
 import { uploadChart } from "@/lib/mcp/tools/library-upload"
+import { mirrorLegacyRoles } from "@/test-stubs/mirror-legacy-roles"
 
 /**
  * Bet 2 — chart lineage against the Firestore emulator. Daniel's ruling
@@ -102,6 +103,9 @@ describe("chart lineage (emulator)", () => {
         if ("error" in t) throw new Error(`no target: ${JSON.stringify(t)}`)
         return t
     }
+
+    // SEC-02: role gates read memberships only; give each seeded person theirs.
+    beforeEach(async () => { await mirrorLegacyRoles(db()) })
 
     it("moves upcoming rows only, keeping their played key and title; past and undated setlists keep the exact chart", async () => {
         const report = await revise("old", "new")
