@@ -117,3 +117,4 @@ bridge/builder_debug.txt
 
 # Local git recovery scratch — index locks and junk the CLI parked here.
 /_to_delete/
+.recordings-work/
