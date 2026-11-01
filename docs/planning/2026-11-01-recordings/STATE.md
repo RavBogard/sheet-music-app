@@ -117,3 +117,14 @@ Daniel marked all 14 clips on the review artifact (claude.ai/artifact/LdPj541R8k
 - Hidden (not deleted): the Shiru L'Adonai intro clip (mostly talk and poems; the song itself is the moved clip above), Twilight, and the old Psukei take.
 - Psukei d'Zimrah: re-cut from 0:30 so it skips Randy's intro. It is a new doc, 1k633gqlJcrGfZzHiMIN, so the cached copy under the old id can't serve the old audio.
 - Verified: the new file returns 206 audio/mpeg, and the 6.19 listen page lists 8 clips.
+
+## Round 2: YouTube (2026-11-01)
+Daniel: "every service is available dated on youtube, so we could go and match known setlists". The congregation's channel (UCsxx_vAur5XLTns8OPsolrQ) has about 1,950 videos.
+- `scripts/recordings/yt.py plan` keeps a video only when its title date has exactly one setlist of a compatible kind. Per-instrument packet copies and "(Copy)" setlists don't count.
+  - On a holiday, the setlist is picked by its name.
+  - Marker words (S'lichot, Camp Sabra, Crown Center, children's, alternative) keep a video from being paired with a different service on the same day.
+  - 33 videos matched, about 69 hours of audio. 44 were skipped: almost every Kabbalat Shabbat has no setlist in the app.
+- Whisper: batched inference (VAD-chunked) was tested on 6.19 and rejected. It is 35× realtime but keeps only 60% of the words, and its cut is mostly wrong. beam_size=1 (RECORDINGS_WHISPER_BEAM=1) is 19× realtime against 12× for beam 5, and its 6.19 cut is at least as good (it places Mizmor l'David where Daniel's review put it). The YouTube run uses beam 1.
+- The Dropbox no-setlist guess run (`guess.py`) was stopped in favour of YouTube. It is resumable, and the transcripts it made are cached. One of the two 6.14 Dropbox files is set aside as a duplicate mix (both are 7434.65 s long).
+- GATE: confident (live) clips from setlist-matched YouTube services will publish the same way round 1 did. Uncertain ones, and songs with no confident take, go to the review artifact. Proceeded because this is the pipeline Daniel approved ("you do it"), and round 1's confident clips were 5 for 5.
+- Next: a timeline of each service (songs, talk, blessings, Torah, with durations) from the same transcripts. Daniel: "are we using these things to gather data on lived services? we should" and "don't worry about privacy. these are all available on youtube".
