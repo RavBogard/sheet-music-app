@@ -79,11 +79,6 @@ export async function GET(req: Request) {
             return NextResponse.json({ success: true, skipped: "feature_off" })
         }
 
-        const due = servicesDueForSnapshot(await loadServiceSchedule(now), now)
-        if (due.length === 0) {
-            return NextResponse.json({ success: true, skipped: "no_service_due" })
-        }
-
         const [monitorDoc, stateDoc] = await Promise.all([
             db.collection("config").doc("monitor").get(),
             db.collection("monitor-live").doc("state").get(),
@@ -92,6 +87,18 @@ export async function GET(req: Request) {
         if (monitor && bridgeConfigOrg(monitor) !== MIXER_ORG_ID) {
             logger.warn("[Cron/ServiceMixSnapshot] config/monitor names another tenant — skipping")
             return NextResponse.json({ success: true, skipped: "bridge_tenant_mismatch" })
+        }
+
+        // A schedule that cannot be read is "no service due" (logged), never a 500.
+        let services: Awaited<ReturnType<typeof loadServiceSchedule>> = []
+        try {
+            services = await loadServiceSchedule(now)
+        } catch (e) {
+            logger.warn("[Cron/ServiceMixSnapshot] could not load the service schedule — treating as none due:", e)
+        }
+        const due = servicesDueForSnapshot(services, now)
+        if (due.length === 0) {
+            return NextResponse.json({ success: true, skipped: "no_service_due" })
         }
         if (!stateDoc.exists) {
             return NextResponse.json({ success: true, skipped: "no_mirror" })

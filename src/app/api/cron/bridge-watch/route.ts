@@ -105,31 +105,39 @@ export async function GET(req: Request) {
             return NextResponse.json({ success: true, skipped: "feature_off" })
         }
 
-        // Only look at the bridge shortly before a service. The studio PC is off
-        // the rest of the week, and that must never alert.
-        const due = servicesInAlertWindow(await loadServiceSchedule(now), now)[0]
-        if (!due) {
-            logger.info("[Cron/BridgeWatch] no service in the pre-service window — nothing to check")
-            return NextResponse.json({ success: true, skipped: "no_service_in_window" })
-        }
-        const startText = formatLocalTime(due.startMs)
-        const serviceName = due.name?.trim() || ""
-        const serviceLabel = serviceName || "The service"
-
-        const [monitorDoc, stateDoc, watchDoc] = await Promise.all([
-            db.collection("config").doc("monitor").get(),
-            db.collection("monitor-live").doc("state").get(),
-            db.collection("config").doc("bridgeWatch").get(),
-        ])
-
+        // Gates first: the bridge config must be the mixer tenant's (absent orgId = crc).
+        const monitorDoc = await db.collection("config").doc("monitor").get()
         const monitorData = monitorDoc.exists ? (monitorDoc.data() as Record<string, unknown>) : undefined
-        // The bridge config must be the mixer tenant's (absent orgId = crc).
         if (monitorData && bridgeConfigOrg(monitorData) !== MIXER_ORG_ID) {
             logger.warn("[Cron/BridgeWatch] config/monitor names another tenant — skipping", {
                 orgId: bridgeConfigOrg(monitorData),
             })
             return NextResponse.json({ success: true, skipped: "bridge_tenant_mismatch" })
         }
+
+        // Then the window: only look at the bridge shortly before a service. The
+        // studio PC is off the rest of the week, and that must never alert. A
+        // schedule that cannot be read is "no service" (logged), never a 500.
+        let services: Awaited<ReturnType<typeof loadServiceSchedule>> = []
+        try {
+            services = await loadServiceSchedule(now)
+        } catch (e) {
+            logger.warn("[Cron/BridgeWatch] could not load the service schedule — treating as no service:", e)
+        }
+        const due = servicesInAlertWindow(services, now)[0]
+        if (!due) {
+            logger.info("[Cron/BridgeWatch] no service in the pre-service window — nothing to check")
+            return NextResponse.json({ success: true, skipped: "no_service_in_window" })
+        }
+        const serviceName = due.name?.trim() || ""
+        const serviceLabel = serviceName || "The service"
+        const startText = formatLocalTime(due.startMs)
+
+        const [stateDoc, watchDoc] = await Promise.all([
+            db.collection("monitor-live").doc("state").get(),
+            db.collection("config").doc("bridgeWatch").get(),
+        ])
+
         const monitor = monitorData
         const bridge = (monitor?.bridge as BridgeHeartbeat | undefined) ?? undefined
         const lease = monitor?.bridgeLease as { expiresAt?: number } | undefined
