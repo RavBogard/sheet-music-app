@@ -23,6 +23,7 @@ import { useT } from "@/i18n/client"
 const SESSION_SETLIST_KEY = "lastOpenedSetlistId"
 
 import { AppNavigationProps } from "./AppNavigation"
+import { displayChartTitle } from "@/lib/format/chart-title"
 
 export function MobileTabBar(props: AppNavigationProps) {
     const t = useT()
@@ -245,7 +246,7 @@ export function MobileTabBar(props: AppNavigationProps) {
                                             className="w-full text-start px-2 min-h-11 rounded-md text-sm hover:bg-accent transition-colors truncate"
                                             onClick={() => handleSearchSelect(file)}
                                         >
-                                            {file.displayName || file.name}
+                                            {displayChartTitle(file.displayName || file.name)}
                                         </button>
                                     </li>
                                 ))}
