@@ -99,6 +99,6 @@ describe("SetlistDrawer/QueueRow — bonded non-song chart affordance", () => {
         )
         const btn = screen.getByRole("button", { name: /Open chart: Maariv Arevim/ })
         expect(btn.className).not.toContain("opacity-60")
-        expect(btn.className).toContain("bg-blue-600")
+        expect(btn.getAttribute("aria-current")).toBe("true")
     })
 })

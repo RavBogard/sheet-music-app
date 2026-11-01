@@ -107,14 +107,14 @@ export function BridgeStatusCard({ bridge }: { bridge: BridgeHeartbeat | undefin
                 <span
                     data-testid="bridge-alive"
                     data-alive={alive}
-                    className={`text-sm font-bold ${alive ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"}`}
+                    className={`text-sm font-bold ${alive ? "text-success" : "text-destructive"}`}
                 >
                     {alive ? t("monitor.bridgeRunning") : t("monitor.bridgeNotRunning")}
                 </span>
             </div>
             <ul className="mt-2 space-y-1 text-sm tabular-nums">
                 {lines.map((l, i) => (
-                    <li key={i} className={l.warn ? "text-amber-700 dark:text-amber-400 font-medium" : "text-muted-foreground"}>
+                    <li key={i} className={l.warn ? "text-caution font-medium" : "text-muted-foreground"}>
                         {l.text}
                     </li>
                 ))}

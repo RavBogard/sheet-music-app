@@ -4,8 +4,8 @@
     "description": "Digital Sheet Music Library for Central Reform Congregation",
     "start_url": "/",
     "display": "standalone",
-    "background_color": "#0e0d18",
-    "theme_color": "#0e0d18",
+    "background_color": "#F6F7FB",
+    "theme_color": "#23356B",
     "orientation": "any",
     "categories": [
         "music",

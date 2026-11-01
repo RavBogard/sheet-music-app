@@ -24,7 +24,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { interpolateNodes } from "@/components/i18n/interpolate-nodes"
-import { Check, ChevronDown, ChevronRight, Loader2, RefreshCw, Sparkles, X } from "lucide-react"
+import { Check, ChevronDown, ChevronRight, Loader2, RefreshCw, X } from "lucide-react"
 import { toast } from "sonner"
 
 import { apiFetch } from "@/lib/api-client"
@@ -32,6 +32,7 @@ import { formatError } from "@/lib/format-error"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { PageHeader } from "@/components/layout/Page"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { DirectionalIcon } from "@/components/i18n/DirectionalIcon"
 import { useT } from "@/i18n/client"
@@ -311,45 +312,40 @@ export default function LibraryReviewClient({ initial, initialError }: Props) {
         <div className="min-h-screen bg-background text-foreground">
             <div className="max-w-7xl mx-auto px-4 py-4 pb-20 space-y-3">
                 {/* Header */}
-                <header className="flex items-center justify-between gap-4">
-                    <div>
-                        <h1 className="text-xl font-semibold flex items-center gap-2">
-                            <Sparkles className="w-5 h-5 text-brand" />
-                            {t("manage-library-review.title")}
-                        </h1>
-                        <p className="text-muted-foreground text-xs mt-0.5">
-                            {interpolateNodes(t("manage-library-review.subtitle"), {
-                                navKeys: <kbd className="px-1 py-0.5 rounded border text-[10px] font-mono">j/k</kbd>,
-                                reviewKeys: <kbd className="px-1 py-0.5 rounded border text-[10px] font-mono">a/r/e</kbd>,
-                                retryKeys: <kbd className="px-1 py-0.5 rounded border text-[10px] font-mono">y/n</kbd>,
-                            })}
-                        </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <Input
-                            ref={filterInputRef}
-                            placeholder={t("manage-library-review.filterPlaceholder")}
-                            aria-label={t("manage-library-review.filterLabel")}
-                            value={filter}
-                            onChange={(e) => setFilter(e.target.value)}
-                            className="h-8 w-44 text-xs"
-                        />
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => void refetch()}
-                            disabled={loading}
-                            aria-label={t("manage-library-review.refreshLabel")}
-                            className="h-8"
-                        >
-                            {loading ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                                <RefreshCw className="w-4 h-4" />
-                            )}
-                        </Button>
-                    </div>
-                </header>
+                <PageHeader
+                    title={t("manage-library-review.title")}
+                    subtitle={interpolateNodes(t("manage-library-review.subtitle"), {
+                        navKeys: <kbd className="px-1 py-0.5 rounded border text-[10px] font-mono">j/k</kbd>,
+                        reviewKeys: <kbd className="px-1 py-0.5 rounded border text-[10px] font-mono">a/r/e</kbd>,
+                        retryKeys: <kbd className="px-1 py-0.5 rounded border text-[10px] font-mono">y/n</kbd>,
+                    })}
+                    actions={
+                        <div className="flex items-center gap-2">
+                            <Input
+                                ref={filterInputRef}
+                                placeholder={t("manage-library-review.filterPlaceholder")}
+                                aria-label={t("manage-library-review.filterLabel")}
+                                value={filter}
+                                onChange={(e) => setFilter(e.target.value)}
+                                className="h-8 w-44 text-xs"
+                            />
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => void refetch()}
+                                disabled={loading}
+                                aria-label={t("manage-library-review.refreshLabel")}
+                                className="h-8"
+                            >
+                                {loading ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                    <RefreshCw className="w-4 h-4" />
+                                )}
+                            </Button>
+                        </div>
+                    }
+                />
 
                 {/* Calibration banner */}
                 {data && (
@@ -508,7 +504,7 @@ function CalibrationBanner({
         )
     }
     return (
-        <div className="rounded-md border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 px-3 py-2 text-xs">
+        <div className="rounded-md border border-success/30 bg-success/10 text-success px-3 py-2 text-xs">
             <strong>{t("manage-library-review.autoApplyTitle")}</strong>{" "}
             {interpolateNodes(t("manage-library-review.autoApplyBody"), { threshold: thresholdNode })}
         </div>
@@ -550,7 +546,7 @@ function ReviewSplit({
     if (rows.length === 0) {
         return (
             <EmptyState
-                icon={<Check className="w-6 h-6 text-emerald-500" />}
+                icon={<Check className="w-6 h-6 text-success" />}
                 title={t("manage-library-review.emptyReviewTitle")}
                 hint={t("manage-library-review.emptyReviewHint")}
             />
@@ -690,10 +686,10 @@ function ConfidenceCell({
     }
     const color =
         value >= threshold
-            ? "text-emerald-600 dark:text-emerald-400"
+            ? "text-success"
             : value >= threshold - 0.1
               ? "text-caution dark:text-caution"
-              : "text-rose-600 dark:text-rose-400"
+              : "text-destructive"
     return (
         <span className={`text-[10px] font-mono ${color}`}>
             {(value * 100).toFixed(0)}%
@@ -1141,7 +1137,7 @@ function FailedList({
     if (rows.length === 0) {
         return (
             <EmptyState
-                icon={<Check className="w-6 h-6 text-emerald-500" />}
+                icon={<Check className="w-6 h-6 text-success" />}
                 title={t("manage-library-review.emptyFailedTitle")}
                 hint={t("manage-library-review.emptyFailedHint")}
             />
@@ -1173,7 +1169,7 @@ function FailedList({
                         >
                             <div className="min-w-0">
                                 <div className="text-xs truncate">{row.title}</div>
-                                <div className="text-[10px] font-mono text-rose-600 dark:text-rose-400 truncate">
+                                <div className="text-[10px] font-mono text-destructive truncate">
                                     {row.lastError}
                                 </div>
                             </div>
@@ -1248,7 +1244,7 @@ function ImportList({
     if (rows.length === 0) {
         return (
             <EmptyState
-                icon={<Check className="w-6 h-6 text-emerald-500" />}
+                icon={<Check className="w-6 h-6 text-success" />}
                 title={t("manage-library-review.emptyImportTitle")}
                 hint={t("manage-library-review.emptyImportHint")}
             />
@@ -1282,7 +1278,7 @@ function ImportList({
                                 <div className="text-xs truncate">
                                     {row.driveName ?? row.driveFileId}
                                 </div>
-                                <div className="text-[10px] font-mono text-rose-600 dark:text-rose-400 truncate">
+                                <div className="text-[10px] font-mono text-destructive truncate">
                                     {row.errorMessage}
                                 </div>
                             </div>

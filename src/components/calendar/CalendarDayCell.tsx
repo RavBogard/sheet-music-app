@@ -72,9 +72,9 @@ export const CalendarDayCell = React.memo(function CalendarDayCell({
                             onClick={() => onSelectSetlist(setlist)}
                             className={cn(
                                 "w-full h-auto min-h-11 text-start p-1.5 rounded-lg text-[11px] border active:scale-[0.97] whitespace-normal flex-col items-start",
-                                mode === 'planning' && coverage === 'full' && "bg-emerald-500/10 border-emerald-500/25 hover:bg-emerald-500/20 hover:border-emerald-500/40",
+                                mode === 'planning' && coverage === 'full' && "bg-success/10 border-success/25 hover:bg-success/20 hover:border-success/40",
                                 mode === 'planning' && coverage === 'partial' && "bg-caution/10 border-caution/25 hover:bg-caution/20 hover:border-caution/40",
-                                mode === 'planning' && coverage === 'empty' && "bg-red-500/10 border-red-500/25 hover:bg-red-500/20 hover:border-red-500/40",
+                                mode === 'planning' && coverage === 'empty' && "bg-destructive/10 border-destructive/25 hover:bg-destructive/20 hover:border-destructive/40",
                                 mode === 'viewer' && "bg-muted hover:bg-accent border-border/50",
                             )}
                         >
@@ -83,7 +83,7 @@ export const CalendarDayCell = React.memo(function CalendarDayCell({
                                 <div className="flex items-center gap-1.5 mt-0.5 text-muted-foreground">
                                     <Users className="h-2.5 w-2.5" />
                                     {confirmed > 0 && (
-                                        <span className="flex items-center gap-0.5 text-emerald-600 dark:text-emerald-400">
+                                        <span className="flex items-center gap-0.5 text-success">
                                             <CheckCircle2 className="h-2.5 w-2.5" />{confirmed}
                                         </span>
                                     )}
@@ -93,7 +93,7 @@ export const CalendarDayCell = React.memo(function CalendarDayCell({
                                         </span>
                                     )}
                                     {setlistAssignments.length === 0 && (
-                                        <span className="text-red-500 italic">{t("calendar.noAssignments")}</span>
+                                        <span className="text-destructive italic">{t("calendar.noAssignments")}</span>
                                     )}
                                 </div>
                             )}

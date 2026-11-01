@@ -37,6 +37,7 @@ colors:
   bl-brand: "oklch(0.72 0.115 210)"
   bl-primary: "oklch(0.97 0.012 200)"
   bl-hairline: "oklch(0.30 0.03 200)"
+  bl-section-slate: "oklch(0.42 0.03 255)"
 typography:
   headline:
     fontFamily: "Assistant, sans-serif"
@@ -209,7 +210,7 @@ A cool white-and-ink page, one action blue, and four bookbinding hues reserved f
 - **Book-Cloth Blue** (`book-cloth`): the top bar on every route, and the browser theme color. Tabs at rest use **Book-Cloth Muted** (`book-cloth-muted`); the active tab is white with a 3px rule on the bar's bottom edge. Dark uses **Night Shell** (`night-shell`).
 
 ### Tertiary
-- **Section Green** (`section-green`), **Section Oxblood** (`section-oxblood`), **Section Ochre** (`section-ochre`), **Section Blue** (`section-blue`): the band hues. White ink on green, oxblood and blue; ink on ochre. A known section name keeps its hue every week (Kabbalat and closing are green, Torah is oxblood, Shacharit and morning blessings ochre, Maariv blue, "Set N" cycles); any other header takes the next hue in green, oxblood, ochre, blue order. Dark deepens each by a step (`#1A6A60`, `#7E2834`, `#B57F17`, `#2B4080`).
+- **Section Green** (`section-green`), **Section Oxblood** (`section-oxblood`), **Section Ochre** (`section-ochre`), **Section Blue** (`section-blue`): the band hues. White ink on green, oxblood and blue; ink on ochre. A known section name keeps its hue every week (Kabbalat and closing are green, Torah is oxblood, Shacharit and morning blessings ochre, Maariv blue, "Set N" cycles); any other header takes the next hue in green, oxblood, ochre, blue order. Dark deepens each by a step (`#1A6A60`, `#7E2834`, `#B57F17`, `#2B4080`). Brothers Lazaroff shares green, oxblood and ochre at the dark step but takes **Slate** (`oklch(0.42 0.03 255)`, white ink) for the fourth band, so no book-cloth blue reaches its teal theme (decided 2026-10-31, theming audit P2-2).
 
 ### Neutral
 - **Ink** (`ink`): all primary text, page calls at full strength even on muted rows.

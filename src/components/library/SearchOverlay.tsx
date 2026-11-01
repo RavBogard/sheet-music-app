@@ -203,7 +203,7 @@ export function SearchOverlay({
                                                 Nava Tehilah
                                             </span>
                                         ) : (
-                                            <span className="text-[10px] font-medium bg-blue-500/10 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded-md border border-blue-500/20 shrink-0 mt-0.5">
+                                            <span className="text-[10px] font-medium bg-brand/10 text-brand px-1.5 py-0.5 rounded-md border border-brand/20 shrink-0 mt-0.5">
                                                 {t("org.library.ownBadge")}
                                             </span>
                                         )}

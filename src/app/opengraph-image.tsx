@@ -6,6 +6,7 @@ import { coerceOrgId } from '@/lib/org/registry'
 import { getOrgConfig } from '@/lib/org/get-org-config'
 import { codeOrgConfig } from '@/lib/org/config-code'
 import { orgString } from '@/lib/org/strings'
+import { getOrgIdentity } from '@/lib/org/identity'
 
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
@@ -29,12 +30,15 @@ export async function generateImageMetadata() {
 }
 
 /**
- * OpenGraph social sharing image — congregation-forward design.
- * Features the 12 Tribes mandala artwork prominently,
- * with elegant serif text identifying the congregation.
+ * OpenGraph / Twitter card in the web-refresh identity: the tenant's top-bar
+ * cloth across the top, the page ground below, the congregation's artwork in a
+ * plain frame, the name in ink at 800, and the four section bands as a flat
+ * rule along the foot. No glow or gradient (DESIGN.md "Don't"). Colours come
+ * from src/lib/org/identity.ts, so Brothers Lazaroff renders in its own teal.
  */
 export default async function OpenGraphImage() {
     const orgId = await requestOrg()
+    const id = getOrgIdentity(orgId)
     // The mandala artwork is CRC's; tenants created through config get the monogram.
     const ownArtwork = codeOrgConfig(orgId) !== null
     let base64Logo: string | null = null
@@ -52,48 +56,35 @@ export default async function OpenGraphImage() {
                     width: '100%',
                     height: '100%',
                     display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    position: 'relative',
-                    background: 'linear-gradient(135deg, #0e0d18 0%, #1a1830 40%, #12111a 100%)',
-                    overflow: 'hidden',
+                    flexDirection: 'column',
+                    background: id.ground,
                 }}
             >
-                {/* Subtle ambient glow behind artwork */}
-                <div
-                    style={{
-                        position: 'absolute',
-                        width: 600,
-                        height: 600,
-                        borderRadius: '50%',
-                        background: 'radial-gradient(circle, rgba(124,58,237,0.12) 0%, rgba(26,138,125,0.06) 40%, transparent 70%)',
-                        top: 15,
-                        left: 60,
-                    }}
-                />
+                {/* Top bar: the tenant's cloth */}
+                <div style={{ height: 56, display: 'flex', background: id.shell }} />
 
-                {/* Layout: artwork left, text right */}
+                {/* Artwork left, text right */}
                 <div
                     style={{
+                        flex: 1,
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 72,
+                        gap: 64,
                         padding: '0 80px',
                     }}
                 >
-                    {/* Artwork circle */}
                     <div
                         style={{
-                            width: 380,
-                            height: 380,
-                            borderRadius: '50%',
+                            width: 340,
+                            height: 340,
+                            borderRadius: 24,
                             overflow: 'hidden',
                             flexShrink: 0,
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            boxShadow: '0 0 80px rgba(124,58,237,0.25), 0 0 160px rgba(26,138,125,0.10), 0 20px 60px rgba(0,0,0,0.5)',
-                            border: '3px solid rgba(255,255,255,0.08)',
+                            background: id.paper,
+                            border: `2px solid ${id.shell}`,
                         }}
                     >
                         {base64Logo ? (
@@ -101,8 +92,8 @@ export default async function OpenGraphImage() {
                                 src={base64Logo}
                                 alt=""
                                 style={{
-                                    width: 380,
-                                    height: 380,
+                                    width: 340,
+                                    height: 340,
                                     objectFit: 'cover',
                                 }}
                             />
@@ -114,10 +105,10 @@ export default async function OpenGraphImage() {
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
-                                    background: 'radial-gradient(circle at 40% 35%, #a855f7, #7c3aed 50%, #5b21b6 100%)',
-                                    color: 'white',
+                                    background: id.shell,
+                                    color: id.shellInk,
                                     fontSize: 120,
-                                    fontWeight: 'bold',
+                                    fontWeight: 800,
                                 }}
                             >
                                 {orgString(orgId, 'og.monogram')}
@@ -125,70 +116,32 @@ export default async function OpenGraphImage() {
                         )}
                     </div>
 
-                    {/* Text content */}
                     <div
                         style={{
                             display: 'flex',
                             flexDirection: 'column',
-                            gap: 16,
-                            maxWidth: 520,
+                            gap: 20,
+                            maxWidth: 560,
                         }}
                     >
-                        {/* Congregation name */}
                         <div
                             style={{
-                                fontSize: 52,
-                                fontWeight: 700,
-                                color: '#f0eefc',
-                                lineHeight: 1.15,
+                                fontSize: 56,
+                                fontWeight: 800,
+                                color: id.ink,
+                                lineHeight: 1.1,
                                 letterSpacing: '-0.01em',
                             }}
                         >
                             {orgString(orgId, 'og.title')}
                         </div>
-
-                        {/* Decorative separator */}
-                        <div
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 12,
-                            }}
-                        >
-                            <div
-                                style={{
-                                    width: 48,
-                                    height: 2,
-                                    background: 'linear-gradient(90deg, #be3a30, #d4952b)',
-                                    borderRadius: 1,
-                                }}
-                            />
-                            <div
-                                style={{
-                                    width: 8,
-                                    height: 8,
-                                    borderRadius: '50%',
-                                    background: '#1a8a7d',
-                                }}
-                            />
-                            <div
-                                style={{
-                                    width: 32,
-                                    height: 2,
-                                    background: 'linear-gradient(90deg, #2a5aad, #7c3aed)',
-                                    borderRadius: 1,
-                                }}
-                            />
-                        </div>
-
-                        {/* Subtitle */}
                         <div
                             style={{
                                 fontSize: 22,
-                                color: 'rgba(255,255,255,0.45)',
-                                letterSpacing: '0.12em',
+                                color: id.muted,
+                                letterSpacing: '0.08em',
                                 textTransform: 'uppercase',
-                                fontWeight: 500,
+                                fontWeight: 700,
                             }}
                         >
                             {/* i18n-ignore: link-preview PNG rendered without a viewer language (and without Hebrew glyphs in the default og font); tenant-branded, same text as the tenant og.alt */}
@@ -197,22 +150,11 @@ export default async function OpenGraphImage() {
                     </div>
                 </div>
 
-                {/* Bottom accent line */}
-                <div
-                    style={{
-                        position: 'absolute',
-                        bottom: 0,
-                        left: 0,
-                        right: 0,
-                        height: 4,
-                        display: 'flex',
-                    }}
-                >
-                    <div style={{ flex: 1, background: '#be3a30' }} />
-                    <div style={{ flex: 1, background: '#1a8a7d' }} />
-                    <div style={{ flex: 1, background: '#d4952b' }} />
-                    <div style={{ flex: 1, background: '#2a5aad' }} />
-                    <div style={{ flex: 1, background: '#7c3aed' }} />
+                {/* Foot: the four section bands as one flat rule */}
+                <div style={{ height: 14, display: 'flex' }}>
+                    {id.bands.map((color, i) => (
+                        <div key={i} style={{ flex: 1, background: color }} />
+                    ))}
                 </div>
             </div>
         ),

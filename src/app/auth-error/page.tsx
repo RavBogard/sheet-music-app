@@ -13,8 +13,8 @@ export default function AuthErrorPage() {
         <div className="flex flex-col items-center justify-center min-h-[calc(100vh-4rem)] p-4 text-center">
             <div className="max-w-md space-y-6">
                 <div className="flex justify-center">
-                    <div className="rounded-full bg-red-100 dark:bg-red-900/20 p-4">
-                        <AlertTriangle className="h-10 w-10 text-red-600 dark:text-red-500" />
+                    <div className="rounded-full bg-destructive/10 p-4">
+                        <AlertTriangle className="h-10 w-10 text-destructive" />
                     </div>
                 </div>
 

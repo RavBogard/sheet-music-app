@@ -104,7 +104,7 @@ export default function StandalonePerformPage() {
         const shownReason = loadError.detail ?? t(ERROR_MESSAGE[loadError.kind])
         return (
             <div className="flex flex-col h-[100dvh] items-center justify-center gap-4 bg-background p-6 text-center">
-                <AlertTriangle className="h-10 w-10 text-amber-400" aria-hidden="true" />
+                <AlertTriangle className="h-10 w-10 text-caution" aria-hidden="true" />
                 <div>
                     <p className="text-foreground font-semibold text-lg">{t("performSetlist.chartLoad.title")}</p>
                     <p className="mt-1 text-sm text-muted-foreground max-w-md">{shownReason}</p>

@@ -26,8 +26,8 @@ export function CapTick({ cap, orientation }: { cap: number | null | undefined; 
             title={label}
             className={
                 orientation === "horizontal"
-                    ? "absolute inset-y-1 w-0.5 -translate-x-1/2 rounded-full bg-amber-400/90 pointer-events-none"
-                    : "absolute inset-x-1 h-0.5 translate-y-1/2 rounded-full bg-amber-400/90 pointer-events-none"
+                    ? "absolute inset-y-1 w-0.5 -translate-x-1/2 rounded-full bg-caution/90 pointer-events-none"
+                    : "absolute inset-x-1 h-0.5 translate-y-1/2 rounded-full bg-caution/90 pointer-events-none"
             }
             style={orientation === "horizontal" ? { left: pos } : { bottom: pos }}
         />
@@ -60,8 +60,8 @@ export function ClampNote({ notice, compact = false }: { notice: ClampNotice; co
             role="status"
             className={
                 compact
-                    ? "block text-[9px] leading-tight text-center text-amber-400 max-w-[56px] mb-0.5"
-                    : "flex items-center gap-1 text-[10px] font-medium text-amber-400 shrink-0"
+                    ? "block text-[9px] leading-tight text-center text-caution max-w-[56px] mb-0.5"
+                    : "flex items-center gap-1 text-[10px] font-medium text-caution shrink-0"
             }
         >
             {!compact && <ShieldAlert aria-hidden className="w-3.5 h-3.5" />}
