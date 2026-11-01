@@ -5,9 +5,8 @@ import { getFirestore, initAdmin } from "@/lib/firebase-admin"
 import { orgFrom, type AuthExtra } from "@/lib/mcp/org-context"
 import { forbiddenRoleEnvelope, richError } from "@/lib/mcp/error-envelopes"
 import type { RichErrorEnvelope } from "@/lib/mcp/errors"
-import { assertEditor } from "@/lib/mcp/server-tracks-write"
-import { listTenantMembers, readTenantRole } from "@/lib/org/access"
-import type { TenantRole } from "@/lib/org/membership-types"
+import { getTenantMembership, isPlatformOwner, listTenantMembers } from "@/lib/org/access"
+import { roleRank, type TenantRole } from "@/lib/org/membership-types"
 import type { OrgId } from "@/lib/org/types"
 import { changeTenantRole } from "@/lib/org/tenant-role-change"
 import { isTestAccount } from "@/lib/people-test-accounts"
@@ -37,6 +36,33 @@ export interface AccessRequestRow {
     status: TenantRole
 }
 
+/**
+ * The CALLER's role in the token's tenant, from their membership there
+ * (getTenantMembership: the membership doc, or for an unmigrated person the
+ * claim-tenant plan). Never the tenant-blind role on users/{uid}. A platform
+ * owner counts as admin everywhere, as on the People tab.
+ */
+async function callerGate(
+    db: FirebaseFirestore.Firestore,
+    uid: string,
+    org: OrgId,
+    min: "admin" | "band_leader",
+): Promise<{ ok: true; po: boolean } | RichErrorEnvelope> {
+    if (await isPlatformOwner(uid, db)) return { ok: true, po: true }
+    const m = await getTenantMembership(uid, org, { db })
+    if (m && roleRank(m.role) >= roleRank(min)) return { ok: true, po: false }
+    const required = min === "admin" ? ["admin"] : ["admin", "band_leader"]
+    return forbiddenRoleEnvelope({
+        callerRole: m?.role ?? null,
+        requiredRoles: required,
+        message:
+            min === "admin"
+                ? "Changing a person's access requires an admin of this tenant."
+                : "Listing access requests requires an admin or band leader of this tenant.",
+        hint: "Ask an admin of this tenant.",
+    })
+}
+
 function iso(v: unknown): string | null {
     if (v == null) return null
     if (v instanceof Date) return Number.isFinite(v.getTime()) ? v.toISOString() : null
@@ -62,7 +88,7 @@ export async function listAccessRequests(
 ): Promise<{ ok: true; org: OrgId; status: AccessStatus; requests: AccessRequestRow[]; count: number } | RichErrorEnvelope> {
     initAdmin()
     const db = getFirestore()
-    const gate = await assertEditor(db, uid, org)
+    const gate = await callerGate(db, uid, org, "band_leader")
     if (!gate.ok) return gate
 
     const status = args.status ?? "pending"
@@ -103,15 +129,8 @@ export async function setMemberRole(
 ): Promise<Record<string, unknown> | RichErrorEnvelope> {
     initAdmin()
     const db = getFirestore()
-    const callerRole = await readTenantRole(db, callerUid, org)
-    if (callerRole !== "admin") {
-        return forbiddenRoleEnvelope({
-            callerRole: callerRole ?? null,
-            requiredRoles: ["admin"],
-            message: "Changing a person's access requires an admin of this tenant.",
-            hint: "Ask an admin of this tenant to make the change.",
-        })
-    }
+    const gate = await callerGate(db, callerUid, org, "admin")
+    if (!gate.ok) return gate
     if (!(SETTABLE_ROLES as readonly string[]).includes(args.role)) {
         return richError("invalid_role", `role must be one of ${SETTABLE_ROLES.join(", ")}.`, { role: args.role })
     }

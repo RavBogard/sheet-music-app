@@ -50,6 +50,14 @@ function addedByFor(reason: MembershipChangeReason, actorUid: string): string {
     return actorUid
 }
 
+/** setMembership refused to remove the tenant's last admin (guardLastAdmin). */
+export class LastAdminError extends Error {
+    constructor(readonly orgId: OrgId) {
+        super("This is the last admin of this tenant")
+        this.name = "LastAdminError"
+    }
+}
+
 export async function readMigrationOverrides(db: Firestore): Promise<MembershipOverrides> {
     const snap = await db.collection("platform").doc("membershipMigration").get()
     const ov = snap.exists ? snap.data()?.overrides : null
@@ -73,6 +81,13 @@ export async function setMembership(
         note?: string
         /** Where the change came from when not the web app (e.g. "mcp"); recorded on the audit row. */
         via?: string
+        /**
+         * Refuse (LastAdminError) when this change takes away the tenant's
+         * last admin. Counted INSIDE the write transaction, so two concurrent
+         * demotions cannot both pass. `extraAdmins` = admins that have no
+         * membership doc yet (legacy, unmigrated people), counted by the caller.
+         */
+        guardLastAdmin?: { extraAdmins: number }
     },
     d?: Deps,
 ): Promise<{ before: Membership | null; after: Membership | null; claims: Record<string, unknown> }> {
@@ -83,6 +98,13 @@ export async function setMembership(
     const { before, after } = await db.runTransaction(async (txn) => {
         const snap = await txn.get(ref)
         const before = snap.exists ? (snap.data() as Membership) : null
+        if (a.guardLastAdmin && before?.role === "admin" && a.role !== "admin") {
+            const admins = await txn.get(
+                db.collection("memberships").where("tenantId", "==", a.orgId).where("role", "==", "admin"),
+            )
+            const others = admins.docs.filter((d) => d.get("uid") !== a.uid).length + a.guardLastAdmin.extraAdmins
+            if (others === 0) throw new LastAdminError(a.orgId)
+        }
         let after: Membership | null
         if (a.role === null) {
             after = null

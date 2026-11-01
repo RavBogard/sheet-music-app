@@ -13,11 +13,12 @@ vi.mock("@/lib/firebase-admin", () => ({
     })),
 }))
 vi.mock("@/lib/org/access", () => ({
-    readTenantRole: vi.fn(async () => h.callerRole),
+    // The caller's role comes from their membership in the token's tenant only.
+    getTenantMembership: vi.fn(async () => (h.callerRole ? { role: h.callerRole, soundEngineer: false } : null)),
+    isPlatformOwner: vi.fn(async () => false),
     listTenantMembers: vi.fn(async () => []),
 }))
 vi.mock("@/lib/org/tenant-role-change", () => ({ changeTenantRole: h.change }))
-vi.mock("@/lib/mcp/server-tracks-write", () => ({ assertEditor: vi.fn(async () => ({ ok: true })) }))
 
 import { setMemberRole } from "@/lib/mcp/tools/people-access"
 import { READ_TOOLS, WRITE_TOOLS } from "@/lib/mcp/tool-access"

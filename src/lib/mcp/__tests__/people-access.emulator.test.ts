@@ -153,4 +153,45 @@ describe("people access MCP tools (emulator)", () => {
         await setMembership({ orgId: CRC, uid: "aMu", role: "admin", actorUid: "fixture", reason: "migration" })
         expect(await setMemberRole("po", { uid: "aAdmin", role: "member", dryRun: false, force: true }, CRC)).toMatchObject({ ok: true })
     })
+
+    it("concurrent demotions of the last two admins: at least one is refused, an admin remains", async () => {
+        await person("po", [])
+        await person("aAdmin2", [[CRC, "admin"]])
+        await db().doc("platform/owners").set({ uids: ["po"] })
+        __resetPlatformOwnerMemo()
+        const [r1, r2] = await Promise.all([
+            setMemberRole("po", { uid: "aAdmin", role: "member", dryRun: false, force: true }, CRC),
+            setMemberRole("po", { uid: "aAdmin2", role: "member", dryRun: false, force: true }, CRC),
+        ])
+        const refused = [r1, r2].filter((r) => (r as { error?: { machine_code?: string } }).error?.machine_code === "last_admin")
+        expect(refused.length).toBeGreaterThanOrEqual(1)
+        const admins = await db().collection("memberships").where("tenantId", "==", CRC).where("role", "==", "admin").get()
+        expect(admins.size).toBeGreaterThanOrEqual(1)
+    })
+
+    it("a person in both tenants: changing their CRC role leaves BL membership and BL claims alone", async () => {
+        await person("dual", [[CRC, "musician"], [BL, "band_leader"]])
+        expect((await auth().getUser("dual")).customClaims).toMatchObject({ m: { crc: "mu", brotherslazaroff: "bl" } })
+        const r = await setMemberRole("aAdmin", { uid: "dual", role: "band_leader", dryRun: false, force: true }, CRC)
+        expect(r).toMatchObject({ ok: true, before: { role: "musician" }, after: { role: "band_leader" } })
+        expect(await roleIn(BL, "dual")).toBe("band_leader")
+        expect((await auth().getUser("dual")).customClaims).toMatchObject({ m: { crc: "bl", brotherslazaroff: "bl" } })
+        const denied = await setMemberRole("aAdmin", { uid: "dual", role: "denied", dryRun: false, force: true }, CRC)
+        expect(denied).toMatchObject({ ok: true })
+        expect(await roleIn(BL, "dual")).toBe("band_leader")
+        const claims = (await auth().getUser("dual")).customClaims as { m: Record<string, string> }
+        expect(claims.m.brotherslazaroff).toBe("bl")
+        expect(claims.m.crc).toBeUndefined()
+    })
+
+    it("the caller's role comes from their membership in the token's tenant, never the users-doc role", async () => {
+        // Unmigrated BL band leader whose users doc says band_leader (tenant-blind).
+        await auth().createUser({ uid: "legacyBl", email: "legacyBl@example.test" })
+        await auth().setCustomUserClaims("legacyBl", { role: "band_leader", orgIds: [BL] })
+        await db().collection("users").doc("legacyBl").set({ email: "legacyBl@example.test", role: "band_leader", orgIds: [BL] })
+        const r = await listAccessRequests("legacyBl", {}, CRC)
+        expect(r).toMatchObject({ ok: false, error: { machine_code: "forbidden_role" } })
+        const ok = await listAccessRequests("legacyBl", {}, BL)
+        expect(ok).toMatchObject({ ok: true })
+    })
 })

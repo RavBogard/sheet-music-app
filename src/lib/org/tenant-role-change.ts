@@ -3,9 +3,9 @@ import { FieldValue } from "firebase-admin/firestore"
 import { getAuth, getFirestore, initAdmin } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
 import type { OrgId } from "@/lib/org/types"
-import { membershipId, type TenantRole } from "@/lib/org/membership-types"
+import type { Membership, TenantRole } from "@/lib/org/membership-types"
 import { getTenantMembership, listTenantMembers } from "@/lib/org/access"
-import { ensureMembershipsMigrated, setMembership } from "@/lib/org/memberships-write"
+import { LastAdminError, setMembership } from "@/lib/org/memberships-write"
 
 /**
  * One person's role change in ONE tenant — the server logic behind the
@@ -23,7 +23,8 @@ import { ensureMembershipsMigrated, setMembership } from "@/lib/org/memberships-
  *                  not admin (platform owner exempt unless strict)
  *
  * `dryRun` reads only: it reports the before/after roles and writes nothing,
- * not even the migrate-on-touch a real change performs.
+ * not even the migrate-on-touch a real change performs. Both runs decide on
+ * the same read-only membership answer, taken before any write.
  */
 
 export type RoleChangeCode = "SELF_CHANGE" | "USER_NOT_FOUND" | "LAST_ADMIN"
@@ -58,6 +59,7 @@ export type RoleChangeResult =
       }
     | { ok: false; code: RoleChangeCode; message: string }
 
+const LAST_ADMIN = { ok: false as const, code: "LAST_ADMIN" as const, message: "This is the last admin of this tenant" }
 const NOT_FOUND = { ok: false as const, code: "USER_NOT_FOUND" as const, message: "User not found" }
 
 export async function changeTenantRole(a: RoleChangeInput): Promise<RoleChangeResult> {
@@ -74,25 +76,21 @@ export async function changeTenantRole(a: RoleChangeInput): Promise<RoleChangeRe
         return NOT_FOUND
     }
 
-    // Current role in this tenant. A real run migrates first (as setMembership
-    // will anyway) and reads the doc; a dry run reads the same answer without
-    // writing (getTenantMembership plans an unmigrated person in memory).
-    let before: { role: TenantRole; soundEngineer: boolean } | null
-    if (a.dryRun) {
-        before = await getTenantMembership(a.targetUid, a.orgId, { db })
-    } else {
-        await ensureMembershipsMigrated(a.targetUid)
-        const cur = await db.collection("memberships").doc(membershipId(a.orgId, a.targetUid)).get()
-        before = cur.exists ? { role: cur.get("role") as TenantRole, soundEngineer: cur.get("soundEngineer") === true } : null
-    }
+    // Current role in this tenant: one read-only answer for the dry run AND
+    // the real run (getTenantMembership plans an unmigrated person in memory,
+    // pending included), taken before anything is migrated or written.
+    const before = await getTenantMembership(a.targetUid, a.orgId, { db })
     if (a.memberOnly && !before) return NOT_FOUND
 
-    // Last-admin guard (counts legacy, unmigrated admins too).
-    if (!exempt && a.newRole !== "admin" && before?.role === "admin") {
-        const admins = await listTenantMembers(a.orgId, { roles: ["admin"], db })
-        if (admins.filter((m) => m.uid !== a.targetUid).length === 0) {
-            return { ok: false, code: "LAST_ADMIN", message: "This is the last admin of this tenant" }
-        }
+    // Last-admin guard, first pass (counts legacy, unmigrated admins too). The
+    // real run repeats the count inside the write transaction (setMembership
+    // guardLastAdmin), so concurrent demotions cannot leave zero admins.
+    const guard = !exempt && a.newRole !== "admin"
+    let legacyAdmins = 0
+    if (guard && before?.role === "admin") {
+        const admins = (await listTenantMembers(a.orgId, { roles: ["admin"], db })).filter((m) => m.uid !== a.targetUid)
+        if (admins.length === 0) return LAST_ADMIN
+        legacyAdmins = admins.filter((m) => m.addedBy === "legacy").length
     }
 
     const planned =
@@ -102,16 +100,23 @@ export async function changeTenantRole(a: RoleChangeInput): Promise<RoleChangeRe
         return { ok: true, dryRun: true, before, after: planned, changed, notified: false }
     }
 
-    const { after } = await setMembership({
-        orgId: a.orgId,
-        uid: a.targetUid,
-        role: a.newRole,
-        actorUid: a.actorUid,
-        actorEmail: a.actorEmail ?? "unknown",
-        reason: a.newRole === null ? "remove" : "set-role",
-        note: a.note,
-        via: a.via,
-    })
+    let after: Membership | null
+    try {
+        ;({ after } = await setMembership({
+            orgId: a.orgId,
+            uid: a.targetUid,
+            role: a.newRole,
+            actorUid: a.actorUid,
+            actorEmail: a.actorEmail ?? "unknown",
+            reason: a.newRole === null ? "remove" : "set-role",
+            note: a.note,
+            via: a.via,
+            ...(guard ? { guardLastAdmin: { extraAdmins: legacyAdmins } } : {}),
+        }))
+    } catch (e) {
+        if (e instanceof LastAdminError) return LAST_ADMIN
+        throw e
+    }
 
     // In-app "role changed" notification (the bell; never email/SMS/push).
     let notified = false
