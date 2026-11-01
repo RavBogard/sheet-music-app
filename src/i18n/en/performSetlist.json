@@ -108,5 +108,17 @@
     "status": {
         "updated": "Updated {when}",
         "chartsOnDevice": "{ready}/{total} charts on this iPad"
+    },
+    "reorder": {
+        "start": "Reorder",
+        "startLabel": "Reorder songs for the whole band",
+        "done": "Done",
+        "hint": "Moves reach every iPad right away.",
+        "listLabel": "Setlist order",
+        "dragHandle": "Drag {rowTitle}",
+        "moveUp": "Move {rowTitle} up",
+        "moveDown": "Move {rowTitle} down",
+        "failed": "Couldn't save that move. The order is back as it was.",
+        "offline": "You're offline. The order wasn't changed."
     }
 }
