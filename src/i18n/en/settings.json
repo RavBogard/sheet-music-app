@@ -144,5 +144,6 @@
         "calendarGenerate": "Generate Calendar URL",
         "calendarGenerateHint": "Generate a URL to subscribe to your {community} schedule in your personal calendar app."
     },
-    "performThemeHint": "Perform mode follows this setting. Choose Dark for a dim stage."
+    "performThemeHint": "Perform mode follows this setting. Choose Dark for a dim stage.",
+    "helpDescription": "Step-by-step guides for the band iPads, the sound system and each service."
 }

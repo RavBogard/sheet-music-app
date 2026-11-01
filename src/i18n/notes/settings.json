@@ -653,5 +653,6 @@
         "who": "everyone signed in",
         "maxLength": 90,
         "context": "'Perform mode' is the on-stage setlist and chart view. 'Dark' is the theme button label above (settings.theme.dark); use the same word."
-    }
+    },
+    "helpDescription": { "where": "Settings page, Help row: one-line description under the Help title", "who": "band members at CRC", "maxLength": 90 }
 }

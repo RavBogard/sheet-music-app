@@ -49,5 +49,6 @@
     "daysAgo": "לפני {days} ימים",
     "orgLogoAlt": "הלוגו של {orgName}",
     "saveLabelNotification": "סימון ההתראה כנקראה",
-    "saveLabelNotifications": "סימון ההתראות כנקראו"
+    "saveLabelNotifications": "סימון ההתראות כנקראו",
+    "help": "עזרה"
 }

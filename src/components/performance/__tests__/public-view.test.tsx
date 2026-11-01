@@ -420,7 +420,8 @@ describe("Public View", () => {
             // And the hero is the only link outside the two sections, so the
             // page total is exactly the cap plus one — this is what would
             // catch a THIRD render site appearing.
-            expect(screen.getAllByRole("link")).toHaveLength(6)
+            // (The Help link in the footer is not a service link.)
+            expect(screen.getAllByRole("link").filter((l) => l.getAttribute("href") !== "/help")).toHaveLength(6)
             // All 5 should be upcoming (upcoming-prioritized), no past rows.
             expect(screen.queryByText("Past 1")).toBeNull()
             expect(screen.queryByText("Past 2")).toBeNull()

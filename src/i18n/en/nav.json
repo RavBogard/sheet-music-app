@@ -51,5 +51,6 @@
     "daysAgo": "{days}d ago",
     "orgLogoAlt": "{orgName} logo",
     "saveLabelNotification": "notification",
-    "saveLabelNotifications": "notifications"
+    "saveLabelNotifications": "notifications",
+    "help": "Help"
 }

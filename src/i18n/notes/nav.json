@@ -46,5 +46,6 @@
     "daysAgo": { "where": "Notifications dropdown: compact age of a notification", "who": "everyone signed in", "maxLength": 10, "context": "{days} is a number of days; 'd' = days, keep it compact" },
     "orgLogoAlt": { "where": "Header and login page: alt text of the congregation's or band's logo", "who": "everyone", "maxLength": 60, "context": "{orgName} is the congregation's or band's name" },
     "saveLabelNotification": { "where": "Error toast when marking one notification as read fails; fills {action} in appSync.saveFailed (\"Couldn't save {action} — try again\")", "who": "leaders and musicians", "maxLength": 25, "context": "A lowercase noun phrase dropped into the middle of another sentence." },
-    "saveLabelNotifications": { "where": "Error toast when 'mark all read' fails; fills {action} in appSync.saveFailed (\"Couldn't save {action} — try again\")", "who": "leaders and musicians", "maxLength": 25, "context": "A lowercase noun phrase dropped into the middle of another sentence." }
+    "saveLabelNotifications": { "where": "Error toast when 'mark all read' fails; fills {action} in appSync.saveFailed (\"Couldn't save {action} — try again\")", "who": "leaders and musicians", "maxLength": 25, "context": "A lowercase noun phrase dropped into the middle of another sentence." },
+    "help": { "where": "Settings page: title of the Help row; /perform list page footer: small link to the Help guides", "who": "band members at CRC", "maxLength": 14 }
 }

@@ -77,6 +77,14 @@ const publicExactRoutes = [
     '/sms-consent',
     '/changelog',
     '/accessibility',
+    // The in-app Help guides (CRC only: the route layout 404s other tenants). Nothing
+    // secret is in them, and a musician on a signed-out iPad needs them. Exact
+    // routes, not a prefix, so a sibling such as /helpdesk stays gated.
+    '/help',
+    '/help/michael',
+    '/help/drew',
+    '/help/before',
+    '/help/after',
     // Per-tenant PWA manifest for tenants created through config (crc/BL use static files).
     '/site.webmanifest',
     // /test-login — headless test-account sign-in harness. Pre-auth like /login
