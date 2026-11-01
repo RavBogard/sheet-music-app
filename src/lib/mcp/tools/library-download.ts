@@ -18,6 +18,8 @@ import { orgString } from "@/lib/org/strings"
 import { readTenantRole } from "@/lib/org/access"
 import type { OrgId } from "@/lib/org/types"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
+import { assertEditor } from "@/lib/mcp/server-tracks-write"
+import { buildContactPartPdf, readContactPart, type ContactPartInfo } from "./contact-part"
 
 /**
  * MCP chart-download tool — return one chart's bytes (base64) + mimeType so
@@ -266,6 +268,28 @@ export interface GenerateGigPacketArgs {
      * actually produced.
      */
     rows?: PrintRowMode
+    /**
+     * BET-5 (TF-09): build one saved contact's part instead of the band
+     * packet, transposed by the contact's `transposition`. Returns a link for
+     * the leader; nothing is sent.
+     */
+    contactId?: string
+}
+
+/** BET-5: a sub's transposed part (generate_gig_packet with `contactId`). */
+export interface GenerateContactPartResult {
+    ok: true
+    downloadUrl: string
+    expiresAt: string
+    storagePath: string
+    sizeBytes: number
+    setlistTitle: string
+    packetTitle: string
+    part: ContactPartInfo
+    trackCount: number
+    appendedCount: number
+    transposedCount: number
+    omitted: Array<{ title: string; fileId?: string; reason: string }>
 }
 
 export interface MissingChartEntry {
@@ -304,9 +328,19 @@ export interface GenerateGigPacketResult {
 
 export async function generateGigPacket(
     uid: string,
+    args: GenerateGigPacketArgs & { contactId?: undefined },
+    org?: OrgId,
+): Promise<GenerateGigPacketResult | RichErrorEnvelope>
+export async function generateGigPacket(
+    uid: string,
+    args: GenerateGigPacketArgs,
+    org?: OrgId,
+): Promise<GenerateGigPacketResult | GenerateContactPartResult | RichErrorEnvelope>
+export async function generateGigPacket(
+    uid: string,
     args: GenerateGigPacketArgs,
     org: OrgId = DEFAULT_ORG_ID,
-): Promise<GenerateGigPacketResult | RichErrorEnvelope> {
+): Promise<GenerateGigPacketResult | GenerateContactPartResult | RichErrorEnvelope> {
     if (!args.setlistId?.trim()) {
         return richError(
             "invalid_argument",
@@ -341,8 +375,21 @@ export async function generateGigPacket(
         )
     }
     const setlistData = setlistDoc.data() as Record<string, unknown>
+    // Another tenant's setlist reads exactly as a missing one (as get_setlist).
+    if (rowOrg(setlistData.orgId) !== org) {
+        return richError(
+            "setlist_not_found",
+            "Setlist not found",
+            { setlistId: args.setlistId },
+            "Confirm the setlistId with list_setlists; pass the `id` field exactly.",
+        )
+    }
     const setlistTitle =
         (typeof setlistData.name === "string" && setlistData.name) || args.setlistId
+
+    if (args.contactId !== undefined) {
+        return generateContactPart(db, uid, org, args.setlistId, args.contactId, setlistData, setlistTitle)
+    }
 
     const tracks = await getTracksForSetlist(db, args.setlistId, setlistData)
     const bondedTracks = tracks.filter((t) => {
@@ -525,64 +572,9 @@ export async function generateGigPacket(
         )
     }
 
-    // Write to Firebase Storage + mint a 10-min v4 signed read URL. Mirrors
-    // request_chart_upload_url (inverse direction) — see decisions.md
-    // 2026-05-17T19:15Z F-012.
-    const bucket = gigPacketBucket()
-    const path = gigPacketStoragePath(args.setlistId)
-    const file = bucket.file(path)
-    const buffer = Buffer.from(finalBytes)
-    const expiresAtMs = Date.now() + GIG_PACKET_SIGNED_URL_TTL_MS
-
-    try {
-        await file.save(buffer, {
-            contentType: "application/pdf",
-            metadata: {
-                contentType: "application/pdf",
-                metadata: {
-                    setlistId: args.setlistId,
-                    setlistTitle,
-                    generatedBy: uid,
-                    generatedAt: new Date().toISOString(),
-                    packetTitle,
-                },
-            },
-        })
-    } catch (err) {
-        logger.warn("[mcp] generate_gig_packet storage write failed", {
-            setlistId: args.setlistId,
-            path,
-            err: err instanceof Error ? err.message : String(err),
-        })
-        return richError(
-            "storage_upload_failed",
-            `Could not write gig packet to Storage: ${err instanceof Error ? err.message : err}`,
-            { storagePath: path, errorCode: 502 },
-            "Retry generate_gig_packet. If the failure persists the Storage bucket may be misconfigured — surface the storagePath to an admin.",
-        )
-    }
-
-    let downloadUrl: string
-    try {
-        const [url] = await file.getSignedUrl({
-            action: "read",
-            version: "v4",
-            expires: expiresAtMs,
-        })
-        downloadUrl = url
-    } catch (err) {
-        logger.warn("[mcp] generate_gig_packet signing failed", {
-            setlistId: args.setlistId,
-            path,
-            err: err instanceof Error ? err.message : String(err),
-        })
-        return richError(
-            "storage_signing_failed",
-            `Could not mint signed download URL: ${err instanceof Error ? err.message : err}`,
-            { storagePath: path, errorCode: 502 },
-            "The packet bytes exist at storagePath; an admin can fetch them via the Firebase console or retry the tool.",
-        )
-    }
+    const stored = await storeAndSignPacket(uid, args.setlistId, setlistTitle, packetTitle, finalBytes)
+    if (!stored.ok) return stored
+    const { downloadUrl, path, expiresAtMs } = stored
 
     logger.info("[mcp] gig packet generated", {
         setlistId: args.setlistId,
@@ -610,6 +602,126 @@ export async function generateGigPacket(
         appendedCount,
         missingCharts,
     }
+}
+
+async function generateContactPart(
+    db: FirebaseFirestore.Firestore,
+    uid: string,
+    org: OrgId,
+    setlistId: string,
+    contactId: string,
+    setlistData: Record<string, unknown>,
+    setlistTitle: string,
+): Promise<GenerateContactPartResult | RichErrorEnvelope> {
+    if (typeof contactId !== "string" || !contactId.trim()) {
+        return richError("invalid_argument", "contactId must be a non-empty string.", { field: "contactId" }, "Get it from list_contacts.")
+    }
+    // A contact's address book entry is leader data: admin or band leader only.
+    const editor = await assertEditor(db, uid, org)
+    if (!editor.ok) return editor as unknown as RichErrorEnvelope
+    const part = await readContactPart(db, contactId.trim(), org)
+    if ("ok" in part) return part
+    const built = await buildContactPartPdf(db, setlistId, setlistData, part)
+    const sizeBytes = built.bytes.byteLength
+    const effectiveCap = _gigPacketMaxBytesOverride ?? GIG_PACKET_MAX_BYTES
+    if (sizeBytes > effectiveCap) {
+        return richError(
+            "packet_too_large",
+            `Generated part is ${sizeBytes} bytes — exceeds the ${effectiveCap}-byte response cap.`,
+            { sizeBytes, maxBytes: effectiveCap },
+            "Fetch individual charts with download_chart instead.",
+        )
+    }
+    const packetTitle = `${setlistTitle} — ${part.name} (${part.transposition})`
+    const stored = await storeAndSignPacket(uid, setlistId, setlistTitle, packetTitle, built.bytes)
+    if (!stored.ok) return stored
+    return {
+        ok: true,
+        downloadUrl: stored.downloadUrl,
+        expiresAt: new Date(stored.expiresAtMs).toISOString(),
+        storagePath: stored.path,
+        sizeBytes,
+        setlistTitle,
+        packetTitle,
+        part: built.part,
+        trackCount: built.trackCount,
+        appendedCount: built.appendedCount,
+        transposedCount: built.transposedCount,
+        omitted: built.omitted,
+    }
+}
+
+/**
+ * Write a packet to Storage and mint its 10-minute signed read URL. Shared by
+ * the band packet and a sub's part (BET-5).
+ */
+async function storeAndSignPacket(
+    uid: string,
+    setlistId: string,
+    setlistTitle: string,
+    packetTitle: string,
+    bytes: Uint8Array,
+): Promise<{ ok: true; downloadUrl: string; path: string; expiresAtMs: number } | RichErrorEnvelope> {
+    // Write to Firebase Storage + mint a 10-min v4 signed read URL. Mirrors
+    // request_chart_upload_url (inverse direction) — see decisions.md
+    // 2026-05-17T19:15Z F-012.
+    const bucket = gigPacketBucket()
+    const path = gigPacketStoragePath(setlistId)
+    const file = bucket.file(path)
+    const buffer = Buffer.from(bytes)
+    const expiresAtMs = Date.now() + GIG_PACKET_SIGNED_URL_TTL_MS
+
+    try {
+        await file.save(buffer, {
+            contentType: "application/pdf",
+            metadata: {
+                contentType: "application/pdf",
+                metadata: {
+                    setlistId: setlistId,
+                    setlistTitle,
+                    generatedBy: uid,
+                    generatedAt: new Date().toISOString(),
+                    packetTitle,
+                },
+            },
+        })
+    } catch (err) {
+        logger.warn("[mcp] generate_gig_packet storage write failed", {
+            setlistId: setlistId,
+            path,
+            err: err instanceof Error ? err.message : String(err),
+        })
+        return richError(
+            "storage_upload_failed",
+            `Could not write gig packet to Storage: ${err instanceof Error ? err.message : err}`,
+            { storagePath: path, errorCode: 502 },
+            "Retry generate_gig_packet. If the failure persists the Storage bucket may be misconfigured — surface the storagePath to an admin.",
+        )
+    }
+
+    let downloadUrl: string
+    try {
+        const [url] = await file.getSignedUrl({
+            action: "read",
+            version: "v4",
+            expires: expiresAtMs,
+        })
+        downloadUrl = url
+    } catch (err) {
+        logger.warn("[mcp] generate_gig_packet signing failed", {
+            setlistId: setlistId,
+            path,
+            err: err instanceof Error ? err.message : String(err),
+        })
+        return richError(
+            "storage_signing_failed",
+            `Could not mint signed download URL: ${err instanceof Error ? err.message : err}`,
+            { storagePath: path, errorCode: 502 },
+            "The packet bytes exist at storagePath; an admin can fetch them via the Firebase console or retry the tool.",
+        )
+    }
+
+    return { ok: true, downloadUrl, path, expiresAtMs }
 }
 
 async function embedImageFullPage(

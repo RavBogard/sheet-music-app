@@ -27,6 +27,8 @@ export interface SongRecord {
     key?: string
     bpm?: number
     lead?: string
+    /** BET-5: the song's default length in seconds (songs defaults, else library_index). */
+    durationSec?: number
     status?: string
     // ─── W-02 trust-calibration fields (joined from library_index) ────────
     /** Bare stem (no clarifier) — see bareStem() in title-specificity.ts. */
@@ -104,6 +106,7 @@ function toSongRecord(id: string, data: Record<string, unknown>): SongRecord {
         key?: unknown
         bpm?: unknown
         lead?: unknown
+        durationSec?: unknown
     }
     // `defaults` is the authoritative sticky memory, but it's sparsely
     // populated in production — most songs have no key/bpm there. When a
@@ -140,6 +143,9 @@ function toSongRecord(id: string, data: Record<string, unknown>): SongRecord {
     if (key !== undefined) rec.key = key
     if (bpm !== undefined) rec.bpm = bpm
     if (lead !== undefined) rec.lead = lead
+    if (typeof defaults.durationSec === "number" && Number.isFinite(defaults.durationSec)) {
+        rec.durationSec = defaults.durationSec
+    }
     // G-15: default `status` to "active" when missing so every row in
     // search_library / get_song has a consistent shape. Curated rows that
     // don't carry an explicit status are active by convention.
@@ -191,8 +197,13 @@ export async function getSongById(id: string): Promise<SongRecord | null> {
                     rec.bpm = idx.bpm
                 if (rec.lead === undefined && typeof idx.leadMusician === "string")
                     rec.lead = idx.leadMusician
+                // BET-5: update_song writes both surfaces; this only covers a row whose
+                // songs doc lacks it while the index is being read anyway.
+                if (rec.durationSec === undefined && typeof idx.durationSec === "number")
+                    rec.durationSec = idx.durationSec
             }
         }
+
         return rec
     } catch (error) {
         logger.warn("[mcp] song fetch failed:", error)
@@ -231,6 +242,8 @@ export interface ResolvedTrackBond {
     fileName: string | undefined
     /** True when a non-empty songId was supplied but didn't resolve to a song doc. */
     songMissing: boolean
+    /** BET-5: the song's default length, copied onto a new row. */
+    durationSec?: number
 }
 
 /**
@@ -252,6 +265,7 @@ export async function resolveTrackBondDefaults(
     let bpm = overrides.bpm
     let leadMusician = overrides.leadMusician
     let fileName: string | undefined
+    let durationSec: number | undefined
     let songMissing = false
     if (overrides.songId && overrides.songId.trim()) {
         const song = await getSongById(overrides.songId)
@@ -263,7 +277,8 @@ export async function resolveTrackBondDefaults(
             bpm = bpm ?? song.bpm
             leadMusician = leadMusician ?? song.lead
             fileName = song.fileName
+            durationSec = song.durationSec
         }
     }
-    return { title, key, bpm, leadMusician, fileName, songMissing }
+    return { title, key, bpm, leadMusician, fileName, songMissing, ...(durationSec !== undefined ? { durationSec } : {}) }
 }

@@ -144,7 +144,10 @@ describe("per-tenant MCP instructions", () => {
         expect(instructions).toContain("a band")
         expect(instructions).toContain('called a "set"')
         expect(instructions).toContain("Band Admin Test and David Lazaroff")
-        for (const phrase of CRC_PHRASES) expect(instructions, phrase).not.toContain(phrase)
+        // BET-5 (TF-08): BL's guide names the draft_service tool; a tool name is not CRC wording.
+        const prose = instructions!.replace(/draft_service/g, "")
+        for (const phrase of CRC_PHRASES) expect(prose, phrase).not.toContain(phrase)
+        expect(instructions).toContain("basedOnSetlistId")
         expect(instructions).toMatchSnapshot()
     })
 

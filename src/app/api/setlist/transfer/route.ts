@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { isHostTenantDoc } from "@/lib/org/setlist-tenant"
 import { getT } from "@/i18n/server"
 import { getAuth, getFirestore } from "@/lib/firebase-admin"
 import { checkRateLimit } from "@/lib/rate-limit"
@@ -18,6 +19,12 @@ export const POST = createApiHandler(
         const setlistSnap = await setlistRef.get()
 
         if (!setlistSnap.exists) {
+            const t = await getT()
+            return new NextResponse(t("api-setlist.setlistNotFound"), { status: 404 })
+        }
+
+        // Another tenant's setlist answers exactly as a missing one.
+        if (!isHostTenantDoc(setlistSnap.data(), auth.orgId)) {
             const t = await getT()
             return new NextResponse(t("api-setlist.setlistNotFound"), { status: 404 })
         }

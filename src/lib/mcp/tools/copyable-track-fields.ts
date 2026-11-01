@@ -48,6 +48,11 @@ export const COPYABLE_TRACK_FIELDS = [
     // purpose is to survive into a different service.
     "momentId",
     "fixed",
+    // BET-5: a band's row keeps its length, segue and singer keys on a clone
+    // (the same song at the next gig runs the same length into the same next song).
+    "durationSec",
+    "segue",
+    "singerKeys",
 ] as const
 
 export type CopyableTrackField = (typeof COPYABLE_TRACK_FIELDS)[number]

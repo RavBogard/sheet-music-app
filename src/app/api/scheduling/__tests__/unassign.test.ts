@@ -12,7 +12,8 @@ let musicianPrefs: Record<string, unknown> | undefined
 let setlistDoc: { exists: boolean; data: () => Record<string, unknown> | undefined }
 
 // Ref-tagged docs so the transaction mock can route get() / update() by ref.
-const ASSIGNMENT_REF = { __kind: 'assignment' as const }
+// BET-5: the route reads the assignment's tenant before the transaction.
+const ASSIGNMENT_REF = { __kind: 'assignment' as const, get: async () => assignmentDoc }
 const SETLIST_REF = { __kind: 'setlist' as const }
 
 const mockFirestoreLocal = {
@@ -223,6 +224,23 @@ describe('POST /api/scheduling/unassign', () => {
                 assignedUids: ['musician-2'],
             }
         )
+    })
+
+    it("another tenant's assignment answers 404 like a missing one; nothing written or sent", async () => {
+        const base = assignmentDoc.data()!
+        assignmentDoc = { exists: true, data: () => ({ ...base, orgId: 'brotherslazaroff' }) }
+        const req = () => makeReq('/api/scheduling/unassign', { method: 'POST', token: 'valid-token', body: { assignmentId: 'a-1' } })
+        const foreign = await POST(req())
+        expect(foreign.status).toBe(404)
+        assignmentDoc = { exists: false, data: () => undefined }
+        const missing = await POST(req())
+        expect(missing.status).toBe(404)
+        expect(await foreign.json()).toEqual(await missing.json())
+        expect(mockAssignmentUpdate).not.toHaveBeenCalled()
+        expect(mockSetlistUpdate).not.toHaveBeenCalled()
+        expect(sendSchedulingEmail).not.toHaveBeenCalled()
+        expect(sendSchedulingCancellationSMS).not.toHaveBeenCalled()
+        expect(mockNotifAdd).not.toHaveBeenCalled()
     })
 
     it('returns 404 for missing assignments', async () => {

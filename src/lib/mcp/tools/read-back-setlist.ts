@@ -19,6 +19,9 @@ import { computeSlotTier, phrase as tierPhrase, type SlotTier } from "@/lib/prof
 import { vsLastOf, type VsLast } from "@/lib/profiles/vs-last"
 import type { TemplateProfile } from "./templates"
 import { readOpenItems } from "./open-items"
+import { hidesLiturgicalFields } from "@/lib/org/vocab"
+import { readGig } from "@/lib/gig/model"
+import { anyDuration, setTotals, type SetTotal } from "@/lib/gig/set-totals"
 import { findProfileTemplateFor } from "./service-profiles"
 
 /**
@@ -44,6 +47,8 @@ export interface ReadBackSetlistResult {
     readback: Readback
     /** MCP-05: per slot, what the profile's last regular service before this one had. Recall only. */
     vsLast: VsLast | null
+    /** BET-5: each set's running length; for band tenants, and for any setlist with a timed row. */
+    setTotals?: SetTotal[]
 }
 
 function str(v: unknown): string | null {
@@ -104,9 +109,18 @@ export async function readBackSetlistTool(
         if (!data || rowOrg(data.orgId) !== org) return notFound(setlistId)
 
         const rawTracks = (await getTracksForSetlist(db, setlistId, data)) as unknown as Array<Record<string, unknown>>
-        const rows: Row[] = rawTracks
+        const ordered = rawTracks
             .filter((t) => typeof t.orgId !== "string" || !t.orgId || rowOrg(t.orgId) === org)
             .sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0))
+        const totalsRows = ordered.map((t) => ({
+            id: String(t.id),
+            type: str(t.type) ?? "song",
+            title: typeof t.title === "string" ? t.title : "",
+            durationSec: t.durationSec,
+        }))
+        const totals =
+            hidesLiturgicalFields(org) || anyDuration(totalsRows) ? setTotals(totalsRows, readGig(data.gig)) : undefined
+        const rows: Row[] = ordered
             .map((t) => ({
                 id: String(t.id),
                 type: str(t.type) ?? "song",
@@ -168,7 +182,7 @@ export async function readBackSetlistTool(
             openItems: readOpenItems(data),
             now: new Date(),
         })
-        return { ok: true, setlistId, readback, vsLast }
+        return { ok: true, setlistId, readback, vsLast, ...(totals ? { setTotals: totals } : {}) }
     } catch (error) {
         logger.warn("read_back_setlist failed:", error)
         return richError(

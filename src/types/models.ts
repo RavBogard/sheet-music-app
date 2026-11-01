@@ -38,6 +38,8 @@ export interface DriveFile {
     }
 }
 
+import type { Gig } from '@/lib/gig/model'
+
 /** Track types for service flow items */
 export type TrackType = 'song' | 'header' | 'reading' | 'prayer' | 'transition' | 'note'
 
@@ -110,6 +112,12 @@ export interface SetlistTrack {
      * on the rabbi's service sheet. Never copied by templates or clone.
      */
     honors?: Array<{ name: string; note?: string }>
+    /** BET-5: the row's length in seconds, set by the author or copied from the song. */
+    durationSec?: number
+    /** BET-5: the song runs straight into the next one. */
+    segue?: boolean
+    /** BET-5: the key each singer sings it in, as the author recorded it. Never chosen for anyone. */
+    singerKeys?: Array<{ musician: string; key: string }>
 }
 
 /** A musician assigned to play a specific service/setlist */
@@ -132,6 +140,10 @@ export interface Contact {
     name: string
     email?: string
     phone?: string
+    /** BET-5: the instrument a sub plays, free text. */
+    instrument?: string
+    /** BET-5: the part a sub reads; generate_gig_packet transposes by it. */
+    transposition?: "C" | "Bb" | "Eb" | "F" | "bass"
     createdBy: string
     createdAt?: unknown   // Firestore Timestamp (serverTimestamp on write)
     updatedAt?: unknown
@@ -173,6 +185,8 @@ export interface Setlist {
      */
     startsAtLocal?: string
     musicians?: SetlistMusician[] // Who's playing this service
+    /** BET-5: the show around a band set (venue, times, set targets). See src/lib/gig/model.ts. */
+    gig?: Gig
     isTemplate?: boolean
     templateType?: 'shabbat_morning' | 'friday_night' | 'rosh_hashanah' | 'yom_kippur' | 'festival' | 'other'
     /**

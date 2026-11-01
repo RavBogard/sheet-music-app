@@ -12,6 +12,7 @@
  */
 
 import { NextResponse } from "next/server"
+import { isHostTenantDoc } from "@/lib/org/setlist-tenant"
 import { getT } from "@/i18n/server"
 import { createApiHandler } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
@@ -56,10 +57,19 @@ export const POST = createApiHandler(
         }
         const db = getFirestore()
 
+        // BET-5 fix round: the setlist must be the host tenant's before its
+        // members are told about it.
+        const org = coerceOrgId(ctx.req.headers.get("x-org-id"))
+        const setlistSnap = await db.collection('setlists').doc(setlistId).get()
+        // Another tenant's setlist answers exactly as a missing one.
+        if (!isHostTenantDoc(setlistSnap.exists ? setlistSnap.data() : null, org)) {
+            const t = await getT()
+            return NextResponse.json({ error: t("api-setlist.setlistNotFound") }, { status: 404 })
+        }
+
         // Fetch active member UIDs (Admin SDK bypasses Firestore rules).
         // Multi-tenant phase 2: the host tenant's members by MEMBERSHIP role
         // (not the global users.role), in the legacy doc-id order.
-        const org = coerceOrgId(ctx.req.headers.get("x-org-id"))
         const members = await listTenantMembers(org, { roles: ['admin', 'band_leader', 'musician', 'member'] })
 
         const recipientUids = members

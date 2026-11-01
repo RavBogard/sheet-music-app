@@ -172,6 +172,17 @@ function frozenCrcOverrides(): Record<string, string> {
     return out
 }
 
+/** BET-5 (TF-08): the gig workflow, plain facts only. */
+const BL_AGENT_GUIDE = `## Gigs
+
+- A set is for one show. Its \`gig\` (update_setlist) holds the venue, address, load-in, soundcheck, start and end (24-hour HH:mm, local time), a contact, notes and a target length per set.
+- The sets of a show are the rows between header rows. get_setlist and read_back_setlist give each set's length from the rows' \`durationSec\`; a song with no length is counted as untimed.
+- To reuse a past gig, call draft_service with the date and \`basedOnSetlistId\` (the past set). Its order is kept and every song is open except the ones the band keeps.
+- "Keep it" (\`standing: true\`, or set_standing_choice) is remembered across gigs.
+- Record each singer's key in \`singerKeys\` on the row (update_track). Never choose a key for anyone.
+- A sub's part: save them with create_contact and a \`transposition\`, then call generate_gig_packet with their \`contactId\`. Nothing is sent; share the link.
+- Ignore the tools for books, page numbers and honors: they are not used here.`
+
 const blBranding = CODE_BRANDING.brotherslazaroff
 const blEmail = CODE_EMAIL_BRANDING.brotherslazaroff
 
@@ -218,8 +229,8 @@ const BL: OrgConfigInput = {
     // Frozen: BL's signed-out pages fall back to CRC's congregation defaults today.
     congregationDefaults: CRC_CONGREGATION_DEFAULTS,
     // Phase 4: BL's connector gets the generated guide (facts from this config +
-    // the shared core); no BL-specific text is needed on top.
-    agentGuide: "",
+    // the shared core). BET-5 (TF-08): plus these plain facts about gigs.
+    agentGuide: BL_AGENT_GUIDE,
     agentGuideMode: "generated",
     configVersion: 1,
 }

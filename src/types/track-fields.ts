@@ -46,6 +46,9 @@ export const TRACK_FIELDS = [
     "momentId",
     "fixed",
     "honors",
+    "durationSec",
+    "segue",
+    "singerKeys",
 ] as const
 
 export type TrackFieldName = (typeof TRACK_FIELDS)[number]

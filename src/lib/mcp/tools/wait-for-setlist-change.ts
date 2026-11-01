@@ -1,4 +1,7 @@
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
+import { rowOrg } from "@/lib/mcp/org-context"
+import { DEFAULT_ORG_ID } from "@/lib/org/registry"
+import type { OrgId } from "@/lib/org/types"
 import { logger } from "@/lib/logger"
 import {
     readVersion,
@@ -126,6 +129,7 @@ async function snapshotState(
 export async function waitForSetlistChange(
     _uid: string,
     args: WaitForSetlistChangeArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<WaitForSetlistChangeResult | WaitForSetlistChangeError> {
     if (!args.setlistId) {
         return richError(
@@ -149,6 +153,18 @@ export async function waitForSetlistChange(
 
     initAdmin()
     const db = getFirestore()
+
+    // BET-5 fix round: another tenant's setlist answers as not found (no wait,
+    // no state). A missing setlist keeps the old wait-then-timeout behaviour.
+    const owner = await db.collection("setlists").doc(args.setlistId).get()
+    if (owner.exists && rowOrg((owner.data() as Record<string, unknown>).orgId) !== org) {
+        return richError(
+            "setlist_not_found",
+            `Setlist '${args.setlistId}' was not found.`,
+            { setlistId: args.setlistId },
+            "Verify the id via list_setlists.",
+        )
+    }
 
     // Immediate-return path: if state has already advanced, no need to wait.
     const initial = await snapshotState(db, args.setlistId, args.sinceVersion)

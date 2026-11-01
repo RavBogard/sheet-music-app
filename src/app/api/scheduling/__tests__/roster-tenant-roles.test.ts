@@ -83,7 +83,7 @@ function ctx(org: string, url: string, body?: unknown) {
     return {
         req: { headers, url: `https://x.test${url}`, nextUrl: new URL(`https://x.test${url}`) },
         body,
-        auth: { uid: "caller", email: "caller@x.test", isAdmin: true, isBandLeader: true, isMusician: true },
+        auth: { uid: "caller", email: "caller@x.test", isAdmin: true, isBandLeader: true, isMusician: true, orgId: org },
     }
 }
 const call = async (fn: unknown, c: unknown) => (await (fn as (c: unknown) => Promise<Response>)(c)).json()
@@ -116,9 +116,24 @@ describe("roster listings use the tenant membership role", () => {
 
     it("email-packets (BL setlist): emails BL musician+ only", async () => {
         const { POST } = await import("@/app/api/setlist/email-packets/route")
-        const body = await call(POST, ctx("crc", "/api/setlist/email-packets", { setlistId: "blSet" }))
+        const body = await call(POST, ctx("brotherslazaroff", "/api/setlist/email-packets", { setlistId: "blSet" }))
         expect(body).toEqual({ sent: 1, failed: 0, total: 1 })
         expect(sent).toEqual(["bo@x.test"])
+    })
+
+    it("email-packets: another tenant's setlist is not found and nothing is sent", async () => {
+        const { POST } = await import("@/app/api/setlist/email-packets/route")
+        const res = await (POST as unknown as (c: unknown) => Promise<Response>)(
+            ctx("brotherslazaroff", "/api/setlist/email-packets", { setlistId: "crcSet" }),
+        )
+        expect(res.status).toBe(404)
+        // The same answer as a setlist that does not exist.
+        const missing = await (POST as unknown as (c: unknown) => Promise<Response>)(
+            ctx("brotherslazaroff", "/api/setlist/email-packets", { setlistId: "no-such-setlist" }),
+        )
+        expect(missing.status).toBe(404)
+        expect(await res.json()).toEqual(await missing.json())
+        expect(sent).toEqual([])
     })
 
     it("notify-updated (BL host): member+ broadcast includes BL member dana and musician bo, not crc-only cy", async () => {

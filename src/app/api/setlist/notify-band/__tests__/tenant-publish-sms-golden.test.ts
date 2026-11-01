@@ -80,7 +80,8 @@ async function notify(orgId?: string): Promise<string> {
     const res = await call({
         req: {},
         body: { setlistId: "sl-1", musicians: [{ uid: "player", name: "Alex Player", email: "" }] },
-        auth: { uid: "leader", email: "leader@example.com", isBandLeader: true },
+        // The caller is on the setlist's own site (BET-5: another tenant's setlist is not found).
+        auth: { uid: "leader", email: "leader@example.com", isBandLeader: true, orgId: orgId ?? "crc" },
     })
     expect(res.status).toBe(200)
     expect(h.sendSMS).toHaveBeenCalledTimes(1)

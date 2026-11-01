@@ -30,6 +30,7 @@
  */
 
 import { NextResponse } from 'next/server'
+import { isHostTenantDoc } from "@/lib/org/setlist-tenant"
 import { getFormat, getT } from '@/i18n/server'
 import { createApiHandler } from '@/lib/api-wrapper'
 import { checkRateLimit } from '@/lib/rate-limit'
@@ -109,6 +110,11 @@ export const POST = createApiHandler(
         }
 
         const setlist = setlistDoc.data()!
+        // Another tenant's setlist answers exactly as a missing one.
+        if (!isHostTenantDoc(setlist, ctx.auth.orgId)) {
+            const t = await getT()
+            return NextResponse.json({ error: t("api-setlist.setlistNotFound") }, { status: 404 })
+        }
 
         // Auth check: owner, band leader, or admin
         const isOwner = setlist.ownerId === ctx.auth.uid

@@ -60,7 +60,8 @@ import { primeTestOrg } from "@/lib/org/__tests__/test-org-config"
 async function packetMeta(orgId?: string) {
     h.saved = []
     h.setlist = { name: "Friday Night Set", ...(orgId ? { orgId } : {}) }
-    const r = await generateGigPacket("leader", { setlistId: "sl-1" })
+    // The caller is in the setlist's tenant: another tenant's setlist reads as missing (BET-5).
+    const r = await generateGigPacket("leader", { setlistId: "sl-1" }, orgId ?? "crc")
     expect(r).toMatchObject({ ok: true, packetTitle: "Friday Night Set — Gig Packet" })
     expect(h.saved).toHaveLength(1)
     const doc = await PDFDocument.load(h.saved[0], { updateMetadata: false })

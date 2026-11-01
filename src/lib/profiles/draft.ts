@@ -36,6 +36,10 @@ const TRACK_FIELDS = [
     "liturgyRefs",
     "momentId",
     "fixed",
+    // BET-5: a band's row keeps its length, segue and singer keys (present only when set).
+    "durationSec",
+    "segue",
+    "singerKeys",
 ] as const
 
 /** Fields that belong to the chart; an open slot carries none of them. */
@@ -357,7 +361,7 @@ export function filledNoteFor(
 }
 
 /** The note read back when one-off changes were made to filled rows. */
-export function oneOffNoteFor(changes: string[]): string | undefined {
+export function oneOffNoteFor(changes: string[], noun: "week" | "show" = "week"): string | undefined {
     if (changes.length === 0) return undefined
-    return `${changes.join(", ")} ${changes.length === 1 ? "is" : "are"} just for this week. Say "keep it" to make ${changes.length === 1 ? "it" : "them"} standard.`
+    return `${changes.join(", ")} ${changes.length === 1 ? "is" : "are"} just for this ${noun}. Say "keep it" to make ${changes.length === 1 ? "it" : "them"} standard.`
 }

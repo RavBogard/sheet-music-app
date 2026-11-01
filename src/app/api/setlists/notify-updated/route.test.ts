@@ -25,6 +25,10 @@ const firestoreWithBatch = {
                 })),
             }
         }
+        if (name === 'setlists') {
+            // BET-5: the route checks the setlist is the host tenant's (crc here).
+            return { doc: vi.fn((id: string) => ({ get: vi.fn(async () => ({ exists: id !== 'foreign', data: () => ({ orgId: 'crc' }) })) })) }
+        }
         return { doc: vi.fn(() => ({})) }
     }),
     batch: vi.fn(() => ({
