@@ -48,6 +48,8 @@ export interface SetlistViewProps {
     showTiming?: boolean
     /** BET-5: the gig, for each set's target length. */
     gig?: Gig | null
+    /** Live reorder: rows just moved, highlighted for a moment. */
+    highlightIds?: ReadonlySet<string> | null
 }
 
 export function SetlistView({
@@ -66,6 +68,7 @@ export function SetlistView({
     saveFailures,
     showTiming = false,
     gig = null,
+    highlightIds = null,
 }: SetlistViewProps) {
     const t = useT()
     // Memoize transposed keys computation (pure function, keyed on tracks + transposition)
@@ -148,6 +151,7 @@ export function SetlistView({
                     setTotal={track.id ? setTotals?.[track.id] : undefined}
                     savedOffline={savedOfflineFor(track)}
                     saveFailure={saveFailureFor(track)}
+                    highlighted={!!track.id && !!highlightIds?.has(track.id)}
                 />
             )
         }
@@ -176,6 +180,7 @@ export function SetlistView({
                         setTotal={setTotals?.[track.id]}
                         savedOffline={savedOfflineFor(track)}
                         saveFailure={saveFailureFor(track)}
+                        highlighted={!!highlightIds?.has(track.id)}
                     />
                 )}
             </LiveDirectorGesture>

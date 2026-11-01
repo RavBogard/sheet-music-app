@@ -108,5 +108,19 @@
     "status": {
         "updated": "עודכן {when}",
         "chartsOnDevice": "{ready}/{total} תווים באייפד הזה"
+    },
+    "reorder": {
+        "start": "סידור מחדש",
+        "startLabel": "סידור השירים מחדש לכל הלהקה",
+        "done": "סיום",
+        "hint": "השינויים מגיעים מיד לכל האייפדים.",
+        "listLabel": "סדר רשימת השירים",
+        "dragHandle": "גרירת {rowTitle}",
+        "moveUp": "הזזת {rowTitle} למעלה",
+        "moveDown": "הזזת {rowTitle} למטה",
+        "failed": "לא ניתן היה לשמור את ההזזה. הסדר חזר למה שהיה.",
+        "offline": "אין חיבור לרשת. הסדר לא השתנה.",
+        "conflict": "רשימת השירים השתנתה. נסו שוב.",
+        "openRowRemoved": "השיר הזה הוסר מרשימת השירים."
     }
 }

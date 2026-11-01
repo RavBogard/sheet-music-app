@@ -79,5 +79,17 @@
     "chartLoad.library": {"where": "Single-chart page error: button to the chart library", "who": "signed-in band members", "maxLength": 12},
     "chartLoad.loading": {"where": "Single-chart page: loading text under the spinner", "who": "everyone", "maxLength": 30},
     "status.updated": {"where": "Perform setlist view: status line under the setlist name, how fresh the setlist is", "who": "musicians and leaders", "maxLength": 30, "context": "{when} is a relative time such as '3 hours ago' (already translated)"},
-    "status.chartsOnDevice": {"where": "Perform setlist view: status line under the setlist name, how many of the setlist's charts are saved on this tablet for offline use", "who": "musicians and leaders", "maxLength": 34, "context": "{ready}/{total} are chart counts. 'this iPad' = the tablet the musician is holding"}
+    "status.chartsOnDevice": {"where": "Perform setlist view: status line under the setlist name, how many of the setlist's charts are saved on this tablet for offline use", "who": "musicians and leaders", "maxLength": 34, "context": "{ready}/{total} are chart counts. 'this iPad' = the tablet the musician is holding"},
+    "reorder.start": {"where": "Perform setlist view: toolbar button that turns on reorder mode", "who": "band leaders", "maxLength": 14, "context": "Reorder = change the order of the songs during the service, for everyone"},
+    "reorder.startLabel": {"where": "Perform setlist view: screen-reader label of the Reorder button", "who": "band leaders", "maxLength": 50},
+    "reorder.done": {"where": "Perform setlist view: toolbar button that leaves reorder mode", "who": "band leaders", "maxLength": 12},
+    "reorder.hint": {"where": "Perform setlist view, reorder mode: line above the list", "who": "band leaders", "maxLength": 60, "context": "iPad = the band's tablets"},
+    "reorder.listLabel": {"where": "Perform setlist view, reorder mode: screen-reader name of the list", "who": "band leaders", "maxLength": 30},
+    "reorder.dragHandle": {"where": "Perform setlist view, reorder mode: screen-reader label of a row's drag handle", "who": "band leaders", "maxLength": 50, "context": "{rowTitle} is the row title (data)"},
+    "reorder.moveUp": {"where": "Perform setlist view, reorder mode: screen-reader label of a row's Move up button", "who": "band leaders", "maxLength": 50, "context": "{rowTitle} is the row title (data)"},
+    "reorder.moveDown": {"where": "Perform setlist view, reorder mode: screen-reader label of a row's Move down button", "who": "band leaders", "maxLength": 50, "context": "{rowTitle} is the row title (data)"},
+    "reorder.failed": {"where": "Perform setlist view: short error when a reorder could not be saved; the list has gone back", "who": "band leaders", "maxLength": 70},
+    "reorder.offline": {"where": "Perform setlist view: short error when the leader tries to reorder with no connection", "who": "band leaders", "maxLength": 60},
+    "reorder.conflict": {"where": "Perform setlist view: short error when a reorder could not be saved because someone else changed the setlist at the same time", "who": "band leaders", "maxLength": 40},
+    "reorder.openRowRemoved": {"where": "Perform setlist view: short line shown after the song a musician had open was removed from the setlist by a leader; the chart closed back to the list", "who": "musicians and leaders", "maxLength": 60}
 }

@@ -54,6 +54,12 @@ export interface SetlistRowProps {
      * known. Shown after the not-saved line; retrying is the Save button.
      */
     saveFailure?: SaveFailureReason
+    /**
+     * Live reorder: the row was just moved (by this leader or, on a receiving
+     * iPad, by another). A brief low-opacity brand wash; colour only, so the
+     * list never shifts.
+     */
+    highlighted?: boolean
 }
 
 export function SetlistRow({
@@ -70,6 +76,7 @@ export function SetlistRow({
     setTotal,
     savedOffline,
     saveFailure,
+    highlighted = false,
 }: SetlistRowProps) {
     const t = useT()
     const isSong = !track.type || track.type === "song"
@@ -219,6 +226,7 @@ export function SetlistRow({
         const bandClass = cn(
             "flex items-end gap-3 px-4 pt-2.5 pb-1 w-full text-start border-b-2",
             SECTION_BAND_CLASS[band?.hue ?? "blue"],
+            highlighted && "ring-4 ring-inset ring-brand/40",
         )
         const bandSpacing = "mt-2 first:mt-0"
         const headerInner = (
@@ -237,7 +245,7 @@ export function SetlistRow({
         if (isLeader) {
             return (
                 <>
-                    <h2 className={bandSpacing} data-testid="perform-section-heading">
+                    <h2 className={bandSpacing} data-testid="perform-section-heading" data-moved={highlighted || undefined}>
                         <button
                             type="button"
                             onClick={handleClick}
@@ -256,7 +264,7 @@ export function SetlistRow({
         }
         return (
             <>
-                <h2 className={cn(bandClass, bandSpacing)} data-section-hue={band?.hue} data-testid="perform-section-heading">
+                <h2 className={cn(bandClass, bandSpacing)} data-section-hue={band?.hue} data-testid="perform-section-heading" data-moved={highlighted || undefined}>
                     {headerInner}
                 </h2>
                 {headerExtra}
@@ -362,6 +370,8 @@ export function SetlistRow({
         // an outline, so it never fights the current-position ring.
         "outline-none focus-visible:outline-3 focus-visible:outline-solid focus-visible:outline-ring focus-visible:-outline-offset-3",
         isCurrentPosition ? "bg-accent ring-2 ring-inset ring-brand" : "bg-card",
+        // Live reorder: a just-moved row. Colour only (no size change).
+        highlighted && "bg-brand/15",
         // Passive non-song labels are de-emphasized via the muted *title color*
         // (songContent's text-muted-foreground span), NOT row opacity. opacity-60
         // composited the muted text below WCAG AA on the light theme (axe color-
@@ -371,7 +381,7 @@ export function SetlistRow({
     // Non-interactive rows
     if (!isInteractive) {
         return (
-            <div className={cn(rowClasses, "cursor-default")} data-current={isCurrentPosition || undefined}>
+            <div className={cn(rowClasses, "cursor-default")} data-current={isCurrentPosition || undefined} data-moved={highlighted || undefined}>
                 {songContent}
             </div>
         )
@@ -397,6 +407,7 @@ export function SetlistRow({
             data-row-id={track.id}
             data-file-id={track.fileId ?? ""}
             data-current={isCurrentPosition || undefined}
+            data-moved={highlighted || undefined}
             aria-label={openableNonSong ? t("performSetlist.row.openChart", { songTitle: title }) : undefined}
             onClick={composedClick}
             onKeyDown={(e) => {

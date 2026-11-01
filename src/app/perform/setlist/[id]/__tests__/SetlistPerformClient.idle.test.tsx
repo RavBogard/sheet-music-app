@@ -13,19 +13,22 @@ import { Profiler } from 'react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, cleanup, act, waitFor } from '@testing-library/react'
 
-import { resetDbForTests } from '@/lib/local/schema'
+import { getDb, resetDbForTests } from '@/lib/local/schema'
+import type { LocalTrack } from '@/lib/local/types'
 import { OFFLINE_STORE_CHANGED_EVENT } from '@/lib/offline-idb'
 
 const idb = vi.hoisted(() => ({ listCalls: 0, saved: ["f1"] as string[] }))
+const who = vi.hoisted(() => ({ signedIn: false }))
 
 vi.mock('@/lib/firebase', () => ({
     db: {},
+    auth: { currentUser: null },
     getDb: vi.fn(async () => ({})),
     subscribeWithDb: vi.fn(() => () => {}),
 }))
 vi.mock('firebase/firestore', () => ({ doc: vi.fn(), Timestamp: class {} }))
 vi.mock('@/lib/auth-context', () => ({
-    useAuth: () => ({ user: null, isAdmin: false, isBandLeader: false, isMusician: false }),
+    useAuth: () => ({ user: who.signedIn ? { uid: 'm1' } : null, isAdmin: false, isBandLeader: false, isMusician: who.signedIn }),
 }))
 vi.mock('@/hooks/use-safe-firestore-sync', () => ({
     useSafeFirestoreSync: () => ({ data: null, loading: false, error: null }),
@@ -42,6 +45,10 @@ vi.mock('@/hooks/use-wake-lock', () => ({
 }))
 vi.mock('@/lib/musician-profile', () => ({ subscribeToMusicianProfile: vi.fn(() => vi.fn()) }))
 vi.mock('@/lib/sync/snapshot-listener', () => ({ startSnapshotListener: vi.fn(() => () => {}) }))
+vi.mock('@/lib/performance/tonight-client', () => ({
+    subscribeTonight: vi.fn(() => () => {}),
+    commitTonightReset: vi.fn(),
+}))
 vi.mock('@/lib/offline-idb', async (orig) => {
     const real = await orig<typeof import('@/lib/offline-idb')>()
     return {
@@ -74,6 +81,7 @@ const idle = (ms: number) => act(() => new Promise<void>((r) => setTimeout(r, ms
 
 describe('Perform setlist page at idle', () => {
     beforeEach(async () => {
+        who.signedIn = false
         idb.listCalls = 0
         idb.saved = ['f1']
         await resetDbForTests()
@@ -116,4 +124,38 @@ describe('Perform setlist page at idle', () => {
         act(() => { window.dispatchEvent(new Event(OFFLINE_STORE_CHANGED_EVENT)) })
         await waitFor(() => expect(screen.getByTestId('save-offline').getAttribute('data-state')).toBe('saved'))
     })
+
+    it('settles in a bounded number of renders after a remote reorder', async () => {
+        // A signed-in iPad: its rows come live from the local store.
+        who.signedIn = true
+        const seed = (order: string[]) =>
+            getDb().tracks.bulkPut(
+                order.map((id, i) => ({ ...rows.find((r) => r.id === id)!, setlistId: ID, order: i }) as unknown as LocalTrack),
+            )
+        await seed(['t1', 't2', 't3'])
+        let commits = 0
+        render(
+            <Profiler id="perform" onRender={() => { commits++ }}>
+                <SetlistPerformClient setlistId={ID} initialSetlist={ssr} initialTracks={rows} />
+            </Profiler>,
+        )
+        // Past the page's settle window.
+        await idle(1700)
+        const before = commits
+
+        // Another leader moves Oseh Shalom to the top.
+        await act(async () => { await seed(['t3', 't1', 't2']) })
+        await waitFor(() =>
+            expect(screen.getAllByTestId('perform-row').map((el) => el.getAttribute('data-row-id'))).toEqual(['t3', 't1', 't2']),
+        )
+        // The move lands, the highlight shows and ends: a handful of renders.
+        await idle(2300)
+        expect(commits - before).toBeLessThanOrEqual(15)
+        expect(screen.getAllByTestId('perform-row').some((el) => el.hasAttribute('data-moved'))).toBe(false)
+
+        // Then quiet again.
+        const settled = commits
+        await idle(1000)
+        expect(commits - settled).toBeLessThanOrEqual(5)
+    }, 10_000)
 })

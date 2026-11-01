@@ -72,6 +72,13 @@ interface UseSetlistPerformanceReturn {
     setlistUpdatedSinceLoad: boolean
     /** Identifies the live version behind the strip (loop guard). */
     setlistLiveStamp: string | null
+    /**
+     * Live reorder: the setlist's version as this device last saw it (live
+     * doc, else the server frame; 0 when the doc carries none, as the server
+     * reads it). Sent as `lastSeenVersion` so a reorder never overwrites a
+     * change this device hasn't seen.
+     */
+    setlistVersion: number
     /** Web refresh: when the setlist was last changed (live doc, else the SSR frame). Display only. */
     setlistUpdatedAt: Date | null
 }
@@ -290,6 +297,13 @@ export function useSetlistPerformance(
     const setlistUpdatedSinceLoad =
         !user && setlistMovedPast(initial?.setlist, setlistData)
     const liveVersion = (setlistData as { version?: unknown } | null)?.version
+    const ssrVersion = (initial?.setlist as { version?: unknown } | null | undefined)?.version
+    const setlistVersion: number =
+        typeof liveVersion === "number"
+            ? liveVersion
+            : !setlistData && typeof ssrVersion === "number"
+              ? ssrVersion
+              : 0
     const setlistLiveStamp: string | null =
         typeof liveVersion === "number"
             ? `v${liveVersion}`
@@ -437,6 +451,7 @@ export function useSetlistPerformance(
         eventDate,
         setlistUpdatedSinceLoad,
         setlistLiveStamp,
+        setlistVersion,
         setlistUpdatedAt,
     }
 }
