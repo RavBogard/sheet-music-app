@@ -73,5 +73,9 @@ def test_merge_short_blocks():
     import numpy as np
 
     music = np.ones(400)
-    blocks = cut._merge_short([cut.Block(0, 100, 0), cut.Block(100, 110, 0), cut.Block(110, 300, 0)], music)
+    fill = lambda b: cut._fill(b, music, [], [])  # noqa: E731
+    raw = [cut.Block(0, 100, 0), cut.Block(100, 110, 0), cut.Block(110, 300, 0)]
+    for b in raw:
+        fill(b)
+    blocks = cut._merge_short(raw, fill)
     assert [(b.start, b.end) for b in blocks] == [(0, 110), (110, 300)]

@@ -27,7 +27,7 @@ from pathlib import Path
 
 import numpy as np
 
-from textmatch import clean_title, title_score
+from textmatch import GENERIC_WORDS, clean_title, title_score
 
 SR = 16000
 SILENCE_DB = -35  # ffmpeg silencedetect noise floor
@@ -43,7 +43,14 @@ TITLE_FLOOR = 0.60  # fuzzy partial matches below this are noise
 STRONG_TITLE = 0.85  # a title this clear anchors a song
 LIVE_MIN = 0.70  # confidence at or above → live, below → held
 NO_SETLIST_MIN = 0.85  # with no setlist, only a title this clear is kept at all
+NO_SETLIST_LIVE_MIN = 0.92  # ... and only this clear (and unique) goes live
+GENERIC_TITLE_CAP = 0.80  # a title made only of everyday prayer words never scores above this
 SHORT_FILE_SEC = 600.0  # source files shorter than this are single songs, not cut
+SPEECH_WINDOW_SEC = 20  # word density is measured over this window
+SPEECH_WPS = 1.7  # words/s at or above which a second counts as talk
+SPEECH_RUN_MIN_SEC = 15  # a run shorter than this is a cue ("page 24"), not a talk
+SPEECH_REPEAT_MAX = 0.3  # a run whose lines repeat this much is sung patter, not talk
+SPEECH_REPEAT_CONTEXT_SEC = 120  # repeats are looked for this far either side
 
 
 @dataclass
@@ -53,6 +60,12 @@ class Block:
     music: float  # 0-1 share of seconds labelled music
     text: str = ""
     words: int = 0
+    speech: float = 0.0  # 0-1 share of the block inside a whisper speech run
+
+    @property
+    def musical(self) -> float:
+        """Music share with talk over a keyboard pad taken out."""
+        return self.music * (1.0 - self.speech)
 
     @property
     def dur(self) -> float:
@@ -135,14 +148,66 @@ def label_switches(music: np.ndarray) -> list[float]:
     return cuts
 
 
-def build_blocks(duration: float, silences: list[tuple[float, float]], music: np.ndarray, words: list[dict]) -> list[Block]:
-    cuts = sorted({round((a + b) / 2, 2) for a, b in silences} | set(label_switches(music)))
+def _norm_line(text: str) -> str:
+    return re.sub(r"[^a-z֐-׿]+", " ", text.lower()).strip()
+
+
+def speech_runs(segments: list[dict]) -> list[tuple[float, float]]:
+    """Stretches of continuous talk (a welcome, a d'var, the names before Kaddish).
+
+    Whisper hears talk densely (about 2-3 words/s over 20 s on 6.19) and hears singing
+    sparsely (mostly 0-1.5 words/s: long notes, instrumental breaks, lines it skips).
+    A second is talk when the words in the 20 s around it reach SPEECH_WPS; runs shorter
+    than SPEECH_RUN_MIN_SEC don't count. Fast sung patter ("Mississippi Goddam") is dense
+    too, but its lines repeat: a run whose lines repeat >= SPEECH_REPEAT_MAX is singing."""
+    words = [w for s in segments for w in (s.get("words") or [])]
+    if not words:
+        return []
+    n = int(max(w["end"] for w in words)) + 2
+    per = np.zeros(n)
+    for w in words:
+        per[min(n - 1, int(w["start"]))] += 1
+    half = SPEECH_WINDOW_SEC // 2
+    dens = np.convolve(per, np.ones(SPEECH_WINDOW_SEC) / SPEECH_WINDOW_SEC, mode="same")
+    talk = dens >= SPEECH_WPS
+    out = []
+    i = 0
+    while i < n:
+        if not talk[i]:
+            i += 1
+            continue
+        j = i
+        while j < n and talk[j]:
+            j += 1
+        a, z = max(0, i - half // 2), min(n, j + half // 2)
+        if z - a >= SPEECH_RUN_MIN_SEC:
+            inside = [_norm_line(s["text"]) for s in segments if a <= s["start"] < z and s["text"].strip()]
+            near = [_norm_line(s["text"]) for s in segments
+                    if (a - SPEECH_REPEAT_CONTEXT_SEC <= s["start"] < a or z <= s["start"] < z + SPEECH_REPEAT_CONTEXT_SEC)]
+            pool = near + inside
+            repeated = sum(1 for ln in inside if pool.count(ln) > 1) / max(1, len(inside))
+            if repeated < SPEECH_REPEAT_MAX:
+                if out and a <= out[-1][1]:
+                    out[-1] = (out[-1][0], float(z))
+                else:
+                    out.append((float(a), float(z)))
+        i = j
+    return out
+
+
+def build_blocks(duration: float, silences: list[tuple[float, float]], music: np.ndarray, words: list[dict],
+                 speech: list[tuple[float, float]] | None = None) -> list[Block]:
+    speech = speech or []
+    cuts = {round((a + b) / 2, 2) for a, b in silences} | set(label_switches(music))
+    for a, b in speech:
+        cuts |= {round(a, 2), round(b, 2)}
+    cuts = sorted(cuts)
     edges = [0.0] + [c for c in cuts if 0 < c < duration] + [duration]
     blocks = [Block(a, b, 0.0) for a, b in zip(edges, edges[1:]) if b - a > 0.5]
-    blocks = _merge_short(blocks, music)
+    fill = lambda b: _fill(b, music, words, speech)  # noqa: E731
     for b in blocks:
-        _fill(b, music, words)
-    return blocks
+        fill(b)
+    return _merge_short(blocks, fill)
 
 
 def _music_share(a: float, b: float, music: np.ndarray) -> float:
@@ -150,30 +215,40 @@ def _music_share(a: float, b: float, music: np.ndarray) -> float:
     return float((seg >= 0.5).mean()) if len(seg) else 0.0
 
 
-def _merge_short(blocks: list[Block], music: np.ndarray) -> list[Block]:
+def _overlap(a: float, b: float, spans: list[tuple[float, float]]) -> float:
+    if b <= a:
+        return 0.0
+    return sum(max(0.0, min(b, e) - max(a, s)) for s, e in spans) / (b - a)
+
+
+def _merge_short(blocks: list[Block], fill) -> list[Block]:
+    """Blocks shorter than MIN_BLOCK_SEC join a neighbour, preferring one of the same
+    kind (music or talk), then the shorter one."""
     changed = True
     while changed and len(blocks) > 1:
         changed = False
         for i, b in enumerate(blocks):
             if b.dur >= MIN_BLOCK_SEC:
                 continue
-            mine = _music_share(b.start, b.end, music) >= 0.5
+            mine = b.musical >= 0.5
             cand = []
             for j in (i - 1, i + 1):
                 if 0 <= j < len(blocks):
                     nb = blocks[j]
-                    same = (_music_share(nb.start, nb.end, music) >= 0.5) == mine
-                    cand.append((not same, nb.dur, j))
+                    cand.append(((nb.musical >= 0.5) != mine, nb.dur, j))
             _, _, j = min(cand)
             a, z = sorted((i, j))
-            blocks[a : z + 1] = [Block(blocks[a].start, blocks[z].end, 0.0)]
+            merged = Block(blocks[a].start, blocks[z].end, 0.0)
+            fill(merged)
+            blocks[a : z + 1] = [merged]
             changed = True
             break
     return blocks
 
 
-def _fill(b: Block, music: np.ndarray, words: list[dict]) -> None:
+def _fill(b: Block, music: np.ndarray, words: list[dict], speech: list[tuple[float, float]] | None = None) -> None:
     b.music = round(_music_share(b.start, b.end, music), 3)
+    b.speech = round(_overlap(b.start, b.end, speech or []), 3)
     inside = [w["word"] for w in words if b.start <= (w["start"] + w["end"]) / 2 < b.end]
     b.words = len(inside)
     b.text = "".join(inside).strip()
@@ -201,7 +276,7 @@ def run_score(blocks: list[Block], title: str) -> tuple[float, float, float, flo
     dur = blocks[-1].end - blocks[0].start
     ts = title_score(title, text)
     ev = title_evidence(ts)
-    mus = sum(b.music * b.dur for b in blocks) / max(dur, 1e-6)
+    mus = sum(b.musical * b.dur for b in blocks) / max(dur, 1e-6)
     df = duration_fit(dur)
     conf = 0.55 * ev + 0.20 * df + 0.10 * mus
     gain = 0.6 * ev + 0.25 * df + 0.25 * mus - 0.30
@@ -259,35 +334,96 @@ def _snippet(text: str, n: int = 80) -> str:
     return text[:n]
 
 
+def _seg_for(blocks: list[Block], bi: int, bj: int, row: dict, out_of_order: bool = False) -> Segment:
+    run = blocks[bi:bj]
+    _, conf, ts, mus = run_score(run, row["title"])
+    reason = "title heard" if ts >= STRONG_TITLE else ("title partly heard" if ts >= TITLE_FLOOR else "setlist order only")
+    if out_of_order:
+        reason += ", out of setlist order"
+    if not row.get("songId"):
+        reason += "; setlist row has no chart"
+    seg = Segment(
+        songId=row.get("songId"),
+        title=row["title"],
+        startSec=round(run[0].start, 2),
+        endSec=round(run[-1].end, 2),
+        confidence=round(conf, 3),
+        reason=reason,
+        titleScore=ts,
+        music=round(mus, 3),
+        snippet=_snippet(" ".join(b.text for b in run)),
+        extra={"order": row.get("order"), "blocks": [bi, bj]},
+    )
+    seg.status = "live" if conf >= LIVE_MIN and seg.songId else "held"
+    return seg
+
+
+def _extend_strong(blocks: list[Block], by_song: dict[int, Segment], song_rows: list[dict]) -> None:
+    """A clearly heard song keeps going into the next free block while that block is
+    music with no talk, or still clearly carries the title (a long song's later verses can
+    read as talk to the talk detector). It stops at talk without the title, at another song's block, or at
+    SONG_MAX_SEC."""
+    owned = {k for sg in by_song.values() for k in range(*sg.extra["blocks"])}
+    for sj, sg in list(by_song.items()):
+        if sg.titleScore < STRONG_TITLE:
+            continue
+        bi, bj = sg.extra["blocks"]
+        title = song_rows[sj]["title"]
+
+        def ok(k: int) -> bool:
+            b = blocks[k]
+            return k not in owned and ((b.speech < 0.5 and b.music >= 0.5) or title_score(title, b.text) >= STRONG_TITLE)
+
+        while bj < len(blocks) and ok(bj) and blocks[bj].end - blocks[bi].start <= SONG_MAX_SEC:
+            owned.add(bj)
+            bj += 1
+        if (bi, bj) != tuple(sg.extra["blocks"]):
+            new = _seg_for(blocks, bi, bj, song_rows[sj], out_of_order="out of setlist order" in sg.reason)
+            new.reason += "; extended over the song's later verses"
+            by_song[sj] = new
+
+
 def segments_with_setlist(blocks: list[Block], setlist: dict, song_rows: list[dict]) -> list[Segment]:
-    pairs = align(blocks, song_rows)
-    taken: set[int] = set()
-    segs: list[Segment] = []
-    for sj, bi, bj in pairs:
-        run = blocks[bi:bj]
-        _, conf, ts, mus = run_score(run, song_rows[sj]["title"])
-        row = song_rows[sj]
-        reason = "title heard" if ts >= STRONG_TITLE else ("title partly heard" if ts >= TITLE_FLOOR else "setlist order only")
-        if not row.get("songId"):
-            reason += "; setlist row has no chart"
-        seg = Segment(
-            songId=row.get("songId"),
-            title=row["title"],
-            startSec=round(run[0].start, 2),
-            endSec=round(run[-1].end, 2),
-            confidence=round(conf, 3),
-            reason=reason,
-            titleScore=ts,
-            music=round(mus, 3),
-            snippet=_snippet(" ".join(b.text for b in run)),
-            extra={"order": row.get("order"), "blocks": [bi, bj]},
-        )
-        seg.status = "live" if conf >= LIVE_MIN and seg.songId else "held"
-        segs.append(seg)
-        taken.update(range(bi, bj))
+    """Align in author order, then let a clearly heard title claim its block even when the
+    band played it out of setlist order (a strong title beats an order-only guess)."""
+    by_song: dict[int, Segment] = {}
+    for sj, bi, bj in align(blocks, song_rows):
+        by_song[sj] = _seg_for(blocks, bi, bj, song_rows[sj])
+
+    def owner(k: int) -> int | None:
+        for sj, sg in by_song.items():
+            a, z = sg.extra["blocks"]
+            if a <= k < z:
+                return sj
+        return None
+
+    cands = []
+    for sj, row in enumerate(song_rows):
+        if sj in by_song and by_song[sj].titleScore >= STRONG_TITLE:
+            continue
+        for bi in range(len(blocks)):
+            for bj in (bi + 1, bi + 2):
+                if bj > len(blocks):
+                    continue
+                gain, conf, ts, mus = run_score(blocks[bi:bj], row["title"])
+                if ts >= STRONG_TITLE and mus >= 0.5:
+                    cands.append((ts, conf, sj, bi, bj))
+    for ts, conf, sj, bi, bj in sorted(cands, reverse=True):
+        if sj in by_song and by_song[sj].titleScore >= STRONG_TITLE:
+            continue
+        owners = {owner(k) for k in range(bi, bj)} - {None}
+        if any(by_song[o].titleScore >= STRONG_TITLE for o in owners):
+            continue
+        for o in owners:  # weaker claims on these blocks give way
+            del by_song[o]
+        by_song[sj] = _seg_for(blocks, bi, bj, song_rows[sj], out_of_order=True)
+
+    _extend_strong(blocks, by_song, song_rows)
+    segs = list(by_song.values())
+    taken = {k for sg in segs for k in range(*sg.extra["blocks"])}
     for k, b in enumerate(blocks):
         if k not in taken:
-            segs.append(_dropped(b, "speech" if b.music < 0.5 else "matched no setlist song"))
+            segs.append(_dropped(b, "speech" if b.musical < 0.5 else "matched no setlist song"))
     return sorted(segs, key=lambda s: s.startSec)
 
 
@@ -296,6 +432,8 @@ def best_library_match(text: str, songs: list[dict], hint: str = "") -> tuple[di
     scored = []
     for s in songs:
         ts = max(title_score(s["title"], text), title_score(s["title"], hint) if hint else 0.0)
+        if ts > GENERIC_TITLE_CAP and all(w in GENERIC_WORDS for w in clean_title(s["title"]).split()):
+            ts = GENERIC_TITLE_CAP  # "Kadosh Kadosh", "Sh'ma Yisrael": words every service sings
         scored.append((ts, s))
     scored.sort(key=lambda x: -x[0])
     if not scored:
@@ -314,7 +452,7 @@ def best_library_match(text: str, songs: list[dict], hint: str = "") -> tuple[di
 def segments_without_setlist(blocks: list[Block], songs: list[dict]) -> list[Segment]:
     segs: list[Segment] = []
     for b in blocks:
-        if b.music < 0.5 and b.words > 0:
+        if b.musical < 0.5 and b.words > 0:
             segs.append(_dropped(b, "speech"))
             continue
         song, ts, note = best_library_match(b.text, songs)
@@ -327,8 +465,17 @@ def segments_without_setlist(blocks: list[Block], songs: list[dict]) -> list[Seg
             confidence=round(conf, 3), reason="no setlist; library title heard" + (f"; {note}" if note else ""),
             titleScore=ts, music=b.music, snippet=_snippet(b.text),
         )
-        seg.status = "live" if conf >= LIVE_MIN and not note else "held"
+        seg.status = "live" if ts >= NO_SETLIST_LIVE_MIN and not note else "held"
         segs.append(seg)
+    # The same song heard in several places of one service is a false friend: hold them all.
+    seen: dict[str, list[Segment]] = {}
+    for sg in segs:
+        if sg.songId:
+            seen.setdefault(sg.songId, []).append(sg)
+    for dup in (v for v in seen.values() if len(v) > 1):
+        for sg in dup:
+            sg.status = "held"
+            sg.reason += f"; matched in {len(dup)} places"
     return segs
 
 
@@ -365,7 +512,7 @@ def cut_service(mp3: Path, setlist: dict | str | None, songs: list[dict], song_r
         cands = song_rows if isinstance(setlist, dict) and song_rows else songs
         return segment_single_song(duration, text, Path(mp3).name, [r for r in cands if r.get("songId")]), []
     music = music_per_second(decode_pcm(mp3))
-    blocks = build_blocks(duration, detect_silences(mp3), music, words)
+    blocks = build_blocks(duration, detect_silences(mp3), music, words, speech_runs(transcript["segments"]))
     if isinstance(setlist, dict):
         segs = segments_with_setlist(blocks, setlist, song_rows or [])
     else:

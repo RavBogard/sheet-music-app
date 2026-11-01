@@ -45,6 +45,14 @@ _NOISE_WORDS = {
 _KEY_TOKEN = re.compile(r"^[a-g](#|b|m|min|maj)?$", re.I)
 
 
+# Words sung in nearly every prayer: on their own they identify nothing.
+GENERIC_WORDS = {
+    "adonai", "elohim", "eloheinu", "baruch", "atah", "shabbat", "shalom", "amen", "hallelujah",
+    "halleluyah", "yisrael", "melech", "olam", "hashem", "ki", "et", "el", "the", "a", "of",
+    "kadosh", "bracha", "brachah", "habracha", "habrachah", "yah", "shema", "shma", "hallel", "mitzvah",
+}
+
+
 def clean_title(title: str) -> str:
     """'L'Cha Dodi Dmin .pdf' → 'lcha dodi'; 'Shema (major).pdf' → 'shema'."""
     t = re.sub(r"\.(pdf|musicxml|mxl|xml|png|jpe?g)$", "", title.strip(), flags=re.I)
@@ -106,17 +114,44 @@ def latin_text(text: str) -> str:
     return " ".join(w for w in re.split(r"[^a-z0-9֐-׿]+", t) if w)
 
 
+def _window_best(needle: str, hay_words: list[str]) -> float:
+    """Best whole-string ratio of `needle` against any run of transcript words about as
+    long as it. Whole-window ratios keep the noise floor low; a char-level partial match
+    over a long transcript finds 60-75% "matches" for almost any title."""
+    if not needle or not hay_words:
+        return 0.0
+    n = len(needle.split())
+    best = 0.0
+    for size in {max(1, n - 1), n, n + 1}:
+        for i in range(0, max(1, len(hay_words) - size + 1)):
+            r = _ratio(needle, " ".join(hay_words[i : i + size]))
+            if r > best:
+                best = r
+    return best
+
+
 def title_score(title: str, transcript: str) -> float:
-    """0–1: how clearly the transcript contains the song's title."""
+    """0-1: how clearly the transcript contains the song's title."""
     ct = clean_title(title)
     if not ct or not transcript.strip():
         return 0.0
+    words = ct.split()
+    head = words[:-1]
+    if len(words) >= 2 and len(words[0]) >= 4 and not all(w in GENERIC_WORDS for w in head):
+        # "Lechu Goldman": a trailing composer name is often outside the parentheses
+        return max(_score(ct, transcript), 0.95 * _score(" ".join(words[:-1]), transcript))
+    return _score(ct, transcript)
+
+
+def _score(ct: str, transcript: str) -> float:
     lt = latin_text(transcript)
-    lat = _partial(ct, lt) if len(ct) >= 4 else (1.0 if f" {ct} " in f" {lt} " else 0.0)
-    sk_t, sk_x = skeleton(ct), skeleton(transcript)
+    if _partial(ct, lt) < 0.6 and _partial(skeleton(ct), skeleton(transcript)) < 0.6:
+        return 0.0  # cheap prefilter
+    lat = _window_best(ct, lt.split())
+    sk_t = skeleton(ct)
     ske = 0.0
-    if len(sk_t.replace(" ", "")) >= 3 and sk_x:
-        ske = _partial(sk_t, sk_x) * 0.95  # skeletons collide more easily; shade them
+    if len(sk_t.replace(" ", "")) >= 3:
+        ske = _window_best(sk_t, skeleton(transcript).split()) * 0.95  # skeletons collide more easily
     # Very short titles ("Shema", "Barchu") collide with anything; damp them.
     damp = min(1.0, 0.6 + 0.05 * len(ct.replace(" ", "")))
     return round(max(lat, ske) * damp, 3)
