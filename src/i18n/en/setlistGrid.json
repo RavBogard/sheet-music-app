@@ -225,5 +225,6 @@
     "chipVocalLead": "Vocal Lead: {name}",
     "rowNoChart": "No chart",
     "statusUpdated": "Updated {when}",
-    "statusCharts": "{bound}/{total} charts"
+    "statusCharts": "{bound}/{total} charts",
+    "addSongFab": "Add a song"
 }

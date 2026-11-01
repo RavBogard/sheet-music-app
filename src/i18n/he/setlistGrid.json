@@ -229,5 +229,6 @@
     "chipVocalLead": "שירה ראשית: {name}",
     "rowNoChart": "אין תווים",
     "statusUpdated": "עודכן {when}",
-    "statusCharts": "{bound}/{total} תווים"
+    "statusCharts": "{bound}/{total} תווים",
+    "addSongFab": "הוספת שיר"
 }

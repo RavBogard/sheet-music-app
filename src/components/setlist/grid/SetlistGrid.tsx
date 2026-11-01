@@ -68,6 +68,7 @@ import { cn } from '@/lib/utils'
 import { PAGE_WIDTH_CLASS } from "@/components/layout/Page"
 
 import { AddBar, type NonSongTrackType } from './AddBar'
+import { AddRowPlaceholder } from './AddRowPlaceholder'
 import { ChartBindDialog } from './ChartBindDialog'
 import { ChartBindPopover, type ChartBindSelection } from './ChartBindPopover'
 import { ChartCell } from './cells/ChartCell'
@@ -1754,11 +1755,20 @@ export function SetlistGrid({
             </div>
 
             <AddBar
-                key={placeholderKey}
-                autoOpen={addOpenSignal > 0}
                 onPickSong={(song) => void handlePickSong(song)}
                 onCreateFreeText={(title) => void handleCreateFreeText(title)}
                 onAddTrackOfType={(type) => void handleAddTrackOfType(type)}
+            />
+
+            {/* The round + at the bottom right: adding a song is one tap from
+                anywhere in the list (Daniel 2026-11-01). The EmptyState CTA
+                and tab-past-the-last-cell open this picker. */}
+            <AddRowPlaceholder
+                key={placeholderKey}
+                variant="fab"
+                autoOpen={addOpenSignal > 0}
+                onPickSong={(song) => void handlePickSong(song)}
+                onCreateFreeText={(title) => void handleCreateFreeText(title)}
             />
 
             {/* Bug 3 fix (2026-05-12): centered command dialog for programmatic

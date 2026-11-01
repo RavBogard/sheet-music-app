@@ -1148,5 +1148,10 @@
         "where": "Setlist editor head status line: last updated time",
         "who": "leaders",
         "maxLength": 32
+    },
+    "addSongFab": {
+        "where": "Setlist editor: the round + fixed at the bottom right (screen-reader label and tooltip)",
+        "who": "leaders",
+        "maxLength": 30
     }
 }

@@ -11,8 +11,6 @@ import {
 import { useState, type ReactNode } from 'react'
 
 import { DirectionalIcon } from '@/components/i18n/DirectionalIcon'
-import { useMediaQuery } from '@/hooks/use-media-query'
-import { useVirtualKeyboardOpen } from '@/hooks/use-virtual-keyboard-open'
 import { useT } from '@/i18n/client'
 import { cn } from '@/lib/utils'
 
@@ -124,14 +122,6 @@ export function AddBar({
     const t = useT()
     const [tilesOpen, setTilesOpen] = useState(false)
 
-    // v60-10-01: coarse-pointer-only hide-on-keyboard gate. visualViewport
-    // delta detection runs on every viewport; we restrict the hide effect
-    // to coarse pointers so a desktop user resizing devtools or triggering
-    // any unrelated viewport quirk can't accidentally hide the bar.
-    const isCoarse = useMediaQuery('(pointer: coarse)')
-    const keyboardOpen = useVirtualKeyboardOpen()
-    const hideForKeyboard = isCoarse && keyboardOpen
-
     const closeTiles = () => setTilesOpen(false)
 
     return (
@@ -140,27 +130,9 @@ export function AddBar({
             className={cn(
                 'flex w-full items-stretch border-t border-rule bg-card',
                 'hover:bg-accent/40',
-                // v60-10-01: coarse-pointer sticky-bottom variant. Pinned
-                // to the viewport bottom on iPad + phone so the AddBar
-                // stays in reach regardless of scroll position (resolves
-                // v53-03 CONTEXT Q1 fold-forward from v5.4). z-40 sits
-                // below Radix Dialog (z-50) so ChartBindDialog still
-                // overlays cleanly. pb-[env(safe-area-inset-bottom)]
-                // pushes the bar above the iOS home indicator on phones.
-                // Desktop fine-pointer surfaces keep the in-flow v53-03
-                // layout byte-for-byte — Tailwind only emits the rule
-                // inside @media (pointer: coarse) so fine pointers see
-                // none of these properties. Web refresh: below lg the band's
-                // bottom tab bar is showing, so the bar sits on top of it
-                // (--tabbar-h, set in globals.css) instead of under it.
-                '[@media(pointer:coarse)]:fixed [@media(pointer:coarse)]:bottom-[var(--tabbar-h,0px)] [@media(pointer:coarse)]:left-0 [@media(pointer:coarse)]:right-0 [@media(pointer:coarse)]:z-40 [@media(pointer:coarse)]:bg-background [@media(pointer:coarse)]:pb-[env(safe-area-inset-bottom)] [@media(pointer:coarse)]:shadow-[0_-4px_12px_rgba(0,0,0,0.18)]',
-                // v60-10-01: hide when the on-screen keyboard is open on
-                // a coarse pointer. `hidden` (display:none) removes the
-                // bar from the a11y tree so it cannot steal focus behind
-                // the keyboard. No motion — the keyboard's own animation
-                // is the visual transition; this also auto-satisfies
-                // prefers-reduced-motion.
-                hideForKeyboard && 'hidden',
+                // In the list flow on every device (2026-11-01): the
+                // always-there entry is now the round + (AddRowPlaceholder
+                // variant="fab"), so this bar no longer pins to the bottom.
             )}
         >
             <div className="flex-1">

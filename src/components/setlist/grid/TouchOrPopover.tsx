@@ -24,7 +24,8 @@ export interface TouchOrPopoverProps {
     trigger: ReactNode
     children: ReactNode
 
-    /** Popover positioning. Defaults: align="start", sideOffset=2. */
+    /** Popover positioning. Defaults: side="bottom", align="start", sideOffset=2. */
+    side?: 'top' | 'right' | 'bottom' | 'left'
     align?: 'start' | 'center' | 'end'
     sideOffset?: number
     onCloseAutoFocus?: (event: Event) => void
@@ -52,6 +53,7 @@ export function TouchOrPopover({
     onOpenChange,
     trigger,
     children,
+    side,
     align = 'start',
     sideOffset = 2,
     onCloseAutoFocus,
@@ -66,7 +68,9 @@ export function TouchOrPopover({
             <Popover.Trigger asChild>{trigger}</Popover.Trigger>
             <Popover.Portal>
                 <Popover.Content
+                    side={side}
                     align={align}
+                    collisionPadding={8}
                     sideOffset={sideOffset}
                     onOpenAutoFocus={(event) => {
                         // v52-02-01: opt-in suppression. Discrete

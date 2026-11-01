@@ -4,6 +4,8 @@ import { CommandGroup, CommandItem } from 'cmdk'
 import { Plus } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
+import { useMediaQuery } from '@/hooks/use-media-query'
+import { useVirtualKeyboardOpen } from '@/hooks/use-virtual-keyboard-open'
 import { useT } from '@/i18n/client'
 import { cn } from '@/lib/utils'
 
@@ -22,14 +24,23 @@ export interface AddRowPlaceholderProps {
     onCreateFreeText: (title: string) => void
     /** Imperative open trigger from the EmptyState "Add a song" CTA. */
     autoOpen?: boolean
+    /** 'row' (default): the full-width "+ Song" row in the AddBar.
+     *  'fab': a round + fixed at the bottom right of the editor, above the
+     *  phone tab bar, so adding a song is one tap from anywhere in the list
+     *  (Daniel 2026-11-01). The picker opens above it. */
+    variant?: 'row' | 'fab'
 }
 
 export function AddRowPlaceholder({
     onPickSong,
     onCreateFreeText,
     autoOpen = false,
+    variant = 'row',
 }: AddRowPlaceholderProps) {
     const t = useT()
+    const fab = variant === 'fab'
+    const isCoarse = useMediaQuery('(pointer: coarse)')
+    const keyboardOpen = useVirtualKeyboardOpen()
     const [open, setOpen] = useState(false)
     const [filter, setFilter] = useState('')
     const triggerRef = useRef<HTMLButtonElement>(null)
@@ -60,10 +71,16 @@ export function AddRowPlaceholder({
 
     return (
         <div
-            data-testid="add-row-placeholder"
+            data-testid={fab ? 'add-song-fab' : 'add-row-placeholder'}
             className={cn(
-                'flex w-full items-center border-t border-rule',
-                'hover:bg-accent/50',
+                fab
+                    ? // Above the tab bar below lg (--tabbar-h carries the
+                      // safe area there); above the home indicator at lg+.
+                      'fixed end-4 z-40 bottom-[calc(var(--tabbar-h,0px)+env(safe-area-inset-bottom)+1rem)] lg:bottom-[calc(env(safe-area-inset-bottom)+1.5rem)] lg:end-6'
+                    : 'flex w-full items-center border-t border-rule hover:bg-accent/50',
+                // Out of the way while typing elsewhere on a phone; kept while
+                // its own picker is open so the popover keeps its anchor.
+                fab && isCoarse && keyboardOpen && !open && 'hidden',
             )}
         >
             <TouchOrPopover
@@ -72,14 +89,32 @@ export function AddRowPlaceholder({
                     if (!next) close()
                     else setOpen(true)
                 }}
-                align="start"
-                sideOffset={2}
+                side={fab ? 'top' : undefined}
+                align={fab ? 'end' : 'start'}
+                sideOffset={fab ? 8 : 2}
                 onCloseAutoFocus={(e) => {
                     e.preventDefault()
                     triggerRef.current?.focus()
                 }}
-                contentClassName="w-[24rem]"
-                trigger={
+                contentClassName="w-[24rem] max-w-[calc(100vw-1rem)]"
+                trigger={fab ? (
+                    <button
+                        ref={triggerRef}
+                        type="button"
+                        data-testid="add-song-fab-trigger"
+                        aria-label={t('setlistGrid.addSongFab')}
+                        title={t('setlistGrid.addSongFab')}
+                        onContextMenu={(e) => e.preventDefault()}
+                        className={cn(
+                            'flex h-14 w-14 items-center justify-center rounded-full',
+                            'bg-primary text-primary-foreground shadow-lg',
+                            'hover:bg-primary/90 active:bg-primary/85 transition-colors cursor-pointer',
+                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+                        )}
+                    >
+                        <Plus aria-hidden className="h-6 w-6" strokeWidth={2.5} />
+                    </button>
+                ) : (
                     <button
                         ref={triggerRef}
                         type="button"
@@ -108,7 +143,7 @@ export function AddRowPlaceholder({
                         />
                         <span>{t('setlistGrid.addSong')}</span>
                     </button>
-                }
+                )}
             >
                 <ChartPickerList
                     filter={filter}
