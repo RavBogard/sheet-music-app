@@ -1,0 +1,163 @@
+<title>Setlist View Options</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&display=swap">
+<style>
+/* Layout: three device-width mocks of the same real service; each shown as an iPad-portrait frame, stacked on phones, side by side on wide screens. */
+:root{--bg:#eceef2;--ink:#16191f;--muted:#5b6270;--card:#fff;--rule:#d9dde5;--accent:#2563EB;--ui:"Assistant",system-ui,-apple-system,"Segoe UI",sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14171c;--ink:#e8ebf0;--muted:#a0a7b4;--card:#1d2128;--rule:#2f3540;--accent:#7aa2ff;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#14171c;--ink:#e8ebf0;--muted:#a0a7b4;--card:#1d2128;--rule:#2f3540;--accent:#7aa2ff;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--ui);font-size:16px;line-height:1.45;margin:0}
+.wrap{max-width:1300px;margin:0 auto;display:flex;flex-direction:column;gap:24px;padding-block:24px 60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1{font-size:1.8rem;margin:0;line-height:1.15}
+p{margin:0}
+.lede{color:var(--muted);max-width:70ch}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:22px;align-items:start}
+.opt{display:flex;flex-direction:column;gap:10px;min-width:0}
+.opt h2{margin:0;font-size:1.2rem}
+.opt .why{color:var(--muted);font-size:.93rem}
+.frame{border-radius:14px;overflow:hidden;border:1px solid var(--rule);box-shadow:0 1px 3px rgba(0,0,0,.08);font-variant-numeric:tabular-nums}
+
+/* ---------- shared device chrome (light, as in the app) ---------- */
+.dev{background:#fff;color:#18202E;font-family:var(--ui)}
+.dev .bar{background:#23356B;color:#fff;display:flex;justify-content:space-between;align-items:center;padding:8px 12px;font-weight:800;font-size:.9rem}
+.dev .bar span{font-weight:600;font-size:.78rem;color:#cfd6ee}
+
+/* ---------- A: Clean standard (D) ---------- */
+.a .head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;border-bottom:1px solid #e5e7eb}
+.a .t{font-weight:800;font-size:1rem;line-height:1.2}
+.a .m{font-size:.75rem;color:#6b7280}
+.a .btn{background:#2563EB;color:#fff;border-radius:6px;padding:6px 12px;font-weight:700;font-size:.8rem;white-space:nowrap}
+.a .sec{background:#f3f4f6;color:#4b5563;font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:4px 12px;border-bottom:1px solid #e5e7eb}
+.a .r{display:grid;grid-template-columns:22px 1fr auto 40px;gap:8px;align-items:center;padding:7px 12px;border-bottom:1px solid #eef0f3;font-size:.92rem}
+.a .n{color:#9ca3af;font-size:.75rem}
+.a .k{font-size:.72rem;font-weight:700;color:#374151;background:#f3f4f6;border-radius:4px;padding:1px 6px}
+.a .p{text-align:right;color:#6b7280;font-size:.82rem}
+.a .rd{color:#6b7280;font-style:normal}
+.a .note{display:block;font-size:.75rem;color:#92400e}
+
+/* ---------- B: Quiet E (sections as thin rules, normal page numbers) ---------- */
+.b .head{padding:10px 12px 8px;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.b .t{font-weight:800;font-size:1rem}
+.b .m{font-size:.75rem;color:#4a5466}
+.b .m b{color:#1F7A6E;font-weight:700}
+.b .btn{background:#2563EB;color:#fff;border-radius:6px;padding:6px 12px;font-weight:700;font-size:.8rem}
+.b .sec{display:flex;justify-content:space-between;align-items:center;padding:10px 12px 3px;font-size:.7rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;border-bottom:2px solid var(--c);color:var(--c)}
+.b .sec span{font-weight:700;letter-spacing:.02em;text-transform:none;color:#6b7488}
+.b .r{display:grid;grid-template-columns:22px 1fr auto 36px;gap:8px;align-items:center;padding:6px 12px;border-bottom:1px solid #eef0f4;font-size:.92rem}
+.b .n{color:#8a93a6;font-size:.72rem}
+.b .k{font-size:.72rem;font-weight:700;border:1px solid #c8cfdc;border-radius:3px;padding:0 5px}
+.b .p{text-align:right;font-weight:700;font-size:.85rem;color:#23356B}
+.b .rd{color:#6b7488}
+.b .note{display:block;font-size:.74rem;color:#8E2E3B}
+
+/* ---------- C: Pro two-column (key + page as columns, sections inline) ---------- */
+.c .head{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid #e5e7eb}
+.c .t{font-weight:800;font-size:.98rem;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.c .ok{font-size:.72rem;color:#1F7A6E;font-weight:700;white-space:nowrap}
+.c .btn{background:#2563EB;color:#fff;border-radius:6px;padding:5px 10px;font-weight:700;font-size:.78rem}
+.c table{width:100%;border-collapse:collapse;font-size:.9rem}
+.c th{font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;color:#6b7280;text-align:left;padding:5px 8px;border-bottom:1px solid #e5e7eb;font-weight:700}
+.c td{padding:6px 8px;border-bottom:1px solid #f0f1f4;vertical-align:baseline}
+.c td.n{color:#9ca3af;font-size:.72rem;width:22px}
+.c td.k,.c td.p{width:44px;font-weight:700;font-size:.82rem}
+.c td.p{text-align:right;color:#374151}
+.c tr.sec td{font-size:.68rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:#4b5563;padding-top:10px;background:#fafafa}
+.c .rd{color:#6b7280}
+.c .note{display:block;font-size:.74rem;color:#92400e}
+</style>
+
+<div class="wrap">
+  <header style="display:flex;flex-direction:column;gap:8px">
+    <h1>Setlist View Options</h1>
+    <p class="lede">The same real service, Shabbat Morning, Sukkot I, Sep 26, drawn three ways at iPad width. Each has a compact header and no big colour bands, so the order, keys and pages read at a glance. Reply with A, B or C, or mix the pieces ("C with B's section labels").</p>
+  </header>
+
+  <div class="grid">
+    <!-- A -->
+    <section class="opt">
+      <h2>A · Clean standard</h2>
+      <p class="why">Like OnSong or Planning Center: plain white rows with grey section labels, and the page number in small grey text. The quietest of the three.</p>
+      <div class="frame dev a">
+        <div class="bar">CRC Music <span>Setlists · Library</span></div>
+        <div class="head"><div><div class="t">Shabbat Morning — Sukkot I</div><div class="m">Sat Sep 26 · 14 songs · 14/14 saved</div></div><span class="btn">▶ Perform</span></div>
+        <div class="sec">Beginning · pp. 51–56</div>
+        <div class="r"><span class="n">1</span><span>Achat Sha'alti</span><span class="k">Am</span><span class="p"></span></div>
+        <div class="r"><span class="n">2</span><span>Modah Ani (Halpert)</span><span class="k">G#m</span><span class="p">51</span></div>
+        <div class="r"><span class="n">3</span><span>Elohai N'shamah (Pourmorady)</span><span class="k">Em</span><span class="p">51</span></div>
+        <div class="r"><span class="n">4</span><span class="rd">Birchot HaShachar</span><span></span><span class="p">53</span></div>
+        <div class="r"><span class="n">5</span><span>Hal'luyah (Psalm 150)</span><span class="k">Dm</span><span class="p">56</span></div>
+        <div class="sec">Bar'chu · pp. 59–68</div>
+        <div class="r"><span class="n">6</span><span>Bar'chu Walkdown<span class="note">Keep it going into Yotzer Or</span></span><span class="k">Em</span><span class="p">59</span></div>
+        <div class="r"><span class="n">7</span><span class="rd">Yotzer Or</span><span></span><span class="p">60</span></div>
+        <div class="r"><span class="n">8</span><span>Ahava Raba (echo)</span><span class="k">E</span><span class="p">61</span></div>
+        <div class="r"><span class="n">9</span><span>Sh'ma</span><span class="k">E</span><span class="p">64</span></div>
+        <div class="r"><span class="n">10</span><span class="rd">V'ahavta</span><span></span><span class="p">65</span></div>
+        <div class="r"><span class="n">11</span><span>Mi Chamocha (Ana B'koach)</span><span class="k">Em</span><span class="p">68</span></div>
+        <div class="sec">Amidah · pp. 70–82</div>
+        <div class="r"><span class="n">12</span><span>Adonai S'fatai (trad)</span><span class="k">Em</span><span class="p">70</span></div>
+        <div class="r"><span class="n">13</span><span class="rd">Avot v'Imahot</span><span></span><span class="p">71</span></div>
+      </div>
+    </section>
+
+    <!-- B -->
+    <section class="opt">
+      <h2>B · E, much quieter</h2>
+      <p class="why">E's world reduced to a hairline: each section is a thin coloured underline with its label, page numbers are normal size in the book-blue, and the header is one line.</p>
+      <div class="frame dev b">
+        <div class="bar">CRC Music <span>Setlists · Library</span></div>
+        <div class="head"><div><div class="t">Shabbat Morning — Sukkot I</div><div class="m">Sat Sep 26 · <b>14/14 saved</b></div></div><span class="btn">▶ Perform</span></div>
+        <div class="sec" style="--c:#1F7A6E">Beginning <span>pp. 51–56</span></div>
+        <div class="r"><span class="n">1</span><span>Achat Sha'alti</span><span class="k">Am</span><span class="p"></span></div>
+        <div class="r"><span class="n">2</span><span>Modah Ani (Halpert)</span><span class="k">G#m</span><span class="p">51</span></div>
+        <div class="r"><span class="n">3</span><span>Elohai N'shamah (Pourmorady)</span><span class="k">Em</span><span class="p">51</span></div>
+        <div class="r"><span class="n">4</span><span class="rd">Birchot HaShachar</span><span></span><span class="p">53</span></div>
+        <div class="r"><span class="n">5</span><span>Hal'luyah (Psalm 150)</span><span class="k">Dm</span><span class="p">56</span></div>
+        <div class="sec" style="--c:#8E2E3B">Bar'chu <span>pp. 59–68</span></div>
+        <div class="r"><span class="n">6</span><span>Bar'chu Walkdown<span class="note">Keep it going into Yotzer Or</span></span><span class="k">Em</span><span class="p">59</span></div>
+        <div class="r"><span class="n">7</span><span class="rd">Yotzer Or</span><span></span><span class="p">60</span></div>
+        <div class="r"><span class="n">8</span><span>Ahava Raba (echo)</span><span class="k">E</span><span class="p">61</span></div>
+        <div class="r"><span class="n">9</span><span>Sh'ma</span><span class="k">E</span><span class="p">64</span></div>
+        <div class="r"><span class="n">10</span><span class="rd">V'ahavta</span><span></span><span class="p">65</span></div>
+        <div class="r"><span class="n">11</span><span>Mi Chamocha (Ana B'koach)</span><span class="k">Em</span><span class="p">68</span></div>
+        <div class="sec" style="--c:#9A6A10">Amidah <span>pp. 70–82</span></div>
+        <div class="r"><span class="n">12</span><span>Adonai S'fatai (trad)</span><span class="k">Em</span><span class="p">70</span></div>
+        <div class="r"><span class="n">13</span><span class="rd">Avot v'Imahot</span><span></span><span class="p">71</span></div>
+      </div>
+    </section>
+
+    <!-- C -->
+    <section class="opt">
+      <h2>C · Pro table</h2>
+      <p class="why">A spreadsheet-tight table with fixed Key and Page columns, so your eye runs straight down them. The header is a single line, and the most rows fit on screen.</p>
+      <div class="frame dev c">
+        <div class="bar">CRC Music <span>Setlists · Library</span></div>
+        <div class="head"><span class="t">Shabbat Morning — Sukkot I · Sep 26</span><span class="ok">14/14 ✓</span><span class="btn">▶ Perform</span></div>
+        <table>
+          <thead><tr><th>#</th><th>Song</th><th>Key</th><th style="text-align:right">Page</th></tr></thead>
+          <tbody>
+            <tr class="sec"><td colspan="4">Beginning · 51–56</td></tr>
+            <tr><td class="n">1</td><td>Achat Sha'alti</td><td class="k">Am</td><td class="p"></td></tr>
+            <tr><td class="n">2</td><td>Modah Ani (Halpert)</td><td class="k">G#m</td><td class="p">51</td></tr>
+            <tr><td class="n">3</td><td>Elohai N'shamah (Pourmorady)</td><td class="k">Em</td><td class="p">51</td></tr>
+            <tr><td class="n">4</td><td class="rd">Birchot HaShachar</td><td class="k"></td><td class="p">53</td></tr>
+            <tr><td class="n">5</td><td>Hal'luyah (Psalm 150)</td><td class="k">Dm</td><td class="p">56</td></tr>
+            <tr class="sec"><td colspan="4">Bar'chu · 59–68</td></tr>
+            <tr><td class="n">6</td><td>Bar'chu Walkdown<span class="note">Keep it going into Yotzer Or</span></td><td class="k">Em</td><td class="p">59</td></tr>
+            <tr><td class="n">7</td><td class="rd">Yotzer Or</td><td class="k"></td><td class="p">60</td></tr>
+            <tr><td class="n">8</td><td>Ahava Raba (echo)</td><td class="k">E</td><td class="p">61</td></tr>
+            <tr><td class="n">9</td><td>Sh'ma</td><td class="k">E</td><td class="p">64</td></tr>
+            <tr><td class="n">10</td><td class="rd">V'ahavta</td><td class="k"></td><td class="p">65</td></tr>
+            <tr><td class="n">11</td><td>Mi Chamocha (Ana B'koach)</td><td class="k">Em</td><td class="p">68</td></tr>
+            <tr class="sec"><td colspan="4">Amidah · 70–82</td></tr>
+            <tr><td class="n">12</td><td>Adonai S'fatai (trad)</td><td class="k">Em</td><td class="p">70</td></tr>
+            <tr><td class="n">13</td><td class="rd">Avot v'Imahot</td><td class="k"></td><td class="p">71</td></tr>
+            <tr><td class="n">14</td><td class="rd">Gevurot</td><td class="k"></td><td class="p">73</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <p class="lede">The same choice applies to both the editor and the musicians' Perform list. The editor adds a drag handle and the chart and recording buttons to each row, but keeps this density. The open-chart view doesn't change.</p>
+</div>

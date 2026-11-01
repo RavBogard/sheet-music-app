@@ -59,3 +59,11 @@ SIGNATURE MOVE: section bands carrying running heads plus page calls in the marg
 
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the
 verdict, DESIGN.md, and every shipping raster carrying its provenance.
+
+## Revision 2026-11-01 (Daniel): 'B. Everywhere. That's the look'
+Daniel found blend E too bloated: the big colour section bands and the tall header/status lines got in the way of the info. The new rule is **Option B, 'E, much quieter'**, mock at docs/design/setlist-mock-B.html (artifact https://claude.ai/artifact/7qKpqt2sJ3v6EWUPM6k2ic):
+- Sections: a thin 2px coloured underline with a small uppercase label and a muted 'pp. N–M' at the right. No filled bands.
+- Page numbers: normal row size (about 0.85rem), bold, in book-blue, right column. No large numerals.
+- Header: a compact block. Title (1rem/800) plus ONE meta line ('Sat Sep 26 · 14/14 saved'), with the primary button on the right. No separate status line, book line or tall area.
+- Rows: dense, about 36–40px visual (44px hit areas kept by padding or the hit-area utility), a muted number, the title, a small outlined key tag, the page. Notes as a small second line.
+- Applies EVERYWHERE: editor, Perform list, Setlists list, Library, Manage, Settings, dashboard, the BL gig line and set totals (as small text in the section label row).
