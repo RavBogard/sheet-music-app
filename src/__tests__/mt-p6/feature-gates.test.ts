@@ -236,6 +236,16 @@ describe("crons skip a tenant with the flag off", () => {
         db = new FakeFirestore().seed("config", { monitor: { orgId: "throwaway", bridge: { lastSeen: Date.now() } } })
         expect(await run()).toEqual({ success: true, skipped: "bridge_tenant_mismatch" })
     })
+
+    it("service-mix-snapshot: skipped when crc's mixer is off, and when config/monitor names another tenant", async () => {
+        const { GET } = await import("@/app/api/cron/service-mix-snapshot/route")
+        const run = async () => (await GET(new Request("https://x.test/api/cron/service-mix-snapshot", auth))).json()
+        t.crcMixer = false
+        expect(await run()).toEqual({ success: true, skipped: "feature_off" })
+        t.crcMixer = true
+        db = new FakeFirestore().seed("config", { monitor: { orgId: "throwaway", bridge: { lastSeen: Date.now() } } })
+        expect(await run()).toEqual({ success: true, skipped: "bridge_tenant_mismatch" })
+    })
 })
 
 // ── MCP ─────────────────────────────────────────────────────────────────────

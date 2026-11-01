@@ -24,6 +24,26 @@ const ALIVE_THRESHOLD_S = 120
  */
 const STATE_STALE_THRESHOLD_S = 90
 
+/**
+ * The remedy Michael can follow with no technical background. The studio PC is
+ * switched on before each service, so a dead bridge almost always means the PC
+ * is off or not signed in, or the tray app was closed.
+ */
+export const RESTART_STEPS =
+    "The studio PC must be on and signed in to Windows; the bridge starts by itself. " +
+    "If the tray icon isn't green, right-click it and choose Quit Bridge, then open CentralReform Bridge from the Start menu. " +
+    "Also check the X32 is switched on."
+
+/** "5 min ago", "3 hours ago", "2 days ago" — for a person reading a push. */
+export function humanAge(seconds: number | null): string {
+    if (seconds == null) return "never"
+    const min = Math.round(seconds / 60)
+    if (min < 90) return `${min} min ago`
+    const hours = Math.round(min / 60)
+    if (hours < 48) return `${hours} hours ago`
+    return `${Math.round(hours / 24)} days ago`
+}
+
 /** Tolerant Firestore timestamp → ms. Same shape-tolerance as admin-consistency's. */
 export function toMillis(raw: unknown): number | null {
     if (raw == null) return null
@@ -119,22 +139,23 @@ export function evaluateBridge(input: {
     let remedy = ""
 
     if (!bridge) {
-        problems.push("The bridge has never written a heartbeat (config/monitor.bridge is absent).")
-        remedy = "Check that the bridge app is installed and running on the venue PC, and that its credentials are provisioned."
+        problems.push("The monitor bridge has never reported in from the studio PC.")
+        remedy =
+            "The studio PC must be on, with the CentralReform Bridge app installed and running (green tray icon). " +
+            "If it has never been set up, an admin needs to finish the bridge setup. (Claude/admins: get_bridge_health shows what it last reported.)"
         parts.push("no-heartbeat")
     } else if (!alive) {
-        const ageText = lastSeenAgeS == null ? "never" : `${Math.round(lastSeenAgeS / 60)} min ago`
         problems.push(
-            `The bridge is DOWN — last heartbeat ${ageText}. ` +
-            `Its status field still reads "${bridge.status ?? "unknown"}", which is last-write-wins and cannot be trusted.`,
+            `The monitor bridge is DOWN — the studio PC is not running it (last heard from it ${humanAge(lastSeenAgeS)}).`,
         )
-        remedy = "Restart the bridge app on the venue PC (or run bridge_restart). Musicians' iPads cannot control anything until it is back."
+        // A command cannot reach a dead bridge, so the second sentence is only a way to check on it.
+        remedy = `${RESTART_STEPS} (Claude/admins: get_bridge_health shows whether it has come back.)`
         parts.push("down")
     } else {
         // Alive — now the subtler failures, which only mean something on a live process.
         if (mixerReachable === false) {
             problems.push("The bridge is running but cannot reach the X32 — the desk is powered off, on another network, or its IP changed.")
-            remedy = "Check the X32 is powered on and on the same LAN, then run bridge_reconnect."
+            remedy = "Check the X32 is switched on and plugged into the network (the same router as the studio PC). (Claude/admins: bridge_reconnect once it is on.)"
             parts.push("mixer-unreachable")
         }
         if (stateAgeS != null && stateAgeS > STATE_STALE_THRESHOLD_S) {
@@ -158,7 +179,7 @@ export function evaluateBridge(input: {
         }
         if (bridge.status === "offline") {
             problems.push("The bridge reports itself offline (graceful shutdown) but is still heartbeating.")
-            if (!remedy) remedy = "Restart the bridge app on the venue PC."
+            if (!remedy) remedy = "Quit the bridge from its tray icon (right-click, Quit Bridge), then open CentralReform Bridge from the Start menu."
             parts.push("self-reported-offline")
         }
     }

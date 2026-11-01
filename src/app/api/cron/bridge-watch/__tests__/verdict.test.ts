@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { evaluateBridge } from "@/app/api/cron/bridge-watch/evaluate"
+import { evaluateBridge, humanAge } from "@/app/api/cron/bridge-watch/evaluate"
 
 /**
  * R8 — the pre-service tripwire's verdict logic.
@@ -26,6 +26,15 @@ const healthy = {
     leaseExpiresAt: NOW + 60_000,
     now: NOW,
 }
+
+describe("humanAge", () => {
+    it("speaks in minutes, hours, then days", () => {
+        expect(humanAge(300)).toBe("5 min ago")
+        expect(humanAge(3 * 3600)).toBe("3 hours ago")
+        expect(humanAge(3 * 86400)).toBe("3 days ago")
+        expect(humanAge(null)).toBe("never")
+    })
+})
 
 describe("evaluateBridge — silent when green", () => {
     it("reports healthy with no problems on a live bridge", () => {
@@ -59,8 +68,11 @@ describe("evaluateBridge — the failures worth waking someone for", () => {
         expect(v.alive).toBe(false)
         expect(v.signature).toBe("down")
         expect(v.problems[0]).toMatch(/DOWN/)
-        expect(v.problems[0]).toMatch(/cannot be trusted/)
-        expect(v.remedy).toMatch(/[Rr]estart/)
+        // Plain words for the person at the studio PC (Michael), not Firestore jargon.
+        expect(v.problems[0]).not.toMatch(/last-write-wins|status field/)
+        expect(v.remedy).toMatch(/signed in to Windows/)
+        expect(v.remedy).toMatch(/Quit Bridge/)
+        expect(v.remedy).toMatch(/Start menu/)
     })
 
     it("reports ONLY the root cause when the bridge is down", () => {

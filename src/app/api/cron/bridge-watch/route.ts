@@ -7,8 +7,11 @@ import { sendBridgeHealthAlert } from "@/lib/email"
 import { sendPushToUsers } from "@/lib/push-send"
 import { captureException } from "@/lib/error-reporting"
 import { env } from "@/env.mjs"
-import { evaluateBridge, toMillis, type BridgeHeartbeat, type BridgeVerdict } from "./evaluate"
+import { evaluateBridge, type BridgeHeartbeat } from "./evaluate"
 import { bridgeAlertRecipients } from "./recipients"
+import { alertDecision, servicesInAlertWindow } from "./service-window"
+import { loadServiceSchedule } from "@/lib/monitor/load-service-schedule"
+import { formatLocalTime } from "@/lib/monitor/service-start"
 import { bridgeConfigOrg, mixerOn, MIXER_ORG_ID } from "@/lib/org/mixer"
 
 /**
@@ -40,25 +43,33 @@ import { bridgeConfigOrg, mixerOn, MIXER_ORG_ID } from "@/lib/org/mixer"
  * deliberately does not duplicate their delta bookkeeping (`config/bridgeHealth`
  * belongs to that lane; this one owns `config/bridgeWatch`).
  *
- * ## Silent when green
+ * ## Timed to the service, silent otherwise
  *
- * Nothing is sent when the bridge is healthy, and a problem that is already
- * outstanding is not re-sent until it clears or changes shape (see
- * `config/bridgeWatch`). An alert that fires every Friday regardless is an alert
- * that gets muted by the third week — and then the one that matters is muted too.
+ * The studio PC is switched on by Michael before each service and off after
+ * (Daniel, 2026-11-01), so "bridge down" is the NORMAL state for most of the week.
+ * This route therefore only looks at the bridge in a window before a CRC service:
+ * 20 to 40 minutes before its start (Michael arrives ~45 min ahead, the band at
+ * 30). Down at any other time never alerts. The start time comes from the same
+ * `today.json` services the band's surfaces read (setlist `startsAtLocal` or the
+ * congregation config's `defaultStartLocal`), falling back to Friday 18:15 /
+ * Saturday 10:00 America/Chicago for a service with no time. A day with no CRC
+ * setlist has no service and no check.
  *
- * ## Schedule (vercel.json — four entries, all pointing here)
+ * Nothing is sent when the bridge is healthy, and each service gets its own check
+ * and its own dedupe: `config/bridgeWatch` remembers the service (`serviceKey`)
+ * and the problem shape (`signature`) last notified, so the later runs inside one
+ * window stay quiet, a new problem speaks, and the next service starts fresh.
  *
- *   `0 14 * * *`   daily light check       09:00 America/Chicago
- *   `0 19 * * 5`   Friday, early           14:00 America/Chicago
- *   `30 21 * * 5`  Friday, last chance     16:30 America/Chicago — before soundcheck
- *   `0 15 * * 6`   Saturday morning        10:00 America/Chicago — a bridge that died
- *                                          overnight is found before the service, not by it
+ * ## Schedule (vercel.json — ONE entry)
  *
- * Vercel crons are UTC-only and do NOT follow DST, so those local times are
- * given for CDT (UTC−5) and land an hour EARLIER in local terms during CST.
- * That is harmless for the daily check and still comfortably pre-service for the
- * Friday pair; if Friday services ever move earlier, re-derive these two.
+ *   minute field "every 15", all other fields "*"   every 15 minutes, every day
+ *   (written with a slash in vercel.json; spelled out here because a slash after a star ends a block comment)
+ *
+ * Vercel crons are UTC-only and do not follow DST, and services can fall on any
+ * day (holidays, B'nai Mitzvah), so no clock time is baked into the schedule: the
+ * route compares "now" with each service's DST-correct start instant and returns
+ * at once when no service is in its window. The 20-minute window on a 15-minute
+ * cron guarantees every service at least one check even if a run is late.
  * vercel.json is strict JSON with no comment support, which is why this table
  * lives here — keep it in step with the file.
  *
@@ -72,12 +83,6 @@ function safeCompare(a: string, b: string): boolean {
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
-
-/**
- * Do not re-send the same outstanding problem more often than this. A genuinely
- * new problem (different shape) always sends immediately.
- */
-const RENOTIFY_AFTER_MS = 6 * 60 * 60 * 1000
 
 export async function GET(req: Request) {
     const authHeader = req.headers.get("authorization")
@@ -100,20 +105,39 @@ export async function GET(req: Request) {
             return NextResponse.json({ success: true, skipped: "feature_off" })
         }
 
-        const [monitorDoc, stateDoc, watchDoc] = await Promise.all([
-            db.collection("config").doc("monitor").get(),
-            db.collection("monitor-live").doc("state").get(),
-            db.collection("config").doc("bridgeWatch").get(),
-        ])
-
+        // Gates first: the bridge config must be the mixer tenant's (absent orgId = crc).
+        const monitorDoc = await db.collection("config").doc("monitor").get()
         const monitorData = monitorDoc.exists ? (monitorDoc.data() as Record<string, unknown>) : undefined
-        // The bridge config must be the mixer tenant's (absent orgId = crc).
         if (monitorData && bridgeConfigOrg(monitorData) !== MIXER_ORG_ID) {
             logger.warn("[Cron/BridgeWatch] config/monitor names another tenant — skipping", {
                 orgId: bridgeConfigOrg(monitorData),
             })
             return NextResponse.json({ success: true, skipped: "bridge_tenant_mismatch" })
         }
+
+        // Then the window: only look at the bridge shortly before a service. The
+        // studio PC is off the rest of the week, and that must never alert. A
+        // schedule that cannot be read is "no service" (logged), never a 500.
+        let services: Awaited<ReturnType<typeof loadServiceSchedule>> = []
+        try {
+            services = await loadServiceSchedule(now)
+        } catch (e) {
+            logger.warn("[Cron/BridgeWatch] could not load the service schedule — treating as no service:", e)
+        }
+        const due = servicesInAlertWindow(services, now)[0]
+        if (!due) {
+            logger.info("[Cron/BridgeWatch] no service in the pre-service window — nothing to check")
+            return NextResponse.json({ success: true, skipped: "no_service_in_window" })
+        }
+        const serviceName = due.name?.trim() || ""
+        const serviceLabel = serviceName || "The service"
+        const startText = formatLocalTime(due.startMs)
+
+        const [stateDoc, watchDoc] = await Promise.all([
+            db.collection("monitor-live").doc("state").get(),
+            db.collection("config").doc("bridgeWatch").get(),
+        ])
+
         const monitor = monitorData
         const bridge = (monitor?.bridge as BridgeHeartbeat | undefined) ?? undefined
         const lease = monitor?.bridgeLease as { expiresAt?: number } | undefined
@@ -127,51 +151,46 @@ export async function GET(req: Request) {
 
         // ── Silent when green ──────────────────────────────────────────────
         if (verdict.healthy) {
-            // Clear the outstanding-problem marker so the NEXT failure notifies
-            // immediately rather than being suppressed by the re-notify guard.
-            if (watchDoc.exists && watchDoc.data()?.signature) {
-                await db.collection("config").doc("bridgeWatch").set(
-                    { signature: "", lastCheckedAt: new Date(now), recoveredAt: new Date(now) },
-                    { merge: true },
-                )
-            } else {
-                await db.collection("config").doc("bridgeWatch").set(
-                    { signature: "", lastCheckedAt: new Date(now) },
-                    { merge: true },
-                )
-            }
-            logger.info("[Cron/BridgeWatch] Bridge healthy — no alert sent")
-            return NextResponse.json({ success: true, healthy: true, notified: false })
+            const wasOutstanding = watchDoc.exists && !!watchDoc.data()?.signature
+            await db.collection("config").doc("bridgeWatch").set(
+                {
+                    signature: "",
+                    serviceKey: due.key,
+                    lastCheckedAt: new Date(now),
+                    ...(wasOutstanding ? { recoveredAt: new Date(now) } : {}),
+                },
+                { merge: true },
+            )
+            logger.info("[Cron/BridgeWatch] Bridge healthy for %s — no alert sent", due.key)
+            return NextResponse.json({ success: true, healthy: true, notified: false, service: due.key })
         }
 
         // ── Something is wrong ─────────────────────────────────────────────
         const prev = watchDoc.exists ? (watchDoc.data() as Record<string, unknown>) : undefined
-        const prevSignature = typeof prev?.signature === "string" ? prev.signature : ""
-        const prevNotifiedMs = toMillis(prev?.lastNotifiedAt)
-        const sameProblem = prevSignature === verdict.signature
-        const suppressed =
-            sameProblem && prevNotifiedMs != null && now - prevNotifiedMs < RENOTIFY_AFTER_MS
 
-        if (suppressed) {
+        if (alertDecision(prev, due.key, verdict.signature) === "suppress") {
             logger.info(
-                "[Cron/BridgeWatch] Problem unchanged (%s) and already notified — staying quiet",
+                "[Cron/BridgeWatch] Problem unchanged (%s) for %s and already notified — staying quiet",
                 verdict.signature,
+                due.key,
             )
             await db
                 .collection("config")
                 .doc("bridgeWatch")
-                .set({ signature: verdict.signature, lastCheckedAt: new Date(now) }, { merge: true })
+                .set({ signature: verdict.signature, serviceKey: due.key, lastCheckedAt: new Date(now) }, { merge: true })
             return NextResponse.json({
                 success: true,
                 healthy: false,
                 notified: false,
                 suppressed: true,
                 signature: verdict.signature,
+                service: due.key,
             })
         }
 
         const headline = verdict.problems[0]
-        const body = `${headline} ${verdict.remedy}`.slice(0, 480)
+        const lead = `${serviceLabel} starts at ${startText}.`
+        const body = `${lead} ${headline} ${verdict.remedy}`.slice(0, 480)
 
         // Recipients: admins, sound-engineer flag holders, and the extra uids in
         // config/monitor.bridgeAlertRecipients (Michael). Band leaders are
@@ -220,15 +239,17 @@ export async function GET(req: Request) {
 
         const email = await sendBridgeHealthAlert({
             subject: verdict.alive
-                ? "Monitor bridge degraded — check before the service"
-                : "Monitor bridge is DOWN — check before the service",
-            problems: verdict.problems,
+                ? `Monitor bridge degraded — check before ${serviceName || "the service"} (${startText})`
+                : `Monitor bridge is DOWN — check before ${serviceName || "the service"} (${startText})`,
+            problems: [lead, ...verdict.problems],
             remedy: verdict.remedy,
             detail: {
                 lastSeenAgeS: verdict.lastSeenAgeS,
                 stateAgeS: verdict.stateAgeS,
                 mixerReachable: verdict.mixerReachable,
                 leaseExpired: verdict.leaseExpired,
+                service: due.key,
+                bridgeStatusField: bridge?.status ?? null,
                 bridgeVersion: bridge?.version ?? null,
                 errCount: bridge?.errCount ?? null,
                 lastError: bridge?.lastError ?? null,
@@ -239,6 +260,7 @@ export async function GET(req: Request) {
         await db.collection("config").doc("bridgeWatch").set(
             {
                 signature: verdict.signature,
+                serviceKey: due.key,
                 lastCheckedAt: new Date(now),
                 lastNotifiedAt: new Date(now),
                 lastProblems: verdict.problems,
@@ -259,6 +281,7 @@ export async function GET(req: Request) {
             healthy: false,
             notified: true,
             signature: verdict.signature,
+            service: due.key,
             problems: verdict.problems,
             remedy: verdict.remedy,
             pushed,
