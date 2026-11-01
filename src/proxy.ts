@@ -216,6 +216,16 @@ export async function proxy(request: NextRequest) {
     const rewriteWithHeaders = (url: URL) =>
         withSecurityHeaders(NextResponse.rewrite(url, { request: { headers: requestHeaders } }))
 
+    // The Help guides are CRC's (its studio PC, its people). Any other tenant gets a real 404
+    // here: the (main) group streams behind loading.tsx, so the help layout's notFound() alone
+    // answered 200 and still carried the guide's RSC payload.
+    if (orgId !== 'crc' && (pathname === '/help' || pathname.startsWith('/help/'))) {
+        return withSecurityHeaders(new NextResponse('Not found', {
+            status: 404,
+            headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' },
+        }))
+    }
+
     // Multi-tenant phase 4: ?viewAs=1 / ?viewAs=0 switch the platform owner's
     // read-only "View as this tenant" mode on this address (host-only cookie).
     const viewAsParam = request.nextUrl.searchParams.get(VIEW_AS_PARAM)
