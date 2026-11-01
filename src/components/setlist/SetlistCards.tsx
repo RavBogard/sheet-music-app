@@ -1,7 +1,8 @@
 "use client"
 import { toDate as toDateHelper } from "@/lib/firestore-helpers"
 
-import { Download, Plus, Loader2, MoreVertical, Copy, PlusSquare, BookmarkPlus, Star, Trash2, Pencil } from "lucide-react"
+import { AudioLines, Download, Plus, Loader2, MoreVertical, Copy, PlusSquare, BookmarkPlus, Star, Trash2, Pencil } from "lucide-react"
+import Link from "next/link"
 import type { ReactNode } from "react"
 import { Setlist } from "@/lib/setlist-firebase"
 import { getServiceContext, type ServiceType } from "@/lib/liturgical-calendar"
@@ -131,6 +132,8 @@ export function SetlistInfoLine({ setlist, extra }: { setlist: Setlist; extra?: 
 
 interface RowActionsProps {
     setlist: Setlist
+    /** Upcoming rows also show a small Listen link beside the pencil. */
+    upcoming?: boolean
     onEdit: (e: React.MouseEvent) => void
     onDownload?: (setlist: Setlist) => void
     isDownloading?: boolean
@@ -150,11 +153,21 @@ interface RowActionsProps {
  * every width, always visible. Everything else (download, clone, template,
  * default, delete) lives in the kebab. Both are 36px drawn, 44px to the touch.
  */
-function RowActions({ setlist, onEdit, onDownload, isDownloading, onDuplicate, onCloneNextWeek, onSaveAsTemplate, onSaveAsDefault, onDelete, canDelete, canDuplicate, canEdit, isAdmin }: RowActionsProps) {
+function RowActions({ upcoming, setlist, onEdit, onDownload, isDownloading, onDuplicate, onCloneNextWeek, onSaveAsTemplate, onSaveAsDefault, onDelete, canDelete, canDuplicate, canEdit, isAdmin }: RowActionsProps) {
     const t = useT()
     const org = useOrg() // v11-05-05: gate the liturgical "Save as Default" affordance for band tenants
     const hasMenu = canEdit || canDuplicate || canDelete
-    if (!canEdit && !hasMenu) return null
+    const listenHref = `/listen/${setlist.id}`
+    if (!canEdit && !hasMenu) {
+        // Listening is public: a signed-out visitor still gets the link on upcoming rows.
+        return upcoming ? (
+            <div className="relative z-10 flex shrink-0 items-center" onClick={(e) => e.stopPropagation()}>
+                <Link href={listenHref} aria-label={t("recordings.listenAria", { name: setlist.name })} title={t("recordings.listen")} className={ICON_BUTTON_CLASS}>
+                    <AudioLines className="h-4 w-4" />
+                </Link>
+            </div>
+        ) : null
+    }
     const inferred = inferServiceType(setlist)
     const canSaveAsDefault =
         isAdmin &&
@@ -166,6 +179,11 @@ function RowActions({ setlist, onEdit, onDownload, isDownloading, onDuplicate, o
     const defaultLabelKey = inferred ? SERVICE_TYPE_LABEL_KEYS[inferred] : null
     return (
         <div className="relative z-10 flex shrink-0 items-center" onClick={(e) => e.stopPropagation()}>
+            {upcoming ? (
+                <Link href={listenHref} aria-label={t("recordings.listenAria", { name: setlist.name })} title={t("recordings.listen")} className={ICON_BUTTON_CLASS}>
+                    <AudioLines className="h-4 w-4" />
+                </Link>
+            ) : null}
             {canEdit ? (
                 <button
                     type="button"
@@ -191,6 +209,12 @@ function RowActions({ setlist, onEdit, onDownload, isDownloading, onDuplicate, o
                         </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-56">
+                        <DropdownMenuItem asChild>
+                            <Link href={listenHref} data-testid="setlist-card-listen">
+                                <AudioLines className="h-4 w-4 me-2" />
+                                {t("recordings.listen")}
+                            </Link>
+                        </DropdownMenuItem>
                         {canDuplicate && onCloneNextWeek && (
                             <DropdownMenuItem onClick={(e) => onCloneNextWeek(setlist, e)}>
                                 <PlusSquare className="h-4 w-4 me-2" />
@@ -288,7 +312,7 @@ function SetlistListRow({ setlist, onPerform, navigatingTo, upcoming = false, ex
                 <SetlistInfoLine setlist={setlist} extra={extra} />
             </div>
 
-            <RowActions setlist={setlist} {...actions} />
+            <RowActions setlist={setlist} upcoming={upcoming} {...actions} />
         </article>
     )
 }

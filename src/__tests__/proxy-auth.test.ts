@@ -31,6 +31,16 @@ describe('Edge Middleware (proxy.ts) Auth Routing', () => {
         expect(res.headers.get('location')).toBeNull()
     })
 
+    it('allows the public Listen page without authentication', async () => {
+        const res = await proxy(makeReq('/listen/abc123'))
+        expect(res.headers.get('location')).toBeNull()
+    })
+
+    it('does not open lookalike paths such as /listening', async () => {
+        const res = await proxy(makeReq('/listening'))
+        expect(res.headers.get('location')).not.toBeNull()
+    })
+
     // F-022 — legal/marketing pages must be reachable without a session.
     // A2P SMS compliance specifically requires /sms-consent to be public so
     // carriers can audit the opt-in disclosure.

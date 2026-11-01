@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import type { ReactNode } from 'react'
-import { ChevronLeft, Pencil, Play } from 'lucide-react'
+import { AudioLines, ChevronLeft, Pencil, Play } from 'lucide-react'
 
 import { DirectionalIcon } from '@/components/i18n/DirectionalIcon'
 import { useT } from '@/i18n/client'
@@ -26,6 +26,8 @@ export interface SetlistGridTopBarProps {
     onEditMeta?: () => void
     /** WEB-12: link to the band view of this setlist (Perform). Omitted when Perform is off. */
     performHref?: string
+    /** Recordings: link to the quiet Listen page for this setlist. Never shown in Perform. */
+    listenHref?: string
     /** BET-5: the gig line under the status line (band tenants). */
     gigSlot?: ReactNode
     /** BET-6: the parasha, joined to the meta line (an inline node). */
@@ -47,6 +49,7 @@ export function SetlistGridTopBar({
     syncProps,
     onEditMeta,
     performHref,
+    listenHref,
     gigSlot,
     metaSlot,
     familySlot,
@@ -120,6 +123,22 @@ export function SetlistGridTopBar({
 
                 <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
                     <SyncIndicator {...syncProps} />
+                    {listenHref ? (
+                        <Link
+                            href={listenHref}
+                            data-testid="setlist-grid-listen-link"
+                            aria-label={t('recordings.listen')}
+                            title={t('recordings.listen')}
+                            className={cn(
+                                'touch-hit inline-flex h-9 w-9 items-center justify-center rounded-md',
+                                'text-foreground hover:bg-accent',
+                                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                                'transition-colors',
+                            )}
+                        >
+                            <AudioLines aria-hidden className="h-4 w-4" />
+                        </Link>
+                    ) : null}
                     {performHref ? (
                         <Link
                             href={performHref}
