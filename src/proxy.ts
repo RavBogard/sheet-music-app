@@ -110,7 +110,9 @@ const publicExactRoutes = [
 //                  unauthenticated to find the MCP authorization server
 // /invite/*      — tenant invitation links (multi-tenant phase 4): the page
 //                  signs the person in itself, like /qr
-const publicPrefixes = ['/perform', '/qr', '/.well-known', '/invite']
+// /listen/*      — a setlist's recordings, read-only; recordings are public
+//                  (Daniel 2026-11-01), so no sign-in. Never linked from Perform.
+const publicPrefixes = ['/perform', '/qr', '/.well-known', '/invite', '/listen/']
 
 // Vestigial paths — these used to be the catch-all defaults the proxy
 // matcher couldn't avoid, and Next.js answered them with either a 307→/login

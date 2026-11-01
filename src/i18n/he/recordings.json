@@ -1,0 +1,15 @@
+{
+    "playAria": "השמעת {title}",
+    "pauseAria": "השהיית {title}",
+    "seekAria": "מיקום ב-{title}",
+    "playFailed": "אי אפשר להשמיע את ההקלטה הזו.",
+    "otherTakes": "הקלטות נוספות ({count})",
+    "showThisTake": "הצגת ההקלטה הזו",
+    "showThisTakeFailed": "לא הצלחנו להחליף את ההקלטה. כדאי לנסות שוב.",
+    "libraryListenAria": "האזנה ל-{title}",
+    "listen": "האזנה",
+    "listenAria": "האזנה ל-{name}",
+    "noRecordingYet": "אין עדיין הקלטה",
+    "listenIntro": "האזנה לשירי השירות לפי הסדר.",
+    "listenEmpty": "אין עדיין שירים ברשימה הזו."
+}

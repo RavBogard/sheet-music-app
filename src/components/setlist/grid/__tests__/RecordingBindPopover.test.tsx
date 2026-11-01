@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -20,8 +20,9 @@ if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
 import type { Recording } from '@/types/models'
 
 // vi.hoisted guarantees these exist before the vi.mock factories run.
-const { mockSubscribe, mockUpload, authState, orgState } = vi.hoisted(() => ({
+const { mockSubscribe, mockUpload, mockFeature, authState, orgState } = vi.hoisted(() => ({
     mockSubscribe: vi.fn(),
+    mockFeature: vi.fn(),
     mockUpload: vi.fn(),
     authState: { isBandLeader: false, isAdmin: false },
     orgState: { current: 'crc' as string },
@@ -30,6 +31,7 @@ const { mockSubscribe, mockUpload, authState, orgState } = vi.hoisted(() => ({
 vi.mock('@/lib/recordings/recordings-client', () => ({
     subscribeRecordingsForSong: mockSubscribe,
     uploadRecording: mockUpload,
+    featureRecording: mockFeature,
     getRecordingPlaybackUrl: (rec: { id: string }) =>
         `/api/recordings/file/${rec.id}`,
 }))
@@ -70,10 +72,11 @@ afterEach(() => {
 })
 
 describe('RecordingBindPopover', () => {
-    it("lists a song's recordings newest-first with inline audio when opened", async () => {
+    it('featured take shown first; held takes not shown; leader sees Show this take', async () => {
         const recs = [
-            makeRecording({ id: 'rec-1', title: 'Take 1' }),
-            makeRecording({ id: 'rec-2', title: 'Take 2' }),
+            makeRecording({ id: 'rec-old', title: 'Older take', createdAt: '2026-01-01T00:00:00Z' }),
+            makeRecording({ id: 'rec-feat', title: 'Featured take', featured: true }),
+            makeRecording({ id: 'rec-held', title: 'Held take', status: 'held' }),
         ]
         mockSubscribe.mockImplementation(
             (_songId: string, _orgId: string, cb: (r: Recording[]) => void) => {
@@ -81,29 +84,44 @@ describe('RecordingBindPopover', () => {
                 return () => {}
             },
         )
+        mockFeature.mockResolvedValue(undefined)
+        authState.isBandLeader = true
 
         render(
             <RecordingBindPopover songId="song-1" songTitle="Adon Olam">
                 <button>open</button>
             </RecordingBindPopover>,
         )
-
         await userEvent.click(screen.getByText('open'))
         await screen.findByTestId('recording-bind-popover')
 
-        expect(screen.getByText('Take 1')).toBeInTheDocument()
-        expect(screen.getByText('Take 2')).toBeInTheDocument()
+        const featured = screen.getByTestId('featured-take')
+        expect(within(featured).getByText('Featured take')).toBeInTheDocument()
+        expect(screen.queryByText('Held take')).not.toBeInTheDocument()
+        // featured + one other; the held take has no audio element
+        expect(document.querySelectorAll('audio')).toHaveLength(2)
+        expect(document.querySelector('audio')!.getAttribute('src')).toBe('/api/recordings/file/rec-feat')
 
-        const audios = document.querySelectorAll('audio')
-        expect(audios).toHaveLength(2)
-        expect(audios[0].getAttribute('src')).toBe(
-            '/api/recordings/file/rec-1',
+        await userEvent.click(screen.getByRole('button', { name: 'Show this take' }))
+        expect(mockFeature).toHaveBeenCalledWith('rec-old')
+        expect(mockSubscribe).toHaveBeenCalledWith('song-1', 'crc', expect.any(Function))
+    })
+
+    it('a member sees no Show this take control', async () => {
+        mockSubscribe.mockImplementation(
+            (_s: string, _o: string, cb: (r: Recording[]) => void) => {
+                cb([makeRecording({ id: 'a', featured: true }), makeRecording({ id: 'b', title: 'B' })])
+                return () => {}
+            },
         )
-        expect(mockSubscribe).toHaveBeenCalledWith(
-            'song-1',
-            'crc',
-            expect.any(Function),
+        render(
+            <RecordingBindPopover songId="song-1">
+                <button>open</button>
+            </RecordingBindPopover>,
         )
+        await userEvent.click(screen.getByText('open'))
+        await screen.findByTestId('recording-bind-popover')
+        expect(screen.queryByRole('button', { name: 'Show this take' })).not.toBeInTheDocument()
     })
 
     it('scopes the subscription to the current tenant org', async () => {

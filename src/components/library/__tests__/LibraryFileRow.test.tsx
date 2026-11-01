@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { render, screen } from "@testing-library/react"
+import { fireEvent, render, screen } from "@testing-library/react"
 import { LibraryFileRow } from "../LibraryFileRow"
 import type { DriveFile } from "@/types/models"
 
@@ -14,6 +14,11 @@ vi.mock("@/components/ui/context-menu", () => ({
     ContextMenuTrigger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
     ContextMenuContent: () => null,
     ContextMenuItem: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}))
+
+const { featured } = vi.hoisted(() => ({ featured: { map: {} as Record<string, unknown> } }))
+vi.mock("@/components/recordings/useFeaturedBySong", () => ({
+    useFeaturedBySong: () => featured.map,
 }))
 
 const getCleanName = (n: string) =>
@@ -32,7 +37,10 @@ function makeChart(overrides: Partial<DriveFile> = {}): DriveFile {
 const noop = () => {}
 
 describe("LibraryFileRow (v11.7-05 density + composer)", () => {
-    beforeEach(() => vi.clearAllMocks())
+    beforeEach(() => {
+        vi.clearAllMocks()
+        featured.map = {}
+    })
 
     it("renders the title and composer as SEPARATE text (composer dimmed sub-label) — AC-3", () => {
         render(
@@ -115,5 +123,29 @@ describe("LibraryFileRow (v11.7-05 density + composer)", () => {
         const title = screen.getByText("Hashkivenu")
         expect(title.className).toContain("font-medium")
         expect(title.className).not.toContain("text-xl")
+    })
+})
+
+describe("LibraryFileRow recordings", () => {
+    beforeEach(() => {
+        featured.map = {}
+    })
+
+    it("no music note without a featured take", () => {
+        render(
+            <LibraryFileRow item={makeChart()} onClick={noop} isDigitizing={false} isAdmin={false} getCleanName={getCleanName} />,
+        )
+        expect(screen.queryByTestId("library-row-listen")).toBeNull()
+    })
+
+    it("a featured take adds a music note that opens a compact player", () => {
+        featured.map = { "upload-1": { id: "rec-9", title: "Shir Shabbat, Nov 14, 2025" } }
+        render(
+            <LibraryFileRow item={makeChart()} onClick={noop} isDigitizing={false} isAdmin={false} getCleanName={getCleanName} />,
+        )
+        expect(screen.queryByTestId("recording-player")).toBeNull()
+        fireEvent.click(screen.getByTestId("library-row-listen"))
+        expect(screen.getByTestId("recording-player")).toBeDefined()
+        expect(document.querySelector("audio")!.getAttribute("src")).toBe("/api/recordings/file/rec-9")
     })
 })

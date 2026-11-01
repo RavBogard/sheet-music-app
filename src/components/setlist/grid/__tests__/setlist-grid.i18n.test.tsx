@@ -43,6 +43,7 @@ vi.mock('@/lib/songs/defaults', () => ({
 vi.mock('@/lib/recordings/recordings-client', () => ({
     subscribeRecordingsForSong: mockSubscribe,
     uploadRecording: vi.fn(),
+    featureRecording: vi.fn(),
     getRecordingPlaybackUrl: (rec: { id: string }) => `/api/recordings/file/${rec.id}`,
 }))
 vi.mock('@/lib/charts/chart-page1', async (orig) => {

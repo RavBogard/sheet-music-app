@@ -1676,6 +1676,7 @@ export function SetlistGrid({
                 onBack={onBack ?? (() => router.back())}
                 onEditMeta={() => setMetaSheetOpen(true)}
                 performHref={performOn ? `/perform/setlist/${setlistId}` : undefined}
+                listenHref={`/listen/${setlistId}`}
                 gigSlot={isBand ? <GigPanel gig={gig} onEdit={() => setMetaSheetOpen(true)} /> : undefined}
                 metaSlot={<SetlistFamilyHead part="parasha" setlistId={setlistId} setlist={liveSetlist as Record<string, unknown> | null | undefined} />}
                 familySlot={<SetlistFamilyHead part="ceremony" setlistId={setlistId} setlist={liveSetlist as Record<string, unknown> | null | undefined} />}

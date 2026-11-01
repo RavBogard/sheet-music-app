@@ -12,8 +12,10 @@ import {
 import { useT } from '@/i18n/client'
 import { useAuth } from '@/lib/auth-context'
 import { useOrg } from '@/lib/org/org-context'
+import { RecordingPlayer } from '@/components/recordings/RecordingPlayer'
+import { compareTakes, isPlayable } from '@/lib/recordings/featured'
 import {
-    getRecordingPlaybackUrl,
+    featureRecording,
     subscribeRecordingsForSong,
     uploadRecording,
 } from '@/lib/recordings/recordings-client'
@@ -57,6 +59,8 @@ export function RecordingBindPopover({
     const [loaded, setLoaded] = useState(false)
     const [uploading, setUploading] = useState(false)
     const [uploadError, setUploadError] = useState<string | null>(null)
+    const [featuring, setFeaturing] = useState<string | null>(null)
+    const [featureError, setFeatureError] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
 
     // Subscribe only while the popover is open — avoids a live Firestore
@@ -97,6 +101,23 @@ export function RecordingBindPopover({
         }
     }
 
+    // Held and hidden takes are never listed. The best playable take (the
+    // featured one) sits on top; the rest are one tap away.
+    const playable = recordings.filter(isPlayable).sort(compareTakes)
+    const [featured, ...others] = playable
+
+    const showThisTake = async (id: string) => {
+        setFeaturing(id)
+        setFeatureError(false)
+        try {
+            await featureRecording(id)
+        } catch {
+            setFeatureError(true)
+        } finally {
+            setFeaturing(null)
+        }
+    }
+
     const inputId = `recording-upload-${songId}`
 
     return (
@@ -127,37 +148,59 @@ export function RecordingBindPopover({
                             <Loader2 aria-hidden className="h-4 w-4 animate-spin" />
                             {t('setlistGrid.loadingRecordings')}
                         </p>
-                    ) : recordings.length === 0 ? (
+                    ) : !featured ? (
                         <p className="px-2 py-3 text-sm text-muted-foreground">
                             {canUpload
                                 ? t('setlistGrid.noRecordingsUpload')
                                 : t('setlistGrid.noRecordings')}
                         </p>
                     ) : (
-                        <ul className="flex flex-col gap-2">
-                            {recordings.map((rec) => (
-                                <li
-                                    key={rec.id}
-                                    className="flex flex-col gap-1 rounded-md bg-muted/50 p-2"
+                        <div className="flex flex-col gap-2">
+                            <div data-testid="featured-take" className="rounded-md bg-muted/50 p-2">
+                                <RecordingPlayer recordingId={featured.id} title={featured.title} />
+                                {featured.notes && (
+                                    <p className="truncate text-xs text-muted-foreground">{featured.notes}</p>
+                                )}
+                            </div>
+                            {others.length > 0 && (
+                                <details
+                                    data-testid="other-takes"
+                                    className="group"
+                                    onToggle={(e) => {
+                                        // Closing the list silences the takes inside it.
+                                        if (!e.currentTarget.open) {
+                                            e.currentTarget.querySelectorAll('audio').forEach((a) => a.pause())
+                                        }
+                                    }}
                                 >
-                                    <span className="truncate text-sm text-foreground">
-                                        {rec.title}
-                                    </span>
-                                    {rec.notes && (
-                                        <span className="truncate text-xs text-muted-foreground">
-                                            {rec.notes}
-                                        </span>
-                                    )}
-                                    <audio
-                                        controls
-                                        preload="none"
-                                        aria-label={t('setlistGrid.playRecordingAria', { title: rec.title })}
-                                        src={getRecordingPlaybackUrl(rec)}
-                                        className="w-full"
-                                    />
-                                </li>
-                            ))}
-                        </ul>
+                                    <summary className="flex min-h-11 cursor-pointer items-center px-2 text-sm font-semibold text-foreground">
+                                        {t('recordings.otherTakes', { count: others.length })}
+                                    </summary>
+                                    <ul className="flex flex-col gap-2">
+                                        {others.map((rec) => (
+                                            <li key={rec.id} className="flex flex-col gap-1 rounded-md bg-muted/50 p-2">
+                                                <RecordingPlayer recordingId={rec.id} title={rec.title} />
+                                                {canUpload && (
+                                                    <button
+                                                        type="button"
+                                                        disabled={featuring !== null}
+                                                        onClick={() => void showThisTake(rec.id)}
+                                                        className="touch-hit min-h-11 self-start rounded-md border border-input px-3 text-sm font-semibold text-foreground hover:bg-accent disabled:opacity-60"
+                                                    >
+                                                        {t('recordings.showThisTake')}
+                                                    </button>
+                                                )}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </details>
+                            )}
+                            {featureError && (
+                                <p role="alert" className="px-2 text-xs text-destructive">
+                                    {t('recordings.showThisTakeFailed')}
+                                </p>
+                            )}
+                        </div>
                     )}
                 </div>
 
