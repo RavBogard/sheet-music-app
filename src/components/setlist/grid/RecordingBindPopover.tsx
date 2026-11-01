@@ -163,7 +163,16 @@ export function RecordingBindPopover({
                                 )}
                             </div>
                             {others.length > 0 && (
-                                <details data-testid="other-takes" className="group">
+                                <details
+                                    data-testid="other-takes"
+                                    className="group"
+                                    onToggle={(e) => {
+                                        // Closing the list silences the takes inside it.
+                                        if (!e.currentTarget.open) {
+                                            e.currentTarget.querySelectorAll('audio').forEach((a) => a.pause())
+                                        }
+                                    }}
+                                >
                                     <summary className="flex min-h-11 cursor-pointer items-center px-2 text-sm font-semibold text-foreground">
                                         {t('recordings.otherTakes', { count: others.length })}
                                     </summary>

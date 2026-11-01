@@ -35,8 +35,10 @@ describe('RecordingPlayer', () => {
         const [a, b] = screen.getAllByTestId('recording-player-toggle')
         const audios = document.querySelectorAll('audio')
         fireEvent.click(a)
+        fireEvent.play(audios[0])
         expect(pause.mock.contexts).not.toContain(audios[0])
         fireEvent.click(b)
+        fireEvent.play(audios[1])
         expect(pause.mock.contexts).toContain(audios[0])
     })
 

@@ -60,7 +60,14 @@ function resolveSpecifier(spec: string, from: string): string | null {
 /** Every file reachable from the shipped (non-test) files under src/app/perform. */
 function performGraph(): Set<string> {
     const seen = new Set<string>()
-    const stack = listFiles(PERFORM).filter((f) => !isTestFile(f))
+    // Roots: every shipped Perform file, plus what wraps it (the root layout and
+    // any template), since those render around Perform too.
+    const roots = [
+        ...listFiles(PERFORM),
+        path.join(SRC, 'app', 'layout.tsx'),
+        ...listFiles(path.join(SRC, 'app')).filter((f) => path.basename(f).startsWith('template.')),
+    ]
+    const stack = roots.filter((f) => fs.existsSync(f) && !isTestFile(f))
     while (stack.length) {
         const file = stack.pop()!
         if (seen.has(file)) continue
@@ -73,6 +80,15 @@ function performGraph(): Set<string> {
     }
     return seen
 }
+
+const AUDIO_PATTERNS = [
+    '<audio',
+    '<video',
+    'new Audio(',
+    "createElement('audio'",
+    'createElement("audio"',
+    'AudioContext',
+]
 
 /**
  * Found while writing this guard: Perform already reaches ONE audio element,
@@ -113,16 +129,14 @@ describe('Perform stays silent', () => {
     it('perform graph has no audio element', () => {
         const hits = files.filter((f) => {
             const s = fs.readFileSync(f, 'utf8')
-            return s.includes('<audio') || s.includes('new Audio(')
+            return AUDIO_PATTERNS.some((p) => s.includes(p))
         })
         const rel = hits.map((f) => norm(path.relative(SRC, f))).filter((f) => !PRE_EXISTING_AUDIO_CHART_VIEWER.includes(f))
         expect(rel).toEqual([])
     })
 
-    it('nothing under /perform links to /listen', () => {
-        const hits = listFiles(PERFORM)
-            .filter((f) => !isTestFile(f))
-            .filter((f) => /['"`]\/listen\b/.test(fs.readFileSync(f, 'utf8')))
+    it('nothing reachable from /perform links to /listen', () => {
+        const hits = files.filter((f) => /['\"`]\/listen(?![A-Za-z])/.test(fs.readFileSync(f, 'utf8')))
         expect(hits.map((f) => norm(path.relative(SRC, f)))).toEqual([])
     })
 })

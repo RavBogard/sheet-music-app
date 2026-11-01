@@ -50,7 +50,6 @@ export function RecordingPlayer({ recordingId, title, compact, className }: Reco
         const el = audioRef.current
         if (!el) return
         if (el.paused) {
-            claimPlayback(el)
             setFailed(false)
             void el.play().catch(() => setFailed(true))
         } else {
@@ -65,7 +64,12 @@ export function RecordingPlayer({ recordingId, title, compact, className }: Reco
                 ref={audioRef}
                 preload="none"
                 src={recordingFileUrl(recordingId)}
-                onPlay={() => setPlaying(true)}
+                onPlay={(e) => {
+                    // Claim on the element's own play event, so a lock-screen or
+                    // hardware play key pauses the others too, not just our button.
+                    claimPlayback(e.currentTarget)
+                    setPlaying(true)
+                }}
                 onPause={() => setPlaying(false)}
                 onEnded={() => {
                     setPlaying(false)

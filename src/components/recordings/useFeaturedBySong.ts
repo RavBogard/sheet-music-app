@@ -52,6 +52,10 @@ const EMPTY: Map = {}
 export function useFeaturedBySong(): Map {
     const orgId = useOrg()
     const [map, setMap] = useState<Map>(EMPTY)
-    useEffect(() => attach(orgId, setMap), [orgId])
+    useEffect(() => {
+        // Another tenant's map must never linger across an org change.
+        setMap(EMPTY)
+        return attach(orgId, setMap)
+    }, [orgId])
     return map
 }

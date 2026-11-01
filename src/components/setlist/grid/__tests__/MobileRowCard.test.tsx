@@ -26,6 +26,9 @@ vi.mock('@/components/recordings/useFeaturedBySong', () => ({
     useFeaturedBySong: () => featured.map,
 }))
 
+const { authState } = vi.hoisted(() => ({ authState: { isBandLeader: false, isAdmin: false } }))
+vi.mock('@/lib/auth-context', () => ({ useAuth: () => authState }))
+
 // jsdom shims (parity with the other grid tests).
 class ResizeObserverStub {
     observe(): void {}
@@ -216,7 +219,25 @@ describe('MobileRowCard — recording affordance', () => {
         expect(cell).not.toBeDisabled()
     })
 
+    it('a leader or admin keeps the note with no take (the popover holds the upload); a member does not', () => {
+        featured.map = {}
+        authState.isBandLeader = true
+        const first = render(<Harness track={makeTrack({ songId: 'song-abc' })} />)
+        expect(screen.getByTestId('recording-cell')).toBeInTheDocument()
+        first.unmount()
+        authState.isBandLeader = false
+        authState.isAdmin = true
+        const second = render(<Harness track={makeTrack({ songId: 'song-abc' })} />)
+        expect(screen.getByTestId('recording-cell')).toBeInTheDocument()
+        second.unmount()
+        authState.isAdmin = false
+        render(<Harness track={makeTrack({ songId: 'song-abc' })} />)
+        expect(screen.queryByTestId('recording-cell')).not.toBeInTheDocument()
+    })
+
     it('offers no music note when the song has no playable take', () => {
+        authState.isBandLeader = false
+        authState.isAdmin = false
         featured.map = {}
         render(<Harness track={makeTrack({ songId: 'song-abc' })} />)
 
