@@ -130,6 +130,22 @@ export function SetlistInfoLine({ setlist, extra }: { setlist: Setlist; extra?: 
     )
 }
 
+/** Labelled Listen button for upcoming rows; public, so shown to every viewer. */
+function ListenButton({ href, name }: { href: string; name: string }) {
+    const t = useT()
+    return (
+        <Link
+            href={href}
+            data-testid="setlist-row-listen"
+            aria-label={t("recordings.listenAria", { name })}
+            className="touch-hit me-1 inline-flex h-9 items-center gap-1.5 rounded-md border border-brand/50 px-2.5 text-sm font-semibold text-brand transition-colors hover:bg-brand/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+            <AudioLines aria-hidden className="h-4 w-4" />
+            <span>{t("recordings.listen")}</span>
+        </Link>
+    )
+}
+
 interface RowActionsProps {
     setlist: Setlist
     /** Upcoming rows also show a small Listen link beside the pencil. */
@@ -162,9 +178,7 @@ function RowActions({ upcoming, setlist, onEdit, onDownload, isDownloading, onDu
         // Listening is public: a signed-out visitor still gets the link on upcoming rows.
         return upcoming ? (
             <div className="relative z-10 flex shrink-0 items-center" onClick={(e) => e.stopPropagation()}>
-                <Link href={listenHref} aria-label={t("recordings.listenAria", { name: setlist.name })} title={t("recordings.listen")} className={ICON_BUTTON_CLASS}>
-                    <AudioLines className="h-4 w-4" />
-                </Link>
+                <ListenButton href={listenHref} name={setlist.name} />
             </div>
         ) : null
     }
@@ -180,9 +194,7 @@ function RowActions({ upcoming, setlist, onEdit, onDownload, isDownloading, onDu
     return (
         <div className="relative z-10 flex shrink-0 items-center" onClick={(e) => e.stopPropagation()}>
             {upcoming ? (
-                <Link href={listenHref} aria-label={t("recordings.listenAria", { name: setlist.name })} title={t("recordings.listen")} className={ICON_BUTTON_CLASS}>
-                    <AudioLines className="h-4 w-4" />
-                </Link>
+                <ListenButton href={listenHref} name={setlist.name} />
             ) : null}
             {canEdit ? (
                 <button

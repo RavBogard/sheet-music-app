@@ -217,6 +217,15 @@ describe('MobileRowCard — recording affordance', () => {
         const cell = screen.getByTestId('recording-cell')
         expect(cell).toBeInTheDocument()
         expect(cell).not.toBeDisabled()
+        expect(cell).toHaveAttribute('data-has-recording', 'true')
+    })
+
+    it('a leader sees only the quiet binding affordance when the song has no take', () => {
+        featured.map = {}
+        authState.isBandLeader = true
+        render(<Harness track={makeTrack({ songId: 'song-abc' })} />)
+        expect(screen.getByTestId('recording-cell')).toHaveAttribute('data-has-recording', 'false')
+        authState.isBandLeader = false
     })
 
     it('the note is not inside a phone-hidden wrapper (phones can hear a take)', () => {
