@@ -127,16 +127,16 @@ export function SetlistGridTopBar({
                         <Link
                             href={listenHref}
                             data-testid="setlist-grid-listen-link"
-                            aria-label={t('recordings.listen')}
-                            title={t('recordings.listen')}
+                            title={t('recordings.listenAria', { name })}
                             className={cn(
-                                'touch-hit inline-flex h-9 w-9 items-center justify-center rounded-md',
-                                'text-foreground hover:bg-accent',
+                                'touch-hit inline-flex h-9 items-center justify-center gap-1.5 rounded-md px-2.5 sm:px-3.5',
+                                'border border-brand/50 text-brand text-sm font-semibold hover:bg-brand/10',
                                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                                 'transition-colors',
                             )}
                         >
                             <AudioLines aria-hidden className="h-4 w-4" />
+                            <span>{t('recordings.listen')}</span>
                         </Link>
                     ) : null}
                     {performHref ? (

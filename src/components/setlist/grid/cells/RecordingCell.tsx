@@ -36,16 +36,19 @@ export const RecordingCell = forwardRef<HTMLButtonElement, RecordingCellProps>(
                           : t('setlistGrid.recordings')
                 }
                 data-testid="recording-cell"
+                data-has-recording={hasRecordings ? 'true' : 'false'}
                 {...rest}
                 className={cn(
                     'flex-none inline-flex items-center justify-center rounded-md',
+                    // A song with a take is a filled brand chip at full strength.
+                    hasRecordings && !disabled && 'ring-1 ring-brand/40',
                     // 44px hit area (WEB-13).
                     'h-11 w-11',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
                     disabled
                         ? 'cursor-not-allowed text-muted-foreground/20'
                         : hasRecordings
-                          ? 'cursor-pointer text-brand opacity-80 hover:opacity-100 transition-opacity motion-reduce:transition-none'
+                          ? 'cursor-pointer text-brand-foreground bg-brand shadow-sm hover:bg-brand/90 transition-colors motion-reduce:transition-none'
                           : 'cursor-pointer text-muted-foreground/50 hover:text-muted-foreground transition-colors motion-reduce:transition-none',
                     className,
                 )}

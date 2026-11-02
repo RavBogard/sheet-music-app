@@ -29,6 +29,7 @@ import { useSetlistPerformance } from "@/hooks/use-setlist-performance"
 import { PERFORM_PRECACHE_DONE_EVENT, usePerformEntryPrecache } from "@/hooks/use-perform-entry-precache"
 import { loadPDFOverlay } from "@/lib/perform-chart-loaders"
 import { requestPerformCacheUrl } from "@/components/performance/perform-shell-sw-register"
+import { PerformListenLink } from "@/components/recordings/PerformListenLink"
 import { useAuth } from "@/lib/auth-context"
 import { useLibrary } from "@/hooks/use-library"
 import { SetlistView } from "@/components/performance/SetlistView"
@@ -718,6 +719,7 @@ export function SetlistPerformClient({
                 </div>
                 </div>
                 <div className="flex items-center justify-end gap-0.5 sm:gap-1 shrink-0">
+                    <PerformListenLink setlistId={setlistId} songIds={tracks.flatMap((r) => [(r as { songId?: string }).songId, r.fileId])} eventDate={eventDate} />
                     {/* "Keep screen on" — now a MANUAL OVERRIDE, not the only
                         way in (2026-08-31). <KeepAwakeAutoArm/> above already
                         armed the lock on mount; this toggle exists so a

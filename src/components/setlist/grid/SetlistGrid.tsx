@@ -1,5 +1,6 @@
 'use client'
 
+import { useFeaturedBySong } from '@/components/recordings/useFeaturedBySong'
 import {
     DndContext,
     type DragEndEvent,
@@ -1025,6 +1026,12 @@ export function SetlistGrid({
 
     const isLoading = tracks === undefined
     const rows = useMemo(() => tracks ?? [], [tracks])
+    // Listen shows only when some song in this setlist has a playable take.
+    const featuredBySong = useFeaturedBySong()
+    const hasAnyTake = useMemo(
+        () => rows.some((r) => Boolean(r.songId && featuredBySong[r.songId])),
+        [rows, featuredBySong],
+    )
 
     // v70-09: live setlist doc — drives the metadata editor's seed values and
     // lets the top bar reflect name/date edits immediately (no reload).
@@ -1676,7 +1683,7 @@ export function SetlistGrid({
                 onBack={onBack ?? (() => router.back())}
                 onEditMeta={() => setMetaSheetOpen(true)}
                 performHref={performOn ? `/perform/setlist/${setlistId}` : undefined}
-                listenHref={`/listen/${setlistId}`}
+                listenHref={hasAnyTake ? `/listen/${setlistId}` : undefined}
                 gigSlot={isBand ? <GigPanel gig={gig} onEdit={() => setMetaSheetOpen(true)} /> : undefined}
                 metaSlot={<SetlistFamilyHead part="parasha" setlistId={setlistId} setlist={liveSetlist as Record<string, unknown> | null | undefined} />}
                 familySlot={<SetlistFamilyHead part="ceremony" setlistId={setlistId} setlist={liveSetlist as Record<string, unknown> | null | undefined} />}
