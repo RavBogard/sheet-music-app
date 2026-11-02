@@ -199,3 +199,5 @@ push the setlist alignment one row off; out-of-order "title sung" hits are the t
   Typical Shabbat morning: ~2 h, 15-17 songs, ~40 min sung on the setlist, 35-40 min Torah service.
 - Worktrees wt-audio-upload, wt-harden-2, wt-harden-3, wt-rec-ui removed after their junctions
   were deleted and main node_modules was confirmed intact.
+- Review page LBvsjhXCzHusSMMB3ViV6p now has 7 services, 124 clips (Jun 6 and Jun 27 added),
+  same db `decisions2`. Reviewing it takes regular Saturday rotation to ~100%.
