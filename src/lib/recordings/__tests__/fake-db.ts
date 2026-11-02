@@ -6,6 +6,13 @@
 type Data = Record<string, unknown>
 type Store = Record<string, Record<string, Data>>
 
+/** Order two values; Timestamps (anything with toMillis) compare by millis. */
+function cmp(a: unknown, b: unknown): number {
+    const n = (x: unknown) =>
+        x && typeof (x as { toMillis?: unknown }).toMillis === "function" ? (x as { toMillis: () => number }).toMillis() : (x as number)
+    return n(a) - n(b)
+}
+
 export function fakeDb(seed: Store = {}) {
     const store: Store = JSON.parse(JSON.stringify(seed))
     const coll = (name: string) => (store[name] ??= {})
@@ -25,6 +32,9 @@ export function fakeDb(seed: Store = {}) {
                 if (!coll(name)[id]) throw new Error(`no doc ${name}/${id}`)
                 coll(name)[id] = { ...coll(name)[id], ...data }
             },
+            async delete() {
+                delete coll(name)[id]
+            },
         }
     }
 
@@ -39,7 +49,11 @@ export function fakeDb(seed: Store = {}) {
             async get() {
                 let hits = Object.entries(coll(name)).filter(([, d]) =>
                     filters.every(([f, op, v]) =>
-                        op === "==" ? d[f] === v : op === "in" ? (v as unknown[]).includes(d[f]) : false,
+                        op === "==" ? d[f] === v
+                            : op === "in" ? (v as unknown[]).includes(d[f])
+                            : op === "<" ? cmp(d[f], v) < 0
+                            : op === ">" ? cmp(d[f], v) > 0
+                            : false,
                     ),
                 )
                 if (lim !== undefined) hits = hits.slice(0, lim)
@@ -71,6 +85,15 @@ export function fakeDb(seed: Store = {}) {
                 get: (target: { get: () => Promise<unknown> }) => target.get(),
                 update(ref: ReturnType<typeof docRef>, data: Data) {
                     writes.push(() => ref.update(data))
+                },
+                set(ref: ReturnType<typeof docRef>, data: Data) {
+                    writes.push(() => ref.set(data))
+                },
+                create(ref: ReturnType<typeof docRef>, data: Data) {
+                    writes.push(async () => {
+                        if ((await ref.get()).exists) throw new Error(`exists ${ref.path}`)
+                        await ref.set(data)
+                    })
                 },
             }
             const out = await fn(tx)

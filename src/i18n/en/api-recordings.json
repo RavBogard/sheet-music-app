@@ -9,6 +9,11 @@
     "leadersOnly": "Only band leaders and admins can upload recordings.",
     "noFileProvided": "No file provided",
     "songIdRequired": "songId is required",
-    "audioOnly": "Only audio files are supported (mp3, m4a, wav, ogg, webm, aac)",
-    "fileTooLarge": "File too large. Maximum size is {maxMb}MB"
+    "audioOnly": "Only audio files are supported (mp3, m4a, wav, aac, ogg, webm, flac, aiff)",
+    "fileTooLarge": "File too large. Maximum size is {maxMb}MB",
+    "songNotFound": "That song isn't in this library.",
+    "uploadNotFound": "That upload wasn't found. Upload the file again.",
+    "uploadMissing": "The file didn't finish uploading. Try again.",
+    "uploadMismatch": "The file arrived incomplete. Try again.",
+    "tooManyPending": "You have several uploads still in progress. Wait for them to finish, then try again."
 }

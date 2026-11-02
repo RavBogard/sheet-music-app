@@ -52,15 +52,40 @@
         "context": "'songId' is a technical field name"
     },
     "audioOnly": {
-        "where": "Song recordings upload: error when the chosen file is not audio",
+        "where": "Song recordings upload: error when the file is not an audio type we take",
         "who": "leaders",
-        "maxLength": 80,
-        "context": "Keep the file extensions in the parentheses as written"
+        "maxLength": 90,
+        "context": "The list of file extensions stays as is."
     },
     "fileTooLarge": {
         "where": "Song recordings upload: error when the audio file is too big",
         "who": "leaders",
         "maxLength": 60,
-        "context": "{maxMb} is a number of megabytes (25); 'MB' is the unit"
+        "context": "{maxMb} is a number of megabytes (200); 'MB' is the unit"
+    },
+    "songNotFound": {
+        "where": "Song recordings upload: error when the chosen song isn't in this site's library",
+        "who": "leaders",
+        "maxLength": 60
+    },
+    "uploadNotFound": {
+        "where": "Song recordings upload: finishing an upload the server has no record of (or someone else's)",
+        "who": "leaders",
+        "maxLength": 70
+    },
+    "uploadMissing": {
+        "where": "Song recordings upload: the file never reached storage",
+        "who": "leaders",
+        "maxLength": 60
+    },
+    "uploadMismatch": {
+        "where": "Song recordings upload: the stored file isn't the size/type that was started",
+        "who": "leaders",
+        "maxLength": 60
+    },
+    "tooManyPending": {
+        "where": "Song recordings upload: refused because this person already has several uploads in progress",
+        "who": "leaders",
+        "maxLength": 90
     }
 }

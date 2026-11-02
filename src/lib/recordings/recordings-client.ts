@@ -14,6 +14,7 @@ import { apiFetch } from "@/lib/api-client"
 import { plainT } from "@/i18n/plain"
 import { subscribeWithDb, recoverFromFirestoreShutdown } from "@/lib/firebase"
 import type { OrgId } from "@/lib/org/types"
+import { MAX_RECORDING_BYTES, MAX_RECORDING_MB, resolveAudioUpload } from "@/lib/recordings/upload-policy"
 import type { Recording } from "@/types/models"
 
 /**
@@ -57,38 +58,136 @@ export function subscribeRecordingsForSong(
     })
 }
 
+/** Why an upload failed, so the UI can say it plainly. */
+export type RecordingUploadErrorKind = "too_big" | "wrong_type" | "network" | "failed"
+
+export class RecordingUploadError extends Error {
+    constructor(
+        public readonly kind: RecordingUploadErrorKind,
+        message: string,
+    ) {
+        super(message)
+        this.name = "RecordingUploadError"
+    }
+}
+
+function uploadError(kind: RecordingUploadErrorKind, serverMessage?: string): RecordingUploadError {
+    const t = plainT()
+    const message =
+        kind === "too_big"
+            ? t("recordings.uploadTooBig", { maxMb: MAX_RECORDING_MB })
+            : kind === "wrong_type"
+              ? t("recordings.uploadWrongType")
+              : kind === "network"
+                ? t("recordings.uploadNetwork")
+                : serverMessage || t("recordings.uploadFailed")
+    return new RecordingUploadError(kind, message)
+}
+
+async function failure(res: Response): Promise<RecordingUploadError> {
+    let body: { error?: string; code?: string } = {}
+    try {
+        body = await res.json()
+    } catch {
+        /* non-JSON error body */
+    }
+    if (res.status === 413 || body.code === "file_too_large") return uploadError("too_big")
+    if (body.code === "unsupported_type") return uploadError("wrong_type")
+    return uploadError("failed", body.error)
+}
+
+/** PUT the bytes to the signed URL, reporting progress 0..1. */
+function putWithProgress(
+    url: string,
+    headers: Record<string, string>,
+    file: File,
+    onProgress?: (fraction: number) => void,
+    signal?: AbortSignal,
+): Promise<void> {
+    return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest()
+        xhr.open("PUT", url)
+        for (const [k, v] of Object.entries(headers)) xhr.setRequestHeader(k, v)
+        xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable && onProgress) onProgress(e.loaded / e.total)
+        }
+        xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) resolve()
+            else reject(uploadError("failed"))
+        }
+        xhr.onerror = () => reject(uploadError("network"))
+        xhr.ontimeout = () => reject(uploadError("network"))
+        xhr.onabort = () => reject(new DOMException("Upload cancelled", "AbortError"))
+        signal?.addEventListener("abort", () => xhr.abort(), { once: true })
+        xhr.send(file)
+    })
+}
+
 /**
- * Upload a reference recording for a song via POST /api/recordings/upload.
- * apiFetch attaches the Firebase Bearer token and leaves Content-Type unset
- * for the FormData body so the browser sets the multipart boundary.
+ * Upload a reference recording for a song. The bytes go straight to Storage
+ * (Vercel refuses request bodies over 4.5 MB):
+ *   1. POST /api/recordings/upload-url → a signed PUT for this exact file
+ *   2. PUT the file to Storage, with progress
+ *   3. POST /api/recordings/upload/complete → the recording doc
+ * Errors are RecordingUploadError with a message ready to show.
  */
 export async function uploadRecording(input: {
     file: File
     songId: string
     title?: string
     notes?: string
+    onProgress?: (fraction: number) => void
+    signal?: AbortSignal
 }): Promise<{ recordingId: string; title: string }> {
-    const formData = new FormData()
-    formData.append("file", input.file)
-    formData.append("songId", input.songId)
-    if (input.title) formData.append("title", input.title)
-    if (input.notes) formData.append("notes", input.notes)
+    const { file } = input
+    if (!resolveAudioUpload(file.type, file.name)) throw uploadError("wrong_type")
+    if (file.size > MAX_RECORDING_BYTES) throw uploadError("too_big")
 
-    const res = await apiFetch("/api/recordings/upload", {
-        method: "POST",
-        body: formData,
-    })
-    if (!res.ok) {
-        let message = plainT()("clientErrors.recordingUploadFailed")
-        try {
-            const body = await res.json()
-            if (body?.error) message = String(body.error)
-        } catch {
-            /* non-JSON error body — keep the default message */
-        }
-        throw new Error(message)
+    let res: Response
+    try {
+        res = await apiFetch("/api/recordings/upload-url", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                songId: input.songId,
+                fileName: file.name,
+                mimeType: file.type,
+                size: file.size,
+                ...(input.title && { title: input.title }),
+                ...(input.notes && { notes: input.notes }),
+            }),
+            signal: input.signal,
+        })
+    } catch (err) {
+        if ((err as Error)?.name === "AbortError") throw err
+        throw uploadError("network")
     }
-    return res.json() as Promise<{ recordingId: string; title: string }>
+    if (!res.ok) throw await failure(res)
+    const signed = (await res.json()) as {
+        recordingId: string
+        uploadUrl: string
+        headers: Record<string, string>
+    }
+
+    await putWithProgress(signed.uploadUrl, signed.headers, file, input.onProgress, input.signal)
+
+    // The bytes are in; finishing is idempotent, so retry once on a blip.
+    let done: Response | null = null
+    for (let attempt = 0; attempt < 2 && !done; attempt++) {
+        try {
+            done = await apiFetch("/api/recordings/upload/complete", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ recordingId: signed.recordingId }),
+                signal: input.signal,
+            })
+        } catch (err) {
+            if ((err as Error)?.name === "AbortError") throw err
+            if (attempt === 1) throw uploadError("network")
+        }
+    }
+    if (!done!.ok) throw await failure(done!)
+    return done!.json() as Promise<{ recordingId: string; title: string }>
 }
 
 /** Band leader: make this recording its song's one featured take. */

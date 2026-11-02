@@ -9,6 +9,11 @@
     "leadersOnly": "רק ראשי להקה ומנהלים יכולים להעלות הקלטות.",
     "noFileProvided": "לא צורף קובץ",
     "songIdRequired": "נדרש songId",
-    "audioOnly": "נתמכים קובצי שמע בלבד (mp3, m4a, wav, ogg, webm, aac)",
-    "fileTooLarge": "הקובץ גדול מדי. הגודל המרבי הוא {maxMb}MB"
+    "audioOnly": "נתמכים קובצי שמע בלבד (mp3, m4a, wav, aac, ogg, webm, flac, aiff)",
+    "fileTooLarge": "הקובץ גדול מדי. הגודל המרבי הוא {maxMb}MB",
+    "songNotFound": "השיר הזה אינו בספרייה.",
+    "uploadNotFound": "ההעלאה לא נמצאה. כדאי להעלות את הקובץ שוב.",
+    "uploadMissing": "הקובץ לא סיים לעלות. כדאי לנסות שוב.",
+    "uploadMismatch": "הקובץ הגיע חלקי. כדאי לנסות שוב.",
+    "tooManyPending": "יש לך כמה העלאות שעדיין בתהליך. כדאי לחכות שיסתיימו ולנסות שוב."
 }

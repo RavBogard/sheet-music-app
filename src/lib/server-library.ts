@@ -12,7 +12,11 @@ const LibraryFileSchema = z.object({
     parents: z.array(z.string()).default([]),
     modifiedTime: z.string().nullable().optional(),
     webViewLink: z.string().nullable().optional(),
-    metadata: z.record(z.string(), z.any()).nullable().optional()
+    metadata: z.record(z.string(), z.any()).nullable().optional(),
+    // Owning tenant and row status, so client filters on the SSR rows (the
+    // recording song picker: own rows only) match the /api/library/list rows.
+    orgId: z.string().optional(),
+    status: z.string().optional(),
 })
 
 export type LibraryFile = z.infer<typeof LibraryFileSchema>
@@ -167,7 +171,9 @@ export async function getServerLibrary(orgId?: OrgId) {
                     parents: data.parents || [],
                     modifiedTime: data.modifiedTime || null,
                     webViewLink: data.webViewLink || null,
-                    metadata: data.metadata || null
+                    metadata: data.metadata || null,
+                    ...(typeof data.orgId === 'string' && { orgId: data.orgId }),
+                    ...(typeof data.status === 'string' && { status: data.status }),
                 })
 
                 if (parsed.success) {

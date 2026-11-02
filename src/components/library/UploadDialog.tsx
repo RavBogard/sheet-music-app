@@ -15,8 +15,12 @@ import { coreSectionLabel } from "@/lib/songs/picker-scope"
 import { useT } from "@/i18n/client"
 import { useFormat } from "@/i18n/format-client"
 import { interpolateNodes } from "@/components/i18n/interpolate-nodes"
+import { isAudioFile, AUDIO_ACCEPT, MAX_RECORDING_BYTES, MAX_RECORDING_MB } from "@/lib/recordings/upload-policy"
+import { uploadRecording } from "@/lib/recordings/recordings-client"
+import { RecordingSongPicker, type PickedSong } from "./RecordingSongPicker"
 
-const ACCEPTED_TYPES = ".pdf,.xml,.musicxml,.mxl,.mscz,.mscx,.txt"
+// Charts, plus audio: an audio file becomes a recording of a song (asked below).
+const ACCEPTED_TYPES = `.pdf,.xml,.musicxml,.mxl,.mscz,.mscx,.txt,${AUDIO_ACCEPT}`
 const MAX_SIZE_MB = 25
 
 const KEY_OPTIONS = [
@@ -56,6 +60,10 @@ export function UploadDialog({ onUploadComplete, setlists = [], onAddToSetlist }
     const [success, setSuccess] = useState(false)
     // The uploaded file, kept for the success screen's "Add to <next service>".
     const [uploaded, setUploaded] = useState<{ id: string, name: string, mimeType: string, metadata?: { key: string } } | null>(null)
+    // Audio branch: the song this recording is of, upload progress, and the error.
+    const [recordingSong, setRecordingSong] = useState<PickedSong | null>(null)
+    const [progress, setProgress] = useState<number | null>(null)
+    const [audioError, setAudioError] = useState<string | null>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
     const dropZoneRef = useRef<HTMLDivElement>(null)
     const abortControllerRef = useRef<AbortController | null>(null)
@@ -80,6 +88,9 @@ export function UploadDialog({ onUploadComplete, setlists = [], onAddToSetlist }
         setUploading(false)
         setSuccess(false)
         setUploaded(null)
+        setRecordingSong(null)
+        setProgress(null)
+        setAudioError(null)
     }, [])
 
     // The picker lists upcoming services first (soonest first), then the
@@ -95,6 +106,16 @@ export function UploadDialog({ onUploadComplete, setlists = [], onAddToSetlist }
     }, [setlists])
 
     const handleFileSelect = useCallback((selectedFile: File) => {
+        if (isAudioFile(selectedFile)) {
+            if (selectedFile.size > MAX_RECORDING_BYTES) {
+                toast.error(t("recordings.uploadTooBig", { maxMb: MAX_RECORDING_MB }))
+                return
+            }
+            setAudioError(null)
+            setFile(selectedFile)
+            return
+        }
+
         if (selectedFile.size > MAX_SIZE_MB * 1024 * 1024) {
             toast.error(t("libraryUpload.fileTooLarge", { max: MAX_SIZE_MB }))
             return
@@ -129,6 +150,42 @@ export function UploadDialog({ onUploadComplete, setlists = [], onAddToSetlist }
     const handleDragLeave = useCallback(() => {
         dropZoneRef.current?.classList.remove('border-brand')
     }, [])
+
+    const handleRecordingUpload = async () => {
+        if (!file || !user || !recordingSong) return
+        setUploading(true)
+        setAudioError(null)
+        setProgress(0)
+        abortControllerRef.current?.abort()
+        const controller = new AbortController()
+        abortControllerRef.current = controller
+        try {
+            await uploadRecording({
+                file,
+                songId: recordingSong.id,
+                title: file.name.replace(/\.[^/.]+$/, ''),
+                onProgress: (f) => setProgress(Math.min(99, Math.round(f * 100))),
+                signal: controller.signal,
+            })
+            if (controller.signal.aborted) return
+            setSuccess(true)
+            toast.success(t("recordings.recordingUploaded"))
+            if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
+            closeTimerRef.current = setTimeout(() => {
+                setOpen(false)
+                reset()
+            }, 1500)
+        } catch (err) {
+            if ((err as Error).name === 'AbortError') return
+            const message = err instanceof Error ? err.message : t("recordings.uploadFailed")
+            setAudioError(message)
+            toast.error(message)
+            setUploading(false)
+            setProgress(null)
+        }
+    }
+
+    const fileIsAudio = file ? isAudioFile(file) : false
 
     const handleUpload = async () => {
         if (!file || !user) return
@@ -231,7 +288,7 @@ export function UploadDialog({ onUploadComplete, setlists = [], onAddToSetlist }
                 {success ? (
                     <div className="flex flex-col items-center gap-3 py-8" data-testid="upload-success">
                         <CheckCircle aria-hidden="true" className="h-12 w-12 text-success" />
-                        <p role="status" className="text-sm text-foreground">{t("libraryUpload.uploadedSuccess")}</p>
+                        <p role="status" className="text-sm text-foreground">{fileIsAudio ? t("recordings.recordingUploaded") : t("libraryUpload.uploadedSuccess")}</p>
                         {!selectedSetlistId && onAddToSetlist && uploaded && nextService && (
                             <div className="mt-2 flex w-full flex-col gap-2">
                                 <Button
@@ -294,14 +351,60 @@ export function UploadDialog({ onUploadComplete, setlists = [], onAddToSetlist }
                                     <p className="text-sm font-medium truncate">{file.name}</p>
                                     <p className="text-xs text-muted-foreground">{t("libraryUpload.fileSizeKb", { size: (file.size / 1024).toFixed(0) })}</p>
                                 </div>
-                                <button type="button" onClick={() => setFile(null)} className="-me-2 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label={t("libraryUpload.removeFile")}>
+                                <button type="button" onClick={() => { setFile(null); setRecordingSong(null); setAudioError(null) }} className="-me-2 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label={t("libraryUpload.removeFile")}>
                                     <X className="h-4 w-4" />
                                 </button>
                             </div>
                         )}
 
+                        {/* Audio: which song is this a recording of? */}
+                        {file && fileIsAudio && (
+                            <div className="space-y-3" data-testid="recording-upload-branch">
+                                {recordingSong ? (
+                                    <div className="flex items-center gap-2 rounded-md border border-brand/30 bg-brand/10 px-3 py-2">
+                                        <p className="min-w-0 flex-1 truncate text-sm" data-testid="recording-song-chosen">
+                                            {t("recordings.recordingFor", { title: recordingSong.title })}
+                                        </p>
+                                        <button
+                                            type="button"
+                                            disabled={uploading}
+                                            onClick={() => setRecordingSong(null)}
+                                            className="min-h-11 shrink-0 rounded-md px-2 text-sm text-brand hover:bg-accent disabled:opacity-60"
+                                        >
+                                            {t("recordings.changeSong")}
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <RecordingSongPicker onPick={setRecordingSong} />
+                                )}
+                                {audioError && (
+                                    <p role="alert" className="text-sm text-destructive">{audioError}</p>
+                                )}
+                                <Button
+                                    data-testid="recording-upload-submit"
+                                    onClick={() => void handleRecordingUpload()}
+                                    disabled={uploading || !recordingSong}
+                                    className="w-full bg-brand hover:bg-brand/90 text-brand-foreground"
+                                >
+                                    {uploading ? (
+                                        <>
+                                            <Loader2 className="h-4 w-4 animate-spin me-2" />
+                                            <span aria-live="polite">
+                                                {progress !== null ? t("recordings.uploadProgress", { percent: progress }) : t("libraryUpload.uploading")}
+                                            </span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Upload className="h-4 w-4 me-2" />
+                                            {t("recordings.uploadRecordingSubmit")}
+                                        </>
+                                    )}
+                                </Button>
+                            </div>
+                        )}
+
                         {/* Metadata fields */}
-                        {file && (
+                        {file && !fileIsAudio && (
                             <>
                                 {/* Title */}
                                 <div>

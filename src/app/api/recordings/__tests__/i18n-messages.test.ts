@@ -15,18 +15,19 @@ vi.mock("next/headers", () => ({
 }))
 vi.mock("@/lib/api-wrapper", () => ({
     createApiHandler: (fn: (ctx: unknown) => unknown) => (ctx: unknown) => fn(ctx),
+    apiError: (error: string, status: number, code?: string) => Response.json({ error, ...(code && { code }) }, { status }),
 }))
 vi.mock("@/lib/rate-limit", () => ({ checkRateLimit: vi.fn(async () => null) }))
 vi.mock("@/lib/firebase-admin", () => ({ initAdmin: () => true, getFirestore: vi.fn() }))
-vi.mock("@/lib/firebase-storage", () => ({ uploadRecordingToStorage: vi.fn() }))
+vi.mock("@/lib/recordings/direct-upload-server", () => ({}))
 vi.mock("@/lib/logger", () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }))
 
-import { POST } from "../upload/route"
+import { POST } from "../upload-url/route"
 
 type Handler = (ctx: unknown) => Promise<Response>
 const call = () =>
     (POST as unknown as Handler)({
-        req: new Request("http://x/api/recordings/upload", { method: "POST" }),
+        req: new Request("http://x/api/recordings/upload-url", { method: "POST" }),
         auth: { uid: "u1", isBandLeader: false, isAdmin: false },
     })
 
@@ -38,7 +39,7 @@ describe("api-recordings messages", () => {
     it("English is unchanged", async () => {
         const res = await call()
         expect(res.status).toBe(403)
-        expect(await res.json()).toEqual({ error: "Only band leaders and admins can upload recordings." })
+        expect(await res.json()).toMatchObject({ error: "Only band leaders and admins can upload recordings." })
     })
 
     it("comes from the catalogue (pseudo-locale)", async () => {

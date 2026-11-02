@@ -35,7 +35,7 @@
         "where": "Library > Upload dialog: small hint under the drop zone",
         "who": "leaders",
         "maxLength": 70,
-        "context": "{max} is the size limit in megabytes (a number); MB is the unit."
+        "context": "{max} is the chart size limit in megabytes (a number); MB is the unit. Audio files become song recordings."
     },
     "fileSizeKb": {
         "where": "Library > Upload dialog: selected file's size",

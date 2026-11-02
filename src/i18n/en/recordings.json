@@ -11,5 +11,18 @@
     "listenAria": "Listen to {name}",
     "noRecordingYet": "No recording yet",
     "listenIntro": "Listen to this service's songs in order.",
-    "listenEmpty": "There are no songs in this setlist yet."
+    "listenEmpty": "There are no songs in this setlist yet.",
+    "uploadTooBig": "That file is too big. Recordings can be up to {maxMb} MB.",
+    "uploadWrongType": "That isn't an audio file. Use mp3, m4a, wav, aac, ogg, flac or aiff.",
+    "uploadNetwork": "The upload stopped. Check your connection and try again.",
+    "uploadFailed": "The recording didn't upload. Try again.",
+    "uploadProgress": "Uploading… {percent}%",
+    "whichSong": "Which song is this a recording of?",
+    "songSearchPlaceholder": "Search songs",
+    "songSearchAria": "Search songs for this recording",
+    "noSongMatch": "No songs match.",
+    "changeSong": "Change song",
+    "recordingFor": "Recording of {title}",
+    "uploadRecordingSubmit": "Upload recording",
+    "recordingUploaded": "Recording added."
 }
