@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
         const decoded = await getAuth().verifyIdToken(token)
 
         // Multi-tenant P2 (design §3.4): platform owner or crc admin (`m.crc`);
-        // a pre-P2 token (no `m`) keeps the legacy role-claim check.
+        // a token without `m` carries no role (CLAIMS-LEGACY).
         if (tenantRoleFromClaims(decoded as unknown as Record<string, unknown>, 'crc') !== 'admin') {
             return NextResponse.json({ error: "Admin access required" }, { status: 403 })
         }
