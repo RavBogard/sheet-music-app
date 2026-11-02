@@ -198,3 +198,16 @@ to the rest of the worship-tech family.
 - GATE: #58 removes the legacy role fallback from every server gate. Proceeded because the re-review found no Critical or High issues, and a read-only migrate-memberships --plan against prod shows all 36 accounts alreadyMigrated, so there's no lockout. Backlog SEC-03: the Firestore and storage rules still accept the legacy role claim when a token has no 'm' (reachable only after a migrate --undo); make the no-m branch deny. Backlog TEST-MOCK: key withMockMemberships on org__uid so route tests can catch tenant mistakes. Low leftovers (proxy, backup crons, soundEngineer outage fallback) are listed in the #58 re-review.
 
 - 2026-11-01: Daniel's phone review of #60: cut the rabbi filter chips on /setlists (search matches a rabbi instead); setlist editor and Perform heads are one row on a phone. Screenshots approved — "ship". GATE: merged master's squashed option-B revert (a088a90d) with `-s ours` — proceeded because the branch already carries the identical revert (0e738eb0) plus the runner pin (58add730); verified line-for-line.
+- 2026-11-02 library cleanup (Daniel: "everything else approved").
+  - STATUS-NULL: 235 CRC library_index rows had no status. Lineage, AI enrichment, upload dedupe and
+    Beit Mitzvah resources all skipped them, though 67 are on setlists (Shema (major) on 19).
+    Applied: 206 to active (no name clash with an active chart), 23 Drive folders to archived,
+    3 unused same-name copies to duplicate. Each write carries statusSetBy 'STATUS-NULL 2026-11-02';
+    the before/after plan is .recordings-work/status-null-plan.json (undo = set those ids' status
+    back to null). Left alone, still no status, all in use with a same-name twin: Fiddley Tune (18),
+    Od Yavo Shalom Aleinu (1), Shiru L_Adonai Shir Shabbat (5). Now 770 active, 105 duplicate,
+    30 archived, 3 unset.
+    GATE: proceeded because the rows were legacy-active in practice and every change is reversible.
+  - DEDUPE-ACTIVE: only two active same-name pairs remain, and both are different formats in use
+    (Adon Olam: Google Doc and PDF, one setlist each; Three Little Birds: PDF in use, text chart
+    unused). Nothing to merge; closed.
