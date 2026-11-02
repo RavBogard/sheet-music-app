@@ -184,3 +184,8 @@ push the setlist alignment one row off; out-of-order "title sung" hits are the t
   once the already-cut clips are reviewed, 99% with Jun 27 (Ray Slavin) and 100% with Jun 6.
   GATE: the bulk YouTube run is dropped; only those two services get cut, one at a time
   (`yt.py run --id`). The clip review is now the bottleneck.
+- The old review page (LdPj541R8kMTU8GkFQ4WdK) disappeared from the account along with other
+  recent pages. Republished for David as https://claude.ai/artifact/LBvsjhXCzHusSMMB3ViV6p
+  (same 87 clips, answers in db `decisions2`, asset map review4/assets-link.json, builder
+  review/build_link_review.py). Link visitors from outside the claude.ai org can only view, so
+  David answers as an org member via the link or as an email-invited Editor.
