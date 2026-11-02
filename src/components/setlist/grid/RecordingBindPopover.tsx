@@ -19,6 +19,7 @@ import {
     subscribeRecordingsForSong,
     uploadRecording,
 } from '@/lib/recordings/recordings-client'
+import { AUDIO_ACCEPT } from '@/lib/recordings/upload-policy'
 import { cn } from '@/lib/utils'
 import type { Recording } from '@/types/models'
 
@@ -59,6 +60,7 @@ export function RecordingBindPopover({
     const [loaded, setLoaded] = useState(false)
     const [uploading, setUploading] = useState(false)
     const [uploadError, setUploadError] = useState<string | null>(null)
+    const [progress, setProgress] = useState<number | null>(null)
     const [featuring, setFeaturing] = useState<string | null>(null)
     const [featureError, setFeatureError] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
@@ -83,11 +85,13 @@ export function RecordingBindPopover({
         if (!file) return
         setUploading(true)
         setUploadError(null)
+        setProgress(0)
         try {
             await uploadRecording({
                 file,
                 songId,
                 title: file.name.replace(/\.[^/.]+$/, ''),
+                onProgress: (f) => setProgress(Math.min(99, Math.round(f * 100))),
             })
             // The onSnapshot subscription surfaces the new recording — no
             // manual refetch needed.
@@ -97,6 +101,7 @@ export function RecordingBindPopover({
             )
         } finally {
             setUploading(false)
+            setProgress(null)
             if (fileInputRef.current) fileInputRef.current.value = ''
         }
     }
@@ -210,7 +215,7 @@ export function RecordingBindPopover({
                             ref={fileInputRef}
                             id={inputId}
                             type="file"
-                            accept="audio/*"
+                            accept={AUDIO_ACCEPT}
                             disabled={uploading}
                             onChange={(e) => void handleFile(e)}
                             className="sr-only"
@@ -234,7 +239,13 @@ export function RecordingBindPopover({
                             ) : (
                                 <Upload aria-hidden className="h-4 w-4" />
                             )}
-                            {uploading ? t('setlistGrid.uploading') : t('setlistGrid.uploadRecording')}
+                            <span data-testid="recording-upload-status" aria-live="polite">
+                                {uploading
+                                    ? progress !== null
+                                        ? t('recordings.uploadProgress', { percent: progress })
+                                        : t('setlistGrid.uploading')
+                                    : t('setlistGrid.uploadRecording')}
+                            </span>
                         </label>
                         {uploadError && (
                             <p

@@ -11,5 +11,18 @@
     "listenAria": "האזנה ל-{name}",
     "noRecordingYet": "אין עדיין הקלטה",
     "listenIntro": "האזנה לשירי השירות לפי הסדר.",
-    "listenEmpty": "אין עדיין שירים ברשימה הזו."
+    "listenEmpty": "אין עדיין שירים ברשימה הזו.",
+    "uploadTooBig": "הקובץ גדול מדי. הקלטה יכולה להגיע עד {maxMb} MB.",
+    "uploadWrongType": "זה אינו קובץ שמע. אפשר mp3, m4a, wav, aac, ogg, flac או aiff.",
+    "uploadNetwork": "ההעלאה נעצרה. כדאי לבדוק את החיבור ולנסות שוב.",
+    "uploadFailed": "ההקלטה לא עלתה. כדאי לנסות שוב.",
+    "uploadProgress": "מעלה… {percent}%",
+    "whichSong": "של איזה שיר ההקלטה הזו?",
+    "songSearchPlaceholder": "חיפוש שירים",
+    "songSearchAria": "חיפוש שיר להקלטה הזו",
+    "noSongMatch": "אין שירים מתאימים.",
+    "changeSong": "החלפת שיר",
+    "recordingFor": "הקלטה של {title}",
+    "uploadRecordingSubmit": "העלאת הקלטה",
+    "recordingUploaded": "ההקלטה נוספה."
 }

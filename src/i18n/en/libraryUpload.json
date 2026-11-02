@@ -5,7 +5,7 @@
     "uploadedSuccess": "Uploaded successfully!",
     "dropPrompt": "Drop a file here or {browse}",
     "browse": "browse",
-    "acceptedHint": "PDF, MusicXML, or MuseScore, up to {max}MB",
+    "acceptedHint": "PDF, MusicXML, MuseScore, or an audio recording (up to {max}MB for charts)",
     "fileSizeKb": "{size} KB",
     "removeFile": "Remove file",
     "titleLabel": "Title",

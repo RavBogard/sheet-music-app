@@ -72,6 +72,15 @@ export function fakeDb(seed: Store = {}) {
                 update(ref: ReturnType<typeof docRef>, data: Data) {
                     writes.push(() => ref.update(data))
                 },
+                set(ref: ReturnType<typeof docRef>, data: Data) {
+                    writes.push(() => ref.set(data))
+                },
+                create(ref: ReturnType<typeof docRef>, data: Data) {
+                    writes.push(async () => {
+                        if ((await ref.get()).exists) throw new Error(`exists ${ref.path}`)
+                        await ref.set(data)
+                    })
+                },
             }
             const out = await fn(tx)
             for (const w of writes) await w()
