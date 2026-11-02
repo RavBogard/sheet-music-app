@@ -99,6 +99,10 @@ const BL_VOCAB_LITERALS: Partial<Record<StringKey, string>> = {
     "print.packetSubject": "Brothers Lazaroff gig packet",
     "chart.footerLeft": "Brothers Lazaroff",
     "chart.footerRight": "brotherslazaroff.live",
+    // The share card carries BL's own name (2026-11-02).
+    "og.alt": "Brothers Lazaroff — Digital Sheet Music Library",
+    "og.monogram": "BL",
+    "og.title": "Brothers Lazaroff",
 }
 
 describe("multi-tenant P1: code-table configs reproduce today's strings", () => {

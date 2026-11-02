@@ -4,7 +4,6 @@ import path from 'path'
 import { headers } from 'next/headers'
 import { coerceOrgId } from '@/lib/org/registry'
 import { getOrgConfig } from '@/lib/org/get-org-config'
-import { codeOrgConfig } from '@/lib/org/config-code'
 import { orgString } from '@/lib/org/strings'
 import { getOrgIdentity } from '@/lib/org/identity'
 
@@ -39,8 +38,9 @@ export async function generateImageMetadata() {
 export default async function OpenGraphImage() {
     const orgId = await requestOrg()
     const id = getOrgIdentity(orgId)
-    // The mandala artwork is CRC's; tenants created through config get the monogram.
-    const ownArtwork = codeOrgConfig(orgId) !== null
+    // The mandala artwork (public/logo.jpg) is CRC's alone; every other tenant,
+    // Brothers Lazaroff included, gets its monogram on its own cloth.
+    const ownArtwork = orgId === 'crc'
     let base64Logo: string | null = null
     if (ownArtwork) try {
         const logo = readFileSync(path.join(process.cwd(), 'public', 'logo.jpg'))

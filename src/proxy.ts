@@ -100,8 +100,6 @@ const publicExactRoutes = [
     // 307 to /login (it fell back to favicon.ico).
     '/icon',
     '/apple-icon',
-    '/opengraph-image',
-    '/twitter-image',
 ]
 
 // Prefix-match public routes — these serve public/unauthenticated content
@@ -113,7 +111,10 @@ const publicExactRoutes = [
 //                  signs the person in itself, like /qr
 // /listen/*      — a setlist's recordings, read-only; recordings are public
 //                  (Daniel 2026-11-01), so no sign-in. Never linked from Perform.
-const publicPrefixes = ['/perform', '/qr', '/.well-known', '/invite', '/listen/']
+// /opengraph-image/*, /twitter-image/* — the share cards (re-audit P3 #12):
+//                  generateImageMetadata puts them at /opengraph-image/card, so an
+//                  exact match missed them and link previews got a 307 to /login.
+const publicPrefixes = ['/perform', '/qr', '/.well-known', '/invite', '/listen/', '/opengraph-image', '/twitter-image']
 
 // Vestigial paths — these used to be the catch-all defaults the proxy
 // matcher couldn't avoid, and Next.js answered them with either a 307→/login

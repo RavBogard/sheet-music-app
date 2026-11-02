@@ -20,7 +20,8 @@ import { orgString } from "@/lib/org/strings"
  * Before phase 7 the image was pinned byte-identical. It is now request-aware
  * through generateImageMetadata (a per-tenant alt), which changes CRC's and
  * BL's og:image URL (`/opengraph-image/card?<hash>`) but not the alt text or the
- * image: this test proves crc and BL still get exactly CRC's three literals.
+ * image. Since 2026-11-02 BL's card carries its own name and monogram, and only
+ * CRC's embeds the CRC mandala.
  */
 vi.mock("next/og", () => ({ ImageResponse: class {} }))
 const state = { org: "crc" }
@@ -42,15 +43,24 @@ describe("multi-tenant golden: social image", () => {
         expect(tw.generateImageMetadata).toBe(og.generateImageMetadata)
     })
 
-    for (const org of ["crc", "brotherslazaroff"]) {
-        it(`${org}: alt, monogram and title are CRC's literals, as before`, async () => {
+    const EXPECTED = {
+        crc: { alt: "Central Reform Congregation — Digital Sheet Music Library", monogram: "CRC", title: "Central Reform Congregation" },
+        // 2026-11-02: BL's link preview carries its own name, not CRC's.
+        brotherslazaroff: { alt: "Brothers Lazaroff — Digital Sheet Music Library", monogram: "BL", title: "Brothers Lazaroff" },
+    } as const
+    for (const org of ["crc", "brotherslazaroff"] as const) {
+        it(`${org}: alt, monogram and title are the tenant's own`, async () => {
             state.org = org
             const og = await import("@/app/opengraph-image")
             const [meta] = await og.generateImageMetadata()
-            expect(meta.alt).toBe("Central Reform Congregation — Digital Sheet Music Library")
-            expect(orgString(org, "og.monogram")).toBe("CRC")
-            expect(orgString(org, "og.title")).toBe("Central Reform Congregation")
+            expect(meta.alt).toBe(EXPECTED[org].alt)
+            expect(orgString(org, "og.monogram")).toBe(EXPECTED[org].monogram)
+            expect(orgString(org, "og.title")).toBe(EXPECTED[org].title)
             expect(source()).not.toContain("Central Reform")
         })
     }
+
+    it("only CRC's card embeds the CRC mandala (public/logo.jpg)", () => {
+        expect(source()).toContain("const ownArtwork = orgId === 'crc'")
+    })
 })

@@ -74,6 +74,23 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // 2026-11-02: the tab icon per host. favicon.ico sits outside the proxy
+  // matcher (no x-org-id there), so the static CRC-blue file was served on
+  // brotherslazaroff.live too. Pages link the per-tenant /icon; this covers a
+  // browser's direct /favicon.ico request.
+  async rewrites() {
+    return {
+      beforeFiles: [
+        {
+          source: '/favicon.ico',
+          has: [{ type: 'host', value: '(?:www\\.)?brotherslazaroff\\.live' }],
+          destination: '/brands/brotherslazaroff/favicon.ico',
+        },
+      ],
+      afterFiles: [],
+      fallback: [],
+    }
+  },
   async headers() {
     return [
       // Perf audit P2-4: static assets that were served `max-age=0,
