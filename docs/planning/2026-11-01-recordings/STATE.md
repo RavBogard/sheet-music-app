@@ -177,3 +177,10 @@ push the setlist alignment one row off; out-of-order "title sung" hits are the t
   fail; (2) the Library Upload dialog doesn't accept audio. Builder audio-upload: signed direct-to-
   Storage PUT + a complete step, 200 MB cap, progress, bucket CORS, and audio in the Library
   Upload with a "which song?" step. GATE: proceeded on Daniel's "let's get that working".
+- #72 merged (7ce49e20): web audio upload goes direct to Storage (200 MB, progress, Library
+  Upload takes audio with a song picker, orphan sweep in the import-batches-resume cron).
+- Daniel 2026-11-02: "you probably don't need that many YouTube services — redundant?" Coverage
+  says yes. Regular Saturday rotation (40 charts on 3+ setlists, 392 slots): 42% live now, 96%
+  once the already-cut clips are reviewed, 99% with Jun 27 (Ray Slavin) and 100% with Jun 6.
+  GATE: the bulk YouTube run is dropped; only those two services get cut, one at a time
+  (`yt.py run --id`). The clip review is now the bottleneck.
