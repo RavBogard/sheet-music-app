@@ -171,3 +171,9 @@ push the setlist alignment one row off; out-of-order "title sung" hits are the t
   (Oct 3 Simchat Torah, Oct 2 Shir Shabbat, Sep 25 Erev Sukkot, Sep 21 Yom Kippur morning,
   Sep 21 Yizkor/Neila: 24 live, 41 held). They are in manifest-yt.json, not yet published.
   Not restarted: waits for Daniel (memory).
+- #70 merged (2b3178fa): take chip in the editor grid, labelled Listen button, Perform Listen link.
+- David can't upload audio from the website. Causes: (1) the ♫ upload POSTs the file through a
+  Vercel function, which rejects bodies over 4.5 MB (our own cap says 25 MB), so normal song mp3s
+  fail; (2) the Library Upload dialog doesn't accept audio. Builder audio-upload: signed direct-to-
+  Storage PUT + a complete step, 200 MB cap, progress, bucket CORS, and audio in the Library
+  Upload with a "which song?" step. GATE: proceeded on Daniel's "let's get that working".
