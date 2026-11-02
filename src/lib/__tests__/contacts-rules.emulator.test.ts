@@ -68,18 +68,15 @@ describe("v11.4-03 firestore.rules — contacts", () => {
 
     // Claimless CRC band_leader (no orgIds claim → defaults to crc in rules).
     const crcLeader = () =>
-        testEnv.authenticatedContext("crc-leader", { role: "band_leader" }).firestore()
+        testEnv.authenticatedContext("crc-leader", { m: { crc: "bl" } }).firestore()
     const blLeader = () =>
         testEnv
-            .authenticatedContext("bl-leader", {
-                role: "band_leader",
-                orgIds: ["brotherslazaroff"],
-            })
+            .authenticatedContext("bl-leader", { m: { brotherslazaroff: "bl" } })
             .firestore()
     const musician = () =>
-        testEnv.authenticatedContext("m-uid", { role: "musician" }).firestore()
+        testEnv.authenticatedContext("m-uid", { m: { crc: "mu" } }).firestore()
     const member = () =>
-        testEnv.authenticatedContext("mem-uid", { role: "member" }).firestore()
+        testEnv.authenticatedContext("mem-uid", { m: { crc: "me" } }).firestore()
 
     // ─── AC-1: leader CRUD in own org; non-leaders denied ──────────────────
 

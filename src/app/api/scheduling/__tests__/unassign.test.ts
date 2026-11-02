@@ -103,7 +103,7 @@ import { sendSchedulingCancellationSMS } from '@/lib/sms'
 import { mClaim, setMockMembershipRole, withMockMemberships } from '@/test-stubs/tenant-claims'
 
 function mockAuth(role: string, uid = 'leader-1') {
-    setMockMembershipRole(role)
+    setMockMembershipRole(role, uid)
     vi.mocked(verifyIdToken).mockResolvedValue({
         uid,
         email: 'leader@example.com',

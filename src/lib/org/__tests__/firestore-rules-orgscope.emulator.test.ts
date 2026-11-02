@@ -95,21 +95,18 @@ describe("v11-01-04 firestore.rules org-scope", () => {
     // Claimless CRC band_leader (no orgIds claim → defaults to crc in rules).
     function crcLeader() {
         return testEnv
-            .authenticatedContext("crc-leader", { role: "band_leader" })
+            .authenticatedContext("crc-leader", { m: { crc: "bl" } })
             .firestore()
     }
     // Brothers Lazaroff band_leader (explicit foreign-tenant claim).
     function blLeader() {
         return testEnv
-            .authenticatedContext("bl-leader", {
-                role: "band_leader",
-                orgIds: ["brotherslazaroff"],
-            })
+            .authenticatedContext("bl-leader", { m: { brotherslazaroff: "bl" } })
             .firestore()
     }
     function adminCtx() {
         return testEnv
-            .authenticatedContext("admin-uid", { role: "admin" })
+            .authenticatedContext("admin-uid", { m: { crc: "ad" } })
             .firestore()
     }
 
@@ -266,7 +263,7 @@ describe("v11-01-04 firestore.rules org-scope", () => {
     // already filters by orgId, so no served surface changes.
 
     it("P9: a CRC member lists CRC setlists (orgId-filtered) — unchanged", async () => {
-        const db = testEnv.authenticatedContext("crc-member", { role: "member" }).firestore()
+        const db = testEnv.authenticatedContext("crc-member", { m: { crc: "me" } }).firestore()
         await assertSucceeds(db.collection("setlists").where("orgId", "==", "crc").get())
     })
 
@@ -286,7 +283,7 @@ describe("v11-01-04 firestore.rules org-scope", () => {
 
     it("P9: an UNFILTERED list is refused — no branch is satisfiable without an orgId filter", async () => {
         await assertFails(
-            testEnv.authenticatedContext("crc-member", { role: "member" }).firestore().collection("setlists").get(),
+            testEnv.authenticatedContext("crc-member", { m: { crc: "me" } }).firestore().collection("setlists").get(),
         )
     })
 
@@ -339,7 +336,7 @@ describe("v11-01-04 firestore.rules org-scope", () => {
 
     it("AC-3: a CRC member can still read songs + recordings", async () => {
         const member = testEnv
-            .authenticatedContext("member-uid", { role: "member" })
+            .authenticatedContext("member-uid", { m: { crc: "me" } })
             .firestore()
         await assertSucceeds(member.collection("songs").doc("song-crc").get())
         await assertSucceeds(member.collection("recordings").doc("rec-crc").get())
@@ -364,7 +361,7 @@ describe("v11-01-04 firestore.rules org-scope", () => {
         // A plain musician (reads only their OWN scheduling assignment).
         function crcMusician() {
             return testEnv
-                .authenticatedContext("crc-musician", { role: "musician" })
+                .authenticatedContext("crc-musician", { m: { crc: "mu" } })
                 .firestore()
         }
 

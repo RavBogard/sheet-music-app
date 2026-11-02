@@ -61,7 +61,7 @@ import type { NextRequest } from 'next/server'
 import { mClaim, setMockMembershipRole, withMockMemberships } from '@/test-stubs/tenant-claims'
 
 function mockAuth(role: string, uid = 'leader-1') {
-    setMockMembershipRole(role)
+    setMockMembershipRole(role, uid)
     vi.mocked(verifyIdToken).mockResolvedValue({
         uid,
         email: `${uid}@example.com`,
@@ -171,5 +171,37 @@ describe('POST /api/setlist/rename', () => {
             method: 'POST', token: 'v', body: { setlistId: 'missing', name: 'N' },
         }))
         expect(res.status).toBe(404)
+    })
+
+    it('rename_refused_for_a_leader_of_another_tenant (TEST-MOCK)', async () => {
+        // leader-1 is a band leader in crc only; the request is on the
+        // brotherslazaroff host. Memberships are keyed org__uid, so the
+        // route's lookup of brotherslazaroff__leader-1 finds nothing.
+        mockAuth('band_leader', 'leader-1')
+        setlistDoc = {
+            exists: true,
+            data: () => ({ name: 'Old', ownerId: 'someone-else', orgId: 'brotherslazaroff' }),
+        }
+        const res = await POST(makeReq('/api/setlist/rename', {
+            method: 'POST', token: 'v', body: { setlistId: 's1', name: 'New' },
+            headers: { 'x-org-id': 'brotherslazaroff' },
+        }))
+        expect(res.status).toBe(403)
+        expect(mockSetlistUpdate).not.toHaveBeenCalled()
+    })
+
+    it('rename_allowed_for_the_same_leader_in_their_own_second_tenant (TEST-MOCK)', async () => {
+        mockAuth('band_leader', 'leader-1')
+        setMockMembershipRole('band_leader', 'leader-1', 'brotherslazaroff')
+        setlistDoc = {
+            exists: true,
+            data: () => ({ name: 'Old', ownerId: 'someone-else', orgId: 'brotherslazaroff' }),
+        }
+        const res = await POST(makeReq('/api/setlist/rename', {
+            method: 'POST', token: 'v', body: { setlistId: 's1', name: 'New' },
+            headers: { 'x-org-id': 'brotherslazaroff' },
+        }))
+        expect(res.status).toBe(200)
+        expect(mockSetlistUpdate).toHaveBeenCalled()
     })
 })

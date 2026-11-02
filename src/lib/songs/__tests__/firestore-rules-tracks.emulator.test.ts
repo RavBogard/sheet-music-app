@@ -124,7 +124,7 @@ describe('v60-12-01 firestore.rules tracks/{trackId}', () => {
     })
 
     it('Scenario F: member-only user (role=member) CANNOT write — write-side regression check', async () => {
-        const member = testEnv.authenticatedContext('member-uid', { role: 'member' }).firestore()
+        const member = testEnv.authenticatedContext('member-uid', { m: { crc: 'me' } }).firestore()
         await assertFails(
             member.collection('tracks').doc('member-track').set({
                 setlistId: 'setlist-1',
@@ -137,7 +137,7 @@ describe('v60-12-01 firestore.rules tracks/{trackId}', () => {
 
     it('Scenario G: band-leader CAN write — existing behavior regression check', async () => {
         const leader = testEnv
-            .authenticatedContext('leader-uid', { role: 'band_leader' })
+            .authenticatedContext('leader-uid', { m: { crc: 'bl' } })
             .firestore()
         await assertSucceeds(
             leader.collection('tracks').doc('leader-track').set({
@@ -150,7 +150,7 @@ describe('v60-12-01 firestore.rules tracks/{trackId}', () => {
     })
 
     it('Scenario H: admin CAN write — existing behavior regression check', async () => {
-        const admin = testEnv.authenticatedContext('admin-uid', { role: 'admin' }).firestore()
+        const admin = testEnv.authenticatedContext('admin-uid', { m: { crc: 'ad' } }).firestore()
         await assertSucceeds(
             admin.collection('tracks').doc('admin-track').set({
                 setlistId: 'setlist-1',

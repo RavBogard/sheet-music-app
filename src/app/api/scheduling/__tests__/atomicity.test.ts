@@ -139,7 +139,7 @@ import type { NextRequest } from 'next/server'
 import { mClaim, setMockMembershipRole, withMockMemberships } from '@/test-stubs/tenant-claims'
 
 function mockAuth(role: string, uid: string) {
-    setMockMembershipRole(role)
+    setMockMembershipRole(role, uid)
     vi.mocked(verifyIdToken).mockResolvedValue({
         uid,
         email: `${uid}@example.com`,

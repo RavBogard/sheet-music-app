@@ -5,39 +5,24 @@ service cloud.firestore {
 
     // ── Identity (multi-tenant P2) ─────────────────────────────────────────
     // Claims: po (platform owner), m {tenant: ad|bl|mu|me|pe}, se [tenant].
-    // Transition: a token without `m` is read through the legacy claims
-    // (role + orgIds, missing orgIds = ['crc']). Legacy admin is a tenant admin
-    // of its orgIds tenants, never a bypass. Only po bypasses tenant checks.
+    // A token without `m` holds no tenant role (SEC-03, 2026-11-02): the
+    // legacy `role` / `orgIds` / `soundEngineer` claims are ignored. Every
+    // prod account carries `m` (migrate-memberships --plan: 0 unmigrated),
+    // so this only bites a token minted after a migrate --undo. Only po
+    // bypasses tenant checks.
     function signedIn() { return request.auth != null; }
     function po() { return signedIn() && request.auth.token.get('po', false) == true; }
     function hasM() { return signedIn() && request.auth.token.get('m', null) is map; }
-    function legacyOrgs() {
-      let o = request.auth.token.get('orgIds', []);
-      return (o is list && o.size() > 0) ? o : ['crc'];
-    }
-    function legacyCode(t) {
-      let r = request.auth.token.get('role', '');
-      return !(t in legacyOrgs()) ? ''
-        : r == 'admin' ? 'ad'
-        : r == 'band_leader' ? 'bl'
-        : r == 'musician' ? 'mu'
-        : r == 'member' ? 'me'
-        : r == 'pending' ? 'pe'
-        : '';
-    }
     function code(t) {
-      return !signedIn() || !(t is string) ? ''
-        : hasM() ? request.auth.token.m.get(t, '')
-        : legacyCode(t);
+      return !signedIn() || !(t is string) || !hasM() ? ''
+        : request.auth.token.m.get(t, '');
     }
     function rank(c) {
       return c == 'ad' ? 4 : c == 'bl' ? 3 : c == 'mu' ? 2 : c == 'me' ? 1 : c == 'pe' ? 0 : -1;
     }
     function atLeast(t, c) { return po() || rank(code(t)) >= rank(c); }
     function se(t) {
-      return signedIn() && (hasM()
-        ? t in request.auth.token.get('se', [])
-        : (request.auth.token.get('soundEngineer', false) == true && t in legacyOrgs()));
+      return hasM() && t in request.auth.token.get('se', []);
     }
 
     // ── Documents ──────────────────────────────────────────────────────────
@@ -205,13 +190,12 @@ service cloud.firestore {
       allow list: if signedIn() && (
         po()
         || atLeast(resource.data.ownerOrgId, 'me')
-        || resource.data.sharedWith.hasAny(hasM() ? seenOrgs() : legacySeenOrgs())
-        || resource.data.assignedTo.hasAny(hasM() ? seenOrgs() : legacySeenOrgs()));
+        || (hasM() && resource.data.sharedWith.hasAny(seenOrgs()))
+        || (hasM() && resource.data.assignedTo.hasAny(seenOrgs())));
       allow get: if signedIn() && (
         po()
         || atLeast(resource.data.ownerOrgId, 'me')
-        || (hasM() && request.auth.token.m.keys().hasAny(resource.data.get('sharedWith', []).concat(resource.data.get('assignedTo', []))))
-        || (!hasM() && legacyOrgs().hasAny(resource.data.get('sharedWith', []).concat(resource.data.get('assignedTo', [])))));
+        || (hasM() && request.auth.token.m.keys().hasAny(resource.data.get('sharedWith', []).concat(resource.data.get('assignedTo', [])))));
       allow write: if false;
     }
 
@@ -340,15 +324,12 @@ service cloud.firestore {
       return seenKey(ks, 0).concat(seenKey(ks, 1)).concat(seenKey(ks, 2)).concat(seenKey(ks, 3))
         .concat(seenKey(ks, 4)).concat(seenKey(ks, 5)).concat(seenKey(ks, 6)).concat(seenKey(ks, 7));
     }
-    function legacySeenOrgs() {
-      return rank(legacyCode(legacyOrgs()[0])) >= 1 ? legacyOrgs() : [];
-    }
     function sharedSees(d) {
       return signedIn() && d.get('visibleToOrgs', []) is list
-        && d.get('visibleToOrgs', []).hasAny(hasM() ? seenOrgs() : legacySeenOrgs());
+        && hasM() && d.get('visibleToOrgs', []).hasAny(seenOrgs());
     }
     function sharedSeesList() {
-      return signedIn() && resource.data.visibleToOrgs.hasAny(hasM() ? seenOrgs() : legacySeenOrgs());
+      return hasM() && resource.data.visibleToOrgs.hasAny(seenOrgs());
     }
     match /songs/{songId} {
       allow get: if atLeast(docOrg(), 'me') || sharedSees(resource.data);

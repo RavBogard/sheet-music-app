@@ -52,11 +52,11 @@ describe("collections", () => {
     const assignedToA = `collections/${C}__x`
 
     it("owner tenant members (member and up) and the platform owner read", async () => {
-        for (const p of ["po", "aAdmin", "aBL", "aMu", "aMe", "dual", "oldBL"] as Persona[]) await assertSucceeds(dbOf(env, p).doc(own).get())
+        for (const p of ["po", "aAdmin", "aBL", "aMu", "aMe", "dual"] as Persona[]) await assertSucceeds(dbOf(env, p).doc(own).get())
     })
 
     it("pending, other tenants and signed-out visitors do not", async () => {
-        for (const p of ["aPe", "bBL", "signedOut"] as Persona[]) await assertFails(dbOf(env, p).doc(own).get())
+        for (const p of ["aPe", "bBL", "oldBL", "signedOut"] as Persona[]) await assertFails(dbOf(env, p).doc(own).get())
     })
 
     it("a tenant it is shared with reads it", async () => {

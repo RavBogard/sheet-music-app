@@ -32,9 +32,9 @@ import { reconcileSetlistTrackCount } from '@/lib/sync/track-count-sync'
  * per [[feedback_harness_real_firestore]] (in-memory fakes miss rule + write
  * semantics).
  *
- * Auth: `firestore.rules` gates `setlists` update on the band_leader/admin token
- * role claim (or owner). We mint an admin custom token carrying
- * `{ role: 'band_leader' }` and sign the modular Web SDK in, mirroring how the
+ * Auth: `firestore.rules` gates `setlists` update on the caller's crc membership
+ * (band_leader or admin) or ownership. We mint an admin custom token carrying
+ * `{ m: { crc: 'bl' } }` and sign the modular Web SDK in, mirroring how the
  * in-app grid editor (a band_leader) actually writes.
  *
  * The tests reproduce the producer bug — a track add/delete that does NOT touch
@@ -112,8 +112,9 @@ describe('cycle-9 Lane B — reconcileSetlistTrackCount (real emulator Firestore
             initAdminApp({ projectId: PROJECT_ID })
         }
         adminDb = getFirestore()
+        // SEC-03: rules read only the membership map `m`; a legacy role claim grants nothing.
         const customToken = await getAdminAuth().createCustomToken(OWNER_UID, {
-            role: 'band_leader',
+            m: { crc: 'bl' },
         })
 
         // Modular Web SDK app — the SDK the production adapter uses. Point it

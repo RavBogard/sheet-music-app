@@ -50,11 +50,11 @@ describe("tonight-only swap rules", () => {
         })
     })
 
-    const leader = () => testEnv.authenticatedContext("crc-lead", { role: "band_leader" }).firestore()
+    const leader = () => testEnv.authenticatedContext("crc-lead", { m: { crc: "bl" } }).firestore()
     const blLeader = () =>
-        testEnv.authenticatedContext("bl-lead", { role: "band_leader", orgIds: ["brotherslazaroff"] }).firestore()
-    const musician = () => testEnv.authenticatedContext("crc-mus", { role: "musician" }).firestore()
-    const admin = () => testEnv.authenticatedContext("admin", { role: "admin" }).firestore()
+        testEnv.authenticatedContext("bl-lead", { m: { brotherslazaroff: "bl" } }).firestore()
+    const musician = () => testEnv.authenticatedContext("crc-mus", { m: { crc: "mu" } }).firestore()
+    const admin = () => testEnv.authenticatedContext("admin", { m: { crc: "ad" } }).firestore()
     const po = () => testEnv.authenticatedContext("owner", { po: true }).firestore()
     const anon = () => testEnv.unauthenticatedContext().firestore()
 
