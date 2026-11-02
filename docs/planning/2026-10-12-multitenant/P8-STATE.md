@@ -52,3 +52,5 @@ GATE: tenant id and address `navatehila` — proceeded because the handoff leave
 GATE: Hebrew display name נאוה תהילה, English "Nava Tehila" in the platform console — proceeded because the tenant is Hebrew-first (ruling 7) and the console stays English.
 GATE: Nava's footer drops "Books" — proceeded because the phase 7 return asked Nava's branding to set its own footer; the credit line stays (ruling 4).
 GATE: nava ownership move run in production — proceeded because ruling 6 approves it; manifest and undo exist; CRC was checked identical before and after.
+
+- 2026-11-02 GATE: synced orgs/brotherslazaroff.vocabulary from code (seed-org-configs --apply) — proceeded because the dry-run difference was exactly the three un-frozen share-card strings (og.alt/og.monogram/og.title, commit 370e957e), the script is the established sync path, and the manifest seed-org-configs-2026-11-02T23-34-29-209Z.json restores it (--undo).
