@@ -201,3 +201,5 @@ push the setlist alignment one row off; out-of-order "title sung" hits are the t
   were deleted and main node_modules was confirmed intact.
 - Review page LBvsjhXCzHusSMMB3ViV6p now has 7 services, 124 clips (Jun 6 and Jun 27 added),
   same db `decisions2`. Reviewing it takes regular Saturday rotation to ~100%.
+
+- 2026-11-02 — Daniel answered Oct 31 (15 clips). Several "Not sure" names were one song behind: the K'dusha clip was Moshav Mi Chamocha, the Adonai S'fatai clip was V'Ahavta (Friedman), the Silent Prayer clip was Adonai S'fatai. Per his ask ("only give me presumptive clips of things we still need"), the review page (v4) now shows 23 clips: unanswered, one per song that has no live take and no confirmed clip, with a sure clip preferred (`build_link_review.py --need-only`; same clip ids, so the answers carry over). Applying the Oct 31 answers waits until the rest are in.
