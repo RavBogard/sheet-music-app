@@ -4,6 +4,7 @@ import { getFirestore } from "firebase-admin/firestore"
 
 import { initAdmin } from "@/lib/firebase-admin"
 import { resumeStuckBatches } from "@/lib/intake/resume-stuck-batches"
+import { sweepExpiredRecordingUploads } from "@/lib/recordings/direct-upload-server"
 import { logger } from "@/lib/logger"
 import { captureException } from "@/lib/error-reporting"
 import { env } from "@/env.mjs"
@@ -16,6 +17,10 @@ import { httpError } from "@/lib/http/error-envelope"
  * seals the batch in Firestore before queueing it, so an executor outage (HTTP
  * self-trigger or Inngest) can leave a `committed` doc nothing will ever process. This drains those: any
  * batch still `committed` five minutes after commit is re-sent.
+ *
+ * It also sweeps abandoned recording uploads (recording_uploads/{id} whose
+ * signed URL expired over an hour ago, plus their unfinished Storage object).
+ * That sweep runs on its own; a failure there never blocks the batch resume.
  *
  * Auth: same CRON_SECRET / Bearer dance as the other crons.
  */
@@ -62,14 +67,26 @@ export async function GET(req: NextRequest) {
             )
         }
 
-        const { resent } = await resumeStuckBatches(getFirestore())
+        const db = getFirestore()
+        const { resent } = await resumeStuckBatches(db)
+
+        let recordingUploads: { removed: number; objectsDeleted: number } | { error: string }
+        try {
+            recordingUploads = await sweepExpiredRecordingUploads(db, Date.now())
+        } catch (err) {
+            logger.error("[Cron] recording-upload sweep failed:", err)
+            captureException(err, { source: "cron", location: "import-batches-resume:recording-uploads" })
+            recordingUploads = { error: err instanceof Error ? err.message : String(err) }
+        }
+
         logger.info(
-            `[Cron] import-batches-resume complete: resent=${resent.length}`,
+            `[Cron] import-batches-resume complete: resent=${resent.length} recordingUploads=${JSON.stringify(recordingUploads)}`,
         )
         return NextResponse.json({
             success: true,
             timestamp: new Date().toISOString(),
             resent,
+            recordingUploads,
         })
     } catch (error: unknown) {
         logger.error("[Cron] import-batches-resume failed:", error)

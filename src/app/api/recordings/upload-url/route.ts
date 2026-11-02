@@ -1,4 +1,5 @@
 import crypto from "crypto"
+import { Timestamp } from "firebase-admin/firestore"
 import { NextResponse } from "next/server"
 
 import { getT } from "@/i18n/server"
@@ -8,6 +9,8 @@ import { getRecordingStoragePath } from "@/lib/firebase-storage"
 import { logger } from "@/lib/logger"
 import { checkRateLimit } from "@/lib/rate-limit"
 import {
+    countOpenUploads,
+    MAX_OPEN_UPLOADS_PER_USER,
     PENDING_COLLECTION,
     SIGNED_PUT_TTL_MS,
     signRecordingPut,
@@ -62,6 +65,11 @@ export const POST = createApiHandler(async (ctx) => {
         return apiError(t("api-recordings.songNotFound"), 404, "song_not_found")
     }
 
+    // A cap on open uploads per person, so abandoned starts can't pile up.
+    if ((await countOpenUploads(db, ctx.auth.uid, Date.now())) >= MAX_OPEN_UPLOADS_PER_USER) {
+        return apiError(t("api-recordings.tooManyPending"), 429, "too_many_pending")
+    }
+
     const recordingId = `rec-${crypto.randomUUID()}`
     const storagePath = getRecordingStoragePath(recordingId, audio.ext)
     const expiresAtMs = Date.now() + SIGNED_PUT_TTL_MS
@@ -80,7 +88,7 @@ export const POST = createApiHandler(async (ctx) => {
         title: rawTitle || fileName.replace(/\.[^/.]+$/, ""),
         ...(notes && { notes }),
         createdAt: new Date().toISOString(),
-        expiresAt: new Date(expiresAtMs).toISOString(),
+        expiresAt: Timestamp.fromMillis(expiresAtMs),
     }
 
     const signed = await signRecordingPut(storagePath, audio.contentType, size, expiresAtMs)
@@ -93,6 +101,6 @@ export const POST = createApiHandler(async (ctx) => {
         uploadUrl: signed.url,
         method: "PUT",
         headers: signed.headers,
-        expiresAt: pending.expiresAt,
+        expiresAt: new Date(expiresAtMs).toISOString(),
     })
 })

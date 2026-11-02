@@ -5,7 +5,7 @@
     "uploadedSuccess": "ההעלאה הצליחה!",
     "dropPrompt": "אפשר לגרור לכאן קובץ או {browse}",
     "browse": "לבחור מהמכשיר",
-    "acceptedHint": "PDF, MusicXML, MuseScore או הקלטת שמע (עד {max}MB לתווים)",
+    "acceptedHint": "PDF, MusicXML, MuseScore (עד {max}MB) או שמע",
     "fileSizeKb": "{size} KB",
     "removeFile": "הסרת הקובץ",
     "titleLabel": "שם השיר",

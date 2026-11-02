@@ -14,5 +14,6 @@
     "songNotFound": "That song isn't in this library.",
     "uploadNotFound": "That upload wasn't found. Upload the file again.",
     "uploadMissing": "The file didn't finish uploading. Try again.",
-    "uploadMismatch": "The file arrived incomplete. Try again."
+    "uploadMismatch": "The file arrived incomplete. Try again.",
+    "tooManyPending": "You have several uploads still in progress. Wait for them to finish, then try again."
 }

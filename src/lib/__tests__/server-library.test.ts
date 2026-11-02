@@ -191,6 +191,17 @@ describe('getServerLibrary', () => {
             expect(result.files.map(f => f.id).sort()).toEqual(['crc-1', 'legacy'])
         })
 
+        it('SSR rows carry orgId and status, so client tenant filters see the owner', async () => {
+            pages = [[
+                makeLibDoc('bl-1', { orgId: 'brotherslazaroff', status: 'active' }),
+                makeLibDoc('legacy', {}),
+            ], []]
+            const result = await getServerLibrary()
+            const byId = Object.fromEntries(result.files.map((f) => [f.id, f]))
+            expect(byId['bl-1']).toMatchObject({ orgId: 'brotherslazaroff', status: 'active' })
+            expect(byId['legacy'].orgId).toBeUndefined()
+        })
+
         it('filters to brotherslazaroff (drops crc + legacy rows)', async () => {
             pages = [[
                 makeLibDoc('crc-1', { orgId: 'crc' }),

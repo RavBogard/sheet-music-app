@@ -70,5 +70,74 @@
         "where": "Listen page: shown when the setlist has no songs",
         "who": "musicians",
         "maxLength": 50
+    },
+    "uploadTooBig": {
+        "where": "Recording upload (setlist ♫ popover and Library upload): file over the size limit",
+        "who": "leaders",
+        "maxLength": 80,
+        "context": "{maxMb} is a number of megabytes (200)."
+    },
+    "uploadWrongType": {
+        "where": "Recording upload: the chosen file isn't audio",
+        "who": "leaders",
+        "maxLength": 80,
+        "context": "Keep the file extensions as they are."
+    },
+    "uploadNetwork": {
+        "where": "Recording upload: the connection dropped while sending the file",
+        "who": "leaders",
+        "maxLength": 70
+    },
+    "uploadFailed": {
+        "where": "Recording upload: generic failure",
+        "who": "leaders",
+        "maxLength": 50
+    },
+    "uploadProgress": {
+        "where": "Recording upload button while sending the file",
+        "who": "leaders",
+        "maxLength": 30,
+        "context": "{percent} is a whole number 0-99."
+    },
+    "whichSong": {
+        "where": "Library > Upload dialog, audio file: label above the song search",
+        "who": "leaders",
+        "maxLength": 50
+    },
+    "songSearchPlaceholder": {
+        "where": "Library > Upload dialog, audio file: placeholder of the song search box",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "songSearchAria": {
+        "where": "Library > Upload dialog, audio file: screen-reader label of the song search box",
+        "who": "leaders",
+        "maxLength": 60
+    },
+    "noSongMatch": {
+        "where": "Library > Upload dialog, audio file: shown when no song matches the search",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "changeSong": {
+        "where": "Library > Upload dialog, audio file: button to pick a different song",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "recordingFor": {
+        "where": "Library > Upload dialog, audio file: the chosen song",
+        "who": "leaders",
+        "maxLength": 60,
+        "context": "{title} is the song's title."
+    },
+    "uploadRecordingSubmit": {
+        "where": "Library > Upload dialog, audio file: the upload button",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "recordingUploaded": {
+        "where": "Recording upload: success message",
+        "who": "leaders",
+        "maxLength": 40
     }
 }

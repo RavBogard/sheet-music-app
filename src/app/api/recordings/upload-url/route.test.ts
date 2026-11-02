@@ -143,6 +143,24 @@ describe("recording direct upload", () => {
             expect(json.code).toBe("unsupported_type")
         })
 
+        it("refuses a sixth open upload from the same person, but not after one finishes", async () => {
+            const ids: string[] = []
+            for (let i = 0; i < 5; i++) {
+                const { res, json } = await sign()
+                expect(res.status).toBe(200)
+                ids.push(json.recordingId as string)
+            }
+            const sixth = await sign()
+            expect(sixth.res.status).toBe(429)
+            expect(sixth.json.code).toBe("too_many_pending")
+            // Another band leader is not affected.
+            expect((await sign(mp3, { uid: "leader-2" })).res.status).toBe(200)
+            // Finishing one frees a slot.
+            land(ids[0])
+            expect((await finish(ids[0])).res.status).toBe(201)
+            expect((await sign()).res.status).toBe(200)
+        })
+
         it("refuses a file over 200 MB", async () => {
             const { res, json } = await sign({ ...mp3, size: 201 * MB })
             expect(res.status).toBe(413)

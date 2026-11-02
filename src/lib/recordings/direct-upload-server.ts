@@ -1,7 +1,7 @@
 import "server-only"
 
 import { getStorage } from "firebase-admin/storage"
-import type { Firestore } from "firebase-admin/firestore"
+import { Timestamp, type Firestore } from "firebase-admin/firestore"
 
 import { initAdmin } from "@/lib/firebase-admin"
 import { rowOrg } from "@/lib/org/membership"
@@ -21,6 +21,10 @@ import { rowOrg } from "@/lib/org/membership"
 export const PENDING_COLLECTION = "recording_uploads"
 /** A signed PUT must START within this window; a slow upload still finishes. */
 export const SIGNED_PUT_TTL_MS = 15 * 60 * 1000
+/** Open (uncompleted, unexpired) uploads one person may have at once. */
+export const MAX_OPEN_UPLOADS_PER_USER = 5
+/** The sweep removes an uncompleted upload this long after its signed URL expired. */
+export const SWEEP_GRACE_MS = 60 * 60 * 1000
 export const RECORDING_ID_RE = /^rec-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 export interface PendingRecordingUpload {
@@ -35,7 +39,8 @@ export interface PendingRecordingUpload {
     title: string
     notes?: string
     createdAt: string
-    expiresAt: string
+    /** When the signed PUT stops being accepted (a Timestamp, for the sweep's range query). */
+    expiresAt: Timestamp
     completedAt?: string
 }
 
@@ -98,4 +103,50 @@ export async function songBelongsToOrg(db: Firestore, songId: string, orgId: str
     const snap = await db.collection("songs").doc(songId).get()
     if (!snap.exists) return false
     return rowOrg((snap.data() ?? {}).orgId) === orgId
+}
+
+function millis(v: unknown): number {
+    if (v && typeof (v as { toMillis?: unknown }).toMillis === "function") return (v as Timestamp).toMillis()
+    if (typeof v === "string") return Date.parse(v)
+    return NaN
+}
+
+/** How many uploads this person has started and not finished, whose signed URL is still live. */
+export async function countOpenUploads(db: Firestore, uid: string, nowMs: number): Promise<number> {
+    const snap = await db.collection(PENDING_COLLECTION).where("uid", "==", uid).get()
+    return snap.docs.filter((d) => {
+        const data = d.data() as Partial<PendingRecordingUpload>
+        return !data.completedAt && millis(data.expiresAt) > nowMs
+    }).length
+}
+
+/**
+ * Remove pending uploads whose signed URL expired more than an hour ago. An
+ * uncompleted one also loses its `recordings/` object (bytes nobody finished);
+ * a completed one is only the leftover record, and its recording stays. Never
+ * deletes an object a recording doc exists for.
+ */
+export async function sweepExpiredRecordingUploads(
+    db: Firestore,
+    nowMs: number,
+    deleteObject: (path: string) => Promise<void> = deleteRecordingObject,
+    limit = 200,
+): Promise<{ removed: number; objectsDeleted: number }> {
+    const cutoff = Timestamp.fromMillis(nowMs - SWEEP_GRACE_MS)
+    const snap = await db.collection(PENDING_COLLECTION).where("expiresAt", "<", cutoff).limit(limit).get()
+    let removed = 0
+    let objectsDeleted = 0
+    for (const d of snap.docs) {
+        const data = d.data() as Partial<PendingRecordingUpload>
+        if (!data.completedAt && typeof data.storagePath === "string" && data.storagePath.startsWith("recordings/")) {
+            const rec = await db.collection("recordings").doc(d.id).get()
+            if (!rec.exists) {
+                await deleteObject(data.storagePath)
+                objectsDeleted++
+            }
+        }
+        await d.ref.delete()
+        removed++
+    }
+    return { removed, objectsDeleted }
 }
