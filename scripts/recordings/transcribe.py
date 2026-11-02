@@ -58,14 +58,27 @@ def transcribe(mp3: Path, model=None, label: str = "") -> dict:
     if model is None:
         model, label = load_model()
     t0 = time.time()
-    segs, info = model.transcribe(
-        str(mp3),
-        word_timestamps=True,
-        vad_filter=False,
-        multilingual=True,
-        condition_on_previous_text=False,
-        beam_size=5,
-    )
+    batch = int(os.environ.get("RECORDINGS_WHISPER_BATCH", "0"))
+    if batch > 0:
+        # Batched inference chunks the audio by voice activity and decodes chunks in
+        # parallel: several times faster on a long service, at the cost of skipping
+        # stretches the VAD hears as silence (instrumental passages carry no words anyway).
+        from faster_whisper import BatchedInferencePipeline
+
+        segs, info = BatchedInferencePipeline(model=model).transcribe(
+            str(mp3), word_timestamps=True, multilingual=True, beam_size=5, batch_size=batch,
+        )
+        label = f"{label}/batch{batch}"
+    else:
+        segs, info = model.transcribe(
+            str(mp3),
+            word_timestamps=True,
+            vad_filter=False,
+            multilingual=True,
+            condition_on_previous_text=False,
+            beam_size=int(os.environ.get("RECORDINGS_WHISPER_BEAM", "5")),
+        )
+        label = label if "RECORDINGS_WHISPER_BEAM" not in os.environ else f"{label}/beam{os.environ['RECORDINGS_WHISPER_BEAM']}"
     rows = []
     for s in segs:
         rows.append(

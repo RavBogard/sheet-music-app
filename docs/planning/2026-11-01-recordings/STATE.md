@@ -128,3 +128,17 @@ Daniel: "every service is available dated on youtube, so we could go and match k
 - The Dropbox no-setlist guess run (`guess.py`) was stopped in favour of YouTube. It is resumable, and the transcripts it made are cached. One of the two 6.14 Dropbox files is set aside as a duplicate mix (both are 7434.65 s long).
 - GATE: confident (live) clips from setlist-matched YouTube services will publish the same way round 1 did. Uncertain ones, and songs with no confident take, go to the review artifact. Proceeded because this is the pipeline Daniel approved ("you do it"), and round 1's confident clips were 5 for 5.
 - Next: a timeline of each service (songs, talk, blessings, Torah, with durations) from the same transcripts. Daniel: "are we using these things to gather data on lived services? we should" and "don't worry about privacy. these are all available on youtube".
+
+## 2026-11-01 — Noa & Ezra's B'nai Mitzvah (Aug 22) from YouTube
+
+Cut the stream (uPX_s6-OMlM) against its setlist: 18 kept clips. Daniel answered every one on the
+review page. The cutter ran one song early through the first half of the service (it named
+Kol HaNeshamah "Shema", Birchot HaShachar "Mi Shebeirach", Psukei "Barchu" and so on), and most
+starts were 10 s to 2 min early. 14 clips published live with his names and start times
+(manifest-bogard.json, `publish.ts --manifest`); 12 songs got their first featured take.
+Not published: Birchot HaShachar and Etz Chayim (Weisenberg), which have no chart in the
+library; and three clips he skipped. The Shema/V'ahavta split (34:29 / 34:46) is mine, from
+the transcript.
+GATE: published without a second look — proceeded because every clip carries Daniel's own answer.
+Lesson for the cutter: early in a B'nai Mitzvah, unlisted songs (a niggun, Birchot HaShachar)
+push the setlist alignment one row off; out-of-order "title sung" hits are the tell.

@@ -2,6 +2,7 @@
  * Recordings ingest: publish the manifest's clips to Storage and the `recordings` collection.
  *
  *   npx jiti scripts/recordings/publish.ts --dry-run          # full plan, writes nothing
+ *   npx jiti scripts/recordings/publish.ts --manifest manifest-bogard.json   # another manifest in the work dir
  *   GOOGLE_APPLICATION_CREDENTIALS=<key file> npx jiti scripts/recordings/publish.ts
  *
  * Reads .recordings-work/manifest.json. For each live or held row with a chart, from a
@@ -266,7 +267,8 @@ function offlineDeps(work: string): PublishDeps {
 async function main(argv: string[]): Promise<void> {
     const dryRun = argv.includes('--dry-run')
     const work = path.resolve(process.env.RECORDINGS_WORK ?? '.recordings-work')
-    const manifest = JSON.parse(fs.readFileSync(path.join(work, 'manifest.json'), 'utf8')) as ManifestRow[]
+    const name = argv.includes('--manifest') ? argv[argv.indexOf('--manifest') + 1] : 'manifest.json'
+    const manifest = JSON.parse(fs.readFileSync(path.join(work, name), 'utf8')) as ManifestRow[]
     let deps: PublishDeps
     if (dryRun && !process.env.GOOGLE_APPLICATION_CREDENTIALS) {
         console.log('[dry-run] no GOOGLE_APPLICATION_CREDENTIALS: not checking Firestore for already-published keys')
