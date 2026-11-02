@@ -142,3 +142,17 @@ the transcript.
 GATE: published without a second look — proceeded because every clip carries Daniel's own answer.
 Lesson for the cutter: early in a B'nai Mitzvah, unlisted songs (a niggun, Birchot HaShachar)
 push the setlist alignment one row off; out-of-order "title sung" hits are the tell.
+
+## 2026-11-02 — Mi Shebeirach repoint, next wave
+- Daniel: "yes to Friedman". All 32 setlist rows that pointed at the duplicate "Mi shebeirach"
+  chart (19FuqP-rbkufIUdAVCGMbXLuvDJKnicZM) now point at Mi Shebeirach (Friedman)
+  (6738e47c-e710-4f65-9655-d93d2ee8332e), which carries the recording. swap_chart with
+  syncMetadata:false, so every row kept its own title, key and notes. 32/32 ok.
+  GATE: past setlists were changed too — proceeded because Daniel's ruling covered "those setlists"
+  and the old chart is already marked duplicate; history now credits the chart the band plays.
+- Daniel approved the grid highlight for songs with recordings and a labelled Listen button
+  (screenshots to follow), plus everything else on the list: hardening (SEC-03, TEST-MOCK,
+  LAYOUT-404, SEED-UNION), library cleanup, and the rest of the YouTube run.
+- YouTube run restarted for the remaining planned services (log yt-run-2026-11-02.log in the
+  work dir). GATE: proceeded because Daniel said "everything else approved"; the run is
+  resumable per video.
