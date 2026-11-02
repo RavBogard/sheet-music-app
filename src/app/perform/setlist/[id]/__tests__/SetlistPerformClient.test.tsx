@@ -24,6 +24,7 @@ import { resetDbForTests } from '@/lib/local/schema'
 
 // ── Mocks (mirror the hook test's stubs) ─────────────────────────────
 
+vi.mock('@/components/recordings/useFeaturedBySong', () => ({ useFeaturedBySong: () => ({}) }))
 vi.mock('@/lib/firebase', () => ({
     db: {},
     getDb: vi.fn(async () => ({})),
