@@ -189,3 +189,13 @@ push the setlist alignment one row off; out-of-order "title sung" hits are the t
   (same 87 clips, answers in db `decisions2`, asset map review4/assets-link.json, builder
   review/build_link_review.py). Link visitors from outside the claude.ai org can only view, so
   David answers as an org member via the link or as an email-invited Editor.
+- #73 merged (eeb744af): no `m` claim means no tenant role anywhere (CLAIMS-LEGACY); the CRC-only
+  404 list matches decoded, lowercased, slash-collapsed paths (LAYOUT-404-ENC).
+- Cut Jun 27 (Ray Slavin, 5 live / 15 held) and Jun 6 (7 live / 10 held) with `yt.py run --id`.
+  yt-dlp needed an update (YouTube 403 on the old version). Not published; they join the review.
+- Lived-service timelines, first pass: scripts/recordings/timeline.py turns manifest-yt.json blocks
+  into segments (song, music, Torah service, teaching ≥5 min, talking, announcements, quiet) with
+  totals; page https://claude.ai/artifact/UorduvaKh49xE7qCBtcbzn (13 services). Heuristic labels.
+  Typical Shabbat morning: ~2 h, 15-17 songs, ~40 min sung on the setlist, 35-40 min Torah service.
+- Worktrees wt-audio-upload, wt-harden-2, wt-harden-3, wt-rec-ui removed after their junctions
+  were deleted and main node_modules was confirmed intact.
