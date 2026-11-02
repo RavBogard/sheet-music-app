@@ -7,6 +7,7 @@ import { resolveRequestOrg } from '@/lib/org/host-resolution'
 import { getHostList } from '@/lib/org/host-list-client'
 import { noSuchSiteResponse, startingUpResponse } from '@/lib/org/no-such-site'
 import { tenantRoleFromClaims } from '@/lib/org/membership-types'
+import { isCrcOnlyPath } from '@/lib/org/crc-only-routes'
 
 // Base64Url decode for Edge Runtime without Buffer
 function decodeJwtPayload(token: string) {
@@ -218,10 +219,10 @@ export async function proxy(request: NextRequest) {
     const rewriteWithHeaders = (url: URL) =>
         withSecurityHeaders(NextResponse.rewrite(url, { request: { headers: requestHeaders } }))
 
-    // The Help guides are CRC's (its studio PC, its people). Any other tenant gets a real 404
-    // here: the (main) group streams behind loading.tsx, so the help layout's notFound() alone
-    // answered 200 and still carried the guide's RSC payload.
-    if (orgId !== 'crc' && (pathname === '/help' || pathname.startsWith('/help/'))) {
+    // CRC-only pages (the Help guides, the mixer): any other tenant gets a real 404 here. The
+    // (main) group streams behind loading.tsx, so a layout's notFound() alone answered 200 and
+    // still carried the page's RSC payload (#68, LAYOUT-404).
+    if (orgId !== 'crc' && isCrcOnlyPath(pathname)) {
         return withSecurityHeaders(new NextResponse('Not found', {
             status: 404,
             headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' },
