@@ -10,18 +10,10 @@ service firebase.storage {
     function signedIn() { return request.auth != null; }
     function po() { return signedIn() && request.auth.token.get('po', false) == true; }
     function hasM() { return signedIn() && request.auth.token.get('m', null) is map; }
-    function legacyOrgs() {
-      let o = request.auth.token.get('orgIds', []);
-      return (o is list && o.size() > 0) ? o : ['crc'];
-    }
-    function legacyCode(t) {
-      let r = request.auth.token.get('role', '');
-      return !(t in legacyOrgs()) ? ''
-        : r == 'admin' ? 'ad' : r == 'band_leader' ? 'bl'
-        : r == 'musician' ? 'mu' : r == 'member' ? 'me' : r == 'pending' ? 'pe' : '';
-    }
+    // A token without `m` holds no tenant role (SEC-03, 2026-11-02): the
+    // legacy `role` / `orgIds` claims are ignored, as in firestore.rules.
     function code(t) {
-      return !signedIn() ? '' : hasM() ? request.auth.token.m.get(t, '') : legacyCode(t);
+      return !signedIn() || !hasM() ? '' : request.auth.token.m.get(t, '');
     }
     function rank(c) {
       return c == 'ad' ? 4 : c == 'bl' ? 3 : c == 'mu' ? 2 : c == 'me' ? 1 : c == 'pe' ? 0 : -1;

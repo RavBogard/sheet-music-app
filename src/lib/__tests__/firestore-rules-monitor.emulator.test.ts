@@ -104,72 +104,72 @@ describe('monitor-fix-f1 firestore.rules monitor-live/commands/pending', () => {
     })
 
     it('C: member creating own-uid bus command is DENIED (multi-tenant P2: commands need musician or above in the bridge tenant)', async () => {
-        const db = testEnv.authenticatedContext('member-uid', { role: 'member' }).firestore()
+        const db = testEnv.authenticatedContext('member-uid', { m: { crc: 'me' } }).firestore()
         await assertFails(pending(db).doc('c-member-bus').set(busCmd('member-uid')))
     })
 
     it('C2: musician creating own-uid bus command is ALLOWED (per-bus ownership stays at the bridge)', async () => {
-        const db = testEnv.authenticatedContext('musician-uid', { role: 'musician' }).firestore()
+        const db = testEnv.authenticatedContext('musician-uid', { m: { crc: 'mu' } }).firestore()
         await assertSucceeds(pending(db).doc('c-musician-bus').set(busCmd('musician-uid')))
     })
 
     it('C3: people of another tenant only are DENIED — the bridge belongs to crc', async () => {
-        const db = testEnv.authenticatedContext('bl-uid', { role: 'band_leader', orgIds: ['brotherslazaroff'] }).firestore()
+        const db = testEnv.authenticatedContext('bl-uid', { m: { brotherslazaroff: 'bl' } }).firestore()
         await assertFails(pending(db).doc('c-bl-bus').set(busCmd('bl-uid')))
         const mdb = testEnv.authenticatedContext('bl-se', { m: { brotherslazaroff: 'mu' }, se: ['brotherslazaroff'] }).firestore()
         await assertFails(pending(mdb).doc('c-blse-bus').set(busCmd('bl-se')))
     })
 
     it('D: musician creating own-uid send command is ALLOWED', async () => {
-        const db = testEnv.authenticatedContext('musician-uid', { role: 'musician' }).firestore()
+        const db = testEnv.authenticatedContext('musician-uid', { m: { crc: 'mu' } }).firestore()
         await assertSucceeds(pending(db).doc('c-musician-send').set(sendCmd('musician-uid')))
     })
 
     // ─── Attribution ───
 
     it('E: cross-uid forge (uid != auth.uid) is DENIED', async () => {
-        const db = testEnv.authenticatedContext('musician-uid', { role: 'musician' }).firestore()
+        const db = testEnv.authenticatedContext('musician-uid', { m: { crc: 'mu' } }).firestore()
         await assertFails(pending(db).doc('c-forge').set(busCmd('someone-else')))
     })
 
     // ─── Matrix privilege gate (admin / sound-engineer only) ───
 
     it('F: non-privileged musician set_matrix_fader is DENIED', async () => {
-        const db = testEnv.authenticatedContext('musician-uid', { role: 'musician' }).firestore()
+        const db = testEnv.authenticatedContext('musician-uid', { m: { crc: 'mu' } }).firestore()
         await assertFails(pending(db).doc('c-mtx-musician').set(matrixCmd('musician-uid')))
     })
 
     it('F2: member set_matrix_fader is DENIED', async () => {
-        const db = testEnv.authenticatedContext('member-uid', { role: 'member' }).firestore()
+        const db = testEnv.authenticatedContext('member-uid', { m: { crc: 'me' } }).firestore()
         await assertFails(pending(db).doc('c-mtx-member').set(matrixCmd('member-uid')))
     })
 
     it('G: admin set_matrix_fader is ALLOWED', async () => {
-        const db = testEnv.authenticatedContext('admin-uid', { role: 'admin' }).firestore()
+        const db = testEnv.authenticatedContext('admin-uid', { m: { crc: 'ad' } }).firestore()
         await assertSucceeds(pending(db).doc('c-mtx-admin').set(matrixCmd('admin-uid')))
     })
 
     it('H: sound-engineer who is a crc musician set_matrix_fader is ALLOWED', async () => {
-        const db = testEnv.authenticatedContext('se-uid', { role: 'musician', soundEngineer: true }).firestore()
+        const db = testEnv.authenticatedContext('se-uid', { m: { crc: 'mu' }, se: ['crc'] }).firestore()
         await assertSucceeds(pending(db).doc('c-mtx-se').set(matrixCmd('se-uid')))
         const mdb = testEnv.authenticatedContext('se-m', { m: { crc: 'mu' }, se: ['crc'] }).firestore()
         await assertSucceeds(pending(mdb).doc('c-mtx-se-m').set(matrixCmd('se-m')))
     })
 
     it('H2: sound-engineer flag with NO role set_matrix_fader is DENIED (multi-tenant P2: matrix needs se AND musician or above)', async () => {
-        const db = testEnv.authenticatedContext('se-uid', { soundEngineer: true }).firestore()
+        const db = testEnv.authenticatedContext('se-uid', { m: {}, se: ['crc'] }).firestore()
         await assertFails(pending(db).doc('c-mtx-se-norole').set(matrixCmd('se-uid')))
     })
 
     it('I: sound-engineer (NO role) set_bus_master is ALLOWED (base gate admits SE)', async () => {
-        const db = testEnv.authenticatedContext('se-uid', { soundEngineer: true }).firestore()
+        const db = testEnv.authenticatedContext('se-uid', { m: {}, se: ['crc'] }).firestore()
         await assertSucceeds(pending(db).doc('c-bus-se').set(busCmd('se-uid')))
     })
 
     // ─── Schema / shape (allowlist + hasOnly + types) ───
 
     it('J: unknown command type is DENIED', async () => {
-        const db = testEnv.authenticatedContext('admin-uid', { role: 'admin' }).firestore()
+        const db = testEnv.authenticatedContext('admin-uid', { m: { crc: 'ad' } }).firestore()
         await assertFails(
             pending(db).doc('c-badtype').set({
                 type: 'set_everything',
@@ -181,7 +181,7 @@ describe('monitor-fix-f1 firestore.rules monitor-live/commands/pending', () => {
     })
 
     it('K: extra/unexpected field is DENIED (hasOnly closed field set)', async () => {
-        const db = testEnv.authenticatedContext('admin-uid', { role: 'admin' }).firestore()
+        const db = testEnv.authenticatedContext('admin-uid', { m: { crc: 'ad' } }).firestore()
         await assertFails(
             pending(db)
                 .doc('c-extrafield')
@@ -190,7 +190,7 @@ describe('monitor-fix-f1 firestore.rules monitor-live/commands/pending', () => {
     })
 
     it('L: createdAt that is not a number is DENIED', async () => {
-        const db = testEnv.authenticatedContext('admin-uid', { role: 'admin' }).firestore()
+        const db = testEnv.authenticatedContext('admin-uid', { m: { crc: 'ad' } }).firestore()
         await assertFails(
             pending(db)
                 .doc('c-badts')
@@ -210,7 +210,7 @@ describe('monitor-fix-f1 firestore.rules monitor-live/commands/pending', () => {
                 .doc('seeded')
                 .set(busCmd('admin-uid'))
         })
-        const db = testEnv.authenticatedContext('admin-uid', { role: 'admin' }).firestore()
+        const db = testEnv.authenticatedContext('admin-uid', { m: { crc: 'ad' } }).firestore()
         await assertFails(pending(db).doc('seeded').get())
     })
 
@@ -224,7 +224,7 @@ describe('monitor-fix-f1 firestore.rules monitor-live/commands/pending', () => {
                 .doc('seeded')
                 .set(busCmd('admin-uid'))
         })
-        const db = testEnv.authenticatedContext('admin-uid', { role: 'admin' }).firestore()
+        const db = testEnv.authenticatedContext('admin-uid', { m: { crc: 'ad' } }).firestore()
         await assertFails(pending(db).doc('seeded').update({ value: 1 }))
         await assertFails(pending(db).doc('seeded').delete())
     })
@@ -261,31 +261,31 @@ describe('monitor-fix-f1 firestore.rules monitor-live/commands/pending', () => {
 
     it('O: musician reads the ack for their OWN command — ALLOWED', async () => {
         await seedAck('ack-own', 'musician-uid')
-        const db = testEnv.authenticatedContext('musician-uid', { role: 'musician' }).firestore()
+        const db = testEnv.authenticatedContext('musician-uid', { m: { crc: 'mu' } }).firestore()
         await assertSucceeds(acks(db).doc('ack-own').get())
     })
 
     it('O2: member — DENIED (multi-tenant P2: acks follow the command gate, musician or above)', async () => {
         await seedAck('ack-member', 'member-uid')
-        const db = testEnv.authenticatedContext('member-uid', { role: 'member' }).firestore()
+        const db = testEnv.authenticatedContext('member-uid', { m: { crc: 'me' } }).firestore()
         await assertFails(acks(db).doc('ack-member').get())
     })
 
     it('O3: sound-engineer with NO role — ALLOWED (mirrors the pending base gate)', async () => {
         await seedAck('ack-se', 'se-uid')
-        const db = testEnv.authenticatedContext('se-uid', { soundEngineer: true }).firestore()
+        const db = testEnv.authenticatedContext('se-uid', { m: {}, se: ['crc'] }).firestore()
         await assertSucceeds(acks(db).doc('ack-se').get())
     })
 
     it("P: reading ANOTHER musician's ack is DENIED (no reading the band's mix activity)", async () => {
         await seedAck('ack-other', 'someone-else')
-        const db = testEnv.authenticatedContext('musician-uid', { role: 'musician' }).firestore()
+        const db = testEnv.authenticatedContext('musician-uid', { m: { crc: 'mu' } }).firestore()
         await assertFails(acks(db).doc('ack-other').get())
     })
 
     it('P2: even an ADMIN cannot read a foreign ack through the rules (Admin SDK is the ops path)', async () => {
         await seedAck('ack-foreign', 'musician-uid')
-        const db = testEnv.authenticatedContext('admin-uid', { role: 'admin' }).firestore()
+        const db = testEnv.authenticatedContext('admin-uid', { m: { crc: 'ad' } }).firestore()
         await assertFails(acks(db).doc('ack-foreign').get())
     })
 
@@ -303,12 +303,12 @@ describe('monitor-fix-f1 firestore.rules monitor-live/commands/pending', () => {
 
     it('R: an ack with NO uid (pre-R2 bridge) is unreadable — fails closed, not open', async () => {
         await seedAck('ack-nouid', null)
-        const db = testEnv.authenticatedContext('musician-uid', { role: 'musician' }).firestore()
+        const db = testEnv.authenticatedContext('musician-uid', { m: { crc: 'mu' } }).firestore()
         await assertFails(acks(db).doc('ack-nouid').get())
     })
 
     it('S: clients cannot WRITE acks (the bridge is the only writer)', async () => {
-        const db = testEnv.authenticatedContext('musician-uid', { role: 'musician' }).firestore()
+        const db = testEnv.authenticatedContext('musician-uid', { m: { crc: 'mu' } }).firestore()
         await assertFails(
             acks(db).doc('ack-forge').set({
                 commandId: 'ack-forge',

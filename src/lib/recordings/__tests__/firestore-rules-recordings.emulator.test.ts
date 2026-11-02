@@ -72,12 +72,12 @@ describe('v70-02-01 firestore.rules recordings/{recordingId}', () => {
     })
 
     it('Scenario B: member read on recordings/{recordingId} SUCCEEDS', async () => {
-        const member = testEnv.authenticatedContext('member-uid', { role: 'member' }).firestore()
+        const member = testEnv.authenticatedContext('member-uid', { m: { crc: 'me' } }).firestore()
         await assertSucceeds(member.collection('recordings').doc('rec-1').get())
     })
 
     it('Scenario C: member query (R1 shape: where orgId == own, songId == X) SUCCEEDS and returns the recording', async () => {
-        const member = testEnv.authenticatedContext('member-uid', { role: 'member' }).firestore()
+        const member = testEnv.authenticatedContext('member-uid', { m: { crc: 'me' } }).firestore()
         const snap = await assertSucceeds(
             member.collection('recordings').where('orgId', '==', 'crc').where('songId', '==', 'song-1').get(),
         )
@@ -110,7 +110,7 @@ describe('v70-02-01 firestore.rules recordings/{recordingId}', () => {
     })
 
     it('Scenario G: member-only user (role=member) CANNOT write — write-side regression check', async () => {
-        const member = testEnv.authenticatedContext('member-uid', { role: 'member' }).firestore()
+        const member = testEnv.authenticatedContext('member-uid', { m: { crc: 'me' } }).firestore()
         await assertFails(
             member.collection('recordings').doc('member-rec').set({
                 songId: 'song-1',
@@ -134,7 +134,7 @@ describe('v70-02-01 firestore.rules recordings/{recordingId}', () => {
     })
 
     it('Scenario H: a band leader of either tenant CANNOT create', async () => {
-        const crc = testEnv.authenticatedContext('leader-uid', { role: 'band_leader' }).firestore()
+        const crc = testEnv.authenticatedContext('leader-uid', { m: { crc: 'bl' } }).firestore()
         await assertFails(crc.collection('recordings').doc('leader-rec').set(take('crc')))
         const bl = testEnv.authenticatedContext('bl-leader', { m: { brotherslazaroff: 'bl' } }).firestore()
         await assertFails(bl.collection('recordings').doc('bl-rec').set(take('brotherslazaroff')))
@@ -144,7 +144,7 @@ describe('v70-02-01 firestore.rules recordings/{recordingId}', () => {
         await testEnv.withSecurityRulesDisabled(async (ctx) => {
             await ctx.firestore().collection('recordings').doc('rec-bl').set(take('brotherslazaroff'))
         })
-        const crc = testEnv.authenticatedContext('leader-uid', { role: 'band_leader' }).firestore()
+        const crc = testEnv.authenticatedContext('leader-uid', { m: { crc: 'bl' } }).firestore()
         await assertFails(crc.collection('recordings').doc('rec-1').update({ notes: 'updated note' }))
         await assertFails(crc.collection('recordings').doc('rec-1').update({ storagePath: 'charts/other.pdf' }))
         await assertFails(crc.collection('recordings').doc('rec-1').update({ featured: true }))
@@ -155,7 +155,7 @@ describe('v70-02-01 firestore.rules recordings/{recordingId}', () => {
     })
 
     it('Scenario J: admin and platform owner CANNOT create', async () => {
-        const admin = testEnv.authenticatedContext('admin-uid', { role: 'admin' }).firestore()
+        const admin = testEnv.authenticatedContext('admin-uid', { m: { crc: 'ad' } }).firestore()
         await assertFails(admin.collection('recordings').doc('admin-rec').set(take('crc')))
         const po = testEnv.authenticatedContext('po-uid', { po: true }).firestore()
         await assertFails(po.collection('recordings').doc('po-rec').set(take('crc')))
@@ -163,7 +163,7 @@ describe('v70-02-01 firestore.rules recordings/{recordingId}', () => {
 
     // Multi-tenant P2: creates must stamp orgId; tenant admin is not a bypass.
     it("Scenario K (P2): an unstamped create is REJECTED (creates must stamp orgId)", async () => {
-        const leader = testEnv.authenticatedContext("leader-uid", { role: "band_leader" }).firestore()
+        const leader = testEnv.authenticatedContext("leader-uid", { m: { crc: "bl" } }).firestore()
         await assertFails(
             leader.collection("recordings").doc("unstamped-rec").set({ songId: "song-1", title: "X", createdAt: Date.now() }),
         )

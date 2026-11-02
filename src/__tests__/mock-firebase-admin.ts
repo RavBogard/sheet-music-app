@@ -81,7 +81,7 @@ export const firebaseAdminMock = {
  * Configure verifyIdToken to return a user with the given role and correct claim flags.
  */
 export function mockAuth(role: string) {
-    setMockMembershipRole(role)
+    setMockMembershipRole(role, 'user123')
     firebaseAdminMock.verifyIdToken.mockResolvedValue({
         uid: 'user123',
         email: 'test@example.com',

@@ -48,7 +48,7 @@ import { verifyIdToken } from '@/lib/firebase-admin'
 import { mClaim, setMockMembershipRole, withMockMemberships } from '@/test-stubs/tenant-claims'
 
 function mockAuth(role: string) {
-    setMockMembershipRole(role)
+    setMockMembershipRole(role, 'leader-1')
     vi.mocked(verifyIdToken).mockResolvedValue({
         uid: 'leader-1',
         email: 'leader@example.com',

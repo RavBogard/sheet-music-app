@@ -47,9 +47,6 @@ describe("P2 storage.rules — library/** by object tenant", () => {
         ["po", "library/a.pdf"],
         ["po", "library/b.pdf"],
         ["po", "library/legacy.pdf"],
-        ["oldBL", "library/a.pdf"],
-        ["oldBL", "library/legacy.pdf"],
-        ["oldAdminBoth", "library/b.pdf"],
     ]
     const CANNOT: Array<[Persona, string]> = [
         ["aMe", "library/b.pdf"],
@@ -60,6 +57,11 @@ describe("P2 storage.rules — library/** by object tenant", () => {
         ["aPe", "library/a.pdf"],
         ["oldPending", "library/a.pdf"],
         ["oldBL", "library/b.pdf"],
+        // SEC-03: a token with only legacy claims holds no tenant role.
+        ["oldBL", "library/a.pdf"],
+        ["oldBL", "library/legacy.pdf"],
+        ["oldAdminBoth", "library/a.pdf"],
+        ["oldAdminBoth", "library/b.pdf"],
         ["signedOut", "library/a.pdf"],
         ["signedOut", "library/legacy.pdf"],
         ["po", "recordings/r.mp3"],
@@ -130,7 +132,6 @@ describe("P5 storage.rules — library/** by visibleTo", () => {
         ["aMe", "library/sharedC.pdf"],
         ["aAdmin", "library/sharedC.pdf"],
         ["dual", "library/sharedC.pdf"],
-        ["oldBL", "library/sharedC.pdf"],
         ["po", "library/privC.pdf"],
         ["aMe", "library/ownA.pdf"],
         ["aMe", "library/legacy.pdf"],
@@ -140,6 +141,7 @@ describe("P5 storage.rules — library/** by visibleTo", () => {
         ["bBL", "library/sharedC.pdf"],
         ["aPe", "library/sharedC.pdf"],
         ["oldPending", "library/sharedC.pdf"],
+        ["oldBL", "library/sharedC.pdf"],
         ["signedOut", "library/sharedC.pdf"],
         ["aMe", "library/privC.pdf"],
         ["aAdmin", "library/unsharedNowC.pdf"],

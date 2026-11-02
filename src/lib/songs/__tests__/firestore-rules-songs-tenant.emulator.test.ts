@@ -51,12 +51,12 @@ describe("songs/* tenant read isolation", () => {
     })
 
     // Claimless CRC musician (no orgIds claim → crc).
-    const crcMusician = () => testEnv.authenticatedContext("crc-mus", { role: "musician" }).firestore()
+    const crcMusician = () => testEnv.authenticatedContext("crc-mus", { m: { crc: "mu" } }).firestore()
     const blMusician = () =>
-        testEnv.authenticatedContext("bl-mus", { role: "musician", orgIds: ["brotherslazaroff"] }).firestore()
+        testEnv.authenticatedContext("bl-mus", { m: { brotherslazaroff: "mu" } }).firestore()
     const bothMusician = () =>
-        testEnv.authenticatedContext("both-mus", { role: "musician", orgIds: ["crc", "brotherslazaroff"] }).firestore()
-    const admin = () => testEnv.authenticatedContext("admin", { role: "admin" }).firestore()
+        testEnv.authenticatedContext("both-mus", { m: { crc: "mu", brotherslazaroff: "mu" } }).firestore()
+    const admin = () => testEnv.authenticatedContext("admin", { m: { crc: "ad" } }).firestore()
     const po = () => testEnv.authenticatedContext("owner", { po: true }).firestore()
 
     it("a Brothers Lazaroff member cannot read a CRC song (stamped or legacy)", async () => {

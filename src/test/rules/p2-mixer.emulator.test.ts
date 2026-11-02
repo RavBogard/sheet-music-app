@@ -27,8 +27,8 @@ describe("P2 mixer — bridge tenant crc", () => {
         await env.cleanup()
     })
 
-    const READ_OK: Persona[] = ["aMe", "aMu", "aMuSE", "aBL", "aAdmin", "po", "dual", "oldBL", "oldAdminBoth"]
-    const READ_NO: Persona[] = ["aPe", "bBL", "bSE", "oldPending", "signedOut"]
+    const READ_OK: Persona[] = ["aMe", "aMu", "aMuSE", "aBL", "aAdmin", "po", "dual"]
+    const READ_NO: Persona[] = ["aPe", "bBL", "bSE", "oldPending", "oldBL", "oldAdminBoth", "signedOut"]
     for (const p of READ_OK) {
         it(`${p} reads config/monitor and monitor-live/state`, async () => {
             await assertSucceeds(db(p).doc("config/monitor").get())
@@ -42,8 +42,8 @@ describe("P2 mixer — bridge tenant crc", () => {
         })
     }
 
-    const CMD_OK: Persona[] = ["aMu", "aMuSE", "aBL", "aAdmin", "po", "dual", "oldBL", "oldAdminBoth"]
-    const CMD_NO: Persona[] = ["aMe", "aPe", "bBL", "bSE", "oldPending"]
+    const CMD_OK: Persona[] = ["aMu", "aMuSE", "aBL", "aAdmin", "po", "dual"]
+    const CMD_NO: Persona[] = ["aMe", "aPe", "bBL", "bSE", "oldPending", "oldBL", "oldAdminBoth"]
     for (const p of CMD_OK) {
         it(`${p} enqueues a bus command`, async () => {
             await assertSucceeds(pendingCmds(db(p)).doc(`bus-${p}`).set(busCmd(p)))
@@ -55,8 +55,8 @@ describe("P2 mixer — bridge tenant crc", () => {
         })
     }
 
-    const MATRIX_OK: Persona[] = ["aMuSE", "aAdmin", "po", "oldAdminBoth"]
-    const MATRIX_NO: Persona[] = ["aMu", "aBL", "aMe", "bSE", "bBL", "dual", "oldBL"]
+    const MATRIX_OK: Persona[] = ["aMuSE", "aAdmin", "po"]
+    const MATRIX_NO: Persona[] = ["aMu", "aBL", "aMe", "bSE", "bBL", "dual", "oldBL", "oldAdminBoth"]
     for (const p of MATRIX_OK) {
         it(`${p} sends a matrix command and writes config/monitor`, async () => {
             await assertSucceeds(pendingCmds(db(p)).doc(`mx-${p}`).set(matrixCmd(p)))

@@ -1,15 +1,21 @@
 import { assertFails, assertSucceeds, type RulesTestEnvironment } from "@firebase/rules-unit-testing"
 import { afterAll, beforeAll, describe, it } from "vitest"
 
-import { A, B, C, busCmd, dbOf, makeEnv, matrixCmd, pendingCmds, seedFixtures, type Persona } from "./personas"
+import { A, B, C, busCmd, ctx, dbOf, makeEnv, matrixCmd, pendingCmds, seedFixtures, type Persona } from "./personas"
 
 /**
- * Multi-tenant phase 2 — design §3.5 transition rule. A token without `m` is
- * read through the legacy claims: `role` restricted to `orgIds` (missing →
- * ['crc']). Legacy admin is a tenant admin of its orgIds tenants, never a
- * bypass. Step 5 (§8) deletes this fallback; until then these must hold.
+ * SEC-03 (2026-11-02): the §3.5 transition fallback is gone. A token without
+ * `m` used to be read through the legacy claims (`role` + `orgIds`,
+ * `soundEngineer`); it now holds no tenant role in either tenant, in
+ * firestore.rules and storage.rules alike. Every prod account carries `m`
+ * (migrate-memberships --plan: 0 unmigrated), so nobody is locked out; a
+ * token minted after a migrate --undo gets signed-in basics only.
+ *
+ * The other half — a normal membership token still works in each tenant —
+ * is asserted here too, so this file alone shows the change is a deny for
+ * legacy tokens and nothing else.
  */
-describe("P2 §3.5 — legacy-claims personas", () => {
+describe("SEC-03 — legacy-claims tokens hold no tenant role", () => {
     let env: RulesTestEnvironment
     const db = (p: Persona) => dbOf(env, p)
 
@@ -23,113 +29,95 @@ describe("P2 §3.5 — legacy-claims personas", () => {
         await env.cleanup()
     })
 
-    describe("oldBL ({role:'band_leader'}, no orgIds) behaves as aBL in crc", () => {
-        it("reads A songs/contacts/templates and runs the leader queries", async () => {
+    describe("Firestore: a legacy-only token is denied in crc", () => {
+        it("oldBL ({role:'band_leader'}) reads and edits nothing crc-scoped", async () => {
             const d = db("oldBL")
+            await assertFails(d.doc("songs/songA").get())
+            await assertFails(d.collection("songs").where("orgId", "==", A).get())
+            await assertFails(d.doc("contacts/cA").get())
+            await assertFails(d.collection("templates").where("orgId", "==", A).get())
+            await assertFails(d.doc("setlists/sA").update({ name: "old leader" }))
+            await assertFails(d.doc("tracks/oT1").set({ setlistId: "sA", title: "T", order: 7, type: "song", orgId: A }))
+            await assertFails(d.doc("tracks/tAu").update({ key: "F" }))
+            await assertFails(pendingCmds(d).doc("ob1").set(busCmd("oldBL")))
+        })
+        it("{role:'admin'} with no orgIds is not a crc admin", async () => {
+            const d = env.authenticatedContext("oldAdminCrc", { role: "admin" }).firestore()
+            await assertFails(d.doc("auditLogs/alA").get())
+            await assertFails(d.doc("config/defaults").set({ shabbat_morning: "sA" }))
+            await assertFails(d.doc("setlists/sA/history/h1").get())
+        })
+    })
+
+    describe("Firestore: a legacy-only token is denied in brotherslazaroff", () => {
+        it("{role:'band_leader', orgIds:[bl]} reads and edits nothing bl-scoped", async () => {
+            const d = env.authenticatedContext("oldBLbl", { role: "band_leader", orgIds: [B] }).firestore()
+            await assertFails(d.doc("songs/songB").get())
+            await assertFails(d.collection("songs").where("orgId", "==", B).get())
+            await assertFails(d.doc("setlists/sB").update({ name: "x" }))
+            await assertFails(d.doc("contacts/cB").get())
+        })
+        it("oldAdminBoth ({role:'admin', orgIds:[crc,bl], soundEngineer}) is admin nowhere", async () => {
+            const d = db("oldAdminBoth")
+            for (const [org, setlist] of [
+                [A, "sA"],
+                [B, "sB"],
+            ] as const) {
+                await assertFails(d.doc(`setlists/${setlist}/history/h1`).get())
+                await assertFails(d.collection("auditLogs").where("orgId", "==", org).orderBy("timestamp", "desc").limit(20).get())
+                await assertFails(d.doc(org === A ? "config/defaults" : `config/defaults__${org}`).set({ shabbat_morning: setlist }))
+                await assertFails(d.doc(`songs/song${org === A ? "A" : "B"}`).update({ title: "admin edit" }))
+            }
+            // The legacy soundEngineer flag is ignored too.
+            await assertFails(pendingCmds(d).doc("oa1").set(matrixCmd("oldAdminBoth")))
+            await assertFails(d.doc("config/monitor").set({ busAssignments: {} }))
+            await assertFails(d.doc("songs/songC").get())
+        })
+    })
+
+    describe("Firestore: a membership token still works in each tenant", () => {
+        it("aBL ({m:{crc:'bl'}}) reads and edits crc", async () => {
+            const d = db("aBL")
             await assertSucceeds(d.doc("songs/songA").get())
             await assertSucceeds(d.collection("songs").where("orgId", "==", A).get())
-            await assertSucceeds(d.doc("contacts/cA").get())
-            await assertSucceeds(d.collection("templates").where("orgId", "==", A).get())
-            await assertSucceeds(d.collection("scheduling_assignments").where("orgId", "==", A).where("status", "in", ["pending"]).orderBy("assignedAt", "desc").get())
-            await assertSucceeds(d.collection("memberships").where("tenantId", "==", A).get())
+            await assertSucceeds(d.doc("setlists/sA").update({ name: "leader edit" }))
+            await assertSucceeds(d.doc("tracks/mT1").set({ setlistId: "sA", title: "T", order: 7, type: "song", orgId: A }))
+            await assertSucceeds(pendingCmds(d).doc("mb1").set(busCmd("aBL")))
         })
-        it("edits A setlists and tracks (stamped and unstamped)", async () => {
-            const d = db("oldBL")
-            await assertSucceeds(d.doc("setlists/sA").update({ name: "old leader" }))
-            await assertSucceeds(d.doc("tracks/oT1").set({ setlistId: "sA", title: "T", order: 7, type: "song", orgId: A }))
-            await assertSucceeds(d.doc("tracks/oT2").set({ setlistId: "sA", title: "T", order: 8, type: "song" }))
-            await assertSucceeds(d.doc("tracks/tAu").update({ key: "F" }))
-        })
-        it("cannot do admin-only things in A", async () => {
-            await assertFails(db("oldBL").doc("config/defaults").set({ x: 1 }))
-            await assertFails(db("oldBL").doc("setlists/sA/history/h1").get())
-            await assertFails(db("oldBL").doc("auditLogs/alA").get())
-        })
-        it("is a mixer operator in crc (musician or above)", async () => {
-            await assertSucceeds(pendingCmds(db("oldBL")).doc("ob1").set(busCmd("oldBL")))
-            await assertFails(pendingCmds(db("oldBL")).doc("ob2").set(matrixCmd("oldBL")))
-        })
-    })
-
-    describe("oldAdminBoth ({role:'admin', orgIds:[crc,bl], soundEngineer}) is admin in A and B, not po", () => {
-        for (const [org, setlist] of [
-            [A, "sA"],
-            [B, "sB"],
-        ] as const) {
-            it(`admin in ${org}`, async () => {
-                const d = db("oldAdminBoth")
-                await assertSucceeds(d.doc(`setlists/${setlist}/history/h1`).get())
-                await assertSucceeds(d.collection("auditLogs").where("orgId", "==", org).orderBy("timestamp", "desc").limit(20).get())
-                await assertSucceeds(d.doc(org === A ? "config/defaults" : `config/defaults__${org}`).set({ shabbat_morning: setlist }))
-                await assertSucceeds(d.doc(`songs/song${org === A ? "A" : "B"}`).update({ title: "admin edit" }))
-            })
-        }
-        it("legacy sound engineer: matrix command and config/monitor write (crc in orgIds)", async () => {
-            const d = db("oldAdminBoth")
-            await assertSucceeds(pendingCmds(d).doc("oa1").set(matrixCmd("oldAdminBoth")))
-            await assertSucceeds(d.doc("config/monitor").set({ busAssignments: {} }))
-        })
-        it("is not po: no ops collections, no users list, no tenant C", async () => {
-            const d = db("oldAdminBoth")
-            await assertFails(d.doc("aiConfig/enrichment").get())
-            await assertFails(d.collection("users").get())
-            await assertFails(d.doc("songs/songC").get())
-            await assertFails(d.collection("setlists").doc("sC").update({ name: "x" }))
-            await assertFails(d.doc("system/globalAlert").set({ message: "x" }))
-        })
-    })
-
-    describe("legacy admin limited to its orgIds", () => {
-        it("{role:'admin'} with no orgIds is a crc admin only", async () => {
-            const d = env.authenticatedContext("oldAdminCrc", { role: "admin" }).firestore()
-            await assertSucceeds(d.doc("auditLogs/alA").get())
-            await assertFails(d.doc("auditLogs/alB").get())
-            await assertFails(d.doc("songs/songB").get())
-            await assertFails(d.doc(`setlists/sB/performance/overrides`).set({ rows: {}, eventDay: "2026-10-16", rev: 2, updatedAt: 2, updatedBy: "oldAdminCrc" }))
-        })
-        it("{role:'band_leader', orgIds:[bl]} cannot reach crc", async () => {
-            const d = env.authenticatedContext("oldBLbl", { role: "band_leader", orgIds: [B] }).firestore()
+        it("bBL ({m:{brotherslazaroff:'bl'}}) reads and edits brotherslazaroff", async () => {
+            const d = db("bBL")
             await assertSucceeds(d.doc("songs/songB").get())
-            await assertFails(d.doc("songs/songA").get())
-            await assertFails(d.doc("setlists/sA").update({ name: "x" }))
-            await assertFails(pendingCmds(d).doc("x").set(busCmd("oldBLbl")))
+            await assertSucceeds(d.collection("songs").where("orgId", "==", B).get())
+            await assertSucceeds(d.doc("setlists/sB").update({ name: "leader edit" }))
+            await assertSucceeds(d.doc("contacts/cB").get())
         })
-        it("a token with an m map ignores the legacy role claim entirely", async () => {
-            // m present but empty for B; legacy role says admin of both.
+        it("an m map wins over legacy claims on the same token", async () => {
             const d = env.authenticatedContext("mixed", { m: { [A]: "me" }, role: "admin", orgIds: [A, B] }).firestore()
             await assertSucceeds(d.doc("songs/songA").get())
             await assertFails(d.doc("songs/songB").get())
             await assertFails(d.doc("auditLogs/alA").get())
         })
-        it("a legacy role pointing at an unknown tenant grants nothing elsewhere", async () => {
+        it("a legacy role at an unknown tenant grants nothing there either", async () => {
             const d = env.authenticatedContext("oldC", { role: "admin", orgIds: [C] }).firestore()
-            await assertSucceeds(d.doc("songs/songC").get())
-            await assertFails(d.doc("songs/songA").get())
+            await assertFails(d.doc("songs/songC").get())
         })
     })
 
-    describe("oldPending ({}) gets nothing beyond signed-in basics", () => {
-        it("no songs, no setlist create, no mixer, no defaults", async () => {
+    describe("oldPending ({}) keeps the signed-in basics", () => {
+        it("a setlist by id, branding, own profile and own membership doc", async () => {
             const d = db("oldPending")
-            await assertFails(d.doc("songs/songA").get())
-            await assertFails(d.collection("songs").where("orgId", "==", A).get())
-            await assertFails(d.doc("setlists/oP").set({ name: "x", ownerId: "oldPending", orgId: A }))
-            await assertFails(pendingCmds(d).doc("op").set(busCmd("oldPending")))
-            await assertFails(d.doc("config/defaults").get())
-            await assertFails(d.doc("config/monitor").get())
-        })
-        it("still has the signed-in basics (branding, own profile, a setlist by id)", async () => {
-            const d = db("oldPending")
-            // Phase 9: listing setlists now needs standing in the tenant, and
-            // a claimless token has none anywhere. Nothing this persona can
-            // see changes — no client query is unfiltered, and every surface
-            // that lists setlists is already behind a role gate. Opening one
-            // setlist by id stays public, which is the service-block case.
             await assertFails(d.collection("setlists").get())
+            await assertFails(d.doc("songs/songA").get())
             await assertSucceeds(d.doc("setlists/sA").get())
             await assertSucceeds(d.doc("config/congregation").get())
             await assertSucceeds(d.doc("users/oldPending").get())
             await assertSucceeds(d.doc(`memberships/${A}__oldPending`).get())
+        })
+        it("a legacy-only token keeps them too (no lockout of public surfaces)", async () => {
+            const d = ctx(env, "oldBL").firestore()
+            await assertSucceeds(d.doc("setlists/sA").get())
+            await assertSucceeds(d.doc("setlists/sB").get())
+            await assertSucceeds(d.doc("users/oldBL").get())
         })
     })
 })

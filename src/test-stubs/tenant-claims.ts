@@ -12,14 +12,25 @@ export function mClaim(role: string, org = "crc"): { m: Record<string, string> }
 
 /**
  * SEC-02 test helper for route tests whose hand-rolled Firestore mock answers
- * every collection alike. Route auth now reads `memberships/{org}__{uid}`
- * only, so wrap the mock once and set the caller's role next to the mocked
- * token: the memberships collection then answers with that role (or absent).
+ * every collection alike. Route auth reads `memberships/{org}__{uid}` only, so
+ * wrap the mock once and set the caller's membership next to the mocked
+ * token. TEST-MOCK (2026-11-02): memberships are keyed on `org__uid` exactly
+ * as in production, so a route that reads the wrong tenant (or the wrong uid)
+ * finds no membership and a test catches the mix-up.
  */
-let mockMembershipRole: string | null = null
+const mockMemberships = new Map<string, string>()
 
-export function setMockMembershipRole(role: string | null): void {
-    mockMembershipRole = role
+/**
+ * Give `uid` the role `role` in tenant `org` (default crc). `null` clears every
+ * mocked membership (test-setup does this before each test).
+ */
+export function setMockMembershipRole(role: string | null, uid?: string, org = "crc"): void {
+    if (role == null) {
+        mockMemberships.clear()
+        return
+    }
+    if (!uid) throw new Error("setMockMembershipRole: pass the uid the mocked token carries")
+    mockMemberships.set(`${org}__${uid}`, role)
 }
 
 const WRAPPED = Symbol("withMockMemberships")
@@ -31,12 +42,15 @@ export function withMockMemberships<T extends { collection: (name: string) => un
     const wrapped = (name: string) =>
         name === "memberships"
             ? {
-                  doc: () => ({
-                      get: async () => ({
-                          exists: mockMembershipRole != null,
-                          data: () =>
-                              mockMembershipRole != null ? { role: mockMembershipRole, soundEngineer: false } : undefined,
-                      }),
+                  doc: (id: string) => ({
+                      get: async () => {
+                          const role = mockMemberships.get(id)
+                          return {
+                              id,
+                              exists: role != null,
+                              data: () => (role != null ? { role, soundEngineer: false } : undefined),
+                          }
+                      },
                   }),
               }
             : original.call(db, name)

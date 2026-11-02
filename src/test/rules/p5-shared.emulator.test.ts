@@ -43,7 +43,6 @@ describe("P5 rules golden — own-tenant catalogue reads", () => {
         ["dual", "songs/songA"],
         ["dual", "songs/songBs"],
         ["po", "songs/songC"],
-        ["oldBL", "songs/songAs"],
     ]
     const CANNOT_GET: Array<[Persona, string]> = [
         ["aMe", "songs/songB"],
@@ -54,6 +53,7 @@ describe("P5 rules golden — own-tenant catalogue reads", () => {
         ["bBL", "songs/songA"],
         ["bBL", "songs/songAs"],
         ["oldPending", "songs/songA"],
+        ["oldBL", "songs/songAs"],
         ["signedOut", "songs/songA"],
     ]
     for (const [p, path] of CAN_GET) it(`${p} gets ${path}`, async () => void (await assertSucceeds(get(p, path))))
@@ -110,10 +110,10 @@ describe("P5 rules — shared chart rows", () => {
         dbOf(env, p).collection(coll).where("visibleToOrgs", "array-contains", org).get()
 
     for (const coll of ["songs", "library_index"]) {
-        for (const p of ["aMe", "aMu", "aBL", "aAdmin", "dual", "po", "oldBL"] as Persona[]) {
+        for (const p of ["aMe", "aMu", "aBL", "aAdmin", "dual", "po"] as Persona[]) {
             it(`${p} gets ${coll}/shared1`, async () => void (await assertSucceeds(get(p, `${coll}/shared1`))))
         }
-        for (const p of ["aPe", "bBL", "bSE", "oldPending", "signedOut"] as Persona[]) {
+        for (const p of ["aPe", "bBL", "bSE", "oldPending", "oldBL", "signedOut"] as Persona[]) {
             it(`${p} cannot get ${coll}/shared1`, async () => void (await assertFails(get(p, `${coll}/shared1`))))
         }
         for (const p of ["aMe", "aAdmin", "bBL", "dual"] as Persona[]) {
@@ -128,7 +128,7 @@ describe("P5 rules — shared chart rows", () => {
             await assertSucceeds(shared("dual", coll, A))
             await assertSucceeds(shared("dual", coll, B))
         })
-        it(`oldBL (legacy claims) queries ${coll} for crc`, async () => void (await assertSucceeds(shared("oldBL", coll, A))))
+        it(`oldBL (legacy claims only) cannot query ${coll} for crc (SEC-03)`, async () => void (await assertFails(shared("oldBL", coll, A))))
         it(`aMe cannot query ${coll} for brotherslazaroff or nava-tehila`, async () => {
             await assertFails(shared("aMe", coll, B))
             await assertFails(shared("aMe", coll, C))
