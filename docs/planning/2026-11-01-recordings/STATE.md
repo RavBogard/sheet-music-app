@@ -156,3 +156,18 @@ push the setlist alignment one row off; out-of-order "title sung" hits are the t
 - YouTube run restarted for the remaining planned services (log yt-run-2026-11-02.log in the
   work dir). GATE: proceeded because Daniel said "everything else approved"; the run is
   resumable per video.
+- PR #70 (grid take chip + labelled Listen button), screenshots sent to Daniel. Musicians are
+  redirected to /perform, so the Listen button on /setlists and the editor never reaches them.
+  GATE: a plain "Listen" LINK on the Perform setlist page head (no player, no audio under /perform),
+  shown only when the setlist has a take and its date is not today (America/Chicago). Proceeded
+  because Daniel asked for a Listen button for musicians and his "never in Perform" ruling is about
+  audio during a service; hiding it on the service day keeps the iPads clean mid-service.
+- PR #71 (SEC-03, TEST-MOCK, LAYOUT-404) adversarial review: no blockers. Backlog lows:
+  LAYOUT-404-ENC (a percent-encoded /monitor path can still reach the layout notFound 200 shell;
+  data stays rule-gated) and CLAIMS-LEGACY (tenantRoleFromClaims still falls back to the legacy
+  role for page gating; rules no longer honour it). SEED-UNION was already fixed by #43.
+- #71 merged (bb836489); "Deploy Firestore and Storage rules" succeeded on master. SEC-03 is live.
+- The YouTube run was killed by Claude Code for low system memory after 5 more services
+  (Oct 3 Simchat Torah, Oct 2 Shir Shabbat, Sep 25 Erev Sukkot, Sep 21 Yom Kippur morning,
+  Sep 21 Yizkor/Neila: 24 live, 41 held). They are in manifest-yt.json, not yet published.
+  Not restarted: waits for Daniel (memory).
