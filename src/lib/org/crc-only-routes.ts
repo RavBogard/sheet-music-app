@@ -16,7 +16,26 @@
  */
 export const CRC_ONLY_ROUTE_ROOTS = ["/help", "/monitor"] as const
 
+/**
+ * The pathname as the router would resolve it, for matching only: percent-
+ * decoded once, duplicate slashes collapsed, lowercased. So `/%6Donitor`,
+ * `/Monitor` and `//monitor` all match `/monitor` rather than slipping past to
+ * the layout's 200 notFound(). A malformed encoding returns null: not ours to
+ * judge, Next answers it.
+ */
+export function normalizePathForMatch(pathname: string): string | null {
+    let decoded: string
+    try {
+        decoded = decodeURIComponent(pathname)
+    } catch {
+        return null
+    }
+    return decoded.replace(/\/{2,}/g, "/").toLowerCase()
+}
+
 /** True for a root itself or anything under it; a sibling like /helpdesk is not. */
 export function isCrcOnlyPath(pathname: string): boolean {
-    return CRC_ONLY_ROUTE_ROOTS.some((root) => pathname === root || pathname.startsWith(`${root}/`))
+    const p = normalizePathForMatch(pathname)
+    if (p === null) return false
+    return CRC_ONLY_ROUTE_ROOTS.some((root) => p === root || p.startsWith(`${root}/`))
 }

@@ -16,6 +16,15 @@ describe("isCrcOnlyPath", () => {
     it.each(["/", "/helpdesk", "/monitoring", "/setlists", "/perform/setlist/x", "/api/monitor"])("%s is not", (p) => {
         expect(isCrcOnlyPath(p)).toBe(false)
     })
+    it.each(["/%6Donitor", "/%6donitor/admin", "/Monitor", "/MONITOR/Engineer", "//monitor", "/help//michael", "/%48elp", "/monitor%2Fadmin"])(
+        "%s is matched after normalising",
+        (p) => {
+            expect(isCrcOnlyPath(p)).toBe(true)
+        },
+    )
+    it.each(["/%E0%A4%A", "/monitor%", "/%zzmonitor", "/%6Donitoring", "/Helpdesk"])("%s is not (malformed or a sibling)", (p) => {
+        expect(isCrcOnlyPath(p)).toBe(false)
+    })
 })
 
 describe("proxy: CRC-only pages on another tenant", () => {
@@ -40,8 +49,24 @@ describe("proxy: CRC-only pages on another tenant", () => {
         },
     )
 
-    it("CRC is not 404'd for /monitor (the usual sign-in gate still applies)", async () => {
-        const res = await onHost("www.centralreform.live", "/monitor")
+    it.each(["/%6Donitor", "/Monitor", "//monitor/admin", "/%48elp"])(
+        "Brothers Lazaroff gets a real 404 for the encoded or re-cased path %s",
+        async (path) => {
+            const res = await onHost("www.brotherslazaroff.live", path)
+            expect(res.status).toBe(404)
+        },
+    )
+
+    it.each(["/monitor", "/help", "/%6Donitor", "/Monitor"])(
+        "CRC is never 404'd for %s (the usual sign-in gate still applies)",
+        async (path) => {
+            const res = await onHost("www.centralreform.live", path)
+            expect(res.status).not.toBe(404)
+        },
+    )
+
+    it("a malformed encoding on Brothers Lazaroff is left to Next, not 404'd here", async () => {
+        const res = await onHost("www.brotherslazaroff.live", "/monitor%")
         expect(res.status).not.toBe(404)
     })
 

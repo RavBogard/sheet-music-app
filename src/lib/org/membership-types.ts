@@ -50,8 +50,10 @@ export function asTenantRole(v: unknown): TenantRole | null {
  * in `orgId` (design §3.5 transition rule).
  *   po            → "admin"
  *   `m` map       → the tenant's code decoded (absent → undefined)
- *   no `m` (legacy token) → the legacy `role` claim, tenant-blind — exactly what
- *                    the proxy and requireAuth read before phase 2.
+ *   no `m` (legacy token) → undefined. The legacy, tenant-blind `role` claim
+ *                    grants nothing (CLAIMS-LEGACY, 2026-11-02), matching the
+ *                    Firestore/Storage rules since SEC-03 and requireAuth since
+ *                    SEC-02. Every prod account carries `m`.
  */
 export function tenantRoleFromClaims(
     claims: Record<string, unknown> | null | undefined,
@@ -62,7 +64,9 @@ export function tenantRoleFromClaims(
     const m = claims.m
     if (m && typeof m === "object" && !Array.isArray(m)) {
         const code = (m as Record<string, unknown>)[orgId]
-        return typeof code === "string" && code in CODE_ROLE ? CODE_ROLE[code as RoleCode] : undefined
+        return typeof code === "string" && Object.prototype.hasOwnProperty.call(CODE_ROLE, code)
+            ? CODE_ROLE[code as RoleCode]
+            : undefined
     }
-    return typeof claims.role === "string" && claims.role ? claims.role : undefined
+    return undefined
 }

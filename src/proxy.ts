@@ -329,7 +329,7 @@ export async function proxy(request: NextRequest) {
     if (session && !isPublicRoute) {
         // Multi-tenant P2: the role is the one held in THIS host's tenant.
         // Session claims: po → admin; an `m` map → m[orgId]; no `m` (pre-P2
-        // token) → the legacy role claim, unchanged. A companion cookie is
+        // token) → no role, as the rules treat it (CLAIMS-LEGACY). A companion cookie is
         // trusted only when it was signed for this host's org — a cookie
         // minted on another tenant's host (or a pre-P2 cookie with no org)
         // is ignored.

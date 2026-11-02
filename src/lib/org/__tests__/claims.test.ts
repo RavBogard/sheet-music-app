@@ -55,13 +55,31 @@ describe("buildClaims (design §3.2)", () => {
     })
 })
 
-describe("tenantRoleFromClaims (§3.5 transition)", () => {
-    it("po → admin; m decides when present; legacy role otherwise", () => {
+describe("tenantRoleFromClaims", () => {
+    it("po → admin; the m map decides", () => {
         expect(tenantRoleFromClaims({ po: true, m: {} }, "brotherslazaroff")).toBe("admin")
         expect(tenantRoleFromClaims({ m: { crc: "bl" }, role: "admin" }, "crc")).toBe("band_leader")
-        expect(tenantRoleFromClaims({ m: { crc: "bl" }, role: "admin" }, "brotherslazaroff")).toBeUndefined()
-        expect(tenantRoleFromClaims({ role: "musician" }, "brotherslazaroff")).toBe("musician")
+        expect(tenantRoleFromClaims({ m: { crc: "ad", brotherslazaroff: "mu" } }, "brotherslazaroff")).toBe("musician")
         expect(tenantRoleFromClaims({}, "crc")).toBeUndefined()
         expect(tenantRoleFromClaims(null, "crc")).toBeUndefined()
+    })
+
+    it("another tenant's m entry grants nothing here", () => {
+        expect(tenantRoleFromClaims({ m: { crc: "bl" }, role: "admin" }, "brotherslazaroff")).toBeUndefined()
+        expect(tenantRoleFromClaims({ m: { brotherslazaroff: "ad" } }, "crc")).toBeUndefined()
+    })
+
+    it("CLAIMS-LEGACY: a token without m carries no role, whatever its legacy role claim", () => {
+        for (const role of ["admin", "band_leader", "musician", "member"]) {
+            expect(tenantRoleFromClaims({ role }, "crc")).toBeUndefined()
+            expect(tenantRoleFromClaims({ role }, "brotherslazaroff")).toBeUndefined()
+        }
+        expect(tenantRoleFromClaims({ role: "admin", m: null }, "crc")).toBeUndefined()
+        expect(tenantRoleFromClaims({ role: "admin", m: ["crc"] }, "crc")).toBeUndefined()
+    })
+
+    it("an unknown or inherited code is not a role", () => {
+        expect(tenantRoleFromClaims({ m: { crc: "zz" } }, "crc")).toBeUndefined()
+        expect(tenantRoleFromClaims({ m: { crc: "toString" } }, "crc")).toBeUndefined()
     })
 })
