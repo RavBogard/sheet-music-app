@@ -1,6 +1,6 @@
 "use client"
 
-import { ChevronLeft, ChevronRight, Minus, Plus } from "lucide-react"
+import { ChevronLeft, ChevronRight, Loader2, Minus, Plus } from "lucide-react"
 import dynamic from "next/dynamic"
 import Link from "next/link"
 import { useEffect } from "react"
@@ -23,12 +23,28 @@ import { cn } from "@/lib/utils"
 
 import type { RehearseSongRow } from "../../rows"
 
+/** Shown in the chart area while a viewer's code loads; each viewer then shows its own spinner while the file loads. */
+function ChartLoading() {
+    const t = useT()
+    return (
+        <div
+            role="status"
+            data-testid="rehearse-chart-loading"
+            className="flex h-full min-h-48 flex-col items-center justify-center gap-2 p-6 text-sm text-muted-foreground"
+        >
+            <Loader2 aria-hidden className="h-6 w-6 motion-safe:animate-spin" />
+            <span>{t("recordings.chartLoading")}</span>
+        </div>
+    )
+}
+const loading = () => <ChartLoading />
+
 // Same viewers Perform mounts; SSR off like Perform (pdf.js and OSMD need the browser).
-const PDFViewer = dynamic(() => loadPDFViewer().then((m) => m.PDFViewer), { ssr: false })
-const SmartScoreViewer = dynamic(() => loadSmartScoreViewer().then((m) => m.SmartScoreViewer), { ssr: false })
-const TextScoreViewer = dynamic(() => loadTextScoreViewer().then((m) => m.TextScoreViewer), { ssr: false })
-const ImageScoreViewer = dynamic(() => loadImageScoreViewer().then((m) => m.ImageScoreViewer), { ssr: false })
-const AudioViewer = dynamic(() => loadAudioViewer().then((m) => m.AudioViewer), { ssr: false })
+const PDFViewer = dynamic(() => loadPDFViewer().then((m) => m.PDFViewer), { ssr: false, loading })
+const SmartScoreViewer = dynamic(() => loadSmartScoreViewer().then((m) => m.SmartScoreViewer), { ssr: false, loading })
+const TextScoreViewer = dynamic(() => loadTextScoreViewer().then((m) => m.TextScoreViewer), { ssr: false, loading })
+const ImageScoreViewer = dynamic(() => loadImageScoreViewer().then((m) => m.ImageScoreViewer), { ssr: false, loading })
+const AudioViewer = dynamic(() => loadAudioViewer().then((m) => m.AudioViewer), { ssr: false, loading })
 
 export interface RehearseTrackClientProps {
     setlistId: string

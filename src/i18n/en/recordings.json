@@ -27,7 +27,6 @@
     "recordingUploaded": "Recording added.",
     "rehearse": "Rehearse",
     "rehearseAria": "Rehearse {name}",
-    "rehearseIntro": "Rehearse this service's songs in order.",
     "chart": "Chart",
     "noChart": "No chart for this song.",
     "backToRehearse": "Back to Rehearse",
@@ -36,5 +35,9 @@
     "transposeGroup": "Transpose",
     "transposeDown": "Down a semitone",
     "transposeUp": "Up a semitone",
-    "transposeReset": "Key {key}, back to written key"
+    "transposeReset": "Key {key}, back to written key",
+    "modePerform": "Perform",
+    "modeEdit": "Edit",
+    "modeSwitchAria": "View this setlist as",
+    "chartLoading": "Loading chart…"
 }

@@ -25,20 +25,17 @@ interface SmartScoreViewerProps {
     fileId: string
     /**
      * SetlistTrack.id of the row this MusicXML is bound to. When supplied
-     * alongside `trackKey`, enables the Q-DETECT-1=C silent heal: if the
-     * current viewer is a band_leader/admin AND `trackKey` is empty AND the
-     * MusicXML has a parseable first-measure key signature, write the
-     * detected key into `tracks/{id}.key` via the existing live-director
-     * `changeTrackKey` helper. Other roles still get the local
-     * `musicXmlKey` store fallback for their TransposerMenu / toolbar
-     * label, but do NOT write to Firestore.
+     * alongside `trackKey`, lets a band_leader/admin tap "Match" to write
+     * the detected key into the row (an explicit action). Opening a chart
+     * NEVER writes a key (R11-b): the detected key only feeds the local
+     * `musicXmlKey` store for the toolbar label.
      */
     trackId?: string
     /** Existing `track.key` value (Firestore). Heal is skipped when already set. */
     trackKey?: string
     /**
      * Read-only surfaces (Rehearse): never write a key to Firestore, whatever
-     * the viewer's role. Skips the silent heal and hides the Match button.
+     * the viewer's role. Hides the Match button.
      * Defaults to false, so Perform behaves exactly as before.
      */
     readOnly?: boolean
@@ -162,12 +159,6 @@ export function SmartScoreViewer({ fileId, trackId, trackKey, readOnly = false }
     const profileInstrument = user?.uid ? (profile?.musicianProfile?.instrument ?? null) : null
     const partsInputRef = useRef({ chartParts, setChartParts, partPresetCache, setPartPresetCache, org, uid: user?.uid ?? null, instrument: profileInstrument })
     partsInputRef.current = { chartParts, setChartParts, partPresetCache, setPartPresetCache, org, uid: user?.uid ?? null, instrument: profileInstrument }
-    const isLeaderRef = useRef(false)
-    const trackIdRef = useRef<string | undefined>(trackId)
-    const trackKeyRef = useRef<string | undefined>(trackKey)
-    useEffect(() => { isLeaderRef.current = !readOnly && (isBandLeader || isAdmin) }, [isBandLeader, isAdmin, readOnly])
-    useEffect(() => { trackIdRef.current = trackId }, [trackId])
-    useEffect(() => { trackKeyRef.current = trackKey }, [trackKey])
 
     // Fit-to-screen baseline: the OSMD zoom (at user zoom = 1) that makes the
     // rendered score fill the container width. The store `zoom` stays the user's
@@ -498,21 +489,6 @@ export function SmartScoreViewer({ fileId, trackId, trackKey, readOnly = false }
                     const canonical = canonicalKeyFromOsmdInstruction(keyInst)
                     if (!stale()) {
                         setMusicXmlKey(canonical)
-
-                        // Q-DETECT-1=C silent heal (band_leader / admin only):
-                        // write the detected key into the bound `tracks/{id}.key`
-                        // when the row's key is empty. Other roles keep the local
-                        // fallback for their TransposerMenu label but do NOT
-                        // propagate to Firestore. Matches the live-director-gesture
-                        // auth model: `changeTrackKey` is a thin `applyEdit` writer
-                        // and trusts the caller's role-gate.
-                        const trackIdNow = trackIdRef.current
-                        const trackKeyNow = trackKeyRef.current
-                        if (canonical && isLeaderRef.current && trackIdNow && !trackKeyNow) {
-                            void changeTrackKey(trackIdNow, canonical).catch((err: unknown) => {
-                                logger.error("MusicXML key heal failed", err)
-                            })
-                        }
                     }
                 } catch (keyErr) {
                     logger.warn("MusicXML key read failed", keyErr)
@@ -687,12 +663,12 @@ export function SmartScoreViewer({ fileId, trackId, trackKey, readOnly = false }
 
     const showOverlay = loading || transposing
     const isLeader = !readOnly && (isBandLeader || isAdmin)
-    // Match-button visibility: leader role + both keys present + non-equal.
-    // The button only ever offers to overwrite an EXISTING `track.key`; the
-    // empty-`track.key` case is already silently healed by the load effect
-    // (Q-DETECT-1=C, b3ef132b0). Both `null` and `undefined` count as empty.
+    // Match-button visibility: leader role + a detected key that differs from
+    // the row's key. An EMPTY row key counts as different: opening a chart never
+    // writes a key (R11-b), so the leader's explicit tap on Match is how a
+    // detected key becomes the row's. Both `null` and `undefined` are empty.
     const keyMismatch = !!musicXmlKey && !!trackKey && musicXmlKey !== trackKey
-    const showMatchButton = isLeader && keyMismatch && !!trackId
+    const showMatchButton = isLeader && !!musicXmlKey && musicXmlKey !== (trackKey ?? "") && !!trackId
 
     const handleMatchKey = async () => {
         if (!trackId || !musicXmlKey) return
