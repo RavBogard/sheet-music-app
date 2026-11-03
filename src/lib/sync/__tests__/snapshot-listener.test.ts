@@ -298,29 +298,39 @@ describe('v50-06-03: startSnapshotListener', () => {
         stop()
     })
 
-    it('listener errors: logged via opts.logger.warn, no throw out of callback', async () => {
+    it('listener errors: logged at error level with the Firestore code, no throw, no re-subscribe', async () => {
         const { subscriber, handle } = makeSubscriberHarness()
+        const tracksSpy = vi.spyOn(subscriber, 'subscribeTracks')
+        const errorLogger = { warn: vi.fn(), error: vi.fn() }
         const stop = startSnapshotListener({
             setlistId: 's1',
             db,
+            orgId: 'crc',
             subscriber,
-            logger,
+            logger: errorLogger,
         })
 
-        handle.raiseSetlistError(new Error('permission-denied'))
-        handle.raiseTracksError(new Error('unavailable'))
+        const denied = Object.assign(new Error('Missing or insufficient permissions.'), {
+            code: 'permission-denied',
+        })
+        handle.raiseSetlistError(new Error('unavailable'))
+        handle.raiseTracksError(denied)
 
         await flush()
 
-        expect(logger.warn).toHaveBeenCalledTimes(2)
-        expect(logger.warn).toHaveBeenCalledWith(
-            expect.stringContaining('setlist subscription error'),
+        expect(errorLogger.warn).not.toHaveBeenCalled()
+        expect(errorLogger.error).toHaveBeenCalledTimes(2)
+        expect(errorLogger.error).toHaveBeenCalledWith(
+            expect.stringMatching(/tracks subscription.*code=permission-denied/),
+            denied,
+        )
+        expect(errorLogger.error).toHaveBeenCalledWith(
+            expect.stringContaining('setlist subscription'),
             expect.any(Error),
         )
-        expect(logger.warn).toHaveBeenCalledWith(
-            expect.stringContaining('tracks subscription error'),
-            expect.any(Error),
-        )
+        // A refused subscription stays dead: no tight retry loop.
+        expect(tracksSpy).toHaveBeenCalledTimes(1)
+        expect(tracksSpy.mock.calls[0]?.[3]).toBe('crc')
 
         stop()
     })

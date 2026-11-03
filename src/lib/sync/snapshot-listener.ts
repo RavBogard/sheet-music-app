@@ -27,12 +27,14 @@ import {
     Timestamp,
     collection as fsCollection,
     doc as fsDoc,
+    getDoc,
     onSnapshot,
     query,
     where,
 } from 'firebase/firestore'
-import type { Firestore } from 'firebase/firestore'
+import type { Firestore, Query, QuerySnapshot } from 'firebase/firestore'
 
+import { tenantOfSetlist } from '@/lib/client-tracks'
 import { subscribeWithDb } from '@/lib/firebase'
 import type { LocalDb } from '@/lib/local/schema'
 import type { LocalCollection, LocalSetlist, LocalTrack } from '@/lib/local/types'
@@ -42,11 +44,19 @@ import { captureSyncFailure } from './sentry-capture'
 
 interface ListenerLogger {
     warn: (msg: string, err?: unknown) => void
+    /** A refused subscription goes here. Falls back to the app logger. */
+    error?: (msg: string, err?: unknown) => void
 }
 
 export interface SnapshotListenerOpts {
     setlistId: string
     db: LocalDb
+    /** The setlist's tenant (`tenantOfSetlist`). The tracks query filters by
+     *  it, which is what the rules require. Leave it out only when the caller
+     *  does not have the setlist yet: the Firestore subscriber then reads the
+     *  setlist doc first and attaches the tracks query after, never with a
+     *  guessed tenant. */
+    orgId?: string
     /** Override for tests. When provided, the subscriber wraps the given
      *  Firestore synchronously (no lazy-load deferral). When absent, the
      *  default subscriber lazy-resolves Firestore via `subscribeWithDb`
@@ -73,6 +83,8 @@ export interface SnapshotSubscriber {
         setlistId: string,
         onChanges: (changes: TrackChange[]) => void,
         onError: (err: Error) => void,
+        /** The setlist's tenant, when the caller knows it. */
+        orgId?: string,
     ): () => void
 }
 
@@ -99,6 +111,78 @@ function timestampToMs(value: unknown): number {
     return 0
 }
 
+function toTrackChanges(snap: QuerySnapshot): TrackChange[] {
+    return snap.docChanges().map((c) => {
+        const data = c.doc.data() as Record<string, unknown>
+        const updatedAt =
+            c.type === 'removed' ? 0 : timestampToMs(data.updatedAt)
+        return {
+            type: c.type as TrackChangeType,
+            docId: c.doc.id,
+            data,
+            updatedAt,
+        }
+    })
+}
+
+/** The live tracks query. The orgId filter is what makes it legal: the
+ *  `tracks` list rule (`atLeast(listOrg(), 'pe')`) reads
+ *  `resource.data.orgId`, and a query that does not pin orgId is refused for
+ *  everyone but the platform owner. From caacfb34 (2026-10-13) until this fix
+ *  the listener sent setlistId alone, so no band device got live rows.
+ *  Exported so the emulator rules test runs this exact query. */
+export function liveTracksQuery(
+    firestoreDb: Firestore,
+    setlistId: string,
+    orgId: string,
+): Query {
+    return query(
+        fsCollection(firestoreDb, 'tracks'),
+        where('orgId', '==', orgId),
+        where('setlistId', '==', setlistId),
+    )
+}
+
+/** Attach the tracks listener once the tenant is known. With `orgId` it
+ *  attaches at once. Without it, it reads the setlist doc first (a public
+ *  `get`) and uses that doc's tenant, else the host's (`tenantOfSetlist`), so
+ *  the query never goes out on a guess. A setlist that does not exist has no
+ *  rows to watch, so nothing attaches. */
+function attachTracks(
+    firestoreDb: Firestore,
+    setlistId: string,
+    orgId: string | undefined,
+    onChanges: (changes: TrackChange[]) => void,
+    onError: (err: Error) => void,
+): () => void {
+    const listen = (tenant: string) =>
+        onSnapshot(
+            liveTracksQuery(firestoreDb, setlistId, tenant),
+            (snap) => {
+                const changes = toTrackChanges(snap)
+                if (changes.length > 0) onChanges(changes)
+            },
+            (err) => onError(err as Error),
+        )
+    if (orgId) return listen(orgId)
+
+    let cancelled = false
+    let inner: (() => void) | null = null
+    getDoc(fsDoc(firestoreDb, 'setlists', setlistId))
+        .then((snap) => {
+            if (cancelled || !snap.exists()) return
+            inner = listen(tenantOfSetlist(snap.data()))
+        })
+        .catch((err) => {
+            if (!cancelled) onError(err as Error)
+        })
+    return () => {
+        cancelled = true
+        if (inner) inner()
+        inner = null
+    }
+}
+
 /** Test-path subscriber: wraps `firebase/firestore` onSnapshot synchronously
  *  against a caller-provided Firestore instance. Used only when tests inject
  *  `opts.firestoreDb`. */
@@ -120,29 +204,8 @@ function makeFirestoreSubscriber(firestoreDb: Firestore): SnapshotSubscriber {
                 (err) => onError(err as Error),
             )
         },
-        subscribeTracks(setlistId, onChanges, onError) {
-            const q = query(
-                fsCollection(firestoreDb, 'tracks'),
-                where('setlistId', '==', setlistId),
-            )
-            return onSnapshot(
-                q,
-                (snap) => {
-                    const changes: TrackChange[] = snap.docChanges().map((c) => {
-                        const data = c.doc.data() as Record<string, unknown>
-                        const updatedAt =
-                            c.type === 'removed' ? 0 : timestampToMs(data.updatedAt)
-                        return {
-                            type: c.type as TrackChangeType,
-                            docId: c.doc.id,
-                            data,
-                            updatedAt,
-                        }
-                    })
-                    if (changes.length > 0) onChanges(changes)
-                },
-                (err) => onError(err as Error),
-            )
+        subscribeTracks(setlistId, onChanges, onError, orgId) {
+            return attachTracks(firestoreDb, setlistId, orgId, onChanges, onError)
         },
     }
 }
@@ -171,33 +234,18 @@ function makeLazyFirestoreSubscriber(): SnapshotSubscriber {
                 )
             })
         },
-        subscribeTracks(setlistId, onChanges, onError) {
-            return subscribeWithDb((firestoreDb) => {
-                const q = query(
-                    fsCollection(firestoreDb, 'tracks'),
-                    where('setlistId', '==', setlistId),
-                )
-                return onSnapshot(
-                    q,
-                    (snap) => {
-                        const changes: TrackChange[] = snap.docChanges().map((c) => {
-                            const data = c.doc.data() as Record<string, unknown>
-                            const updatedAt =
-                                c.type === 'removed' ? 0 : timestampToMs(data.updatedAt)
-                            return {
-                                type: c.type as TrackChangeType,
-                                docId: c.doc.id,
-                                data,
-                                updatedAt,
-                            }
-                        })
-                        if (changes.length > 0) onChanges(changes)
-                    },
-                    (err) => onError(err as Error),
-                )
-            })
+        subscribeTracks(setlistId, onChanges, onError, orgId) {
+            return subscribeWithDb((firestoreDb) =>
+                attachTracks(firestoreDb, setlistId, orgId, onChanges, onError),
+            )
         },
     }
+}
+
+/** Firestore error code, when there is one (`permission-denied`, …). */
+function errorCode(err: unknown): string | undefined {
+    const code = (err as { code?: unknown } | null)?.code
+    return typeof code === 'string' ? code : undefined
 }
 
 async function hasPendingOutboxRow(
@@ -219,10 +267,12 @@ export function startSnapshotListener(opts: SnapshotListenerOpts): () => void {
     const {
         setlistId,
         db,
+        orgId,
         firestoreDb,
         logger = defaultLogger,
         subscriber,
     } = opts
+    const logError = logger.error ?? defaultLogger.error
 
     const transport =
         subscriber ??
@@ -405,14 +455,7 @@ export function startSnapshotListener(opts: SnapshotListenerOpts): () => void {
         (delivery) => {
             void handleSetlist(delivery)
         },
-        (err) => {
-            logger.warn('[SnapshotListener] setlist subscription error', err)
-            captureSyncFailure(err, {
-                feature: 'snapshot-listener',
-                site: 'setlist-subscribe',
-                setlistId,
-            })
-        },
+        (err) => reportSubscribeError('setlist', err),
     )
 
     const unsubTracks = transport.subscribeTracks(
@@ -420,15 +463,29 @@ export function startSnapshotListener(opts: SnapshotListenerOpts): () => void {
         (changes) => {
             void handleTracks(changes)
         },
-        (err) => {
-            logger.warn('[SnapshotListener] tracks subscription error', err)
-            captureSyncFailure(err, {
-                feature: 'snapshot-listener',
-                site: 'tracks-subscribe',
-                setlistId,
-            })
-        },
+        (err) => reportSubscribeError('tracks', err),
+        orgId,
     )
+
+    // A refused subscription is a dead one: Firestore terminates a query
+    // listener on error and this module does not re-attach it, so there is
+    // no retry loop to throttle. What it must not be is quiet: before the
+    // tracks orgId fix every band device's live rows died here at warn level.
+    // So it logs at error level with the Firestore code and goes to Sentry.
+    function reportSubscribeError(kind: 'setlist' | 'tracks', err: Error): void {
+        const code = errorCode(err) ?? 'unknown'
+        logError(
+            `[SnapshotListener] ${kind} subscription refused or failed (code=${code}, setlist=${setlistId}${
+                kind === 'tracks' ? `, org=${orgId ?? 'from-setlist'}` : ''
+            }); live updates for this ${kind === 'tracks' ? 'setlist\'s rows' : 'setlist'} are off until reload`,
+            err,
+        )
+        captureSyncFailure(err, {
+            feature: 'snapshot-listener',
+            site: kind === 'tracks' ? 'tracks-subscribe' : 'setlist-subscribe',
+            setlistId,
+        })
+    }
 
     return () => {
         cancelled = true

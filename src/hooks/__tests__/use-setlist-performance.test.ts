@@ -337,13 +337,32 @@ describe('useSetlistPerformance (v5h-01-04: Dexie-backed)', () => {
     })
 
     const callArgs = startFn.mock.calls[0]?.[0] as
-      | { setlistId: string; db: unknown }
+      | { setlistId: string; db: unknown; orgId?: string }
       | undefined
     expect(callArgs?.setlistId).toBe(SETLIST_ID)
     expect(callArgs?.db).toBeDefined()
+    expect(callArgs?.orgId).toBe('crc')
 
     unmount()
     expect(stopFn).toHaveBeenCalledTimes(1)
+  })
+
+  it("mounts the listener with the setlist's own tenant, and not before the setlist is known", async () => {
+    mockUseSafeFirestoreSync.mockReturnValue({ data: null, loading: true, error: null })
+    const startFn = vi.fn((_opts: any) => () => {})
+    const { rerender } = renderHook(() =>
+      useSetlistPerformance(SETLIST_ID, { startSnapshotListener: startFn }),
+    )
+    expect(startFn).not.toHaveBeenCalled()
+
+    mockUseSafeFirestoreSync.mockReturnValue({
+      data: { id: SETLIST_ID, orgId: 'brotherslazaroff', hydrated: true, tracks: [], musicians: [] },
+      loading: false,
+      error: null,
+    })
+    rerender()
+    await waitFor(() => expect(startFn).toHaveBeenCalledTimes(1))
+    expect((startFn.mock.calls[0]?.[0] as { orgId?: string }).orgId).toBe('brotherslazaroff')
   })
 
   it('does NOT mount the snapshot listener for unauthenticated public sessions (R-0919-audit-2)', () => {

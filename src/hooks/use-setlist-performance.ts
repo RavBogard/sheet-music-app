@@ -13,7 +13,7 @@ import { logger } from "@/lib/logger"
 import { subscribeToMusicianProfile } from "@/lib/musician-profile"
 import { getDb } from "@/lib/local/schema"
 import type { LocalTrack } from "@/lib/local/types"
-import { getTracksForSetlistClient, fetchTracksForSetlistClient } from "@/lib/client-tracks"
+import { getTracksForSetlistClient, fetchTracksForSetlistClient, tenantOfSetlist } from "@/lib/client-tracks"
 import { setlistMovedPast } from "@/lib/performance/setlist-freshness"
 import {
     type SnapshotListenerOpts,
@@ -173,13 +173,22 @@ export function useSetlistPerformance(
     // such a reader sees come from the SSR frame and
     // `/api/setlists/{id}/tracks` instead. A signed-in device still subscribes
     // and still updates live.
+    //
+    // THE TENANT FIRST (2026-11-03). The tracks query must filter by the
+    // setlist's orgId or the rules refuse it for everyone but the platform
+    // owner — which is what happened to every band device from 2026-10-13.
+    // So the listener waits until the setlist doc is here and its tenant is
+    // known, then mounts once with it.
+    const listenerOrg = setlistData ? tenantOfSetlist(setlistData) : null
     useEffect(() => {
         if (!setlistId) return
         if (!user) return
+        if (!listenerOrg) return
         try {
             const stop = startSnapshotListener({
                 setlistId,
                 db: getDb(),
+                orgId: listenerOrg,
             })
             return stop
         } catch (err) {
@@ -188,7 +197,7 @@ export function useSetlistPerformance(
                 err,
             )
         }
-    }, [setlistId, startSnapshotListener, user])
+    }, [setlistId, startSnapshotListener, user, listenerOrg])
 
     // Tracks: live-query Dexie, sorted by order. dexie-react-hooks returns
     // undefined while the query is in flight, [] when it resolves with no
