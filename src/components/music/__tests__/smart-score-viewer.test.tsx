@@ -752,11 +752,18 @@ describe('SmartScoreViewer', () => {
         vi.useFakeTimers()
     })
 
-    it('Match button: HIDDEN when trackKey is empty (heal path handles that case silently)', () => {
+    it('Match button: SHOWN when trackKey is empty, since the tap is the explicit write (R11-b)', () => {
         mockStoreValues.musicXmlKey = 'Eb'
         mockAuthValues.isBandLeader = true
         vi.useRealTimers()
-        // No trackKey prop — the load effect's heal handles this case.
+        render(<SmartScoreViewer fileId="file-x" trackId="t-1" />)
+        expect(screen.queryByLabelText(/Match label to written key/i)).not.toBeNull()
+        vi.useFakeTimers()
+    })
+
+    it('Match button: still hidden for a musician with an empty trackKey', () => {
+        mockStoreValues.musicXmlKey = 'Eb'
+        vi.useRealTimers()
         render(<SmartScoreViewer fileId="file-x" trackId="t-1" />)
         expect(screen.queryByLabelText(/Match label to written key/i)).toBeNull()
         vi.useFakeTimers()

@@ -12,6 +12,7 @@
  * The decisions are pure so they are tested without a browser.
  */
 import type { LocalDb } from '@/lib/local/schema'
+import { quietFor } from './quiet'
 import { noteSetlistVersion, replaceServerRows, type ServerRow } from '@/lib/setlist-ops-client/server-cache'
 
 /**
@@ -60,7 +61,18 @@ export async function seedCacheFromSsr(
         const cachedVersion = known(setlistId, (cached as { version?: unknown } | undefined)?.version)
         if (decideSeed(ssr.version, cachedVersion, true) === 'keep') return false
     }
-    await replaceServerRows(db, setlistId, toServerRows(ssr.rows))
+    // Re-checked inside the replace's own transaction: a live snapshot may have
+    // landed while we were reading.
+    quietFor(setlistId)
+    const res = await replaceServerRows(
+        db,
+        setlistId,
+        toServerRows(ssr.rows),
+        Date.now(),
+        cachedRows > 0 && typeof ssr.version === 'number' ? { version: ssr.version } : undefined,
+    )
+    if (res.skipped) return false
+    quietFor(setlistId)
     remember(setlistId, ssr.version)
     if (typeof ssr.version === 'number') await noteSetlistVersion(db, setlistId, ssr.version)
     return true
@@ -99,11 +111,23 @@ export async function selfCheckAndHeal(
         const set = await fetchSet(setlistId)
         if (!set) return false
         if (decideHeal(known(setlistId, (cached as { version?: unknown } | undefined)?.version), set.version) === 'ok' && (cached || lastKnown.has(setlistId))) return false
-        await replaceServerRows(db, setlistId, toServerRows(set.rows))
+        // The cache may have moved on while the fetch was in flight (a live
+        // snapshot, an /ops answer): the transaction re-reads its version and
+        // replaces nothing when it is already at or past the fetched one.
+        quietFor(setlistId)
+        const res = await replaceServerRows(db, setlistId, toServerRows(set.rows), Date.now(), { version: set.version })
+        if (res.skipped) return false
+        quietFor(setlistId)
         remember(setlistId, set.version)
         await noteSetlistVersion(db, setlistId, set.version)
         return true
     } catch {
         return false
     }
+}
+
+/** A live (non-cache) rows snapshot arrived this recently: the listener is doing the job, skip the focus fetch. */
+export const LIVE_FRESH_MS = 60_000
+export function shouldSkipHeal(lastLiveRowsAt: number, now = Date.now()): boolean {
+    return lastLiveRowsAt > 0 && now - lastLiveRowsAt < LIVE_FRESH_MS
 }

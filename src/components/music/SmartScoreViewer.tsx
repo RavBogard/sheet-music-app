@@ -663,12 +663,12 @@ export function SmartScoreViewer({ fileId, trackId, trackKey, readOnly = false }
 
     const showOverlay = loading || transposing
     const isLeader = !readOnly && (isBandLeader || isAdmin)
-    // Match-button visibility: leader role + both keys present + non-equal.
-    // The button only ever offers to overwrite an EXISTING `track.key`; the
-    // empty-`track.key` case is already silently healed by the load effect
-    // (Q-DETECT-1=C, b3ef132b0). Both `null` and `undefined` count as empty.
+    // Match-button visibility: leader role + a detected key that differs from
+    // the row's key. An EMPTY row key counts as different: opening a chart never
+    // writes a key (R11-b), so the leader's explicit tap on Match is how a
+    // detected key becomes the row's. Both `null` and `undefined` are empty.
     const keyMismatch = !!musicXmlKey && !!trackKey && musicXmlKey !== trackKey
-    const showMatchButton = isLeader && keyMismatch && !!trackId
+    const showMatchButton = isLeader && !!musicXmlKey && musicXmlKey !== (trackKey ?? "") && !!trackId
 
     const handleMatchKey = async () => {
         if (!trackId || !musicXmlKey) return

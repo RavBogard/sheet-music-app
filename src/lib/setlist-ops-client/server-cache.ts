@@ -39,10 +39,31 @@ function recent(map: Map<string, number>, id: string, now: number): boolean {
 export const recentlyWrittenByOps = (id: string, now = Date.now()) => recent(recentWrites, id, now)
 export const recentlyRemovedByOps = (id: string, now = Date.now()) => recent(recentRemoves, id, now)
 
+/**
+ * Rows this device itself changed. Marked when the intent is QUEUED (not when
+ * the answer arrives), so the listener's echo of the author's own edit is
+ * never mistaken for someone else's change.
+ */
+export const OWN_ROW_MS = 120_000
+const ownRows = new Map<string, number>()
+export function markOwnRows(ids: Iterable<string>, now = Date.now()): void {
+    for (const id of ids) ownRows.set(id, now)
+}
+export function isOwnRow(id: string, now = Date.now()): boolean {
+    const at = ownRows.get(id)
+    if (at === undefined) return false
+    if (now - at > OWN_ROW_MS) {
+        ownRows.delete(id)
+        return false
+    }
+    return true
+}
+
 /** Test helper. */
 export function _resetServerCacheMemory(): void {
     recentWrites.clear()
     recentRemoves.clear()
+    ownRows.clear()
 }
 
 function toMs(v: unknown): number {
@@ -89,11 +110,25 @@ export async function replaceServerRows(
     setlistId: string,
     rows: readonly ServerRow[],
     now = Date.now(),
-): Promise<{ put: number; pruned: number; kept: number }> {
+    /**
+     * For a set fetched earlier (SSR render, heal refetch): replace nothing
+     * if, by the time the transaction runs, the cached setlist is already at
+     * or past this version. An older fetch must never prune newer rows.
+     */
+    guard?: { version: number },
+): Promise<{ put: number; pruned: number; kept: number; skipped?: true }> {
     let put = 0
     let pruned = 0
     let kept = 0
-    await db.transaction('rw', db.tracks, async () => {
+    let skipped = false
+    await db.transaction('rw', db.tracks, db.setlists, async () => {
+        if (guard) {
+            const cur = await db.setlists.get(setlistId)
+            if (cur && versionOf(cur) >= guard.version) {
+                skipped = true
+                return
+            }
+        }
         const local = await db.tracks.where('setlistId').equals(setlistId).toArray()
         const localById = new Map(local.map((r) => [r.id, r]))
         const incoming = new Set<string>()
@@ -120,7 +155,7 @@ export async function replaceServerRows(
         put = toPut.length
         pruned = toDelete.length
     })
-    return { put, pruned, kept }
+    return skipped ? { put, pruned, kept, skipped: true } : { put, pruned, kept }
 }
 
 /** Rows and removals from an /ops response. */

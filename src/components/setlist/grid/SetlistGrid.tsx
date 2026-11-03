@@ -1502,7 +1502,7 @@ export function SetlistGrid({
                 listenHref={hasAnyTake ? `/rehearse/${setlistId}` : undefined}
                 modeSlot={
                     performOn ? (
-                        <SetlistModeSwitch setlistId={setlistId} current="edit" eventDate={liveSetlist?.eventDate ?? null} />
+                        <SetlistModeSwitch setlistId={setlistId} current="edit" eventDate={liveSetlist?.eventDate ?? null} setlistOrg={(liveSetlist as { orgId?: string } | undefined)?.orgId} />
                     ) : undefined
                 }
                 gigSlot={isBand ? <GigPanel gig={gig} onEdit={() => setMetaSheetOpen(true)} /> : undefined}

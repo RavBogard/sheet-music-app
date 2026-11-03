@@ -12,7 +12,8 @@ import { useKeepAwake } from "@/components/performance/keep-awake-context"
 import { logger } from "@/lib/logger"
 import { subscribeToMusicianProfile } from "@/lib/musician-profile"
 import { getDb } from "@/lib/local/schema"
-import { seedCacheFromSsr, selfCheckAndHeal } from "@/lib/performance/read-model"
+import { seedCacheFromSsr, selfCheckAndHeal, shouldSkipHeal } from "@/lib/performance/read-model"
+import { lastLiveRowsAt } from "@/lib/setlist-ops-client/freshness"
 import type { LocalTrack } from "@/lib/local/types"
 import { getTracksForSetlistClient, fetchTracksForSetlistClient, fetchTracksViaPublicApi, tenantOfSetlist, type PublicTracksAnswer } from "@/lib/client-tracks"
 import { setlistMovedPast } from "@/lib/performance/setlist-freshness"
@@ -258,6 +259,8 @@ export function useSetlistPerformance(
             if (typeof document !== "undefined" && document.visibilityState === "hidden") return
             // The refused-listener path below already refetches on these events.
             if (tracksRefusedRef.current || busy) return
+            // The live listener delivered a fresh snapshot a moment ago: it is doing the job.
+            if (shouldSkipHeal(lastLiveRowsAt(setlistId))) return
             busy = true
             void selfCheckAndHeal(db, setlistId).finally(() => {
                 busy = false

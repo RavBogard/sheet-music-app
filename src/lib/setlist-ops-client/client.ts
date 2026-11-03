@@ -23,7 +23,7 @@
 import type { LocalDb } from '@/lib/local/schema'
 import type { SetlistIntent, SetlistIntentRefusal } from '@/lib/local/types'
 
-import { applyOpsRows, applySetlistEdit, noteSetlistVersion } from './server-cache'
+import { applyOpsRows, applySetlistEdit, markOwnRows, noteSetlistVersion } from './server-cache'
 import { baseOf, setlistBaseOf } from './fields'
 import { noteSendFailedOnNetwork, noteSendReachedServer, useConnectivity } from './connectivity'
 
@@ -163,6 +163,7 @@ export class SetlistOpsClient {
         if (items.length === 0) return ''
         const batchKey = newKey()
         const now = this.now()
+        markOwnRows(items.map((it) => it.op.rowId).filter((id): id is string => typeof id === 'string'))
         await this.db.intents.bulkAdd(
             items.map((it) => ({
                 setlistId,
@@ -217,6 +218,20 @@ export class SetlistOpsClient {
             sentAt: undefined,
         })
         this.kick(it.setlistId)
+    }
+
+    /**
+     * Take a batch out of the queue: its intents that have not been answered
+     * (pending or refused) are deleted, so a move the author was told did not
+     * happen can never land later. A batch already answered stays answered.
+     * Returns how many intents were dropped.
+     */
+    async dropBatch(batchKey: string): Promise<number> {
+        if (!batchKey) return 0
+        const mine = (await this.db.intents.where('batchKey').equals(batchKey).toArray()) as SetlistIntent[]
+        const ids = mine.filter((i) => i.status === 'pending' || i.status === 'refused').map((i) => i.localId!)
+        if (ids.length > 0) await this.db.intents.bulkDelete(ids)
+        return ids.length
     }
 
     /** "Discard" a refused intent: the server's row shows again. */

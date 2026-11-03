@@ -3,8 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 
 import { LocalDb, resetDbForTests } from '../../local/schema'
 import { _resetServerCacheMemory } from '../../setlist-ops-client/server-cache'
-import { _resetReadModelMemory, decideHeal, decideSeed, seedCacheFromSsr, selfCheckAndHeal } from '../read-model'
-import { movesToReach } from '../live-reorder-client'
+import { _resetReadModelMemory, decideHeal, decideSeed, seedCacheFromSsr, selfCheckAndHeal, shouldSkipHeal } from '../read-model'
 
 const SID = 's1'
 const row = (id: string, order: number, version = 1) => ({ id, setlistId: SID, order, title: id, version })
@@ -75,14 +74,46 @@ describe('seed and heal against the cache', () => {
     })
 })
 
-describe('reorder as ops', () => {
-    it('one swap is one anchored move; an unchanged order sends nothing', () => {
-        expect(movesToReach(['a', 'b', 'c'], ['a', 'b', 'c'])).toEqual([])
-        expect(movesToReach(['a', 'b', 'c'], ['b', 'a', 'c'])).toEqual([
-            { kind: 'move', rowId: 'b', afterRowId: null, beforeRowId: 'a' },
-        ])
+
+describe('races and live-listener skip', () => {
+    let db: LocalDb
+    beforeEach(async () => {
+        await resetDbForTests()
+        _resetServerCacheMemory()
+        _resetReadModelMemory()
+        db = new LocalDb('read-model-race-test')
+        await db.tracks.clear()
+        await db.setlists.clear()
     })
-    it('ignores rows the server does not have', () => {
-        expect(movesToReach(['a', 'b'], ['x', 'a', 'b'])).toEqual([])
+    const ids = async () => (await db.tracks.where('setlistId').equals(SID).sortBy('order')).map((r) => r.id)
+
+    it('a heal fetch that finishes after a newer live snapshot replaces nothing and prunes nothing', async () => {
+        await db.setlists.put({ id: SID, version: 3, name: 'x' } as never)
+        await db.tracks.bulkPut([row('a', 0, 3)] as never)
+        const healed = await selfCheckAndHeal(db, SID, async () => {
+            // While the fetch is in flight the live listener lands version 6.
+            await db.setlists.put({ id: SID, version: 6, name: 'x' } as never)
+            await db.tracks.bulkPut([row('a', 0, 6), row('new', 1, 6)] as never)
+            return { version: 5, rows: [row('a', 0, 5)] }
+        })
+        expect(healed).toBe(false)
+        expect(await ids()).toEqual(['a', 'new'])
+    })
+
+    it('an SSR seed that loses the same race is skipped too', async () => {
+        await db.setlists.put({ id: SID, version: 2, name: 'x' } as never)
+        await db.tracks.bulkPut([row('a', 0, 2)] as never)
+        const pending = seedCacheFromSsr(db, SID, { version: 4, rows: [row('s', 0, 4)] })
+        await db.setlists.put({ id: SID, version: 7, name: 'x' } as never)
+        await db.tracks.bulkPut([row('live', 1, 7)] as never)
+        await pending
+        expect(await ids()).toContain('live')
+    })
+
+    it('the focus heal fetch is skipped while a live snapshot arrived within 60 s', () => {
+        const now = 1_000_000
+        expect(shouldSkipHeal(now - 10_000, now)).toBe(true)
+        expect(shouldSkipHeal(now - 61_000, now)).toBe(false)
+        expect(shouldSkipHeal(0, now)).toBe(false)
     })
 })

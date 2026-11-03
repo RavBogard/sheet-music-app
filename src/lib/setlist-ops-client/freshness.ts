@@ -79,6 +79,12 @@ export const useLiveFlags = create<LiveFlags>((set) => ({
         set((s) => (s[kind][setlistId] ? s : { ...s, [kind]: { ...s[kind], [setlistId]: true } })),
 }))
 
+/** When each setlist's rows last arrived from a live (non-cache) snapshot, ms. */
+const liveRowsAt = new Map<string, number>()
+export const lastLiveRowsAt = (setlistId: string): number => liveRowsAt.get(setlistId) ?? 0
+export const _resetLiveRowsAt = (): void => liveRowsAt.clear()
+
 export function markLive(kind: 'rows' | 'setlist', setlistId: string): void {
+    if (kind === 'rows') liveRowsAt.set(setlistId, Date.now())
     useLiveFlags.getState().mark(kind, setlistId)
 }

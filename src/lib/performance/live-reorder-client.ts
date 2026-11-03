@@ -1,8 +1,6 @@
 "use client"
 
-import { getDb } from "@/lib/local/schema"
 import { getOpsClient } from "@/lib/setlist-ops-client/runtime"
-import { canonicalOrder } from "@/lib/setlist-ops-client/view"
 import type { WireOp } from "@/lib/setlist-ops-client/client"
 
 export type LiveReorderFailure = "offline" | "rejected" | "network" | "conflict"
@@ -12,60 +10,56 @@ export type LiveReorderResult =
     | { ok: false; reason: Exclude<LiveReorderFailure, "conflict">; code?: string }
 
 /**
- * The `move` ops that turn `current` into `target`, each anchored on its
- * neighbours at that step (the server rebases anchors onto its newer order).
- * Rows missing from either list are left where they are.
+ * ONE anchored `move` per dragged row: the row's new neighbours in the order
+ * the leader sees (`order`). The server rebases the anchors onto its own
+ * order, so a move never half-applies and never needs a stale-version retry.
  */
-export function movesToReach(current: readonly string[], target: readonly string[]): WireOp[] {
-    const have = new Set(current)
-    const want = target.filter((id) => have.has(id))
-    const seq = current.slice()
+export function moveOps(order: readonly string[], moved: readonly string[]): WireOp[] {
     const ops: WireOp[] = []
-    want.forEach((id, i) => {
-        if (seq[i] === id) return
-        seq.splice(seq.indexOf(id), 1)
-        seq.splice(i, 0, id)
+    for (const id of new Set(moved)) {
+        const at = order.indexOf(id)
+        if (at < 0) continue
         ops.push({
             kind: "move",
             rowId: id,
-            afterRowId: i > 0 ? seq[i - 1] : null,
-            beforeRowId: i + 1 < seq.length ? seq[i + 1] : null,
+            afterRowId: at > 0 ? order[at - 1] : null,
+            beforeRowId: at + 1 < order.length ? order[at + 1] : null,
         })
-    })
+    }
     return ops
 }
 
 /**
- * Write a new row order from Perform through the setlist ops client (the one
- * writer MCP and the editor use). The whole reorder is ONE batch, so other
- * devices get it as one update; the ops client retries a network failure with
- * backoff under the same batch id. Never throws: the caller rolls its
- * optimistic order back on any `ok: false`.
+ * Write a reorder from Perform through the setlist ops client (the one writer
+ * MCP and the editor use), as ONE batch. What the leader is told is what
+ * happens: when the write is not confirmed (offline, refused, a network
+ * failure) the batch is also REMOVED from the ops queue, so a move that was
+ * rolled back on screen can never land minutes later. Never throws.
  */
 export async function commitLiveReorder(
     setlistId: string,
-    orderedTrackIds: string[],
+    order: string[],
+    moved: string[],
 ): Promise<LiveReorderResult> {
     if (typeof navigator !== "undefined" && navigator.onLine === false) {
         return { ok: false, reason: "offline" }
     }
+    const ops = moveOps(order, moved)
+    if (ops.length === 0) return { ok: true }
+    const client = getOpsClient()
+    let key = ""
     try {
-        const rows = await getDb().tracks.where("setlistId").equals(setlistId).toArray()
-        const ops = movesToReach(
-            canonicalOrder(rows).map((r) => r.id),
-            orderedTrackIds,
-        )
-        if (ops.length === 0) return { ok: true }
-        const client = getOpsClient()
-        const key = await client.enqueue(
+        key = await client.enqueue(
             setlistId,
             ops.map((op) => ({ op })),
         )
         const r = await client.settle(setlistId, key)
         if (r.ok) return { ok: true }
+        await client.dropBatch(key).catch(() => 0)
         if (r.reason === "offline") return { ok: false, reason: "offline" }
         return { ok: false, reason: "rejected", code: r.reason }
     } catch {
+        if (key) await client.dropBatch(key).catch(() => 0)
         return {
             ok: false,
             reason: typeof navigator !== "undefined" && navigator.onLine === false ? "offline" : "network",

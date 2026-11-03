@@ -56,7 +56,7 @@ import { GigPanel } from "@/components/setlist/gig/GigPanel"
 import { useOrg } from "@/lib/org/org-context"
 import { isBandTenant } from "@/lib/org/vocab"
 import { formatDuration, setTotalsByHeader, showsTiming } from "@/lib/gig/display"
-import { applyOrder, moveRow, sameOrder, type IntendedMove } from "@/lib/performance/live-reorder"
+import { applyOrder, moveRow, sameOrder } from "@/lib/performance/live-reorder"
 import { commitLiveReorder, type LiveReorderFailure } from "@/lib/performance/live-reorder-client"
 import { PerformReorderList } from "@/components/performance/PerformReorderList"
 import { useMovedRowHighlight } from "@/components/performance/use-moved-row-highlight"
@@ -215,7 +215,7 @@ export function SetlistPerformClient({
         useMovedRowHighlight(tracks.map((t) => t.id))
     // A row another device changed gets the same two-second outline. Leaders
     // only: musicians' pages never flash mid-service.
-    const changedIds = useChangedRowHighlight(liveTracks, !!isLeader)
+    const changedIds = useChangedRowHighlight(setlistId, liveTracks as unknown as { id?: string }[], !!isLeader)
     const highlightIds = useMemo<ReadonlySet<string>>(
         () => (!isLeader ? new Set<string>() : changedIds.size === 0 ? movedIds : new Set([...movedIds, ...changedIds])),
         [isLeader, movedIds, changedIds],
@@ -424,7 +424,7 @@ export function SetlistPerformClient({
     const inFlightRef = useRef(false)
     // Moves made while a write is in flight coalesce: only the newest order
     // (and the move that made it) goes next.
-    const queuedRef = useRef<{ order: string[]; move: IntendedMove } | null>(null)
+    const queuedRef = useRef<{ order: string[]; moved: string[] } | null>(null)
     const settleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     useEffect(() => () => {
         if (settleTimerRef.current) clearTimeout(settleTimerRef.current)
@@ -465,7 +465,7 @@ export function SetlistPerformClient({
                 // The server rebases a move onto its newer order, so there is no
                 // stale-version round trip; the ops client retries a network
                 // failure on its own.
-                const res = await commitLiveReorder(setlistId, job.order)
+                const res = await commitLiveReorder(setlistId, job.order, job.moved)
                 if (!res.ok) {
                     rollBack(res.reason, "code" in res ? res.code : undefined)
                     return
@@ -494,7 +494,9 @@ export function SetlistPerformClient({
             setReorderFailure(null)
             pendingOrderRef.current = next
             setPendingOrder(next)
-            queuedRef.current = { order: next, move: { rowId: ids[from], to } }
+            // Moves made while a write is in flight coalesce into the next batch:
+            // the newest order, and every row the leader dragged to reach it.
+            queuedRef.current = { order: next, moved: [...(queuedRef.current?.moved ?? []), ids[from]] }
             void pumpWrites()
         },
         [pumpWrites],
@@ -696,7 +698,7 @@ export function SetlistPerformClient({
                 </div>
                 </div>
                 <div className="flex items-center justify-end gap-0.5 sm:gap-1 shrink-0">
-                    <SetlistModeSwitch setlistId={setlistId} current="perform" eventDate={eventDate} />
+                    <SetlistModeSwitch setlistId={setlistId} current="perform" eventDate={eventDate} setlistOrg={(initialSetlist as { orgId?: string } | null)?.orgId} />
                     {/* "Keep screen on" — now a MANUAL OVERRIDE, not the only
                         way in (2026-08-31). <KeepAwakeAutoArm/> above already
                         armed the lock on mount; this toggle exists so a

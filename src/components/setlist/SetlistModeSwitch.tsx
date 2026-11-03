@@ -4,18 +4,22 @@ import Link from 'next/link'
 
 import { useT } from '@/i18n/client'
 import { useAuth } from '@/lib/auth-context'
+import { useOrg } from '@/lib/org/org-context'
+import { DEFAULT_ORG_ID, coerceOrgId } from '@/lib/org/registry'
+import type { OrgId } from '@/lib/org/types'
+import { eventDayOf } from '@/lib/performance/tonight'
 import { cn } from '@/lib/utils'
 
 export type SetlistMode = 'rehearse' | 'perform' | 'edit'
 
-const dayKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
-
-/** True when `eventDate` falls on today's date in this device's local time. Unknown dates are not "today". */
-export function isEventToday(eventDate: unknown, now: Date = new Date()): boolean {
-    if (!eventDate) return false
-    const d = eventDate instanceof Date ? eventDate : new Date(String(eventDate))
-    if (!Number.isFinite(d.getTime())) return false
-    return dayKey(d) === dayKey(now)
+/**
+ * True when `eventDate` (any timestamp shape: ISO or day string, ms, Date,
+ * Firestore Timestamp) falls on today's date in the congregation's time zone.
+ * Unknown dates are not "today".
+ */
+export function isEventToday(eventDate: unknown, org: OrgId = DEFAULT_ORG_ID, now: Date = new Date()): boolean {
+    const day = eventDayOf(eventDate, org)
+    return day !== null && day === eventDayOf(now.getTime(), org)
 }
 
 /**
@@ -23,9 +27,9 @@ export function isEventToday(eventDate: unknown, now: Date = new Date()): boolea
  * Edit. Edit is for band leaders and admins. Rehearse is hidden on the
  * setlist's service day so nobody drifts off the band's chart mid-service.
  */
-export function visibleModes(opts: { canEdit: boolean; eventDate: unknown; now?: Date }): SetlistMode[] {
+export function visibleModes(opts: { canEdit: boolean; eventDate: unknown; org?: OrgId; now?: Date }): SetlistMode[] {
     const modes: SetlistMode[] = []
-    if (!isEventToday(opts.eventDate, opts.now)) modes.push('rehearse')
+    if (!isEventToday(opts.eventDate, opts.org, opts.now)) modes.push('rehearse')
     modes.push('perform')
     if (opts.canEdit) modes.push('edit')
     return modes
@@ -46,16 +50,24 @@ export function SetlistModeSwitch({
     setlistId,
     current,
     eventDate,
+    setlistOrg,
     className,
 }: {
     setlistId: string
     current: SetlistMode
     eventDate: unknown
+    /** The setlist's own tenant. Edit needs the leader role in THIS tenant. */
+    setlistOrg?: string | null
     className?: string
 }) {
     const t = useT()
     const { isBandLeader, isAdmin } = useAuth()
-    const modes = visibleModes({ canEdit: isBandLeader || isAdmin, eventDate })
+    const siteOrg = useOrg()
+    const org = setlistOrg ? coerceOrgId(setlistOrg) : siteOrg
+    // The signed-in role is the member's role in the tenant this site is. On
+    // another tenant's setlist it says nothing about standing there.
+    const canEdit = (isBandLeader || isAdmin) && org === siteOrg
+    const modes = visibleModes({ canEdit, eventDate, org })
     const label: Record<SetlistMode, string> = {
         rehearse: t('recordings.rehearse'),
         perform: t('recordings.modePerform'),

@@ -137,7 +137,7 @@ describe('Perform live reorder', () => {
 
         expect(reorderOrder()).toEqual(['t2', 't1', 't3'])
         // Gated on the version this page saw (the server frame's, here).
-        await waitFor(() => expect(commit).toHaveBeenCalledWith(ID, ['t2', 't1', 't3']))
+        await waitFor(() => expect(commit).toHaveBeenCalledWith(ID, ['t2', 't1', 't3'], ['t1']))
 
         // Done returns to the list, still in the new order.
         fireEvent.click(screen.getByTestId('perform-reorder-toggle'))
