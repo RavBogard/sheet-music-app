@@ -513,6 +513,12 @@
       "fieldPath": "ttlAt",
       "ttl": true,
       "indexes": []
+    },
+    {
+      "collectionGroup": "opBatches",
+      "fieldPath": "expiresAt",
+      "ttl": true,
+      "indexes": []
     }
   ]
 }

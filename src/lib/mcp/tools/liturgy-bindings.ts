@@ -11,6 +11,7 @@ import { momentIdForUnit } from "@/lib/books/moments"
 import { BINDABLE_ROW_TYPES, writableLiturgyRef } from "@/lib/liturgy/bind-on-type"
 import { matchLiturgyTitle, type LiturgyMatch } from "@/lib/liturgy/match"
 import { logger } from "@/lib/logger"
+import { writeRowFields, type RowPatch } from "@/lib/setlist-ops"
 
 /**
  * A-W3' — `propose_liturgy_bindings`.
@@ -354,37 +355,51 @@ export async function proposeLiturgyBindings(
     }
 
     let written = 0
-    for (const r of identified) {
-        try {
+    if (setlistId) {
+        // Setlist rows: one transaction through the single writer. Every
+        // written row gets a new updatedAt + version and the setlist's version
+        // moves, so iPads holding the row pick up the new page number.
+        const patches: RowPatch[] = []
+        const identifyIds = new Set<string>()
+        for (const r of identified) {
             const momentId = momentIdForUnit(r.unitId)
-            await db
-                .collection("tracks")
-                .doc(r.rowId)
-                .update({
-                    "liturgyRef.unitId": r.unitId,
-                    ...(momentId ? { momentId } : {}),
-                })
-            written++
-        } catch (err) {
-            logger.warn("[propose_liturgy_bindings] identify write failed", {
+            identifyIds.add(r.rowId)
+            patches.push({
                 rowId: r.rowId,
+                patch: { "liturgyRef.unitId": r.unitId, ...(momentId ? { momentId } : {}) },
+            })
+        }
+        for (const b of toWrite) {
+            const ref = writableLiturgyRef(book, b.folio, b.unitId, service)
+            if (!ref) continue
+            // The moment travels with the page. It is what the cue log can be
+            // matched on, and for a machzor service it is the ONLY thing that can.
+            const momentId = momentIdForUnit(b.unitId)
+            patches.push({ rowId: b.rowId, patch: { liturgyRef: ref, ...(momentId ? { momentId } : {}) } })
+        }
+        try {
+            const res = await writeRowFields(db, setlistId, patches, {
+                actor: uid,
+                // Re-checked inside the transaction: identify only completes a
+                // page that is still there; a new bind never overwrites one an
+                // author typed in the meantime.
+                guard: (current, rowId) => {
+                    const has = !!current.liturgyRef && typeof current.liturgyRef === "object"
+                    return identifyIds.has(rowId) ? has : !has
+                },
+            })
+            written = res.written.length
+        } catch (err) {
+            logger.warn("[propose_liturgy_bindings] write failed", {
+                setlistId,
                 err: err instanceof Error ? err.message : String(err),
             })
         }
-    }
-    for (const b of toWrite) {
-        const ref = writableLiturgyRef(book, b.folio, b.unitId, service)
-        if (!ref) continue
-        // The moment travels with the page. It is what the cue log can be
-        // matched on, and for a machzor service it is the ONLY thing that can.
-        const momentId = momentIdForUnit(b.unitId)
-        try {
-            if (setlistId) {
-                await db
-                    .collection("tracks")
-                    .doc(b.rowId)
-                    .update({ liturgyRef: ref, ...(momentId ? { momentId } : {}) })
-            } else {
+    } else {
+        for (const b of toWrite) {
+            const ref = writableLiturgyRef(book, b.folio, b.unitId, service)
+            if (!ref) continue
+            try {
                 const docRef = db.collection("setlistTemplates").doc(templateId as string)
                 await db.runTransaction(async (tx) => {
                     const snap = await tx.get(docRef)
@@ -409,13 +424,13 @@ export async function proposeLiturgyBindings(
                     }
                     tx.update(docRef, { tracks })
                 })
+                written++
+            } catch (err) {
+                logger.warn("[propose_liturgy_bindings] write failed", {
+                    rowId: b.rowId,
+                    err: err instanceof Error ? err.message : String(err),
+                })
             }
-            written++
-        } catch (err) {
-            logger.warn("[propose_liturgy_bindings] write failed", {
-                rowId: b.rowId,
-                err: err instanceof Error ? err.message : String(err),
-            })
         }
     }
 

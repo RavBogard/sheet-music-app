@@ -48,6 +48,7 @@ import {
 } from "@/lib/liturgy/bind-on-type"
 import type { LiturgyRef } from "@/lib/books/types"
 import { logger } from "@/lib/logger"
+import { runSetlistTransaction, writeRowFields } from "@/lib/setlist-ops"
 import { parseGigArg, parseTrackGigPatch, readGig, type Gig, type GigPatch } from "@/lib/gig/model"
 import { chartChangeKey } from "@/lib/library/lineage-pure"
 import { isTestSetlist } from "@/types/models"
@@ -206,10 +207,10 @@ export async function createSetlist(
         // the callback keeps the same target id; a concurrent invocation loses
         // the receipt race and returns the winner's stored target instead.
         const candidateSetlistId = crypto.randomUUID()
-        const outcome = await db.runTransaction<
+        const outcome = await runSetlistTransaction<
             | { kind: "ok"; result: CreateSetlistOk }
             | { kind: "conflict" }
-        >(async (tx) => {
+        >(db, async (tx, w) => {
             const receiptSnap = await tx.get(receiptRef)
             if (receiptSnap.exists) {
                 const receipt = receiptSnap.data() as StoredWriteReceipt<CreateSetlistOk>
@@ -264,7 +265,7 @@ export async function createSetlist(
             if (typeof args.special === "boolean") setlistPayload.special = args.special
             if (args.book !== undefined) setlistPayload.book = args.book
 
-            tx.create(db.collection("setlists").doc(candidateSetlistId), setlistPayload)
+            w.createSetlist(candidateSetlistId, setlistPayload)
             tx.create(receiptRef, {
                 tool,
                 uid,
@@ -482,20 +483,25 @@ export async function updateSetlist(
     if (args.book === null) {
         // No book: no row may print a page. Clear `liturgyRef` on every row
         // that has one, and nothing else.
+        // One transaction through the single writer: every cleared row gets a
+        // new updatedAt + version, so iPads holding it drop the old page.
         const tracks = await getTracksForSetlist(db, args.id, loaded.data)
         let cleared = 0
-        for (const t of tracks) {
-            if ((t as unknown as Record<string, unknown>).liturgyRef == null) continue
-            try {
-                await db.collection("tracks").doc(t.id).update({ liturgyRef: FieldValue.delete() })
-                cleared++
-            } catch (err) {
-                logger.warn("[update_setlist] page clear failed", {
-                    setlistId: args.id,
-                    rowId: t.id,
-                    err: err instanceof Error ? err.message : String(err),
-                })
-            }
+        try {
+            const { written } = await writeRowFields(
+                db,
+                args.id,
+                tracks
+                    .filter((t) => (t as unknown as Record<string, unknown>).liturgyRef != null)
+                    .map((t) => ({ rowId: t.id, patch: { liturgyRef: FieldValue.delete() } })),
+                { actor: uid },
+            )
+            cleared = written.length
+        } catch (err) {
+            logger.warn("[update_setlist] page clear failed", {
+                setlistId: args.id,
+                err: err instanceof Error ? err.message : String(err),
+            })
         }
         rebook = { from: previousBook, to: null, cleared }
     } else if (bookChanged && args.book) {
@@ -511,26 +517,28 @@ export async function updateSetlist(
             }),
             args.book,
         )
-        for (const wRow of plan.writes) {
-            try {
-                await db
-                    .collection("tracks")
-                    .doc(wRow.rowId)
-                    .update({
-                        liturgyRef: wRow.stale
-                            ? { ...wRow.ref, stale: true }
-                            : wRow.ref,
-                    })
-            } catch (err) {
-                // A page that cannot be rewritten keeps the one it had. The
-                // book change is the caller's request and still stands; a
-                // failed page update is reported, never a failed update.
-                logger.warn("[update_setlist] re-resolve write failed", {
-                    setlistId: args.id,
+        try {
+            // One transaction through the single writer, so every re-paged row
+            // carries a new updatedAt + version (stale iPad pages were the bug).
+            await writeRowFields(
+                db,
+                args.id,
+                plan.writes.map((wRow) => ({
                     rowId: wRow.rowId,
-                    err: err instanceof Error ? err.message : String(err),
-                })
-            }
+                    patch: {
+                        liturgyRef: wRow.stale ? { ...wRow.ref, stale: true } : wRow.ref,
+                    },
+                })),
+                { actor: uid },
+            )
+        } catch (err) {
+            // A page that cannot be rewritten keeps the one it had. The
+            // book change is the caller's request and still stands; a
+            // failed page update is reported, never a failed update.
+            logger.warn("[update_setlist] re-resolve write failed", {
+                setlistId: args.id,
+                err: err instanceof Error ? err.message : String(err),
+            })
         }
         rebook = {
             from: previousBook ?? "",
@@ -1421,7 +1429,7 @@ export async function deleteSetlist(
         | { ok: true; tracksDeleted: number }
         | { ok: false; envelope: RichErrorEnvelope }
         | { ok: false; envelope: StaleVersionEnvelope }
-    const result = await db.runTransaction<TxResult>(async (tx) => {
+    const result = await runSetlistTransaction<TxResult>(db, async (tx, w) => {
         const setlistSnap = await tx.get(setlistRef)
         if (!setlistSnap.exists) {
             return {
@@ -1488,8 +1496,8 @@ export async function deleteSetlist(
         const tracksSnap = await tx.get(
             db.collection("tracks").where("setlistId", "==", args.id),
         )
-        tracksSnap.docs.forEach((d) => tx.delete(d.ref))
-        tx.delete(setlistRef)
+        tracksSnap.docs.forEach((d) => w.deleteTrack(d.id))
+        w.deleteSetlist(args.id)
         return { ok: true, tracksDeleted: tracksSnap.size }
     })
 

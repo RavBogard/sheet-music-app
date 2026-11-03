@@ -225,6 +225,11 @@ service cloud.firestore {
       allow delete: if signedIn()
         && (atLeast(docOrg(), 'bl') || (isOwner() && atLeast(docOrg(), 'me')));
     }
+    // Setlist ops idempotency receipts (OPS-CONTRACT). Written and read only
+    // by the server op engine (src/lib/setlist-ops); no client may touch them.
+    match /setlists/{setlistId}/opBatches/{batchId} {
+      allow read, write: if false;
+    }
     match /setlists/{setlistId}/history/{entryId} {
       allow read: if atLeast(setlistOrgOf(setlistId), 'ad');
       allow create: if atLeast(setlistOrgOf(setlistId), 'me');

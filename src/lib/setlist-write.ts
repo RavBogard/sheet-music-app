@@ -23,6 +23,7 @@ import {
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import { parseEventDate as toTimestamp } from "@/lib/parse-event-date"
 import { deriveSetlistCounts } from "@/lib/setlist-derived-counts"
+import { runSetlistTransaction, setlistBatch, updateSetlistFields } from "@/lib/setlist-ops"
 import type { GigPatch } from "@/lib/gig/model"
 import { isTestSetlist, type Setlist } from "@/types/models"
 import { computeWeek, isFamilyOrg, weekFields } from "@/lib/family/week-key"
@@ -216,8 +217,8 @@ export async function createSetlistServerSide(
 
     // One atomic batch: the parent setlists/{id} doc + every top-level
     // tracks/{id} seed. Either the whole setlist commits or nothing does.
-    const batch = db.batch()
-    batch.set(db.collection('setlists').doc(setlistId), setlistPayload)
+    const { w, commit } = setlistBatch(db, { actor: input.ownerId })
+    w.setSetlist(setlistId, setlistPayload)
     const nowIso = new Date().toISOString()
     input.tracks.forEach((t, i) => {
         const trackId = crypto.randomUUID()
@@ -241,9 +242,9 @@ export async function createSetlistServerSide(
         }
         if (t.fileId !== undefined) trackPayload.fileId = t.fileId
         if (t.fileName !== undefined) trackPayload.fileName = t.fileName
-        batch.set(db.collection('tracks').doc(trackId), trackPayload)
+        w.setTrack(trackId, trackPayload)
     })
-    await batch.commit()
+    await commit()
 
     return { setlistId, trackCount: input.tracks.length }
 }
@@ -338,11 +339,11 @@ export async function updateSetlistServerSide(
     // Fast path for pre-W-04 callers: skip the tx round-trip when no
     // version gate was requested. Behavior identical to pre-Plan-02.
     if (lastSeenVersion === undefined) {
-        await setlistRef.update(mapped)
+        await updateSetlistFields(db, setlistId, mapped)
         return { ok: true }
     }
 
-    return db.runTransaction<UpdateSetlistResult>(async (tx) => {
+    return runSetlistTransaction<UpdateSetlistResult>(db, async (tx, w) => {
         const snap = await tx.get(setlistRef)
         if (!snap.exists) {
             return { ok: false, error: "setlist_not_found" }
@@ -362,7 +363,7 @@ export async function updateSetlistServerSide(
                 }),
             }
         }
-        tx.update(setlistRef, mapped)
+        w.updateSetlist(setlistId, mapped)
         return { ok: true }
     })
 }

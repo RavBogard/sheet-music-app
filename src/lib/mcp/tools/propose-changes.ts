@@ -26,6 +26,7 @@ import { deriveSetlistCounts } from "@/lib/setlist-derived-counts"
 import { profileSlotInfo, type ProfileMatchCandidate, type ProfileSlotInfo } from "@/lib/profiles/profile-match"
 import { compareTitleToFilename } from "./chart-bond-audit"
 import { logger } from "@/lib/logger"
+import { runSetlistTransaction } from "@/lib/setlist-ops"
 import {
     WRITE_RECEIPTS_COLLECTION,
     type StoredWriteReceipt,
@@ -414,7 +415,7 @@ export async function commitStagedChanges(
         | { kind: "stale_version"; envelope: StaleVersionEnvelope }
         | { kind: "error"; envelope: RichErrorEnvelope }
 
-    const txResult = await db.runTransaction<TxResult>(async (tx) => {
+    const txResult = await runSetlistTransaction<TxResult>(db, async (tx, w) => {
         const [receiptSnap, setlistSnap] = await Promise.all([
             tx.get(receiptRef),
             tx.get(setlistRef),
@@ -604,11 +605,11 @@ export async function commitStagedChanges(
         // Writes — issue all deletes, sets, updates inside the same tx.
         const nowIso = new Date().toISOString()
         for (const id of removedTrackIds) {
-            tx.delete(tracksColl.doc(id))
+            w.deleteTrack(id)
         }
         working.forEach((row, i) => {
             if (row.kind === "new") {
-                tx.set(tracksColl.doc(row.id), {
+                w.setTrack(row.id, {
                     ...row.payload,
                     // Multi-tenant P2 (W1): a new track carries its parent
                     // setlist's tenant (already checked == caller org above).
@@ -636,7 +637,7 @@ export async function commitStagedChanges(
                     lastModifiedAt: nowIso,
                 }
                 if (orderChanged) patch.order = i
-                tx.update(tracksColl.doc(row.id), patch)
+                w.updateTrack(row.id, patch)
             }
         })
 
@@ -671,7 +672,7 @@ export async function commitStagedChanges(
             lastModifiedAt: nowIso,
             lastModifiedBy: uid,
         }
-        tx.update(setlistRef, setlistPatch)
+        w.updateSetlist(stage.setlistId, setlistPatch)
         const committedResult: CommitResult = {
             ok: true,
             stageId: args.stageId,
