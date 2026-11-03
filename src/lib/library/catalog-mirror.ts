@@ -213,7 +213,9 @@ export type SaveSongDefaultsResult =
 export async function saveSongDefaults(
     db: DB,
     org: OrgId,
-    input: { songId: string; setlistId: string; patch: SongDefaultsPatch; now?: number },
+    /** `setlistId: null` when the caller's setlist could not be confirmed as
+     *  the tenant's own: the use is recorded without it. */
+    input: { songId: string; setlistId: string | null; patch: SongDefaultsPatch; now?: number },
 ): Promise<SaveSongDefaultsResult> {
     const { songId, setlistId, patch } = input
     const now = input.now ?? Date.now()
@@ -233,7 +235,7 @@ export async function saveSongDefaults(
         if (!isOwnedBy(row, org)) return { ok: false as const, reason: "not-owner" as const }
         const defaults = { ...((song.defaults ?? {}) as DocumentData), ...changed }
         const prior = Array.isArray(song.recent) ? (song.recent as DocumentData[]) : []
-        const recent = [{ ...changed, setlistId, performedAt: now }, ...prior].slice(0, RECENT_CAP)
+        const recent = [{ ...changed, ...(setlistId ? { setlistId } : {}), performedAt: now }, ...prior].slice(0, RECENT_CAP)
         tx.set(songRef, { defaults: changed, recent, ...songStamp(rowOrg(row.orgId), now) }, { merge: true })
         return { ok: true as const, defaults, recent }
     })

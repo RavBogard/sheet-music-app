@@ -1,6 +1,6 @@
-import { ANY_TENANT, writeCatalog } from "@/lib/library/catalog-mirror"
+import { writeCatalog } from "@/lib/library/catalog-mirror"
 import { rowOrg } from "@/lib/mcp/org-context"
-import { visibleTo } from "@/lib/library/visibility"
+import { isOwnedBy, visibleTo } from "@/lib/library/visibility"
 import { readTenantRole } from "@/lib/org/access"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
@@ -277,8 +277,18 @@ export interface VerifySetlistChartsResult {
      * hygiene pass usually want to re-bond or remove these rows entirely
      * rather than mark them orphaned (which would just create empty stub
      * rows). Always reported, regardless of `markOrphaned`.
+     *
+     * Multi-tenant: a fileId whose row belongs to another tenant (or is only
+     * shared with the caller's) counts here too, so this count never reveals
+     * that another tenant's chart exists.
      */
     phantomBonds: number
+    /**
+     * Missing bonds with no row the caller's tenant owns: phantoms, another
+     * tenant's rows and shared rows, none of them written. A count only, equal
+     * to `phantomBonds`; it never says which kind.
+     */
+    skippedNotOwned: number
     rows: SetlistTrackHealth[]
 }
 
@@ -398,31 +408,29 @@ export async function verifySetlistCharts(
                 db.collection("library_index").doc(fid).get(),
             ),
         )
+        // Only rows the caller's tenant owns are candidates. A track may bond
+        // another tenant's chart (a shared one, or a stray id): that row is
+        // never written, and it is counted with the phantoms so the result
+        // cannot tell a foreign row from no row.
         const existingFileIds: string[] = []
-        // Multi-tenant P2 (W8): each row's tenant, stamped onto a songs stub.
-        const rowOrgOf = new Map<string, OrgId>()
         for (let i = 0; i < missingFileIds.length; i++) {
-            if (existingSnaps[i].exists) {
-                existingFileIds.push(missingFileIds[i])
-                rowOrgOf.set(
-                    missingFileIds[i],
-                    rowOrg(existingSnaps[i].data()?.orgId),
-                )
-            } else {
-                phantomBonds++
-            }
+            const data = existingSnaps[i].exists ? (existingSnaps[i].data() ?? {}) : null
+            if (data && isOwnedBy(data, org)) existingFileIds.push(missingFileIds[i])
+            else phantomBonds++
         }
         if (args.markOrphaned && existingFileIds.length > 0) {
             try {
                 // Both collections; songs/{fid} is stubbed when absent so the
-                // orphaned status lands where `search_library` looks. The rows
-                // were read just above (same tenant as the setlist).
+                // orphaned status lands where `search_library` looks. The
+                // writer re-checks each row's tenant against the caller's.
                 const res = await writeCatalog(
                     db,
                     existingFileIds.map((fid) => ({ fileId: fid, patch: { status: "orphaned" as const } })),
-                    { org: ANY_TENANT, missingSong: "stub", broadcast: false },
+                    { org, missingSong: "stub", broadcast: false },
                 )
                 orphanedMarked = res.written.length
+                // A row that changed hands between the read and the write.
+                phantomBonds += res.refused.length + res.missing.length
             } catch (err) {
                 logger.warn("[mcp] verify_setlist_charts orphan-mark failed", {
                     setlistId: args.setlistId,
@@ -458,6 +466,7 @@ export async function verifySetlistCharts(
         shortcutUnresolvedCount,
         orphanedMarked,
         phantomBonds,
+        skippedNotOwned: phantomBonds,
         rows: probes,
     }
 }

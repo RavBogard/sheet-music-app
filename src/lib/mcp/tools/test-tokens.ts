@@ -939,17 +939,19 @@ async function callerScope(
 
 const scopeLabel = (scope: SweepScope): string => (scope.allTenants ? "all-tenants" : scope.org)
 
-/** A test account's tenants: its membership claim map, else its orgIds, else crc. */
-function tenantsFromClaims(claims: Record<string, unknown> | null | undefined): string[] | null {
-    if (!claims) return null
-    const m = claims.m
-    if (m && typeof m === "object" && !Array.isArray(m)) {
-        const keys = Object.keys(m as Record<string, unknown>)
-        if (keys.length > 0) return keys
+/**
+ * A test account's tenants, from the memberships collection (the source
+ * getTenantAccess reads; claims and the users doc are mirrors of it).
+ */
+async function membershipTenants(uid: string): Promise<string[]> {
+    const snap = await getFirestore().collection("memberships").where("uid", "==", uid).get()
+    const out = new Set<string>()
+    for (const d of snap.docs) {
+        const data = d.data()
+        const tenant = typeof data.tenantId === "string" ? data.tenantId : typeof data.orgId === "string" ? data.orgId : d.id.split("__")[0]
+        if (tenant) out.add(tenant)
     }
-    const orgIds = claims.orgIds
-    if (Array.isArray(orgIds) && orgIds.length > 0) return orgIds.filter((o): o is string => typeof o === "string")
-    return null
+    return [...out]
 }
 
 /**
@@ -981,30 +983,23 @@ async function enumerateSweepTargets(prefix: string | undefined, scope: SweepSco
     const auth = getAuth()
     let pageToken: string | undefined
     const orphanAuthUids: string[] = []
-    const authTenants = new Map<string, string[] | null>()
     for (let i = 0; i < 20; i++) {
         const result = await auth.listUsers(1000, pageToken)
         for (const u of result.users) {
-            if (!matchesPrefix(u.uid)) continue
-            authTenants.set(u.uid, tenantsFromClaims(u.customClaims))
-            if (!indexUids.has(u.uid)) orphanAuthUids.push(u.uid)
+            if (matchesPrefix(u.uid) && !indexUids.has(u.uid)) orphanAuthUids.push(u.uid)
         }
         if (!result.pageToken) break
         pageToken = result.pageToken
     }
     if (scope.allTenants) return { fullPrefix, indexUids, orphanAuthUids, skippedOtherTenants: 0 }
 
-    // Tenant-scoped: keep only accounts whose every tenant is the caller's.
-    // An index account with no Auth user left falls back to its users doc.
-    const tenantsOf = async (uid: string): Promise<string[]> => {
-        const fromClaims = authTenants.get(uid)
-        if (fromClaims) return fromClaims
-        const userSnap = await db.collection(USERS).doc(uid).get()
-        const orgIds = userSnap.exists ? userSnap.data()?.orgIds : undefined
-        if (Array.isArray(orgIds) && orgIds.length > 0) return orgIds.map((o) => rowOrg(o))
-        return [DEFAULT_ORG_ID]
+    // Tenant-scoped: keep only accounts whose every membership is in the
+    // caller's tenant. An account with no membership (unknown tenancy) is
+    // out of scope: it is the platform owner's to sweep, never read as crc.
+    const inScope = async (uid: string) => {
+        const tenants = await membershipTenants(uid)
+        return tenants.length > 0 && tenants.every((t) => t === scope.org)
     }
-    const inScope = async (uid: string) => (await tenantsOf(uid)).every((t) => t === scope.org)
     let skippedOtherTenants = 0
     const keptIndex = new Set<string>()
     for (const uid of indexUids) {

@@ -1,4 +1,4 @@
-import { ANY_TENANT, writeCatalog } from "@/lib/library/catalog-mirror"
+import { writeCatalog } from "@/lib/library/catalog-mirror"
 import 'server-only'
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import {
@@ -817,6 +817,7 @@ async function commitRebondBatch(
 async function commitOrphanBatch(
     db: FirebaseFirestore.Firestore,
     plan: ProbeResult[],
+    org: OrgId,
 ): Promise<{ committed: number; heldArchived: number }> {
     const writable = plan.filter(
         (p) => p.candidate.currentStatus !== "archived",
@@ -830,12 +831,13 @@ async function commitOrphanBatch(
         const slice = writable.slice(i, i + BATCH_MAX)
         // Both collections through the catalogue writer (songs/{id} stubbed
         // when absent, so search_library's status filter agrees on either).
-        // Rows were read moments ago by the org-scoped scan; a row that
+        // Rows were read moments ago by the org-scoped scan; the writer
+        // re-checks each one against the caller's tenant, and a row that
         // vanished since is skipped, never re-created as a stub.
         const res = await writeCatalog(
             db,
             slice.map((p) => ({ fileId: p.candidate.fileId, patch: { status: "orphaned" as const }, index: { orphanedAt: nowIso } })),
-            { org: ANY_TENANT, missingSong: "stub", broadcast: false },
+            { org, missingSong: "stub", broadcast: false },
         )
         committed += res.written.length
     }
@@ -1061,7 +1063,7 @@ export async function reconcileLibrary(
         const finalNeedsRebondRows: NeedsRebondRow[] =
             rebondOutcome.stillNeedsRebond
 
-        const orphanCommit = await commitOrphanBatch(db, fullOrphanPlan)
+        const orphanCommit = await commitOrphanBatch(db, fullOrphanPlan, org)
         const orphansCommitted = orphanCommit.committed
         if (orphanCommit.heldArchived > 0) {
             logger.info(

@@ -107,6 +107,13 @@ describe("catalog mirror (emulator)", () => {
             expect((await get("songs", id))?.defaults).toEqual({ key: "C", durationSec: 200 })
         })
 
+        it("setlistId null (not confirmed as the tenant's) records the use without a setlist", async () => {
+            const id = await seed("crc")
+            await saveSongDefaults(db(), "crc", { songId: id, setlistId: null, patch: { key: "E" }, now: 7 })
+            const recent = (await get("songs", id))?.recent
+            expect(recent[0]).toEqual({ key: "E", performedAt: 7 })
+        })
+
         it("an unknown song is not-found and an empty patch is invalid", async () => {
             expect(await saveSongDefaults(db(), "crc", { songId: "nope-" + fid(), setlistId: "sl", patch: { key: "G" } })).toEqual({ ok: false, reason: "not-found" })
             const id = await seed("crc")

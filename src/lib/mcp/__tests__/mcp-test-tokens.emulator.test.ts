@@ -461,10 +461,14 @@ describe("MCP test tokens (emulator)", () => {
         })
         if ("error" in minted) throw new Error("mint failed")
 
-        // Create an orphan: Auth user with test- prefix but no index doc.
+        // Create an orphan: Auth user with test- prefix but no index doc,
+        // still a crc member (tenancy comes from the memberships collection).
         await getAuth().createUser({
             uid: "test-musician-orphan1",
             disabled: true,
+        })
+        await db().collection("memberships").doc("crc__test-musician-orphan1").set({
+            uid: "test-musician-orphan1", tenantId: "crc", role: "musician",
         })
 
         const result = await cleanupAllTestDataCore(ADMIN_UID)
@@ -472,6 +476,31 @@ describe("MCP test tokens (emulator)", () => {
         expect(result.removed).toBeGreaterThanOrEqual(2)
 
         await expect(getAuth().getUser("test-musician-orphan1")).rejects.toThrow()
+    })
+
+    it("an account of unknown tenancy (no membership) is out of a leader's sweep, never read as crc; po sweeps it", async () => {
+        // Its claims even say crc: the memberships collection is the truth.
+        await getAuth().createUser({ uid: "test-musician-nomember", disabled: true })
+        await getAuth().setCustomUserClaims("test-musician-nomember", { m: { crc: "mu" }, orgIds: ["crc"] })
+
+        const leader = await cleanupAllTestDataCore(ADMIN_UID, {}, "crc")
+        if ("error" in leader) throw new Error("cleanup failed: " + leader.error)
+        expect(leader.removed).toBe(0)
+        expect(leader.skippedOtherTenants).toBe(1)
+        await expect(getAuth().getUser("test-musician-nomember")).resolves.toBeTruthy()
+
+        const PO = "platform-owner-2"
+        await db().collection("platform").doc("owners").set({ uids: [PO] })
+        __resetPlatformOwnerMemo()
+        try {
+            const po = await cleanupAllTestDataCore(PO, {}, "crc")
+            if ("error" in po) throw new Error("cleanup failed: " + po.error)
+            expect(po.removed).toBe(1)
+            await expect(getAuth().getUser("test-musician-nomember")).rejects.toThrow()
+        } finally {
+            await db().collection("platform").doc("owners").delete()
+            __resetPlatformOwnerMemo()
+        }
     })
 
     it("create_test_account with uidPrefix emits `test-<prefix>-<role>-<hex>`", async () => {
@@ -524,6 +553,11 @@ describe("MCP test tokens (emulator)", () => {
         await getAuth().createUser({
             uid: "test-insta-musician-orphan2",
             disabled: true,
+        })
+        // A crc member, so a crc leader's sweep covers it (tenancy is read
+        // from the memberships collection).
+        await db().collection("memberships").doc("crc__test-insta-musician-orphan2").set({
+            uid: "test-insta-musician-orphan2", tenantId: "crc", role: "musician",
         })
         // And an orphan under instb — must NOT be swept.
         await getAuth().createUser({

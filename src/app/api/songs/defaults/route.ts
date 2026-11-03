@@ -4,6 +4,7 @@ import { z } from "zod"
 import { createApiHandler } from "@/lib/api-wrapper"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { saveSongDefaults } from "@/lib/library/catalog-mirror"
+import { rowOrg } from "@/lib/org/membership"
 
 /**
  * POST /api/songs/defaults — the grid's sticky song memory (the key, Vocal
@@ -21,7 +22,7 @@ export const runtime = "nodejs"
 
 const schema = z.object({
     songId: z.string().min(1).max(200).regex(/^[^/]+$/),
-    setlistId: z.string().min(1).max(200),
+    setlistId: z.string().min(1).max(200).regex(/^[^/]+$/),
     patch: z
         .object({
             key: z.string().max(16).optional(),
@@ -39,7 +40,13 @@ export const POST = createApiHandler(
             return NextResponse.json({ ok: false, reason: "not-ready" }, { status: 503 })
         }
         const body = ctx.body!
-        const result = await saveSongDefaults(getFirestore(), ctx.auth.orgId, body)
+        const db = getFirestore()
+        // `recent[]` names the setlist the song was used on. Keep it only when
+        // it is a setlist of the host tenant: another tenant's id (or a made-up
+        // one) is dropped, never stored on this tenant's song.
+        const sl = await db.collection("setlists").doc(body.setlistId).get()
+        const setlistId = sl.exists && rowOrg(sl.data()?.orgId) === ctx.auth.orgId ? body.setlistId : null
+        const result = await saveSongDefaults(db, ctx.auth.orgId, { ...body, setlistId })
         if (!result.ok) {
             const reason = result.reason === "not-owner" ? "not-found" : result.reason
             return NextResponse.json({ ok: false, reason }, { status: STATUS[result.reason] })
