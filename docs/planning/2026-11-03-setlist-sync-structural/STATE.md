@@ -129,3 +129,9 @@ not a patch of the particulars.
   re-review only the security deltas (rules deny client writes, /create), then merge.
 - Next: PR 4 (Perform read model + the Rehearse/Perform/Edit mode switch), then the wording pass,
   then derived BPM (waiting on Daniel: show/write).
+- #80 Rehearse merged as a061a3c5 and verified on prod with Playwright:
+  - /listen → /rehearse redirect works.
+  - The list renders correctly at 820×1180 and 390×844, with no horizontal scroll.
+  - The chart page renders the PDF with the docked player and prev/next.
+  - Polish gap: the chart area is blank (no loading indicator) for about 2–5 s while the PDF
+    loads. Fold this into PR 4.
