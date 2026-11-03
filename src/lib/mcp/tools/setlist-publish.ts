@@ -797,7 +797,7 @@ export async function publishSetlist(
             | { kind: "conflict" }
             | { kind: "in_progress" }
             | { kind: "stale"; envelope: StaleVersionEnvelope }
-        >(db, args.setlistId, async (tx, m) => {
+        >(db, org, args.setlistId, async (tx, m) => {
             const [liveReceiptSnap, liveSetlistSnap] = await Promise.all([
                 tx.get(receiptRef),
                 tx.get(setlistRef),
@@ -875,7 +875,7 @@ export async function publishSetlist(
         const commit = await maintainSetlist<
             | { kind: "committed"; version: number; wasNotifiedBefore: boolean }
             | { kind: "stale"; envelope: StaleVersionEnvelope }
-        >(db, args.setlistId, async (tx, m) => {
+        >(db, org, args.setlistId, async (tx, m) => {
             const liveSnap = await tx.get(setlistRef)
             if (!liveSnap.exists) {
                 throw new Error(`Setlist '${args.setlistId}' no longer exists.`)

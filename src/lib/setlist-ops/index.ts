@@ -41,6 +41,8 @@ export {
     deleteSetlistTree,
     SetlistMaintenance,
     MAX_TRANSACTION_WRITES,
+    NO_BUMP_FIELDS,
+    MaintenanceError,
     type MaintainOptions,
     type NewSetlistInput,
 } from "./maintenance"

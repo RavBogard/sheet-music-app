@@ -163,7 +163,7 @@ export async function addOpenItemTool(
             resolvedAt: null,
             resolvedByName: null,
         }
-        const after = await maintainSetlist(db, setlistId, async (tx, m) => {
+        const after = await maintainSetlist(db, org, setlistId, async (tx, m) => {
             const snap = await tx.get(ref)
             const data = snap.exists ? (snap.data() as Record<string, unknown>) : null
             if (!data || rowOrg(data.orgId) !== org) throw new Refusal(setlistNotFound(setlistId))
@@ -219,7 +219,7 @@ export async function resolveOpenItemTool(
         if (!editor.ok) return editor
         const resolvedByName = await displayNameFor(db, uid)
         const ref = db.collection("setlists").doc(setlistId)
-        const out = await maintainSetlist(db, setlistId, async (tx, m) => {
+        const out = await maintainSetlist(db, org, setlistId, async (tx, m) => {
             const snap = await tx.get(ref)
             const data = snap.exists ? (snap.data() as Record<string, unknown>) : null
             // Another tenant's setlist hides its items too: the item is simply not found.

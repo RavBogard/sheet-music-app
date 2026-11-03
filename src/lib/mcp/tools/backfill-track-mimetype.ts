@@ -1,6 +1,7 @@
 import "server-only"
 
 import { maintainRows } from "@/lib/setlist-ops"
+import { rowOrg } from "@/lib/org/membership"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { assertEditor } from "@/lib/mcp/server-tracks-write"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
@@ -173,12 +174,15 @@ export async function backfillTrackMimetype(
         // absent", so we filter in memory — mirrors reconcile_library's full
         // library_index scan.
         const snap = await db.collection("tracks").get()
-        const scannedTracks = snap.size
+        // Only the caller's tenant: a leader of one tenant never heals (or
+        // version-bumps) another tenant's rows. Unstamped rows read as crc.
+        const mine = snap.docs.filter((d) => rowOrg(d.data().orgId) === org)
+        const scannedTracks = mine.length
 
         let bondedTracks = 0
         let alreadyHealthy = 0
         const candidates: Candidate[] = []
-        for (const d of snap.docs) {
+        for (const d of mine) {
             const data = d.data()
             const fileId =
                 typeof data.fileId === "string" ? data.fileId.trim() : ""
@@ -306,6 +310,7 @@ export async function backfillTrackMimetype(
         // are skipped (an update never resurrects a row), never re-created.
         const { written } = await maintainRows(
             db,
+            org,
             healRows.map((r) => ({ rowId: r.trackId, setlistId: r.setlistId, patch: { mimeType: r.after } })),
             { actor: uid },
         )

@@ -383,7 +383,7 @@ export async function cloneSetlist(
         newRows.push({ id: newTrackId, data: payload })
     })
 
-    await createSetlistWithRows(db, { setlistId: newSetlistId, setlist: setlistPayload, rows: newRows }, { actor: uid })
+    await createSetlistWithRows(db, org, { setlistId: newSetlistId, setlist: setlistPayload, rows: newRows }, { actor: uid })
     logger.info("[mcp] clone_setlist committed", {
         sourceSetlistId: args.sourceSetlistId,
         newSetlistId,

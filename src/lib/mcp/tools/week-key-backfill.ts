@@ -130,9 +130,12 @@ export async function backfillWeekKeys(
         if (!dryRun) {
             // Through the single writer: each setlist's `version` is bumped so
             // devices take the new week key.
+            // `updatedAt` stays as it was (server-derived field, until PR 3).
             await maintainSetlists(
                 db,
+                org,
                 deltas.map((delta) => ({ setlistId: delta.setlistId, patch: weekFields(weeks.get(delta.setlistId)!) })),
+                { touchUpdatedAt: false },
             )
         }
         return {

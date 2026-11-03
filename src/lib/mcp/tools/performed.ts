@@ -321,7 +321,7 @@ async function promote(
     // One transaction on the clone through the single writer (OPS-CONTRACT):
     // every touched row and the clone itself are stamped and version-bumped.
     const added = diff.rows.filter((r) => r.status === "added")
-    const { rowsRemoved, rowsStamped } = await maintainSetlist(db, cloneId, async (tx, m) => {
+    const { rowsRemoved, rowsStamped } = await maintainSetlist(db, org, cloneId, async (tx, m) => {
         const snap = await tx.get(db.collection("tracks").where("setlistId", "==", cloneId))
         const cloneDocs = snap.docs
             .map((d) => ({

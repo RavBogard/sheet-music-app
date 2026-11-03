@@ -1244,7 +1244,7 @@ export async function writeSetlistFromTemplateRows(
         newRows.push({ id: newTrackId, data: payload })
     })
 
-    await createSetlistWithRows(db, { setlistId: newSetlistId, setlist: setlistPayload, rows: newRows }, { actor: uid })
+    await createSetlistWithRows(db, org, { setlistId: newSetlistId, setlist: setlistPayload, rows: newRows }, { actor: uid })
     logger.info(`[mcp] ${input.logLabel} committed`, {
         sourceTemplateId: input.sourceTemplateId,
         newSetlistId,

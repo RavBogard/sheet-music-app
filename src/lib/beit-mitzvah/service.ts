@@ -172,18 +172,19 @@ export async function ensureService(db: Firestore, request: EnsureRequest): Prom
                 ceremonyId: request.ceremonyId, ceremonyIds: [request.ceremonyId], occasion: "bnei-mitzvah",
                 ...(week ? weekFields(week) : {}),
             })
-            writeNewSetlist(w, { setlistId, setlist, rows: rows.map(row => ({ id: String(row.id), data: row })) }, "create")
+            writeNewSetlist(w, "crc", { setlistId, setlist, rows: rows.map(row => ({ id: String(row.id), data: row })) }, "create")
         }
         // BET-6: a linked existing service learns its ceremony. A setlist that a
         // second ceremony also links to keeps its first ceremonyId and lists
         // every ceremony in ceremonyIds, so each one's card shows.
         if (selected) {
             const first = typeof selected.ceremonyId === "string" ? selected.ceremonyId : request.ceremonyId
-            // Stamped and version-bumped, so every device sees the ceremony link.
+            // Version-bumped, so every device sees the ceremony link; `updatedAt`
+            // stays as it was (server-derived, until PR 3).
             w.updateSetlist(setlistId, {
                 ceremonyId: first, occasion: "bnei-mitzvah",
                 ceremonyIds: FieldValue.arrayUnion(first, request.ceremonyId),
-            })
+            }, { touchUpdatedAt: false })
         }
         const reviewRequired = !!selected && (dateOf(selected.eventDate) !== request.localDate || selected.templateType !== templateType(request.ceremonyType))
         tx.create(ceremonyRef, clean({ orgId: "crc", ceremonyId: request.ceremonyId, setlistId, localDate: request.localDate, ceremonyType: request.ceremonyType,

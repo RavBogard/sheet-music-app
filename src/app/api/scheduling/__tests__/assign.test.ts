@@ -111,6 +111,23 @@ vi.mock('@/lib/firebase-admin', () => ({
     verifyIdToken: vi.fn(),
 }))
 
+// assignment-service writes the setlist doc through the single writer
+// (src/lib/setlist-ops). Its stamps are covered by the module's emulator tests;
+// here the writer is a thin shim over the mocked transaction, so each
+// assertion still sees the setlist write land in the SAME transaction.
+vi.mock('@/lib/setlist-ops', () => ({
+    runSetlistTransaction: (
+        db: { runTransaction: (fn: (tx: unknown) => Promise<unknown>) => Promise<unknown>; collection: (n: string) => { doc: (id: string) => unknown } },
+        fn: (tx: unknown, w: unknown) => Promise<unknown>,
+    ) =>
+        db.runTransaction((tx) =>
+            fn(tx, {
+                updateSetlist: (id: string, patch: Record<string, unknown>) =>
+                    (tx as { update: (ref: unknown, data: unknown) => unknown }).update(db.collection('setlists').doc(id), patch),
+            }),
+        ),
+}))
+
 vi.mock('firebase-admin/firestore', () => ({
     FieldValue: {
         serverTimestamp: vi.fn(() => 'SERVER_TIMESTAMP'),

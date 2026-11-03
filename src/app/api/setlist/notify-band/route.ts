@@ -154,6 +154,7 @@ export const POST = createApiHandler(
         const wasNotifiedBefore = !!setlist.lastNotifiedAt
         await maintainSetlist(
             db,
+            ctx.auth.orgId,
             setlistId,
             async (_tx, m) => {
                 m.updateSetlist({ lastNotifiedAt: FieldValue.serverTimestamp() })

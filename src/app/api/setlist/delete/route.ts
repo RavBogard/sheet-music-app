@@ -131,7 +131,7 @@ export const POST = createApiHandler(
         // The reverse shape (parent gone, top-level tracks present) is what
         // we close here.
         try {
-            tracks = await deleteSetlistRows(db, setlistId)
+            tracks = await deleteSetlistRows(db, ctx.auth.orgId, setlistId)
         } catch (e) {
             const msg = e instanceof Error ? e.message : String(e)
             logger.error(`[setlist/delete] tracks cleanup failed for ${setlistId}: ${msg}`)
@@ -140,7 +140,7 @@ export const POST = createApiHandler(
 
         // 6) recursiveDelete: parent + subcollections (history, emailEvents, ...)
         try {
-            await deleteSetlistTree(db, setlistId)
+            await deleteSetlistTree(db, ctx.auth.orgId, setlistId)
         } catch (e) {
             const msg = e instanceof Error ? e.message : String(e)
             logger.error(`[setlist/delete] recursiveDelete failed for ${setlistId}: ${msg}`)

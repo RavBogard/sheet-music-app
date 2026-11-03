@@ -257,13 +257,13 @@ export async function assignMusiciansService(
                 for (const g of guests) finalMusicians.push(g)
 
                 if (setlistSnap.exists) {
-                    // Stamped and version-bumped: devices show the band list.
+                    // Version-bumped: devices show the band list (`updatedAt` untouched until PR 3).
                     w.updateSetlist(args.setlistId, {
                         musicians: finalMusicians,
                         assignedUids: finalMusicians
                             .map((m) => m.uid)
                             .filter(Boolean),
-                    })
+                    }, { touchUpdatedAt: false })
                 }
 
                 return {
@@ -492,13 +492,13 @@ export async function unassignAssignmentService(
                         (m) => m.uid !== musicianUid,
                     )
                     if (filtered.length !== musicians.length) {
-                        // Stamped and version-bumped: devices show the band list.
+                        // Version-bumped: devices show the band list (`updatedAt` untouched until PR 3).
                         w.updateSetlist(setlistId, {
                             musicians: filtered,
                             assignedUids: filtered
                                 .map((m) => m.uid)
                                 .filter(Boolean),
-                        })
+                        }, { touchUpdatedAt: false })
                     }
                 }
             }
@@ -704,13 +704,13 @@ export async function respondToAssignmentService(
                         (m) => m.uid !== args.actorUid,
                     )
                     if (filtered.length !== musicians.length) {
-                        // Stamped and version-bumped: devices show the band list.
+                        // Version-bumped: devices show the band list (`updatedAt` untouched until PR 3).
                         w.updateSetlist(data.setlistId, {
                             musicians: filtered,
                             assignedUids: filtered
                                 .map((m) => m.uid)
                                 .filter(Boolean),
-                        })
+                        }, { touchUpdatedAt: false })
                     }
                 }
             }

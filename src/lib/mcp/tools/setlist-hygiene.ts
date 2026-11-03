@@ -26,6 +26,7 @@ import { richError, type RichErrorEnvelope } from "@/lib/mcp/errors"
 import { readTenantRole } from "@/lib/org/access"
 import type { OrgId } from "@/lib/org/types"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
+import { rowOrg } from "@/lib/org/membership"
 
 export interface BackfillSetlistTestFlagArgs {
     dryRun?: boolean
@@ -83,7 +84,7 @@ export async function backfillSetlistTestFlag(
             // Cycle-3 REG-003: real-run without force returns the rich
             // `force_required` envelope carrying the dry-run plan in
             // extras. F-05 standing rule preserved.
-            const planOnly = await backfillSetlistTestFlag(uid, { dryRun: true })
+            const planOnly = await backfillSetlistTestFlag(uid, { dryRun: true }, org)
             if ("ok" in planOnly && planOnly.ok === false) return planOnly
             return richError(
                 "force_required",
@@ -95,7 +96,9 @@ export async function backfillSetlistTestFlag(
             )
         }
 
-        const snap = await db.collection("setlists").get()
+        const all = await db.collection("setlists").get()
+        // Only the caller's tenant (unstamped rows read as crc).
+        const snap = { docs: all.docs.filter((d) => rowOrg(d.data().orgId) === org) }
 
         const deltas: BackfillSetlistTestFlagDelta[] = []
         let flaggedTest = 0
@@ -126,7 +129,7 @@ export async function backfillSetlistTestFlag(
 
         if (dryRun) {
             return {
-                scanned: snap.size,
+                scanned: snap.docs.length,
                 rowsChanged: deltas.length,
                 flaggedTest,
                 flaggedReal,
@@ -138,13 +141,16 @@ export async function backfillSetlistTestFlag(
 
         // Through the single writer: `isTest` decides which lists a setlist
         // appears in, so each setlist's `version` is bumped and devices see it.
+        // `updatedAt` stays as it was (server-derived field, until PR 3).
         await maintainSetlists(
             db,
+            org,
             deltas.map((delta) => ({ setlistId: delta.setlistId, patch: { isTest: delta.to } })),
+            { touchUpdatedAt: false },
         )
 
         return {
-            scanned: snap.size,
+            scanned: snap.docs.length,
             rowsChanged: deltas.length,
             flaggedTest,
             flaggedReal,

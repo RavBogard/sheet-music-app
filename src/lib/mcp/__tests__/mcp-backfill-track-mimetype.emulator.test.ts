@@ -320,4 +320,24 @@ describe("MCP backfill_track_mimetype — cowork #2/#7 (emulator)", () => {
             reason: "library_entry_not_found",
         })
     })
+
+    it("a Brothers Lazaroff leader's force run changes no CRC row or setlist", async () => {
+        const BL = "bl-leader"
+        await db().collection("memberships").doc(`brotherslazaroff__${BL}`).set({ uid: BL, tenantId: "brotherslazaroff", role: "band_leader" })
+        await db().collection("setlists").doc("crc-s").set({ orgId: "crc", version: 7 })
+        await db().collection("setlists").doc("bl-s").set({ orgId: "brotherslazaroff", version: 2 })
+        await seedTrack("crc-t", { setlistId: "crc-s", orgId: "crc", fileId: "upload-x", version: 1 })
+        await seedTrack("legacy-t", { setlistId: "crc-s", fileId: "upload-x", version: 1 }) // unstamped = crc
+        await seedTrack("bl-t", { setlistId: "bl-s", orgId: "brotherslazaroff", fileId: "upload-x", version: 1 })
+        await seedIndex("upload-x", { mimeType: "application/pdf" })
+
+        const r = await backfillTrackMimetype(BL, { dryRun: false, force: true }, "brotherslazaroff")
+        expect(r.ok).toBe(true)
+        const doc = async (c: string, id: string) => (await db().collection(c).doc(id).get()).data() ?? {}
+        expect(await doc("tracks", "crc-t")).toEqual({ setlistId: "crc-s", orgId: "crc", fileId: "upload-x", version: 1 })
+        expect(await doc("tracks", "legacy-t")).toEqual({ setlistId: "crc-s", fileId: "upload-x", version: 1 })
+        expect(await doc("setlists", "crc-s")).toEqual({ orgId: "crc", version: 7 })
+        expect(await doc("tracks", "bl-t")).toMatchObject({ mimeType: "application/pdf", version: 2 })
+        expect(await doc("setlists", "bl-s")).toMatchObject({ version: 3 })
+    })
 })

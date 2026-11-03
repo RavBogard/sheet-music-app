@@ -12,6 +12,7 @@ import {
 import { generateRawToken, hashToken } from "@/lib/mcp/tokens"
 import { logger } from "@/lib/logger"
 import { deleteSetlistsWithRows } from "@/lib/setlist-ops"
+import { rowOrg } from "@/lib/org/membership"
 import { liftLegacyErrorEnvelope } from "@/lib/mcp/errors"
 import { isTestUid } from "@/lib/test-isolation"
 import { setMembership } from "@/lib/org/memberships-write"
@@ -542,6 +543,31 @@ export interface RevokeTestAccountResult {
     authDeleted: boolean
 }
 
+/**
+ * Test-fixture cleanup is platform housekeeping (trusted leaders only, and only
+ * on test-owned or isTest setlists), and test fixtures exist in both tenants.
+ * Each setlist is therefore deleted under its OWN stored tenant, so the module's
+ * tenant check still holds per doc.
+ */
+async function deleteFixtureSetlists(
+    db: FirebaseFirestore.Firestore,
+    docs: ReadonlyArray<{ id: string; orgId: unknown }>,
+): Promise<{ setlists: number; tracks: number }> {
+    const byOrg = new Map<OrgId, string[]>()
+    for (const d of docs) {
+        const org = rowOrg(d.orgId)
+        byOrg.set(org, [...(byOrg.get(org) ?? []), d.id])
+    }
+    let setlists = 0
+    let tracks = 0
+    for (const [org, ids] of byOrg) {
+        const out = await deleteSetlistsWithRows(db, org, ids)
+        setlists += out.setlists
+        tracks += out.tracks
+    }
+    return { setlists, tracks }
+}
+
 async function deleteByQuery(
     db: FirebaseFirestore.Firestore,
     collection: string,
@@ -711,7 +737,10 @@ async function revokeTestAccountUnchecked(
     const setlistIds = setlistsSnap.docs.map((d) => d.id)
     // Tracks are top-level, keyed by setlistId; the single writer deletes
     // each setlist's rows, then the setlist docs.
-    const { tracks: tracksDeleted } = await deleteSetlistsWithRows(db, setlistIds)
+    const { tracks: tracksDeleted } = await deleteFixtureSetlists(
+        db,
+        setlistsSnap.docs.map((d) => ({ id: d.id, orgId: d.data().orgId })),
+    )
 
     // 2. Other owned collections.
     const cascaded: Record<string, number> = {
@@ -1058,7 +1087,7 @@ export async function cleanupAllTestDataCore(
         let flagTracks = 0
         for (const doc of flagSnap.docs) {
             try {
-                const { tracks } = await deleteSetlistsWithRows(db, [doc.id])
+                const { tracks } = await deleteFixtureSetlists(db, [{ id: doc.id, orgId: doc.data().orgId }])
                 flagTracks += tracks
                 flagSetlists++
             } catch (err) {
@@ -1175,6 +1204,7 @@ export async function sweepOrphanTestDataCore(
 
     const orphans: SweepOrphanTestDataResult["orphans"] = []
     const orphanSetlistIds: string[] = []
+    const orphanSetlistOrg = new Map<string, unknown>()
     const orphanTemplateIds: string[] = []
     const orphanLibraryIds: string[] = []
     let orphansTruncated = false
@@ -1187,6 +1217,7 @@ export async function sweepOrphanTestDataCore(
         const ownerId = typeof data.ownerId === "string" ? data.ownerId : null
         if (!(await orphanFilter(ownerId))) continue
         orphanSetlistIds.push(doc.id)
+        orphanSetlistOrg.set(doc.id, data.orgId)
         if (orphans.length < MAX_ORPHAN_SAMPLE) {
             orphans.push({
                 collection: "setlists",
@@ -1260,7 +1291,10 @@ export async function sweepOrphanTestDataCore(
         // Delete tracks for orphan setlists first (preserve referential
         // hygiene — track rows pointing at no setlist are themselves orphans).
         if (orphanSetlistIds.length > 0) {
-            const out = await deleteSetlistsWithRows(db, orphanSetlistIds)
+            const out = await deleteFixtureSetlists(
+                db,
+                orphanSetlistIds.map((id) => ({ id, orgId: orphanSetlistOrg.get(id) })),
+            )
             swept.tracks += out.tracks
             swept.setlists = out.setlists
         }
