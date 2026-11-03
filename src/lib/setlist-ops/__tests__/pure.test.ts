@@ -1,3 +1,4 @@
+import { checkRowFields, checkSetlistFields } from "../fields"
 import { describe, it, expect } from "vitest"
 import { FieldValue } from "firebase-admin/firestore"
 import { mergeFields, placementIndex, stripUndefined, valuesEqual } from "../pure"
@@ -146,5 +147,24 @@ describe("validateOpsRequest", () => {
     it("refuses an oversized batch as too-large", () => {
         const ops = Array.from({ length: 301 }, (_, i) => ({ kind: "remove", rowId: `r${i}` }))
         expect(validateOpsRequest({ ...ok, ops })?.reason).toBe("too-large")
+    })
+})
+
+describe("field checks (security re-review 2026-11-03)", () => {
+    it.each(["constructor", "toString", "valueOf", "hasOwnProperty"])(
+        "treats the built-in key %s as an unknown field, not a crash",
+        (k) => {
+            expect(checkRowFields({ [k]: "x" }, "set")).toMatchObject({ ok: false })
+            expect(checkSetlistFields({ [k]: "x" }, "set")).toMatchObject({ ok: false })
+        },
+    )
+    it("caps free text", () => {
+        expect(checkRowFields({ notes: "a".repeat(5000) }, "set")).toMatchObject({ ok: true })
+        expect(checkRowFields({ notes: "a".repeat(5001) }, "set")).toMatchObject({ ok: false })
+    })
+    it("refuses an eventDate outside a sane window", () => {
+        expect(checkSetlistFields({ eventDate: "2026-11-06T18:00:00.000Z" }, "set")).toMatchObject({ ok: true })
+        expect(checkSetlistFields({ eventDate: "+275760-09-13T00:00:00.000Z" }, "set")).toMatchObject({ ok: false })
+        expect(checkSetlistFields({ eventDate: "1900-01-01" }, "set")).toMatchObject({ ok: false })
     })
 })

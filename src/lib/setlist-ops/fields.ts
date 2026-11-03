@@ -20,7 +20,8 @@ import { RESERVED_ROW_FIELDS, RESERVED_SETLIST_FIELDS } from "./types"
 export const FIELD_KEY_RE = /^[A-Za-z_][A-Za-z0-9_]*$/
 export const isSafeKey = (k: string) => FIELD_KEY_RE.test(k) && !k.startsWith("__")
 
-const freeform = z.string().transform(sanitizeFreeformString)
+/** Free text. Capped so one field can't approach Firestore's 1 MiB doc limit. */
+const freeform = z.string().max(5000).transform(sanitizeFreeformString)
 
 const liturgyRefSchema = z
     .object({
@@ -89,7 +90,11 @@ const HHMM = /^([01]\d|2[0-3]):([0-5]\d)$/
 const SETLIST_FIELDS: Record<string, { schema: z.ZodTypeAny; nullable: boolean }> = {
     name: { schema: z.string().min(1).max(200).transform(sanitizeFreeformString), nullable: false },
     eventDate: {
-        schema: z.string().refine((s) => !Number.isNaN(Date.parse(s)), "eventDate must be an ISO date string"),
+        schema: z.string().max(40).refine((s) => {
+            const t = Date.parse(s)
+            // A Firestore Timestamp holds years 1..9999; keep to a sane window.
+            return !Number.isNaN(t) && t >= Date.UTC(2000, 0, 1) && t < Date.UTC(2200, 0, 1)
+        }, "eventDate must be an ISO date string between 2000 and 2199"),
         nullable: false,
     },
     templateType: { schema: z.string().max(100), nullable: true },
@@ -123,7 +128,8 @@ function checkFields(
             continue
         }
         if (reserved.has(k)) return { ok: false, message: `field '${k}' is written by the server only` }
-        const spec = table[k]
+        // Own keys only: `constructor`, `toString` etc. must read as unknown.
+        const spec = Object.hasOwn(table, k) ? table[k] : undefined
         if (!spec) return { ok: false, message: `unknown field '${k}'` }
         if (v === null) {
             if (mode === "row") continue
