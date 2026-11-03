@@ -60,3 +60,40 @@ not a patch of the particulars.
 ## Decisions (Daniel, 2026-11-03): D1 = go, D2 = (a)
 - OPS-CONTRACT.md written. PR 1 (server ops) and PR 2 (tenant guard) dispatched in parallel; they
   share no hot files. PR 3 is after PR 1; PR 4 is after PR 3.
+
+## PR 1 = #76 (setlist-sync/ops-engine @ 169f39c7)
+- Lead rulings on the builder's choices:
+  - A no-op batch doesn't bump the version — accepted (a version means "content changed").
+  - not-found for non-members, forbidden below bl — accepted (no tenant existence leak).
+  - The route folder is `[setlistId]` — accepted.
+- GATE: the non-author server writers (clone, templates, performed, open-items, hygiene, backfills,
+  B'nei Mitzvah, scheduling, notify-band) stay allowlisted — proceeded because they are not author
+  edits of an existing setlist's rows, or they create new setlists. They move in PR 3's sweep or the
+  later review, and the allowlist names each one.
+- Known interim risk: bind-row bumps updatedAt, so the editor may show "Remote changes detected" on
+  that row until PR 3.
+- SECURITY (#76, unmerged, so prod is not exposed):
+  - S1: an insert could overwrite any tenant's track (existence check limited to the setlist, plus
+    a replacing `set` through Admin).
+  - S2: dotted keys bypassed the reserved fields (could re-tenant a doc).
+  Reported to Daniel. One fix round was sent to the builder with review items R3–R10. A re-review
+  of the security deltas follows.
+- #76 security re-review: S1, S2 and R5 CLOSED. The lead fixed the leftovers (0e0ed050): built-in keys
+  crashed the schema check (now unknown), free text is capped at 5000, eventDate is bounded to
+  2000–2199.
+- GATE: R6 guard evasions using dynamically built collection names were accepted as out of scope —
+  proceeded because the guard is a developer tripwire. Firestore rules and the server-side tenant
+  check in setlist-ops are the security boundary, and the lint ban in #77 covers client code.
+- Note: 0e0ed050 carries the worktree's inherited identity `pr2-tenant-query` (cosmetic).
+
+## Merged
+- #77 → e4286f72 (tenant query helper, lint ban, 128-case matrix, cross-tenant fallback, assignments index).
+- #76 → c6c9d2f1 (server ops path; all checks green; rules deploy run started).
+- PR 3 (editor client) and PR 3b (server writer stragglers) dispatched in parallel; the file sets
+  are disjoint apart from possibly the guard test.
+- GATE: PR 3 migrates the old queue by replaying pending/failed rows as ops instead of discarding
+  them — proceeded because Daniel's unsaved rows must survive and the replay is safe (conflicts land
+  in a visible refused list).
+- GATE: wording for the new editor strings is provisional ("Reconnect to add, move or remove rows";
+  "Couldn't save: {row} — {reason}", with "Try again" / "Discard"). Batched for Daniel's wording
+  pass at the end of the wave.
