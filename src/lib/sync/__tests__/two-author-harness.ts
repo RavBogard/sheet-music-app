@@ -202,6 +202,8 @@ export async function makeDevice(name: string, uid: string, claims: Record<strin
                 void view(setlistId).then((r) => {
                     const sig = r.map((x) => x.id).join(',')
                     if (seenOrders[seenOrders.length - 1] !== sig) seenOrders.push(sig)
+                }).catch(() => {
+                    // A sample still in flight when shutdown closes Dexie.
                 })
             }, 15)
         },
