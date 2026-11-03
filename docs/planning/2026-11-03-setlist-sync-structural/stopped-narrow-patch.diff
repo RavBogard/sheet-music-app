@@ -1,0 +1,343 @@
+diff --git a/src/app/perform/setlist/[id]/SetlistPerformClient.tsx b/src/app/perform/setlist/[id]/SetlistPerformClient.tsx
+index 86205ef9..2ccb6cfe 100644
+--- a/src/app/perform/setlist/[id]/SetlistPerformClient.tsx
++++ b/src/app/perform/setlist/[id]/SetlistPerformClient.tsx
+@@ -60,6 +60,7 @@ import { applyOrder, moveRow, reapplyMove, sameOrder, type IntendedMove } from "
+ import { commitLiveReorder, type LiveReorderFailure } from "@/lib/performance/live-reorder-client"
+ import { PerformReorderList } from "@/components/performance/PerformReorderList"
+ import { useMovedRowHighlight } from "@/components/performance/use-moved-row-highlight"
++import { useSettledLiveOrder } from "@/components/performance/use-settled-live-order"
+ import { ServerOrderContext } from "@/components/performance/live-order-context"
+ 
+ const PrintModal = dynamic(
+@@ -153,50 +154,15 @@ export function SetlistPerformClient({
+     pendingOrderRef.current = pendingOrder
+     const liveIdsKey = liveTracks.map((t) => t.id ?? "").join("\n")
+ 
+-    // Receivers: an incoming reorder waits while a finger is on the list
+-    // (touchstart through touchend + 300 ms), so a row never jumps out from
+-    // under a tap. Refs, not state: a touch costs no render unless a change
+-    // is actually held.
+-    const touchingRef = useRef(false)
+-    const touchReleaseRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+-    const shownLiveOrderRef = useRef<string[] | null>(null)
+-    const heldRef = useRef(false)
+-    const [holdReleaseTick, setHoldReleaseTick] = useState(0)
+-    const onListTouchStart = useCallback(() => {
+-        if (touchReleaseRef.current) clearTimeout(touchReleaseRef.current)
+-        touchReleaseRef.current = null
+-        touchingRef.current = true
+-    }, [])
+-    const onListTouchEnd = useCallback(() => {
+-        if (touchReleaseRef.current) clearTimeout(touchReleaseRef.current)
+-        touchReleaseRef.current = setTimeout(() => {
+-            touchReleaseRef.current = null
+-            touchingRef.current = false
+-            if (heldRef.current) {
+-                heldRef.current = false
+-                setHoldReleaseTick((n) => n + 1)
+-            }
+-        }, 300)
+-    }, [])
+-    useEffect(() => () => {
+-        if (touchReleaseRef.current) clearTimeout(touchReleaseRef.current)
+-    }, [])
+-    const shownLive = useMemo(() => {
+-        const shown = shownLiveOrderRef.current
+-        if (touchingRef.current && shown) {
+-            const ids = liveIdsKey.split("\n")
+-            const before = new Set(shown)
+-            // Only a pure reorder is held; a row arriving or leaving shows at once.
+-            if (!sameOrder(ids, shown) && ids.length === shown.length && ids.every((id) => before.has(id))) {
+-                heldRef.current = true
+-                return applyOrder(liveTracks, shown) as typeof liveTracks
+-            }
+-        }
+-        shownLiveOrderRef.current = liveIdsKey.split("\n")
+-        return liveTracks
+-        // holdReleaseTick: re-run when a held order is let go.
+-        // eslint-disable-next-line react-hooks/exhaustive-deps
+-    }, [liveTracks, liveIdsKey, holdReleaseTick])
++    // Receivers: an incoming change of ORDER alone waits until deliveries go
++    // quiet (the editor writes a reorder row by row) and while a finger is on
++    // the list; rows added or removed and content edits show at once. See
++    // `use-settled-live-order.ts`.
++    const {
++        shownLive,
++        onTouchStart: onListTouchStart,
++        onTouchEnd: onListTouchEnd,
++    } = useSettledLiveOrder(liveTracks, pendingOrderRef)
+ 
+     const tracks = useMemo(
+         () => applyOrder(shownLive, pendingOrder) as typeof liveTracks,
+diff --git a/src/components/performance/use-settled-live-order.ts b/src/components/performance/use-settled-live-order.ts
+new file mode 100644
+index 00000000..5f7c856b
+--- /dev/null
++++ b/src/components/performance/use-settled-live-order.ts
+@@ -0,0 +1,132 @@
++"use client"
++
++import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react"
++
++import { applyOrder, sameOrder } from "@/lib/performance/live-reorder"
++
++/**
++ * RECEIVER-SIDE REORDER SETTLING (David's phone, 2026-11-03).
++ *
++ * The in-app editor writes a reorder one row at a time, so a receiving Perform
++ * device gets one delivery per row, a few hundred ms apart, and each
++ * intermediate order (with duplicate `order` values along the way) used to be
++ * drawn — the list "jumped around". This hook shows the rows in their
++ * content's latest state at once but holds a change of ORDER alone (same ids,
++ * new sequence) until deliveries go quiet:
++ *
++ *  - a pure reorder waits until SETTLE_QUIET_MS pass with no new live change,
++ *    and never longer than SETTLE_MAX_MS from the first held delivery, so it
++ *    always lands;
++ *  - a row added or removed shows at once, and so does a content edit (the
++ *    held order is laid over the fresh rows);
++ *  - while a finger is on the list (touchstart → touchend + 300 ms) a reorder
++ *    also waits, as before; it lands when both the touch and the quiet window
++ *    are over;
++ *  - an order that matches the leader's own pending move shows at once, so a
++ *    leader's move never flickers back when the server confirms it.
++ *
++ * Nothing here invents an order (R11-b): what is shown is always either the
++ * order last shown or the live order the server sent.
++ */
++export const SETTLE_QUIET_MS = 1200
++export const SETTLE_MAX_MS = 8000
++const TOUCH_TAIL_MS = 300
++
++type Timer = ReturnType<typeof setTimeout>
++
++function isPureReorder(ids: readonly string[], shown: readonly string[]): boolean {
++    if (ids.length !== shown.length || sameOrder(ids, shown)) return false
++    const before = new Set(shown)
++    return ids.every((id) => before.has(id))
++}
++
++export function useSettledLiveOrder<T extends { id?: string }>(
++    liveTracks: readonly T[],
++    pendingOrderRef: RefObject<string[] | null>,
++): { shownLive: readonly T[]; onTouchStart: () => void; onTouchEnd: () => void } {
++    const shownOrderRef = useRef<string[] | null>(null)
++    const heldRef = useRef(false)
++    const releaseRef = useRef(false)
++    const touchingRef = useRef(false)
++    const touchTimer = useRef<Timer | null>(null)
++    const quietTimer = useRef<Timer | null>(null)
++    const maxTimer = useRef<Timer | null>(null)
++    const [tick, setTick] = useState(0)
++
++    const liveIdsKey = liveTracks.map((t) => t.id ?? "").join("\n")
++
++    const shownLive = useMemo(() => {
++        const ids = liveIdsKey === "" ? [] : liveIdsKey.split("\n")
++        const shown = shownOrderRef.current
++        const pending = pendingOrderRef.current
++        if (
++            shown &&
++            !releaseRef.current &&
++            isPureReorder(ids, shown) &&
++            !(pending && sameOrder(ids, pending))
++        ) {
++            heldRef.current = true
++            return applyOrder(liveTracks, shown)
++        }
++        releaseRef.current = false
++        heldRef.current = false
++        shownOrderRef.current = ids
++        return liveTracks
++        // tick: re-run when a held order is let go.
++        // eslint-disable-next-line react-hooks/exhaustive-deps
++    }, [liveTracks, liveIdsKey, tick])
++
++    const clearSettleTimers = useCallback(() => {
++        if (quietTimer.current) clearTimeout(quietTimer.current)
++        if (maxTimer.current) clearTimeout(maxTimer.current)
++        quietTimer.current = null
++        maxTimer.current = null
++    }, [])
++
++    const release = useCallback(() => {
++        if (!heldRef.current) return
++        releaseRef.current = true
++        setTick((n) => n + 1)
++    }, [])
++
++    const onSettled = useCallback(() => {
++        clearSettleTimers()
++        // A finger still on the list keeps the hold; touch-end lets it go.
++        if (!touchingRef.current) release()
++    }, [clearSettleTimers, release])
++
++    // Every live change while an order is held restarts the quiet window; the
++    // cap starts with the first held delivery and is not restarted.
++    useEffect(() => {
++        if (!heldRef.current) {
++            clearSettleTimers()
++            return
++        }
++        if (quietTimer.current) clearTimeout(quietTimer.current)
++        quietTimer.current = setTimeout(onSettled, SETTLE_QUIET_MS)
++        if (!maxTimer.current) maxTimer.current = setTimeout(onSettled, SETTLE_MAX_MS)
++    }, [liveTracks, clearSettleTimers, onSettled])
++
++    const onTouchStart = useCallback(() => {
++        if (touchTimer.current) clearTimeout(touchTimer.current)
++        touchTimer.current = null
++        touchingRef.current = true
++    }, [])
++    const onTouchEnd = useCallback(() => {
++        if (touchTimer.current) clearTimeout(touchTimer.current)
++        touchTimer.current = setTimeout(() => {
++            touchTimer.current = null
++            touchingRef.current = false
++            // Deliveries already quiet: land now. Otherwise the quiet window does.
++            if (!quietTimer.current && !maxTimer.current) release()
++        }, TOUCH_TAIL_MS)
++    }, [release])
++
++    useEffect(() => () => {
++        if (touchTimer.current) clearTimeout(touchTimer.current)
++        if (quietTimer.current) clearTimeout(quietTimer.current)
++        if (maxTimer.current) clearTimeout(maxTimer.current)
++    }, [])
++
++    return { shownLive, onTouchStart, onTouchEnd }
++}
+diff --git a/src/lib/sync/heal-from-server-frame.ts b/src/lib/sync/heal-from-server-frame.ts
+new file mode 100644
+index 00000000..e742af80
+--- /dev/null
++++ b/src/lib/sync/heal-from-server-frame.ts
+@@ -0,0 +1,127 @@
++// SELF-HEAL A PERFORM DEVICE FROM SERVER TRUTH (David's phone, 2026-11-03).
++//
++// Perform reads its rows from Dexie, and "Dexie wins when it has rows", so a
++// device whose Dexie copy went stale used to stay stale across reloads: the
++// fresh server frame (Admin read at page load) was thrown away. A row can stay
++// stale through the snapshot listener's guards — any outbox row for it,
++// including a terminal 'failed' one waiting for a conflict UI Perform does not
++// show; a local row with no updatedAt; or a Dexie row the Firestore cache no
++// longer knows about (a ghost the listener never hears removed).
++//
++// These helpers replay the server's rows into Dexie. They never invent an
++// order (R11-b): every row written is the server's own row, and a row is only
++// removed when the server's full set for this setlist does not contain it.
++// A row with an outbox write in flight ('pending' or 'sending') is left alone;
++// a 'failed' one is not — a stuck write must not freeze a band device. The
++// outbox row itself is never touched.
++
++import type { LocalDb } from '@/lib/local/schema'
++import type { LocalTrack } from '@/lib/local/types'
++
++/** Track ids with a track write the engine is still going to send. */
++export async function inFlightTrackIds(db: LocalDb): Promise<Set<string>> {
++    const rows = await db.outbox
++        .filter(
++            (r) =>
++                r.collection === 'tracks' &&
++                (r.status === 'pending' || r.status === 'sending'),
++        )
++        .toArray()
++    return new Set(rows.map((r) => r.docId))
++}
++
++export interface ServerFrameRow {
++    id?: string
++    updatedAt?: unknown
++    [key: string]: unknown
++}
++
++export interface HealReport {
++    written: string[]
++    deleted: string[]
++    skipped: string[]
++}
++
++function ms(value: unknown): number {
++    return typeof value === 'number' && Number.isFinite(value) ? value : 0
++}
++
++/**
++ * Reconcile this setlist's Dexie rows against the server frame. An empty
++ * frame means the server read failed (or the setlist has no rows); either
++ * way it is not evidence, so nothing changes.
++ *
++ * A Dexie row missing from the frame is deleted only when it is not newer
++ * than the newest row in the frame: a row the live listener delivered after
++ * the page was rendered is newer than the frame, and the first server
++ * snapshot (see `snapshot-listener.ts`) settles it instead.
++ */
++export async function healTracksFromServerFrame(
++    db: LocalDb,
++    setlistId: string,
++    frame: readonly ServerFrameRow[],
++): Promise<HealReport> {
++    const report: HealReport = { written: [], deleted: [], skipped: [] }
++    const rows = frame.filter((r): r is ServerFrameRow & { id: string } => typeof r.id === 'string' && r.id !== '')
++    if (!setlistId || rows.length === 0) return report
++
++    await db.transaction('rw', db.tracks, db.outbox, async () => {
++        const busy = await inFlightTrackIds(db)
++        const frameIds = new Set<string>()
++        let frameNewest = 0
++        for (const row of rows) {
++            frameIds.add(row.id)
++            frameNewest = Math.max(frameNewest, ms(row.updatedAt))
++            if (busy.has(row.id)) {
++                report.skipped.push(row.id)
++                continue
++            }
++            const local = await db.tracks.get(row.id)
++            const serverAt = ms(row.updatedAt)
++            if (local && local.updatedAt !== undefined && local.updatedAt >= serverAt) continue
++            await db.tracks.put({
++                ...(row as unknown as LocalTrack),
++                id: row.id,
++                setlistId,
++                updatedAt: serverAt,
++            } as LocalTrack)
++            report.written.push(row.id)
++        }
++        const locals = await db.tracks.where('setlistId').equals(setlistId).toArray()
++        for (const local of locals) {
++            if (frameIds.has(local.id)) continue
++            if (busy.has(local.id)) {
++                report.skipped.push(local.id)
++                continue
++            }
++            if (local.updatedAt !== undefined && local.updatedAt > frameNewest) continue
++            await db.tracks.delete(local.id)
++            report.deleted.push(local.id)
++        }
++    })
++    return report
++}
++
++/**
++ * Remove this setlist's Dexie rows that a server (not cache) snapshot of the
++ * whole set does not contain. Same in-flight skip as above. An empty server
++ * set is not trusted (a filter that matched nothing proves nothing).
++ */
++export async function pruneTracksAbsentFromServer(
++    db: LocalDb,
++    setlistId: string,
++    serverIds: ReadonlySet<string>,
++): Promise<string[]> {
++    if (!setlistId || serverIds.size === 0) return []
++    const deleted: string[] = []
++    await db.transaction('rw', db.tracks, db.outbox, async () => {
++        const busy = await inFlightTrackIds(db)
++        const locals = await db.tracks.where('setlistId').equals(setlistId).toArray()
++        for (const local of locals) {
++            if (serverIds.has(local.id) || busy.has(local.id)) continue
++            await db.tracks.delete(local.id)
++            deleted.push(local.id)
++        }
++    })
++    return deleted
++}
