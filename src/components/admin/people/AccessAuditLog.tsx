@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { collection, query, where, orderBy, limit, type Query, type DocumentData } from "firebase/firestore"
+import type { Query, DocumentData } from "firebase/firestore"
+import { auditLogsQuery } from "@/lib/tenant-query"
 import { getDb } from "@/lib/firebase"
 import { Shield, ArrowRight, Loader2 } from "lucide-react"
 import { useSafeFirestoreSync } from "@/hooks/use-safe-firestore-sync"
@@ -40,12 +41,7 @@ export function AccessAuditLog() {
         void getDb().then((db) => {
             if (cancelled) return
             // Multi-tenant phase 2: this tenant's records only.
-            setQ(query(
-                collection(db, "auditLogs"),
-                where("orgId", "==", org),
-                orderBy("timestamp", "desc"),
-                limit(20) // Only show the last 20 actions
-            ))
+            setQ(auditLogsQuery(db, org, 20)) // Only show the last 20 actions
         })
         return () => { cancelled = true }
     }, [org])

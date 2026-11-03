@@ -14,7 +14,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { QuickMonitorPanel } from "@/components/monitor/QuickMonitorPanel"
 import { Input } from "@/components/ui/input"
 import { getDb } from "@/lib/firebase"
-import { collection, query, where, orderBy, limit, getDocs, Timestamp } from "firebase/firestore"
+import { getDocs } from "firebase/firestore"
+import { upcomingSetlistsQuery } from "@/lib/tenant-query"
 import { useLibraryStore } from "@/lib/library-store"
 import Fuse from "fuse.js"
 import type { DriveFile } from "@/types/models"
@@ -143,13 +144,7 @@ export function MobileTabBar(props: AppNavigationProps) {
             const db = await getDb()
             const now = new Date()
             // Multi-tenant phase 2: this tenant's next gig only.
-            const q = query(
-                collection(db, "setlists"),
-                where("orgId", "==", org),
-                where("eventDate", ">=", Timestamp.fromDate(now)),
-                orderBy("eventDate", "asc"),
-                limit(1),
-            )
+            const q = upcomingSetlistsQuery(db, org, now, { max: 1 })
             const snap = await getDocs(q)
             if (!snap.empty) {
                 router.push(`/perform/setlist/${snap.docs[0].id}`)

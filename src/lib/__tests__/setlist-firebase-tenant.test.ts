@@ -17,7 +17,8 @@ const h = vi.hoisted(() => ({
     getDocs: vi.fn(),
     setDoc: vi.fn(),
     where: vi.fn((...args: unknown[]) => ({ __where: args })),
-    query: vi.fn((...args: unknown[]) => ({ __query: args })),
+    query: vi.fn((...args: unknown[]) =>
+        Object.defineProperty({ __query: args }, 'withConverter', { value() { return this }, enumerable: false })),
 }))
 
 vi.mock('firebase/firestore', () => {

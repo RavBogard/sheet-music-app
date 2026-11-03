@@ -2,13 +2,8 @@
 // no store. RecordingBindPopover subscribes directly. Builds on the v70-02
 // recordings/{id} collection + the songId+createdAt composite index.
 
-import {
-    collection,
-    onSnapshot,
-    orderBy,
-    query,
-    where,
-} from "firebase/firestore"
+import { onSnapshot } from "firebase/firestore"
+import { recordingsForSongQuery } from "@/lib/tenant-query"
 
 import { apiFetch } from "@/lib/api-client"
 import { plainT } from "@/i18n/plain"
@@ -33,12 +28,7 @@ export function subscribeRecordingsForSong(
     cb: (recordings: Recording[]) => void,
 ): () => void {
     return subscribeWithDb((db) => {
-        const q = query(
-            collection(db, "recordings"),
-            where("orgId", "==", orgId),
-            where("songId", "==", songId),
-            orderBy("createdAt", "desc"),
-        )
+        const q = recordingsForSongQuery(db, orgId, songId)
         return onSnapshot(
             q,
             (snap) => {

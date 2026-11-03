@@ -3,7 +3,8 @@
 // don't force a rewrite. Production call sites flipped at SetlistGridHydrator
 // + ChartBindDialog; the helper here no longer fires at runtime.
 
-import { collection, getDocs, query, where } from 'firebase/firestore'
+import { getDocs } from 'firebase/firestore'
+import { songsQuery } from '@/lib/tenant-query'
 
 import { getDb as getFirestoreDb } from '@/lib/firebase'
 import { getDb, type LocalDb } from '@/lib/local/schema'
@@ -49,7 +50,7 @@ export function firestoreSongsAdapter(org: OrgId): PrimeAdapter {
         async getAllSongs() {
             const firestoreDb = await getFirestoreDb()
             const snap = await getDocs(
-                query(collection(firestoreDb, 'songs'), where('orgId', '==', org)),
+                songsQuery(firestoreDb, org),
             )
             return snap.docs.map((d) => ({
                 id: d.id,
