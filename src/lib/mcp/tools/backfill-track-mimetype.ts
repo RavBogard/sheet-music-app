@@ -308,6 +308,7 @@ export async function backfillTrackMimetype(
             const slice = healRows.slice(i, i + WRITE_BATCH_MAX)
             const batch = db.batch()
             for (const r of slice) {
+                // setlist-ops-allowlist: remove in PR 3 (mimetype backfill)
                 batch.set(
                     db.collection("tracks").doc(r.trackId),
                     {

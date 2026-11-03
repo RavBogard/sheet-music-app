@@ -7,6 +7,7 @@ import { rowOrg } from "@/lib/mcp/org-context"
 import { coerceOrgId } from "@/lib/org/registry"
 import { autoBindLiturgyRef } from "@/lib/liturgy/bind-on-type"
 import { logger } from "@/lib/logger"
+import { writeRowFields } from "@/lib/setlist-ops"
 
 /**
  * POST /api/liturgy/bind-row — bind on type, for the browser.
@@ -84,10 +85,26 @@ export const POST = createApiHandler(
         }
 
         try {
-            await trackRef.update({
-                liturgyRef: auto.ref,
-                ...(auto.momentId ? { momentId: auto.momentId } : {}),
-            })
+            // Through the single writer: the row gets a new updatedAt + version
+            // and the setlist's version moves, so every device holding the row
+            // sees the page (this write used to be invisible to their guards).
+            // Re-checked in the transaction: never overwrite a page typed since.
+            const { written } = await writeRowFields(
+                db,
+                setlistId,
+                [{
+                    rowId: trackId,
+                    patch: {
+                        liturgyRef: auto.ref,
+                        ...(auto.momentId ? { momentId: auto.momentId } : {}),
+                    },
+                }],
+                {
+                    actor: ctx.auth.uid,
+                    guard: (current) => !(current.liturgyRef && typeof current.liturgyRef === "object"),
+                },
+            )
+            if (written.length === 0) return NextResponse.json({ ok: true, outcome: "already-bound" })
         } catch (err) {
             // The row is saved and correct; only the page is missing. Say so
             // and let the batch sweep catch it rather than failing an edit.

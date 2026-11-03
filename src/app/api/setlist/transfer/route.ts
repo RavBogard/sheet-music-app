@@ -5,6 +5,7 @@ import { getAuth, getFirestore } from "@/lib/firebase-admin"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { transferSetlistSchema } from "@/lib/validations"
 import { createApiHandler } from "@/lib/api-wrapper"
+import { updateSetlistFields } from "@/lib/setlist-ops"
 
 export const POST = createApiHandler(
     async ({ req, auth, body }) => {
@@ -43,13 +44,13 @@ export const POST = createApiHandler(
 
         const setlistData = setlistSnap.data()
 
-        // Update Setlist
-        await setlistRef.update({
+        // Update Setlist, through the single writer (stamps updatedAt, bumps version).
+        await updateSetlistFields(db, setlistId, {
             ownerId: targetUser.uid,
             ownerName: targetUser.displayName || targetUser.email || "Unknown User",
             transferredAt: new Date().toISOString(),
             previousOwnerId: auth.uid
-        })
+        }, { actor: auth.uid })
 
         const t = await getT()
         return NextResponse.json({

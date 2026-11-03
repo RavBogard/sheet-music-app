@@ -158,6 +158,7 @@ export async function ensureService(db: Firestore, request: EnsureRequest): Prom
             const rows = seedTemplateRows(slots, book)
             setlistId = candidateId
             const stamp = FieldValue.serverTimestamp()
+            // setlist-ops-allowlist: remove in PR 3 (B'nei Mitzvah service creation)
             tx.create(db.collection("setlists").doc(setlistId), clean({
                 id: setlistId, orgId: "crc", name: request.displayName ?? `B'nei Mitzvah ${request.ceremonyType === "morning" ? "Morning" : "Havdalah"} — ${request.localDate}`,
                 eventDate: parseEventDate(`${request.localDate}T${request.ceremonyType === "morning" ? "10:00" : "16:00"}`, "crc"), templateType: key, serviceType: storedClassFor({ templateType: key }).serviceType ?? null,
@@ -169,6 +170,7 @@ export async function ensureService(db: Firestore, request: EnsureRequest): Prom
                 ceremonyId: request.ceremonyId, ceremonyIds: [request.ceremonyId], occasion: "bnei-mitzvah",
                 ...(week ? weekFields(week) : {}),
             }))
+            // setlist-ops-allowlist: remove in PR 3 (B'nei Mitzvah service creation)
             for (const row of rows) tx.create(db.collection("tracks").doc(String(row.id)), { ...row, setlistId })
         }
         // BET-6: a linked existing service learns its ceremony. A setlist that a
@@ -176,6 +178,7 @@ export async function ensureService(db: Firestore, request: EnsureRequest): Prom
         // every ceremony in ceremonyIds, so each one's card shows.
         if (selected) {
             const first = typeof selected.ceremonyId === "string" ? selected.ceremonyId : request.ceremonyId
+            // setlist-ops-allowlist: remove in PR 3 (B'nei Mitzvah service creation)
             tx.update(db.collection("setlists").doc(setlistId), {
                 ceremonyId: first, occasion: "bnei-mitzvah",
                 ceremonyIds: FieldValue.arrayUnion(first, request.ceremonyId),

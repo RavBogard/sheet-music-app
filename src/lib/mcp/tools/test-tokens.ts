@@ -551,6 +551,7 @@ async function deleteByQuery(
     if (snap.empty) return { ids: [], count: 0 }
     const ids = snap.docs.map((d) => d.id)
     const bw = db.bulkWriter()
+    // setlist-ops-allowlist: remove in PR 3 (test-fixture cleanup)
     for (const d of snap.docs) bw.delete(d.ref)
     await bw.close()
     return { ids, count: ids.length }
@@ -714,11 +715,13 @@ async function revokeTestAccountUnchecked(
         for (const sid of setlistIds) {
             const trackSnap = await db.collection("tracks").where("setlistId", "==", sid).get()
             const bw = db.bulkWriter()
+            // setlist-ops-allowlist: remove in PR 3 (test-fixture cleanup)
             for (const t of trackSnap.docs) bw.delete(t.ref)
             await bw.close()
             tracksDeleted += trackSnap.size
         }
         const bw = db.bulkWriter()
+        // setlist-ops-allowlist: remove in PR 3 (test-fixture cleanup)
         for (const s of setlistsSnap.docs) bw.delete(s.ref)
         await bw.close()
     }
@@ -744,6 +747,7 @@ async function revokeTestAccountUnchecked(
     const tokenSnap = await db.collection(MCP_TOKENS).where("testUid", "==", uid).get()
     {
         const bw = db.bulkWriter()
+        // setlist-ops-allowlist: remove in PR 3 (test-fixture cleanup)
         for (const t of tokenSnap.docs) bw.delete(t.ref)
         await bw.close()
     }
@@ -754,6 +758,7 @@ async function revokeTestAccountUnchecked(
 
     // 5. users/{uid} with subcollections.
     try {
+        // setlist-ops-allowlist: remove in PR 3 (test-fixture cleanup)
         await db.recursiveDelete(db.collection(USERS).doc(uid))
     } catch (err) {
         logger.warn("[mcp-test-token] recursiveDelete failed", { uid, err })
@@ -1071,9 +1076,11 @@ export async function cleanupAllTestDataCore(
                     .where("setlistId", "==", doc.id)
                     .get()
                 const bw = db.bulkWriter()
+                // setlist-ops-allowlist: remove in PR 3 (test-fixture cleanup)
                 for (const t of trackSnap.docs) bw.delete(t.ref)
                 await bw.close()
                 flagTracks += trackSnap.size
+                // setlist-ops-allowlist: remove in PR 3 (test-fixture cleanup)
                 await doc.ref.delete()
                 flagSetlists++
             } catch (err) {
@@ -1280,6 +1287,7 @@ export async function sweepOrphanTestDataCore(
                 .where("setlistId", "==", sid)
                 .get()
             const bw = db.bulkWriter()
+            // setlist-ops-allowlist: remove in PR 3 (test-fixture cleanup)
             for (const t of trackSnap.docs) bw.delete(t.ref)
             await bw.close()
             swept.tracks += trackSnap.size
@@ -1288,6 +1296,7 @@ export async function sweepOrphanTestDataCore(
         if (orphanSetlistIds.length > 0) {
             const bw = db.bulkWriter()
             for (const sid of orphanSetlistIds) {
+                // setlist-ops-allowlist: remove in PR 3 (test-fixture cleanup)
                 bw.delete(db.collection("setlists").doc(sid))
             }
             await bw.close()

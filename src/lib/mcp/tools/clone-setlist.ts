@@ -355,6 +355,7 @@ export async function cloneSetlist(
     // createSetlistServerSide uses. A typical weekly setlist is well under
     // the 500-write batch limit.
     const batch = db.batch()
+    // setlist-ops-allowlist: remove in PR 3 (clone_setlist batch)
     batch.set(db.collection("setlists").doc(newSetlistId), setlistPayload)
 
     const nowIso = new Date().toISOString()
@@ -381,6 +382,7 @@ export async function cloneSetlist(
         // surface defaults rather than write a broken row.
         if (typeof payload.title !== "string") payload.title = ""
         if (typeof payload.type !== "string") payload.type = "song"
+        // setlist-ops-allowlist: remove in PR 3 (clone_setlist batch)
         batch.set(db.collection("tracks").doc(newTrackId), payload)
     })
 

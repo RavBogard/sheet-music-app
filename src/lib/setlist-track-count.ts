@@ -1,6 +1,7 @@
 import 'server-only'
 import { getTracksForSetlist } from '@/lib/server-tracks'
 import { logger } from '@/lib/logger'
+import { updateSetlistDerivedCounts } from '@/lib/setlist-ops'
 import {
     deriveSetlistCounts,
     isSongType,
@@ -92,13 +93,14 @@ export async function recomputeTrackCount(
         }
     }
     try {
-        await db.collection('setlists').doc(setlistId).update({
+        // No updatedAt: derived fields are not an edit. Bumping it would
+        // invalidate any open editor's pending precondition (the false
+        // "Remote changes detected" dialog) every time a cron heals. The
+        // single writer's derived-only write carries no stamps for that reason.
+        await updateSetlistDerivedCounts(db, setlistId, {
             trackCount: actual,
             songCount: actualSongs,
             fileIds: derived.fileIds,
-            // No updatedAt: derived fields are not an edit. Bumping it would
-            // invalidate any open editor's pending precondition (the false
-            // "Remote changes detected" dialog) every time a cron heals.
         })
         logger.info(
             `[setlist-track-count] repaired ${setlistId} (tracks ${declared} → ${actual}, songs ${declaredSongs} → ${actualSongs})`,

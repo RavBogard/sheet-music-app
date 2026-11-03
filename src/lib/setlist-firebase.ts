@@ -91,6 +91,7 @@ async function updateSetlistWithVersion(
         if (remote.hydrated === true) {
             applied.tracks = deleteField()
         }
+        // setlist-ops-allowlist: remove in PR 3 (client-side creation paths)
         tx.update(ref, applied)
     })
 }
@@ -217,6 +218,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
                 // v11-05-05: host-org default; an explicit additionalData.orgId
                 // wins (the in-app wizard passes none).
                 const orgId = rowOrg(additionalData.orgId ?? hostOrgId())
+                // setlist-ops-allowlist: remove in PR 3 (client-side creation paths)
                 const docRef = await addDoc(collection(db, COLLECTION_PATH), {
                     name,
                     date: serverTimestamp(),
@@ -373,6 +375,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
                     copiedFrom: sourceSetlistId
                 }) as Record<string, unknown>
                 const db = await getDb()
+                // setlist-ops-allowlist: remove in PR 3 (client-side creation paths)
                 const docRef = await addDoc(collection(db, COLLECTION_PATH), copyData);
                 await seedTopLevelTracks(docRef.id, freshTracks, rowOrg(setlistData.orgId))
                 return docRef.id;
@@ -410,6 +413,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
         async setDefaultForServiceType(serviceType: ServiceType, setlistId: string, org: OrgId = hostOrgId()): Promise<void> {
             const db = await getDb()
             const ref = doc(db, 'config', defaultsDocId(org))
+            // setlist-ops-allowlist: remove in PR 3 (client-side creation paths)
             await setDoc(
                 ref,
                 {
@@ -523,6 +527,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
                     clonedFrom: source.id,
                 }) as Record<string, unknown>
                 const db = await getDb()
+                // setlist-ops-allowlist: remove in PR 3 (client-side creation paths)
                 const docRef = await addDoc(collection(db, COLLECTION_PATH), cloneData)
                 await seedTopLevelTracks(docRef.id, freshTracks, rowOrg(source.orgId))
 
@@ -578,6 +583,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
                     orgId: rowOrg(source.orgId),
                 }) as Record<string, unknown>
                 const db = await getDb()
+                // setlist-ops-allowlist: remove in PR 3 (client-side creation paths)
                 const docRef = await addDoc(collection(db, COLLECTION_PATH), templateData)
                 await seedTopLevelTracks(docRef.id, freshTracks, rowOrg(source.orgId))
 

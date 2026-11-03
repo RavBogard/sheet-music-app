@@ -1209,6 +1209,7 @@ export async function writeSetlistFromTemplateRows(
 
 
     const batch = db.batch()
+    // setlist-ops-allowlist: remove in PR 3 (clone from template batch)
     batch.set(db.collection("setlists").doc(newSetlistId), setlistPayload)
 
     const nowIso = new Date().toISOString()
@@ -1240,6 +1241,7 @@ export async function writeSetlistFromTemplateRows(
         if (noBook) delete payload.liturgyRef
         if (typeof payload.title !== "string") payload.title = ""
         if (typeof payload.type !== "string") payload.type = "song"
+        // setlist-ops-allowlist: remove in PR 3 (clone from template batch)
         batch.set(db.collection("tracks").doc(newTrackId), payload)
     })
 

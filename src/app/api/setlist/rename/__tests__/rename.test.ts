@@ -20,6 +20,7 @@ const mockFirestoreLocal = {
         if (name === 'setlists') {
             return {
                 doc: vi.fn(() => ({
+                    __kind: 'setlistRef',
                     get: vi.fn(async () => setlistDoc),
                     update: mockSetlistUpdate,
                 })),
@@ -37,8 +38,11 @@ const mockFirestoreLocal = {
         }
         return { doc: vi.fn(() => ({ get: vi.fn(async () => ({ exists: false })) })) }
     }),
+    // The setlist write goes through the single writer (@/lib/setlist-ops),
+    // which batches it; route the setlist-ref update to mockSetlistUpdate.
     batch: vi.fn(() => ({
-        update: mockBatchUpdate,
+        update: (ref: { __kind?: string }, data: unknown) =>
+            ref?.__kind === 'setlistRef' ? mockSetlistUpdate(data) : mockBatchUpdate(ref, data),
         commit: mockBatchCommit,
     })),
 }
@@ -50,7 +54,7 @@ vi.mock('@/lib/firebase-admin', () => ({
 }))
 
 vi.mock('firebase-admin/firestore', () => ({
-    FieldValue: { serverTimestamp: vi.fn(() => 'SERVER_TIMESTAMP') },
+    FieldValue: { serverTimestamp: vi.fn(() => 'SERVER_TIMESTAMP'), increment: vi.fn((n: number) => ({ increment: n })) },
 }))
 
 vi.mock('@/lib/rate-limit', () => ({ checkRateLimit: vi.fn(() => null) }))
@@ -106,10 +110,12 @@ describe('POST /api/setlist/rename', () => {
 
         expect(res.status).toBe(200)
         expect(json.updated.assignments).toBe(3)
-        expect(mockSetlistUpdate).toHaveBeenCalledWith({
+        expect(mockSetlistUpdate).toHaveBeenCalledWith(expect.objectContaining({
             name: 'New',
             updatedAt: 'SERVER_TIMESTAMP',
-        })
+            version: { increment: 1 },
+            lastModifiedBy: 'leader-1',
+        }))
         for (const call of mockBatchUpdate.mock.calls as unknown[][]) {
             expect(call[1]).toEqual({ setlistName: 'New' })
         }

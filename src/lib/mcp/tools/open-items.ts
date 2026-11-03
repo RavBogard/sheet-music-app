@@ -172,6 +172,7 @@ export async function addOpenItemTool(
             const existing = storedItems(data).find((i) => !i.resolvedAt && i.text.toLowerCase() === same)
             if (existing) return { data, item: existing }
             const next = [...raw, item]
+            // setlist-ops-allowlist: remove in PR 3 (open items on the setlist doc)
             tx.update(ref, {
                 openItems: next,
                 version: FieldValue.increment(1),
@@ -234,6 +235,7 @@ export async function resolveOpenItemTool(
             if (at < 0) throw new Refusal(itemNotFound(setlistId, itemId))
             const resolvedAt = new Date().toISOString()
             const next = raw.map((r, i) => (i === at ? { ...r, resolvedAt, resolvedByName } : r))
+            // setlist-ops-allowlist: remove in PR 3 (open items on the setlist doc)
             tx.update(ref, {
                 openItems: next,
                 version: FieldValue.increment(1),

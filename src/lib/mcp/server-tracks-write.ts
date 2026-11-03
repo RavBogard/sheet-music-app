@@ -25,19 +25,12 @@ import {
     type WriteRejection,
 } from "@/lib/mcp/error-envelopes"
 import { liturgyRefGuard } from "@/lib/mcp/liturgy-ref-guard"
+// OPS-CONTRACT single writer: every setlists/tracks write below goes through
+// the stamped SetlistWriter `w` from @/lib/setlist-ops.
+import { runSetlistTransaction } from "@/lib/setlist-ops"
 
-/**
- * F-015: Strip null bytes and C0/C1 control characters from user-supplied
- * freeform string fields (notes, title, leadMusician, referenceLink) before
- * writing to Firestore. Printable Unicode (including Hebrew, emoji) is
- * preserved; only invisible/control characters that can corrupt display or
- * break downstream parsers are removed. Applied at the MCP boundary.
- */
-export function sanitizeFreeformString(s: string): string {
-    // Remove null bytes and ASCII C0 controls (0x00–0x1F) except tab (0x09),
-    // LF (0x0A), CR (0x0D), and DEL (0x7F) + C1 controls (0x80–0x9F).
-    return s.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F\x80-\x9F]/g, "")
-}
+import { sanitizeFreeformString } from "@/lib/sanitize-freeform"
+export { sanitizeFreeformString }
 
 /**
  * Task 5 (liturgy outlines Phase 2): `honors` carries user-authored
@@ -258,7 +251,7 @@ export async function addTrack(
     // callback after a concurrent writer changes the parent/query; reusing the
     // id makes those retries one logical insert rather than minting ghost ids.
     const trackId = crypto.randomUUID()
-    const insertAt = await db.runTransaction(async (tx) => {
+    const insertAt = await runSetlistTransaction(db, async (tx, w) => {
         const setlistRef = db.collection("setlists").doc(input.setlistId)
         const [setlistSnap, tracksSnap] = await Promise.all([
             tx.get(setlistRef),
@@ -328,9 +321,9 @@ export async function addTrack(
         const nowIso = new Date().toISOString()
         postInsert.forEach((row, order) => {
             if (row.id === trackId) {
-                tx.set(db.collection("tracks").doc(trackId), { ...payload, order })
+                w.setTrack(trackId, { ...payload, order })
             } else if (row.order !== order) {
-                tx.update(db.collection("tracks").doc(row.id), {
+                w.updateTrack(row.id, {
                     order,
                     version: FieldValue.increment(1),
                     lastModifiedAt: nowIso,
@@ -344,7 +337,7 @@ export async function addTrack(
             updatedAt: FieldValue.serverTimestamp(),
             ...versionBumpFields(),
         }
-        tx.update(setlistRef, setlistPatch)
+        w.updateSetlist(input.setlistId, setlistPatch)
         return target
     })
 
@@ -372,7 +365,7 @@ export async function reorderTracks(
     const setlistRef = db.collection("setlists").doc(setlistId)
 
     type TxResult = { ok: true } | WriteError | WriteRejection
-    const result = await db.runTransaction<TxResult>(async (tx) => {
+    const result = await runSetlistTransaction<TxResult>(db, async (tx, w) => {
         const setlistSnap = await tx.get(setlistRef)
         if (!setlistSnap.exists) {
             return {
@@ -431,13 +424,13 @@ export async function reorderTracks(
         }
 
         orderedTrackIds.forEach((id, i) => {
-            tx.update(db.collection("tracks").doc(id), {
+            w.updateTrack(id, {
                 order: i,
                 updatedAt: FieldValue.serverTimestamp(),
                 ...versionBumpFields(),
             })
         })
-        tx.update(setlistRef, {
+        w.updateSetlist(setlistId, {
             updatedAt: FieldValue.serverTimestamp(),
             ...versionBumpFields(),
         })
@@ -753,7 +746,7 @@ export async function updateTrack(
         | { ok: true; track: Record<string, unknown> }
         | WriteError
         | WriteRejection
-    const txResult = await db.runTransaction<TxResult>(async (tx) => {
+    const txResult = await runSetlistTransaction<TxResult>(db, async (tx, w) => {
         const txTrackSnap = await tx.get(trackRef)
         if (!txTrackSnap.exists) {
             const txSetlistSnap = await tx.get(setlistRef)
@@ -864,7 +857,7 @@ export async function updateTrack(
                         // Merge into the target row's combined update.
                         update.order = i
                     } else {
-                        tx.update(db.collection("tracks").doc(t.id), {
+                        w.updateTrack(t.id, {
                             order: i,
                             ...versionBumpFields(),
                         })
@@ -873,7 +866,7 @@ export async function updateTrack(
             }
         }
 
-        tx.update(trackRef, update)
+        w.updateTrack(trackId, update)
 
         const setlistPatch: Record<string, unknown> = {
             updatedAt: FieldValue.serverTimestamp(),
@@ -903,7 +896,7 @@ export async function updateTrack(
             ).songCount
         }
 
-        tx.update(setlistRef, setlistPatch)
+        w.updateSetlist(setlistId, setlistPatch)
         return { ok: true, track: { id: trackId } }
     })
 
@@ -1310,7 +1303,7 @@ export async function bulkUpdateTracks(
         type AtomicTxResult =
             | { kind: "ok" }
             | { kind: "stale_version"; staleRows: BulkStaleRow[] }
-        const txResult = await db.runTransaction<AtomicTxResult>(async (tx) => {
+        const txResult = await runSetlistTransaction<AtomicTxResult>(db, async (tx, w) => {
             // Read phase — pull current version for every gated row first.
             // (Firestore transactions require all reads before any writes.)
             const gated = patches.filter(
@@ -1339,7 +1332,6 @@ export async function bulkUpdateTracks(
 
             // Write phase — unchanged from pre-Plan-03 shape.
             for (const entry of patches) {
-                const ref = db.collection("tracks").doc(entry.trackId)
                 const update: Record<string, unknown> = {
                     updatedAt: FieldValue.serverTimestamp(),
                     ...versionBumpFields(), // W-04 Plan 01
@@ -1377,7 +1369,7 @@ export async function bulkUpdateTracks(
                 if (existingRow) {
                     applyRebondSideEffects(update, existingRow, entry.patch)
                 }
-                tx.update(ref, update)
+                w.updateTrack(entry.trackId, update)
             }
             // Canonical fileIds[] rebuild from post-patch state — same
             // contract as update_track's re-bond path. Self-heals any prior
@@ -1445,7 +1437,7 @@ export async function bulkUpdateTracks(
                     }),
                 ).songCount
             }
-            tx.update(db.collection("setlists").doc(setlistId), setlistPatch)
+            w.updateSetlist(setlistId, setlistPatch)
             return { kind: "ok" }
         })
 
@@ -1863,7 +1855,7 @@ export async function bulkAddTracks(
     }
 
     if (mode === "atomic") {
-        const committedOrders = await db.runTransaction(async (tx) => {
+        const committedOrders = await runSetlistTransaction(db, async (tx, w) => {
             const setlistRef = db.collection("setlists").doc(setlistId)
             const [setlistSnap, tracksSnap] = await Promise.all([
                 tx.get(setlistRef),
@@ -1906,14 +1898,14 @@ export async function bulkAddTracks(
             const orgId = rowOrg(setlistSnap.data()?.orgId)
             ordered.forEach((row, order) => {
                 if (row.kind === "new") {
-                    tx.set(db.collection("tracks").doc(row.id), {
+                    w.setTrack(row.id, {
                         ...row.payload,
                         orgId,
                         order,
                     })
                     orderByInputIndex.set(row.index, order)
                 } else if (row.order !== order) {
-                    tx.update(db.collection("tracks").doc(row.id), {
+                    w.updateTrack(row.id, {
                         order,
                         version: FieldValue.increment(1),
                         lastModifiedAt: nowIso,
@@ -1930,7 +1922,7 @@ export async function bulkAddTracks(
                 updatedAt: FieldValue.serverTimestamp(),
                 ...versionBumpFields(),
             }
-            tx.update(setlistRef, setlistPatch)
+            w.updateSetlist(setlistId, setlistPatch)
             return [...orderByInputIndex.entries()]
         })
         for (const [inputIndex, order] of committedOrders) {
@@ -2025,7 +2017,7 @@ export async function removeTrack(
     const trackRef = db.collection("tracks").doc(trackId)
 
     type TxResult = { ok: true } | WriteError | WriteRejection
-    const result = await db.runTransaction<TxResult>(async (tx) => {
+    const result = await runSetlistTransaction<TxResult>(db, async (tx, w) => {
         // Read the target track first; if missing return the structured
         // not-found envelope (carries current setlist version so the
         // agent can re-fetch without guessing).
@@ -2104,10 +2096,10 @@ export async function removeTrack(
         const remaining = existing.filter((t) => t.id !== trackId)
 
         // Writes — delete the target + re-pack siblings + setlist patch.
-        tx.delete(trackRef)
+        w.deleteTrack(trackId)
         remaining.forEach((t, i) => {
             if (t.order !== i) {
-                tx.update(db.collection("tracks").doc(t.id), {
+                w.updateTrack(t.id, {
                     order: i,
                     updatedAt: FieldValue.serverTimestamp(),
                     ...versionBumpFields(),
@@ -2121,7 +2113,7 @@ export async function removeTrack(
             updatedAt: FieldValue.serverTimestamp(),
             ...versionBumpFields(),
         }
-        tx.update(setlistRef, setlistPatch)
+        w.updateSetlist(setlistId, setlistPatch)
         return { ok: true }
     })
 

@@ -83,6 +83,7 @@ export async function reconcileSetlistTrackCount(
         const derived = deriveSetlistCounts(
             snap.docs.map((d) => d.data() as { type?: unknown; fileId?: unknown }),
         )
+        // setlist-ops-allowlist: remove in PR 3 (client count reconcile)
         await updateDoc(doc(fsDb, 'setlists', setlistId), {
             trackCount: derived.trackCount,
             songCount: derived.songCount,

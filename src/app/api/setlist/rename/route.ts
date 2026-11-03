@@ -6,6 +6,7 @@ import { logger } from "@/lib/logger"
 import { createApiHandler } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { chunkBatchUpdate } from "@/lib/firestore-batch"
+import { updateSetlistFields } from "@/lib/setlist-ops"
 import { z } from "zod"
 
 // v4.4 DL-010: setlist rename with fan-out of the denormalized
@@ -22,7 +23,6 @@ export const POST = createApiHandler(
 
         const { setlistId, name } = ctx.body!
         const db = getFirestore()
-        const { FieldValue } = await import('firebase-admin/firestore')
 
         const setlistRef = db.collection('setlists').doc(setlistId)
         const setlistSnap = await setlistRef.get()
@@ -48,10 +48,9 @@ export const POST = createApiHandler(
             return NextResponse.json({ success: true, updated: { assignments: 0 } })
         }
 
-        await setlistRef.update({
-            name,
-            updatedAt: FieldValue.serverTimestamp(),
-        })
+        // Through the single writer: stamps updatedAt and bumps version, so
+        // every device and the MCP version gate see the rename.
+        await updateSetlistFields(db, setlistId, { name }, { actor: ctx.auth.uid })
 
         // Fan-out: every assignment with this setlistId needs the denormalized copy refreshed.
         const snap = await db.collection('scheduling_assignments')

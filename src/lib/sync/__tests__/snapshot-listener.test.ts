@@ -233,6 +233,54 @@ describe('v50-06-03: startSnapshotListener', () => {
         stop()
     })
 
+    it('a higher server version is applied even when updatedAt did not move (server page binds)', async () => {
+        await db.tracks.put({
+            id: 't1',
+            setlistId: 's1',
+            order: 0,
+            title: 'Barchu',
+            version: 3,
+            updatedAt: 2000,
+        } as never)
+        await db.tracks.put({
+            id: 't2',
+            setlistId: 's1',
+            order: 1,
+            title: 'Shema',
+            version: 3,
+            updatedAt: 2000,
+        } as never)
+
+        const { subscriber, handle } = makeSubscriberHarness()
+        const stop = startSnapshotListener({ setlistId: 's1', db, subscriber, logger })
+
+        handle.deliverTracks([
+            {
+                type: 'modified',
+                docId: 't1',
+                data: { id: 't1', setlistId: 's1', order: 0, title: 'Barchu', version: 4, liturgyRef: { book: 'b', folio: 12 } },
+                updatedAt: 2000,
+            },
+            {
+                // Same version, same updatedAt: still the stale guard's to skip.
+                type: 'modified',
+                docId: 't2',
+                data: { id: 't2', setlistId: 's1', order: 1, title: 'OLD', version: 3 },
+                updatedAt: 2000,
+            },
+        ])
+        await flush()
+
+        const t1 = (await db.tracks.get('t1')) as unknown as Record<string, unknown>
+        expect(t1.liturgyRef).toEqual({ book: 'b', folio: 12 })
+        expect(t1.version).toBe(4)
+        expect(t1.updatedAt).toBe(2000)
+        const t2 = await db.tracks.get('t2')
+        expect(t2?.title).toBe('Shema')
+
+        stop()
+    })
+
     it('removed track: deletes from local Dexie when no pending outbox row exists', async () => {
         await db.tracks.put({
             id: 't1',

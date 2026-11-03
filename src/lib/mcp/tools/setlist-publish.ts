@@ -833,6 +833,7 @@ export async function publishSetlist(
             }
             const liveWasNotified = !!liveSetlist.lastNotifiedAt
             const version = liveVersion + 1
+            // setlist-ops-allowlist: remove in PR 3 (notify-era setlist stamps)
             tx.update(setlistRef, {
                 lastNotifiedSnapshot: snapshot,
                 lastNotifiedAt: FieldValue.serverTimestamp(),
@@ -897,6 +898,7 @@ export async function publishSetlist(
                 }
             }
             const liveWasNotified = !!liveSetlist.lastNotifiedAt
+            // setlist-ops-allowlist: remove in PR 3 (notify-era setlist stamps)
             tx.update(setlistRef, {
                 lastNotifiedSnapshot: snapshot,
                 lastNotifiedAt: FieldValue.serverTimestamp(),
