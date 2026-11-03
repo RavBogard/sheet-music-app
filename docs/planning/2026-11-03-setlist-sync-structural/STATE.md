@@ -135,3 +135,10 @@ not a patch of the particulars.
   - The chart page renders the PDF with the docked player and prev/next.
   - Polish gap: the chart area is blank (no loading indicator) for about 2–5 s while the PDF
     loads. Fold this into PR 4.
+- Daniel 2026-11-03: derived BPM = "write". Lead ruling, consistent with R11-b and "never overwrite
+  an author's value":
+  - Detected tempo is written automatically into EMPTY bpm fields only (song defaults and setlist
+    rows), through the setlist-ops maintenance helper (which bumps versions), marked bpmSource:
+    "recording".
+  - A typed BPM is never overwritten.
+  - Clips with no confident beat are skipped.
