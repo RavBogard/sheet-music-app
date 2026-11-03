@@ -36,6 +36,12 @@ interface SmartScoreViewerProps {
     trackId?: string
     /** Existing `track.key` value (Firestore). Heal is skipped when already set. */
     trackKey?: string
+    /**
+     * Read-only surfaces (Rehearse): never write a key to Firestore, whatever
+     * the viewer's role. Skips the silent heal and hides the Match button.
+     * Defaults to false, so Perform behaves exactly as before.
+     */
+    readOnly?: boolean
 }
 
 /**
@@ -113,7 +119,7 @@ const findScrollableAncestor = (el: HTMLElement | null): HTMLElement | null => {
     return null
 }
 
-export function SmartScoreViewer({ fileId, trackId, trackKey }: SmartScoreViewerProps) {
+export function SmartScoreViewer({ fileId, trackId, trackKey, readOnly = false }: SmartScoreViewerProps) {
     // Phase 7: the chart keeps its own (ltr) direction on an rtl page.
     const chartDir = useChartContentDir()
     const t = useT()
@@ -159,7 +165,7 @@ export function SmartScoreViewer({ fileId, trackId, trackKey }: SmartScoreViewer
     const isLeaderRef = useRef(false)
     const trackIdRef = useRef<string | undefined>(trackId)
     const trackKeyRef = useRef<string | undefined>(trackKey)
-    useEffect(() => { isLeaderRef.current = isBandLeader || isAdmin }, [isBandLeader, isAdmin])
+    useEffect(() => { isLeaderRef.current = !readOnly && (isBandLeader || isAdmin) }, [isBandLeader, isAdmin, readOnly])
     useEffect(() => { trackIdRef.current = trackId }, [trackId])
     useEffect(() => { trackKeyRef.current = trackKey }, [trackKey])
 
@@ -680,7 +686,7 @@ export function SmartScoreViewer({ fileId, trackId, trackKey }: SmartScoreViewer
     }, [])
 
     const showOverlay = loading || transposing
-    const isLeader = isBandLeader || isAdmin
+    const isLeader = !readOnly && (isBandLeader || isAdmin)
     // Match-button visibility: leader role + both keys present + non-equal.
     // The button only ever offers to overwrite an EXISTING `track.key`; the
     // empty-`track.key` case is already silently healed by the load effect

@@ -24,5 +24,17 @@
     "changeSong": "החלפת שיר",
     "recordingFor": "הקלטה של {title}",
     "uploadRecordingSubmit": "העלאת הקלטה",
-    "recordingUploaded": "ההקלטה נוספה."
+    "recordingUploaded": "ההקלטה נוספה.",
+    "rehearse": "חזרה",
+    "rehearseAria": "חזרה על {name}",
+    "rehearseIntro": "חזרה על שירי השירות לפי הסדר.",
+    "chart": "תווים",
+    "noChart": "אין תווים לשיר הזה.",
+    "backToRehearse": "חזרה לחזרה",
+    "previousSong": "השיר הקודם",
+    "nextSong": "השיר הבא",
+    "transposeGroup": "שינוי טון",
+    "transposeDown": "חצי טון למטה",
+    "transposeUp": "חצי טון למעלה",
+    "transposeReset": "חזרה לטון הכתוב"
 }

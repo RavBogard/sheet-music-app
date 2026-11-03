@@ -18,7 +18,7 @@ describe('PerformListenLink', () => {
     it('shows a link to the Listen page for a past setlist with a take', () => {
         featured.map = { s1: { id: 'r' } }
         render(<PerformListenLink setlistId="abc" songIds={['x', 's1']} eventDate={PAST} />)
-        expect(screen.getByTestId('perform-head-listen')).toHaveAttribute('href', '/listen/abc')
+        expect(screen.getByTestId('perform-head-listen')).toHaveAttribute('href', '/rehearse/abc')
     })
 
     it('is hidden when no song has a take', () => {

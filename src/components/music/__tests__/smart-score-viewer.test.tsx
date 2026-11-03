@@ -390,6 +390,21 @@ describe('SmartScoreViewer', () => {
         expect(mockChangeTrackKey).toHaveBeenCalledWith('track-abc', 'D')
     })
 
+    it('readOnly: never writes track.key even for a band_leader with an empty key', async () => {
+        mockKeyInstruction.Key = 2 // D major
+        mockKeyInstruction.Mode = 0
+        mockStoreValues.aiXmlContent = XML
+        mockAuthValues.isBandLeader = true
+
+        await act(async () => {
+            render(<SmartScoreViewer fileId="file-score" trackId="track-abc" trackKey="" readOnly />)
+        })
+        await advance(250)
+
+        expect(mockSetMusicXmlKey).toHaveBeenCalledWith('D')
+        expect(mockChangeTrackKey).not.toHaveBeenCalled()
+    })
+
     it('heals track.key for admin even when band_leader is false', async () => {
         mockKeyInstruction.Key = -2 // Bb major
         mockKeyInstruction.Mode = 0

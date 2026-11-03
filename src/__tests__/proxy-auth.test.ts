@@ -34,6 +34,8 @@ describe('Edge Middleware (proxy.ts) Auth Routing', () => {
     it('allows the public Listen page without authentication', async () => {
         const res = await proxy(makeReq('/listen/abc123'))
         expect(res.headers.get('location')).toBeNull()
+        const rehearse = await proxy(makeReq('/rehearse/abc123/track/t1'))
+        expect(rehearse.headers.get('location')).toBeNull()
     })
 
     it('does not open lookalike paths such as /listening', async () => {

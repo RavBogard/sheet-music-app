@@ -24,5 +24,17 @@
     "changeSong": "Change song",
     "recordingFor": "Recording of {title}",
     "uploadRecordingSubmit": "Upload recording",
-    "recordingUploaded": "Recording added."
+    "recordingUploaded": "Recording added.",
+    "rehearse": "Rehearse",
+    "rehearseAria": "Rehearse {name}",
+    "rehearseIntro": "Rehearse this service's songs in order.",
+    "chart": "Chart",
+    "noChart": "No chart for this song.",
+    "backToRehearse": "Back to Rehearse",
+    "previousSong": "Previous song",
+    "nextSong": "Next song",
+    "transposeGroup": "Transpose",
+    "transposeDown": "Down a semitone",
+    "transposeUp": "Up a semitone",
+    "transposeReset": "Back to written key"
 }

@@ -139,5 +139,66 @@
         "where": "Recording upload: success message",
         "who": "leaders",
         "maxLength": 40
+    },
+    "rehearse": {
+        "where": "Rehearse link on the Perform head, the setlist editor and the setlist list; also the page's name",
+        "who": "musicians",
+        "maxLength": 20
+    },
+    "rehearseAria": {
+        "where": "Aria label of the Rehearse link",
+        "who": "musicians",
+        "maxLength": 60,
+        "context": "{name} is the setlist's name."
+    },
+    "rehearseIntro": {
+        "where": "Rehearse page: one line under the setlist name",
+        "who": "musicians",
+        "maxLength": 60
+    },
+    "chart": {
+        "where": "Rehearse page: button that opens a song's chart full screen",
+        "who": "musicians",
+        "maxLength": 16
+    },
+    "noChart": {
+        "where": "Rehearse chart page: shown when the song has no chart bonded",
+        "who": "musicians",
+        "maxLength": 40
+    },
+    "backToRehearse": {
+        "where": "Rehearse chart page: link back to the song list",
+        "who": "musicians",
+        "maxLength": 24
+    },
+    "previousSong": {
+        "where": "Rehearse chart page dock: step to the previous song",
+        "who": "musicians",
+        "maxLength": 20
+    },
+    "nextSong": {
+        "where": "Rehearse chart page dock: step to the next song",
+        "who": "musicians",
+        "maxLength": 20
+    },
+    "transposeGroup": {
+        "where": "Rehearse chart page: label of the transpose buttons (MusicXML only; never saved)",
+        "who": "musicians",
+        "maxLength": 20
+    },
+    "transposeDown": {
+        "where": "Rehearse chart page: transpose down",
+        "who": "musicians",
+        "maxLength": 24
+    },
+    "transposeUp": {
+        "where": "Rehearse chart page: transpose up",
+        "who": "musicians",
+        "maxLength": 24
+    },
+    "transposeReset": {
+        "where": "Rehearse chart page: the key button resets transposition",
+        "who": "musicians",
+        "maxLength": 30
     }
 }

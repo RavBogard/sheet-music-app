@@ -137,11 +137,11 @@ function ListenButton({ href, name }: { href: string; name: string }) {
         <Link
             href={href}
             data-testid="setlist-row-listen"
-            aria-label={t("recordings.listenAria", { name })}
+            aria-label={t("recordings.rehearseAria", { name })}
             className="touch-hit me-1 inline-flex h-9 items-center gap-1.5 rounded-md border border-brand/50 px-2.5 text-sm font-semibold text-brand transition-colors hover:bg-brand/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
             <AudioLines aria-hidden className="h-4 w-4" />
-            <span>{t("recordings.listen")}</span>
+            <span>{t("recordings.rehearse")}</span>
         </Link>
     )
 }
@@ -173,7 +173,7 @@ function RowActions({ upcoming, setlist, onEdit, onDownload, isDownloading, onDu
     const t = useT()
     const org = useOrg() // v11-05-05: gate the liturgical "Save as Default" affordance for band tenants
     const hasMenu = canEdit || canDuplicate || canDelete
-    const listenHref = `/listen/${setlist.id}`
+    const listenHref = `/rehearse/${setlist.id}`
     if (!canEdit && !hasMenu) {
         // Listening is public: a signed-out visitor still gets the link on upcoming rows.
         return upcoming ? (
@@ -224,7 +224,7 @@ function RowActions({ upcoming, setlist, onEdit, onDownload, isDownloading, onDu
                         <DropdownMenuItem asChild>
                             <Link href={listenHref} data-testid="setlist-card-listen">
                                 <AudioLines className="h-4 w-4 me-2" />
-                                {t("recordings.listen")}
+                                {t("recordings.rehearse")}
                             </Link>
                         </DropdownMenuItem>
                         {canDuplicate && onCloneNextWeek && (
