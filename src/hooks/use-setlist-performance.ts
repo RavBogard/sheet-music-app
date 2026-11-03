@@ -12,6 +12,8 @@ import { useKeepAwake } from "@/components/performance/keep-awake-context"
 import { logger } from "@/lib/logger"
 import { subscribeToMusicianProfile } from "@/lib/musician-profile"
 import { getDb } from "@/lib/local/schema"
+import { seedCacheFromSsr, selfCheckAndHeal, shouldSkipHeal } from "@/lib/performance/read-model"
+import { lastLiveRowsAt } from "@/lib/setlist-ops-client/freshness"
 import type { LocalTrack } from "@/lib/local/types"
 import { getTracksForSetlistClient, fetchTracksForSetlistClient, fetchTracksViaPublicApi, tenantOfSetlist, type PublicTracksAnswer } from "@/lib/client-tracks"
 import { setlistMovedPast } from "@/lib/performance/setlist-freshness"
@@ -233,6 +235,46 @@ export function useSetlistPerformance(
     // surface the SSR rows so the band member sees the setlist on FCP rather
     // than a spinner. Once Dexie resolves (even to []), we trust its result.
     const initial = opts.initial ?? null
+    // THE READ MODEL (setlist sync PR 4). Seed the cache from the server render
+    // when that is newer, then re-check the setlist version on focus, on
+    // visibility and on reconnect and heal by refetching. Silent by design:
+    // nothing here alerts anyone mid-service.
+    const initialRef = useRef(initial)
+    const tracksRefusedRef = useRef(tracksRefused)
+    tracksRefusedRef.current = tracksRefused
+    initialRef.current = initial
+    useEffect(() => {
+        if (!setlistId) return
+        const db = getDb()
+        const ssr = initialRef.current
+        void seedCacheFromSsr(
+            db,
+            setlistId,
+            ssr?.setlist && ssr.tracks
+                ? { version: (ssr.setlist as { version?: unknown }).version, rows: ssr.tracks as unknown as { id?: string }[] }
+                : null,
+        ).catch(() => {})
+        let busy = false
+        const check = () => {
+            if (typeof document !== "undefined" && document.visibilityState === "hidden") return
+            // The refused-listener path below already refetches on these events.
+            if (tracksRefusedRef.current || busy) return
+            // The live listener delivered a fresh snapshot a moment ago: it is doing the job.
+            if (shouldSkipHeal(lastLiveRowsAt(setlistId))) return
+            busy = true
+            void selfCheckAndHeal(db, setlistId).finally(() => {
+                busy = false
+            })
+        }
+        window.addEventListener("focus", check)
+        window.addEventListener("online", check)
+        document.addEventListener("visibilitychange", check)
+        return () => {
+            window.removeEventListener("focus", check)
+            window.removeEventListener("online", check)
+            document.removeEventListener("visibilitychange", check)
+        }
+    }, [setlistId])
     const liveTracks: SetlistTrack[] = useMemo(
         () => getTracksForSetlistClient(dexieTracks, setlistData ?? undefined),
         [dexieTracks, setlistData],
