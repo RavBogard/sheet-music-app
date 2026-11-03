@@ -231,6 +231,9 @@ export async function makeDevice(name: string, uid: string, claims: Record<strin
         async shutdown() {
             device.stopListener()
             device.resume()
+            // Let a request released by resume() finish writing to Dexie
+            // before the database closes (it threw DatabaseClosedError late).
+            await Promise.race([device.idle().catch(() => {}), sleep(5_000)])
             try {
                 await terminate(fs)
                 await deleteApp(app)
