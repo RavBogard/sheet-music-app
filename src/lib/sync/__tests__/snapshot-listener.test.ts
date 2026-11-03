@@ -1,7 +1,7 @@
-// v50-06-03 Task 1 — startSnapshotListener: Firestore onSnapshot →
-// Dexie direct-put with outbox-pending guard + LWW guard. Uses an
-// injectable SnapshotSubscriber so the unit tests don't need a live
-// Firestore (or even firebase-admin).
+// startSnapshotListener (setlist sync PR 3): each live (non-cache) tracks
+// snapshot is the FULL server set for the setlist; the Dexie cache is
+// replaced by it and ghosts are pruned. Uses an injectable SnapshotSubscriber
+// so no Firestore is needed.
 
 import 'fake-indexeddb/auto'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -10,28 +10,25 @@ const { captureSyncFailure } = vi.hoisted(() => ({ captureSyncFailure: vi.fn() }
 vi.mock('../sentry-capture', () => ({ captureSyncFailure }))
 
 import { LocalDb, resetDbForTests } from '../../local/schema'
+import { _resetServerCacheMemory, applyOpsRows } from '../../setlist-ops-client/server-cache'
+import { useLiveFlags } from '../../setlist-ops-client/freshness'
 import {
     type SetlistDelivery,
     type SnapshotSubscriber,
-    type TrackChange,
+    type TracksDelivery,
     startSnapshotListener,
 } from '../snapshot-listener'
 
-// ─── Hand-rolled subscriber harness ────────────────────────────────────────
-
 interface SubscriberHandle {
     deliverSetlist(delivery: SetlistDelivery | null): void
-    deliverTracks(changes: TrackChange[]): void
+    deliverTracks(delivery: TracksDelivery): void
     raiseSetlistError(err: Error): void
     raiseTracksError(err: Error): void
     setlistUnsubCount: number
     tracksUnsubCount: number
 }
 
-function makeSubscriberHarness(): {
-    subscriber: SnapshotSubscriber
-    handle: SubscriberHandle
-} {
+function makeSubscriberHarness(): { subscriber: SnapshotSubscriber; handle: SubscriberHandle } {
     const handle: SubscriberHandle = {
         deliverSetlist: () => {},
         deliverTracks: () => {},
@@ -40,7 +37,6 @@ function makeSubscriberHarness(): {
         setlistUnsubCount: 0,
         tracksUnsubCount: 0,
     }
-
     const subscriber: SnapshotSubscriber = {
         subscribeSetlist(_setlistId, onNext, onError) {
             handle.deliverSetlist = (d) => onNext(d)
@@ -49,36 +45,42 @@ function makeSubscriberHarness(): {
                 handle.setlistUnsubCount += 1
             }
         },
-        subscribeTracks(_setlistId, onChanges, onError) {
-            handle.deliverTracks = (changes) => onChanges(changes)
+        subscribeTracks(_setlistId, onSet, onError) {
+            handle.deliverTracks = (d) => onSet(d)
             handle.raiseTracksError = (e) => onError(e)
             return () => {
                 handle.tracksUnsubCount += 1
             }
         },
     }
-
     return { subscriber, handle }
 }
 
-async function flush(rounds = 4): Promise<void> {
+async function flush(rounds = 6): Promise<void> {
     for (let i = 0; i < rounds; i++) {
         await new Promise<void>((r) => setTimeout(r, 0))
         for (let j = 0; j < 50; j++) await Promise.resolve()
     }
 }
 
-// Fresh per-test Dexie instance to keep tests hermetic.
-const TEST_DB = 'crc-snap-listener'
+const row = (id: string, order: number, extra: Record<string, unknown> = {}) => ({
+    id,
+    data: { id, setlistId: 's1', orgId: 'crc', order, title: `T ${id}`, version: 1, updatedAt: 1000, ...extra },
+})
 
-describe('v50-06-03: startSnapshotListener', () => {
+const TEST_DB = 'crc-snap-listener'
+const ready = () => Promise.resolve()
+
+describe('startSnapshotListener: the server cache', () => {
     let db: LocalDb
     let logger: { warn: ReturnType<typeof vi.fn> }
 
     beforeEach(async () => {
         await resetDbForTests()
+        _resetServerCacheMemory()
+        useLiveFlags.setState({ rows: {}, setlist: {} })
         db = new LocalDb(TEST_DB)
-        await db.outbox.count() // force open
+        await db.outbox.count()
         logger = { warn: vi.fn() }
     })
 
@@ -88,264 +90,91 @@ describe('v50-06-03: startSnapshotListener', () => {
         } catch {
             // ignore
         }
-        try {
-            const Dexie = (await import('dexie')).default
-            await Dexie.delete(TEST_DB)
-        } catch {
-            // ignore
-        }
+        const Dexie = (await import('dexie')).default
+        await Dexie.delete(TEST_DB).catch(() => {})
     })
 
-    it('AC-1: writes remote setlist + track deliveries directly to Dexie (no outbox row created)', async () => {
-        await db.setlists.put({
-            id: 's1',
-            updatedAt: 1000,
-            ownerId: 'u1',
-            name: 'baseline',
-        })
-        await db.tracks.put({
-            id: 't1',
-            setlistId: 's1',
-            order: 0,
-            key: 'F',
-            title: 'song-1',
-            updatedAt: 1000,
-        })
-
-        const { subscriber, handle } = makeSubscriberHarness()
-        const stop = startSnapshotListener({
-            setlistId: 's1',
-            db,
-            subscriber,
-            logger,
-        })
-
-        handle.deliverSetlist({
-            data: { id: 's1', name: 'remote-name', ownerId: 'u1' },
-            updatedAt: 2000,
-        })
-        handle.deliverTracks([
-            {
-                type: 'modified',
-                docId: 't1',
-                data: { id: 't1', setlistId: 's1', order: 0, key: 'G', title: 'song-1' },
-                updatedAt: 2000,
-            },
+    it('a live tracks snapshot replaces the cached set: ghosts are pruned, rows updated, nothing queued', async () => {
+        await db.tracks.bulkPut([
+            { id: 'a', setlistId: 's1', order: 0, title: 'old a', updatedAt: 1 },
+            { id: 'ghost', setlistId: 's1', order: 1, title: 'browser only', updatedAt: 1 },
+            { id: 'other', setlistId: 's2', order: 0, title: 'another setlist', updatedAt: 1 },
         ])
+        const { subscriber, handle } = makeSubscriberHarness()
+        const stop = startSnapshotListener({ setlistId: 's1', db, subscriber, logger, ready })
 
+        handle.deliverTracks({ fromCache: false, rows: [row('a', 0, { title: 'new a' }), row('b', 1)] })
         await flush()
 
-        const sl = await db.setlists.get('s1')
-        const tr = await db.tracks.get('t1')
-        expect(sl?.name).toBe('remote-name')
-        expect(sl?.updatedAt).toBe(2000)
-        expect(tr?.key).toBe('G')
-        expect(tr?.updatedAt).toBe(2000)
-
-        // Critical: NO outbox row created.
+        const s1 = (await db.tracks.where('setlistId').equals('s1').toArray()).sort((x, y) => x.order - y.order)
+        expect(s1.map((r) => r.id)).toEqual(['a', 'b'])
+        expect(s1[0].title).toBe('new a')
+        expect(s1[0].updatedAt).toBe(1000)
+        expect(await db.tracks.get('other')).toBeDefined()
         expect(await db.outbox.count()).toBe(0)
-
+        expect(await db.intents.count()).toBe(0)
+        expect(useLiveFlags.getState().rows.s1).toBe(true)
         stop()
     })
 
-    it('AC-2: skips writes when outbox has a pending row for the docId', async () => {
-        await db.tracks.put({
-            id: 't1',
-            setlistId: 's1',
-            order: 0,
-            key: 'A',
-            updatedAt: 1000,
-        })
-        // Pending local edit — engine hasn't drained it yet.
-        await db.outbox.add({
-            status: 'pending',
-            scheduledFor: Date.now(),
-            op: 'update',
-            collection: 'tracks',
-            docId: 't1',
-            payload: { key: 'A' },
-            expectedUpdatedAt: 1000,
-            attempts: 0,
-            createdAt: Date.now(),
-        })
-
+    it('a snapshot from the local Firestore cache is ignored', async () => {
+        await db.tracks.put({ id: 'a', setlistId: 's1', order: 0, title: 'kept', updatedAt: 1 })
         const { subscriber, handle } = makeSubscriberHarness()
-        const stop = startSnapshotListener({
-            setlistId: 's1',
-            db,
-            subscriber,
-            logger,
-        })
+        const stop = startSnapshotListener({ setlistId: 's1', db, subscriber, logger, ready })
 
-        // Remote echo of someone else's competing edit — listener must NOT
-        // clobber local 'A' (the engine drain + ReconciliationProvider
-        // own conflict resolution).
-        handle.deliverTracks([
-            {
-                type: 'modified',
-                docId: 't1',
-                data: { id: 't1', setlistId: 's1', order: 0, key: 'G' },
-                updatedAt: 1500,
-            },
-        ])
-
+        handle.deliverTracks({ fromCache: true, rows: [] })
         await flush()
 
-        const tr = await db.tracks.get('t1')
-        expect(tr?.key).toBe('A') // local edit preserved
-        expect(tr?.updatedAt).toBe(1000)
-
+        expect((await db.tracks.get('a'))?.title).toBe('kept')
+        expect(useLiveFlags.getState().rows.s1).toBeUndefined()
         stop()
     })
 
-    it('AC-3: LWW guard — stale snapshot delivery does not overwrite a fresher local row', async () => {
-        await db.tracks.put({
-            id: 't1',
-            setlistId: 's1',
-            order: 0,
-            key: 'C',
-            updatedAt: 2000,
-        })
-
+    it('never lowers a row version, and keeps a row an /ops answer just wrote', async () => {
+        await applyOpsRows(db, 's1', [{ ...row('a', 0, { title: 'mine', version: 5 }).data, id: 'a' }, { ...row('new', 1).data, id: 'new' }], [])
         const { subscriber, handle } = makeSubscriberHarness()
-        const stop = startSnapshotListener({
-            setlistId: 's1',
-            db,
-            subscriber,
-            logger,
-        })
+        const stop = startSnapshotListener({ setlistId: 's1', db, subscriber, logger, ready })
 
-        handle.deliverTracks([
-            {
-                type: 'modified',
-                docId: 't1',
-                data: { id: 't1', setlistId: 's1', order: 0, key: 'OLD' },
-                updatedAt: 1500,
-            },
-        ])
-
+        // A snapshot taken before the write: older version of a, no `new` yet.
+        handle.deliverTracks({ fromCache: false, rows: [row('a', 0, { title: 'stale', version: 4 })] })
         await flush()
 
-        const tr = await db.tracks.get('t1')
-        expect(tr?.key).toBe('C')
-        expect(tr?.updatedAt).toBe(2000)
-
+        expect((await db.tracks.get('a'))?.title).toBe('mine')
+        expect(await db.tracks.get('new')).toBeDefined()
         stop()
     })
 
-    it('a higher server version is applied even when updatedAt did not move (server page binds)', async () => {
-        await db.tracks.put({
-            id: 't1',
-            setlistId: 's1',
-            order: 0,
-            title: 'Barchu',
-            version: 3,
-            updatedAt: 2000,
-        } as never)
-        await db.tracks.put({
-            id: 't2',
-            setlistId: 's1',
-            order: 1,
-            title: 'Shema',
-            version: 3,
-            updatedAt: 2000,
-        } as never)
-
+    it('waits for `ready` (the old-outbox migration) before pruning', async () => {
+        await db.tracks.put({ id: 'ghost', setlistId: 's1', order: 0, updatedAt: 1 })
+        let release: () => void = () => {}
+        const gate = new Promise<void>((r) => (release = r))
         const { subscriber, handle } = makeSubscriberHarness()
-        const stop = startSnapshotListener({ setlistId: 's1', db, subscriber, logger })
+        const stop = startSnapshotListener({ setlistId: 's1', db, subscriber, logger, ready: () => gate })
 
-        handle.deliverTracks([
-            {
-                type: 'modified',
-                docId: 't1',
-                data: { id: 't1', setlistId: 's1', order: 0, title: 'Barchu', version: 4, liturgyRef: { book: 'b', folio: 12 } },
-                updatedAt: 2000,
-            },
-            {
-                // Same version, same updatedAt: still the stale guard's to skip.
-                type: 'modified',
-                docId: 't2',
-                data: { id: 't2', setlistId: 's1', order: 1, title: 'OLD', version: 3 },
-                updatedAt: 2000,
-            },
-        ])
+        handle.deliverTracks({ fromCache: false, rows: [] })
         await flush()
+        expect(await db.tracks.get('ghost')).toBeDefined()
 
-        const t1 = (await db.tracks.get('t1')) as unknown as Record<string, unknown>
-        expect(t1.liturgyRef).toEqual({ book: 'b', folio: 12 })
-        expect(t1.version).toBe(4)
-        expect(t1.updatedAt).toBe(2000)
-        const t2 = await db.tracks.get('t2')
-        expect(t2?.title).toBe('Shema')
-
+        release()
+        await flush()
+        expect(await db.tracks.get('ghost')).toBeUndefined()
         stop()
     })
 
-    it('removed track: deletes from local Dexie when no pending outbox row exists', async () => {
-        await db.tracks.put({
-            id: 't1',
-            setlistId: 's1',
-            order: 0,
-            updatedAt: 1000,
-        })
-
+    it('the setlist doc: a live delivery is cached; an older version never replaces a newer one', async () => {
         const { subscriber, handle } = makeSubscriberHarness()
-        const stop = startSnapshotListener({
-            setlistId: 's1',
-            db,
-            subscriber,
-            logger,
-        })
+        const stop = startSnapshotListener({ setlistId: 's1', db, subscriber, logger, ready })
 
-        handle.deliverTracks([
-            { type: 'removed', docId: 't1', data: {}, updatedAt: 0 },
-        ])
-
+        handle.deliverSetlist({ data: { name: 'v3', version: 3, ownerId: 'u' }, updatedAt: 3000, fromCache: false })
+        await flush()
+        handle.deliverSetlist({ data: { name: 'v2', version: 2, ownerId: 'u' }, updatedAt: 2000, fromCache: false })
+        handle.deliverSetlist({ data: { name: 'cached', version: 9, ownerId: 'u' }, updatedAt: 9000, fromCache: true })
         await flush()
 
-        expect(await db.tracks.get('t1')).toBeUndefined()
-        expect(await db.outbox.count()).toBe(0)
-
-        stop()
-    })
-
-    it('removed track: preserves local row if a pending outbox row exists for that docId', async () => {
-        await db.tracks.put({
-            id: 't1',
-            setlistId: 's1',
-            order: 0,
-            key: 'F',
-            updatedAt: 1000,
-        })
-        await db.outbox.add({
-            status: 'pending',
-            scheduledFor: Date.now(),
-            op: 'set',
-            collection: 'tracks',
-            docId: 't1',
-            payload: { id: 't1', setlistId: 's1', order: 0, key: 'F' },
-            attempts: 0,
-            createdAt: Date.now(),
-        })
-
-        const { subscriber, handle } = makeSubscriberHarness()
-        const stop = startSnapshotListener({
-            setlistId: 's1',
-            db,
-            subscriber,
-            logger,
-        })
-
-        handle.deliverTracks([
-            { type: 'removed', docId: 't1', data: {}, updatedAt: 0 },
-        ])
-
-        await flush()
-
-        const tr = await db.tracks.get('t1')
-        expect(tr).toBeDefined() // pending insert preserved
-        expect(tr?.key).toBe('F')
-
+        const s = await db.setlists.get('s1')
+        expect(s?.name).toBe('v3')
+        expect(s?.updatedAt).toBe(3000)
+        expect(useLiveFlags.getState().setlist.s1).toBe(true)
         stop()
     })
 
@@ -353,36 +182,17 @@ describe('v50-06-03: startSnapshotListener', () => {
         const { subscriber, handle } = makeSubscriberHarness()
         const tracksSpy = vi.spyOn(subscriber, 'subscribeTracks')
         const errorLogger = { warn: vi.fn(), error: vi.fn() }
-        const stop = startSnapshotListener({
-            setlistId: 's1',
-            db,
-            orgId: 'crc',
-            subscriber,
-            logger: errorLogger,
-        })
+        const stop = startSnapshotListener({ setlistId: 's1', db, orgId: 'crc', subscriber, logger: errorLogger, ready })
 
-        const denied = Object.assign(new Error('Missing or insufficient permissions.'), {
-            code: 'permission-denied',
-        })
+        const denied = Object.assign(new Error('Missing or insufficient permissions.'), { code: 'permission-denied' })
         handle.raiseSetlistError(new Error('unavailable'))
         handle.raiseTracksError(denied)
-
         await flush()
 
-        expect(errorLogger.warn).not.toHaveBeenCalled()
         expect(errorLogger.error).toHaveBeenCalledTimes(2)
-        expect(errorLogger.error).toHaveBeenCalledWith(
-            expect.stringMatching(/tracks subscription.*code=permission-denied/),
-            denied,
-        )
-        expect(errorLogger.error).toHaveBeenCalledWith(
-            expect.stringContaining('setlist subscription'),
-            expect.any(Error),
-        )
-        // A refused subscription stays dead: no tight retry loop.
+        expect(errorLogger.error).toHaveBeenCalledWith(expect.stringMatching(/tracks subscription.*code=permission-denied/), denied)
         expect(tracksSpy).toHaveBeenCalledTimes(1)
         expect(tracksSpy.mock.calls[0]?.[3]).toBe('crc')
-
         stop()
     })
 
@@ -399,6 +209,7 @@ describe('v50-06-03: startSnapshotListener', () => {
                 subscriber,
                 logger: log,
                 onTracksRefused,
+                ready,
             })
             handle.raiseTracksError(Object.assign(new Error(code), { code }))
             await flush()
@@ -410,56 +221,16 @@ describe('v50-06-03: startSnapshotListener', () => {
         }
     })
 
-    it('returned unsubscribe stops both setlist and tracks subscriptions', async () => {
+    it('unsubscribe stops both subscriptions, and later deliveries are dropped', async () => {
+        await db.tracks.put({ id: 't1', setlistId: 's1', order: 0, key: 'F', updatedAt: 1000 })
         const { subscriber, handle } = makeSubscriberHarness()
-        const stop = startSnapshotListener({
-            setlistId: 's1',
-            db,
-            subscriber,
-            logger,
-        })
-
+        const stop = startSnapshotListener({ setlistId: 's1', db, subscriber, logger, ready })
         stop()
-
         expect(handle.setlistUnsubCount).toBe(1)
         expect(handle.tracksUnsubCount).toBe(1)
-    })
 
-    it('post-unsubscribe deliveries are ignored (cancelled flag)', async () => {
-        await db.tracks.put({
-            id: 't1',
-            setlistId: 's1',
-            order: 0,
-            key: 'F',
-            updatedAt: 1000,
-        })
-
-        const { subscriber, handle } = makeSubscriberHarness()
-        const stop = startSnapshotListener({
-            setlistId: 's1',
-            db,
-            subscriber,
-            logger,
-        })
-
-        stop()
-
-        // Even if the test harness still routes a delivery (real Firestore
-        // would have torn down by now, but be defensive), the listener's
-        // `cancelled` flag drops it.
-        handle.deliverTracks([
-            {
-                type: 'modified',
-                docId: 't1',
-                data: { id: 't1', setlistId: 's1', order: 0, key: 'CHANGED' },
-                updatedAt: 5000,
-            },
-        ])
-
+        handle.deliverTracks({ fromCache: false, rows: [] })
         await flush()
-
-        const tr = await db.tracks.get('t1')
-        expect(tr?.key).toBe('F')
-        expect(tr?.updatedAt).toBe(1000)
+        expect((await db.tracks.get('t1'))?.key).toBe('F')
     })
 })

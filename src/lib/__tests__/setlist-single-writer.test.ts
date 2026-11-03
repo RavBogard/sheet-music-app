@@ -335,6 +335,24 @@ describe("OPS-CONTRACT single writer: only src/lib/setlist-ops writes setlists/*
         }
     })
 
+    it("PR 3: no browser file writes setlists/* or tracks/*, allowlisted or not", () => {
+        const browser = files.filter(
+            (f) =>
+                f.rel.startsWith("components/") ||
+                f.rel.startsWith("hooks/") ||
+                f.rel.startsWith("lib/sync/") ||
+                f.rel.startsWith("lib/local/") ||
+                f.rel.startsWith("lib/setlist-ops-client/") ||
+                ["lib/setlist-firebase.ts", "lib/live-director.ts"].includes(f.rel),
+        )
+        expect(browser.length).toBeGreaterThan(20)
+        const hits = browser.flatMap((f) => [
+            ...findWriteSites(f.src).map((s) => `${f.rel}:${s.line} [${s.why}]`),
+            ...(f.src.includes(MARKER) ? [`${f.rel}: carries an allowlist marker`] : []),
+        ])
+        expect(hits, hits.join("\n")).toEqual([])
+    })
+
     it("the module's public index does not export raw doc refs", () => {
         const index = files.find((x) => x.rel === "lib/setlist-ops/index.ts")!.src
         expect(index).not.toMatch(/\b(?:trackRef|setlistRef)\b\s*,|\b(?:trackRef|setlistRef)\s*\}/)

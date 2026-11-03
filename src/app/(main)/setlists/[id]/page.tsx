@@ -12,6 +12,8 @@ import { canEditSetlist } from "@/lib/setlist-permissions"
 import type { LocalSetlist } from "@/lib/local/types"
 import { getTracksForSetlist } from "@/lib/server-tracks"
 import { randomUUID } from "node:crypto"
+import { hydrateEmbeddedTracks } from "@/lib/setlist-ops"
+import { logger } from "@/lib/logger"
 
 function toMs(value: unknown): number {
     if (value == null) return 0
@@ -83,6 +85,17 @@ export default async function SetlistEditorPage({
     if (!canEdit) {
         // Non-editors get sent to the performance view
         redirect(`/perform/setlist/${id}`)
+    }
+
+    // Setlist sync PR 3: a legacy setlist whose rows are still embedded is
+    // hydrated here, on the server, in one transaction (the browser no longer
+    // writes rows). Idempotent; a hydrated setlist skips it.
+    if (data.hydrated !== true && Array.isArray(data.tracks) && data.tracks.length > 0) {
+        try {
+            await hydrateEmbeddedTracks(db, id)
+        } catch (err) {
+            logger.error(`[setlist editor] hydrating ${id} failed`, err)
+        }
     }
 
     const serialized = serializeSetlist(doc.id, data) as Record<string, unknown> & {

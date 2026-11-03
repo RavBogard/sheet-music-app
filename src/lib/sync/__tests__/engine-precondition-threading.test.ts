@@ -59,17 +59,17 @@ async function drain(engine: SyncEngine) {
 
 beforeEach(async () => {
     await resetDbForTests()
-    await getDb().setlists.put({ id: 'S', ownerId: 'u', updatedAt: 1000 } as never)
+    await getDb().songs.put({ id: 'S', ownerId: 'u', updatedAt: 1000 } as never)
 })
 
 describe('engine writeback: precondition threading', () => {
     it('leaves a precondition-free pending row precondition-free after a sibling commits', async () => {
         await applyEdit(
-            { op: 'update', collection: 'setlists', docId: 'S', patch: { name: 'A' } },
+            { op: 'update', collection: 'songs', docId: 'S', patch: { name: 'A' } },
             { withoutUndo: true },
         )
         await applyEdit(
-            { op: 'update', collection: 'setlists', docId: 'S', patch: { name: 'B' } },
+            { op: 'update', collection: 'songs', docId: 'S', patch: { name: 'B' } },
             { withoutUndo: true },
         )
         const adapter = new RemoteAdapter()
@@ -87,11 +87,11 @@ describe('engine writeback: precondition threading', () => {
 
     it('commits a precondition-free row despite an intervening server write', async () => {
         await applyEdit(
-            { op: 'update', collection: 'setlists', docId: 'S', patch: { trackCount: 26 } },
+            { op: 'update', collection: 'songs', docId: 'S', patch: { trackCount: 26 } },
             { withoutUndo: true },
         )
         await applyEdit(
-            { op: 'update', collection: 'setlists', docId: 'S', patch: { songCount: 14 } },
+            { op: 'update', collection: 'songs', docId: 'S', patch: { songCount: 14 } },
             { withoutUndo: true },
         )
         const adapter = new RemoteAdapter()
@@ -110,7 +110,7 @@ describe('engine writeback: precondition threading', () => {
         await applyEdit(
             {
                 op: 'update',
-                collection: 'setlists',
+                collection: 'songs',
                 docId: 'S',
                 patch: { name: 'A' },
                 expectedUpdatedAt: 1000,
@@ -120,7 +120,7 @@ describe('engine writeback: precondition threading', () => {
         await applyEdit(
             {
                 op: 'update',
-                collection: 'setlists',
+                collection: 'songs',
                 docId: 'S',
                 patch: { name: 'B' },
                 expectedUpdatedAt: 1000,

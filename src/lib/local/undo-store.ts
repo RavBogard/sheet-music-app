@@ -59,7 +59,21 @@ export interface CompositeUndoEntry {
     ts: number
 }
 
-export type UndoEntry = SimpleUndoEntry | CompositeUndoEntry
+/**
+ * A setlist action (setlist sync PR 3). Undo and redo are explicit op lists
+ * for the ops endpoint, built when the action was taken: field lists and
+ * anchors, never a copied row.
+ */
+export interface OpsUndoEntry {
+    kind: 'ops'
+    setlistId: string
+    label: string
+    undo: ReadonlyArray<Record<string, unknown> & { kind: 'insert' | 'remove' | 'move' | 'editRow' | 'editSetlist' }>
+    redo: ReadonlyArray<Record<string, unknown> & { kind: 'insert' | 'remove' | 'move' | 'editRow' | 'editSetlist' }>
+    ts: number
+}
+
+export type UndoEntry = SimpleUndoEntry | CompositeUndoEntry | OpsUndoEntry
 
 interface UndoStoreState {
     undoStack: UndoEntry[]

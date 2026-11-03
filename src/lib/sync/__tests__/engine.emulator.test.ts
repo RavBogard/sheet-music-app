@@ -245,7 +245,7 @@ describe('v60-03 H-SL-7 regression canary — engine writeback threads server up
         await resetDbForTests()
         // Best-effort clear of the setlists collection on the emulator side
         // so repeated runs see a clean slate.
-        const refs = await adminDb.collection('setlists').listDocuments()
+        const refs = await adminDb.collection('songs').listDocuments()
         await Promise.all(refs.map((r) => r.delete()))
     })
 
@@ -292,7 +292,7 @@ describe('v60-03 H-SL-7 regression canary — engine writeback threads server up
         // via firebase-admin directly. Capture the resolved ms so we can
         // pass it as `expectedUpdatedAt` to both edits.
         const setlistId = 'h-sl-7-canary'
-        const ref = adminDb.collection('setlists').doc(setlistId)
+        const ref = adminDb.collection('songs').doc(setlistId)
         await ref.set({
             name: 'initial',
             updatedAt: FieldValue.serverTimestamp(),
@@ -305,7 +305,7 @@ describe('v60-03 H-SL-7 regression canary — engine writeback threads server up
         // Step 2: mirror the remote into the local Dexie row so applyEdit
         // can find an existing row to merge against. Without this,
         // applyEdit('update') throws WriteAtomicityError("target missing").
-        await getDb().setlists.put({
+        await getDb().songs.put({
             id: setlistId,
             name: 'initial',
             updatedAt: initialUpdatedAt,
@@ -318,7 +318,7 @@ describe('v60-03 H-SL-7 regression canary — engine writeback threads server up
         await applyEdit(
             {
                 op: 'update',
-                collection: 'setlists',
+                collection: 'songs',
                 docId: setlistId,
                 patch: { name: 'edit-1' },
                 expectedUpdatedAt: initialUpdatedAt,
@@ -328,7 +328,7 @@ describe('v60-03 H-SL-7 regression canary — engine writeback threads server up
         await applyEdit(
             {
                 op: 'update',
-                collection: 'setlists',
+                collection: 'songs',
                 docId: setlistId,
                 patch: { description: 'edit-2-added' },
                 expectedUpdatedAt: initialUpdatedAt,

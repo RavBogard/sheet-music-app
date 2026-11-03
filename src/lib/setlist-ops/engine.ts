@@ -43,6 +43,7 @@ const refuse = (reason: OpsRefusal["reason"], message?: string): OpsRefusal => (
 
 const isObj = (v: unknown): v is Record<string, unknown> =>
     !!v && typeof v === "object" && !Array.isArray(v)
+const NO_RESERVED: ReadonlySet<string> = new Set()
 const isId = (v: unknown): v is string => typeof v === "string" && ID_RE.test(v)
 const isAnchor = (v: unknown) => v === null || isId(v)
 
@@ -382,7 +383,31 @@ export async function applyOpsAuthorized(
                         return
                     }
                     case "editSetlist": {
-                        const m = mergeFields(setlistCur, op.set, op.base ?? {}, RESERVED_SETLIST_FIELDS)
+                        // `gig` merges per sub-field (venue, start, setTargets…):
+                        // the editor sends only the parts it changed with their
+                        // base, so it never clobbers a part MCP changed. A null
+                        // part removes it; `gig: null` clears the whole gig.
+                        let set = op.set
+                        const gigConflicts: OpConflict[] = []
+                        let gigApplied = false
+                        if (isObj(op.set.gig)) {
+                            const { gig: setGig, ...rest } = op.set
+                            set = rest
+                            const curGig: Record<string, unknown> = isObj(setlistCur.gig) ? { ...setlistCur.gig } : {}
+                            const baseGig = isObj(op.base?.gig) ? (op.base.gig as Record<string, unknown>) : {}
+                            const gm = mergeFields(curGig, setGig as Record<string, unknown>, baseGig, NO_RESERVED)
+                            applyToCur(curGig, gm.apply)
+                            if (Object.keys(gm.apply).length > 0) {
+                                const next = Object.keys(curGig).length > 0 ? curGig : null
+                                if (next) setlistCur.gig = next
+                                else delete setlistCur.gig
+                                setlistPatch = { ...setlistPatch, gig: next }
+                                gigApplied = true
+                            }
+                            for (const c of gm.conflicts) gigConflicts.push({ opIndex, reason: "field", ...c, field: `gig.${c.field}` })
+                        }
+                        const m = mergeFields(setlistCur, set, op.base ?? {}, RESERVED_SETLIST_FIELDS)
+                        conflicts.push(...gigConflicts)
                         applyToCur(setlistCur, m.apply)
                         setlistPatch = { ...setlistPatch, ...m.apply }
                         // Derived class fields follow the author's own entries, as on update_setlist.
@@ -392,7 +417,7 @@ export async function applyOpsAuthorized(
                             setlistDerived.rabbiSlot = storedClassFor({ rabbi: m.apply.rabbi as string | null }).rabbiSlot ?? null
                         if ("eventDate" in m.apply && weekFor.has(opIndex)) Object.assign(setlistDerived, weekFor.get(opIndex))
                         for (const c of m.conflicts) conflicts.push({ opIndex, reason: "field", ...c })
-                        if (m.conflicts.length === 0 || Object.keys(m.apply).length > 0) applied.push(opIndex)
+                        if ((m.conflicts.length === 0 && gigConflicts.length === 0) || Object.keys(m.apply).length > 0 || gigApplied) applied.push(opIndex)
                         return
                     }
                 }

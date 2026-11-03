@@ -13,67 +13,19 @@ vi.mock('../../sync/init', () => ({
 import { getDb, resetDbForTests } from '../schema'
 import type { LocalTrack, OutboxRow } from '../types'
 import { WriteAtomicityError } from '../types'
-import { applyEdit, withTrackOrg } from '../write'
+import { applyEdit } from '../write'
 
-describe('applyEdit - multi-tenant P2 track orgId stamping', () => {
+describe('applyEdit refuses setlists and tracks (setlist sync PR 3: the ops client writes them)', () => {
     beforeEach(async () => {
         await resetDbForTests()
     })
-    afterEach(async () => {
-        await resetDbForTests()
-    })
 
-    async function seedParent(id: string, orgId?: string) {
-        await getDb().setlists.put({ id, updatedAt: 1, ownerId: 'u1', ...(orgId ? { orgId } : {}) })
-    }
-    async function outboxPayload(docId: string) {
-        const rows = await getDb().outbox.toArray()
-        return rows.find((r) => r.docId === docId)!.payload
-    }
-
-    it('grid add: a new track gets its Dexie parent setlist orgId (Dexie row and outbox agree)', async () => {
-        await seedParent('bl-1', 'brotherslazaroff')
-        await applyEdit({ op: 'set', collection: 'tracks', doc: { id: 't-add', setlistId: 'bl-1', order: 0 } })
-        const local = (await getDb().tracks.get('t-add')) as unknown as Record<string, unknown>
-        expect(local.orgId).toBe('brotherslazaroff')
-        expect((await outboxPayload('t-add')).orgId).toBe('brotherslazaroff')
-    })
-
-    it('a parent without orgId is crc', async () => {
-        await seedParent('c-1')
-        await applyEdit({ op: 'set', collection: 'tracks', doc: { id: 't-crc', setlistId: 'c-1', order: 0 } })
-        expect((await outboxPayload('t-crc')).orgId).toBe('crc')
-    })
-
-    it('duplicate row: a copy that already carries orgId keeps it', async () => {
-        await seedParent('bl-1', 'brotherslazaroff')
-        await applyEdit({
-            op: 'set',
-            collection: 'tracks',
-            doc: { id: 't-dup', setlistId: 'bl-1', order: 1, orgId: 'brotherslazaroff', title: 'copy' },
-        })
-        expect((await outboxPayload('t-dup')).orgId).toBe('brotherslazaroff')
-    })
-
-    it('duplicate row of an unstamped source row: stamped from the parent', async () => {
-        await seedParent('bl-1', 'brotherslazaroff')
-        await applyEdit({ op: 'set', collection: 'tracks', doc: { id: 't-dup2', setlistId: 'bl-1', order: 2, title: 'copy' } })
-        expect((await outboxPayload('t-dup2')).orgId).toBe('brotherslazaroff')
-    })
-
-    it('parent not in Dexie: left unstamped for the commit-time stamp (no guessing)', async () => {
-        await applyEdit({ op: 'set', collection: 'tracks', doc: { id: 't-orphan', setlistId: 'remote-only', order: 0 } })
-        expect((await outboxPayload('t-orphan')).orgId).toBeUndefined()
-    })
-
-    it('updates and non-track sets are untouched', async () => {
-        await seedParent('bl-1', 'brotherslazaroff')
-        await applyEdit({ op: 'set', collection: 'tracks', doc: { id: 't-u', setlistId: 'bl-1', order: 0 } })
-        await applyEdit({ op: 'update', collection: 'tracks', docId: 't-u', patch: { key: 'G' } })
-        const rows = await getDb().outbox.toArray()
-        expect(rows.find((r) => r.op === 'update')!.payload).toEqual({ key: 'G' })
-        const edited = await withTrackOrg({ op: 'set', collection: 'setlists', doc: { id: 's', updatedAt: 1, ownerId: 'u' } } as never, getDb())
-        expect((edited as unknown as { doc: Record<string, unknown> }).doc.orgId).toBeUndefined()
+    it.each(['tracks', 'setlists'] as const)('%s: throws, and writes neither the cache nor the outbox', async (collection) => {
+        await expect(
+            applyEdit({ op: 'set', collection, doc: { id: 'x', setlistId: 's', order: 0 } } as never),
+        ).rejects.toBeInstanceOf(WriteAtomicityError)
+        expect(await getDb().outbox.count()).toBe(0)
+        expect(await getDb()[collection].count()).toBe(0)
     })
 })
 
@@ -96,7 +48,7 @@ describe('applyEdit', () => {
         it("'set' commits notify the engine via notifyEditCommitted()", async () => {
             await applyEdit({
                 op: 'set',
-                collection: 'tracks',
+                collection: 'songs',
                 doc: { id: 't-nudge-set', setlistId: 's1', order: 0 },
             })
             expect(notifyEditCommittedMock).toHaveBeenCalledTimes(1)
@@ -105,13 +57,13 @@ describe('applyEdit', () => {
         it("'update' commits notify the engine", async () => {
             await applyEdit({
                 op: 'set',
-                collection: 'tracks',
+                collection: 'songs',
                 doc: { id: 't-nudge-up', setlistId: 's1', order: 0 },
             })
             notifyEditCommittedMock.mockClear()
             await applyEdit({
                 op: 'update',
-                collection: 'tracks',
+                collection: 'songs',
                 docId: 't-nudge-up',
                 patch: { key: 'G' },
             })
@@ -121,13 +73,13 @@ describe('applyEdit', () => {
         it("'delete' commits notify the engine", async () => {
             await applyEdit({
                 op: 'set',
-                collection: 'tracks',
+                collection: 'songs',
                 doc: { id: 't-nudge-del', setlistId: 's1', order: 0 },
             })
             notifyEditCommittedMock.mockClear()
             await applyEdit({
                 op: 'delete',
-                collection: 'tracks',
+                collection: 'songs',
                 docId: 't-nudge-del',
             })
             expect(notifyEditCommittedMock).toHaveBeenCalledTimes(1)
@@ -137,7 +89,7 @@ describe('applyEdit', () => {
             await expect(
                 applyEdit({
                     op: 'update',
-                    collection: 'tracks',
+                    collection: 'songs',
                     docId: 't-does-not-exist',
                     patch: { key: 'G' },
                 }),
@@ -150,18 +102,18 @@ describe('applyEdit', () => {
         const db = getDb()
         await applyEdit({
             op: 'set',
-            collection: 'tracks',
+            collection: 'songs',
             doc: { id: 't1', setlistId: 's1', order: 0, title: 'Adon Olam' },
         })
 
-        const track = await db.tracks.get('t1')
+        const track = await db.songs.get('t1')
         expect(track?.title).toBe('Adon Olam')
 
         const outbox = await db.outbox.toArray()
         expect(outbox).toHaveLength(1)
         expect(outbox[0]).toMatchObject({
             op: 'set',
-            collection: 'tracks',
+            collection: 'songs',
             docId: 't1',
             status: 'pending',
             attempts: 0,
@@ -172,19 +124,19 @@ describe('applyEdit', () => {
     it("'update' merges the patch into the entity and enqueues the patch (not the merged doc)", async () => {
         await applyEdit({
             op: 'set',
-            collection: 'tracks',
+            collection: 'songs',
             doc: { id: 't1', setlistId: 's1', order: 0, key: 'C' },
         })
         await applyEdit({
             op: 'update',
-            collection: 'tracks',
+            collection: 'songs',
             docId: 't1',
             patch: { key: 'G' },
             expectedUpdatedAt: 0,
         })
 
         const db = getDb()
-        const track = (await db.tracks.get('t1')) as LocalTrack
+        const track = (await db.songs.get('t1')) as unknown as LocalTrack
         expect(track.key).toBe('G')
         expect(track.setlistId).toBe('s1') // preserved
 
@@ -200,23 +152,23 @@ describe('applyEdit', () => {
     it("'delete' removes the entity and enqueues an empty-payload row", async () => {
         await applyEdit({
             op: 'set',
-            collection: 'tracks',
+            collection: 'songs',
             doc: { id: 't1', setlistId: 's1', order: 0 },
         })
         await applyEdit({
             op: 'delete',
-            collection: 'tracks',
+            collection: 'songs',
             docId: 't1',
         })
 
         const db = getDb()
-        expect(await db.tracks.get('t1')).toBeUndefined()
+        expect(await db.songs.get('t1')).toBeUndefined()
 
         const outbox = await db.outbox.toArray()
         expect(outbox).toHaveLength(2)
         expect(outbox[1]).toMatchObject({
             op: 'delete',
-            collection: 'tracks',
+            collection: 'songs',
             docId: 't1',
             payload: {},
         })
@@ -226,7 +178,7 @@ describe('applyEdit', () => {
         await expect(
             applyEdit({
                 op: 'update',
-                collection: 'tracks',
+                collection: 'songs',
                 docId: 'nope',
                 patch: { key: 'G' },
             }),
@@ -234,7 +186,7 @@ describe('applyEdit', () => {
 
         const db = getDb()
         expect(await db.outbox.count()).toBe(0)
-        expect(await db.tracks.count()).toBe(0)
+        expect(await db.songs.count()).toBe(0)
     })
 
     // AC-1: atomicity — if the transaction throws after the entity write but
@@ -242,7 +194,7 @@ describe('applyEdit', () => {
     it('AC-1: rollback when outbox insert fails leaves entity unchanged', async () => {
         await applyEdit({
             op: 'set',
-            collection: 'tracks',
+            collection: 'songs',
             doc: { id: 't1', setlistId: 's1', order: 0, key: 'C' },
         })
 
@@ -258,7 +210,7 @@ describe('applyEdit', () => {
         await expect(
             applyEdit({
                 op: 'update',
-                collection: 'tracks',
+                collection: 'songs',
                 docId: 't1',
                 patch: { key: 'G' },
                 expectedUpdatedAt: 0,
@@ -266,7 +218,7 @@ describe('applyEdit', () => {
         ).rejects.toBeInstanceOf(WriteAtomicityError)
 
         // Entity reverts to pre-update value
-        const track = (await db.tracks.get('t1')) as LocalTrack
+        const track = (await db.songs.get('t1')) as unknown as LocalTrack
         expect(track.key).toBe('C')
 
         // Outbox has only the original 'set' row from before injection — no
@@ -282,7 +234,7 @@ describe('applyEdit', () => {
         const when = new Date('2026-04-26T12:00:00Z')
         await applyEdit({
             op: 'set',
-            collection: 'setlists',
+            collection: 'songs',
             doc: {
                 id: 's1',
                 ownerId: 'u1',

@@ -206,7 +206,7 @@ describe('SyncEngine', () => {
         const h = buildEngine()
         await applyEdit({
             op: 'set',
-            collection: 'tracks',
+            collection: 'songs',
             doc: { id: 't1', setlistId: 's1', order: 0 },
         })
         h.adapter.queue('ok')
@@ -222,7 +222,7 @@ describe('SyncEngine', () => {
         const h = buildEngine()
         await applyEdit({
             op: 'set',
-            collection: 'tracks',
+            collection: 'songs',
             doc: { id: 't1', setlistId: 's1', order: 0 },
         })
         h.adapter.queue(
@@ -260,7 +260,7 @@ describe('SyncEngine', () => {
 
     it('AC-4: version-mismatch routes to Conflict, no auto-retry', async () => {
         const h = buildEngine()
-        await getDb().tracks.put({
+        await (getDb().songs as unknown as { put(r: unknown): Promise<unknown> }).put({
             id: 't1',
             setlistId: 's1',
             order: 0,
@@ -268,7 +268,7 @@ describe('SyncEngine', () => {
         })
         await applyEdit({
             op: 'update',
-            collection: 'tracks',
+            collection: 'songs',
             docId: 't1',
             patch: { key: 'G' },
             expectedUpdatedAt: 999,
@@ -289,7 +289,7 @@ describe('SyncEngine', () => {
         const h = buildEngine()
         await applyEdit({
             op: 'set',
-            collection: 'tracks',
+            collection: 'songs',
             doc: { id: 't1', setlistId: 's1', order: 0 },
         })
         h.adapter.queue(new AuthError(), new AuthError())
@@ -306,7 +306,7 @@ describe('SyncEngine', () => {
         const h = buildEngine()
         await applyEdit({
             op: 'set',
-            collection: 'tracks',
+            collection: 'songs',
             doc: { id: 't1', setlistId: 's1', order: 0 },
         })
         h.adapter.queue(new AuthError(), 'ok')
@@ -322,7 +322,7 @@ describe('SyncEngine', () => {
         const h = buildEngine()
         await applyEdit({
             op: 'set',
-            collection: 'tracks',
+            collection: 'songs',
             doc: { id: 't1', setlistId: 's1', order: 0 },
         })
         for (let i = 0; i < 5; i++) {
@@ -348,7 +348,7 @@ describe('SyncEngine', () => {
         h.online.value = false
         await applyEdit({
             op: 'set',
-            collection: 'tracks',
+            collection: 'songs',
             doc: { id: 't1', setlistId: 's1', order: 0 },
         })
         await h.engine.start()
@@ -376,7 +376,7 @@ describe('SyncEngine', () => {
 
         await applyEdit({
             op: 'set',
-            collection: 'tracks',
+            collection: 'songs',
             doc: { id: 't1', setlistId: 's1', order: 0 },
         })
         a.adapter.queue('ok')
@@ -393,7 +393,7 @@ describe('SyncEngine', () => {
 
         await applyEdit({
             op: 'set',
-            collection: 'tracks',
+            collection: 'songs',
             doc: { id: 't2', setlistId: 's1', order: 1 },
         })
         const holder = a.lock.isHolder() ? a : b
@@ -414,13 +414,13 @@ describe('SyncEngine', () => {
         const h = buildEngine()
         await applyEdit({
             op: 'set',
-            collection: 'tracks',
+            collection: 'songs',
             doc: { id: 't1', setlistId: 's1', order: 0 },
         })
         h.adapter.queue({ ok: true, updatedAt: 12345 })
         await h.engine.start()
         await flushAll()
-        const row = await getDb().tracks.get('t1')
+        const row = await getDb().songs.get('t1')
         expect(row?.updatedAt).toBe(12345)
         expect(await getDb().outbox.count()).toBe(0)
         h.engine.shutdown()
@@ -428,7 +428,7 @@ describe('SyncEngine', () => {
 
     it('v50-06-01: adapter result with no updatedAt leaves local row unchanged', async () => {
         const h = buildEngine()
-        await getDb().tracks.put({
+        await (getDb().songs as unknown as { put(r: unknown): Promise<unknown> }).put({
             id: 't1',
             setlistId: 's1',
             order: 0,
@@ -440,14 +440,14 @@ describe('SyncEngine', () => {
         await getDb().outbox.clear()
         await applyEdit({
             op: 'update',
-            collection: 'tracks',
+            collection: 'songs',
             docId: 't1',
             patch: { key: 'G' },
         })
         h.adapter.queue('ok') // returns {} — no updatedAt
         await h.engine.start()
         await flushAll()
-        const row = await getDb().tracks.get('t1')
+        const row = await getDb().songs.get('t1')
         // Local updatedAt unchanged because adapter returned {}.
         expect(row?.updatedAt).toBe(1000)
         expect(await getDb().outbox.count()).toBe(0)
@@ -456,7 +456,7 @@ describe('SyncEngine', () => {
 
     it('v50-06-01: delete op skips writeback even if adapter returns updatedAt', async () => {
         const h = buildEngine()
-        await getDb().tracks.put({
+        await (getDb().songs as unknown as { put(r: unknown): Promise<unknown> }).put({
             id: 't1',
             setlistId: 's1',
             order: 0,
@@ -465,7 +465,7 @@ describe('SyncEngine', () => {
         await getDb().outbox.clear()
         await applyEdit({
             op: 'delete',
-            collection: 'tracks',
+            collection: 'songs',
             docId: 't1',
         })
         // Even if a misbehaving adapter returned updatedAt for a delete,
@@ -473,7 +473,7 @@ describe('SyncEngine', () => {
         h.adapter.queue({ ok: true, updatedAt: 9999 })
         await h.engine.start()
         await flushAll()
-        const row = await getDb().tracks.get('t1')
+        const row = await getDb().songs.get('t1')
         expect(row).toBeUndefined()
         expect(await getDb().outbox.count()).toBe(0)
         h.engine.shutdown()
@@ -481,7 +481,7 @@ describe('SyncEngine', () => {
 
     it('v50-06-01: writeback skipped when local row was deleted mid-flight', async () => {
         const h = buildEngine()
-        await getDb().tracks.put({
+        await (getDb().songs as unknown as { put(r: unknown): Promise<unknown> }).put({
             id: 't1',
             setlistId: 's1',
             order: 0,
@@ -490,7 +490,7 @@ describe('SyncEngine', () => {
         await getDb().outbox.clear()
         await applyEdit({
             op: 'update',
-            collection: 'tracks',
+            collection: 'songs',
             docId: 't1',
             patch: { key: 'G' },
         })
@@ -499,11 +499,11 @@ describe('SyncEngine', () => {
         // returns updatedAt as if the server commit succeeded on the
         // remote-side doc; the engine's `if (existing)` guard must
         // suppress resurrection.
-        await getDb().tracks.delete('t1')
+        await getDb().songs.delete('t1')
         h.adapter.queue({ ok: true, updatedAt: 5000 })
         await h.engine.start()
         await flushAll()
-        const row = await getDb().tracks.get('t1')
+        const row = await getDb().songs.get('t1')
         expect(row).toBeUndefined()
         expect(await getDb().outbox.count()).toBe(0)
         h.engine.shutdown()
@@ -513,7 +513,7 @@ describe('SyncEngine', () => {
         const h = buildEngine()
         await applyEdit({
             op: 'set',
-            collection: 'tracks',
+            collection: 'songs',
             doc: { id: 't1', setlistId: 's1', order: 0 },
         })
         h.adapter.queue(new NetworkError('fetch failed'))
@@ -527,7 +527,7 @@ describe('SyncEngine', () => {
 
     it('a legacy forceLwwOnConflict row still surfaces a conflict without overwriting', async () => {
         const h = buildEngine()
-        await getDb().tracks.put({
+        await (getDb().songs as unknown as { put(r: unknown): Promise<unknown> }).put({
             id: 't1',
             setlistId: 's1',
             order: 0,
@@ -540,7 +540,7 @@ describe('SyncEngine', () => {
             status: 'pending',
             scheduledFor: h.clock.now(),
             op: 'update',
-            collection: 'tracks',
+            collection: 'songs',
             docId: 't1',
             payload: { key: 'G' },
             expectedUpdatedAt: 999,
@@ -567,7 +567,7 @@ describe('SyncEngine', () => {
         // a first-time conflict must still surface — only manual retry
         // opts into the silent LWW path.
         const h = buildEngine()
-        await getDb().tracks.put({
+        await (getDb().songs as unknown as { put(r: unknown): Promise<unknown> }).put({
             id: 't1',
             setlistId: 's1',
             order: 0,
@@ -575,7 +575,7 @@ describe('SyncEngine', () => {
         })
         await applyEdit({
             op: 'update',
-            collection: 'tracks',
+            collection: 'songs',
             docId: 't1',
             patch: { key: 'G' },
             expectedUpdatedAt: 999,

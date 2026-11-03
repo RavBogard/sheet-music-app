@@ -7,6 +7,7 @@ import type {
     LocalTrack,
     MetaRow,
     OutboxRow,
+    SetlistIntent,
     Tombstone,
 } from './types'
 
@@ -18,6 +19,7 @@ export class LocalDb extends Dexie {
     meta!: Table<MetaRow, string>
     edit_log!: Table<LocalEditLog, number>
     tombstones!: Table<Tombstone, [string, string]>
+    intents!: Table<SetlistIntent, number>
 
     constructor(name = 'crc-local') {
         super(name)
@@ -73,6 +75,22 @@ export class LocalDb extends Dexie {
             meta: 'key',
             edit_log: '++id, ts',
             tombstones: '[collection+docId], deletedAt',
+        })
+        // v5 (setlist sync PR 3, 2026-11-03): additive `intents` table, the
+        // per-setlist queue of edits for the server ops endpoint. `tracks` and
+        // `setlists` now hold SERVER state only; the old outbox keeps serving
+        // other collections. Old tracks/setlists outbox rows are converted to
+        // intents at runtime (setlist-ops-client/migrate.ts), not here, because
+        // the conversion reads the row's neighbours and must not race a reload.
+        this.version(5).stores({
+            setlists: 'id, updatedAt, ownerId, eventDate',
+            tracks: 'id, setlistId, [setlistId+order], songId',
+            songs: 'id, normalizedTitle',
+            outbox: '++localId, status, scheduledFor, [status+scheduledFor]',
+            meta: 'key',
+            edit_log: '++id, ts',
+            tombstones: '[collection+docId], deletedAt',
+            intents: '++localId, setlistId, status, batchKey',
         })
     }
 }

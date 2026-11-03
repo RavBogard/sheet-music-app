@@ -18,7 +18,7 @@ function makeEntry(
         ts: Date.now(),
         source: 'apply-edit',
         op: 'update',
-        collection: 'tracks',
+        collection: 'songs',
         docId: 't-' + Math.random().toString(36).slice(2, 8),
         payloadKeys: ['key'],
         ...overrides,
@@ -170,7 +170,7 @@ describe('edit-log helper (v5h3-01-02)', () => {
         const { applyEdit } = await import('../../local/write')
         await applyEdit({
             op: 'set',
-            collection: 'tracks',
+            collection: 'songs',
             doc: { id: 't-site-1', setlistId: 's1', order: 0, title: 'Adon Olam' },
         })
         // recordEdit fires fire-and-forget — yield microtasks for it to land.
@@ -183,7 +183,7 @@ describe('edit-log helper (v5h3-01-02)', () => {
         const row = rows[rows.length - 1] as unknown as Record<string, unknown>
         expect(row.source).toBe('apply-edit')
         expect(row.op).toBe('set')
-        expect(row.collection).toBe('tracks')
+        expect(row.collection).toBe('songs')
         expect(row.docId).toBe('t-site-1')
         // payloadKeys is the LIST OF KEY NAMES from the doc, not values.
         const keys = row.payloadKeys as string[]

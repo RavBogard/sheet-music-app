@@ -162,51 +162,52 @@ describe("P2 §7.5 — CRC and BL parity (must still work)", () => {
         await assertSucceeds(db("bSE").collection("scheduling_assignments").where("musicianUid", "==", "bSE").get())
     })
 
-    describe("aMe — own setlist lifecycle, no track writes", () => {
-        it("creates, updates and deletes its own setlist (orgId:A, ownerId self)", async () => {
-            const d = db("aMe")
-            await assertSucceeds(d.doc("setlists/me1").set({ name: "Mine", ownerId: "aMe", orgId: A }))
-            await assertSucceeds(d.doc("setlists/me1").update({ name: "Mine 2" }))
-            await assertSucceeds(d.doc("setlists/me1/history/h1").set({ action: "renamed", timestamp: 2 }))
-            await assertSucceeds(d.doc("setlists/me1").delete())
+    // Setlist sync PR 3: setlists/*, tracks/* and users/{uid}/setlists are
+    // written by the server only (src/lib/setlist-ops, behind /ops and
+    // /api/setlists/create). No persona of either tenant may write them from
+    // a browser; reads are unchanged (the signed-out gets above, the list
+    // matrix). A setlist's own subcollections keep their rules.
+    describe("PR 3: setlists and tracks are server-written only, for every persona of both tenants", () => {
+        const personas: Persona[] = ["aMe", "aBL", "aAdmin", "bBL", "dual", "po"]
+        for (const p of personas) {
+            it(`${p}: create / update / delete of setlists and tracks are denied`, async () => {
+                const d = db(p)
+                const own = p === "bBL" ? B : A
+                const sl = own === A ? "sA" : "sB"
+                const tr = own === A ? "tA" : "tB"
+                await assertFails(d.doc(`setlists/new-${p}`).set({ name: "x", ownerId: p, orgId: own }))
+                await assertFails(d.doc(`setlists/${sl}`).update({ name: "client edit" }))
+                await assertFails(d.doc(`setlists/${sl}`).delete())
+                await assertFails(d.doc(`tracks/new-${p}`).set({ setlistId: sl, title: "T", order: 9, type: "song", orgId: own }))
+                await assertFails(d.doc(`tracks/${tr}`).update({ key: "D" }))
+                await assertFails(d.doc(`tracks/${tr}`).delete())
+                await assertFails(d.doc(`users/${p}/setlists/x`).set({ name: "x" }))
+                // Reads stay as they were.
+                await assertSucceeds(d.doc(`setlists/${sl}`).get())
+                await assertSucceeds(d.doc(`tracks/${tr}`).get())
+                await assertSucceeds(d.doc(`users/${p}/setlists/x`).get())
+            })
+        }
+        it("an unstamped legacy track and a cross-setlist move are denied too", async () => {
+            await assertFails(db("aBL").doc("tracks/tAu").update({ orgId: A }))
+            await assertFails(db("aBL").doc("tracks/tA").update({ setlistId: "sA" }))
         })
-        it("cannot touch tracks (parity: members never could)", async () => {
-            await assertFails(db("aMe").doc("tracks/meT").set({ setlistId: "sA", title: "T", order: 9, type: "song", orgId: A }))
-            await assertFails(db("aMe").doc("tracks/tA").update({ key: "D" }))
+    })
+
+    describe("aMe — setlist history", () => {
+        it("adds a history entry on an A setlist (the audit log the browser still writes)", async () => {
+            await env.withSecurityRulesDisabled(async (c) => {
+                await c.firestore().doc("setlists/me1").set({ name: "Mine", ownerId: "aMe", orgId: A })
+            })
+            await assertSucceeds(db("aMe").doc("setlists/me1/history/h1").set({ action: "renamed", timestamp: 2 }))
         })
         it("creates own musician_availability stamped A", async () => {
             await assertSucceeds(db("aMe").doc("musician_availability/meAv").set({ musicianUid: "aMe", orgId: A, startDate: 1 }))
         })
     })
 
-    describe("aBL — tracks, songs, overrides", () => {
-        it("creates/updates/deletes a stamped track", async () => {
-            const d = db("aBL")
-            await assertSucceeds(d.doc("tracks/blT1").set({ setlistId: "sA", title: "T", order: 5, type: "song", orgId: A }))
-            await assertSucceeds(d.doc("tracks/blT1").update({ key: "G" }))
-            await assertSucceeds(d.doc("tracks/blT1").delete())
-        })
-        it("creates an unstamped track on an A setlist (pre-P2 cached bundle, §10 Q1)", async () => {
-            await assertSucceeds(db("aBL").doc("tracks/blT2").set({ setlistId: "sA", title: "T", order: 6, type: "song" }))
-        })
-        it("updates an unstamped A track, and restamps it as A", async () => {
-            const d = db("aBL")
-            await assertSucceeds(d.doc("tracks/tAu").update({ key: "E" }))
-            await assertSucceeds(d.doc("tracks/tAu").update({ orgId: A }))
-        })
-        it("moves an A track to another A setlist", async () => {
-            const d = db("aBL")
-            await assertSucceeds(d.doc("setlists/blS").set({ name: "BL own", ownerId: "aBL", orgId: A }))
-            await assertSucceeds(d.doc("tracks/tA").update({ setlistId: "blS" }))
-            await assertSucceeds(d.doc("tracks/tA").update({ setlistId: "sA" }))
-        })
-        it("stamped track update performs no get() of the parent (lazy trackOrg)", async () => {
-            // tGhost's setlistId names a missing doc; evaluating setlistOrgOf on
-            // it would deny. Success proves the stamped branch never ran it.
-            await assertSucceeds(db("aBL").doc("tracks/tGhost").update({ key: "C" }))
-        })
-        it("updates any A setlist and an A song", async () => {
-            await assertSucceeds(db("aBL").doc("setlists/sA").update({ name: "Renamed by leader" }))
+    describe("aBL — songs, overrides", () => {
+        it("updates an A song", async () => {
             await assertSucceeds(db("aBL").doc("songs/songA").update({ defaults: { key: "D" } }))
         })
         it("creates a song stamped A; a client recording create is denied (server-only, 2026-11)", async () => {
@@ -218,7 +219,9 @@ describe("P2 §7.5 — CRC and BL parity (must still work)", () => {
         })
         it("overrides create + rev+1 update + deviation in the same commit", async () => {
             const d = db("aBL")
-            await assertSucceeds(d.doc("setlists/blS2").set({ name: "Tonight", ownerId: "aBL", orgId: A }))
+            await env.withSecurityRulesDisabled(async (c) => {
+                await c.firestore().doc("setlists/blS2").set({ name: "Tonight", ownerId: "aBL", orgId: A })
+            })
             await assertSucceeds(d.doc("setlists/blS2/performance/overrides").set({ rows: {}, eventDay: EVENT_DAY, rev: 1, updatedAt: 1, updatedBy: "aBL" }))
             const b = d.batch()
             b.set(d.doc("setlists/blS2/performance/overrides"), { rows: { r1: { fileId: "B" } }, eventDay: EVENT_DAY, rev: 2, updatedAt: 2, updatedBy: "aBL" })
@@ -244,26 +247,13 @@ describe("P2 §7.5 — CRC and BL parity (must still work)", () => {
         it("reads A setlist history (H1)", async () => {
             await assertSucceeds(db("aAdmin").collection("setlists/sA/history").orderBy("timestamp", "desc").limit(50).get())
         })
-        it("changes an A setlist's ownerId", async () => {
-            const d = db("aAdmin")
-            await assertSucceeds(d.doc("setlists/adm1").set({ name: "x", ownerId: "aAdmin", orgId: A }))
-            await assertSucceeds(d.doc("setlists/adm1").update({ ownerId: "aBL" }))
-        })
     })
 
     describe("bBL / dual in B", () => {
-        it("bBL updates its own tenant's setlist and creates a B track", async () => {
-            await assertSucceeds(db("bBL").doc("setlists/sB").update({ name: "BL renamed" }))
-            await assertSucceeds(db("bBL").doc("tracks/bT1").set({ setlistId: "sB", title: "T", order: 3, type: "song", orgId: B }))
-            await assertSucceeds(db("bBL").doc("tracks/tBu").update({ key: "A" }))
-        })
         it("dual (B admin) writes config/defaults__brotherslazaroff and reads B history", async () => {
             await assertSucceeds(db("dual").doc(`config/defaults__${B}`).set({ shabbat_morning: "sB" }))
             await assertSucceeds(db("dual").doc("setlists/sB/history/h1").get())
             await assertSucceeds(db("dual").collection("auditLogs").where("orgId", "==", B).orderBy("timestamp", "desc").limit(20).get())
-        })
-        it("dual (A band leader) edits A tracks", async () => {
-            await assertSucceeds(db("dual").doc("tracks/tA").update({ key: "Bb" }))
         })
     })
 
@@ -304,7 +294,6 @@ describe("P2 §7.5 — CRC and BL parity (must still work)", () => {
             const d = db("po")
             await assertSucceeds(d.doc("songs/songB").get())
             await assertSucceeds(d.doc("songs/songB").update({ title: "po edit" }))
-            await assertSucceeds(d.doc("setlists/sB").update({ ownerId: "po" }))
             await assertSucceeds(d.doc("setlists/sB/history/h1").get())
             await assertSucceeds(d.collection("auditLogs").get())
             await assertSucceeds(d.doc(`config/defaults__${B}`).set({ shabbat_morning: "sB" }))

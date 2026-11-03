@@ -80,15 +80,16 @@ describe("SEC-03 — legacy-claims tokens hold no tenant role", () => {
             const d = db("aBL")
             await assertSucceeds(d.doc("songs/songA").get())
             await assertSucceeds(d.collection("songs").where("orgId", "==", A).get())
-            await assertSucceeds(d.doc("setlists/sA").update({ name: "leader edit" }))
-            await assertSucceeds(d.doc("tracks/mT1").set({ setlistId: "sA", title: "T", order: 7, type: "song", orgId: A }))
+            // Setlists and tracks are server-written only (setlist sync PR 3).
+            await assertFails(d.doc("setlists/sA").update({ name: "leader edit" }))
+            await assertFails(d.doc("tracks/mT1").set({ setlistId: "sA", title: "T", order: 7, type: "song", orgId: A }))
             await assertSucceeds(pendingCmds(d).doc("mb1").set(busCmd("aBL")))
         })
         it("bBL ({m:{brotherslazaroff:'bl'}}) reads and edits brotherslazaroff", async () => {
             const d = db("bBL")
             await assertSucceeds(d.doc("songs/songB").get())
             await assertSucceeds(d.collection("songs").where("orgId", "==", B).get())
-            await assertSucceeds(d.doc("setlists/sB").update({ name: "leader edit" }))
+            await assertFails(d.doc("setlists/sB").update({ name: "leader edit" }))
             await assertSucceeds(d.doc("contacts/cB").get())
         })
         it("an m map wins over legacy claims on the same token", async () => {

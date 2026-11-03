@@ -71,7 +71,7 @@ function renderSheet(
                     templateType: 'shabbat_morning',
                     ...over.initial,
                 }}
-                applyEdit={applyEdit}
+                saveSetlist={applyEdit}
             />
         </OrgProvider>,
     )
@@ -105,16 +105,13 @@ describe('SetlistMetaEditSheet', () => {
         await user.click(screen.getByRole('button', { name: /save/i }))
 
         expect(applyEdit).toHaveBeenCalledTimes(1)
-        expect(applyEdit).toHaveBeenCalledWith({
-            op: 'update',
-            collection: 'setlists',
-            docId: 'setlist-1',
-            patch: { name: 'Erev Shabbat' },
-        })
+        // The base is what the sheet opened with; the patch only what changed.
+        expect(applyEdit).toHaveBeenCalledWith('setlist-1', expect.objectContaining({ name: expect.any(String) }), { name: 'Erev Shabbat' })
         expect(onOpenChange).toHaveBeenCalledWith(false)
     })
 
-    it('AC-3: changing the rabbi saves the rabbi and the slot it names', async () => {
+    // The server writes the stored class (rabbiSlot / serviceType) from these.
+    it('AC-3: changing the rabbi saves the rabbi', async () => {
         const user = userEvent.setup()
         const { applyEdit } = renderSheet()
 
@@ -124,15 +121,10 @@ describe('SetlistMetaEditSheet', () => {
         await user.click(screen.getByRole('button', { name: /save/i }))
 
         expect(applyEdit).toHaveBeenCalledTimes(1)
-        expect(applyEdit).toHaveBeenCalledWith({
-            op: 'update',
-            collection: 'setlists',
-            docId: 'setlist-1',
-            patch: { rabbi: 'Rabbi Randy', rabbiSlot: 'randy' },
-        })
+        expect(applyEdit).toHaveBeenCalledWith('setlist-1', expect.any(Object), { rabbi: 'Rabbi Randy' })
     })
 
-    it('AC-3: changing the service type saves templateType and its stored class', async () => {
+    it('AC-3: changing the service type saves templateType', async () => {
         const user = userEvent.setup()
         const { applyEdit } = renderSheet()
 
@@ -142,12 +134,7 @@ describe('SetlistMetaEditSheet', () => {
         await user.click(screen.getByRole('button', { name: /save/i }))
 
         expect(applyEdit).toHaveBeenCalledTimes(1)
-        expect(applyEdit).toHaveBeenCalledWith({
-            op: 'update',
-            collection: 'setlists',
-            docId: 'setlist-1',
-            patch: { templateType: 'friday_night', serviceType: 'friday_night' },
-        })
+        expect(applyEdit).toHaveBeenCalledWith('setlist-1', expect.any(Object), { templateType: 'friday_night' })
     })
 
     it('AC-4: saving with no changes does not write and closes the sheet', async () => {

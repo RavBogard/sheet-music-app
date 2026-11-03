@@ -1,240 +1,70 @@
 import '@testing-library/jest-dom'
-import { render, screen, act } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
-import { useSyncStatus } from '@/lib/sync/store'
-import type { SyncState } from '@/lib/sync/state-machine'
+import type { SetlistIntent } from '@/lib/local/types'
+import { computeFreshness } from '@/lib/setlist-ops-client/freshness'
 
 import { SyncIndicator } from '../SyncIndicator'
 
-vi.mock('@/lib/sync/cleanup', () => ({
-    discardFailedOutboxRows: vi.fn(async () => ({ removed: 0 })),
-    retryFailedOutboxRows: vi.fn(async () => ({ retried: 0 })),
-}))
+/**
+ * The save indicator reads ONE setlist's freshness (setlist sync PR 3):
+ * current, saving(n), refused(list) or offline. Behaviour and test ids, not
+ * copy (the wording test for these strings is setlist-grid.i18n).
+ */
 
-const signOutMock = vi.fn(async () => {})
-vi.mock('@/lib/auth-context', () => ({
-    useAuth: () => ({ signOut: signOutMock }),
-}))
+const intent = (localId: number, status: SetlistIntent['status'], extra: Partial<SetlistIntent> = {}): SetlistIntent => ({
+    localId,
+    setlistId: 's1',
+    batchKey: `b${localId}`,
+    attempt: 0,
+    op: { kind: 'editRow', rowId: 'r1', set: { key: 'G' }, base: { key: 'F' } },
+    status,
+    createdAt: 1,
+    ...extra,
+})
 
-import {
-    discardFailedOutboxRows,
-    retryFailedOutboxRows,
-} from '@/lib/sync/cleanup'
-
-function setSyncState(
-    state: SyncState,
-    queued = 0,
-    extras: { lastError?: string; lastSyncAt?: number } = {},
-): void {
-    useSyncStatus.setState({
-        state,
-        queued,
-        lastError: extras.lastError,
-        lastSyncAt: extras.lastSyncAt,
-    })
-}
+const online = { online: true, offlineSince: null }
 
 describe('SyncIndicator', () => {
-    beforeEach(() => {
-        useSyncStatus.setState({
-            state: 'idle',
-            queued: 0,
-            lastError: undefined,
-            lastSyncAt: undefined,
-        })
-        vi.useFakeTimers({ shouldAdvanceTime: true })
+    it('current when nothing is queued', () => {
+        render(<SyncIndicator freshness={computeFreshness([], online)} />)
+        expect(screen.getByTestId('sync-indicator')).toHaveAttribute('data-state', 'current')
+        expect(screen.queryByTestId('sync-refused-list')).toBeNull()
     })
 
-    afterEach(() => {
-        vi.useRealTimers()
+    it('saving while intents are pending or in flight', () => {
+        render(<SyncIndicator freshness={computeFreshness([intent(1, 'pending'), intent(2, 'sending')], online)} />)
+        expect(screen.getByTestId('sync-indicator')).toHaveAttribute('data-state', 'saving')
     })
 
-    it('renders the Saved label in idle state', async () => {
-        setSyncState('idle')
-        render(<SyncIndicator />)
-        expect(screen.getByTestId('sync-indicator')).toHaveAttribute(
-            'data-state',
-            'idle',
-        )
-        expect(screen.getByTestId('sync-indicator')).toHaveTextContent('Saved')
-        await act(async () => {
-            vi.advanceTimersByTime(100)
-        })
-        expect(screen.getByTestId('sync-indicator-announce')).toHaveTextContent(
-            'Saved',
-        )
+    it('offline while the device is offline, with field edits still queued', () => {
+        const f = computeFreshness([intent(1, 'pending')], { online: false, offlineSince: 1000 })
+        expect(f.canEditStructure).toBe(false)
+        render(<SyncIndicator freshness={f} />)
+        expect(screen.getByTestId('sync-indicator')).toHaveAttribute('data-state', 'offline')
     })
 
-    it('renders Editing… in dirty state', async () => {
-        setSyncState('dirty')
-        render(<SyncIndicator />)
-        expect(screen.getByTestId('sync-indicator')).toHaveTextContent(
-            'Editing…',
-        )
-        await act(async () => {
-            vi.advanceTimersByTime(100)
-        })
-        expect(screen.getByTestId('sync-indicator-announce')).toHaveTextContent(
-            'Editing',
-        )
-    })
-
-    it('renders Saving… with a spinner in saving state', async () => {
-        setSyncState('saving')
-        render(<SyncIndicator />)
-        const indicator = screen.getByTestId('sync-indicator')
-        expect(indicator).toHaveTextContent('Saving…')
-        // Spinner is the Loader2 svg with animate-spin (motion-reduce friendly).
-        expect(indicator.querySelector('svg.animate-spin')).not.toBeNull()
-    })
-
-    it('clicking the conflict pill opens reconciliation instead of retrying as last-write-wins', async () => {
-        setSyncState('conflict')
-        const onResolve = vi.fn()
+    it('refused: lists each refused change with Try again and Discard; a gone row offers Discard only', async () => {
         const onRetry = vi.fn()
-        render(
-            <SyncIndicator
-                onResolveConflict={onResolve}
-                onRetryFailed={onRetry}
-            />,
+        const onDiscard = vi.fn()
+        const f = computeFreshness(
+            [
+                intent(1, 'refused', { label: 'Lecha Dodi', refusal: { reason: 'field', field: 'key', server: 'A', mine: 'G' } }),
+                intent(2, 'refused', { label: 'Oseh Shalom', refusal: { reason: 'row-gone' } }),
+                intent(3, 'pending'),
+            ],
+            online,
         )
-        const btn = screen.getByTestId('sync-indicator')
-        expect(btn.tagName).toBe('BUTTON')
-        expect(btn).toHaveTextContent('Conflict — review')
-        await userEvent.click(btn)
-        expect(onResolve).toHaveBeenCalledTimes(1)
-        expect(onRetry).not.toHaveBeenCalled()
-    })
+        render(<SyncIndicator freshness={f} onRetry={onRetry} onDiscard={onDiscard} />)
+        expect(screen.getByTestId('sync-indicator')).toHaveAttribute('data-state', 'refused')
+        expect(screen.getByTestId('sync-refused-1')).toHaveAttribute('data-reason', 'field')
+        expect(screen.queryByTestId('sync-refused-retry-2')).toBeNull()
 
-    it('a conflict outside an editor has no destructive fallback action', async () => {
-        setSyncState('conflict')
-        render(<SyncIndicator />)
-        const btn = screen.getByTestId('sync-indicator')
-        expect(btn.tagName).toBe('BUTTON')
-        expect(btn).toBeDisabled()
-        await userEvent.click(btn)
-        expect(vi.mocked(retryFailedOutboxRows)).not.toHaveBeenCalled()
-    })
-
-    it('renders Failed — retry with a clickable action button', async () => {
-        setSyncState('failed', 0, { lastError: 'auth refresh failed' })
-        const onRetry = vi.fn()
-        render(<SyncIndicator onRetryFailed={onRetry} />)
-        const btn = screen.getByTestId('sync-indicator')
-        expect(btn.tagName).toBe('BUTTON')
-        expect(btn).toHaveTextContent('Failed — retry')
-        expect(btn).toHaveAttribute('title', expect.stringContaining('auth refresh failed'))
-        await userEvent.click(btn)
-        expect(onRetry).toHaveBeenCalledTimes(1)
-    })
-
-    it('renders Offline — N queued with the queued count', async () => {
-        setSyncState('offline', 3)
-        render(<SyncIndicator />)
-        const indicator = screen.getByTestId('sync-indicator')
-        expect(indicator).toHaveTextContent('Offline — 3 queued')
-        await act(async () => {
-            vi.advanceTimersByTime(100)
-        })
-        expect(screen.getByTestId('sync-indicator-announce')).toHaveTextContent(
-            'Offline, 3 changes queued',
-        )
-    })
-
-    it('announces a different message via aria-live when state changes', async () => {
-        setSyncState('idle')
-        const { rerender } = render(<SyncIndicator />)
-        await act(async () => {
-            vi.advanceTimersByTime(100)
-        })
-        expect(screen.getByTestId('sync-indicator-announce')).toHaveTextContent(
-            'Saved',
-        )
-
-        setSyncState('saving')
-        rerender(<SyncIndicator />)
-        await act(async () => {
-            vi.advanceTimersByTime(100)
-        })
-        expect(screen.getByTestId('sync-indicator-announce')).toHaveTextContent(
-            'Saving',
-        )
-    })
-
-    describe('v52-03-01: failed-state recovery', () => {
-        beforeEach(() => {
-            vi.mocked(discardFailedOutboxRows).mockClear()
-            vi.mocked(retryFailedOutboxRows).mockClear()
-            signOutMock.mockClear()
-        })
-
-        it('failed state with no onRetryFailed prop has an enabled action button', () => {
-            setSyncState('failed', 0, { lastError: 'Save failed' })
-            render(<SyncIndicator />)
-            const btn = screen.getByTestId('sync-indicator')
-            expect(btn.tagName).toBe('BUTTON')
-            expect(btn).not.toBeDisabled()
-        })
-
-        // Bug 2 fix (2026-05-12): the default action must actually retry, not
-        // discard. The destructive `discardFailedOutboxRows` helper deletes
-        // failed outbox rows without applying — silently abandoning the
-        // user's edit. The default must call `retryFailedOutboxRows` which
-        // resets status to 'pending' + attempts=0 + scheduledFor=now and
-        // nudges the engine.
-        it('clicking the failed-state action button calls retryFailedOutboxRows() when no prop passed', async () => {
-            setSyncState('failed', 0, { lastError: 'Save failed' })
-            render(<SyncIndicator />)
-            const btn = screen.getByTestId('sync-indicator')
-            await userEvent.click(btn)
-            expect(retryFailedOutboxRows).toHaveBeenCalledTimes(1)
-            // The destructive discard helper must NOT be the default —
-            // that's the bug we just fixed.
-            expect(discardFailedOutboxRows).not.toHaveBeenCalled()
-        })
-
-        it('an explicit onRetryFailed prop wins over the default cleanup fallback', async () => {
-            setSyncState('failed', 0, { lastError: 'Save failed' })
-            const onRetry = vi.fn()
-            render(<SyncIndicator onRetryFailed={onRetry} />)
-            const btn = screen.getByTestId('sync-indicator')
-            await userEvent.click(btn)
-            expect(onRetry).toHaveBeenCalledTimes(1)
-            expect(retryFailedOutboxRows).not.toHaveBeenCalled()
-            expect(discardFailedOutboxRows).not.toHaveBeenCalled()
-        })
-
-        it('renders the sign-out link when lastError matches auth/permission keywords', () => {
-            setSyncState('failed', 0, {
-                lastError:
-                    'Permission denied: missing or insufficient permissions',
-            })
-            render(<SyncIndicator />)
-            expect(
-                screen.getByTestId('sync-indicator-signout-link'),
-            ).toBeInTheDocument()
-        })
-
-        it('does NOT render the sign-out link for non-auth errors', () => {
-            setSyncState('failed', 0, {
-                lastError: 'Network error: ECONNRESET',
-            })
-            render(<SyncIndicator />)
-            expect(
-                screen.queryByTestId('sync-indicator-signout-link'),
-            ).toBeNull()
-        })
-
-        it('clicking the sign-out link calls useAuth().signOut()', async () => {
-            setSyncState('failed', 0, {
-                lastError: 'unauthenticated: token expired',
-            })
-            render(<SyncIndicator />)
-            const link = screen.getByTestId('sync-indicator-signout-link')
-            await userEvent.click(link)
-            expect(signOutMock).toHaveBeenCalledTimes(1)
-        })
+        await userEvent.click(screen.getByTestId('sync-refused-retry-1'))
+        await userEvent.click(screen.getByTestId('sync-refused-discard-2'))
+        expect(onRetry).toHaveBeenCalledWith(1)
+        expect(onDiscard).toHaveBeenCalledWith(2)
     })
 })

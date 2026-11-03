@@ -1153,5 +1153,100 @@
         "where": "Setlist editor: the round + fixed at the bottom right (screen-reader label and tooltip)",
         "who": "leaders",
         "maxLength": 30
+    },
+    "offlineStructureReason": {
+        "where": "Setlist editor, offline: shown in place of the add bar and as the reason on disabled Duplicate / Delete / drag",
+        "who": "leaders",
+        "maxLength": 60
+    },
+    "syncRefused": {
+        "where": "Setlist editor: save indicator when some changes were refused by the server",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "syncRefusedAnnounce": {
+        "where": "Setlist editor: screen-reader announcement when changes were refused",
+        "who": "leaders",
+        "maxLength": 60
+    },
+    "syncSavingCount": {
+        "where": "Setlist editor: save indicator while {count} changes are on their way to the server",
+        "who": "leaders",
+        "maxLength": 18
+    },
+    "syncOfflineSince": {
+        "where": "Setlist editor: save indicator tooltip when offline; {time} is a clock time",
+        "who": "leaders",
+        "maxLength": 40
+    },
+    "refusedItem": {
+        "where": "Setlist editor: one line per refused change under the save indicator; {row} is the row's title, {reason} one of the refusedReason* strings",
+        "who": "leaders",
+        "maxLength": 120
+    },
+    "refusedRetry": {
+        "where": "Setlist editor: button on a refused change: send it again over the other person's value",
+        "who": "leaders",
+        "maxLength": 14
+    },
+    "refusedDiscard": {
+        "where": "Setlist editor: button on a refused change: drop it and show the saved version",
+        "who": "leaders",
+        "maxLength": 14
+    },
+    "refusedListAria": {
+        "where": "Setlist editor: screen-reader name of the list of refused changes",
+        "who": "leaders",
+        "maxLength": 60
+    },
+    "refusedSetlistLabel": {
+        "where": "Setlist editor: {row} in refusedItem when the refused change is to the setlist's own details",
+        "who": "leaders",
+        "maxLength": 30
+    },
+    "refusedReasonField": {
+        "where": "Setlist editor: {reason} in refusedItem; {field} is the field's internal name",
+        "who": "leaders",
+        "maxLength": 50
+    },
+    "refusedReasonRowGone": {
+        "where": "Setlist editor: {reason} in refusedItem",
+        "who": "leaders",
+        "maxLength": 50
+    },
+    "refusedReasonRowExists": {
+        "where": "Setlist editor: {reason} in refusedItem",
+        "who": "leaders",
+        "maxLength": 50
+    },
+    "refusedReasonForbidden": {
+        "where": "Setlist editor: {reason} in refusedItem",
+        "who": "leaders",
+        "maxLength": 50
+    },
+    "refusedReasonNotFound": {
+        "where": "Setlist editor: {reason} in refusedItem",
+        "who": "leaders",
+        "maxLength": 50
+    },
+    "refusedReasonInvalid": {
+        "where": "Setlist editor: {reason} in refusedItem",
+        "who": "leaders",
+        "maxLength": 50
+    },
+    "refusedReasonOther": {
+        "where": "Setlist editor: {reason} in refusedItem",
+        "who": "leaders",
+        "maxLength": 50
+    },
+    "refusedReasonUnauthenticated": {
+        "where": "Setlist editor and Perform live director: {reason} in refusedItem / the modal's error line when the session expired; the change is kept",
+        "who": "leaders",
+        "maxLength": 50
+    },
+    "refusedSignIn": {
+        "where": "Setlist editor: link on a refused change whose session expired; opens sign-in",
+        "who": "leaders",
+        "maxLength": 14
     }
 }

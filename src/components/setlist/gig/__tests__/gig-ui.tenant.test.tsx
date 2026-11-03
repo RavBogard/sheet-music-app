@@ -38,6 +38,13 @@ async function seed(setlistId: string, rows: Partial<LocalTrack>[], setlist: Rec
     )
 }
 
+/** The value a queued edit (setlist sync PR 3 intent) sets on a row's field. */
+async function queuedSet(rowId: string, field: string): Promise<unknown> {
+    const intents = await getDb().intents.toArray()
+    const hit = intents.reverse().find((i) => i.op.kind === 'editRow' && i.op.rowId === rowId && field in ((i.op.set as object) ?? {}))
+    return hit ? (hit.op.set as Record<string, unknown>)[field] : undefined
+}
+
 const ROWS: Partial<LocalTrack>[] = [
     { id: 'h1', type: 'header', title: 'Set 1' },
     { id: 's1', type: 'song', title: 'Opener', key: 'G', leadMusician: 'Sam', singerKeys: [{ musician: 'Sam', key: 'Bb' }] },
@@ -114,7 +121,7 @@ describe('BET-5 band UI by tenant: the setlist editor', () => {
             fireEvent.change(field, { target: { value: '3:45' } })
             fireEvent.blur(field)
         })
-        await waitFor(async () => expect((await getDb().tracks.get('s1'))?.durationSec).toBe(225))
+        await waitFor(async () => expect(await queuedSet('s1', 'durationSec')).toBe(225))
 
         const closer = screen.getByRole('textbox', { name: 'Length of Closer' })
         await act(async () => {
@@ -122,14 +129,14 @@ describe('BET-5 band UI by tenant: the setlist editor', () => {
             fireEvent.blur(closer)
         })
         expect(closer).toHaveAttribute('aria-invalid', 'true')
-        expect((await getDb().tracks.get('s2'))?.durationSec).toBeUndefined()
+        expect(await queuedSet('s2', 'durationSec')).toBeUndefined()
 
         const [segue] = screen.getAllByRole('button', { name: 'Runs straight into the next song' })
         expect(segue).toHaveAttribute('aria-pressed', 'false')
         await act(async () => {
             fireEvent.click(segue)
         })
-        await waitFor(async () => expect((await getDb().tracks.get('s1'))?.segue).toBe(true))
+        await waitFor(async () => expect(await queuedSet('s1', 'segue')).toBe(true))
     })
 })
 

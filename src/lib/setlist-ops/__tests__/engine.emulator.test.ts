@@ -301,6 +301,29 @@ describe("setlist ops engine (emulator)", () => {
         expect(s.version).toBe(6)
     })
 
+    it("gig merges per part: a part MCP changed is kept, the same part is a `gig.<part>` conflict, null removes a part", async () => {
+        const { setlistId } = await seed("brotherslazaroff", [0])
+        await db().collection("setlists").doc(setlistId).update({ gig: { venue: "Old Hall", start: "19:00", notes: "MCP note" } })
+        const r = (await applyOps(db(), BL_LEAD, setlistId, req([
+            {
+                kind: "editSetlist",
+                // The sheet opened on venue "Old Hall", start "19:00"; meanwhile MCP set start "21:00".
+                set: { gig: { venue: "New Hall", start: "20:00", notes: null } },
+                base: { gig: { venue: "Old Hall", start: "19:00", notes: "MCP note" } },
+            },
+        ]))) as OpsOk
+        expect(r.ok).toBe(true)
+        expect(r.conflicts).toEqual([])
+        expect((await setlist(setlistId)).gig).toEqual({ venue: "New Hall", start: "20:00" })
+
+        await db().collection("setlists").doc(setlistId).update({ "gig.start": "21:00" })
+        const r2 = (await applyOps(db(), BL_LEAD, setlistId, req([
+            { kind: "editSetlist", set: { gig: { venue: "Third", start: "22:00" } }, base: { gig: { venue: "New Hall", start: "20:00" } } },
+        ]))) as OpsOk
+        expect(r2.conflicts).toEqual([{ opIndex: 0, reason: "field", field: "gig.start", server: "21:00", mine: "22:00" }])
+        expect((await setlist(setlistId)).gig).toEqual({ venue: "Third", start: "21:00" })
+    })
+
     it("server page writes bump the row's and the setlist's version but leave updatedAt alone (interim until PR 3)", async () => {
         const { setlistId, ids } = await seed("crc", [0, 1])
         const res = await writeRowFields(db(), setlistId, [
