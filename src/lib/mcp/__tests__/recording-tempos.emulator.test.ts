@@ -15,6 +15,8 @@ vi.mock("@/lib/rate-limit", () => ({ checkUserRateLimit: vi.fn().mockResolvedVal
 import { applyRecordingTemposTool, type ApplyRecordingTemposResult } from "../tools/recording-tempos"
 import { updateSong } from "../tools/song-metadata"
 import { mirrorLegacyRoles } from "@/test-stubs/mirror-legacy-roles"
+import { applyOps, checkRowFields } from "@/lib/setlist-ops"
+import { copyableRow } from "@/lib/setlist-ops/create"
 
 /**
  * apply_recording_tempos against the emulator: a real run fills empty bpm
@@ -94,5 +96,33 @@ describe("apply_recording_tempos (emulator)", () => {
         await db().collection("recordings").doc("rt-rec3").set({ orgId: "crc", songId: "rt-song", title: "t", storagePath: "recordings/rt-rec3.mp3", createdBy: "ingest", createdAt: "2026-03-01", tempo: tempo(110, 0.99) })
         await applyRecordingTemposTool("crc-lead", { dryRun: false, force: true }, "crc")
         expect((await get("library_index", "rt-song")).bpm).toBe(100)
+    })
+
+    it("a person's bpm write clears the row marker even when the number is the same; clients cannot send the marker; copies keep it", async () => {
+        const auto = await get("tracks", "rt-empty")
+        // The earlier run (rec3, the most confident take) updated this auto-filled row to 110.
+        expect(auto).toMatchObject({ bpm: 110, bpmSource: "recording", bpmSourceRecordingId: "rt-rec3" })
+        // A server-side copy (clone / duplicate) keeps the marker.
+        expect(copyableRow(auto)).toMatchObject({ bpm: 110, bpmSource: "recording", bpmSourceRecordingId: "rt-rec3", bpmSourceValue: 110 })
+        // A client may not write the marker.
+        expect(checkRowFields({ bpmSource: "recording" }, "set").ok).toBe(false)
+
+        await db().collection("memberships").doc("crc__rt-editor").set({ uid: "rt-editor", tenantId: "crc", role: "band_leader" })
+        const r = await applyOps(db(), "rt-editor", "rt-sl", {
+            clientBatchId: `rt-${Date.now()}`,
+            baseVersion: 0,
+            ops: [{ kind: "editRow", rowId: "rt-empty", set: { bpm: 110 }, base: { bpm: 110 } }],
+        })
+        expect(r).toMatchObject({ ok: true })
+        const after = await get("tracks", "rt-empty")
+        expect(after.bpm).toBe(110)
+        expect(after.bpmSource).toBeUndefined()
+        expect(after.bpmSourceRecordingId).toBeUndefined()
+        expect(after.bpmSourceValue).toBeUndefined()
+        // Now it is the person's: a more confident take leaves it alone.
+        await db().collection("recordings").doc("rt-rec4").set({ orgId: "crc", songId: "rt-song", title: "t", storagePath: "recordings/rt-rec4.mp3", createdBy: "ingest", createdAt: "2026-04-01", tempo: tempo(80, 1) })
+        await applyRecordingTemposTool("crc-lead", { dryRun: false, force: true }, "crc")
+        expect((await get("tracks", "rt-empty")).bpm).toBe(110)
+        expect((await get("tracks", "rt-empty")).bpmSource).toBeUndefined()
     })
 })

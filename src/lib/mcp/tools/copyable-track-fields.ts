@@ -53,6 +53,11 @@ export const COPYABLE_TRACK_FIELDS = [
     "durationSec",
     "segue",
     "singerKeys",
+    // 2026-11-03: a bpm filled from a recording keeps its marker on a copy, so a
+    // better take can still update it (setlist-ops BPM_MARKER_FIELDS).
+    "bpmSource",
+    "bpmSourceRecordingId",
+    "bpmSourceValue",
 ] as const
 
 export type CopyableTrackField = (typeof COPYABLE_TRACK_FIELDS)[number]

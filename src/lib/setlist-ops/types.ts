@@ -79,6 +79,17 @@ export const RESERVED_ROW_FIELDS: ReadonlySet<string> = new Set([
     "opBatchId",
 ])
 
+/**
+ * 2026-11-03: provenance of a bpm filled from a recording. Written only by
+ * apply_recording_tempos (a patch that carries `bpmSource`); a client may not
+ * send them, any other bpm write clears them (SetlistWriter.updateTrack), and a
+ * server-side copy (copyableRow, clone_setlist) carries them.
+ */
+export const BPM_MARKER_FIELDS = ["bpmSource", "bpmSourceRecordingId", "bpmSourceValue"] as const
+
+/** Row fields a client may never send: the engine's own plus the bpm marker. */
+export const CLIENT_REFUSED_ROW_FIELDS: ReadonlySet<string> = new Set([...RESERVED_ROW_FIELDS, ...BPM_MARKER_FIELDS])
+
 /** Fields on a setlist that only the server writes. Dropped from editSetlist `set`. */
 export const RESERVED_SETLIST_FIELDS: ReadonlySet<string> = new Set([
     "id",

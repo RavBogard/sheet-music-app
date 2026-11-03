@@ -3,7 +3,7 @@ import { sanitizeFreeformString } from "@/lib/sanitize-freeform"
 import { liturgyRefGuard } from "@/lib/mcp/liturgy-ref-guard"
 import { DurationSecSchema, GigPatchSchema, SingerKeysSchema } from "@/lib/gig/model"
 import type { LiturgyRef } from "@/lib/books/types"
-import { RESERVED_ROW_FIELDS, RESERVED_SETLIST_FIELDS } from "./types"
+import { CLIENT_REFUSED_ROW_FIELDS, RESERVED_SETLIST_FIELDS } from "./types"
 
 /**
  * Per-field validation for op payloads. The types and limits are the MCP
@@ -60,11 +60,6 @@ const ROW_FIELDS: Record<string, { schema: z.ZodTypeAny; nullable: boolean }> = 
     type: { schema: z.enum(TRACK_TYPES), nullable: false },
     key: { schema: freeform, nullable: true },
     bpm: { schema: z.number().positive().max(400), nullable: true },
-    // 2026-11-03: provenance of a bpm filled from a recording (apply_recording_tempos).
-    // Accepted so a client that echoes a row back is not refused.
-    bpmSource: { schema: z.literal("recording"), nullable: true },
-    bpmSourceRecordingId: { schema: z.string().min(1).max(128), nullable: true },
-    bpmSourceValue: { schema: z.number().positive().max(400), nullable: true },
     leadMusician: { schema: freeform, nullable: true },
     referenceLink: { schema: freeform, nullable: true },
     notes: { schema: freeform, nullable: true },
@@ -174,7 +169,7 @@ function checkFields(
 }
 
 export const checkRowFields = (obj: Record<string, unknown>, mode: "row" | "set" | "base") =>
-    checkFields(obj, ROW_FIELDS, RESERVED_ROW_FIELDS, mode)
+    checkFields(obj, ROW_FIELDS, CLIENT_REFUSED_ROW_FIELDS, mode)
 
 export const checkSetlistFields = (obj: Record<string, unknown>, mode: "set" | "base") =>
     checkFields(obj, SETLIST_FIELDS, RESERVED_SETLIST_FIELDS, mode)
