@@ -375,7 +375,7 @@ describe('SmartScoreViewer', () => {
         expect(mockChangeTrackKey).not.toHaveBeenCalled()
     })
 
-    it('heals track.key for band_leader when track.key is empty and key is canonicalisable', async () => {
+    it('NEVER writes track.key on open, even for a band_leader with an empty key (R11-b)', async () => {
         mockKeyInstruction.Key = 2 // D major
         mockKeyInstruction.Mode = 0
         mockStoreValues.aiXmlContent = XML
@@ -387,7 +387,7 @@ describe('SmartScoreViewer', () => {
         await advance(250)
 
         expect(mockSetMusicXmlKey).toHaveBeenCalledWith('D')
-        expect(mockChangeTrackKey).toHaveBeenCalledWith('track-abc', 'D')
+        expect(mockChangeTrackKey).not.toHaveBeenCalled()
     })
 
     it('readOnly: never writes track.key even for a band_leader with an empty key', async () => {
@@ -405,7 +405,7 @@ describe('SmartScoreViewer', () => {
         expect(mockChangeTrackKey).not.toHaveBeenCalled()
     })
 
-    it('heals track.key for admin even when band_leader is false', async () => {
+    it('NEVER writes track.key on open for an admin either', async () => {
         mockKeyInstruction.Key = -2 // Bb major
         mockKeyInstruction.Mode = 0
         mockStoreValues.aiXmlContent = XML
@@ -418,7 +418,7 @@ describe('SmartScoreViewer', () => {
         })
         await advance(250)
 
-        expect(mockChangeTrackKey).toHaveBeenCalledWith('track-xyz', 'Bb')
+        expect(mockChangeTrackKey).not.toHaveBeenCalled()
     })
 
     it('does NOT heal when trackId is missing (caller did not opt in)', async () => {

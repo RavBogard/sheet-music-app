@@ -29,7 +29,7 @@ import { useSetlistPerformance } from "@/hooks/use-setlist-performance"
 import { PERFORM_PRECACHE_DONE_EVENT, usePerformEntryPrecache } from "@/hooks/use-perform-entry-precache"
 import { loadPDFOverlay } from "@/lib/perform-chart-loaders"
 import { requestPerformCacheUrl } from "@/components/performance/perform-shell-sw-register"
-import { PerformListenLink } from "@/components/recordings/PerformListenLink"
+import { SetlistModeSwitch } from "@/components/setlist/SetlistModeSwitch"
 import { useAuth } from "@/lib/auth-context"
 import { useLibrary } from "@/hooks/use-library"
 import { SetlistView } from "@/components/performance/SetlistView"
@@ -56,10 +56,11 @@ import { GigPanel } from "@/components/setlist/gig/GigPanel"
 import { useOrg } from "@/lib/org/org-context"
 import { isBandTenant } from "@/lib/org/vocab"
 import { formatDuration, setTotalsByHeader, showsTiming } from "@/lib/gig/display"
-import { applyOrder, moveRow, reapplyMove, sameOrder, type IntendedMove } from "@/lib/performance/live-reorder"
+import { applyOrder, moveRow, sameOrder, type IntendedMove } from "@/lib/performance/live-reorder"
 import { commitLiveReorder, type LiveReorderFailure } from "@/lib/performance/live-reorder-client"
 import { PerformReorderList } from "@/components/performance/PerformReorderList"
 import { useMovedRowHighlight } from "@/components/performance/use-moved-row-highlight"
+import { useChangedRowHighlight } from "@/components/performance/use-changed-row-highlight"
 import { ServerOrderContext } from "@/components/performance/live-order-context"
 
 const PrintModal = dynamic(
@@ -130,7 +131,6 @@ export function SetlistPerformClient({
         eventDate,
         setlistUpdatedSinceLoad,
         setlistLiveStamp,
-        setlistVersion,
         isWakeLockActive,
         isWakeLockSupported,
         wakeLockError,
@@ -211,8 +211,15 @@ export function SetlistPerformClient({
     }, [liveIdsKey, pendingOrder])
     // A moved row (this leader's move, or another leader's arriving live)
     // is highlighted for two seconds. A rollback is not a move.
-    const { highlighted: highlightIds, suppressNext: suppressMoveHighlight } =
+    const { highlighted: movedIds, suppressNext: suppressMoveHighlight } =
         useMovedRowHighlight(tracks.map((t) => t.id))
+    // A row another device changed gets the same two-second outline. Leaders
+    // only: musicians' pages never flash mid-service.
+    const changedIds = useChangedRowHighlight(liveTracks, !!isLeader)
+    const highlightIds = useMemo<ReadonlySet<string>>(
+        () => (!isLeader ? new Set<string>() : changedIds.size === 0 ? movedIds : new Set([...movedIds, ...changedIds])),
+        [isLeader, movedIds, changedIds],
+    )
 
     // PERF-01: the SW may answer an offline /track/<id> reload with the BASE
     // setlist page (no initialTrackId), leaving the track only in the address
@@ -414,12 +421,6 @@ export function SetlistPerformClient({
     const canReorder = isLeader && !!user && tracks.length > 1 && tracks.every((t) => !!t.id)
     const [reordering, setReordering] = useState(false)
     const [reorderFailure, setReorderFailure] = useState<LiveReorderFailure | null>(null)
-    // The setlist version each write is gated on: the live version when a
-    // move starts from the server's order, else the version our own last
-    // write produced (each write bumps it by one).
-    const setlistVersionRef = useRef(setlistVersion)
-    setlistVersionRef.current = setlistVersion
-    const baseVersionRef = useRef<number>(setlistVersion)
     const inFlightRef = useRef(false)
     // Moves made while a write is in flight coalesce: only the newest order
     // (and the move that made it) goes next.
@@ -461,34 +462,14 @@ export function SetlistPerformClient({
         try {
             for (let job = queuedRef.current; job; job = queuedRef.current) {
                 queuedRef.current = null
-                let res = await commitLiveReorder(setlistId, job.order, baseVersionRef.current)
-                if (!res.ok && res.reason === "stale") {
-                    // Someone changed the setlist first. Take the server's order,
-                    // re-apply the leader's latest move on it once, and retry.
-                    // (a move made while this write was in flight is the newer one)
-                    const queuedNow = queuedRef.current as { move: IntendedMove } | null
-                    const latest = queuedNow?.move ?? job.move
-                    queuedRef.current = null
-                    const retry = reapplyMove(res.currentOrder, latest)
-                    if (!retry) {
-                        rollBack("conflict")
-                        return
-                    }
-                    baseVersionRef.current = res.currentVersion
-                    suppressMoveHighlight()
-                    pendingOrderRef.current = retry
-                    setPendingOrder(retry)
-                    res = await commitLiveReorder(setlistId, retry, baseVersionRef.current)
-                    if (!res.ok) {
-                        rollBack(res.reason === "stale" ? "conflict" : res.reason)
-                        return
-                    }
-                }
+                // The server rebases a move onto its newer order, so there is no
+                // stale-version round trip; the ops client retries a network
+                // failure on its own.
+                const res = await commitLiveReorder(setlistId, job.order)
                 if (!res.ok) {
                     rollBack(res.reason, "code" in res ? res.code : undefined)
                     return
                 }
-                baseVersionRef.current += 1
             }
             // Written. The pending order clears when the live rows arrive in it;
             // if they never do (a listener that stalled), let it go after 10 s.
@@ -499,7 +480,7 @@ export function SetlistPerformClient({
         } finally {
             inFlightRef.current = false
         }
-    }, [setlistId, rollBack, dropPending, suppressMoveHighlight])
+    }, [setlistId, rollBack, dropPending])
 
     const moveTrack = useCallback(
         (from: number, to: number) => {
@@ -510,10 +491,6 @@ export function SetlistPerformClient({
             const ids = tracksRef.current.map((t) => t.id)
             const next = moveRow(ids, from, to)
             if (sameOrder(ids, next)) return
-            // A move from the server's own order is gated on the live version.
-            if (!pendingOrderRef.current && !inFlightRef.current) {
-                baseVersionRef.current = setlistVersionRef.current
-            }
             setReorderFailure(null)
             pendingOrderRef.current = next
             setPendingOrder(next)
@@ -719,7 +696,7 @@ export function SetlistPerformClient({
                 </div>
                 </div>
                 <div className="flex items-center justify-end gap-0.5 sm:gap-1 shrink-0">
-                    <PerformListenLink setlistId={setlistId} songIds={tracks.flatMap((r) => [(r as { songId?: string }).songId, r.fileId])} eventDate={eventDate} />
+                    <SetlistModeSwitch setlistId={setlistId} current="perform" eventDate={eventDate} />
                     {/* "Keep screen on" — now a MANUAL OVERRIDE, not the only
                         way in (2026-08-31). <KeepAwakeAutoArm/> above already
                         armed the lock on mount; this toggle exists so a

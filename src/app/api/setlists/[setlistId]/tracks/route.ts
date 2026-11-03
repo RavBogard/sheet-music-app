@@ -91,7 +91,11 @@ export async function GET(
         // them over `tracks`, which stay exactly the plan.
         const overrides = await readTonightOverrides(db, setlistId)
 
-        return NextResponse.json({ found: true, tracks, overrides })
+        // The setlist's version lets a Perform device check its cache against
+        // the server without reading the doc itself.
+        const rawVersion = (setlistSnap.data() as Record<string, unknown>).version
+        const version = typeof rawVersion === "number" ? rawVersion : 0
+        return NextResponse.json({ found: true, version, tracks, overrides })
     } catch (error: unknown) {
         logger.warn("[setlists/tracks] fetch failed:", error)
         return httpError(

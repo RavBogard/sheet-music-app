@@ -27,7 +27,6 @@
     "recordingUploaded": "ההקלטה נוספה.",
     "rehearse": "חזרה",
     "rehearseAria": "חזרה על {name}",
-    "rehearseIntro": "חזרה על שירי השירות לפי הסדר.",
     "chart": "תווים",
     "noChart": "אין תווים לשיר הזה.",
     "backToRehearse": "חזרה לחזרה",
@@ -36,5 +35,9 @@
     "transposeGroup": "שינוי טון",
     "transposeDown": "חצי טון למטה",
     "transposeUp": "חצי טון למעלה",
-    "transposeReset": "טון {key}, חזרה לטון הכתוב"
+    "transposeReset": "טון {key}, חזרה לטון הכתוב",
+    "modePerform": "ביצוע",
+    "modeEdit": "עריכה",
+    "modeSwitchAria": "הצגת הסט־ליסט כ־",
+    "chartLoading": "טוען תווים…"
 }

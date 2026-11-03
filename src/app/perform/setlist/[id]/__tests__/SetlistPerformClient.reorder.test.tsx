@@ -137,7 +137,7 @@ describe('Perform live reorder', () => {
 
         expect(reorderOrder()).toEqual(['t2', 't1', 't3'])
         // Gated on the version this page saw (the server frame's, here).
-        await waitFor(() => expect(commit).toHaveBeenCalledWith(ID, ['t2', 't1', 't3'], 1))
+        await waitFor(() => expect(commit).toHaveBeenCalledWith(ID, ['t2', 't1', 't3']))
 
         // Done returns to the list, still in the new order.
         fireEvent.click(screen.getByTestId('perform-reorder-toggle'))
@@ -176,8 +176,8 @@ describe('Perform live reorder', () => {
         }
     })
 
-    it('keeps an open chart on a receiving iPad, moves its queue, and highlights the moved row', async () => {
-        who.role = 'musician'
+    it('keeps an open chart on a receiving leader iPad, moves its queue, and highlights the moved row', async () => {
+        who.role = 'band_leader'
         await seedLive(['t1', 't2', 't3'])
         render(<SetlistPerformClient setlistId={ID} initialSetlist={ssr} initialTracks={rows} initialTrackId="t2" />)
         const overlay = await screen.findByTestId('stub-overlay')
@@ -201,28 +201,9 @@ describe('Perform live reorder', () => {
         expect(screen.getAllByTestId('perform-row').some((el) => el.hasAttribute('data-moved'))).toBe(false)
     }, 10_000)
 
-    it('re-applies the move on the server order and retries once when the setlist changed first', async () => {
+    it('rolls back without a highlight when the write is refused', async () => {
         who.role = 'band_leader'
-        commit
-            .mockResolvedValueOnce({ ok: false, reason: 'stale', currentVersion: 4, currentOrder: ['t1', 't3', 't2'] })
-            .mockResolvedValueOnce({ ok: true })
-        await seedLive(['t1', 't2', 't3'])
-        render(<SetlistPerformClient setlistId={ID} initialSetlist={ssr} initialTracks={rows} />)
-        fireEvent.click(await screen.findByTestId('perform-reorder-toggle'))
-
-        // Move Adonai Sfatai down one; meanwhile someone else swapped t2 and t3.
-        fireEvent.click(within(screen.getAllByTestId('perform-reorder-row')[0]).getByTestId('perform-reorder-down'))
-
-        await waitFor(() => expect(commit).toHaveBeenCalledTimes(2))
-        expect(commit.mock.calls[0]).toEqual([ID, ['t2', 't1', 't3'], 1])
-        expect(commit.mock.calls[1]).toEqual([ID, ['t3', 't1', 't2'], 4])
-        await waitFor(() => expect(reorderOrder()).toEqual(['t3', 't1', 't2']))
-        expect(screen.queryByTestId('perform-reorder-error')).toBeNull()
-    })
-
-    it('says the setlist changed when the retry is stale too, and rolls back without a highlight', async () => {
-        who.role = 'band_leader'
-        commit.mockResolvedValue({ ok: false, reason: 'stale', currentVersion: 5, currentOrder: ['t1', 't2', 't3'] })
+        commit.mockResolvedValue({ ok: false, reason: 'rejected', code: 'row-gone' })
         await seedLive(['t1', 't2', 't3'])
         render(<SetlistPerformClient setlistId={ID} initialSetlist={ssr} initialTracks={rows} />)
         fireEvent.click(await screen.findByTestId('perform-reorder-toggle'))
@@ -230,11 +211,21 @@ describe('Perform live reorder', () => {
 
         fireEvent.click(within(screen.getAllByTestId('perform-reorder-row')[2]).getByTestId('perform-reorder-up'))
 
-        const alert = await screen.findByTestId('perform-reorder-error')
-        expect(alert.getAttribute('data-reason')).toBe('conflict')
-        expect(commit).toHaveBeenCalledTimes(2)
+        await screen.findByTestId('perform-reorder-error')
+        expect(commit).toHaveBeenCalledTimes(1)
         expect(reorderOrder()).toEqual(['t1', 't2', 't3'])
         expect(screen.getAllByTestId('perform-reorder-row').some((el) => el.hasAttribute('data-moved'))).toBe(false)
+    })
+
+    it('does not highlight a remote move on a musician iPad', async () => {
+        who.role = 'musician'
+        await seedLive(['t1', 't2', 't3'])
+        render(<SetlistPerformClient setlistId={ID} initialSetlist={ssr} initialTracks={rows} />)
+        await screen.findAllByTestId('perform-row')
+        await wait(1600)
+        await act(async () => { await seedLive(['t3', 't1', 't2']) })
+        await waitFor(() => expect(rowOrder()).toEqual(['t3', 't1', 't2']))
+        expect(screen.getAllByTestId('perform-row').some((el) => el.hasAttribute('data-moved'))).toBe(false)
     })
 
     it('keeps the Swap sheet on its row when the order changes under it', async () => {

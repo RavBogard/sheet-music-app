@@ -3,6 +3,7 @@
 import Link from "next/link"
 
 import { PAGE_WIDTH_CLASS } from "@/components/layout/Page"
+import { SetlistModeSwitch } from "@/components/setlist/SetlistModeSwitch"
 import { RecordingPlayer } from "@/components/recordings/RecordingPlayer"
 import { useT } from "@/i18n/client"
 import { useFormat } from "@/i18n/format-client"
@@ -29,11 +30,11 @@ export function RehearseClient({ setlistId, chartsEnabled = true, name, eventDat
     return (
         <main id="main-content" className={cn(PAGE_WIDTH_CLASS, "pt-4 pb-12")}>
             <header className="border-b border-rule pb-3">
-                <h1 className="text-base font-extrabold leading-tight text-foreground">{name}</h1>
-                <p className="tnum text-xs font-medium text-muted-foreground">
-                    {date ? `${date} · ` : ""}
-                    {t("recordings.rehearseIntro")}
-                </p>
+                <div className="flex items-start justify-between gap-3">
+                    <h1 className="min-w-0 break-words text-base font-extrabold leading-tight text-foreground">{name}</h1>
+                    <SetlistModeSwitch setlistId={setlistId} current="rehearse" eventDate={eventDate} />
+                </div>
+                {date ? <p className="tnum text-xs font-medium text-muted-foreground">{date}</p> : null}
             </header>
             {!hasSongs ? (
                 <p className="py-6 text-sm text-muted-foreground">{t("recordings.listenEmpty")}</p>

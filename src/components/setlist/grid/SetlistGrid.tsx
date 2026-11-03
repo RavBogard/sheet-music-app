@@ -67,6 +67,7 @@ import {
 } from '@/lib/setlist-ops-client/actions'
 import { getOpsClient } from '@/lib/setlist-ops-client/runtime'
 import { useSetlistView } from '@/lib/setlist-ops-client/use-setlist-view'
+import { SetlistModeSwitch } from '@/components/setlist/SetlistModeSwitch'
 import {
     propagateTrackEditToSong,
     seedTrackFromSong,
@@ -1499,6 +1500,11 @@ export function SetlistGrid({
                 syncProps={{ freshness }}
                 performHref={performOn ? `/perform/setlist/${setlistId}` : undefined}
                 listenHref={hasAnyTake ? `/rehearse/${setlistId}` : undefined}
+                modeSlot={
+                    performOn ? (
+                        <SetlistModeSwitch setlistId={setlistId} current="edit" eventDate={liveSetlist?.eventDate ?? null} />
+                    ) : undefined
+                }
                 gigSlot={isBand ? <GigPanel gig={gig} onEdit={() => setMetaSheetOpen(true)} /> : undefined}
                 metaSlot={<SetlistFamilyHead part="parasha" setlistId={setlistId} setlist={liveSetlist as Record<string, unknown> | null | undefined} />}
                 familySlot={<SetlistFamilyHead part="ceremony" setlistId={setlistId} setlist={liveSetlist as Record<string, unknown> | null | undefined} />}
