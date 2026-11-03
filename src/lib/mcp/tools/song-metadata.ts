@@ -8,6 +8,8 @@ import { notOwnerError } from "@/lib/mcp/not-owner"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import { parseSongDuration } from "@/lib/gig/model"
 import type { OrgId } from "@/lib/org/types"
+import { isOwnedBy } from "@/lib/library/visibility"
+import { decideField, type BpmFieldState, type FieldDecision, type TempoPick } from "@/lib/recordings/tempo-fill"
 import {
     loadUploader,
     isUploadAllowed,
@@ -47,19 +49,14 @@ export interface SongMetadataPatch {
     leadMusician?: string
     /** BET-5: the song's default length in seconds; a new setlist row copies it. */
     durationSec?: number
-    /**
-     * 2026-11-03: set only by apply_recording_tempos, with `bpm`: the bpm came
-     * from this recording (marker `bpmSource: "recording"`). A bpm written
-     * WITHOUT it is a person's, and clears the marker.
-     */
-    bpmSource?: { recordingId: string }
 }
 
-/** The bpm provenance marker a bpm write sets (from a recording) or clears (a person's). */
-function bpmMarker(patch: SongMetadataPatch): Record<"bpmSource" | "bpmSourceRecordingId" | "bpmSourceValue", unknown> {
-    if (patch.bpmSource && patch.bpm !== undefined) {
-        return { bpmSource: "recording", bpmSourceRecordingId: patch.bpmSource.recordingId, bpmSourceValue: patch.bpm }
-    }
+/**
+ * 2026-11-03: a bpm written here is a person's, so it clears the
+ * recording-tempo marker (apply_recording_tempos writes through
+ * applyRecordingTempoToSong instead).
+ */
+function bpmMarker(_patch: SongMetadataPatch): Record<"bpmSource" | "bpmSourceRecordingId" | "bpmSourceValue", unknown> {
     return { bpmSource: FieldValue.delete(), bpmSourceRecordingId: FieldValue.delete(), bpmSourceValue: FieldValue.delete() }
 }
 
@@ -234,10 +231,10 @@ export async function applySongMetadata(
 
 /** Best-effort cache-invalidation broadcast — same channel processChartUpload
  *  / delete_chart use so open in-app library views refetch. Never throws. */
-async function broadcastLibrarySignal(
+export async function broadcastLibrarySignal(
     db: FirebaseFirestore.Firestore,
-    fileId: string,
-    uid: string,
+    _fileId: string,
+    _uid: string,
 ): Promise<void> {
     try {
         // No fileId, no uid: every tenant can read this doc (phase 9).
@@ -252,6 +249,69 @@ async function broadcastLibrarySignal(
             }`,
         )
     }
+}
+
+// ─── recording tempo into a song's default (2026-11-03) ──────────────────────
+
+type TempoDoc = "library_index" | "songs"
+
+export interface SongTempoDecision {
+    doc: TempoDoc
+    decision: FieldDecision
+}
+
+function songTempoFields(lib: Record<string, unknown> | null, song: Record<string, unknown> | null): Array<{ doc: TempoDoc; field: BpmFieldState }> {
+    const out: Array<{ doc: TempoDoc; field: BpmFieldState }> = []
+    if (lib) out.push({ doc: "library_index", field: { bpm: lib.bpm, bpmSource: lib.bpmSource, bpmSourceRecordingId: lib.bpmSourceRecordingId, bpmSourceValue: lib.bpmSourceValue } })
+    if (song) {
+        const d = (song.defaults ?? {}) as Record<string, unknown>
+        out.push({ doc: "songs", field: { bpm: d.bpm, bpmSource: d.bpmSource, bpmSourceRecordingId: d.bpmSourceRecordingId, bpmSourceValue: d.bpmSourceValue } })
+    }
+    return out
+}
+
+/**
+ * apply_recording_tempos' write to a song default. library_index.bpm and
+ * songs.defaults.bpm are decided SEPARATELY (each doc is written only when its
+ * own field is empty or still auto-filled), read and written in ONE
+ * transaction so a bpm a person typed meanwhile is kept. Only a chart the
+ * caller's tenant owns is written. `dryRun` decides without writing.
+ */
+export async function applyRecordingTempoToSong(
+    db: FirebaseFirestore.Firestore,
+    org: OrgId,
+    fileId: string,
+    pick: TempoPick,
+    opts: { dryRun?: boolean; uid?: string } = {},
+): Promise<{ owned: boolean; exists: boolean; decisions: SongTempoDecision[]; written: TempoDoc[] }> {
+    const libRef = db.collection("library_index").doc(fileId)
+    const songRef = db.collection("songs").doc(fileId)
+    const res = await db.runTransaction(async (tx) => {
+        const [libSnap, songSnap] = await tx.getAll(libRef, songRef)
+        const lib = libSnap.exists ? ((libSnap.data() ?? {}) as Record<string, unknown>) : null
+        const song = songSnap.exists ? ((songSnap.data() ?? {}) as Record<string, unknown>) : null
+        const owner = lib ?? song
+        if (!owner) return { owned: false, exists: false, decisions: [], written: [] as TempoDoc[] }
+        if (!isOwnedBy(owner as Record<string, unknown> & { orgId?: string }, org)) return { owned: false, exists: true, decisions: [], written: [] as TempoDoc[] }
+        const decisions = songTempoFields(lib, song).map(({ doc, field }) => ({ doc, decision: decideField(field, pick) }))
+        const written: TempoDoc[] = []
+        if (!opts.dryRun) {
+            const marker = { bpmSource: "recording", bpmSourceRecordingId: pick.recordingId, bpmSourceValue: pick.bpm }
+            for (const { doc, decision } of decisions) {
+                if (decision.action !== "fill" && decision.action !== "update") continue
+                if (doc === "library_index") tx.update(libRef, { bpm: pick.bpm, ...marker })
+                else {
+                    const u: Record<string, unknown> = { updatedAt: Date.now(), "defaults.bpm": pick.bpm }
+                    for (const [k, v] of Object.entries(marker)) u[`defaults.${k}`] = v
+                    tx.update(songRef, u)
+                }
+                written.push(doc)
+            }
+        }
+        return { owned: true, exists: true, decisions, written }
+    })
+    if (res.written.length > 0) await broadcastLibrarySignal(db, fileId, opts.uid ?? "")
+    return res
 }
 
 // ─── update_song (cowork #5) ─────────────────────────────────────────────────

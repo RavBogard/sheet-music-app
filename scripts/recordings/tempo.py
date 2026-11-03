@@ -22,6 +22,15 @@ Half/double time: the tempogram peaks at the beat AND at its octaves. Among octa
 peaks nearly as strong as the strongest, the fastest one inside 60-160 BPM wins; with none
 inside, the strongest is folded into 60-160 by doubling or halving. `alt` is the other octave
 (half or double the chosen tempo), whichever the music supports more.
+
+Octave ambiguity: when another octave of the beat ALSO lies inside 60-160 and its tempogram
+strength is within OCTAVE_AMBIGUOUS (15%) of the chosen one, the octave is a guess and the
+clip is marked not confident ("half or double time is unclear"). This skips most clips at
+120-160 BPM whose half-time pulse (60-80) is nearly as strong, which is common.
+
+Calibration limit: THRESHOLD and OCTAVE_AMBIGUOUS were set on synthetic clicks/grooves/
+noise/chant/rubato (tests/test_tempo.py) and sanity-checked on 23 real CRC clips with no
+ground-truth tempo. Real-world accuracy is unmeasured; the settings err towards skipping.
 """
 from __future__ import annotations
 
@@ -38,6 +47,7 @@ WIN = 512  # tempogram window, ~5.9 s
 MIN_BPM, MAX_BPM = 30.0, 320.0
 PREF_LO, PREF_HI = 60.0, 160.0
 OCTAVE_SHARE = 0.75  # an octave peak this close to the strongest counts as the same beat
+OCTAVE_AMBIGUOUS = 0.85  # another in-range octave this strong (vs the chosen) makes it a guess
 PERIODICITY_FULL = 0.35  # periodicity at or above this counts fully
 THRESHOLD = 0.5  # calibrated on the synthetic clips in tests/test_tempo.py
 MIN_SEC = 12.0
@@ -53,9 +63,10 @@ def decode(path: Path, sr: int = SR) -> np.ndarray:
     return np.frombuffer(raw, dtype=np.int16).astype(np.float32) / 32768.0
 
 
-def _result(bpm: float | None, alt: float | None, confidence: float, reason: str | None = None, **diag) -> dict:
+def _result(bpm: float | None, alt: float | None, confidence: float, reason: str | None = None,
+            ambiguous: bool = False, **diag) -> dict:
     confidence = float(round(max(0.0, min(1.0, confidence)), 3))
-    confident = bpm is not None and confidence >= THRESHOLD
+    confident = bpm is not None and confidence >= THRESHOLD and not ambiguous
     out = {
         "bpm": None if bpm is None else round(float(bpm), 1),
         "alt": None if alt is None else round(float(alt), 1),
@@ -102,8 +113,8 @@ def _refine_lag(curve: np.ndarray, bpm: float, sr: int) -> float:
     return i + float(np.clip(off, -0.5, 0.5))
 
 
-def choose_octave(curve: np.ndarray, sr: int) -> tuple[float, float, float, float] | None:
-    """(chosen bpm, alt bpm, beat bpm, strength) from a lag-domain strength curve, or None.
+def choose_octave(curve: np.ndarray, sr: int) -> tuple[float, float, float, float, bool] | None:
+    """(chosen bpm, alt bpm, beat bpm, strength, ambiguous) from a lag-domain strength curve.
 
     `beat` is the octave the music itself supports most (what confidence is measured on);
     `chosen` is the tempo reported, which may be `beat` folded into 60-160."""
@@ -134,7 +145,12 @@ def choose_octave(curve: np.ndarray, sr: int) -> tuple[float, float, float, floa
     chosen = beat * factor
     half, double = chosen / 2, chosen * 2
     alt = half if _strength(curve, half, sr) >= _strength(curve, double, sr) else double
-    return chosen, alt, beat, _strength(curve, beat, sr)
+    win = _strength(curve, chosen, sr)
+    ambiguous = any(
+        PREF_LO <= o <= PREF_HI and _strength(curve, o, sr) >= OCTAVE_AMBIGUOUS * win
+        for o in (half, double)
+    )
+    return chosen, alt, beat, _strength(curve, beat, sr), ambiguous
 
 
 def analyse(y: np.ndarray, sr: int = SR) -> dict:
@@ -155,7 +171,7 @@ def analyse(y: np.ndarray, sr: int = SR) -> dict:
     picked = choose_octave(glob, sr)
     if picked is None:
         return _result(None, None, 0.0, "no periodic onsets")
-    chosen, alt, beat, periodicity = picked
+    chosen, alt, beat, periodicity, ambiguous = picked
 
     # Stability: windows whose own strongest tempo is the beat, up to an octave.
     lags = np.arange(tg.shape[0])
@@ -193,13 +209,15 @@ def analyse(y: np.ndarray, sr: int = SR) -> dict:
             chosen, alt = chosen * line_bpm / beat, alt * line_bpm / beat
 
     confidence = stability * min(1.0, periodicity / PERIODICITY_FULL) * steadiness
-    if stability < 0.5:
+    if ambiguous and confidence >= THRESHOLD:
+        reason = "half or double time is unclear"
+    elif stability < 0.5:
         reason = "tempo changes or no steady beat"
     elif periodicity < PERIODICITY_FULL * THRESHOLD:
         reason = "weak pulse"
     else:
         reason = "beat drifts (rubato)"
-    return _result(chosen, alt, confidence, reason, periodicity=periodicity, stability=stability,
+    return _result(chosen, alt, confidence, reason, ambiguous, periodicity=periodicity, stability=stability,
                    steadiness=steadiness, jitter=jitter, drift=drift)
 
 

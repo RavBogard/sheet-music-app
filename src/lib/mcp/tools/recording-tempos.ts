@@ -6,9 +6,8 @@ import { readTenantRole } from "@/lib/org/access"
 import { rowOrg } from "@/lib/org/membership"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
-import { isOwnedBy } from "@/lib/library/visibility"
 import { logger } from "@/lib/logger"
-import { maintainSetlist, MAX_TRANSACTION_WRITES } from "@/lib/setlist-ops"
+import { maintainSetlist, MaintenanceError, MAX_TRANSACTION_WRITES } from "@/lib/setlist-ops"
 import type { Recording } from "@/types/models"
 import { loadRecordingsForSongs, recordingFromDoc } from "@/lib/recordings/featured-server"
 import {
@@ -20,7 +19,7 @@ import {
     type RecordingVerdict,
     type TempoPick,
 } from "@/lib/recordings/tempo-fill"
-import { applySongMetadata } from "./song-metadata"
+import { applyRecordingTempoToSong } from "./song-metadata"
 
 /**
  * apply_recording_tempos (Daniel 2026-11-03): each song's most confident
@@ -52,6 +51,8 @@ export interface TempoFieldReport {
     target: "song" | "row"
     /** songId for the song default; the track id for a row. */
     id: string
+    /** For target "song": which catalog doc (each is decided on its own field). */
+    doc?: "library_index" | "songs"
     setlistId?: string
     action: FieldAction
     before: number | string | null
@@ -72,6 +73,8 @@ export interface ApplyRecordingTemposResult {
     summary: { recordings: number; songsWithTempo: number; fill: number; update: number; keep: number; skip: number }
     recordings: TempoRecordingReport[]
     written?: { songs: number; rows: number; setlists: number }
+    /** Setlists the real run could not write (gone or another tenant's); the run went on. */
+    skippedSetlists?: Array<{ setlistId: string; reason: string }>
 }
 
 function str(v: unknown): string | null {
@@ -88,27 +91,12 @@ async function tenantRecordings(db: DB, org: OrgId, songId: string | null): Prom
         .map((d) => recordingFromDoc(d.id, d.data() as Data))
 }
 
-interface SongState {
-    title: string | null
-    owned: boolean
-    exists: boolean
-    field: BpmFieldState
+async function songTitle(db: DB, songId: string): Promise<string | null> {
+    const [song, idx] = await Promise.all([db.collection("songs").doc(songId).get(), db.collection("library_index").doc(songId).get()])
+    return str(song.data()?.title) ?? str(idx.data()?.name)
 }
 
-async function songState(db: DB, org: OrgId, songId: string): Promise<SongState> {
-    const [song, idx] = await Promise.all([db.collection("songs").doc(songId).get(), db.collection("library_index").doc(songId).get()])
-    const s = song.exists ? (song.data() as Data) : null
-    const i = idx.exists ? (idx.data() as Data) : null
-    const d = (s?.defaults ?? {}) as Data
-    const title = str(s?.title) ?? str(i?.name)
-    const owned = !!(i ?? s) && isOwnedBy((i ?? s) as Data & { orgId?: string }, org)
-    // library_index wins, as in applySongMetadata's `before`.
-    const fromIndex = i && i.bpm !== undefined && i.bpm !== null
-    const field: BpmFieldState = fromIndex
-        ? { bpm: i!.bpm, bpmSource: i!.bpmSource, bpmSourceRecordingId: i!.bpmSourceRecordingId, bpmSourceValue: i!.bpmSourceValue }
-        : { bpm: d.bpm, bpmSource: d.bpmSource, bpmSourceRecordingId: d.bpmSourceRecordingId, bpmSourceValue: d.bpmSourceValue }
-    return { title, owned, exists: !!(i || s), field }
-}
+type SongPlan = Awaited<ReturnType<typeof applyRecordingTempoToSong>>
 
 interface RowRef {
     id: string
@@ -187,16 +175,15 @@ export async function applyRecordingTemposTool(
         const recs = await tenantRecordings(db, org, songId)
         const { picks, verdicts } = pickSongTempos(recs)
         const songIds = [...picks.keys()]
-        const states = new Map<string, SongState>()
-        await Promise.all(songIds.map(async (id) => states.set(id, await songState(db, org, id))))
+        const songPlans = new Map<string, SongPlan>()
+        await Promise.all(
+            songIds.map(async (id) => songPlans.set(id, await applyRecordingTempoToSong(db, org, id, picks.get(id)!, { dryRun: true }))),
+        )
         const { bySong, gone } = await bondedRows(db, org, songIds)
 
         const titleIds = [...new Set(recs.map((r) => r.songId).filter((s): s is string => !!s))]
         const titles = new Map<string, string | null>()
-        for (const id of titleIds) titles.set(id, states.get(id)?.title ?? null)
-        await Promise.all(
-            titleIds.filter((id) => !states.has(id)).map(async (id) => titles.set(id, (await songState(db, org, id)).title)),
-        )
+        await Promise.all(titleIds.map(async (id) => titles.set(id, await songTitle(db, id))))
 
         const summary = { recordings: recs.length, songsWithTempo: picks.size, fill: 0, update: 0, keep: 0, skip: 0 }
         const songWrites: Array<{ songId: string; pick: TempoPick }> = []
@@ -206,13 +193,12 @@ export async function applyRecordingTemposTool(
             if (!v.used || !v.songId) return out
             const pick = picks.get(v.songId)!
             const fields: TempoFieldReport[] = []
-            const st = states.get(v.songId)!
-            if (!st.exists) fields.push({ target: "song", id: v.songId, action: "skip", before: null, reason: "no library entry for this chart" })
-            else if (!st.owned) fields.push({ target: "song", id: v.songId, action: "skip", before: null, reason: "another tenant's chart (shared, not ours to change)" })
+            const sp = songPlans.get(v.songId)!
+            if (!sp.exists) fields.push({ target: "song", id: v.songId, action: "skip", before: null, reason: "no library entry for this chart" })
+            else if (!sp.owned) fields.push({ target: "song", id: v.songId, action: "skip", before: null, reason: "another tenant's chart (shared, not ours to change)" })
             else {
-                const d = decideField(st.field, pick)
-                fields.push({ target: "song", id: v.songId, ...d })
-                if (writes(d.action)) songWrites.push({ songId: v.songId, pick })
+                for (const { doc, decision } of sp.decisions) fields.push({ target: "song", id: v.songId, doc, ...decision })
+                if (sp.decisions.some((d) => writes(d.decision.action))) songWrites.push({ songId: v.songId, pick })
             }
             for (const r of bySong.get(v.songId) ?? []) {
                 const d = decideField(rowField(r.data), pick)
@@ -240,19 +226,20 @@ export async function applyRecordingTemposTool(
 
         let songsWritten = 0
         for (const { songId: id, pick } of songWrites) {
-            // Re-read just before the write: a bpm a person typed since the plan is kept.
-            const now = await songState(db, org, id)
-            if (!writes(decideField(now.field, pick).action)) continue
-            const res = await applySongMetadata(db, id, { bpm: pick.bpm, bpmSource: { recordingId: pick.recordingId } }, { org })
-            if (res.songWritten || res.indexWritten) songsWritten++
+            // Re-decided inside the write's transaction: a bpm a person typed since the plan is kept.
+            const res = await applyRecordingTempoToSong(db, org, id, pick, { uid })
+            if (res.written.length > 0) songsWritten++
         }
 
         let rowsWritten = 0
         let setlistsWritten = 0
+        const skippedSetlists: Array<{ setlistId: string; reason: string }> = []
         for (const [setlistId, rows] of rowWrites) {
             for (let i = 0; i < rows.length; i += ROWS_PER_TX) {
                 const slice = rows.slice(i, i + ROWS_PER_TX)
-                const n = await maintainSetlist(
+                let n = 0
+                try {
+                    n = await maintainSetlist(
                     db,
                     org,
                     setlistId,
@@ -273,12 +260,24 @@ export async function applyRecordingTemposTool(
                     },
                     { touchUpdatedAt: false, actor: uid },
                 )
+                } catch (err) {
+                    // A setlist deleted or moved since the plan: report it and go on.
+                    if (!(err instanceof MaintenanceError)) throw err
+                    skippedSetlists.push({ setlistId, reason: err.code })
+                    break
+                }
                 rowsWritten += n
                 if (n > 0) setlistsWritten++
             }
         }
         logger.info("[mcp] apply_recording_tempos committed", { uid, org, songsWritten, rowsWritten, setlistsWritten })
-        return { ...base, dryRun: false, applied: true, written: { songs: songsWritten, rows: rowsWritten, setlists: setlistsWritten } }
+        return {
+            ...base,
+            dryRun: false,
+            applied: true,
+            written: { songs: songsWritten, rows: rowsWritten, setlists: setlistsWritten },
+            ...(skippedSetlists.length ? { skippedSetlists } : {}),
+        }
     } catch (err) {
         logger.error("[mcp] apply_recording_tempos failed", { err: err instanceof Error ? err.message : err })
         return richError("recording_tempos_failed", "Could not apply recording tempos.", { errorCode: 500 }, "Retry the dry run first.")
