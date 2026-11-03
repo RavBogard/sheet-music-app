@@ -16,7 +16,7 @@ import { rowOrg } from "@/lib/org/membership"
 import { liftLegacyErrorEnvelope } from "@/lib/mcp/errors"
 import { isTestUid } from "@/lib/test-isolation"
 import { setMembership } from "@/lib/org/memberships-write"
-import { readTenantRole } from "@/lib/org/access"
+import { isPlatformOwner, readTenantRole } from "@/lib/org/access"
 import { orgFrom } from "@/lib/mcp/org-context"
 import { DEFAULT_ORG_ID, ORGS } from "@/lib/org/registry"
 import { orgExists } from "@/lib/org/org-exists"
@@ -837,6 +837,10 @@ export interface CleanupAllResult {
     removed: number
     failures: string[]
     aggregate: Record<string, number>
+    /** The caller's tenant, or "all-tenants" for a platform-owner caller. */
+    scope: string
+    /** Test accounts left alone because they belong to another tenant. */
+    skippedOtherTenants: number
 }
 
 export interface CleanupAllToolArgs extends CleanupAllArgs {
@@ -856,6 +860,10 @@ export interface CleanupAllPlan {
      * prefix-less sweep touches these, so it is 0 whenever `prefix` is set.
      */
     wouldSweepFlaggedSetlists: number
+    /** The caller's tenant, or "all-tenants" for a platform-owner caller. */
+    scope: string
+    /** Test accounts left alone because they belong to another tenant. */
+    skippedOtherTenants: number
     removed: 0
     hint: string
 }
@@ -884,6 +892,7 @@ export interface CleanupAllPlan {
 export async function cleanupAllTestData(
     callerUid: string,
     args: CleanupAllToolArgs = {},
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<CleanupAllResult | CleanupAllPlan | ReturnType<typeof envelope>> {
     const dryRun = args.dryRun !== false
     if (!dryRun && args.force !== true) {
@@ -894,8 +903,53 @@ export async function cleanupAllTestData(
             "Read the plan first (call with no arguments, or with `prefix`), then re-call with `dryRun:false, force:true`.",
         )
     }
-    if (!dryRun) return cleanupAllTestDataCore(callerUid, { prefix: args.prefix })
-    return planCleanupAllTestData(callerUid, { prefix: args.prefix })
+    if (!dryRun) return cleanupAllTestDataCore(callerUid, { prefix: args.prefix }, org)
+    return planCleanupAllTestData(callerUid, { prefix: args.prefix }, org)
+}
+
+/**
+ * Who may be swept. A band leader or admin sweeps only their own tenant: test
+ * accounts whose every membership is in that tenant, and that tenant's
+ * `isTest` setlists. A test account in two tenants, or in another, is left
+ * for that tenant (or the platform owner). The platform owner keeps the
+ * cross-tenant sweep.
+ */
+interface SweepScope {
+    allTenants: boolean
+    org: OrgId
+}
+
+async function callerScope(
+    callerUid: string,
+    org: OrgId,
+): Promise<SweepScope | ReturnType<typeof envelope>> {
+    const db = getFirestore()
+    if (await isPlatformOwner(callerUid, db)) return { allTenants: true, org }
+    const { isTrustedLeader, role: callerRole } = await loadCallerRole(callerUid, org)
+    if (!isTrustedLeader) {
+        return envelope(
+            "forbidden_role",
+            "cleanup_all_test_data requires admin or band_leader role.",
+            { callerRole: callerRole ?? null, requiredRoles: ["admin", "band_leader"] },
+            "Sign in as admin/band_leader, or ask one to run cleanup for you.",
+        )
+    }
+    return { allTenants: false, org }
+}
+
+const scopeLabel = (scope: SweepScope): string => (scope.allTenants ? "all-tenants" : scope.org)
+
+/** A test account's tenants: its membership claim map, else its orgIds, else crc. */
+function tenantsFromClaims(claims: Record<string, unknown> | null | undefined): string[] | null {
+    if (!claims) return null
+    const m = claims.m
+    if (m && typeof m === "object" && !Array.isArray(m)) {
+        const keys = Object.keys(m as Record<string, unknown>)
+        if (keys.length > 0) return keys
+    }
+    const orgIds = claims.orgIds
+    if (Array.isArray(orgIds) && orgIds.length > 0) return orgIds.filter((o): o is string => typeof o === "string")
+    return null
 }
 
 /**
@@ -905,10 +959,11 @@ export async function cleanupAllTestData(
  * scope — a preview that scopes differently from the sweep it previews is
  * worse than no preview.
  */
-async function enumerateSweepTargets(prefix: string | undefined): Promise<{
+async function enumerateSweepTargets(prefix: string | undefined, scope: SweepScope): Promise<{
     fullPrefix: string | null
     indexUids: Set<string>
     orphanAuthUids: string[]
+    skippedOtherTenants: number
 }> {
     const fullPrefix = prefix ? `${TEST_UID_PREFIX}${prefix}-` : null
     const matchesPrefix = (uid: string): boolean =>
@@ -926,34 +981,59 @@ async function enumerateSweepTargets(prefix: string | undefined): Promise<{
     const auth = getAuth()
     let pageToken: string | undefined
     const orphanAuthUids: string[] = []
+    const authTenants = new Map<string, string[] | null>()
     for (let i = 0; i < 20; i++) {
         const result = await auth.listUsers(1000, pageToken)
         for (const u of result.users) {
-            if (matchesPrefix(u.uid) && !indexUids.has(u.uid)) {
-                orphanAuthUids.push(u.uid)
-            }
+            if (!matchesPrefix(u.uid)) continue
+            authTenants.set(u.uid, tenantsFromClaims(u.customClaims))
+            if (!indexUids.has(u.uid)) orphanAuthUids.push(u.uid)
         }
         if (!result.pageToken) break
         pageToken = result.pageToken
     }
-    return { fullPrefix, indexUids, orphanAuthUids }
+    if (scope.allTenants) return { fullPrefix, indexUids, orphanAuthUids, skippedOtherTenants: 0 }
+
+    // Tenant-scoped: keep only accounts whose every tenant is the caller's.
+    // An index account with no Auth user left falls back to its users doc.
+    const tenantsOf = async (uid: string): Promise<string[]> => {
+        const fromClaims = authTenants.get(uid)
+        if (fromClaims) return fromClaims
+        const userSnap = await db.collection(USERS).doc(uid).get()
+        const orgIds = userSnap.exists ? userSnap.data()?.orgIds : undefined
+        if (Array.isArray(orgIds) && orgIds.length > 0) return orgIds.map((o) => rowOrg(o))
+        return [DEFAULT_ORG_ID]
+    }
+    const inScope = async (uid: string) => (await tenantsOf(uid)).every((t) => t === scope.org)
+    let skippedOtherTenants = 0
+    const keptIndex = new Set<string>()
+    for (const uid of indexUids) {
+        if (await inScope(uid)) keptIndex.add(uid)
+        else skippedOtherTenants++
+    }
+    const keptOrphans: string[] = []
+    for (const uid of orphanAuthUids) {
+        if (await inScope(uid)) keptOrphans.push(uid)
+        else skippedOtherTenants++
+    }
+    return { fullPrefix, indexUids: keptIndex, orphanAuthUids: keptOrphans, skippedOtherTenants }
+}
+
+/** isTest setlists the flag-sweep may delete (the caller's tenant only, unless po). */
+async function flaggedTestSetlists(scope: SweepScope): Promise<FirebaseFirestore.QueryDocumentSnapshot[]> {
+    const snap = await getFirestore().collection("setlists").where("isTest", "==", true).get()
+    return scope.allTenants ? snap.docs : snap.docs.filter((d) => rowOrg(d.data().orgId) === scope.org)
 }
 
 /** What `cleanup_all_test_data` would remove. Reads only. */
 async function planCleanupAllTestData(
     callerUid: string,
     args: CleanupAllArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<CleanupAllPlan | ReturnType<typeof envelope>> {
     initAdmin()
-    const { isTrustedLeader, role: callerRole } = await loadCallerRole(callerUid, DEFAULT_ORG_ID) /* test-account housekeeping: crc admins (P2 parity) */
-    if (!isTrustedLeader) {
-        return envelope(
-            "forbidden_role",
-            "cleanup_all_test_data requires admin or band_leader role.",
-            { callerRole: callerRole ?? null, requiredRoles: ["admin", "band_leader"] },
-            "Sign in as admin/band_leader, or ask one to run cleanup for you.",
-        )
-    }
+    const scope = await callerScope(callerUid, org)
+    if ("error" in scope) return scope
     if (args.prefix !== undefined && !UID_PREFIX_RE.test(args.prefix)) {
         return envelope(
             "invalid_uid_prefix",
@@ -963,8 +1043,9 @@ async function planCleanupAllTestData(
         )
     }
 
-    const { fullPrefix, indexUids, orphanAuthUids } = await enumerateSweepTargets(
+    const { fullPrefix, indexUids, orphanAuthUids, skippedOtherTenants } = await enumerateSweepTargets(
         args.prefix,
+        scope,
     )
     const wouldRevoke = [...indexUids, ...orphanAuthUids].sort()
 
@@ -972,12 +1053,7 @@ async function planCleanupAllTestData(
     // so the plan counts it only when the run would do it.
     let wouldSweepFlaggedSetlists = 0
     if (fullPrefix === null) {
-        const db = getFirestore()
-        const flagged = await db
-            .collection("setlists")
-            .where("isTest", "==", true)
-            .get()
-        wouldSweepFlaggedSetlists = flagged.size
+        wouldSweepFlaggedSetlists = (await flaggedTestSetlists(scope)).length
     }
 
     return {
@@ -985,10 +1061,12 @@ async function planCleanupAllTestData(
         prefix: args.prefix ?? null,
         wouldRevoke,
         wouldSweepFlaggedSetlists,
+        scope: scopeLabel(scope),
+        skippedOtherTenants,
         removed: 0,
         hint:
             fullPrefix === null
-                ? "No prefix: this would sweep EVERY test account in the project, including other sessions'. Pass `prefix` to scope it. Re-call with `dryRun:false, force:true` to run it."
+                ? "No prefix: this would sweep EVERY test account in scope, including other sessions'. Pass `prefix` to scope it. Re-call with `dryRun:false, force:true` to run it."
                 : "Re-call with `dryRun:false, force:true` to run it.",
     }
 }
@@ -996,20 +1074,13 @@ async function planCleanupAllTestData(
 export async function cleanupAllTestDataCore(
     callerUid: string,
     args: CleanupAllArgs = {},
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<CleanupAllResult | ReturnType<typeof envelope>> {
     initAdmin()
-    const { isTrustedLeader, role: callerRole } = await loadCallerRole(callerUid, DEFAULT_ORG_ID) /* test-account housekeeping: crc admins (P2 parity) */
-    if (!isTrustedLeader) {
-        return envelope(
-            "forbidden_role",
-            "cleanup_all_test_data requires admin or band_leader role.",
-            {
-                callerRole: callerRole ?? null,
-                requiredRoles: ["admin", "band_leader"],
-            },
-            "Sign in as admin/band_leader, or ask one to run cleanup for you.",
-        )
-    }
+    // The gate runs ONCE, here: the caller may be a test bearer in its own
+    // sweep (revoked last, below).
+    const scope = await callerScope(callerUid, org)
+    if ("error" in scope) return scope
 
     if (args.prefix !== undefined && !UID_PREFIX_RE.test(args.prefix)) {
         return envelope(
@@ -1022,10 +1093,11 @@ export async function cleanupAllTestDataCore(
     // `test-<prefix>-` — full match prefix including the leading `test-`.
     // Falsy means "sweep every test-namespaced uid". Used as a string
     // predicate; never echoed back so trailing hyphen is just join-glue.
-    const db = getFirestore()
-    const { fullPrefix, indexUids, orphanAuthUids } = await enumerateSweepTargets(
+    const { fullPrefix, indexUids, orphanAuthUids, skippedOtherTenants } = await enumerateSweepTargets(
         args.prefix,
+        scope,
     )
+    const db = getFirestore()
 
     // Order the sweep so the CALLER (if they're a test user) is revoked
     // LAST. Belt-and-braces — `revokeTestAccountUnchecked` skips the
@@ -1079,13 +1151,10 @@ export async function cleanupAllTestDataCore(
     // directly (no caller-role dependency), so the caller-last ordering and
     // the self-inclusion path (caller is a test bearer) stay correct.
     if (fullPrefix === null) {
-        const flagSnap = await db
-            .collection("setlists")
-            .where("isTest", "==", true)
-            .get()
+        const flagDocs = await flaggedTestSetlists(scope)
         let flagSetlists = 0
         let flagTracks = 0
-        for (const doc of flagSnap.docs) {
+        for (const doc of flagDocs) {
             try {
                 const { tracks } = await deleteFixtureSetlists(db, [{ id: doc.id, orgId: doc.data().orgId }])
                 flagTracks += tracks
@@ -1100,8 +1169,8 @@ export async function cleanupAllTestDataCore(
         if (flagTracks > 0) aggregate["tracks.isTest"] = flagTracks
     }
 
-    breadcrumb("cleanup", { callerUid, removed, failures: failures.length, aggregate })
-    return { removed, failures, aggregate }
+    breadcrumb("cleanup", { callerUid, scope: scopeLabel(scope), removed, failures: failures.length, aggregate })
+    return { removed, failures, aggregate, scope: scopeLabel(scope), skippedOtherTenants }
 }
 
 // ─── Sweep orphan test data (Convergence C) ─────────────────────────────────
@@ -1587,7 +1656,7 @@ export function registerTestTokenTools(server: McpServer): void {
         "cleanup_all_test_data",
         {
             description:
-                "Nuclear option — revoke every test-namespaced user in the project and cascade-delete their owned data. Walks the mcpTestUsers index AND Firebase Auth (for orphaned test-* users without an index doc, defense-in-depth). Returns per-collection aggregate counts + per-uid failures. Admin + band_leader only. Pass `prefix` to scope the sweep to one instance namespace — only uids starting with `test-<prefix>-` are touched, so parallel cowork instances don't cross-contaminate. DEFAULTS TO `dryRun:true` (F-05): the plan comes back with `wouldRemove` and nothing is deleted. A real sweep needs `dryRun:false, force:true`. The argument NAME is `prefix`, not `uidPrefix` — an unrecognised argument is REFUSED rather than ignored, because a delete tool that quietly drops the argument you thought was scoping it is how an inspection becomes a sweep.",
+                "Nuclear option — revoke every test-namespaced user in YOUR TENANT (all tenants for the platform owner) and cascade-delete their owned data; a test account that also belongs to another tenant is left alone. Walks the mcpTestUsers index AND Firebase Auth (for orphaned test-* users without an index doc, defense-in-depth). Returns per-collection aggregate counts + per-uid failures. Admin + band_leader only. Pass `prefix` to scope the sweep to one instance namespace — only uids starting with `test-<prefix>-` are touched, so parallel cowork instances don't cross-contaminate. DEFAULTS TO `dryRun:true` (F-05): the plan comes back with `wouldRemove` and nothing is deleted. A real sweep needs `dryRun:false, force:true`. The argument NAME is `prefix`, not `uidPrefix` — an unrecognised argument is REFUSED rather than ignored, because a delete tool that quietly drops the argument you thought was scoping it is how an inspection becomes a sweep.",
             inputSchema: {
                 prefix: z
                     .string()
@@ -1613,7 +1682,7 @@ export function registerTestTokenTools(server: McpServer): void {
             },
         },
         async (args, extra) => {
-            const result = await cleanupAllTestData(uidFrom(extra), args)
+            const result = await cleanupAllTestData(uidFrom(extra), args, orgFrom(extra))
             return jsonResult(result)
         },
     )

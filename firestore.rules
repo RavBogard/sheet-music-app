@@ -324,9 +324,11 @@ service cloud.firestore {
     match /songs/{songId} {
       allow get: if atLeast(docOrg(), 'me') || sharedSees(resource.data);
       allow list: if atLeast(listOrg(), 'me') || sharedSeesList();
-      allow create: if newOrgSet() && atLeast(newOrg(), 'bl');
-      allow update: if atLeast(docOrg(), 'bl') && orgKept();
-      allow delete: if atLeast(strictDocOrg(), 'bl');
+      // Server-only writes (setlist sync later list, 2026-11-03): the
+      // catalogue fields mirror library_index and go through
+      // src/lib/library/catalog-mirror.ts; the grid's sticky defaults go
+      // through POST /api/songs/defaults. The browser had no other writer.
+      allow write: if false;
     }
     match /recordings/{recordingId} {
       allow get: if atLeast(docOrg(), 'me');
@@ -344,6 +346,13 @@ service cloud.firestore {
       allow list: if atLeast(listOrg(), 'me') || sharedSeesList();
       allow write: if false;
       match /chordData/{page} { allow read, write: if false; }
+    }
+    // Drive sync run log (admin Data tab "last sync"). Written by the server
+    // only; read by that tenant's admins and the platform owner.
+    match /sync_runs/{runId} {
+      allow get: if atLeast(docOrg(), 'ad');
+      allow list: if atLeast(listOrg(), 'ad');
+      allow write: if false;
     }
     match /library_signals/{docId} {
       allow read: if signedIn();

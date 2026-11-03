@@ -106,6 +106,7 @@ const CASES: Record<keyof typeof CLIENT_QUERIES, Case> = {
     recordingsForSongQuery: { need: "me", visible: own, build: (db, p) => CLIENT_QUERIES.recordingsForSongQuery(db, p.host, `song-${p.host}`) },
     auditLogsQuery: { need: "ad", visible: own, build: (db, p) => CLIENT_QUERIES.auditLogsQuery(db, p.host, 20) },
     partPresetsQuery: { need: "me", visible: own, build: (db, p) => CLIENT_QUERIES.partPresetsQuery(db, p.host) },
+    lastSyncRunQuery: { need: "ad", visible: own, build: (db, p) => CLIENT_QUERIES.lastSyncRunQuery(db, p.host) },
     tenantAssignmentsQuery: { need: "bl", visible: own, build: (db, p) => CLIENT_QUERIES.tenantAssignmentsQuery(db, p.host) },
     myAssignmentsQuery: {
         need: "self",
@@ -184,6 +185,7 @@ describe("client queries × personas vs firestore.rules", () => {
                 await db.doc(`recordings/rec-${org}`).set({ orgId: org, songId: `song-${org}`, createdAt: NOW })
                 await db.doc(`auditLogs/log-${org}`).set({ orgId: org, timestamp: NOW })
                 await db.doc(`part_presets/pp-${org}`).set({ orgId: org, patterns: ["x"] })
+                await db.doc(`sync_runs/run-${org}`).set({ orgId: org, startedAt: new Date(NOW).toISOString(), status: "completed" })
                 for (const p of PERSONAS) {
                     await db.doc(`scheduling_assignments/sa-${org}-${p.id}`).set({
                         orgId: org,

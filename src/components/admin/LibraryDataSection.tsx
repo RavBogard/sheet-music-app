@@ -4,8 +4,9 @@ import { useState, useEffect, useCallback } from "react"
 import { Loader2, CheckCircle, AlertCircle, Clock, ArchiveRestore, ChevronDown, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { getDb } from "@/lib/firebase"
-// eslint-disable-next-line no-restricted-imports -- non-tenant: sync_runs (platform log, no orgId)
-import { collection, query, orderBy, limit, getDocs } from "firebase/firestore"
+import { getDocs } from "firebase/firestore"
+import { lastSyncRunQuery } from "@/lib/tenant-query"
+import { useOrg } from "@/lib/org/org-context"
 import { LibrarySyncCard } from "./library/LibrarySyncCard"
 import { Button } from "@/components/ui/button"
 import { apiFetch } from "@/lib/api-client"
@@ -51,6 +52,7 @@ export function LibraryDataSection() {
     const driveOn = useFeature("driveInbox")
     const t = useT()
     const fmt = useFormat()
+    const org = useOrg()
 
     const loadArchived = useCallback(async () => {
         setArchivedLoading(true)
@@ -88,12 +90,7 @@ export function LibraryDataSection() {
                 // v4.3 P05: parallelize the two independent reads (~half the
                 // wall-time for the admin Data tab first-paint).
                 const db = await getDb()
-                const syncRunsQuery = query(
-                    collection(db, "sync_runs"),
-                    orderBy("startedAt", "desc"),
-                    limit(1)
-                )
-                const syncSnap = await getDocs(syncRunsQuery)
+                const syncSnap = await getDocs(lastSyncRunQuery(db, org))
                 if (!syncSnap.empty) {
                     const syncData = syncSnap.docs[0].data() as SyncRunData
                     setLastSync(syncData)
@@ -106,7 +103,7 @@ export function LibraryDataSection() {
             }
         }
         load()
-    }, [])
+    }, [org])
 
     const statusIcon = lastSync?.status === 'completed'
         ? <CheckCircle className="w-5 h-5 text-success" />

@@ -10,8 +10,8 @@
  */
 
 import { getDb } from "./firebase"
-// eslint-disable-next-line no-restricted-imports -- setlists/{id}/history subcollection (write + admin read), not a tenant list
-import { collection, addDoc, serverTimestamp, query, orderBy, limit, getDocs } from "firebase/firestore"
+// eslint-disable-next-line no-restricted-imports -- setlists/{id}/history subcollection (append-only write), not a tenant list
+import { collection, addDoc, serverTimestamp } from "firebase/firestore"
 import { logger } from "@/lib/logger"
 
 export type AuditAction =
@@ -82,28 +82,4 @@ export function logSetlistChange(
     void getDb().then(db => addDoc(collection(db, 'setlists', setlistId, 'history'), entry)).catch(err => {
         logger.warn('[Audit] Failed to log setlist change:', err)
     })
-}
-
-/**
- * Get recent history for a setlist (most recent first).
- * Useful for admin/debugging views.
- */
-export async function getSetlistHistory(
-    setlistId: string,
-    maxEntries: number = 50
-): Promise<AuditEntry[]> {
-    try {
-        const db = await getDb()
-        // tenant-scan-allow: setlists/{id}/history subcollection, rule reads the parent setlist's org (ad)
-        const historyRef = collection(db, 'setlists', setlistId, 'history')
-        const q = query(historyRef, orderBy('timestamp', 'desc'), limit(maxEntries))
-        const snapshot = await getDocs(q)
-
-        return snapshot.docs.map(doc => ({
-            ...doc.data(),
-        })) as AuditEntry[]
-    } catch (err) {
-        logger.warn('[Audit] Failed to fetch setlist history:', err)
-        return []
-    }
 }

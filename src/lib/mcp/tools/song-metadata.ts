@@ -1,3 +1,4 @@
+import { ANY_TENANT, writeCatalog } from "@/lib/library/catalog-mirror"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { checkUserRateLimit } from "@/lib/rate-limit"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
@@ -176,30 +177,22 @@ export async function applySongMetadata(
         }
     }
 
-    const batch = db.batch()
-    if (willWriteSong) {
-        // Dotted field paths touch only the nested default, leaving the rest
-        // of `defaults` (and `recent[]`) intact.
-        const songUpdate: Record<string, unknown> = { updatedAt: Date.now() }
-        if (patch.key !== undefined) songUpdate["defaults.key"] = patch.key
-        if (patch.bpm !== undefined) songUpdate["defaults.bpm"] = patch.bpm
-        if (patch.leadMusician !== undefined)
-            songUpdate["defaults.lead"] = patch.leadMusician
-        if (patch.durationSec !== undefined)
-            songUpdate["defaults.durationSec"] = patch.durationSec
-        batch.update(db.collection("songs").doc(fileId), songUpdate)
-    }
-    if (willWriteIndex) {
-        const indexUpdate: Record<string, unknown> = {}
-        if (patch.key !== undefined) indexUpdate.key = patch.key
-        if (patch.bpm !== undefined) indexUpdate.bpm = patch.bpm
-        if (patch.leadMusician !== undefined)
-            indexUpdate.leadMusician = patch.leadMusician
-        if (patch.durationSec !== undefined)
-            indexUpdate.durationSec = patch.durationSec
-        batch.update(db.collection("library_index").doc(fileId), indexUpdate)
-    }
-    await batch.commit()
+    // Both catalogue surfaces through the one writer: songs `defaults.*`
+    // (nested merge: the rest of `defaults` and `recent[]` stay intact) and
+    // the library_index fields. The tenant was checked above.
+    await writeCatalog(
+        db,
+        [{
+            fileId,
+            patch: {
+                ...(patch.key !== undefined ? { key: patch.key } : {}),
+                ...(patch.bpm !== undefined ? { bpm: patch.bpm } : {}),
+                ...(patch.leadMusician !== undefined ? { leadMusician: patch.leadMusician } : {}),
+                ...(patch.durationSec !== undefined ? { durationSec: patch.durationSec } : {}),
+            },
+        }],
+        { org: opts.org ?? ANY_TENANT, broadcast: false },
+    )
 
     return {
         existed,

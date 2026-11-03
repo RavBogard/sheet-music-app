@@ -128,9 +128,10 @@ describe("v11-01-04 firestore.rules org-scope", () => {
         await assertFails(crcLeader().collection("tracks").doc("tk-crc").update({ key: "G" }))
     })
 
-    it("a claimless CRC leader can still write songs (orgId=crc); recordings are server-only", async () => {
+    it("songs and recordings are server-only writes, even for a CRC leader", async () => {
         const db = crcLeader()
-        await assertSucceeds(db.collection("songs").doc("song-new").set({ title: "S", orgId: "crc" }))
+        await assertFails(db.collection("songs").doc("song-new").set({ title: "S", orgId: "crc" }))
+        await assertFails(db.collection("songs").doc("song-crc").update({ defaults: { key: "D" } }))
         await assertFails(db.collection("recordings").doc("rec-new").set({ songId: "song-crc", title: "R", orgId: "crc" }))
     })
 

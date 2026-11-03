@@ -51,6 +51,13 @@ function fakeDb() {
                 update: async () => undefined,
             }),
         }),
+        // The catalogue writer (catalog-mirror.ts) reads with getAll and
+        // writes through a batch; both route to the doc fakes above.
+        getAll: (...refs: Array<{ get: () => Promise<unknown> }>) => Promise.all(refs.map((r) => r.get())),
+        batch: () => ({
+            set: (ref: { set: (d: unknown) => unknown }, data: unknown) => ref.set(data),
+            commit: async () => undefined,
+        }),
     } as unknown as FirebaseFirestore.Firestore
 }
 

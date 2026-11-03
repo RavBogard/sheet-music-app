@@ -1,3 +1,4 @@
+import { ANY_TENANT, writeCatalog } from "@/lib/library/catalog-mirror"
 import { rowOrg } from "@/lib/mcp/org-context"
 import { visibleTo } from "@/lib/library/visibility"
 import { readTenantRole } from "@/lib/org/access"
@@ -412,24 +413,16 @@ export async function verifySetlistCharts(
             }
         }
         if (args.markOrphaned && existingFileIds.length > 0) {
-            const batch = db.batch()
-            for (const fid of existingFileIds) {
-                batch.update(db.collection("library_index").doc(fid), {
-                    status: "orphaned",
-                })
-                // songs/{fid} parallel write stays set+merge: some catalog
-                // entries don't have a sibling songs/{fid} row, and we want
-                // the orphaned status to land regardless so `search_library`
-                // exclusion sees it on either collection.
-                batch.set(
-                    db.collection("songs").doc(fid),
-                    { status: "orphaned", orgId: rowOrgOf.get(fid) ?? rowOrg(undefined) },
-                    { merge: true },
-                )
-            }
             try {
-                await batch.commit()
-                orphanedMarked = existingFileIds.length
+                // Both collections; songs/{fid} is stubbed when absent so the
+                // orphaned status lands where `search_library` looks. The rows
+                // were read just above (same tenant as the setlist).
+                const res = await writeCatalog(
+                    db,
+                    existingFileIds.map((fid) => ({ fileId: fid, patch: { status: "orphaned" as const } })),
+                    { org: ANY_TENANT, missingSong: "stub", broadcast: false },
+                )
+                orphanedMarked = res.written.length
             } catch (err) {
                 logger.warn("[mcp] verify_setlist_charts orphan-mark failed", {
                     setlistId: args.setlistId,

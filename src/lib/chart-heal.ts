@@ -1,3 +1,4 @@
+import { ANY_TENANT, writeCatalog } from "@/lib/library/catalog-mirror"
 import { rowOrg } from "@/lib/org/membership"
 import "server-only"
 import {
@@ -214,13 +215,15 @@ export async function healChartBytes(
     }
 
     try {
-        await db.collection("library_index").doc(fileId).set(patch, { merge: true })
-        // Mirror status onto songs/{id} if present so search_library /
-        // list_library reflect the flip. set+merge is safe — may not exist.
-        await db
-            .collection("songs")
-            .doc(fileId)
-            .set({ status: "active", orgId: rowOrg(rowData.orgId) }, { merge: true })
+        // Status lands on both collections (songs/{id} stubbed if absent) so
+        // search_library / list_library and the pickers reflect the flip.
+        const { status: _status, ...indexOnly } = patch
+        await writeCatalog(
+            db,
+            [{ fileId, patch: { status: "active" }, index: indexOnly }],
+            // The owner check ran above (writeAccess); internal callers own the row.
+            { org: callerOrg ?? ANY_TENANT, missingSong: "stub", broadcast: false },
+        )
     } catch (err) {
         // Compensating-delete: roll Storage back so we never leave a reverse
         // orphan (bytes-without-index-update). force:true is correct here —
