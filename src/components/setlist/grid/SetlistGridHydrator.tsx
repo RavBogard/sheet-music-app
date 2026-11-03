@@ -11,6 +11,7 @@ import {
     subscribeSongsLibrary as defaultSubscribeSongsLibrary,
     type SubscribeSongsLibraryOptions,
 } from '@/lib/songs/subscribe'
+import { tenantOfSetlist } from '@/lib/client-tracks'
 import { useOrg } from '@/lib/org/org-context'
 import { captureSyncFailure } from '@/lib/sync/sentry-capture'
 import type {
@@ -285,12 +286,15 @@ export function SetlistGridHydrator({
     // What it changes is the console during a service: a denied subscription
     // that retries looks exactly like a real fault to whoever opens the
     // inspector on an iPad at 7pm, and that is the wrong thing to hand them.
+    const listenerOrg = tenantOfSetlist(initialSetlist)
     useEffect(() => {
         if (hydration !== 'done') return
         if (!user) return
-        const stop = startSnapshotListener({ setlistId, db: getDb() })
+        // The tracks query filters by the setlist's tenant; without it the
+        // rules refuse it for every non-po user (2026-11-03 fix).
+        const stop = startSnapshotListener({ setlistId, db: getDb(), orgId: listenerOrg })
         return stop
-    }, [hydration, setlistId, startSnapshotListener, user])
+    }, [hydration, setlistId, startSnapshotListener, user, listenerOrg])
 
     // v50-07-03 (Option C Hybrid Lazy Hydration): on first edit-open of a
     // legacy setlist, fan out the embedded `tracks[]` into the top-level

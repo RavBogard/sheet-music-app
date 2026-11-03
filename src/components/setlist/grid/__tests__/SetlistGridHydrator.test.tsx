@@ -681,10 +681,12 @@ describe('SetlistGridHydrator', () => {
         })
 
         const callArgs = startFn.mock.calls[0]?.[0] as
-            | { setlistId: string; db: unknown }
+            | { setlistId: string; db: unknown; orgId?: string }
             | undefined
         expect(callArgs?.setlistId).toBe(SETLIST_ID)
         expect(callArgs?.db).toBeDefined()
+        // The tracks query needs the tenant (unstamped setlist -> host tenant).
+        expect(callArgs?.orgId).toBe('crc')
 
         unmount()
         expect(stopFn).toHaveBeenCalledTimes(1)

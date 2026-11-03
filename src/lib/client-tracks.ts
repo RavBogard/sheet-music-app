@@ -80,11 +80,16 @@ async function fetchViaApi(setlistId: string): Promise<SetlistTrack[] | null> {
     }
 }
 
-/** The tenant whose rows we are asking for: the setlist's, else this site's. */
-function orgOf(setlistData?: { orgId?: string } | null): string {
-    if (setlistData?.orgId) return coerceOrgId(setlistData.orgId)
+/** The tenant whose rows we are asking for: the setlist's, else this site's.
+ *  Every client `list` on `tracks` must filter by this, because the rule reads
+ *  `resource.data.orgId` and cannot see a setlistId filter. The live listener
+ *  (`sync/snapshot-listener.ts`) uses it too. */
+export function tenantOfSetlist(setlistData?: object | null): string {
+    const own = (setlistData as { orgId?: unknown } | null | undefined)?.orgId
+    if (typeof own === "string" && own) return coerceOrgId(own)
     return coerceOrgId(typeof document !== "undefined" ? document.documentElement.dataset.org : undefined)
 }
+const orgOf = tenantOfSetlist
 
 export async function fetchTracksForSetlistClient(
     setlistId: string,
