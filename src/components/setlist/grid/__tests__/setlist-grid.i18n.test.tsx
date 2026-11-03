@@ -61,6 +61,7 @@ import { useLibraryStore } from '@/lib/library-store'
 import { getDb, resetDbForTests } from '@/lib/local/schema'
 import type { LocalTrack } from '@/lib/local/types'
 import { useSyncStatus } from '@/lib/sync/store'
+import { computeFreshness } from '@/lib/setlist-ops-client/freshness'
 import type { DriveFile } from '@/types/models'
 
 import { AddBar } from '../AddBar'
@@ -224,7 +225,7 @@ describe('setlist grid i18n (pseudo-locale)', () => {
                 open
                 onOpenChange={vi.fn()}
                 initial={{ name: SETLIST_NAME, eventDate: Date.UTC(2026, 9, 16, 18), templateType: 'shabbat_morning' }}
-                applyEdit={vi.fn()}
+                saveSetlist={vi.fn()}
             />,
         )
         await screen.findByDisplayValue(SETLIST_NAME)
@@ -232,19 +233,39 @@ describe('setlist grid i18n (pseudo-locale)', () => {
     })
 
     it('qps: sync indicator states', async () => {
-        const r = renderPseudo(<SyncIndicator />)
-        for (const s of [
-            { state: 'idle', queued: 0, lastSyncAt: Date.now() },
-            { state: 'saving', queued: 0 },
-            { state: 'offline', queued: 3 },
-            { state: 'conflict', queued: 0 },
-            { state: 'failed', queued: 0, lastError: 'permission-denied' },
-        ] as const) {
-            act(() => useSyncStatus.setState({ lastError: undefined, lastSyncAt: undefined, ...s }))
-            // The inline error detail is the engine's raw error (data).
-            expectNoUntranslatedText(r.container, { allow: ['permission-denied'], ignoreSelector: '[data-testid="sync-indicator-error-detail"]' })
+        // Setlist sync PR 3: one setlist's freshness, and the refused list.
+        const intent = (localId: number, status: 'pending' | 'refused', reason?: string) => ({
+            localId,
+            setlistId: 's',
+            batchKey: `b${localId}`,
+            attempt: 0,
+            op: { kind: 'editRow', rowId: 'r', set: { key: 'G' } },
+            status,
+            createdAt: 1,
+            label: 'Row title',
+            ...(reason ? { refusal: { reason, field: 'key' } } : {}),
+        })
+        const states = [
+            computeFreshness([], { online: true, offlineSince: null }),
+            computeFreshness([intent(1, 'pending'), intent(2, 'pending')], { online: true, offlineSince: null }),
+            computeFreshness([intent(1, 'pending')], { online: false, offlineSince: Date.now() }),
+            computeFreshness(
+                ['field', 'row-gone', 'row-exists', 'forbidden', 'not-found', 'invalid', 'other'].map((reason, i) => intent(i + 1, 'refused', reason)),
+                { online: true, offlineSince: null },
+            ),
+        ]
+        const r = renderPseudo(<SyncIndicator freshness={states[0]} />)
+        for (const f of states) {
+            r.rerender(<SyncIndicator freshness={f} />)
+            // The row title and the field name are data.
+            expectNoUntranslatedText(r.container, { allow: ['Row title', 'key'] })
         }
-        expect(screen.getByTestId('sync-indicator-signout-link').textContent).toMatch(/⟦/)
+        expect(screen.getByTestId('sync-refused-retry-1').textContent).toMatch(/⟦/)
+        expect(screen.getByTestId('sync-refused-discard-1').textContent).toMatch(/⟦/)
+
+        // Offline, the add bar says why it cannot add.
+        const bar = renderPseudo(<AddBar onPickSong={() => {}} onCreateFreeText={() => {}} onAddTrackOfType={() => {}} disabledReason="⟦offline⟧" />)
+        expect(bar.getByTestId('add-bar-offline-reason')).toBeInTheDocument()
     })
 
     it('qps: cells (type, key with its picker, lead)', async () => {

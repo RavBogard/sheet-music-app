@@ -83,6 +83,16 @@ export interface MobileRowCardProps {
      * page on the setlist the column is left out and the title keeps the room.
      */
     pageColumn?: boolean
+    /**
+     * Setlist sync D2(a): adding, moving and removing rows need a connection.
+     * When set (the reason, already translated), the drag handle, Duplicate
+     * and Delete are disabled and say why. Field edits stay open.
+     */
+    structureLocked?: string
+    /** Fields of this row with an edit not yet saved (the view's pending mark). */
+    pendingFields?: readonly string[]
+    /** The row itself is not yet saved (a new row, or a move). */
+    pendingRow?: boolean
 }
 
 /**
@@ -118,7 +128,11 @@ export function MobileRowCard({
     showTiming = false,
     setTotal,
     pageColumn = true,
+    structureLocked,
+    pendingFields,
+    pendingRow = false,
 }: MobileRowCardProps) {
+    const isPending = pendingRow || (pendingFields?.length ?? 0) > 0
     const t = useT()
     const [title, setTitle] = useState(String(track.title ?? ''))
     const [key, setKey] = useState(String(track.key ?? ''))
@@ -253,7 +267,7 @@ export function MobileRowCard({
         transform,
         transition,
         isDragging,
-    } = useSortable({ id: track.id })
+    } = useSortable({ id: track.id, disabled: Boolean(structureLocked) })
 
     const dragStyle: React.CSSProperties = {
         transform: CSS.Transform.toString(transform),
@@ -356,7 +370,18 @@ export function MobileRowCard({
             className="flex flex-col relative"
             data-dragging={isDragging || undefined}
             data-section-hue={isSection ? band?.hue : undefined}
+            data-pending={isPending || undefined}
+            data-testid={`mobile-card-li-${track.id}`}
         >
+            {/* An edit not yet saved: a thin brand rule on the inline-start
+                edge. The words live in the save indicator. */}
+            {isPending && (
+                <span
+                    aria-hidden
+                    data-testid={`mobile-card-pending-${track.id}`}
+                    className="absolute inset-y-1 start-0 w-0.5 rounded-full bg-brand/70"
+                />
+            )}
             <ContextMenu>
                 <ContextMenuTrigger asChild>
                     <div
@@ -651,6 +676,8 @@ export function MobileRowCard({
                     </ContextMenuItem>
                     <ContextMenuItem
                         onSelect={onContextDuplicate}
+                        disabled={Boolean(structureLocked)}
+                        title={structureLocked}
                         data-testid="mobile-card-context-menu-duplicate"
                         className="cursor-pointer"
                     >
@@ -660,6 +687,8 @@ export function MobileRowCard({
                     <ContextMenuSeparator />
                     <ContextMenuItem
                         onSelect={onContextDelete}
+                        disabled={Boolean(structureLocked)}
+                        title={structureLocked}
                         data-testid="mobile-card-context-menu-delete"
                         className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10"
                     >
@@ -736,6 +765,8 @@ export function MobileRowCard({
                         <button
                             type="button"
                             onClick={onDeleteRow}
+                            disabled={Boolean(structureLocked)}
+                            title={structureLocked}
                             aria-label={t('setlistGrid.menuDeleteRow')}
                             className="h-11 w-11 rounded-md flex items-center justify-center text-sm border border-border bg-background text-destructive hover:bg-destructive/10 transition-colors"
                         >

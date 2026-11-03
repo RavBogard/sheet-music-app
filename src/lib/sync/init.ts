@@ -14,7 +14,7 @@ import {
 import { auth, getDb as getFirestoreDb } from '@/lib/firebase'
 import { logger } from '@/lib/logger'
 import type { LocalCollection, OutboxRow } from '@/lib/local/types'
-import { rowOrg } from '@/lib/org/membership'
+import { bootSetlistOps } from '@/lib/setlist-ops-client/runtime'
 
 import { CrossTabLock } from './cross-tab-lock'
 import { uploadRecentEditLog } from './edit-log-upload'
@@ -24,8 +24,7 @@ export type {
     SnapshotListenerOpts,
     SnapshotSubscriber,
     SetlistDelivery,
-    TrackChange,
-    TrackChangeType,
+    TracksDelivery,
 } from './snapshot-listener'
 import {
     AuthError,
@@ -38,7 +37,6 @@ import {
     VersionMismatchError,
 } from './firestore-adapter'
 import { wireSyncEngineToStore } from './store'
-import { reconcileSetlistTrackCount } from './track-count-sync'
 
 /**
  * T1.3 (2026-05-12): exported for testing.
@@ -48,18 +46,7 @@ import { reconcileSetlistTrackCount } from './track-count-sync'
  * to proceed, or an error message string when the write must throw
  * `VersionMismatchError`.
  *
- * Bug fix vs. the pre-T1.3 inline code: the previous guard short-
- * circuited the precondition check when the remote stamp was
- * undefined (`remoteMs !== undefined && remoteMs !== expectedMs`).
- * That meant: if the editor saw a stamped doc at read time but the
- * remote doc had no stamp at commit time, the write proceeded as if
- * there were no precondition. Silent LWW on legacy / pre-stamp data.
- *
- * Corrected semantics:
- *  - No expectation (`expectedUpdatedAt === undefined`) → always pass;
- *    the engine treats this as "first write, no precondition" (matches
- *    LocalTrack.updatedAt semantics for freshly-created rows that
- *    haven't been server-stamped yet).
+ *  - No expectation (`expectedUpdatedAt === undefined`) → always pass.
  *  - Expected stamp matches remote stamp → pass.
  *  - Expected stamp does NOT match remote stamp (including the case
  *    where remote stamp is undefined) → fail with VersionMismatch.
@@ -74,81 +61,36 @@ export function checkUpdatePrecondition(
 }
 
 /**
- * Multi-tenant phase 2: the second layer of track `orgId` stamping. applyEdit
- * stamps a new track from its Dexie parent; a row that still has no `orgId`
- * here (parent not in Dexie, or queued by a pre-P2 bundle) is stamped from the
- * Firestore parent setlist (`setlists/{id}` get is public). When the parent
- * cannot be read the payload goes out unchanged (the rules then resolve the
- * tenant from the parent themselves). Exported for testing.
+ * Setlist sync PR 3: setlists and their rows are written ONLY by the server
+ * ops endpoint (src/lib/setlist-ops-client). The outbox keeps serving the
+ * other collections, and refuses these two outright, so no stale queued row
+ * from an old tab can write them behind the ops path's back.
  */
-export async function stampTrackOrgForCommit(
-    collection: LocalCollection,
-    payload: Record<string, unknown>,
-    readSetlistOrg: (setlistId: string) => Promise<{ exists: boolean; orgId?: unknown }>,
-): Promise<Record<string, unknown>> {
-    if (collection !== 'tracks') return payload
-    if (typeof payload.orgId === 'string' && payload.orgId.length > 0) return payload
-    const setlistId = payload.setlistId
-    if (typeof setlistId !== 'string' || setlistId.length === 0) return payload
-    try {
-        const parent = await readSetlistOrg(setlistId)
-        if (!parent.exists) return payload
-        return { ...payload, orgId: rowOrg(parent.orgId) }
-    } catch {
-        return payload
-    }
-}
+export const OPS_ONLY_COLLECTIONS: ReadonlySet<string> = new Set(['tracks', 'setlists'])
 
-/** Track fields the parent setlist's derived fields depend on: `type`
- *  (songCount) and the chart binding (fileIds). Exported for testing. */
-export function touchesDerivedTrackField(payload: Record<string, unknown>): boolean {
-    return 'type' in payload || 'fileId' in payload || 'songId' in payload
+/** The Firestore path of an outbox row. Refuses the ops-only collections. */
+export function outboxDocPath(row: Pick<OutboxRow, 'collection' | 'docId'>): string {
+    if (OPS_ONLY_COLLECTIONS.has(row.collection)) {
+        throw new RemoteDocMissingError(
+            `${row.collection} are saved through the setlist ops endpoint, not the outbox`,
+        )
+    }
+    return `${row.collection}/${row.docId}`
 }
 
 class ProductionFirestoreAdapter implements FirestoreAdapter {
     async commitOutboxRow(row: OutboxRow): Promise<CommitResult> {
         try {
             const firestoreDb = await getFirestoreDb()
+            const ref = doc(firestoreDb, outboxDocPath(row))
             switch (row.op) {
                 case 'set': {
-                    const ref = doc(firestoreDb, row.collection, row.docId)
-                    const payload = await stampTrackOrgForCommit(
-                        row.collection,
-                        row.payload,
-                        async (setlistId) => {
-                            const snap = await getDoc(doc(firestoreDb, 'setlists', setlistId))
-                            return snap.exists()
-                                ? { exists: true, orgId: (snap.data() as { orgId?: unknown }).orgId }
-                                : { exists: false }
-                        },
-                    )
-                    // setlist-ops-allowlist: remove in PR 3 (client outbox adapter)
                     await setDoc(ref, {
-                        ...payload,
+                        ...row.payload,
                         updatedAt: serverTimestamp(),
                     })
-                    // Cycle-9 Lane B: a track create through the grid editor
-                    // never maintains the parent setlist's `trackCount`.
-                    // Reconcile it here (the single client→Firestore chokepoint)
-                    // so the in-app add path can't deflate the counter. The
-                    // setlistId rides on the set payload; reconcile is
-                    // best-effort and never fails the committed track write.
-                    if (row.collection === 'tracks') {
-                        const setlistId = (row.payload as { setlistId?: unknown })
-                            .setlistId
-                        if (typeof setlistId === 'string' && setlistId) {
-                            await reconcileSetlistTrackCount(
-                                firestoreDb,
-                                setlistId,
-                                // Stamped from the parent setlist above.
-                                payload.orgId,
-                            )
-                        }
-                    }
                     // Re-read to capture the resolved server timestamp
-                    // (serverTimestamp() is a sentinel until commit). One
-                    // extra read per commit is acceptable — v50-06
-                    // reconciliation depends on this freshness.
+                    // (serverTimestamp() is a sentinel until commit).
                     const after = await getDoc(ref)
                     const ms = (
                         after.data() as { updatedAt?: Timestamp } | undefined
@@ -156,92 +98,37 @@ class ProductionFirestoreAdapter implements FirestoreAdapter {
                     return { updatedAt: ms }
                 }
                 case 'update': {
-                    const ref = doc(firestoreDb, row.collection, row.docId)
                     await runTransaction(firestoreDb, async (tx) => {
                         const snap = await tx.get(ref)
                         if (!snap.exists()) {
-                            // v51-h01: terminal failure, not transient. The doc
-                            // either was deleted or never landed (e.g. phantom
-                            // row from a flaky-signal addDoc that resolved
-                            // client-side without server confirmation). Engine
-                            // latches to 'failed' immediately — no retry.
+                            // v51-h01: terminal failure, not transient.
                             throw new RemoteDocMissingError(
-                                `This setlist isn't on the server (was deleted or never synced). Refresh your library.`,
+                                `This item isn't on the server (was deleted or never synced). Refresh your library.`,
                             )
                         }
-                        // T1.3 (2026-05-12): precondition check via the
-                        // exported `checkUpdatePrecondition` helper so the
-                        // semantics are unit-testable. Previously the inline
-                        // guard had a `remoteMs !== undefined &&` short-
-                        // circuit that silently passed when local expected
-                        // a stamp but remote had none — silent LWW on
-                        // pre-stamp legacy data. The helper closes that gap.
                         const remote = snap.data() as {
                             updatedAt?: Timestamp
                         }
-                        const remoteMs = remote.updatedAt?.toMillis()
                         const preconditionError = checkUpdatePrecondition(
                             row.expectedUpdatedAt,
-                            remoteMs,
+                            remote.updatedAt?.toMillis(),
                         )
                         if (preconditionError !== null) {
                             throw new VersionMismatchError(preconditionError)
                         }
-                        // setlist-ops-allowlist: remove in PR 3 (client outbox adapter)
                         tx.update(ref, {
                             ...row.payload,
                             updatedAt: serverTimestamp(),
                         })
                     })
                     const after = await getDoc(ref)
-                    const afterData = after.data() as
-                        | { updatedAt?: Timestamp; setlistId?: unknown; orgId?: unknown }
-                        | undefined
-                    // A track's type decides songCount and its chart decides
-                    // fileIds; re-derive the parent's fields when either moves.
-                    if (
-                        row.collection === 'tracks' &&
-                        touchesDerivedTrackField(row.payload) &&
-                        typeof afterData?.setlistId === 'string' &&
-                        afterData.setlistId
-                    ) {
-                        await reconcileSetlistTrackCount(
-                            firestoreDb,
-                            afterData.setlistId,
-                            afterData.orgId,
-                        )
-                    }
-                    const ms = afterData?.updatedAt?.toMillis()
+                    const ms = (
+                        after.data() as { updatedAt?: Timestamp } | undefined
+                    )?.updatedAt?.toMillis()
                     return { updatedAt: ms }
                 }
                 case 'delete': {
-                    const ref = doc(firestoreDb, row.collection, row.docId)
-                    // Cycle-9 Lane B: a track delete through the grid editor
-                    // never decrements the parent setlist's `trackCount` (the
-                    // 45-vs-30 drift shape). Capture the parent setlistId from
-                    // the doc BEFORE deleting — the delete outbox payload is
-                    // empty — then reconcile the count after the delete lands.
-                    let trackParentSetlistId: string | undefined
-                    let trackOrgId: unknown
-                    if (row.collection === 'tracks') {
-                        const snap = await getDoc(ref)
-                        const data = snap.exists()
-                            ? (snap.data() as { setlistId?: unknown; orgId?: unknown })
-                            : undefined
-                        if (typeof data?.setlistId === 'string' && data.setlistId) {
-                            trackParentSetlistId = data.setlistId
-                            trackOrgId = data.orgId
-                        }
-                    }
-                    // setlist-ops-allowlist: remove in PR 3 (client outbox adapter)
                     await deleteDoc(ref)
-                    if (trackParentSetlistId) {
-                        await reconcileSetlistTrackCount(
-                            firestoreDb,
-                            trackParentSetlistId,
-                            trackOrgId,
-                        )
-                    }
                     return {}
                 }
             }
@@ -452,6 +339,9 @@ export function shutdownSyncEngine(): void {
 export function SyncEngineBoot(): null {
     useEffect(() => {
         bootEngineOnce()
+        // Setlist sync PR 3: the setlist ops queue drains on every page, and
+        // the old outbox's setlist rows are converted on the first load.
+        void bootSetlistOps()
         // Engine intentionally outlives this component — booted once per
         // session and shut down on `beforeunload`. The cross-tab lock leases
         // make any premature shutdown safe (other tabs take over).

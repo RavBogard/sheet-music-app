@@ -2,21 +2,30 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { displayChartTitle } from '@/lib/format/chart-title'
-import { Timestamp } from "firebase/firestore"
 import { toast } from "sonner"
 import { useAuth } from "@/lib/auth-context"
 import { useOrg } from "@/lib/org/org-context"
-import { applyEdit } from "@/lib/local/write"
-import { rowOrg } from "@/lib/org/membership"
+import { appendRows } from "@/lib/setlist-ops-client/actions"
+import { getOpsClient } from "@/lib/setlist-ops-client/runtime"
 import { createSetlistService } from "@/lib/setlist-firebase"
 import type { DriveFile, Setlist, SetlistTrack } from "@/types/models"
 import { useT } from "@/i18n/client"
 
-// v60-08-01: this hook reads only denormalized parent-doc fields
-// (trackCount + fileIds). Order indices for new tracks are computed off
-// trackCount; duplicate detection uses fileIds. It never WRITES them: each
-// tracks/{id} write the engine commits re-derives the parent's derived
-// fields from the server (reconcileSetlistTrackCount).
+// This hook reads only denormalized parent-doc fields (fileIds, for the
+// duplicate warning). New rows go to the END of the setlist through the ops
+// endpoint (setlist sync PR 3), which renumbers and keeps the counts.
+
+/** A library pick as row fields for the ops client (explicit list). */
+function rowFromTrack(t: SetlistTrack): Record<string, unknown> {
+  return {
+    title: t.title,
+    type: "song",
+    ...(t.fileId ? { songId: t.fileId, fileId: t.fileId } : {}),
+    ...(t.fileName ? { fileName: t.fileName } : {}),
+    ...(t.key ? { key: t.key } : {}),
+    ...(t.notes ? { notes: t.notes } : {}),
+  }
+}
 
 /** Clean a filename into a display title (same logic as addSongsFromLibrary).
  *  `untitled` is the translated fallback title (hooks.untitledSong). */
@@ -139,47 +148,19 @@ export function useAddToSetlist() {
       type: 'song' as const,
     }))
 
-    const addedTrackIds = newTracks.map(t => t.id)
-    lastAddedTrackIdsRef.current = addedTrackIds
 
     // Close sheet optimistically
     setIsOpen(false)
 
-    const baseTrackCount = setlist.trackCount ?? 0
-
-    // v60-07-01: per-track top-level writes via the engine. The toast
-    // Undo action below is the user-facing undo UX (composite-undo cascade).
-    await Promise.all(
-      newTracks.map((t, i) =>
-        applyEdit(
-          {
-            op: "set",
-            collection: "tracks",
-            doc: {
-              id: t.id,
-              setlistId,
-              // Multi-tenant phase 2: the row carries its setlist's tenant.
-              orgId: rowOrg(setlist.orgId),
-              songId: t.fileId,
-              fileId: t.fileId,
-              order: baseTrackCount + i,
-              title: t.title,
-              type: "song",
-              ...(t.key ? { key: t.key } : {}),
-              ...(t.notes ? { notes: t.notes } : {}),
-            } as unknown as Record<string, unknown> & { id: string },
-          },
-          { withoutUndo: true },
-        ),
-      ),
-    )
-
-    // v60-07-01: parent-doc denormalization-only update. No `tracks`
-    // field — the embedded-array writer is decommissioned.
-    const expected = (setlist.updatedAt instanceof Timestamp) ? setlist.updatedAt : null
-    await setlistService.updateSetlist(setlistId, {
-      hydrated: true,
-    }, expected)
+    // Setlist sync PR 3: ONE batch of inserts at the end of that setlist,
+    // through the ops endpoint (the server stamps the tenant, renumbers and
+    // keeps the counts). Adding rows needs a connection (D2(a)).
+    const ids = await appendRows(setlistId, newTracks.map(rowFromTrack))
+    if (!ids) {
+      toast.error(t("setlistGrid.offlineStructureReason"))
+      return
+    }
+    lastAddedTrackIdsRef.current = ids
 
     // Build toast message
     let message: string
@@ -196,30 +177,17 @@ export function useAddToSetlist() {
 
     // Capture values for undo closure
     const undoSetlistId = setlistId
-    const undoTrackIds = [...addedTrackIds]
+    const undoTrackIds = [...ids]
 
     toast(message, {
       action: {
         label: t("hooks.undo"),
         onClick: async () => {
-          // v60-07-01: per-track deletes via the engine — inverse of the
-          // Promise.all applyEdit('set', ...) cascade above.
-          await Promise.all(
-            undoTrackIds.map((trackId) =>
-              applyEdit(
-                {
-                  op: "delete",
-                  collection: "tracks",
-                  docId: trackId,
-                  expectedUpdatedAt: undefined,
-                },
-                { withoutUndo: true },
-              ),
-            ),
+          // One batch of removes: the inverse of the inserts above.
+          await getOpsClient().enqueue(
+            undoSetlistId,
+            undoTrackIds.map((rowId) => ({ op: { kind: "remove" as const, rowId } })),
           )
-          // No parent-doc count write: each track delete re-derives the
-          // setlist's trackCount / songCount / fileIds from the server when
-          // it commits (reconcileSetlistTrackCount).
         },
       },
       duration: 5000,
@@ -227,7 +195,7 @@ export function useAddToSetlist() {
 
     // Clear pending songs
     setPendingSongs([])
-  }, [pendingSongs, setlistService, t, untitled])
+  }, [pendingSongs, t, untitled])
 
   // Allows adding songs without passing through the pendingSongs state
   const addDirectlyToSetlist = useCallback(async (setlistId: string, files: { id: string, name: string, mimeType: string, metadata?: any }[]) => {
@@ -253,39 +221,12 @@ export function useAddToSetlist() {
       type: 'song' as const,
     }))
 
-    const baseTrackCount = setlist.trackCount ?? 0
-
-    // v60-07-01: per-track top-level writes via the engine.
-    await Promise.all(
-      newTracks.map((t, i) =>
-        applyEdit(
-          {
-            op: "set",
-            collection: "tracks",
-            doc: {
-              id: t.id,
-              setlistId,
-              // Multi-tenant phase 2: the row carries its setlist's tenant.
-              orgId: rowOrg(setlist.orgId),
-              songId: t.fileId,
-              fileId: t.fileId,
-              order: baseTrackCount + i,
-              title: t.title,
-              type: "song",
-              ...(t.key ? { key: t.key } : {}),
-              ...(t.notes ? { notes: t.notes } : {}),
-            } as unknown as Record<string, unknown> & { id: string },
-          },
-          { withoutUndo: true },
-        ),
-      ),
-    )
-
-    // v60-07-01: parent-doc denormalization-only update. No `tracks` field.
-    const expected = (setlist.updatedAt instanceof Timestamp) ? setlist.updatedAt : null
-    await setlistService.updateSetlist(setlistId, {
-      hydrated: true,
-    }, expected)
+    // Setlist sync PR 3: one batch of inserts at the end (see addToSetlist).
+    const ids = await appendRows(setlistId, newTracks.map(rowFromTrack))
+    if (!ids) {
+      toast.error(t("setlistGrid.offlineStructureReason"))
+      return
+    }
 
     let message: string
     if (files.length === 1) {
@@ -300,7 +241,7 @@ export function useAddToSetlist() {
     }
 
     toast.success(message)
-  }, [allSetlists, setlistService, t, untitled])
+  }, [allSetlists, t, untitled])
 
   const createNewSetlist = useCallback(async (name: string) => {
     if (pendingSongs.length === 0) return

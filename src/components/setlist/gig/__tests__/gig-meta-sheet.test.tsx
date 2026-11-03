@@ -28,7 +28,7 @@ function renderSheet(org: 'crc' | 'brotherslazaroff', gig?: Gig) {
                 onOpenChange={() => {}}
                 initial={{ name: 'Show', gig }}
                 sets={[{ id: 'h1', title: 'Set 1', targetMinutes: gig?.setTargets?.[0]?.minutes }]}
-                applyEdit={applyEdit}
+                saveSetlist={applyEdit}
             />
         </OrgProvider>,
     )
@@ -49,7 +49,7 @@ describe('BET-5 gig fields in the details sheet', () => {
             fireEvent.click(screen.getByRole('button', { name: /save/i }))
         })
         expect(applyEdit).toHaveBeenCalledTimes(1)
-        expect(applyEdit.mock.calls[0][0].patch).toEqual({
+        expect(applyEdit.mock.calls[0][2]).toEqual({
             gig: { venue: 'The Hall', loadIn: '17:30', start: '20:00', setTargets: [{ headerRowId: 'h1', minutes: 45 }] },
         })
     })

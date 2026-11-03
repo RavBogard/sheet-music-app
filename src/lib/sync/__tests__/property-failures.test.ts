@@ -1034,208 +1034,6 @@ describe('v50-06-02: resolveConflict branches (mine / theirs)', () => {
     }, 30_000)
 })
 
-// v50-06-03: passive listener closes the 'theirs' staleness gap.
-// After 'theirs' resolution the loser's local row is still at the
-// pre-conflict baseline. Mounting startSnapshotListener on the loser's
-// LocalDb (with a thin shim that re-emits SharedRemote state via
-// SnapshotSubscriber) brings the local row up to the remote's winner-state
-// — closing the gap v50-06-02 explicitly deferred.
-//
-// Block also proves that the listener does NOT trigger ReconciliationProvider
-// (no new outbox row created by listener writes) — engine drain remains the
-// sole path to 'conflict' state.
-describe('v50-06-03: passive listener closes the "theirs" staleness gap', () => {
-    const dbAName = 'crc-listener-a'
-    const dbBName = 'crc-listener-b'
-
-    afterEach(async () => {
-        try {
-            await Dexie.delete(dbAName)
-        } catch {
-            // ignore
-        }
-        try {
-            await Dexie.delete(dbBName)
-        } catch {
-            // ignore
-        }
-    })
-
-    /** SnapshotSubscriber backed by SharedRemote. emitTracksFor(setlistId)
-     *  re-emits the current state of every tracks/* doc whose payload
-     *  carries setlistId == setlistId. */
-    class SharedRemoteSubscriber {
-        private trackHandlers = new Map<
-            string,
-            (changes: import('../snapshot-listener').TrackChange[]) => void
-        >()
-        constructor(private readonly remote: SharedRemote) {}
-
-        toSubscriber(): import('../snapshot-listener').SnapshotSubscriber {
-            return {
-                subscribeSetlist: () => () => {},
-                subscribeTracks: (setlistId, onChanges) => {
-                    this.trackHandlers.set(setlistId, onChanges)
-                    return () => {
-                        this.trackHandlers.delete(setlistId)
-                    }
-                },
-            }
-        }
-
-        emitTracksFor(setlistId: string): void {
-            const handler = this.trackHandlers.get(setlistId)
-            if (!handler) return
-            const changes: import('../snapshot-listener').TrackChange[] = []
-            for (const [key, doc] of this.remote.docs) {
-                const [collection, docId] = key.split('/')
-                if (collection !== 'tracks') continue
-                if (doc.payload.setlistId !== setlistId) continue
-                changes.push({
-                    type: 'modified',
-                    docId,
-                    data: { ...doc.payload, id: docId },
-                    updatedAt: doc.updatedAt,
-                })
-            }
-            if (changes.length > 0) handler(changes)
-        }
-    }
-
-    it("AC-4: loser's local row matches remote after 'theirs' + listener delivery", async () => {
-        const {
-            startSnapshotListener,
-        } = await import('../snapshot-listener')
-
-        // Reuse the v50-06-02 setupTwoWriterRace helper — but inline because
-        // the helper above is scoped to that describe block. Recreate the
-        // race inline.
-        const remote = new SharedRemote()
-        remote.seed('tracks', 't1', {
-            payload: { id: 't1', setlistId: 's1', title: 'orig' },
-            updatedAt: 1000,
-        })
-
-        const dbA = new LocalDb(dbAName)
-        const dbB = new LocalDb(dbBName)
-        await dbA.outbox.count()
-        await dbB.outbox.count()
-
-        const baseline = {
-            id: 't1',
-            setlistId: 's1',
-            order: 0,
-            title: 'orig',
-            updatedAt: 1000,
-        }
-        await dbA.tracks.put(baseline)
-        await dbB.tracks.put(baseline)
-
-        const now = Date.now()
-        await dbA.outbox.add({
-            status: 'pending',
-            scheduledFor: now,
-            op: 'update',
-            collection: 'tracks',
-            docId: 't1',
-            payload: { title: 'A-edit' },
-            expectedUpdatedAt: 1000,
-            attempts: 0,
-            createdAt: now,
-        })
-        await dbB.outbox.add({
-            status: 'pending',
-            scheduledFor: now,
-            op: 'update',
-            collection: 'tracks',
-            docId: 't1',
-            payload: { title: 'B-edit' },
-            expectedUpdatedAt: 1000,
-            attempts: 0,
-            createdAt: now,
-        })
-
-        const hub = new FakeChannelHub()
-        const lockA = new CrossTabLock('crc-listener-A', {
-            channelFactory: (n) => hub.create(n),
-            leaseMs: 5000,
-        })
-        const lockB = new CrossTabLock('crc-listener-B', {
-            channelFactory: (n) => hub.create(n),
-            leaseMs: 5000,
-        })
-
-        const engineA = new SyncEngine({
-            db: dbA,
-            adapter: new TwoWriterAdapter(remote),
-            lock: lockA,
-            isOnline: () => true,
-            onlineListener: { addListener: () => {}, removeListener: () => {} },
-        })
-        const engineB = new SyncEngine({
-            db: dbB,
-            adapter: new TwoWriterAdapter(remote),
-            lock: lockB,
-            isOnline: () => true,
-            onlineListener: { addListener: () => {}, removeListener: () => {} },
-        })
-
-        await engineA.start()
-        await flushTwoWriter()
-        await engineB.start()
-        await flushTwoWriter()
-
-        const aRows = await dbA.outbox.toArray()
-        const bRows = await dbB.outbox.toArray()
-        const aLost = aRows.length > 0
-        const loserDb = aLost ? dbA : dbB
-        const loserEngine = aLost ? engineA : engineB
-        const loserLocalId = (aLost ? aRows : bRows)[0].localId!
-
-        expect(loserEngine.getState()).toBe('conflict')
-
-        // Mount listener on loser's db, hooked to SharedRemote.
-        const subscriberAdapter = new SharedRemoteSubscriber(remote)
-        const stopListener = startSnapshotListener({
-            setlistId: 's1',
-            db: loserDb,
-            subscriber: subscriberAdapter.toSubscriber(),
-            logger: { warn: () => {} },
-        })
-
-        // Resolve 'theirs' — engine deletes failed outbox row.
-        await loserEngine.resolveConflict(loserLocalId, 'theirs')
-        await flushTwoWriter()
-
-        // BEFORE listener delivery: loser's local row is still at baseline
-        // (the v50-06-02 staleness gap).
-        const beforeDelivery = await loserDb.tracks.get('t1')
-        expect(beforeDelivery?.updatedAt).toBe(1000)
-        expect(beforeDelivery?.title).toBe('orig')
-
-        // Trigger listener delivery from SharedRemote — winner's state
-        // re-emits to the loser.
-        subscriberAdapter.emitTracksFor('s1')
-        await flushTwoWriter()
-
-        // AFTER listener delivery: loser's local row reflects remote.
-        const afterDelivery = await loserDb.tracks.get('t1')
-        const remoteWinner = remote.snapshot().get('tracks/t1')
-        expect(afterDelivery?.updatedAt).toBe(remoteWinner!.updatedAt)
-        expect(afterDelivery?.title).toBe(remoteWinner!.payload.title)
-
-        // Critical invariant: listener did NOT create an outbox row.
-        // (The engine's drain path is still the only road to 'conflict'.)
-        expect(await loserDb.outbox.count()).toBe(0)
-
-        stopListener()
-        engineA.shutdown()
-        engineB.shutdown()
-        dbA.close()
-        dbB.close()
-    }, 30_000)
-})
-
 // v50-06-03: sequential offline edits queue and drain in order on reconnect.
 // Single-writer airplane-mode flow: 5 sequential applyEdit calls on the
 // same track land in the outbox while offline (NetworkError on every
@@ -2088,477 +1886,6 @@ describe('v50-07-04: kitchen-sink under random failure mix', () => {
     }, 30_000)
 })
 
-// ─── v5h-01-01: track-edit save-loss reproduction ──────────────────────────
-//
-// Reproduces Daniel's UAT save-loss (path "P"): brand-new setlist, no legacy
-// embedded tracks, edit a song's key, sync indicator shows "Saved", navigate
-// away and back, key field is gone.
-//
-// The bug surface lives at the intersection of two production paths:
-//   1. engine.ts:264 gates writeback on `result.updatedAt !== undefined` —
-//      if the production adapter's getDoc readback races serverTimestamp
-//      resolution and returns `{}`, the engine SKIPS writeback and the local
-//      Dexie row's updatedAt stays at whatever applyEdit left it (undefined
-//      for a fresh track, or stale from before).
-//   2. snapshot-listener.ts:215 `(local.updatedAt ?? 0) >= change.updatedAt`
-//      underflows when `local.updatedAt` is undefined → 0 >= ts1 → false →
-//      falls through to `db.tracks.put(next)` → local row clobbered with
-//      cached pre-edit Firestore data (cached delivery has no key).
-//
-// The conjunction of #1 + #2 is the save-loss path. AC-1 deterministically
-// reproduces it (test SHOULD fail on master per hypothesis B; passes after
-// listener-LWW or engine-writeback fix lands in v5h-01-02). AC-2 is the
-// counter-test scoping the bug: with an adapter that returns a real
-// updatedAt, engine writeback lands and the listener guard skips correctly.
-//
-// Reuses module-scoped helpers: SharedRemote, FakeChannelHub, flushTwoWriter.
-// New helpers (UndefinedWritebackAdapter + CachedThenFreshSubscriber) are
-// scoped to this describe block — they model production adapter races and
-// Firestore SDK's initial-cache-then-fresh delivery semantics that the
-// v50-07-04 kitchen-sink (zero-latency in-memory adapters) didn't model.
-describe('v5h-01-01: track-edit save-loss reproduction (cached-then-fresh listener delivery)', () => {
-    beforeEach(async () => {
-        await resetDbForTests()
-    })
-    afterEach(async () => {
-        await resetDbForTests()
-    })
-
-    // Mirrors OfflineToggleAdapter's SharedRemote write path BUT always
-    // returns `{}` on success — modeling the production adapter's
-    // getDoc-after-commit hitting Firestore's local cache before
-    // serverTimestamp() resolves on the server. This is the engine-side
-    // half of the bug: engine.ts:264 gates writeback on `result.updatedAt
-    // !== undefined`, so the local Dexie row's updatedAt never lands.
-    class UndefinedWritebackAdapter implements FirestoreAdapter {
-        writes: Array<{ docId: string; payload: Record<string, unknown> }> = []
-        constructor(private readonly remote: SharedRemote) {}
-
-        async commitOutboxRow(
-            row: OutboxRow,
-        ): Promise<{ updatedAt?: number }> {
-            const key = `${row.collection}/${row.docId}`
-            const existing = this.remote.docs.get(key)
-            const ts = this.remote.nextTimestamp()
-            if (row.op === 'set') {
-                this.remote.docs.set(key, {
-                    payload: { ...row.payload, id: row.docId },
-                    updatedAt: ts,
-                })
-            } else if (row.op === 'update') {
-                this.remote.docs.set(key, {
-                    payload: { ...(existing?.payload ?? {}), ...row.payload },
-                    updatedAt: ts,
-                })
-            } else {
-                this.remote.docs.delete(key)
-            }
-            this.writes.push({
-                docId: row.docId,
-                payload: { ...row.payload },
-            })
-            // The bug condition: server commit succeeded, but adapter cannot
-            // surface the resolved updatedAt → engine skips writeback.
-            return {}
-        }
-
-        async refreshAuthToken(): Promise<void> {}
-        async readDoc(
-            collection: LocalCollection,
-            docId: string,
-        ): Promise<{ data: Record<string, unknown>; updatedAt: number } | null> {
-            const k = `${collection}/${docId}`
-            const doc = this.remote.docs.get(k)
-            return doc ? { data: { ...doc.payload }, updatedAt: doc.updatedAt } : null
-        }
-    }
-
-    // Counter-test adapter: returns a real updatedAt so engine writeback
-    // lands and the listener's LWW guard has a non-undefined local timestamp
-    // to compare against. Used by AC-2 to scope the bug to the conjunction
-    // of "adapter returned undefined" AND "listener underflows undefined".
-    class TimestampedWritebackAdapter implements FirestoreAdapter {
-        writes: Array<{ docId: string; payload: Record<string, unknown> }> = []
-        constructor(private readonly remote: SharedRemote) {}
-
-        async commitOutboxRow(
-            row: OutboxRow,
-        ): Promise<{ updatedAt?: number }> {
-            const key = `${row.collection}/${row.docId}`
-            const existing = this.remote.docs.get(key)
-            const ts = this.remote.nextTimestamp()
-            if (row.op === 'set') {
-                this.remote.docs.set(key, {
-                    payload: { ...row.payload, id: row.docId },
-                    updatedAt: ts,
-                })
-                this.writes.push({ docId: row.docId, payload: { ...row.payload } })
-                return { updatedAt: ts }
-            }
-            if (row.op === 'update') {
-                this.remote.docs.set(key, {
-                    payload: { ...(existing?.payload ?? {}), ...row.payload },
-                    updatedAt: ts,
-                })
-                this.writes.push({ docId: row.docId, payload: { ...row.payload } })
-                return { updatedAt: ts }
-            }
-            this.remote.docs.delete(key)
-            return {}
-        }
-
-        async refreshAuthToken(): Promise<void> {}
-        async readDoc(
-            collection: LocalCollection,
-            docId: string,
-        ): Promise<{ data: Record<string, unknown>; updatedAt: number } | null> {
-            const k = `${collection}/${docId}`
-            const doc = this.remote.docs.get(k)
-            return doc ? { data: { ...doc.payload }, updatedAt: doc.updatedAt } : null
-        }
-    }
-
-    // SnapshotSubscriber that captures a frozen snapshot of SharedRemote at
-    // construction time and fires it synchronously on `subscribeTracks`.
-    // Models Firestore SDK's initial cache delivery: the listener's first
-    // `onChanges` callback fires with whatever Firestore had cached locally
-    // BEFORE the subscription started — which can be staler than the user's
-    // most-recent local commit. Subsequent fresh deliveries from the server
-    // are gated behind explicit `pushFreshDelivery()` calls so tests can
-    // reason deterministically about the cache-vs-fresh window.
-    //
-    // The v50-07-04 kitchen-sink's SharedRemoteSubscriber didn't model this
-    // — it re-emitted the LIVE SharedRemote state on every `emitTracksFor`
-    // call, which is "fresh-only" delivery. The cache-vs-fresh staleness is
-    // the fidelity gap that allowed the save-loss to ship undetected.
-    class CachedThenFreshSubscriber {
-        private trackHandlers = new Map<
-            string,
-            (changes: import('../snapshot-listener').TrackChange[]) => void
-        >()
-        // Frozen snapshot of `tracks/*` docs at construction time, by setlistId.
-        private cachedTracksBySetlist = new Map<
-            string,
-            Array<{
-                docId: string
-                data: Record<string, unknown>
-                updatedAt: number
-            }>
-        >()
-
-        constructor(private readonly remote: SharedRemote) {
-            // Capture the frozen snapshot of every tracks/* doc, indexed by
-            // setlistId so subscribeTracks can deliver only the relevant
-            // subset on first cache delivery.
-            for (const [key, doc] of remote.docs) {
-                const [collection, docId] = key.split('/')
-                if (collection !== 'tracks') continue
-                const setlistId = doc.payload.setlistId as string | undefined
-                if (!setlistId) continue
-                const arr = this.cachedTracksBySetlist.get(setlistId) ?? []
-                arr.push({
-                    docId,
-                    data: { ...doc.payload, id: docId },
-                    updatedAt: doc.updatedAt,
-                })
-                this.cachedTracksBySetlist.set(setlistId, arr)
-            }
-        }
-
-        toSubscriber(): import('../snapshot-listener').SnapshotSubscriber {
-            return {
-                subscribeSetlist: () => () => {},
-                subscribeTracks: (setlistId, onChanges) => {
-                    this.trackHandlers.set(setlistId, onChanges)
-                    // Synchronously fire the frozen cached state — mirrors
-                    // Firestore SDK firing initial cache delivery on
-                    // subscribe before any network round-trip.
-                    const cached = this.cachedTracksBySetlist.get(setlistId) ?? []
-                    if (cached.length > 0) {
-                        const changes: import('../snapshot-listener').TrackChange[] =
-                            cached.map((c) => ({
-                                type: 'modified',
-                                docId: c.docId,
-                                data: c.data,
-                                updatedAt: c.updatedAt,
-                            }))
-                        // Defer to next microtask so listener's outer
-                        // subscribeTracks call returns before the handler
-                        // fires (matches Firestore SDK behavior).
-                        Promise.resolve().then(() => onChanges(changes))
-                    }
-                    return () => {
-                        this.trackHandlers.delete(setlistId)
-                    }
-                },
-            }
-        }
-
-        /** Test-only: trigger a "fresh from server" delivery for a setlist
-         *  using the CURRENT live SharedRemote state. Not used by the
-         *  reproduction tests below — those rely on cached delivery alone
-         *  to clobber — but exposed for future tests that want to model
-         *  the post-cache fresh-delivery race window. */
-        pushFreshDelivery(setlistId: string): void {
-            const handler = this.trackHandlers.get(setlistId)
-            if (!handler) return
-            const changes: import('../snapshot-listener').TrackChange[] = []
-            for (const [key, doc] of this.remote.docs) {
-                const [collection, docId] = key.split('/')
-                if (collection !== 'tracks') continue
-                if (doc.payload.setlistId !== setlistId) continue
-                changes.push({
-                    type: 'modified',
-                    docId,
-                    data: { ...doc.payload, id: docId },
-                    updatedAt: doc.updatedAt,
-                })
-            }
-            if (changes.length > 0) handler(changes)
-        }
-    }
-
-    // Boot a SyncEngine against the singleton getDb() (the same db
-    // applyEdit() uses), wired to the supplied adapter. Returns a teardown.
-    async function bootEngine(adapter: FirestoreAdapter): Promise<{
-        engine: SyncEngine
-        cleanup: () => void
-    }> {
-        const hub = new FakeChannelHub()
-        const lock = new CrossTabLock('crc-v5h-01-01', {
-            channelFactory: (n) => hub.create(n),
-            leaseMs: 5000,
-        })
-        const engine = new SyncEngine({
-            adapter,
-            lock,
-            isOnline: () => true,
-            onlineListener: { addListener: () => {}, removeListener: () => {} },
-        })
-        await engine.start()
-        await flushTwoWriter()
-        return {
-            engine,
-            cleanup: () => {
-                try {
-                    engine.shutdown()
-                } catch {
-                    /* ignore */
-                }
-            },
-        }
-    }
-
-    // AC-1 (regression lock): models Daniel's exact flow against the
-    // UndefinedWritebackAdapter. Was an expected-failure on master pre-fix
-    // (engine skipped writeback → local row's updatedAt stayed undefined →
-    // listener's LWW underflow `(undefined ?? 0) >= remoteTs` fell open →
-    // cached delivery clobbered the user's edit). Now passes after
-    // v5h-01-02 fix (B): snapshot-listener.ts strict-equality guard at
-    // both branches preserves local rows under uncertainty. Locks the bug:
-    // any future regression that re-introduces the underflow surfaces here.
-    it(
-        'AC-1: cached snapshot delivery preserves local edit when engine writeback skipped (regression lock for v5h-01-02 listener fix)',
-        async () => {
-            const remote = new SharedRemote()
-            const adapter = new UndefinedWritebackAdapter(remote)
-            const { engine, cleanup } = await bootEngine(adapter)
-
-            try {
-                // Step 1: applyEdit set the new track — fresh setlist, no key.
-                // Mirrors Daniel's flow of adding "Modeh Ani" without a key.
-                await applyEdit({
-                    op: 'set',
-                    collection: 'tracks',
-                    doc: {
-                        id: 't1',
-                        setlistId: 's1',
-                        order: 0,
-                        songId: 'song1',
-                        title: 'Modeh Ani',
-                    } as never,
-                })
-
-                // Drain to remote. UndefinedWritebackAdapter writes to
-                // SharedRemote with a real ts but returns {} → engine skips
-                // writeback → local Dexie t1.updatedAt stays undefined.
-                await engine.pump()
-                await flushTwoWriter()
-
-                // Sanity: local Dexie row exists and has the title; remote
-                // received the write; engine writeback was skipped (local
-                // updatedAt still undefined).
-                const afterSet = await getDb().tracks.get('t1')
-                expect(afterSet?.title).toBe('Modeh Ani')
-                expect(afterSet?.updatedAt).toBeUndefined()
-                expect(adapter.writes.length).toBe(1)
-                expect(remote.docs.has('tracks/t1')).toBe(true)
-                expect(await getDb().outbox.count()).toBe(0)
-
-                // Step 2: capture SharedRemote state HERE — this is what the
-                // snapshot listener's initial cache delivery will replay
-                // when the user navigates back to the setlist later. The
-                // payload at this point has no key field.
-                const cachedRemoteForListener = new SharedRemote()
-                for (const [k, v] of remote.docs) {
-                    cachedRemoteForListener.docs.set(k, {
-                        payload: { ...v.payload },
-                        updatedAt: v.updatedAt,
-                    })
-                }
-
-                // Step 3: applyEdit update the key — Daniel's "set Modeh Ani
-                // key to E". Pass expectedUpdatedAt: undefined (since local
-                // row's updatedAt is undefined — exactly what the cell
-                // commit path passes when row.updatedAt is unset).
-                await applyEdit({
-                    op: 'update',
-                    collection: 'tracks',
-                    docId: 't1',
-                    patch: { key: 'E' } as never,
-                    expectedUpdatedAt: undefined,
-                })
-
-                // Local Dexie should now carry key='E' (synchronous put
-                // inside applyEdit's txn) — confirm the local edit landed.
-                const afterEditLocal = await getDb().tracks.get('t1')
-                expect(afterEditLocal?.key).toBe('E')
-
-                // Drain. Adapter writes to SharedRemote (server now has
-                // key='E'); writeback skipped again.
-                await engine.pump()
-                await flushTwoWriter()
-
-                // Sanity: outbox drained; remote now has key='E'; local
-                // updatedAt still undefined (writeback skipped twice).
-                expect(await getDb().outbox.count()).toBe(0)
-                const remoteAfterEdit = remote.docs.get('tracks/t1')
-                expect(remoteAfterEdit?.payload.key).toBe('E')
-                const localAfterEdit = await getDb().tracks.get('t1')
-                expect(localAfterEdit?.key).toBe('E')
-                expect(localAfterEdit?.updatedAt).toBeUndefined()
-
-                // Step 4: simulate page-navigation by mounting the snapshot
-                // listener with the CachedThenFreshSubscriber holding the
-                // PRE-edit cached state captured in step 2. The listener's
-                // initial `subscribeTracks` callback delivers that cached
-                // state (no key field, older updatedAt). With local
-                // updatedAt undefined, the LWW guard fails open and clobbers.
-                const { startSnapshotListener } = await import('../snapshot-listener')
-                const subscriber = new CachedThenFreshSubscriber(
-                    cachedRemoteForListener,
-                )
-                const stopListener = startSnapshotListener({
-                    setlistId: 's1',
-                    db: getDb(),
-                    subscriber: subscriber.toSubscriber(),
-                    logger: { warn: () => {} },
-                })
-
-                // Wait for the deferred microtask firing the cached delivery
-                // and the listener's rw transaction to complete.
-                await flushTwoWriter()
-
-                // ⚠️ THE BUG: assertion on master fails because the cached
-                // pre-edit delivery clobbered the local key='E'.
-                const localAfterListener = await getDb().tracks.get('t1')
-                expect(localAfterListener?.key).toBe('E')
-
-                stopListener()
-            } finally {
-                cleanup()
-            }
-        },
-        30_000,
-    )
-
-    // AC-2 (counter-test, passes on master): same flow but adapter returns
-    // a real updatedAt → engine writeback lands → local Dexie carries a
-    // valid updatedAt → snapshot listener's LWW guard skips correctly when
-    // the cached delivery's updatedAt is older. Proves the bug is the
-    // CONJUNCTION of "adapter returned undefined" AND "listener underflows
-    // undefined" — not a general listener regression.
-    it('AC-2: counter-test — listener LWW guard works when engine writeback lands', async () => {
-        const remote = new SharedRemote()
-        const adapter = new TimestampedWritebackAdapter(remote)
-        const { engine, cleanup } = await bootEngine(adapter)
-
-        try {
-            // Same shape as AC-1: set track, drain, capture cached state,
-            // update key, drain, mount listener with pre-edit cached state.
-            await applyEdit({
-                op: 'set',
-                collection: 'tracks',
-                doc: {
-                    id: 't1',
-                    setlistId: 's1',
-                    order: 0,
-                    songId: 'song1',
-                    title: 'Modeh Ani',
-                } as never,
-            })
-            await engine.pump()
-            await flushTwoWriter()
-
-            // With timestamped writeback, local row gets the server ts
-            // written back inside the engine's atomic outbox+entity tx.
-            const afterSet = await getDb().tracks.get('t1')
-            expect(afterSet?.updatedAt).toBeDefined()
-            expect(typeof afterSet?.updatedAt).toBe('number')
-
-            // Capture cached state for listener (pre-edit).
-            const cachedRemoteForListener = new SharedRemote()
-            for (const [k, v] of remote.docs) {
-                cachedRemoteForListener.docs.set(k, {
-                    payload: { ...v.payload },
-                    updatedAt: v.updatedAt,
-                })
-            }
-
-            // Edit key. Local has a real updatedAt → pass it through.
-            await applyEdit({
-                op: 'update',
-                collection: 'tracks',
-                docId: 't1',
-                patch: { key: 'E' } as never,
-                expectedUpdatedAt: afterSet!.updatedAt,
-            })
-            await engine.pump()
-            await flushTwoWriter()
-
-            // Local row now has a NEWER updatedAt than the cached snapshot
-            // because the engine writeback landed after the second commit.
-            const localAfterEdit = await getDb().tracks.get('t1')
-            expect(localAfterEdit?.key).toBe('E')
-            expect(localAfterEdit?.updatedAt).toBeGreaterThan(
-                afterSet!.updatedAt!,
-            )
-
-            // Mount listener with the PRE-edit cached state. Cached
-            // delivery's updatedAt is OLDER than local's — LWW guard skips.
-            const { startSnapshotListener } = await import('../snapshot-listener')
-            const subscriber = new CachedThenFreshSubscriber(
-                cachedRemoteForListener,
-            )
-            const stopListener = startSnapshotListener({
-                setlistId: 's1',
-                db: getDb(),
-                subscriber: subscriber.toSubscriber(),
-                logger: { warn: () => {} },
-            })
-            await flushTwoWriter()
-
-            // Local edit preserved — guard worked correctly.
-            const localAfterListener = await getDb().tracks.get('t1')
-            expect(localAfterListener?.key).toBe('E')
-
-            stopListener()
-        } finally {
-            cleanup()
-        }
-    }, 30_000)
-})
-
 // ─── v5h3-01-03: pending-outbox expectedUpdatedAt threading ─────────────────
 //
 // H-SL-7 regression: when the engine writes back a server-stamped
@@ -2676,7 +2003,7 @@ describe('v5h3-01-03: pending-outbox expectedUpdatedAt threading', () => {
     it('Case 1 (AC-2): rapid same-doc edits drain without phantom VersionMismatch', async () => {
         const remote = new SharedRemote()
         // Seed remote at a known baseline.
-        remote.seed('tracks', 't1', {
+        remote.seed('songs', 't1', {
             payload: { id: 't1', setlistId: 's1', title: 'orig' },
             updatedAt: 1000,
         })
@@ -2685,7 +2012,7 @@ describe('v5h3-01-03: pending-outbox expectedUpdatedAt threading', () => {
         // committed update threads expectedUpdatedAt=1000 (the editor would
         // capture this from useLiveQuery in production).
         const db = getDb()
-        await db.tracks.put({
+        await (db.songs as unknown as { put(r: unknown): Promise<unknown> }).put({
             id: 't1',
             setlistId: 's1',
             order: 0,
@@ -2720,7 +2047,7 @@ describe('v5h3-01-03: pending-outbox expectedUpdatedAt threading', () => {
             await applyEdit(
                 {
                     op: 'update',
-                    collection: 'tracks',
+                    collection: 'songs',
                     docId: 't1',
                     patch: { title },
                     expectedUpdatedAt: 1000,
@@ -2760,8 +2087,8 @@ describe('v5h3-01-03: pending-outbox expectedUpdatedAt threading', () => {
         expect(adapter.seen[2].expectedUpdatedAt).not.toBe(1000)
         expect(adapter.seen[2].expectedUpdatedAt).toBeDefined()
         // Local row's final updatedAt reflects the LATEST commit.
-        const localFinal = await db.tracks.get('t1')
-        const remoteFinal = remote.snapshot().get('tracks/t1')
+        const localFinal = await db.songs.get('t1')
+        const remoteFinal = remote.snapshot().get('songs/t1')
         expect(localFinal?.updatedAt).toBe(remoteFinal?.updatedAt)
         expect(remoteFinal?.payload.title).toBe('edit-3')
 
@@ -2770,13 +2097,13 @@ describe('v5h3-01-03: pending-outbox expectedUpdatedAt threading', () => {
 
     it('Case 2 (AC-3): genuine multi-writer scenario STILL triggers VersionMismatch reconciliation', async () => {
         const remote = new SharedRemote()
-        remote.seed('tracks', 't1', {
+        remote.seed('songs', 't1', {
             payload: { id: 't1', setlistId: 's1', title: 'orig' },
             updatedAt: 1000,
         })
 
         const db = getDb()
-        await db.tracks.put({
+        await (db.songs as unknown as { put(r: unknown): Promise<unknown> }).put({
             id: 't1',
             setlistId: 's1',
             order: 0,
@@ -2812,7 +2139,7 @@ describe('v5h3-01-03: pending-outbox expectedUpdatedAt threading', () => {
             await applyEdit(
                 {
                     op: 'update',
-                    collection: 'tracks',
+                    collection: 'songs',
                     docId: 't1',
                     patch: { title },
                     expectedUpdatedAt: 1000,
@@ -2839,24 +2166,24 @@ describe('v5h3-01-03: pending-outbox expectedUpdatedAt threading', () => {
 
     it('Case 3 (AC-1 boundary): cross-doc pending rows are NOT touched by threading', async () => {
         const remote = new SharedRemote()
-        remote.seed('tracks', 'track-A', {
+        remote.seed('songs', 'track-A', {
             payload: { id: 'track-A', setlistId: 's1', title: 'A-orig' },
             updatedAt: 1000,
         })
-        remote.seed('tracks', 'track-B', {
+        remote.seed('songs', 'track-B', {
             payload: { id: 'track-B', setlistId: 's1', title: 'B-orig' },
             updatedAt: 1500,
         })
 
         const db = getDb()
-        await db.tracks.put({
+        await (db.songs as unknown as { put(r: unknown): Promise<unknown> }).put({
             id: 'track-A',
             setlistId: 's1',
             order: 0,
             title: 'A-orig',
             updatedAt: 1000,
         })
-        await db.tracks.put({
+        await (db.songs as unknown as { put(r: unknown): Promise<unknown> }).put({
             id: 'track-B',
             setlistId: 's1',
             order: 1,
@@ -2889,7 +2216,7 @@ describe('v5h3-01-03: pending-outbox expectedUpdatedAt threading', () => {
         await applyEdit(
             {
                 op: 'update',
-                collection: 'tracks',
+                collection: 'songs',
                 docId: 'track-A',
                 patch: { title: 'A-edit' },
                 expectedUpdatedAt: 1000,
@@ -2899,7 +2226,7 @@ describe('v5h3-01-03: pending-outbox expectedUpdatedAt threading', () => {
         await applyEdit(
             {
                 op: 'update',
-                collection: 'tracks',
+                collection: 'songs',
                 docId: 'track-B',
                 patch: { title: 'B-edit' },
                 expectedUpdatedAt: 1500,
@@ -2937,8 +2264,8 @@ describe('v5h3-01-03: pending-outbox expectedUpdatedAt threading', () => {
         expect(seenB).toBeDefined()
         expect(seenB!.expectedUpdatedAt).toBe(1500)
         // Both edits landed on the remote.
-        const remoteA = remote.snapshot().get('tracks/track-A')
-        const remoteB = remote.snapshot().get('tracks/track-B')
+        const remoteA = remote.snapshot().get('songs/track-A')
+        const remoteB = remote.snapshot().get('songs/track-B')
         expect(remoteA?.payload.title).toBe('A-edit')
         expect(remoteB?.payload.title).toBe('B-edit')
 

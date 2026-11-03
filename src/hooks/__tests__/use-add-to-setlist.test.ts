@@ -4,11 +4,14 @@ import { renderHook, act, waitFor } from '@testing-library/react'
 // --- Mocks ---
 
 const mockToast = vi.fn()
+const mockToastError = vi.fn()
 vi.mock('sonner', () => ({
-  toast: (...args: unknown[]) => mockToast(...args),
+  toast: Object.assign((...args: unknown[]) => mockToast(...args), {
+    error: (...args: unknown[]) => mockToastError(...args),
+    success: (...args: unknown[]) => mockToast(...args),
+  }),
 }))
 
-const mockUpdateSetlist = vi.fn().mockResolvedValue(undefined)
 const mockSubscribeToAllSetlists = vi.fn()
 const mockSubscribeToSetlist = vi.fn()
 
@@ -16,16 +19,18 @@ vi.mock('@/lib/setlist-firebase', () => ({
   createSetlistService: () => ({
     subscribeToAllSetlists: mockSubscribeToAllSetlists,
     subscribeToSetlist: mockSubscribeToSetlist,
-    updateSetlist: mockUpdateSetlist,
   }),
 }))
 
-// v60-07-01: this hook now writes per-track via applyEdit to the top-level
-// `tracks/{id}` collection, plus a denormalization-only parent-doc update
-// via updateSetlist. Tests assert against BOTH mocks.
-const mockApplyEdit = vi.fn().mockResolvedValue(undefined)
-vi.mock('@/lib/local/write', () => ({
-  applyEdit: (...args: unknown[]) => mockApplyEdit(...args),
+// Setlist sync PR 3: rows are appended through the ops client (one batch of
+// inserts at the end); undo is one batch of removes. No parent-doc write.
+const mockAppendRows = vi.fn(async (_setlistId: string, rows: unknown[]) => rows.map((_r, i) => `new-${i}`))
+vi.mock('@/lib/setlist-ops-client/actions', () => ({
+  appendRows: (setlistId: string, rows: unknown[]) => mockAppendRows(setlistId, rows),
+}))
+const mockEnqueue = vi.fn().mockResolvedValue('b')
+vi.mock('@/lib/setlist-ops-client/runtime', () => ({
+  getOpsClient: () => ({ enqueue: mockEnqueue }),
 }))
 
 const mockAuth: { user: { uid: string; displayName: string } | null; isAdmin: boolean; isBandLeader: boolean; isMusician: boolean } = {
@@ -199,7 +204,7 @@ describe('useAddToSetlist', () => {
   // --- addToSetlist ---
 
   describe('addToSetlist', () => {
-    it('builds tracks with correct ID format and writes them to top-level via applyEdit', async () => {
+    it('appends the picks as ONE batch of explicit row fields (no ids, stamps, order or tenant from the client)', async () => {
       const { result } = renderHook(() => useAddToSetlist())
       const file = makeDriveFile({ id: 'drive-abc', name: 'My_Song.pdf', metadata: { key: 'Am' } })
       const setlist = makeSetlist({ id: 'sl-1' })
@@ -212,48 +217,23 @@ describe('useAddToSetlist', () => {
         await result.current.addToSetlist('sl-1', setlist)
       })
 
-      // v60-07-01: per-track writes via applyEdit('set', 'tracks', ...) — NOT
-      // an embedded `tracks` array on the parent doc.
-      expect(mockApplyEdit).toHaveBeenCalledOnce()
-      const [edit, opts] = mockApplyEdit.mock.calls[0]
-      expect(edit.op).toBe('set')
-      expect(edit.collection).toBe('tracks')
-      expect(edit.doc.id).toMatch(/^track-\d+-drive-abc-0$/)
-      expect(edit.doc.title).toBe('My Song')
-      expect(edit.doc.fileId).toBe('drive-abc')
-      expect(edit.doc.songId).toBe('drive-abc')
-      expect(edit.doc.setlistId).toBe('sl-1')
-      expect(edit.doc.order).toBe(0)
-      expect(edit.doc.type).toBe('song')
-      expect(edit.doc.key).toBe('Am')
-      expect(opts).toEqual({ withoutUndo: true })
-
-      // Parent doc gets denormalization-only update — no `tracks` field.
-      expect(mockUpdateSetlist).toHaveBeenCalledOnce()
-      const [id, data] = mockUpdateSetlist.mock.calls[0]
+      expect(mockAppendRows).toHaveBeenCalledOnce()
+      const [id, rows] = mockAppendRows.mock.calls[0]
       expect(id).toBe('sl-1')
-      expect(data.tracks).toBeUndefined()
-      // Derived counts are re-derived server-side after each track commit.
-      expect(data.trackCount).toBeUndefined()
-      expect(data.hydrated).toBe(true)
+      expect(rows).toEqual([
+        { title: 'My Song', type: 'song', songId: 'drive-abc', fileId: 'drive-abc', fileName: 'My_Song.pdf', key: 'Am' },
+      ])
     })
 
-    it('multi-tenant P2: every added track carries the setlist orgId (missing -> crc)', async () => {
+    it('offline: nothing is queued and the author is told why', async () => {
+      mockAppendRows.mockResolvedValueOnce(null as never)
       const { result } = renderHook(() => useAddToSetlist())
-      const files = [makeDriveFile({ id: 'f1' }), makeDriveFile({ id: 'f2' })]
-
-      act(() => { result.current.openForSongs(files) })
+      act(() => { result.current.openForSongs([makeDriveFile()]) })
       await act(async () => {
-        await result.current.addToSetlist('bl-1', makeSetlist({ id: 'bl-1', orgId: 'brotherslazaroff' }))
+        await result.current.addToSetlist('sl-1', makeSetlist())
       })
-      expect(mockApplyEdit.mock.calls.map(([e]) => e.doc.orgId)).toEqual(['brotherslazaroff', 'brotherslazaroff'])
-
-      mockApplyEdit.mockClear()
-      act(() => { result.current.openForSongs([makeDriveFile({ id: 'f3' })]) })
-      await act(async () => {
-        await result.current.addToSetlist('c-1', makeSetlist({ id: 'c-1' }))
-      })
-      expect(mockApplyEdit.mock.calls[0][0].doc.orgId).toBe('crc')
+      expect(mockToast).not.toHaveBeenCalled()
+      expect(mockToastError).toHaveBeenCalledOnce()
     })
 
     it('closes the sheet after adding', async () => {
@@ -306,12 +286,8 @@ describe('useAddToSetlist', () => {
         await result.current.addToSetlist('sl-1', setlist)
       })
 
-      // Should still add (not blocked) — 1 new applyEdit call + 1 parent update.
-      expect(mockApplyEdit).toHaveBeenCalledOnce()
-      expect(mockUpdateSetlist).toHaveBeenCalledOnce()
-      const data = mockUpdateSetlist.mock.calls[0][1]
-      expect(data.tracks).toBeUndefined()
-      expect(data.trackCount).toBeUndefined()
+      // Should still add (not blocked).
+      expect(mockAppendRows).toHaveBeenCalledOnce()
 
       // Toast should mention duplicate
       expect(mockToast.mock.calls[0][0]).toContain('already in this setlist')
@@ -343,7 +319,7 @@ describe('useAddToSetlist', () => {
   // --- Undo ---
 
   describe('undo', () => {
-    it('deletes only the specific added track IDs via applyEdit (engine-path)', async () => {
+    it('removes only the rows it added, as one batch', async () => {
       const { result } = renderHook(() => useAddToSetlist())
       const file = makeDriveFile({ id: 'file-new' })
       const setlist = makeSetlist({
@@ -365,26 +341,12 @@ describe('useAddToSetlist', () => {
       expect(toastOptions.action).toBeDefined()
       expect(toastOptions.action.label).toBe('Undo')
 
-      // Capture the added track ID from the first applyEdit('set', ...) call.
-      const addedTrackId = mockApplyEdit.mock.calls[0][0].doc.id
-
-      // Clear and execute undo.
-      mockApplyEdit.mockClear()
-      mockUpdateSetlist.mockClear()
       await act(async () => {
         await toastOptions.action.onClick()
       })
 
-      // v60-07-01: undo issues applyEdit('delete', 'tracks', ...) per added id.
-      expect(mockApplyEdit).toHaveBeenCalledOnce()
-      const [edit, opts] = mockApplyEdit.mock.calls[0]
-      expect(edit.op).toBe('delete')
-      expect(edit.collection).toBe('tracks')
-      expect(edit.docId).toBe(addedTrackId)
-      expect(opts).toEqual({ withoutUndo: true })
-
-      // No parent-doc count write: the delete re-derives it server-side.
-      expect(mockUpdateSetlist).not.toHaveBeenCalled()
+      expect(mockEnqueue).toHaveBeenCalledOnce()
+      expect(mockEnqueue).toHaveBeenCalledWith('sl-1', [{ op: { kind: 'remove', rowId: 'new-0' } }])
     })
   })
 })

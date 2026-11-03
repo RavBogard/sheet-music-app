@@ -124,6 +124,42 @@ export interface Tombstone {
     originalUpdatedAt?: number
 }
 
+/**
+ * One queued edit to a setlist, waiting for (or refused by) the server's
+ * /api/setlists/{id}/ops endpoint (src/lib/setlist-ops-client). Intents that
+ * share a `batchKey` are one user action and travel as ONE batch, in
+ * `localId` order. `op` is the wire op exactly as the server takes it.
+ */
+export type SetlistIntentStatus = 'pending' | 'sending' | 'refused'
+
+export interface SetlistIntentRefusal {
+    reason: string
+    field?: string
+    server?: unknown
+    mine?: unknown
+    message?: string
+}
+
+export interface SetlistIntent {
+    localId?: number
+    setlistId: string
+    batchKey: string
+    /** Bumped by "Try again" so the server does not replay the stored answer. */
+    attempt: number
+    op: Record<string, unknown> & { kind: string }
+    status: SetlistIntentStatus
+    createdAt: number
+    /** What the author would call the row (for the refused list). Never sent. */
+    label?: string
+    refusal?: SetlistIntentRefusal
+    /**
+     * Converted from the old outbox (PR 3 migration). The base of a migrated
+     * edit is resolved against the server just before it is sent: the old
+     * outbox kept only the `updatedAt` it expected, not the field values.
+     */
+    migrated?: { expectedUpdatedAt?: number; from: 'set' | 'update' | 'delete' }
+}
+
 export type EditDescriptor =
     | {
           op: 'set'

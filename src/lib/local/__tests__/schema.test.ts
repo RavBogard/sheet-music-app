@@ -13,10 +13,10 @@ describe('LocalDb schema (Bug 2 fix 2026-05-12: v4 additive tombstones)', () => 
         await resetDbForTests()
     })
 
-    it('opens at Dexie version 4', async () => {
+    it('opens at Dexie version 5', async () => {
         const db = getDb()
         await db.open()
-        expect(db.verno).toBe(4)
+        expect(db.verno).toBe(5)
     })
 
     it('round-trips a tombstone row keyed by [collection+docId]', async () => {

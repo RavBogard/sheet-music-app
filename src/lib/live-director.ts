@@ -8,38 +8,46 @@
  *   1. `changeTrackKey(trackId, key)`    — write `tracks/{id}.key`.
  *   2. `swapTrackChart(trackId, song)`   — re-bond row to a different chart;
  *      mirrors the server-side `swap_chart` MCP tool: refresh fileId + songId
- *      + title + fileName + key + bpm from the new song's catalog row in one
- *      atomic-feeling patch (a single `applyEdit` `update` op).
+ *      + title + fileName + key + bpm from the new song's catalog row in ONE
+ *      edit.
  *   3. `insertTrack({setlistId, song, placement, currentIndex, currentTracks})`
  *      — add a new song row at `before` / `after` / `append` placement
- *      relative to the long-pressed row; bumps `order` on the rows that move
- *      down, then `set`s the new row and seeds song defaults.
+ *      relative to the long-pressed row, with the song's defaults.
  *
- * Write surface = `applyEdit` (Dexie + outbox + Firestore via the sync engine
- * — the existing "Firestore → Dexie → useLiveQuery pipe" the lane PROMPT
- * specifies). NOT the `/api/mcp` HTTP surface — those tools are admin-SDK
- * server paths primarily for Claude Desktop; the in-app editor (SetlistGrid,
- * MobileRowCard) already mutates `tracks/{id}` via the same applyEdit path,
- * and that's the canonical band_leader-iPad write contract.
+ * Write surface (setlist sync PR 3): the setlist ops client, the same path
+ * the editor uses. A key or chart change is an `editRow` with the values the
+ * device last had from the server as its base, so it can queue offline and
+ * a concurrent edit shows as a conflict instead of being overwritten. An
+ * insert is one `insert` op anchored on its neighbours; it needs a
+ * connection (D2(a)) and throws when there is none, so the caller's error
+ * path tells the director.
  *
  * No SmartTransposer / chord-overlay coordination — this is pure label
- * propagation. The display key label updates; the chord graphics on the
- * PDF stay unchanged. Per DISCUSSION ##ADDENDUM 4: "the label IS the
- * feature".
+ * propagation. Per DISCUSSION ##ADDENDUM 4: "the label IS the feature".
  */
 
-import { applyEdit } from "@/lib/local/write"
+import { getDb } from "@/lib/local/schema"
+import type { LocalTrack } from "@/lib/local/types"
+import { editRow, insertRows } from "@/lib/setlist-ops-client/actions"
 import { seedTrackFromSong } from "@/lib/songs/defaults"
 import type { DriveFile, SetlistTrack } from "@/types/models"
 
+/** The row as this device last had it from the server (cache, else a fresh read). */
+async function serverRow(trackId: string): Promise<LocalTrack> {
+    const cached = await getDb().tracks.get(trackId)
+    if (cached) return cached
+    const { getDb: getFirestore } = await import("@/lib/firebase")
+    const { doc, getDoc } = await import("firebase/firestore")
+    const snap = await getDoc(doc(await getFirestore(), "tracks", trackId))
+    if (!snap.exists()) throw new Error("This row is no longer on the setlist.")
+    const data = snap.data() as Record<string, unknown>
+    return { ...data, id: trackId, setlistId: String(data.setlistId ?? ""), order: Number(data.order ?? 0) } as LocalTrack
+}
+
 /** Write `tracks/{id}.key`. Empty string clears the key (DiscoverySpec). */
 export async function changeTrackKey(trackId: string, key: string): Promise<void> {
-    await applyEdit({
-        op: "update",
-        collection: "tracks",
-        docId: trackId,
-        patch: { key },
-    })
+    const row = await serverRow(trackId)
+    await editRow(row.setlistId, row, { key }, { undo: false })
 }
 
 /**
@@ -79,13 +87,8 @@ export async function swapTrackChart(
         // Swap is the primary intent; the new title + fileId already give
         // the band the right chart in their iPad. Defaults are nice-to-have.
     }
-
-    await applyEdit({
-        op: "update",
-        collection: "tracks",
-        docId: trackId,
-        patch,
-    })
+    const row = await serverRow(trackId)
+    await editRow(row.setlistId, row, patch, { undo: false })
 }
 
 export type InsertPlacement = "before" | "after" | "append"
@@ -97,19 +100,15 @@ export interface InsertTrackInput {
     /** Display index of the currently-focused row (Bryn's long-press target).
      *  Ignored for `placement === "append"`. */
     currentIndex: number
-    /** Live, display-ordered tracks for the setlist. Used to compute the new
-     *  row's `order` and to bump downstream rows. */
+    /** Live, display-ordered tracks for the setlist. Used for the new row's
+     *  neighbours (its anchors). */
     currentTracks: SetlistTrack[]
 }
 
 /**
  * Insert a fresh track at the chosen placement. Returns the new track id.
- *
- * Order semantics: `applyEdit({op:'update', patch:{order}})` mirrors the
- * editor's reorder path (SetlistGrid handleReorderInsertOrUpdate); the new
- * track gets order=insertAt and every existing row at index >= insertAt
- * shifts by +1. We use the display-array index (NOT the existing `order`
- * field) so prior order-gaps don't matter.
+ * One `insert` op anchored on the rows around the display position, so the
+ * server places it right even if others moved rows meanwhile.
  */
 export async function insertTrack(input: InsertTrackInput): Promise<string> {
     const { setlistId, song, placement, currentIndex, currentTracks } = input
@@ -121,72 +120,29 @@ export async function insertTrack(input: InsertTrackInput): Promise<string> {
         return Math.min(currentTracks.length, currentIndex + 1)
     })()
 
-    // 1. Bump order on every row at or after the insertion point. Skip for
-    //    `append` (nothing to bump). Parallel writes are safe — each docId
-    //    is unique, each new order value is unique.
-    if (insertAt < currentTracks.length) {
-        const bumps: Promise<void>[] = []
-        for (let i = insertAt; i < currentTracks.length; i++) {
-            const t = currentTracks[i]
-            bumps.push(
-                applyEdit({
-                    op: "update",
-                    collection: "tracks",
-                    docId: t.id,
-                    patch: { order: i + 1 },
-                }),
-            )
-        }
-        await Promise.all(bumps)
-    }
-
-    // 2. Insert the new row. Field set mirrors SetlistGrid.handlePickSong:
-    //    songId === fileId (libId is both, per v54-01-02 lock); type='song'
-    //    explicit so SetlistRow's clickability gate (fileId-bonded non-songs
-    //    were the cycle-5 R1 finding) gets the right semantics from frame 1.
-    const newId =
-        typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-            ? crypto.randomUUID()
-            : `track-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
-
-    const doc: Record<string, unknown> & { id: string } = {
-        id: newId,
-        setlistId,
+    // Field set mirrors the editor's add: songId === fileId (libId is both,
+    // per v54-01-02 lock); type='song' explicit so SetlistRow's clickability
+    // gate gets the right semantics from frame 1. Defaults (key + lead + bpm)
+    // ride on the same insert, best-effort.
+    const row: Record<string, unknown> = {
         songId: song.id,
         fileId: song.id,
-        order: insertAt,
         title: song.displayName ?? song.name,
         type: "song",
     }
-    if (song.mimeType) doc.mimeType = song.mimeType
-
-    await applyEdit({
-        op: "set",
-        collection: "tracks",
-        doc,
-    })
-
-    // 3. Seed defaults (key + lead + bpm) from the song's catalog row. Best-
-    //    effort: if the catalog row is missing, leave the new track bare —
-    //    the band reads the key off the chart anyway and Bryn can long-press
-    //    the new row to set a key if needed.
+    if (song.mimeType) row.mimeType = song.mimeType
     try {
         const defaults = await seedTrackFromSong(song.id)
-        const seedPatch: Record<string, unknown> = {}
-        if (defaults.key !== undefined) seedPatch.key = defaults.key
-        if (defaults.lead !== undefined) seedPatch.leadMusician = defaults.lead
-        if (defaults.bpm !== undefined) seedPatch.bpm = defaults.bpm
-        if (Object.keys(seedPatch).length > 0) {
-            await applyEdit({
-                op: "update",
-                collection: "tracks",
-                docId: newId,
-                patch: seedPatch,
-            })
-        }
+        if (defaults.key !== undefined) row.key = defaults.key
+        if (defaults.lead !== undefined) row.leadMusician = defaults.lead
+        if (defaults.bpm !== undefined) row.bpm = defaults.bpm
     } catch {
         // Seeding is best-effort; the insert itself is the primary intent.
     }
 
-    return newId
+    const view = currentTracks.map((t, i) => ({ ...t, setlistId, order: i })) as unknown as LocalTrack[]
+    const ids = await insertRows(setlistId, view, insertAt, [row], { undo: false })
+    // Machine text only (offline): the caller shows its own translated error.
+    if (!ids || ids.length === 0) throw new Error("offline: structural edits need a connection")
+    return ids[0]
 }

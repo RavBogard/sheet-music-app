@@ -21,15 +21,14 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useT } from '@/i18n/client'
 
 import type { LocalTrack } from '@/lib/local/types'
-import { applyEdit } from '@/lib/local/write'
-import { useUndoStore, type UndoableDoc } from '@/lib/local/undo-store'
 import { getDb } from '@/lib/local/schema'
+import { moveRow } from '@/lib/setlist-ops-client/actions'
+import type { PendingMark } from '@/lib/setlist-ops-client/view'
 
 import { MobileRowCard } from './MobileRowCard'
 import type { SectionBand } from './section-bands'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { isSectionRow, sectionBands } from './section-bands'
-import { computeReorderUpdates } from './SetlistGrid'
 import type { SetTotal } from '@/lib/gig/set-totals'
 
 export interface MobileCardListProps {
@@ -61,6 +60,12 @@ export interface MobileCardListProps {
     showTiming?: boolean
     /** BET-5: header row id → that set's running length. */
     setTotalsByHeaderId?: Record<string, SetTotal>
+    /** D2(a): when set (translated reason), drag, duplicate and delete are off. */
+    structureLocked?: string
+    /** The view's pending marks (rowId → pending row / fields). */
+    pending?: Record<string, PendingMark>
+    /** Override the drag's write (tests). Defaults to the ops client's moveRow. */
+    onMoveRow?: (activeId: string, overId: string) => Promise<unknown>
 }
 
 /**
@@ -81,13 +86,14 @@ export interface MobileCardListProps {
  *     drag activates, disambiguating from scroll and from tap-to-edit.
  *   - KeyboardSensor — Space + arrows preserves keyboard a11y.
  *
- * The drag-end handler reuses `computeReorderUpdates` from SetlistGrid
- * (the same pure function the dead desktop table used), so the
- * persistence semantics are identical: N parallel applyEdit calls with
- * `order` patches + a composite undo entry.
+ * The drag-end handler sends ONE move op through the setlist ops client
+ * (setlist sync PR 3) and pushes one undo entry (move back).
  */
 export function MobileCardList({
-    setlistId: _setlistId,
+    setlistId,
+    structureLocked,
+    pending,
+    onMoveRow,
     tracks,
     onContextEditRow,
     onContextBindChart,
@@ -236,59 +242,16 @@ export function MobileCardList({
         [],
     )
 
+    // Setlist sync PR 3: a drag is ONE move op (anchored on its new
+    // neighbours); the server renumbers every row in one transaction, so the
+    // other devices get one snapshot, never the in-between orders.
     const handleDragEnd = async (e: DragEndEvent) => {
         const { active, over } = e
-        if (!over) return
-        const updates = computeReorderUpdates(
-            tracks,
+        if (!over || structureLocked) return
+        await (onMoveRow ?? ((a: string, o: string) => moveRow(setlistId, tracks, a, o)))(
             String(active.id),
             String(over.id),
         )
-        if (updates.length === 0) return
-
-        // Snapshot prevDocs for the composite undo entry — N parallel order
-        // patches should revert as ONE user-perceived action. Mirrors the
-        // pattern from the deleted desktop handleDragEnd.
-        const prevDocs = updates
-            .map(({ id }) => tracks.find((r) => r.id === id))
-            .filter((r): r is LocalTrack => Boolean(r))
-            .map((r) => ({ ...r }))
-
-        await Promise.all(
-            updates.map(({ id, order }) => {
-                const r = tracks.find((row) => row.id === id)
-                return applyEdit(
-                    {
-                        op: 'update',
-                        collection: 'tracks',
-                        docId: id,
-                        patch: { order },
-                        expectedUpdatedAt: r?.updatedAt,
-                    },
-                    { withoutUndo: true },
-                )
-            }),
-        )
-
-        const db = getDb()
-        const newDocs = await Promise.all(
-            updates.map(
-                async ({ id }) =>
-                    (await db.tracks.get(id)) as UndoableDoc | undefined,
-            ),
-        )
-        useUndoStore.getState().pushEntry({
-            kind: 'composite',
-            label: `Reorder ${updates.length} rows`,
-            entries: updates.map((u, i) => ({
-                op: 'update' as const,
-                collection: 'tracks' as const,
-                docId: u.id,
-                prevDoc: prevDocs[i] as UndoableDoc,
-                newDoc: newDocs[i],
-            })),
-            ts: Date.now(),
-        })
     }
 
     return (
@@ -322,6 +285,9 @@ export function MobileCardList({
                             showTiming={showTiming}
                             setTotal={setTotalsByHeaderId?.[track.id]}
                             pageColumn={pageColumn}
+                            structureLocked={structureLocked}
+                            pendingRow={pending?.[track.id]?.row ?? false}
+                            pendingFields={pending?.[track.id]?.fields}
                         />
                     ))}
                 </ul>
@@ -353,6 +319,9 @@ interface CardRowProps {
     showTiming: boolean
     setTotal?: SetTotal
     pageColumn: boolean
+    structureLocked?: string
+    pendingRow: boolean
+    pendingFields?: readonly string[]
 }
 
 /**
@@ -372,6 +341,9 @@ const CardRow = memo(function CardRow({
     showTiming,
     setTotal,
     pageColumn,
+    structureLocked,
+    pendingRow,
+    pendingFields,
 }: CardRowProps) {
     const onTap = useCallback(() => actions.toggleEditing(track.id), [actions, track.id])
     const onContextEditRow = useCallback(() => actions.editRow(index), [actions, index])
@@ -397,6 +369,9 @@ const CardRow = memo(function CardRow({
             showTiming={showTiming}
             setTotal={setTotal}
             pageColumn={pageColumn}
+            structureLocked={structureLocked}
+            pendingRow={pendingRow}
+            pendingFields={pendingFields}
             onTap={onTap}
             onContextEditRow={onContextEditRow}
             onContextBindChart={onContextBindChart}

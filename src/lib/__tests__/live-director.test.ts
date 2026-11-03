@@ -1,260 +1,108 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-vi.mock('@/lib/local/write', () => ({
-    applyEdit: vi.fn(async () => undefined),
+/**
+ * Live-director writes go through the setlist ops client (setlist sync PR 3):
+ * a key or chart change is ONE editRow on the row as the device last had it
+ * from the server; an insert is ONE insert anchored at the display position,
+ * with the song's defaults in the same row.
+ */
+
+const cached = new Map<string, Record<string, unknown>>()
+vi.mock('@/lib/local/schema', () => ({
+    getDb: () => ({ tracks: { get: async (id: string) => cached.get(id) } }),
+}))
+vi.mock('@/lib/setlist-ops-client/actions', () => ({
+    editRow: vi.fn(async () => undefined),
+    insertRows: vi.fn(async () => ['new-row']),
 }))
 vi.mock('@/lib/songs/defaults', () => ({
     seedTrackFromSong: vi.fn(async () => ({})),
 }))
 
-import { applyEdit } from '@/lib/local/write'
+import { editRow, insertRows } from '@/lib/setlist-ops-client/actions'
 import { seedTrackFromSong } from '@/lib/songs/defaults'
-import {
-    changeTrackKey,
-    swapTrackChart,
-    insertTrack,
-} from '@/lib/live-director'
+import { changeTrackKey, swapTrackChart, insertTrack } from '@/lib/live-director'
 import type { DriveFile, SetlistTrack } from '@/types/models'
 
-const mockedApplyEdit = vi.mocked(applyEdit)
+const mockedEdit = vi.mocked(editRow)
+const mockedInsert = vi.mocked(insertRows)
 const mockedSeed = vi.mocked(seedTrackFromSong)
 
-function track(id: string, fields: Partial<SetlistTrack> = {}): SetlistTrack {
-    return {
-        id,
-        title: `Track ${id}`,
-        type: 'song',
-        ...fields,
-    } as SetlistTrack
-}
-
-function libFile(id: string, fields: Partial<DriveFile> = {}): DriveFile {
-    return {
-        id,
-        name: `${id}.pdf`,
-        displayName: undefined,
-        mimeType: 'application/pdf',
-        ...fields,
-    } as DriveFile
-}
+const libFile = (id: string, fields: Partial<DriveFile> = {}): DriveFile =>
+    ({ id, name: `${id}.pdf`, displayName: undefined, mimeType: 'application/pdf', ...fields }) as DriveFile
+const track = (id: string): SetlistTrack => ({ id, title: `Track ${id}`, type: 'song' }) as SetlistTrack
 
 beforeEach(() => {
-    mockedApplyEdit.mockReset()
-    mockedApplyEdit.mockResolvedValue(undefined)
-    mockedSeed.mockReset()
+    vi.clearAllMocks()
     mockedSeed.mockResolvedValue({})
+    mockedInsert.mockResolvedValue(['new-row'])
+    cached.clear()
+    cached.set('t1', { id: 't1', setlistId: 's1', order: 0, title: 'Lecha Dodi', key: 'F' })
 })
 
 describe('changeTrackKey', () => {
-    it('writes tracks/{id}.key via applyEdit update', async () => {
+    it('one editRow on the cached server row (its values are the base)', async () => {
         await changeTrackKey('t1', 'D')
-        expect(mockedApplyEdit).toHaveBeenCalledTimes(1)
-        expect(mockedApplyEdit).toHaveBeenCalledWith({
-            op: 'update',
-            collection: 'tracks',
-            docId: 't1',
-            patch: { key: 'D' },
-        })
-    })
-
-    it('passes through empty-string to clear the key (KeyPicker Clear behavior)', async () => {
-        await changeTrackKey('t1', '')
-        expect(mockedApplyEdit).toHaveBeenCalledWith({
-            op: 'update',
-            collection: 'tracks',
-            docId: 't1',
-            patch: { key: '' },
-        })
+        expect(mockedEdit).toHaveBeenCalledTimes(1)
+        const [setlistId, row, patch, opts] = mockedEdit.mock.calls[0]
+        expect(setlistId).toBe('s1')
+        expect(row).toMatchObject({ id: 't1', key: 'F' })
+        expect(patch).toEqual({ key: 'D' })
+        expect(opts).toEqual({ undo: false })
     })
 })
 
 describe('swapTrackChart', () => {
-    it('refreshes fileId / songId / title / fileName + catalog key on swap', async () => {
-        mockedSeed.mockResolvedValue({ key: 'G', bpm: 90 })
-        const newSong = libFile('lib-123', {
-            name: 'eli_eli.musicxml',
-            displayName: 'Eili Eili',
-            mimeType: 'application/vnd.recordare.musicxml',
-        })
-
-        await swapTrackChart('track-A', newSong)
-
-        expect(mockedApplyEdit).toHaveBeenCalledTimes(1)
-        expect(mockedApplyEdit).toHaveBeenCalledWith({
-            op: 'update',
-            collection: 'tracks',
-            docId: 'track-A',
-            patch: {
-                fileId: 'lib-123',
-                songId: 'lib-123',
-                title: 'Eili Eili',
-                fileName: 'eli_eli.musicxml',
-                mimeType: 'application/vnd.recordare.musicxml',
-                key: 'G',
-                bpm: 90,
-            },
+    it('rebinds fileId / songId / title / fileName / mimeType and the catalog key in ONE edit', async () => {
+        mockedSeed.mockResolvedValue({ key: 'G', bpm: 96, lead: 'Sam' })
+        await swapTrackChart('t1', libFile('c2', { displayName: 'Hinei Ma Tov', mimeType: 'image/png' }))
+        expect(mockedEdit).toHaveBeenCalledTimes(1)
+        expect(mockedEdit.mock.calls[0][2]).toEqual({
+            fileId: 'c2',
+            songId: 'c2',
+            title: 'Hinei Ma Tov',
+            fileName: 'c2.pdf',
+            mimeType: 'image/png',
+            key: 'G',
+            bpm: 96,
         })
     })
 
-    it('falls back to song.name when displayName missing', async () => {
-        const newSong = libFile('lib-2', { name: 'Adon Olam.pdf' })
-        await swapTrackChart('track-A', newSong)
-        expect(mockedApplyEdit.mock.calls[0]?.[0]).toMatchObject({
-            patch: expect.objectContaining({ title: 'Adon Olam.pdf' }),
-        })
-    })
-
-    it('still completes the swap when seedTrackFromSong throws', async () => {
-        mockedSeed.mockRejectedValueOnce(new Error('songs row missing'))
-        const newSong = libFile('lib-3')
-        await expect(swapTrackChart('track-A', newSong)).resolves.toBeUndefined()
-        expect(mockedApplyEdit).toHaveBeenCalledTimes(1)
-        const patch = (mockedApplyEdit.mock.calls[0]?.[0] as { patch: Record<string, unknown> }).patch
-        expect(patch.key).toBeUndefined()
-        expect(patch.bpm).toBeUndefined()
-    })
-
-    it('omits mimeType when the catalog row exposes none (PDF default route remains)', async () => {
-        const newSong = libFile('lib-4')
-        ;(newSong as { mimeType?: string }).mimeType = ''
-        await swapTrackChart('track-A', newSong)
-        const patch = (mockedApplyEdit.mock.calls[0]?.[0] as { patch: Record<string, unknown> }).patch
-        expect(patch).not.toHaveProperty('mimeType')
+    it('still swaps when the catalog defaults cannot be read', async () => {
+        mockedSeed.mockRejectedValue(new Error('no row'))
+        await swapTrackChart('t1', libFile('c3'))
+        expect(mockedEdit.mock.calls[0][2]).toMatchObject({ fileId: 'c3', title: 'c3.pdf' })
     })
 })
 
 describe('insertTrack', () => {
-    const baseTracks = [
-        track('t0'),
-        track('t1'),
-        track('t2'),
-        track('t3'),
-    ]
+    const tracks = [track('a'), track('b'), track('c')]
 
-    it('append: writes the new row at order=length with no order bumps', async () => {
-        const song = libFile('lib-new')
-        const id = await insertTrack({
-            setlistId: 'sl-1',
-            song,
-            placement: 'append',
-            currentIndex: 1,
-            currentTracks: baseTracks,
-        })
-        expect(typeof id).toBe('string')
-        const setCalls = mockedApplyEdit.mock.calls.filter(
-            (c) => (c[0] as { op: string }).op === 'set',
-        )
-        expect(setCalls).toHaveLength(1)
-        const setDoc = (setCalls[0]![0] as { doc: Record<string, unknown> }).doc
-        expect(setDoc.order).toBe(4)
-        expect(setDoc.setlistId).toBe('sl-1')
-        expect(setDoc.fileId).toBe('lib-new')
-        expect(setDoc.songId).toBe('lib-new')
-        // No order-bump updates on existing tracks for append.
-        const orderBumps = mockedApplyEdit.mock.calls.filter(
-            (c) =>
-                (c[0] as { op: string }).op === 'update' &&
-                'patch' in (c[0] as object) &&
-                'order' in (c[0] as { patch: Record<string, unknown> }).patch,
-        )
-        expect(orderBumps).toHaveLength(0)
+    it.each([
+        ['append', 1, 3],
+        ['before', 1, 1],
+        ['after', 1, 2],
+    ] as const)('%s: one insert at display index', async (placement, currentIndex, index) => {
+        const id = await insertTrack({ setlistId: 's1', song: libFile('song-1'), placement, currentIndex, currentTracks: tracks })
+        expect(id).toBe('new-row')
+        expect(mockedInsert).toHaveBeenCalledTimes(1)
+        const [setlistId, view, at, rows] = mockedInsert.mock.calls[0]
+        expect(setlistId).toBe('s1')
+        expect(view.map((r) => r.id)).toEqual(['a', 'b', 'c'])
+        expect(at).toBe(index)
+        expect(rows).toEqual([{ songId: 'song-1', fileId: 'song-1', title: 'song-1.pdf', type: 'song', mimeType: 'application/pdf' }])
     })
 
-    it('after: bumps rows downstream of currentIndex+1 and inserts at that position', async () => {
-        await insertTrack({
-            setlistId: 'sl-1',
-            song: libFile('lib-new'),
-            placement: 'after',
-            currentIndex: 1,
-            currentTracks: baseTracks,
-        })
-        // Insert position = 2 → bump t2 (index 2) → 3 and t3 (index 3) → 4.
-        const bumps = mockedApplyEdit.mock.calls.filter(
-            (c) =>
-                (c[0] as { op: string }).op === 'update' &&
-                'patch' in (c[0] as object) &&
-                'order' in (c[0] as { patch: Record<string, unknown> }).patch,
-        )
-        expect(bumps).toHaveLength(2)
-        const targets = bumps.map((c) => {
-            const arg = c[0] as unknown as { docId: string; patch: { order: number } }
-            return [arg.docId, arg.patch.order] as const
-        })
-        expect(targets).toEqual(
-            expect.arrayContaining([
-                ['t2', 3],
-                ['t3', 4],
-            ]),
-        )
-        const set = mockedApplyEdit.mock.calls.find(
-            (c) => (c[0] as { op: string }).op === 'set',
-        )!
-        expect((set[0] as { doc: Record<string, unknown> }).doc.order).toBe(2)
+    it('carries the catalog defaults on the same row', async () => {
+        mockedSeed.mockResolvedValue({ key: 'Am', lead: 'Sam', bpm: 70 })
+        await insertTrack({ setlistId: 's1', song: libFile('song-2'), placement: 'append', currentIndex: 0, currentTracks: tracks })
+        expect(mockedInsert.mock.calls[0][3][0]).toMatchObject({ key: 'Am', leadMusician: 'Sam', bpm: 70 })
     })
 
-    it('before: bumps rows from currentIndex downward and inserts at that position', async () => {
-        await insertTrack({
-            setlistId: 'sl-1',
-            song: libFile('lib-new'),
-            placement: 'before',
-            currentIndex: 1,
-            currentTracks: baseTracks,
-        })
-        const bumps = mockedApplyEdit.mock.calls.filter(
-            (c) =>
-                (c[0] as { op: string }).op === 'update' &&
-                'patch' in (c[0] as object) &&
-                'order' in (c[0] as { patch: Record<string, unknown> }).patch,
-        )
-        expect(bumps).toHaveLength(3)
-        const targets = new Map(
-            bumps.map((c) => {
-                const arg = c[0] as unknown as { docId: string; patch: { order: number } }
-                return [arg.docId, arg.patch.order] as const
-            }),
-        )
-        expect(targets.get('t1')).toBe(2)
-        expect(targets.get('t2')).toBe(3)
-        expect(targets.get('t3')).toBe(4)
-        const set = mockedApplyEdit.mock.calls.find(
-            (c) => (c[0] as { op: string }).op === 'set',
-        )!
-        expect((set[0] as { doc: Record<string, unknown> }).doc.order).toBe(1)
-    })
-
-    it('seeds key/lead/bpm defaults from the song catalog row when present', async () => {
-        mockedSeed.mockResolvedValue({ key: 'A', lead: 'Bryn', bpm: 88 })
-        await insertTrack({
-            setlistId: 'sl-1',
-            song: libFile('lib-new'),
-            placement: 'append',
-            currentIndex: 0,
-            currentTracks: [track('t0')],
-        })
-        const seedPatch = mockedApplyEdit.mock.calls
-            .map((c) => c[0] as { op: string; patch?: Record<string, unknown> })
-            .find(
-                (e) =>
-                    e.op === 'update' &&
-                    e.patch &&
-                    ('key' in e.patch || 'leadMusician' in e.patch || 'bpm' in e.patch),
-            )
-        expect(seedPatch?.patch).toEqual({ key: 'A', leadMusician: 'Bryn', bpm: 88 })
-    })
-
-    it('does NOT emit a defaults patch when the catalog row has none', async () => {
-        mockedSeed.mockResolvedValue({})
-        await insertTrack({
-            setlistId: 'sl-1',
-            song: libFile('lib-new'),
-            placement: 'append',
-            currentIndex: 0,
-            currentTracks: [track('t0')],
-        })
-        const updates = mockedApplyEdit.mock.calls.filter(
-            (c) => (c[0] as { op: string }).op === 'update',
-        )
-        // append → 0 order bumps + 0 seed patches.
-        expect(updates).toHaveLength(0)
+    it('throws when offline (structural edits need a connection), so the caller shows its error', async () => {
+        mockedInsert.mockResolvedValue(null)
+        await expect(
+            insertTrack({ setlistId: 's1', song: libFile('song-3'), placement: 'append', currentIndex: 0, currentTracks: tracks }),
+        ).rejects.toThrow(/offline/)
     })
 })

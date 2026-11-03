@@ -119,136 +119,59 @@ vi.mock('@/lib/liturgical-templates', () => ({
 vi.mock('@/types/schemas', () => ({
     setlistConverter: {},
 }))
-// v60-07-02: applyEdit fanout mock for create-style writer seeding.
-vi.mock('@/lib/local/write', () => ({
-    applyEdit: vi.fn().mockResolvedValue(undefined),
-}))
-// v60-08-01: cloneSetlist + saveAsTemplate + duplicateSetlist fetch
-// source tracks via this helper.
 vi.mock('@/lib/client-tracks', () => ({
     fetchTracksForSetlistClient: vi.fn().mockResolvedValue([]),
 }))
 
-import { createSetlistService, StaleWriteError } from './setlist-firebase'
-import { Timestamp } from 'firebase/firestore'
-import { applyEdit } from '@/lib/local/write'
-import { fetchTracksForSetlistClient } from '@/lib/client-tracks'
-const mockApplyEdit = vi.mocked(applyEdit)
-const mockFetchTracks = vi.mocked(fetchTracksForSetlistClient)
+import { createSetlistService } from './setlist-firebase'
+
+/** Bodies POSTed to /api/setlists/create, in order. */
+const createBodies: Array<Record<string, unknown>> = []
 
 describe('createSetlistService', () => {
     let service: ReturnType<typeof createSetlistService>
 
     beforeEach(() => {
         vi.clearAllMocks()
-        hoisted.txRemoteDoc = { exists: true, data: { updatedAt: null } }
-        hoisted.txUpdatePayloads.length = 0
-        // apiFetch (via deleteSetlist task cleanup) bypasses the real network
-        globalThis.fetch = vi.fn(async () =>
-            new Response(JSON.stringify({ ok: true }), { status: 200 }),
-        ) as unknown as typeof fetch
+        createBodies.length = 0
+        globalThis.fetch = vi.fn(async (url: string, init?: RequestInit) => {
+            if (String(url).includes('/api/setlists/create')) {
+                const body = JSON.parse(String(init?.body)) as Record<string, unknown>
+                createBodies.push(body)
+                return new Response(JSON.stringify({ ok: true, setlistId: body.setlistId }), { status: 200 })
+            }
+            return new Response(JSON.stringify({ ok: true }), { status: 200 })
+        }) as unknown as typeof fetch
         service = createSetlistService('user123', 'Test User')
     })
 
+    // Setlist sync PR 3: every create-style path is ONE server transaction.
     describe('createSetlist', () => {
-        it('creates a setlist with required fields', async () => {
+        it('posts the setlist and its rows as explicit field lists; the browser writes no Firestore doc', async () => {
             const tracks = [
                 { id: '1', title: 'Song 1', fileName: 'Song 1', type: 'song' as const },
                 { id: '2', title: 'Song 2', fileName: 'Song 2', type: 'song' as const },
             ]
+            const id = await service.createSetlist('Friday Night', tracks, { templateType: 'rosh_hashanah' })
 
-            const id = await service.createSetlist('Friday Night', tracks)
-
-            expect(id).toBe('new-setlist-id')
-            expect(mockAddDoc).toHaveBeenCalledTimes(1)
-
-            const data = mockAddDoc.mock.calls[0][1]
-            expect(data.name).toBe('Friday Night')
-            // v60-07-02: parent doc carries denormalization markers only — no
-            // embedded `tracks` field. Top-level seeding asserted below.
-            expect(data).not.toHaveProperty('tracks')
-            expect(data.trackCount).toBe(2)
-            expect(data.hydrated).toBe(true)
-            expect(data.ownerId).toBe('user123')
-            expect(data.ownerName).toBe('Test User')
-
-            // Engine-path fanout: one applyEdit per source track.
-            expect(mockApplyEdit).toHaveBeenCalledTimes(2)
-            expect(mockApplyEdit).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    op: 'set',
-                    collection: 'tracks',
-                    doc: expect.objectContaining({
-                        id: '1',
-                        setlistId: 'new-setlist-id',
-                        order: 0,
-                        title: 'Song 1',
-                        type: 'song',
-                    }),
-                }),
-                { withoutUndo: true },
-            )
+            expect(createBodies).toHaveLength(1)
+            const body = createBodies[0]
+            expect(body.setlistId).toBe(id)
+            expect(body).toMatchObject({ name: 'Friday Night', templateType: 'rosh_hashanah' })
+            expect(body.rows).toEqual([
+                { title: 'Song 1', fileName: 'Song 1', type: 'song' },
+                { title: 'Song 2', fileName: 'Song 2', type: 'song' },
+            ])
+            expect(body).not.toHaveProperty('isPublic')
+            expect(body).not.toHaveProperty('orgId')
+            expect(mockAddDoc).not.toHaveBeenCalled()
         })
 
-        it('never writes isPublic to Firestore (regression guard)', async () => {
-            await service.createSetlist('Any Setlist', [])
-            const data = mockAddDoc.mock.calls[0][1]
-            expect(Object.keys(data)).not.toContain('isPublic')
-            // v60-07-02: empty tracks → no seed fanout.
-            expect(mockApplyEdit).not.toHaveBeenCalled()
-        })
-
-        it('includes additional data when provided', async () => {
-            await service.createSetlist('Festival', [], {
-                templateType: 'rosh_hashanah',
-            })
-
-            const data = mockAddDoc.mock.calls[0][1]
-            expect(data.templateType).toBe('rosh_hashanah')
-        })
-    })
-
-    // v11-05-05: every in-app setlist create stamps orgId so the doc is visible
-    // under the v11-04 where('orgId','==',org) dashboard reads.
-    describe('orgId stamping (v11-05-05)', () => {
-        afterEach(() => {
-            delete (document.documentElement.dataset as Record<string, string>).org
-        })
-
-        it('createSetlist stamps the host org (data-org) by default', async () => {
-            document.documentElement.dataset.org = 'brotherslazaroff'
-            await service.createSetlist('BL Set', [])
-            expect(mockAddDoc.mock.calls[0][1].orgId).toBe('brotherslazaroff')
-        })
-
-        it('createSetlist: explicit additionalData.orgId wins over the host', async () => {
-            document.documentElement.dataset.org = 'brotherslazaroff'
-            await service.createSetlist('Override', [], { orgId: 'crc' } as never)
-            expect(mockAddDoc.mock.calls[0][1].orgId).toBe('crc')
-        })
-
-        it('createSetlist defaults to crc when no data-org is set', async () => {
-            await service.createSetlist('CRC Set', [])
-            expect(mockAddDoc.mock.calls[0][1].orgId).toBe('crc')
-        })
-
-        it('cloneForNextWeek inherits the source setlist orgId', async () => {
-            mockFetchTracks.mockResolvedValue([] as never)
-            document.documentElement.dataset.org = 'crc' // host is crc; clone must still inherit source
-            await service.cloneForNextWeek({
-                id: 'src-bl', name: 'BL Show', ownerId: 'user123',
-                orgId: 'brotherslazaroff',
-            } as never)
-            expect(mockAddDoc.mock.calls[0][1].orgId).toBe('brotherslazaroff')
-        })
-
-        it('duplicateSetlist inherits the source setlist orgId', async () => {
-            mockFetchTracks.mockResolvedValue([] as never)
-            await service.duplicateSetlist('src-bl', {
-                id: 'src-bl', name: 'BL Show', ownerId: 'user123',
-                orgId: 'brotherslazaroff',
-            } as never)
-            expect(mockAddDoc.mock.calls[0][1].orgId).toBe('brotherslazaroff')
+        it('a refused create throws with the server reason', async () => {
+            globalThis.fetch = vi.fn(async () =>
+                new Response(JSON.stringify({ ok: false, reason: 'forbidden' }), { status: 403 }),
+            ) as unknown as typeof fetch
+            await expect(service.createSetlist('X', [])).rejects.toThrow(/forbidden/)
         })
     })
 
@@ -261,7 +184,6 @@ describe('createSetlistService', () => {
 
             await service.deleteSetlist('setlist-abc')
 
-            // D01: deletion is fully server-side now — client never touches Firestore directly
             expect(fetchSpy).toHaveBeenCalledTimes(1)
             const [url, init] = (fetchSpy as unknown as { mock: { calls: [string, RequestInit][] } }).mock.calls[0]
             expect(url).toContain('/api/setlist/delete')
@@ -269,96 +191,6 @@ describe('createSetlistService', () => {
             expect((init as RequestInit).body).toBe(JSON.stringify({ setlistId: 'setlist-abc' }))
             expect(mockDeleteDoc).not.toHaveBeenCalled()
             expect(mockBatchDelete).not.toHaveBeenCalled()
-        })
-    })
-
-    describe('updateSetlist', () => {
-        it('updates fields inside a transaction and stamps updatedAt', async () => {
-            hoisted.txRemoteDoc = { exists: true, data: { updatedAt: null } }
-
-            await service.updateSetlist('setlist-xyz', {
-                tracks: [{ id: 'a', title: 'Song A', fileName: 'Song A', type: 'song' as const }],
-                trackCount: 1,
-                name: 'Test Setlist',
-            } as Parameters<typeof service.updateSetlist>[1])
-
-            expect(hoisted.txUpdatePayloads).toHaveLength(1)
-            const payload = hoisted.txUpdatePayloads[0]
-            expect(payload.name).toBe('Test Setlist')
-            expect(payload.updatedAt).toBe('SERVER_TIMESTAMP')
-            // v60-07-03: caller-passed tracks dropped defensively;
-            // remote unhydrated → no deleteField strip emitted either.
-            expect(Object.keys(payload)).not.toContain('tracks')
-        })
-
-        it('strips embedded tracks via deleteField when remote is hydrated', async () => {
-            hoisted.txRemoteDoc = { exists: true, data: { updatedAt: null, hydrated: true } }
-
-            await service.updateSetlist('setlist-xyz', { name: 'rename me' })
-
-            expect(hoisted.txUpdatePayloads).toHaveLength(1)
-            const payload = hoisted.txUpdatePayloads[0]
-            expect(payload.name).toBe('rename me')
-            expect(payload.tracks).toBe('__DELETE_FIELD__')
-        })
-
-        it('does NOT strip tracks when remote is not hydrated (legacy doc safety)', async () => {
-            hoisted.txRemoteDoc = { exists: true, data: { updatedAt: null } }
-
-            await service.updateSetlist('setlist-xyz', { name: 'rename me' })
-
-            expect(hoisted.txUpdatePayloads).toHaveLength(1)
-            const payload = hoisted.txUpdatePayloads[0]
-            expect(payload.name).toBe('rename me')
-            expect(Object.keys(payload)).not.toContain('tracks')
-        })
-
-        it('drops embedded tracks from caller patch defensively', async () => {
-            hoisted.txRemoteDoc = { exists: true, data: { updatedAt: null } }
-
-            await service.updateSetlist('setlist-xyz', {
-                tracks: [{ id: 'a', title: 'A', fileName: 'A', type: 'song' as const }],
-                name: 'rename',
-            } as Parameters<typeof service.updateSetlist>[1])
-
-            expect(hoisted.txUpdatePayloads).toHaveLength(1)
-            const payload = hoisted.txUpdatePayloads[0]
-            expect(payload.name).toBe('rename')
-            expect(Object.keys(payload)).not.toContain('tracks')
-        })
-
-        it('with a matching expectedUpdatedAt, commits successfully', async () => {
-            const expected = new Timestamp(1_700_000_000, 0)
-            hoisted.txRemoteDoc = { exists: true, data: { updatedAt: expected } }
-
-            await service.updateSetlist('s1', { name: 'ok' }, expected)
-            expect(hoisted.txUpdatePayloads).toHaveLength(1)
-        })
-
-        it('with a stale expectedUpdatedAt, throws StaleWriteError and does not write', async () => {
-            const stale = new Timestamp(1_700_000_000, 0)
-            const remote = new Timestamp(1_700_000_001, 0)
-            hoisted.txRemoteDoc = { exists: true, data: { updatedAt: remote } }
-
-            await expect(
-                service.updateSetlist('s1', { name: 'nope' }, stale)
-            ).rejects.toBeInstanceOf(StaleWriteError)
-            expect(hoisted.txUpdatePayloads).toHaveLength(0)
-        })
-
-        it('null expectedUpdatedAt acts as skip-check (legacy doc path)', async () => {
-            const remote = new Timestamp(1_700_000_001, 0)
-            hoisted.txRemoteDoc = { exists: true, data: { updatedAt: remote } }
-
-            await service.updateSetlist('s1', { name: 'legacy' }, null)
-            expect(hoisted.txUpdatePayloads).toHaveLength(1)
-        })
-
-        it('regression guard: every updateSetlist write advances updatedAt', async () => {
-            await service.updateSetlist('s1', { name: 'x' })
-            const payload = hoisted.txUpdatePayloads[0]
-            expect(Object.keys(payload)).toContain('updatedAt')
-            expect(payload.updatedAt).toBe('SERVER_TIMESTAMP')
         })
     })
 
@@ -371,10 +203,6 @@ describe('createSetlistService', () => {
     })
 
     describe('cloneForNextWeek', () => {
-        const sourceTracks = [
-            { id: 't1', title: 'Shema', type: 'song' as const },
-            { id: 't2', title: 'Mi Chamocha', type: 'song' as const },
-        ]
         const sourceSetlist = {
             id: 'source-setlist-id',
             name: 'Friday Night — Parashat Tzav — March 13',
@@ -386,73 +214,20 @@ describe('createSetlistService', () => {
             rabbi: 'Daniel',
         }
 
-        beforeEach(() => {
-            // v60-08-01: cloneSetlist reads source tracks via fetchTracksForSetlistClient.
-            mockFetchTracks.mockResolvedValue(sourceTracks as never)
-        })
-
-        it('creates a new setlist with advanced date (+7 days)', async () => {
-            const newId = await service.cloneForNextWeek(sourceSetlist as any)
-
-            expect(newId).toBe('new-setlist-id')
-            expect(mockAddDoc).toHaveBeenCalledTimes(1)
-
-            const data = mockAddDoc.mock.calls[0][1]
-            // Date should be advanced (Timestamp.fromDate is called with the target date)
-            expect(data.date).toBeDefined()
-            expect(data.eventDate).toBeDefined()
-        })
-
-        it('copies tracks from source', async () => {
-            await service.cloneForNextWeek(sourceSetlist as any)
-
-            const data = mockAddDoc.mock.calls[0][1]
-            // v60-07-02: parent doc no longer carries embedded `tracks`. The
-            // trackCount denorm + per-track engine fanout cover the contract.
-            expect(data).not.toHaveProperty('tracks')
-            expect(data.trackCount).toBe(2)
-            expect(data.hydrated).toBe(true)
-            expect(mockApplyEdit).toHaveBeenCalledTimes(2)
-            expect(mockApplyEdit).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    op: 'set',
-                    collection: 'tracks',
-                    doc: expect.objectContaining({
-                        setlistId: 'new-setlist-id',
-                        order: 0,
-                        title: 'Shema',
-                        type: 'song',
-                    }),
-                }),
-                { withoutUndo: true },
-            )
-        })
-
-        it('auto-generates a liturgical name', async () => {
-            await service.cloneForNextWeek(sourceSetlist as any)
-
-            const data = mockAddDoc.mock.calls[0][1]
-            expect(data.name).toBe('Friday Night — Parashat Vayikra — March 20')
-        })
-
-        it('copies musicians and rabbi from source', async () => {
-            await service.cloneForNextWeek(sourceSetlist as any)
-
-            const data = mockAddDoc.mock.calls[0][1]
-            expect(data.musicians).toEqual(sourceSetlist.musicians)
-            expect(data.rabbi).toBe('Daniel')
-        })
-
-        it('new setlist has a different ID from source', async () => {
-            const newId = await service.cloneForNextWeek(sourceSetlist as any)
+        it('asks the server to clone the source a week later, with its musicians and rabbi', async () => {
+            const newId = await service.cloneForNextWeek(sourceSetlist as never)
             expect(newId).not.toBe(sourceSetlist.id)
-        })
-
-        it('records clonedFrom reference', async () => {
-            await service.cloneForNextWeek(sourceSetlist as any)
-
-            const data = mockAddDoc.mock.calls[0][1]
-            expect(data.clonedFrom).toBe('source-setlist-id')
+            const body = createBodies[0]
+            expect(body).toMatchObject({
+                name: 'Friday Night — Parashat Vayikra — March 20',
+                copyFrom: 'source-setlist-id',
+                copyKind: 'clonedFrom',
+                rabbi: 'Daniel',
+                musicians: sourceSetlist.musicians,
+            })
+            expect(new Date(String(body.eventDate)).getDate()).toBe(20)
+            expect(body).not.toHaveProperty('rows')
         })
     })
 })
+

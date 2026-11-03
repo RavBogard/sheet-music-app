@@ -49,8 +49,9 @@ async function seedSongs(rows: Array<Pick<LocalSong, 'id' | 'title'>>) {
     await db.songs.bulkPut(docs)
 }
 
-async function getOutboxRows() {
-    return getDb().outbox.toArray()
+/** Queued setlist intents (setlist sync PR 3: the grid no longer uses the outbox). */
+async function getIntents() {
+    return getDb().intents.toArray()
 }
 
 /**
@@ -104,12 +105,9 @@ describe('SetlistGrid v54-01-02 — handlePickSong + handleBindChart write fileI
         // The applyEdit('set','tracks',doc) should land in the outbox with
         // BOTH songId and fileId set to the library id.
         await waitFor(async () => {
-            const rows = await getOutboxRows()
-            const setRow = rows.find(
-                (r) => r.collection === 'tracks' && r.op === 'set',
-            )
+            const setRow = (await getIntents()).find((i) => i.op.kind === 'insert')
             expect(setRow).toBeDefined()
-            const payload = setRow!.payload as Record<string, unknown>
+            const payload = setRow!.op.row as Record<string, unknown>
             expect(payload.songId).toBe('lib-adon-olam')
             // FAILING IN a693d23 (PRE-FIX) — handlePickSong omitted fileId:
             expect(payload.fileId).toBe('lib-adon-olam')
@@ -150,15 +148,11 @@ describe('SetlistGrid v54-01-02 — handlePickSong + handleBindChart write fileI
         // Outbox `update` op on tracks/{t-hinei} should patch BOTH songId and
         // fileId. FAILING in a693d23 (pre-fix) — handleBindChart omitted fileId.
         await waitFor(async () => {
-            const rows = await getOutboxRows()
-            const updateRow = rows.find(
-                (r) =>
-                    r.collection === 'tracks' &&
-                    r.op === 'update' &&
-                    r.docId === 't-hinei',
+            const updateRow = (await getIntents()).find(
+                (i) => i.op.kind === 'editRow' && i.op.rowId === 't-hinei',
             )
             expect(updateRow).toBeDefined()
-            const patch = updateRow!.payload as Record<string, unknown>
+            const patch = updateRow!.op.set as Record<string, unknown>
             expect(patch.songId).toBe('lib-hinei')
             expect(patch.fileId).toBe('lib-hinei')
             expect(patch.title).toBe('Hinei Ma Tov')

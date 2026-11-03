@@ -62,6 +62,13 @@ async function getOutboxRows() {
     return getDb().outbox.toArray()
 }
 
+/** Queued insert intents for a setlist (setlist sync PR 3). */
+async function getInserts(setlistId: string) {
+    return (await getDb().intents.where('setlistId').equals(setlistId).toArray()).filter(
+        (i) => i.op.kind === 'insert',
+    ) as unknown as Array<{ op: Record<string, unknown> & { row: Record<string, unknown> } }>
+}
+
 describe('SetlistGrid (drag / add / delete)', () => {
     beforeEach(async () => {
         await resetDbForTests()
@@ -102,32 +109,20 @@ describe('SetlistGrid (drag / add / delete)', () => {
         await user.type(filterInput, 'Lecha')
         await user.keyboard('{Enter}')
 
+        // Setlist sync PR 3: ONE insert intent after the last row, with the
+        // song's defaults in the same row; nothing goes to the outbox.
         await waitFor(async () => {
-            const rows = await getOutboxRows()
-            // 1 set + 1 update from defaults
-            expect(rows.length).toBeGreaterThanOrEqual(2)
+            expect(await getInserts('set-1')).toHaveLength(1)
         })
-
-        const allRows = await getOutboxRows()
-        const setRow = allRows.find((r) => r.op === 'set')
-        const updateRow = allRows.find((r) => r.op === 'update')
-
-        expect(setRow).toBeDefined()
-        expect(setRow?.collection).toBe('tracks')
-        expect(setRow?.payload).toMatchObject({
-            songId: 'song-lecha-dodi',
-            title: 'Lecha Dodi',
-            setlistId: 'set-1',
-            order: 1,
+        const [insert] = await getInserts('set-1')
+        expect(insert.op).toMatchObject({
+            kind: 'insert',
+            afterRowId: 't-1',
+            beforeRowId: null,
+            row: { songId: 'song-lecha-dodi', fileId: 'song-lecha-dodi', title: 'Lecha Dodi', key: 'G', leadMusician: 'Randy', bpm: 90 },
         })
-
-        expect(updateRow).toBeDefined()
-        expect(updateRow?.payload).toMatchObject({
-            key: 'G',
-            leadMusician: 'Randy',
-            bpm: 90,
-        })
-
+        expect(insert.op.row).not.toHaveProperty('order')
+        expect(await getOutboxRows()).toHaveLength(0)
         expect(seedSpy).toHaveBeenCalledWith('song-lecha-dodi')
     })
 
@@ -151,18 +146,11 @@ describe('SetlistGrid (drag / add / delete)', () => {
         await user.click(customGroup)
 
         await waitFor(async () => {
-            const rows = await getOutboxRows()
-            expect(rows.some((r) => r.op === 'set')).toBe(true)
+            expect(await getInserts('set-2')).toHaveLength(1)
         })
-        const allRows = await getOutboxRows()
-        const setRow = allRows.find((r) => r.op === 'set')
-        expect(setRow).toBeDefined()
-        expect(setRow?.payload).toMatchObject({
-            title: 'Custom track',
-            setlistId: 'set-2',
-            order: 0,
-        })
-        expect(setRow?.payload).not.toHaveProperty('songId')
+        const [insert] = await getInserts('set-2')
+        expect(insert.op).toMatchObject({ kind: 'insert', afterRowId: null, beforeRowId: null, row: { title: 'Custom track', type: 'song' } })
+        expect(insert.op.row).not.toHaveProperty('songId')
     })
 
     // QUARANTINED (cycle-9 hardening Lane A, 2026-05-20): the 3 delete-row /
