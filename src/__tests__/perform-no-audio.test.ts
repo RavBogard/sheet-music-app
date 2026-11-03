@@ -103,7 +103,7 @@ const PRE_EXISTING_AUDIO_CHART_VIEWER = ['components/music/AudioViewer.tsx']
 
 /**
  * 2026-11-02 (Daniel asked for a Listen button musicians can find; they only see
- * Perform): the Perform setlist head shows a plain LINK to /listen when the setlist
+ * Perform): the Perform setlist head shows a plain LINK to /rehearse when the setlist
  * has a take and is not today's service. These files read which songs have a take
  * (data only, no player) and render that link. They are allowed by name; the
  * player, now-playing and any audio element stay forbidden, and the audio check
@@ -151,8 +151,8 @@ describe('Perform stays silent', () => {
         expect(rel).toEqual([])
     })
 
-    it('nothing reachable from /perform links to /listen', () => {
-        const hits = files.filter((f) => /['\"`]\/listen(?![A-Za-z])/.test(fs.readFileSync(f, 'utf8')))
+    it('nothing reachable from /perform links to /rehearse', () => {
+        const hits = files.filter((f) => /['\"`]\/(?:listen|rehearse)(?![A-Za-z])/.test(fs.readFileSync(f, 'utf8')))
         expect(hits.map((f) => norm(path.relative(SRC, f)))).toEqual(['components/recordings/PerformListenLink.tsx'])
     })
 })

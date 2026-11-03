@@ -54,10 +54,10 @@ describe('SetlistGridTopBar', () => {
     })
 
     it('shows a labelled Listen link when given a listen href, and none otherwise', () => {
-        const { rerender } = render(<SetlistGridTopBar name="S" onBack={vi.fn()} listenHref="/listen/s1" />)
+        const { rerender } = render(<SetlistGridTopBar name="S" onBack={vi.fn()} listenHref="/rehearse/s1" />)
         const link = screen.getByTestId('setlist-grid-listen-link')
-        expect(link).toHaveAttribute('href', '/listen/s1')
-        expect(link).toHaveTextContent('Listen')
+        expect(link).toHaveAttribute('href', '/rehearse/s1')
+        expect(link).toHaveTextContent('Rehearse')
         rerender(<SetlistGridTopBar name="S" onBack={vi.fn()} />)
         expect(screen.queryByTestId('setlist-grid-listen-link')).not.toBeInTheDocument()
     })

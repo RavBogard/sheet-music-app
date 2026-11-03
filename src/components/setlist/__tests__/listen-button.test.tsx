@@ -42,13 +42,13 @@ describe("Listen button on upcoming setlist rows", () => {
     it("is a labelled link for an editor", () => {
         render(upcoming({ canEdit: true, canDuplicate: true, canDelete: true }))
         const link = screen.getByTestId("setlist-row-listen")
-        expect(link).toHaveAttribute("href", "/listen/s1")
-        expect(link).toHaveTextContent("Listen")
+        expect(link).toHaveAttribute("href", "/rehearse/s1")
+        expect(link).toHaveTextContent("Rehearse")
     })
 
     it("is shown to a musician or visitor with no edit rights", () => {
         render(upcoming({ canEdit: false, canDuplicate: false, canDelete: false }))
-        expect(screen.getByTestId("setlist-row-listen")).toHaveAttribute("href", "/listen/s1")
+        expect(screen.getByTestId("setlist-row-listen")).toHaveAttribute("href", "/rehearse/s1")
     })
 
     it("is not on past rows' primary actions for a visitor", () => {

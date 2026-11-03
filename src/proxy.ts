@@ -109,12 +109,12 @@ const publicExactRoutes = [
 //                  unauthenticated to find the MCP authorization server
 // /invite/*      — tenant invitation links (multi-tenant phase 4): the page
 //                  signs the person in itself, like /qr
-// /listen/*      — a setlist's recordings, read-only; recordings are public
+// /rehearse/*, /listen/* — a setlist's recordings, read-only; recordings are public
 //                  (Daniel 2026-11-01), so no sign-in. Never linked from Perform.
 // /opengraph-image/*, /twitter-image/* — the share cards (re-audit P3 #12):
 //                  generateImageMetadata puts them at /opengraph-image/card, so an
 //                  exact match missed them and link previews got a 307 to /login.
-const publicPrefixes = ['/perform', '/qr', '/.well-known', '/invite', '/listen/', '/opengraph-image', '/twitter-image']
+const publicPrefixes = ['/perform', '/qr', '/.well-known', '/invite', '/listen/', '/rehearse/', '/opengraph-image', '/twitter-image']
 
 // Vestigial paths — these used to be the catch-all defaults the proxy
 // matcher couldn't avoid, and Next.js answered them with either a 307→/login

@@ -69,9 +69,11 @@ function clearFetchErrorKeysFor(fetchUrl: string): void {
 interface PDFViewerProps {
     url: string
     trackName?: string
+    /** Read-only surfaces (Rehearse): on a load error show only the error and Retry, no library suggestions. */
+    hideSuggestions?: boolean
 }
 
-export function PDFViewer({ url, trackName }: PDFViewerProps) {
+export function PDFViewer({ url, trackName, hideSuggestions = false }: PDFViewerProps) {
     // Phase 7: the chart keeps its own (ltr) direction on an rtl page.
     const chartDir = useChartContentDir()
     const { t, isRtl } = useI18n()
@@ -505,11 +507,13 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
                                     {retryCountRef.current > 0 ? t("music.viewer.retryWithCount", { attempt: retryCountRef.current, max: MAX_RETRIES }) : t("music.viewer.retry")}
                                 </Button>
                             )}
-                            <ChartSuggestions
-                                trackName={trackName}
-                                currentFileId={url.split('/').pop()}
-                                isReplaceMode
-                            />
+                            {!hideSuggestions && (
+                                <ChartSuggestions
+                                    trackName={trackName}
+                                    currentFileId={url.split('/').pop()}
+                                    isReplaceMode
+                                />
+                            )}
                         </div>
                     )}
 

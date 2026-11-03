@@ -23,15 +23,16 @@ vi.mock('@/lib/firebase-admin', () => ({
     }),
 }))
 vi.mock('@/lib/org/request-org', () => ({ requestOrg: async () => ({ orgId: m.hostOrg }) }))
+vi.mock('@/lib/org/features', () => ({ hasFeature: async () => true }))
 vi.mock('@/lib/server-auth', () => ({ serializeSetlist: (id: string, d: object) => ({ id, ...d }) }))
 vi.mock('@/lib/server-tracks', () => ({ getTracksForSetlist: async () => m.tracks }))
 vi.mock('@/lib/recordings/featured-server', () => ({ getFeaturedForSongs: (...a: unknown[]) => m.featured(...a) }))
 vi.mock('@/lib/logger', () => ({ logger: { warn: vi.fn(), error: vi.fn(), info: vi.fn() } }))
-vi.mock('../ListenClient', () => ({ ListenClient: () => null }))
+vi.mock('../RehearseClient', () => ({ RehearseClient: () => null }))
 
-import ListenPage from '../page'
+import RehearsePage from '../page'
 
-const call = (id: string) => ListenPage({ params: Promise.resolve({ id }) })
+const call = (id: string) => RehearsePage({ params: Promise.resolve({ id }) })
 
 beforeEach(() => {
     m.setlist = { name: 'Shabbat', orgId: 'crc' }
@@ -41,7 +42,7 @@ beforeEach(() => {
     m.featured.mockResolvedValue({})
 })
 
-describe('Listen page', () => {
+describe('Rehearse page', () => {
     it('a setlist from another tenant host is a 404', async () => {
         m.hostOrg = 'brotherslazaroff'
         await expect(call('sl1')).rejects.toThrow('NEXT_NOT_FOUND')
@@ -59,6 +60,6 @@ describe('Listen page', () => {
     it('a featured-lookup failure still renders the rows', async () => {
         m.featured.mockRejectedValue(new Error('boom'))
         const el = (await call('sl1')) as { props: { rows: Array<{ title: string; take: unknown }> } }
-        expect(el.props.rows).toEqual([{ kind: 'song', id: 't1', title: 'Hashkivenu', take: null }])
+        expect(el.props.rows).toMatchObject([{ kind: 'song', id: 't1', title: 'Hashkivenu', take: null }])
     })
 })

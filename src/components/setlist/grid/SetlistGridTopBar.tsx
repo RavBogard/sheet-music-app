@@ -127,7 +127,7 @@ export function SetlistGridTopBar({
                         <Link
                             href={listenHref}
                             data-testid="setlist-grid-listen-link"
-                            title={t('recordings.listenAria', { name })}
+                            title={t('recordings.rehearseAria', { name })}
                             className={cn(
                                 'touch-hit inline-flex h-9 items-center justify-center gap-1.5 rounded-md px-2.5 sm:px-3.5',
                                 'border border-brand/50 text-brand text-sm font-semibold hover:bg-brand/10',
@@ -136,7 +136,7 @@ export function SetlistGridTopBar({
                             )}
                         >
                             <AudioLines aria-hidden className="h-4 w-4" />
-                            <span>{t('recordings.listen')}</span>
+                            <span>{t('recordings.rehearse')}</span>
                         </Link>
                     ) : null}
                     {performHref ? (

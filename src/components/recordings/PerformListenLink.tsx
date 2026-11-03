@@ -38,12 +38,12 @@ export function PerformListenLink({
     if (!hasTake || isServiceDayToday(eventDate)) return null
     return (
         <Link
-            href={`/listen/${setlistId}`}
+            href={`/rehearse/${setlistId}`}
             data-testid="perform-head-listen"
             className="touch-hit inline-flex h-9 items-center gap-1.5 rounded-md px-2 text-sm font-semibold text-brand hover:bg-brand/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
             <AudioLines aria-hidden className="h-4 w-4" />
-            <span>{t('recordings.listen')}</span>
+            <span>{t('recordings.rehearse')}</span>
         </Link>
     )
 }
