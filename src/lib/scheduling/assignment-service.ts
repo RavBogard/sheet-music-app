@@ -1,6 +1,7 @@
 import "server-only"
 
 import { logger } from "@/lib/logger"
+import { runSetlistTransaction } from "@/lib/setlist-ops"
 import { BASE_URL } from "@/lib/constants"
 import { formatEventDate } from "@/lib/firestore-helpers"
 import { detectNewSongs, type TrackRef } from "@/lib/new-song-detector"
@@ -173,7 +174,7 @@ export async function assignMusiciansService(
                 }
             }
 
-            const txResult = await db.runTransaction(async (transaction) => {
+            const txResult = await runSetlistTransaction(db, async (transaction, w) => {
                 const [activeSnap, setlistSnap] = await Promise.all([
                     transaction.get(
                         activeAssignmentsQuery,
@@ -256,8 +257,8 @@ export async function assignMusiciansService(
                 for (const g of guests) finalMusicians.push(g)
 
                 if (setlistSnap.exists) {
-                    // setlist-ops-allowlist: remove in PR 3 (assignment fields on the setlist doc)
-                    transaction.update(setlistRef, {
+                    // Stamped and version-bumped: devices show the band list.
+                    w.updateSetlist(args.setlistId, {
                         musicians: finalMusicians,
                         assignedUids: finalMusicians
                             .map((m) => m.uid)
@@ -469,7 +470,7 @@ export async function unassignAssignmentService(
     let assignment: FirebaseFirestore.DocumentData
 
     try {
-        assignment = await db.runTransaction(async (transaction) => {
+        assignment = await runSetlistTransaction(db, async (transaction, w) => {
             const assignmentDoc = await transaction.get(assignmentRef)
             if (!assignmentDoc.exists) {
                 throw new Error("NOT_FOUND")
@@ -491,8 +492,8 @@ export async function unassignAssignmentService(
                         (m) => m.uid !== musicianUid,
                     )
                     if (filtered.length !== musicians.length) {
-                        // setlist-ops-allowlist: remove in PR 3 (assignment fields on the setlist doc)
-                        transaction.update(setlistRef, {
+                        // Stamped and version-bumped: devices show the band list.
+                        w.updateSetlist(setlistId, {
                             musicians: filtered,
                             assignedUids: filtered
                                 .map((m) => m.uid)
@@ -676,7 +677,7 @@ export async function respondToAssignmentService(
     let assignment: FirebaseFirestore.DocumentData
 
     try {
-        assignment = await db.runTransaction(async (transaction) => {
+        assignment = await runSetlistTransaction(db, async (transaction, w) => {
             const assignmentDoc = await transaction.get(assignmentRef)
             if (!assignmentDoc.exists) {
                 throw new Error("NOT_FOUND")
@@ -703,8 +704,8 @@ export async function respondToAssignmentService(
                         (m) => m.uid !== args.actorUid,
                     )
                     if (filtered.length !== musicians.length) {
-                        // setlist-ops-allowlist: remove in PR 3 (assignment fields on the setlist doc)
-                        transaction.update(setlistRef, {
+                        // Stamped and version-bumped: devices show the band list.
+                        w.updateSetlist(data.setlistId, {
                             musicians: filtered,
                             assignedUids: filtered
                                 .map((m) => m.uid)

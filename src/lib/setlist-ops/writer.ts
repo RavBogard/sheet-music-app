@@ -163,6 +163,17 @@ export class SetlistWriter {
         this.sink.delete(setlistRef(this.db, id))
         this.writes++
     }
+
+    /**
+     * A patch with NO stamps, for `maintainSetlist(..., { bump: false })` only:
+     * bookkeeping fields nobody renders. Every caller of that option carries a
+     * `// no-bump: <why>` line (guarded by setlist-single-writer.test.ts).
+     */
+    updateUnstamped(kind: "track" | "setlist", id: string, patch: Record<string, unknown>): void {
+        const ref = kind === "track" ? trackRef(this.db, id) : setlistRef(this.db, id)
+        this.sink.update(ref, stripUndefined(patch))
+        this.writes++
+    }
 }
 
 /** Run `fn` in one Admin transaction with a stamped writer. */

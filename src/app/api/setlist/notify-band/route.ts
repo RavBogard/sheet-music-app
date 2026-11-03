@@ -45,6 +45,7 @@ import { rowOrg } from '@/lib/org/membership'
 import { requireFeature } from '@/lib/org/features'
 import { orgString } from '@/lib/org/strings'
 import { logger } from '@/lib/logger'
+import { maintainSetlist } from '@/lib/setlist-ops'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 
@@ -146,17 +147,20 @@ export const POST = createApiHandler(
         //
         // Intentionally skips the concurrent-edit precondition used by
         // updateSetlist — telling the band is a user-initiated action, and it
-        // is fine for it to race with a recent edit. `updatedAt` still
-        // advances so open editors see the change.
+        // is fine for it to race with a recent edit.
         //
         // `wasNotifiedBefore` is what governs SMS below: the first time the
         // band is told we text; a re-notify does not, for cost.
         const wasNotifiedBefore = !!setlist.lastNotifiedAt
-        // setlist-ops-allowlist: remove in PR 3 (notify-band stamp)
-        await setlistRef.update({
-            lastNotifiedAt: FieldValue.serverTimestamp(),
-            updatedAt: FieldValue.serverTimestamp(),
-        })
+        await maintainSetlist(
+            db,
+            setlistId,
+            async (_tx, m) => {
+                m.updateSetlist({ lastNotifiedAt: FieldValue.serverTimestamp() })
+            },
+            // no-bump: lastNotifiedAt is read only by the server crons (emit-today, bridge-watch); no device renders it
+            { bump: false },
+        )
 
         // Get event date
         const eventDate = setlist.eventDate?.toDate?.() || setlist.date?.toDate?.() || new Date()

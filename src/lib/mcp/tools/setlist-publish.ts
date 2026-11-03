@@ -1,4 +1,5 @@
 import { FieldValue } from "firebase-admin/firestore"
+import { maintainSetlist } from "@/lib/setlist-ops"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { checkUserRateLimit } from "@/lib/rate-limit"
 import { getTracksForSetlist } from "@/lib/server-tracks"
@@ -790,13 +791,13 @@ export async function publishSetlist(
     // observers wake on a publish, and so a subsequent edit can pass the
     // post-publish version as its `lastSeenVersion`.
     if (receiptRef && idempotencyKey && inputHash) {
-        const claim = await db.runTransaction<
+        const claim = await maintainSetlist<
             | { kind: "claimed"; version: number; wasNotifiedBefore: boolean }
             | { kind: "replay"; result: PublishSetlistResult }
             | { kind: "conflict" }
             | { kind: "in_progress" }
             | { kind: "stale"; envelope: StaleVersionEnvelope }
-        >(async (tx) => {
+        >(db, args.setlistId, async (tx, m) => {
             const [liveReceiptSnap, liveSetlistSnap] = await Promise.all([
                 tx.get(receiptRef),
                 tx.get(setlistRef),
@@ -833,14 +834,10 @@ export async function publishSetlist(
             }
             const liveWasNotified = !!liveSetlist.lastNotifiedAt
             const version = liveVersion + 1
-            // setlist-ops-allowlist: remove in PR 3 (notify-era setlist stamps)
-            tx.update(setlistRef, {
+            // version, updatedAt and lastModifiedAt/By are stamped by the writer.
+            m.updateSetlist({
                 lastNotifiedSnapshot: snapshot,
                 lastNotifiedAt: FieldValue.serverTimestamp(),
-                updatedAt: FieldValue.serverTimestamp(),
-                version: FieldValue.increment(1),
-                lastModifiedAt: new Date().toISOString(),
-                lastModifiedBy: callerUid,
             })
             tx.create(receiptRef, {
                 tool: "notify_band",
@@ -852,7 +849,7 @@ export async function publishSetlist(
                 createdAt: FieldValue.serverTimestamp(),
             } satisfies StoredWriteReceipt<PublishSetlistResult>)
             return { kind: "claimed", version, wasNotifiedBefore: liveWasNotified }
-        })
+        }, { actor: callerUid })
         if (claim.kind === "conflict") {
             return richError(
                 "idempotency_key_reused",
@@ -875,10 +872,10 @@ export async function publishSetlist(
         result.wasNotifiedBefore = claim.wasNotifiedBefore
         result.delivery.sms.skippedRenotify = claim.wasNotifiedBefore
     } else {
-        const commit = await db.runTransaction<
+        const commit = await maintainSetlist<
             | { kind: "committed"; version: number; wasNotifiedBefore: boolean }
             | { kind: "stale"; envelope: StaleVersionEnvelope }
-        >(async (tx) => {
+        >(db, args.setlistId, async (tx, m) => {
             const liveSnap = await tx.get(setlistRef)
             if (!liveSnap.exists) {
                 throw new Error(`Setlist '${args.setlistId}' no longer exists.`)
@@ -898,21 +895,17 @@ export async function publishSetlist(
                 }
             }
             const liveWasNotified = !!liveSetlist.lastNotifiedAt
-            // setlist-ops-allowlist: remove in PR 3 (notify-era setlist stamps)
-            tx.update(setlistRef, {
+            // version, updatedAt and lastModifiedAt/By are stamped by the writer.
+            m.updateSetlist({
                 lastNotifiedSnapshot: snapshot,
                 lastNotifiedAt: FieldValue.serverTimestamp(),
-                updatedAt: FieldValue.serverTimestamp(),
-                version: FieldValue.increment(1),
-                lastModifiedAt: new Date().toISOString(),
-                lastModifiedBy: callerUid,
             })
             return {
                 kind: "committed",
                 version: liveVersion + 1,
                 wasNotifiedBefore: liveWasNotified,
             }
-        })
+        }, { actor: callerUid })
         if (commit.kind === "stale") return commit.envelope
         result.version = commit.version
         result.wasNotifiedBefore = commit.wasNotifiedBefore

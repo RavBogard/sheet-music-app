@@ -33,6 +33,7 @@ import {
  * `honors` is excluded by design — see the shared module's header.
  */
 import { COPYABLE_TRACK_FIELDS } from "./copyable-track-fields"
+import { createSetlistWithRows } from "@/lib/setlist-ops"
 
 /**
  * GAP-002 (cycle-2) — clone an existing setlist into a brand new one.
@@ -351,12 +352,9 @@ export async function cloneSetlist(
     }
 
 
-    // Atomic batch — parent + every track in one commit, same shape
-    // createSetlistServerSide uses. A typical weekly setlist is well under
-    // the 500-write batch limit.
-    const batch = db.batch()
-    // setlist-ops-allowlist: remove in PR 3 (clone_setlist batch)
-    batch.set(db.collection("setlists").doc(newSetlistId), setlistPayload)
+    // Parent + every track in ONE transaction through the single writer
+    // (OPS-CONTRACT). A typical weekly setlist is well under the 500-write cap.
+    const newRows: Array<{ id: string; data: Record<string, unknown> }> = []
 
     const nowIso = new Date().toISOString()
     const newTrackIds: string[] = []
@@ -382,11 +380,10 @@ export async function cloneSetlist(
         // surface defaults rather than write a broken row.
         if (typeof payload.title !== "string") payload.title = ""
         if (typeof payload.type !== "string") payload.type = "song"
-        // setlist-ops-allowlist: remove in PR 3 (clone_setlist batch)
-        batch.set(db.collection("tracks").doc(newTrackId), payload)
+        newRows.push({ id: newTrackId, data: payload })
     })
 
-    await batch.commit()
+    await createSetlistWithRows(db, { setlistId: newSetlistId, setlist: setlistPayload, rows: newRows }, { actor: uid })
     logger.info("[mcp] clone_setlist committed", {
         sourceSetlistId: args.sourceSetlistId,
         newSetlistId,

@@ -1,7 +1,7 @@
 import "server-only"
 
 import crypto from "crypto"
-import { FieldValue } from "firebase-admin/firestore"
+import { maintainSetlist } from "@/lib/setlist-ops"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { assertEditor } from "@/lib/mcp/server-tracks-write"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
@@ -163,7 +163,7 @@ export async function addOpenItemTool(
             resolvedAt: null,
             resolvedByName: null,
         }
-        const after = await db.runTransaction(async (tx) => {
+        const after = await maintainSetlist(db, setlistId, async (tx, m) => {
             const snap = await tx.get(ref)
             const data = snap.exists ? (snap.data() as Record<string, unknown>) : null
             if (!data || rowOrg(data.orgId) !== org) throw new Refusal(setlistNotFound(setlistId))
@@ -172,15 +172,9 @@ export async function addOpenItemTool(
             const existing = storedItems(data).find((i) => !i.resolvedAt && i.text.toLowerCase() === same)
             if (existing) return { data, item: existing }
             const next = [...raw, item]
-            // setlist-ops-allowlist: remove in PR 3 (open items on the setlist doc)
-            tx.update(ref, {
-                openItems: next,
-                version: FieldValue.increment(1),
-                lastModifiedAt: new Date().toISOString(),
-                updatedAt: FieldValue.serverTimestamp(),
-            })
+            m.updateSetlist({ openItems: next })
             return { data: { ...data, openItems: next }, item }
-        })
+        }, { actor: uid })
         return { ok: true, setlistId, item: publicItem(after.item), openItems: readOpenItems(after.data) }
     } catch (error) {
         if (error instanceof Refusal) return error.envelope
@@ -225,7 +219,7 @@ export async function resolveOpenItemTool(
         if (!editor.ok) return editor
         const resolvedByName = await displayNameFor(db, uid)
         const ref = db.collection("setlists").doc(setlistId)
-        const out = await db.runTransaction(async (tx) => {
+        const out = await maintainSetlist(db, setlistId, async (tx, m) => {
             const snap = await tx.get(ref)
             const data = snap.exists ? (snap.data() as Record<string, unknown>) : null
             // Another tenant's setlist hides its items too: the item is simply not found.
@@ -235,16 +229,10 @@ export async function resolveOpenItemTool(
             if (at < 0) throw new Refusal(itemNotFound(setlistId, itemId))
             const resolvedAt = new Date().toISOString()
             const next = raw.map((r, i) => (i === at ? { ...r, resolvedAt, resolvedByName } : r))
-            // setlist-ops-allowlist: remove in PR 3 (open items on the setlist doc)
-            tx.update(ref, {
-                openItems: next,
-                version: FieldValue.increment(1),
-                lastModifiedAt: resolvedAt,
-                updatedAt: FieldValue.serverTimestamp(),
-            })
+            m.updateSetlist({ openItems: next })
             const resolved = storedItems({ openItems: [next[at]] })[0]
             return { resolved: publicItem(resolved), openItems: readOpenItems({ openItems: next }) }
-        })
+        }, { actor: uid })
         return { ok: true, setlistId, ...out }
     } catch (error) {
         if (error instanceof Refusal) return error.envelope

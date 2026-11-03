@@ -22,11 +22,21 @@ import { join, relative, resolve } from "node:path"
  * ALLOWLIST is per call site: the write's line, or the line above it, carries
  *   // setlist-ops-allowlist: remove in PR 3 (<why>)
  * A marker with no write under it fails the stale-marker test.
+ *
+ * A call site the scan flags that is NOT a setlists/tracks write (a bulk delete
+ * of another collection in a file that also reads setlists) carries instead
+ *   // setlist-ops-not-a-setlist-write: <what it writes>
+ *
+ * `maintainSetlist(..., { bump: false })` writes with no stamps; every such
+ * call carries `// no-bump: <why nobody renders the field>` on its line or the
+ * line above.
  */
 
 const ROOT = resolve(process.cwd(), "src")
 const MODULE_DIR = "lib/setlist-ops/"
 const MARKER = "setlist-ops-allowlist: remove in PR 3"
+const NOT_A_SETLIST = /setlist-ops-not-a-setlist-write:\s*\S.{4,}/
+const NO_BUMP = /\/\/\s*no-bump:\s*\S.{9,}/
 
 const W = String.raw`(?:set|update|delete|create)`
 const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
@@ -105,15 +115,16 @@ export function findWriteSites(raw: string): WriteSite[] {
 /** Sites without an allowlist marker on their line or the line above, and markers covering nothing. */
 export function checkFile(raw: string): { unmarked: WriteSite[]; staleMarkers: number[] } {
     const lines = raw.split(/\r?\n/)
-    const marked = (n: number) => !!lines[n - 1]?.includes(MARKER) || !!lines[n - 2]?.includes(MARKER)
+    const has = (n: number) => !!lines[n - 1]?.includes(MARKER) || NOT_A_SETLIST.test(lines[n - 1] ?? "")
+    const marked = (n: number) => has(n) || has(n - 1)
     const sites = findWriteSites(raw)
     const unmarked = sites.filter((s) => !marked(s.line))
     const used = new Set<number>()
     for (const s of sites) {
-        if (lines[s.line - 1]?.includes(MARKER)) used.add(s.line)
-        if (lines[s.line - 2]?.includes(MARKER)) used.add(s.line - 1)
+        if (has(s.line)) used.add(s.line)
+        if (has(s.line - 1)) used.add(s.line - 1)
     }
-    const staleMarkers = lines.flatMap((l, i) => (l.includes(MARKER) && !used.has(i + 1) ? [i + 1] : []))
+    const staleMarkers = lines.flatMap((l, i) => (has(i + 1) && !used.has(i + 1) ? [i + 1] : []))
     return { unmarked, staleMarkers }
 }
 
@@ -184,6 +195,19 @@ describe("OPS-CONTRACT single writer: only src/lib/setlist-ops writes setlists/*
         expect(offenders, offenders.join("\n")).toEqual([])
     })
 
+    it("every bump:false maintenance write carries a no-bump justification", () => {
+        const bare = outside.flatMap((f) => {
+            const lines = f.src.split(/\r?\n/)
+            const code = stripComments(f.src).split("\n")
+            return code.flatMap((l, i) =>
+                /\bbump\s*:\s*false\b/.test(l) && !NO_BUMP.test(lines[i]) && !NO_BUMP.test(lines[i - 1] ?? "")
+                    ? [`${f.rel}:${i + 1}`]
+                    : [],
+            )
+        })
+        expect(bare, bare.join("\n")).toEqual([])
+    })
+
     it("no allowlist marker is stale", () => {
         const stale = outside.flatMap((f) => checkFile(f.src).staleMarkers.map((n) => `${f.rel}:${n}`))
         expect(stale, stale.join("\n")).toEqual([])
@@ -200,6 +224,19 @@ describe("OPS-CONTRACT single writer: only src/lib/setlist-ops writes setlists/*
             "app/api/liturgy/bind-row/route.ts",
             "app/api/setlist/rename/route.ts",
             "app/api/setlist/transfer/route.ts",
+            // PR 3b: the server stragglers.
+            "lib/mcp/tools/clone-setlist.ts",
+            "lib/mcp/tools/templates.ts",
+            "lib/mcp/tools/performed.ts",
+            "lib/mcp/tools/open-items.ts",
+            "lib/mcp/tools/setlist-publish.ts",
+            "lib/mcp/tools/setlist-hygiene.ts",
+            "lib/mcp/tools/week-key-backfill.ts",
+            "lib/mcp/tools/backfill-track-mimetype.ts",
+            "lib/beit-mitzvah/service.ts",
+            "lib/scheduling/assignment-service.ts",
+            "app/api/setlist/delete/route.ts",
+            "app/api/setlist/notify-band/route.ts",
         ]) {
             const f = files.find((x) => x.rel === rel)!
             expect(f.src, rel).toMatch(/from ["']@\/lib\/setlist-ops["']/)

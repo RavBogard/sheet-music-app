@@ -20,6 +20,7 @@
 
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
+import { maintainSetlists } from "@/lib/setlist-ops"
 import { isTestSetlist } from "@/types/models"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/errors"
 import { readTenantRole } from "@/lib/org/access"
@@ -135,18 +136,12 @@ export async function backfillSetlistTestFlag(
             }
         }
 
-        const BATCH_MAX = 400
-        for (let i = 0; i < deltas.length; i += BATCH_MAX) {
-            const batch = db.batch()
-            for (const delta of deltas.slice(i, i + BATCH_MAX)) {
-                // setlist-ops-allowlist: remove in PR 3 (isTest hygiene backfill)
-                batch.update(
-                    db.collection("setlists").doc(delta.setlistId),
-                    { isTest: delta.to },
-                )
-            }
-            await batch.commit()
-        }
+        // Through the single writer: `isTest` decides which lists a setlist
+        // appears in, so each setlist's `version` is bumped and devices see it.
+        await maintainSetlists(
+            db,
+            deltas.map((delta) => ({ setlistId: delta.setlistId, patch: { isTest: delta.to } })),
+        )
 
         return {
             scanned: snap.size,

@@ -12,6 +12,7 @@ import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 import { rowOrg } from "@/lib/mcp/org-context"
 import { cloneSetlist } from "./clone-setlist"
+import { maintainSetlist } from "@/lib/setlist-ops"
 import { fetchHistory, historyConfigured } from "@/lib/performed/history-client"
 import { chapters as buildChapters, reconcile, type PlannedRow } from "@/lib/performed/reconcile"
 import type { Diff, DiffRow } from "@/lib/performed/types"
@@ -317,108 +318,104 @@ async function promote(
     if (!("ok" in cloned) || cloned.ok !== true) return cloned as RichErrorEnvelope
 
     const cloneId = cloned.setlistId
-    const snap = await db.collection("tracks").where("setlistId", "==", cloneId).get()
-    const cloneDocs = snap.docs
-        .map((d) => ({
-            ref: d.ref,
-            id: d.id,
-            order: Number((d.data() as { order?: unknown }).order) || 0,
-            data: d.data() as { type?: unknown; fileId?: unknown },
-        }))
-        .sort((a, b) => a.order - b.order || a.id.localeCompare(b.id))
+    // One transaction on the clone through the single writer (OPS-CONTRACT):
+    // every touched row and the clone itself are stamped and version-bumped.
+    const added = diff.rows.filter((r) => r.status === "added")
+    const { rowsRemoved, rowsStamped } = await maintainSetlist(db, cloneId, async (tx, m) => {
+        const snap = await tx.get(db.collection("tracks").where("setlistId", "==", cloneId))
+        const cloneDocs = snap.docs
+            .map((d) => ({
+                id: d.id,
+                order: Number((d.data() as { order?: unknown }).order) || 0,
+                data: d.data() as { type?: unknown; fileId?: unknown },
+            }))
+            .sort((a, b) => a.order - b.order || a.id.localeCompare(b.id))
 
-    const batch = db.batch()
-    const nowIso = new Date().toISOString()
-    let rowsRemoved = 0
-    let rowsStamped = 0
+        const nowIso = new Date().toISOString()
+        let rowsRemoved = 0
+        let rowsStamped = 0
 
-    // Rows the service skipped come OUT of the performed version — that is what
-    // makes it a record of the service rather than a copy of the plan. They are
-    // still in the planned setlist, which is the point of not overwriting it.
-    const removed = new Set<number>()
-    for (const row of diff.rows) {
-        if (row.plannedPosition === undefined) continue
-        const target = cloneDocs[row.plannedPosition]
-        if (!target) continue
-        if (row.status === "skipped") {
-            // setlist-ops-allowlist: remove in PR 3 (performed-service clone)
-            batch.delete(target.ref)
-            removed.add(row.plannedPosition)
-            rowsRemoved += 1
-        } else {
-            const patch: Record<string, unknown> = {}
-            if (row.performedAt) patch.performedAt = row.performedAt
-            // The performed version carries the tune actually played: a row
-            // the band swapped for tonight is re-bonded, on the CLONE only.
-            if (row.chart?.swapped && row.chart.performedFileId) {
-                target.data = { ...target.data, fileId: row.chart.performedFileId }
-                patch.fileId = row.chart.performedFileId
-                patch.songId = row.chart.performedFileId
-                patch.title = row.chart.performedTitle || row.title
-            }
-            if (Object.keys(patch).length > 0) {
-                // setlist-ops-allowlist: remove in PR 3 (performed-service clone)
-                batch.update(target.ref, { ...patch, lastModifiedAt: nowIso })
-                rowsStamped += 1
+        // Rows the service skipped come OUT of the performed version — that is what
+        // makes it a record of the service rather than a copy of the plan. They are
+        // still in the planned setlist, which is the point of not overwriting it.
+        const removed = new Set<number>()
+        for (const row of diff.rows) {
+            if (row.plannedPosition === undefined) continue
+            const target = cloneDocs[row.plannedPosition]
+            if (!target) continue
+            if (row.status === "skipped") {
+                m.deleteRow(target.id)
+                removed.add(row.plannedPosition)
+                rowsRemoved += 1
+            } else {
+                const patch: Record<string, unknown> = {}
+                if (row.performedAt) patch.performedAt = row.performedAt
+                // The performed version carries the tune actually played: a row
+                // the band swapped for tonight is re-bonded, on the CLONE only.
+                if (row.chart?.swapped && row.chart.performedFileId) {
+                    target.data = { ...target.data, fileId: row.chart.performedFileId }
+                    patch.fileId = row.chart.performedFileId
+                    patch.songId = row.chart.performedFileId
+                    patch.title = row.chart.performedTitle || row.title
+                }
+                if (Object.keys(patch).length > 0) {
+                    m.updateRow(target.id, { ...patch, lastModifiedAt: nowIso })
+                    rowsStamped += 1
+                }
             }
         }
-    }
 
-    // Audibles, spliced at the position the diff already worked out. Order is
-    // renumbered below, so a fractional slot here would only be temporary —
-    // simpler to place them by their index in the diff's row list.
-    const added = diff.rows.filter((r) => r.status === "added")
-    const newIds: string[] = []
-    for (const row of added) {
-        const id = crypto.randomUUID()
-        newIds.push(id)
-        // setlist-ops-allowlist: remove in PR 3 (performed-service clone)
-        batch.set(db.collection("tracks").doc(id), {
-            id,
-            setlistId: cloneId,
-            orgId: org,
-            title: row.title,
-            type: row.type ?? "prayer",
-            ...(row.liturgyRef ? { liturgyRef: row.liturgyRef } : {}),
-            performedAt: row.performedAt ?? null,
-            order: 0, // renumbered below
-            version: 1,
+        // Audibles, spliced at the position the diff already worked out. Order is
+        // renumbered below, so a fractional slot here would only be temporary —
+        // simpler to place them by their index in the diff's row list.
+        const newIds: string[] = []
+        for (const row of added) {
+            const id = crypto.randomUUID()
+            newIds.push(id)
+            m.addRow(id, {
+                id,
+                setlistId: cloneId,
+                orgId: org,
+                title: row.title,
+                type: row.type ?? "prayer",
+                ...(row.liturgyRef ? { liturgyRef: row.liturgyRef } : {}),
+                performedAt: row.performedAt ?? null,
+                order: 0, // renumbered below
+                version: 1,
+                lastModifiedAt: nowIso,
+                lastModifiedBy: uid,
+            })
+        }
+
+        // Renumber `order` over the surviving + added rows, in the diff's own order,
+        // so the performed version reads top-to-bottom as the service ran.
+        let position = 0
+        let addedCursor = 0
+        const finalRows: Array<{ type?: unknown; fileId?: unknown }> = []
+        for (const row of diff.rows) {
+            if (row.status === "added") {
+                m.updateRow(newIds[addedCursor++], { order: position++ })
+                finalRows.push({ type: row.type ?? "prayer" })
+                continue
+            }
+            if (row.plannedPosition === undefined) continue
+            if (removed.has(row.plannedPosition)) continue
+            const target = cloneDocs[row.plannedPosition]
+            if (!target) continue
+            m.updateRow(target.id, { order: position++ })
+            finalRows.push(target.data)
+        }
+
+        m.updateSetlist({
+            // trackCount / songCount / fileIds of the performed version.
+            ...deriveSetlistCounts(finalRows),
+            performedFromSetlistId: sourceSetlistId,
             lastModifiedAt: nowIso,
             lastModifiedBy: uid,
         })
-    }
 
-    // Renumber `order` over the surviving + added rows, in the diff's own order,
-    // so the performed version reads top-to-bottom as the service ran.
-    let position = 0
-    let addedCursor = 0
-    const finalRows: Array<{ type?: unknown; fileId?: unknown }> = []
-    for (const row of diff.rows) {
-        if (row.status === "added") {
-            // setlist-ops-allowlist: remove in PR 3 (performed-service clone)
-            batch.update(db.collection("tracks").doc(newIds[addedCursor++]), { order: position++ })
-            finalRows.push({ type: row.type ?? "prayer" })
-            continue
-        }
-        if (row.plannedPosition === undefined) continue
-        if (removed.has(row.plannedPosition)) continue
-        const target = cloneDocs[row.plannedPosition]
-        if (!target) continue
-        // setlist-ops-allowlist: remove in PR 3 (performed-service clone)
-        batch.update(target.ref, { order: position++ })
-        finalRows.push(target.data)
-    }
-
-    // setlist-ops-allowlist: remove in PR 3 (performed-service clone)
-    batch.update(db.collection("setlists").doc(cloneId), {
-        // trackCount / songCount / fileIds of the performed version.
-        ...deriveSetlistCounts(finalRows),
-        performedFromSetlistId: sourceSetlistId,
-        lastModifiedAt: nowIso,
-        lastModifiedBy: uid,
-    })
-
-    await batch.commit()
+        return { rowsRemoved, rowsStamped }
+    }, { actor: uid })
     logger.info("[mcp] reconcile_service promoted", {
         sourceSetlistId,
         cloneId,

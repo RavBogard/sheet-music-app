@@ -13,6 +13,7 @@
 
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
+import { maintainSetlists } from "@/lib/setlist-ops"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/errors"
 import { rowOrg } from "@/lib/mcp/org-context"
 import { readTenantRole } from "@/lib/org/access"
@@ -127,14 +128,12 @@ export async function backfillWeekKeys(
         deltas.sort((a, b) => a.day.localeCompare(b.day) || a.setlistId.localeCompare(b.setlistId))
 
         if (!dryRun) {
-            for (let i = 0; i < deltas.length; i += 400) {
-                const batch = db.batch()
-                for (const delta of deltas.slice(i, i + 400)) {
-                    // setlist-ops-allowlist: remove in PR 3 (week-key backfill)
-                    batch.update(db.collection("setlists").doc(delta.setlistId), weekFields(weeks.get(delta.setlistId)!))
-                }
-                await batch.commit()
-            }
+            // Through the single writer: each setlist's `version` is bumped so
+            // devices take the new week key.
+            await maintainSetlists(
+                db,
+                deltas.map((delta) => ({ setlistId: delta.setlistId, patch: weekFields(weeks.get(delta.setlistId)!) })),
+            )
         }
         return {
             scanned: mine.length,

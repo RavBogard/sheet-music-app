@@ -30,5 +30,19 @@ export {
     type WriteSink,
     type WriterOptions,
 } from "./writer"
+export {
+    createSetlistWithRows,
+    writeNewSetlist,
+    maintainSetlist,
+    maintainSetlists,
+    maintainRows,
+    deleteSetlistRows,
+    deleteSetlistsWithRows,
+    deleteSetlistTree,
+    SetlistMaintenance,
+    MAX_TRANSACTION_WRITES,
+    type MaintainOptions,
+    type NewSetlistInput,
+} from "./maintenance"
 export { stripUndefined, placementIndex, mergeFields, canonicalSort, valuesEqual } from "./pure"
 export { checkRowFields, checkSetlistFields, isSafeKey } from "./fields"

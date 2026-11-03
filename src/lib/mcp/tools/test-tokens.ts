@@ -11,6 +11,7 @@ import {
 } from "@/lib/firebase-admin"
 import { generateRawToken, hashToken } from "@/lib/mcp/tokens"
 import { logger } from "@/lib/logger"
+import { deleteSetlistsWithRows } from "@/lib/setlist-ops"
 import { liftLegacyErrorEnvelope } from "@/lib/mcp/errors"
 import { isTestUid } from "@/lib/test-isolation"
 import { setMembership } from "@/lib/org/memberships-write"
@@ -551,7 +552,7 @@ async function deleteByQuery(
     if (snap.empty) return { ids: [], count: 0 }
     const ids = snap.docs.map((d) => d.id)
     const bw = db.bulkWriter()
-    // setlist-ops-allowlist: remove in PR 3 (test-fixture cleanup)
+    // setlist-ops-not-a-setlist-write: CASCADE_FIELDS names no setlists/tracks collection
     for (const d of snap.docs) bw.delete(d.ref)
     await bw.close()
     return { ids, count: ids.length }
@@ -708,23 +709,9 @@ async function revokeTestAccountUnchecked(
     // 1. Setlists owned by the test user → cascade their tracks.
     const setlistsSnap = await db.collection("setlists").where("ownerId", "==", uid).get()
     const setlistIds = setlistsSnap.docs.map((d) => d.id)
-    let tracksDeleted = 0
-    if (setlistIds.length > 0) {
-        // Tracks are top-level, keyed by setlistId. One query per setlist
-        // keeps the index footprint zero; tiny test datasets.
-        for (const sid of setlistIds) {
-            const trackSnap = await db.collection("tracks").where("setlistId", "==", sid).get()
-            const bw = db.bulkWriter()
-            // setlist-ops-allowlist: remove in PR 3 (test-fixture cleanup)
-            for (const t of trackSnap.docs) bw.delete(t.ref)
-            await bw.close()
-            tracksDeleted += trackSnap.size
-        }
-        const bw = db.bulkWriter()
-        // setlist-ops-allowlist: remove in PR 3 (test-fixture cleanup)
-        for (const s of setlistsSnap.docs) bw.delete(s.ref)
-        await bw.close()
-    }
+    // Tracks are top-level, keyed by setlistId; the single writer deletes
+    // each setlist's rows, then the setlist docs.
+    const { tracks: tracksDeleted } = await deleteSetlistsWithRows(db, setlistIds)
 
     // 2. Other owned collections.
     const cascaded: Record<string, number> = {
@@ -747,7 +734,7 @@ async function revokeTestAccountUnchecked(
     const tokenSnap = await db.collection(MCP_TOKENS).where("testUid", "==", uid).get()
     {
         const bw = db.bulkWriter()
-        // setlist-ops-allowlist: remove in PR 3 (test-fixture cleanup)
+        // setlist-ops-not-a-setlist-write: mcpTokens docs
         for (const t of tokenSnap.docs) bw.delete(t.ref)
         await bw.close()
     }
@@ -758,7 +745,7 @@ async function revokeTestAccountUnchecked(
 
     // 5. users/{uid} with subcollections.
     try {
-        // setlist-ops-allowlist: remove in PR 3 (test-fixture cleanup)
+        // setlist-ops-not-a-setlist-write: the users/{uid} doc tree
         await db.recursiveDelete(db.collection(USERS).doc(uid))
     } catch (err) {
         logger.warn("[mcp-test-token] recursiveDelete failed", { uid, err })
@@ -1071,17 +1058,8 @@ export async function cleanupAllTestDataCore(
         let flagTracks = 0
         for (const doc of flagSnap.docs) {
             try {
-                const trackSnap = await db
-                    .collection("tracks")
-                    .where("setlistId", "==", doc.id)
-                    .get()
-                const bw = db.bulkWriter()
-                // setlist-ops-allowlist: remove in PR 3 (test-fixture cleanup)
-                for (const t of trackSnap.docs) bw.delete(t.ref)
-                await bw.close()
-                flagTracks += trackSnap.size
-                // setlist-ops-allowlist: remove in PR 3 (test-fixture cleanup)
-                await doc.ref.delete()
+                const { tracks } = await deleteSetlistsWithRows(db, [doc.id])
+                flagTracks += tracks
                 flagSetlists++
             } catch (err) {
                 failures.push(
@@ -1281,26 +1259,10 @@ export async function sweepOrphanTestDataCore(
     if (wantsWrite) {
         // Delete tracks for orphan setlists first (preserve referential
         // hygiene — track rows pointing at no setlist are themselves orphans).
-        for (const sid of orphanSetlistIds) {
-            const trackSnap = await db
-                .collection("tracks")
-                .where("setlistId", "==", sid)
-                .get()
-            const bw = db.bulkWriter()
-            // setlist-ops-allowlist: remove in PR 3 (test-fixture cleanup)
-            for (const t of trackSnap.docs) bw.delete(t.ref)
-            await bw.close()
-            swept.tracks += trackSnap.size
-        }
-
         if (orphanSetlistIds.length > 0) {
-            const bw = db.bulkWriter()
-            for (const sid of orphanSetlistIds) {
-                // setlist-ops-allowlist: remove in PR 3 (test-fixture cleanup)
-                bw.delete(db.collection("setlists").doc(sid))
-            }
-            await bw.close()
-            swept.setlists = orphanSetlistIds.length
+            const out = await deleteSetlistsWithRows(db, orphanSetlistIds)
+            swept.tracks += out.tracks
+            swept.setlists = out.setlists
         }
 
         if (orphanTemplateIds.length > 0) {
