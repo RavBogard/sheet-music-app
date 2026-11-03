@@ -173,6 +173,15 @@ export function sharedLibraryRowsQuery(db: Firestore, orgId: string): Query {
     )
 }
 
+/** Builders that do NOT start with `where('orgId','==',…)`, each with why the
+ *  rules still prove it. `tenant-query-scan.test.ts` fails on a builder that
+ *  lacks the orgId filter and is not listed here. */
+export const ORG_FILTER_EXCEPTIONS: Readonly<Record<string, string>> = {
+    myAssignmentsQuery: "the list rule's `musicianUid == auth.uid` branch proves a caller's own rows in any tenant",
+    sharedCollectionsQuery: "collections carry ownerOrgId, not orgId; the rule proves `sharedWith`/`assignedTo` array-contains a tenant the caller belongs to",
+    sharedLibraryRowsQuery: "rows OTHER tenants shared: `visibleToOrgs` array-contains the caller's tenant (sharedSeesList), with orgId != it",
+}
+
 /** The registry the persona matrix runs. Adding a builder above without
  *  adding it here fails `tenant-query-scan.test.ts`. */
 export const CLIENT_QUERIES = {

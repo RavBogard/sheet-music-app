@@ -18,6 +18,7 @@
 
 import { getDb, subscribeWithDb, recoverFromFirestoreShutdown } from '@/lib/firebase'
 import {
+    // eslint-disable-next-line no-restricted-imports -- non-tenant: users/{uid}/notifications, the caller's own subcollection
     collection, query, where, orderBy, limit,
     onSnapshot, doc, updateDoc, writeBatch,
     Timestamp, getDocs,

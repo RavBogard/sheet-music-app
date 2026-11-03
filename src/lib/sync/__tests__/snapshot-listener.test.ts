@@ -6,6 +6,9 @@
 import 'fake-indexeddb/auto'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+const { captureSyncFailure } = vi.hoisted(() => ({ captureSyncFailure: vi.fn() }))
+vi.mock('../sentry-capture', () => ({ captureSyncFailure }))
+
 import { LocalDb, resetDbForTests } from '../../local/schema'
 import {
     type SetlistDelivery,
@@ -335,21 +338,26 @@ describe('v50-06-03: startSnapshotListener', () => {
         stop()
     })
 
-    it('a permission-denied tracks listener calls onTracksRefused; other errors do not', async () => {
-        for (const [code, expected] of [['permission-denied', 1], ['unavailable', 0]] as const) {
+    it('a handled permission-denied calls onTracksRefused at info level and skips Sentry; other errors do not', async () => {
+        for (const [code, refused] of [['permission-denied', true], ['unavailable', false]] as const) {
+            captureSyncFailure.mockClear()
             const { subscriber, handle } = makeSubscriberHarness()
             const onTracksRefused = vi.fn()
+            const log = { warn: vi.fn(), error: vi.fn(), info: vi.fn() }
             const stop = startSnapshotListener({
                 setlistId: 's1',
                 db,
                 orgId: 'brotherslazaroff',
                 subscriber,
-                logger: { warn: vi.fn(), error: vi.fn() },
+                logger: log,
                 onTracksRefused,
             })
             handle.raiseTracksError(Object.assign(new Error(code), { code }))
             await flush()
-            expect(onTracksRefused).toHaveBeenCalledTimes(expected)
+            expect(onTracksRefused).toHaveBeenCalledTimes(refused ? 1 : 0)
+            expect(log.info).toHaveBeenCalledTimes(refused ? 1 : 0)
+            expect(log.error).toHaveBeenCalledTimes(refused ? 0 : 1)
+            expect(captureSyncFailure).toHaveBeenCalledTimes(refused ? 0 : 1)
             stop()
         }
     })

@@ -32,6 +32,7 @@ import { getDb, auth } from "@/lib/firebase"
 import { coerceOrgId } from "@/lib/org/registry"
 import { logger } from "@/lib/logger"
 import { setlistTracksQuery } from "@/lib/tenant-query"
+import { parseOverridesDoc, type OverridesDoc } from "@/lib/performance/tonight"
 import type { LocalTrack } from "@/lib/local/types"
 import type { SetlistTrack } from "@/types/models"
 
@@ -58,23 +59,38 @@ function sortRows(rows: Record<string, unknown>[]): Record<string, unknown>[] {
     })
 }
 
+/** The public endpoint's answer: the rows, and tonight's overrides as the
+ *  server read them (null when there are none). */
+export interface PublicTracksAnswer {
+    tracks: SetlistTrack[]
+    overrides: OverridesDoc | null
+}
+
 /** The public endpoint. Returns null when it cannot answer, so we can fall back.
  *  Perform uses it directly when the rules refuse the live listener (a viewer
- *  signed in to another tenant). */
-export async function fetchTracksViaPublicApi(setlistId: string): Promise<SetlistTrack[] | null> {
+ *  signed in to another tenant). `signal` aborts a request a newer one replaces. */
+export async function fetchTracksViaPublicApi(
+    setlistId: string,
+    signal?: AbortSignal,
+): Promise<PublicTracksAnswer | null> {
     try {
         const res = await fetch(
             `/api/setlists/${encodeURIComponent(setlistId)}/tracks`,
-            { headers: { accept: "application/json" } },
+            { headers: { accept: "application/json" }, signal },
         )
         if (!res.ok) return null
         const body = (await res.json()) as {
             found?: boolean
             tracks?: Record<string, unknown>[]
+            overrides?: unknown
         }
         if (!Array.isArray(body.tracks)) return null
-        return sortRows(body.tracks) as unknown as SetlistTrack[]
+        return {
+            tracks: sortRows(body.tracks) as unknown as SetlistTrack[],
+            overrides: parseOverridesDoc(body.overrides ?? null),
+        }
     } catch (err) {
+        if (signal?.aborted) return null
         logger.warn("[client-tracks] public tracks endpoint failed", {
             setlistId,
             err: err instanceof Error ? err.message : String(err),
@@ -103,7 +119,7 @@ export async function fetchTracksForSetlistClient(
     // endpoint that can answer for one setlist.
     if (!auth?.currentUser) {
         const viaApi = await fetchTracksViaPublicApi(setlistId)
-        if (viaApi) return viaApi
+        if (viaApi) return viaApi.tracks
     }
 
     const db = await getDb()
@@ -124,7 +140,7 @@ export async function fetchTracksForSetlistClient(
         // which P2 kept working on purpose. The server can answer for one
         // setlist where a security rule can only answer for a whole
         // collection, so it answers this one.
-        return (await fetchTracksViaPublicApi(setlistId)) ?? []
+        return (await fetchTracksViaPublicApi(setlistId))?.tracks ?? []
     }
     const rows: Record<string, unknown>[] = snap.docs.map((d) => ({
         ...(d.data() as Record<string, unknown>),
@@ -135,7 +151,7 @@ export async function fetchTracksForSetlistClient(
     // believing it.
     if (rows.length === 0) {
         const viaApi = await fetchTracksViaPublicApi(setlistId)
-        if (viaApi && viaApi.length > 0) return viaApi
+        if (viaApi && viaApi.tracks.length > 0) return viaApi.tracks
     }
     return sortRows(rows) as unknown as SetlistTrack[]
 }

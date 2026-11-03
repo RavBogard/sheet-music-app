@@ -1,6 +1,7 @@
 import { storedClassFor, storedRabbiSlot } from "@/lib/history/classify"
 import { getDb, subscribeWithDb } from "./firebase";
 import {
+    // eslint-disable-next-line no-restricted-imports -- write only: addDoc to setlists
     collection,
     addDoc,
     updateDoc,

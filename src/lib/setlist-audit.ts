@@ -10,6 +10,7 @@
  */
 
 import { getDb } from "./firebase"
+// eslint-disable-next-line no-restricted-imports -- setlists/{id}/history subcollection (write + admin read), not a tenant list
 import { collection, addDoc, serverTimestamp, query, orderBy, limit, getDocs } from "firebase/firestore"
 import { logger } from "@/lib/logger"
 
@@ -93,6 +94,7 @@ export async function getSetlistHistory(
 ): Promise<AuditEntry[]> {
     try {
         const db = await getDb()
+        // tenant-scan-allow: setlists/{id}/history subcollection, rule reads the parent setlist's org (ad)
         const historyRef = collection(db, 'setlists', setlistId, 'history')
         const q = query(historyRef, orderBy('timestamp', 'desc'), limit(maxEntries))
         const snapshot = await getDocs(q)

@@ -14,6 +14,7 @@
 import { getDb, auth, subscribeWithDb, recoverFromFirestoreShutdown } from "@/lib/firebase"
 import {
     doc,
+    // eslint-disable-next-line no-restricted-imports -- write only: addDoc to monitor-live/commands/pending
     collection,
     onSnapshot,
     addDoc,

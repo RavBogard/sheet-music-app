@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth-context"
 import { useOrg } from "@/lib/org/org-context"
 import { getDb } from "@/lib/firebase"
 import { upcomingSetlistsQuery } from "@/lib/tenant-query"
+// eslint-disable-next-line no-restricted-imports -- non-tenant: users/{uid}/songPreferences, the caller's own subcollection
 import { collection, query, where, doc, getDoc, getDocFromCache, setDoc, documentId, getDocs, serverTimestamp, type Query, type DocumentData } from "firebase/firestore"
 import { toDate } from "@/lib/firestore-helpers"
 import { Setlist, type SetlistTrack } from "@/lib/setlist-firebase"

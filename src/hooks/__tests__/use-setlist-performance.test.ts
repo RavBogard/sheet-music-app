@@ -62,6 +62,7 @@ vi.mock('@/lib/sync/snapshot-listener', () => ({
 }))
 
 import { useSetlistPerformance } from '@/hooks/use-setlist-performance'
+import { orgDay } from '@/lib/performance/tonight'
 import type { LocalTrack } from '@/lib/local/types'
 
 const SETLIST_ID = 'set-perf-1'
@@ -365,31 +366,50 @@ describe('useSetlistPerformance (v5h-01-04: Dexie-backed)', () => {
     expect((startFn.mock.calls[0]?.[0] as { orgId?: string }).orgId).toBe('brotherslazaroff')
   })
 
-  it("another tenant's setlist: a refused tracks listener falls back to the public endpoint and refreshes on visibility", async () => {
+  it("another tenant's setlist: refused listeners fall back to the public endpoint (rows and tonight's overrides), debounced", async () => {
     // A crc device opening a Brothers Lazaroff Perform link: the rules refuse
-    // the listener, so the rows come from /api/setlists/{id}/tracks.
+    // both listeners, so rows and overrides come from /api/setlists/{id}/tracks.
+    const today = orgDay(Date.now(), 'brotherslazaroff')
     mockUseSafeFirestoreSync.mockReturnValue({
-      data: { id: SETLIST_ID, orgId: 'brotherslazaroff', hydrated: true, tracks: [], musicians: [] },
+      data: { id: SETLIST_ID, orgId: 'brotherslazaroff', hydrated: true, tracks: [], musicians: [], eventDate: new Date() },
       loading: false,
       error: null,
     })
     let rows = [{ id: 'r1', order: 0, title: 'One' }]
-    const fetchMock = vi.fn(async () => ({ ok: true, json: async () => ({ found: true, tracks: rows }) }))
+    const overrides = { rows: {}, eventDay: today, rev: 3, updatedAt: 1, updatedBy: 'u' }
+    const fetchMock = vi.fn(async (_url: string, _init?: { signal?: AbortSignal }) => ({
+      ok: true,
+      json: async () => ({ found: true, tracks: rows, overrides }),
+    }))
     vi.stubGlobal('fetch', fetchMock)
+    const denied = () => Object.assign(new Error('denied'), { code: 'permission-denied' })
     try {
       const startFn = vi.fn((opts: { onTracksRefused?: (e: Error) => void }) => {
-        opts.onTracksRefused?.(Object.assign(new Error('denied'), { code: 'permission-denied' }))
+        opts.onTracksRefused?.(denied())
+        return () => {}
+      })
+      const subscribeTonight = vi.fn((_id: string, _onDoc: unknown, onError: (e: unknown) => void) => {
+        onError(denied())
         return () => {}
       })
       const { result } = renderHook(() =>
-        useSetlistPerformance(SETLIST_ID, { startSnapshotListener: startFn as never }),
+        useSetlistPerformance(SETLIST_ID, { startSnapshotListener: startFn as never, subscribeTonight: subscribeTonight as never }),
       )
       await waitFor(() => expect(result.current.plannedTracks.map((t) => t.id)).toEqual(['r1']))
-      expect(String((fetchMock.mock.calls[0] as unknown[])[0])).toBe(`/api/setlists/${SETLIST_ID}/tracks`)
+      expect(String(fetchMock.mock.calls[0]?.[0])).toBe(`/api/setlists/${SETLIST_ID}/tracks`)
+      expect(result.current.tonightOverrides?.rev).toBe(3)
 
+      // A burst of triggers costs one request.
+      const before = fetchMock.mock.calls.length
       rows = [{ id: 'r1', order: 0, title: 'One' }, { id: 'r2', order: 1, title: 'Two' }]
-      act(() => { document.dispatchEvent(new Event('visibilitychange')) })
+      act(() => {
+        document.dispatchEvent(new Event('visibilitychange'))
+        window.dispatchEvent(new Event('online'))
+        document.dispatchEvent(new Event('visibilitychange'))
+      })
       await waitFor(() => expect(result.current.plannedTracks.map((t) => t.id)).toEqual(['r1', 'r2']))
+      expect(fetchMock.mock.calls.length - before).toBe(1)
+      expect(fetchMock.mock.calls.at(-1)?.[1]?.signal).toBeInstanceOf(AbortSignal)
     } finally {
       vi.unstubAllGlobals()
     }

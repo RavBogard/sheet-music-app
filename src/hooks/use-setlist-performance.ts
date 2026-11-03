@@ -1,7 +1,7 @@
 "use client"
 
 import { readGig, type Gig } from "@/lib/gig/model"
-import { useEffect, useState, useMemo } from "react"
+import { useEffect, useState, useMemo, useRef } from "react"
 import { doc, type DocumentReference } from "firebase/firestore"
 import { useLiveQuery } from "dexie-react-hooks"
 
@@ -13,7 +13,7 @@ import { logger } from "@/lib/logger"
 import { subscribeToMusicianProfile } from "@/lib/musician-profile"
 import { getDb } from "@/lib/local/schema"
 import type { LocalTrack } from "@/lib/local/types"
-import { getTracksForSetlistClient, fetchTracksForSetlistClient, fetchTracksViaPublicApi, tenantOfSetlist } from "@/lib/client-tracks"
+import { getTracksForSetlistClient, fetchTracksForSetlistClient, fetchTracksViaPublicApi, tenantOfSetlist, type PublicTracksAnswer } from "@/lib/client-tracks"
 import { setlistMovedPast } from "@/lib/performance/setlist-freshness"
 import {
     type SnapshotListenerOpts,
@@ -26,6 +26,10 @@ import { applyTonight, eventDayOf, overridesApply, type OverridesDoc, type WithT
 import { subscribeTonight as defaultSubscribeTonight } from "@/lib/performance/tonight-client"
 import { useOrg } from "@/lib/org/org-context"
 import { useT } from "@/i18n/client"
+
+/** Coalesces a burst of refetch triggers (edits, focus, reconnect) into one
+ *  request to the public tracks endpoint. */
+const REFUSED_REFETCH_DEBOUNCE_MS = 500
 
 interface UseSetlistPerformanceReturn {
     /** The rows to show: the plan with tonight's swaps laid over it. */
@@ -319,42 +323,55 @@ export function useSetlistPerformance(
             ? `v${liveVersion}`
             : toISOString(setlistData?.updatedAt as never)
 
-    // The refused-listener fallback: ask the public endpoint now, again on
+    // The refused-listener fallback: ask the public endpoint, again on
     // `online` / `visibilitychange`, and whenever the live setlist doc (a
-    // public get, still subscribed) moves. The answer is the server's full
-    // set, so it replaces what we had.
-    const [refusedTracks, setRefusedTracks] = useState<SetlistTrack[] | null>(null)
-    useEffect(() => { setRefusedTracks(null) }, [setlistId])
+    // public get, still subscribed) moves. Triggers are debounced, and a new
+    // request aborts the one in flight, so a burst of edits costs one fetch.
+    // The answer is the server's full set (rows and tonight's overrides), so it
+    // replaces what we had.
+    const [refused, setRefused] = useState<PublicTracksAnswer | null>(null)
+    useEffect(() => { setRefused(null) }, [setlistId])
+    const refetchRefused = useRef<(() => void) | null>(null)
     useEffect(() => {
         if (!setlistId || !user || !tracksRefused) return
         let cancelled = false
-        let inFlight = false
-        const load = async () => {
-            if (cancelled || inFlight) return
-            inFlight = true
-            try {
-                const rows = await fetchTracksViaPublicApi(setlistId)
-                if (!cancelled && rows) setRefusedTracks(rows)
-            } finally {
-                inFlight = false
-            }
+        let timer: ReturnType<typeof setTimeout> | null = null
+        let ctrl: AbortController | null = null
+        const run = async () => {
+            timer = null
+            ctrl?.abort()
+            const mine = new AbortController()
+            ctrl = mine
+            const answer = await fetchTracksViaPublicApi(setlistId, mine.signal)
+            if (cancelled || mine.signal.aborted || !answer) return
+            setRefused(answer)
         }
-        void load()
+        const schedule = () => {
+            if (cancelled) return
+            if (timer) clearTimeout(timer)
+            timer = setTimeout(() => void run(), REFUSED_REFETCH_DEBOUNCE_MS)
+        }
+        refetchRefused.current = schedule
+        schedule()
         const onVisible = () => {
-            if (document.visibilityState === "visible") void load()
+            if (document.visibilityState === "visible") schedule()
         }
-        window.addEventListener("online", load)
+        window.addEventListener("online", schedule)
         document.addEventListener("visibilitychange", onVisible)
         return () => {
             cancelled = true
-            window.removeEventListener("online", load)
+            refetchRefused.current = null
+            if (timer) clearTimeout(timer)
+            ctrl?.abort()
+            window.removeEventListener("online", schedule)
             document.removeEventListener("visibilitychange", onVisible)
         }
-    }, [setlistId, user, tracksRefused, setlistLiveStamp])
+    }, [setlistId, user, tracksRefused])
+    useEffect(() => { refetchRefused.current?.() }, [setlistLiveStamp])
 
     const plannedTracks: SetlistTrack[] =
-        tracksRefused && refusedTracks
-            ? refusedTracks
+        tracksRefused && refused
+            ? refused.tracks
             : liveTracks.length > 0
               ? liveTracks
               : !ssrEmpty
@@ -372,20 +389,34 @@ export function useSetlistPerformance(
     // server read on load (no anonymous realtime access).
     const subscribeTonight = opts.subscribeTonight ?? defaultSubscribeTonight
     const [liveOverrides, setLiveOverrides] = useState<OverridesDoc | null | undefined>(undefined)
+    // Refused (another tenant's setlist): the public endpoint's overrides stand in.
+    const [overridesRefused, setOverridesRefused] = useState(false)
     useEffect(() => {
         setLiveOverrides(undefined)
+        setOverridesRefused(false)
         if (!setlistId || !user) return
         try {
             return subscribeTonight(
                 setlistId,
                 (d) => setLiveOverrides(d),
-                (err) => logger.warn(`[useSetlistPerformance] overrides unavailable for ${setlistId}; showing the plan`, err),
+                (err) => {
+                    if ((err as { code?: unknown } | null)?.code === "permission-denied") {
+                        setOverridesRefused(true)
+                        return
+                    }
+                    logger.warn(`[useSetlistPerformance] overrides unavailable for ${setlistId}; showing the plan`, err)
+                },
             )
         } catch (err) {
             logger.warn(`[useSetlistPerformance] overrides listener failed for ${setlistId}`, err)
         }
     }, [setlistId, user, subscribeTonight])
-    const overridesDoc = liveOverrides !== undefined ? liveOverrides : (initial?.overrides ?? null)
+    const overridesDoc =
+        overridesRefused && refused
+            ? refused.overrides
+            : liveOverrides !== undefined
+              ? liveOverrides
+              : (initial?.overrides ?? null)
     // Re-evaluate once a minute so a device left open past midnight drops
     // yesterday's swaps without a reload.
     const [now, setNow] = useState(() => Date.now())

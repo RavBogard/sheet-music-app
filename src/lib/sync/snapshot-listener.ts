@@ -42,6 +42,8 @@ import { captureSyncFailure } from './sentry-capture'
 
 interface ListenerLogger {
     warn: (msg: string, err?: unknown) => void
+    /** An expected, handled refusal goes here. Falls back to the app logger. */
+    info?: (msg: string, err?: unknown) => void
     /** A refused subscription goes here. Falls back to the app logger. */
     error?: (msg: string, err?: unknown) => void
 }
@@ -272,6 +274,7 @@ export function startSnapshotListener(opts: SnapshotListenerOpts): () => void {
         onTracksRefused,
     } = opts
     const logError = logger.error ?? defaultLogger.error
+    const logInfo = logger.info ?? defaultLogger.info
 
     const transport =
         subscriber ??
@@ -463,8 +466,17 @@ export function startSnapshotListener(opts: SnapshotListenerOpts): () => void {
             void handleTracks(changes)
         },
         (err) => {
+            // A refusal the caller handles (another tenant's setlist, read
+            // through the public endpoint instead) is expected: info, no Sentry.
+            if (errorCode(err) === 'permission-denied' && onTracksRefused) {
+                logInfo(
+                    `[SnapshotListener] tracks listener refused for setlist=${setlistId} (org=${orgId ?? 'from-setlist'}); using the public endpoint`,
+                    err,
+                )
+                if (!cancelled) onTracksRefused(err)
+                return
+            }
             reportSubscribeError('tracks', err)
-            if (!cancelled && errorCode(err) === 'permission-denied') onTracksRefused?.(err)
         },
         orgId,
     )
