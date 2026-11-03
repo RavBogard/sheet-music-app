@@ -56,3 +56,7 @@ not a patch of the particulars.
 - D-adjacent.md is in; PROPOSAL.md is written. Waiting on Daniel: D1 (direction) and D2 (offline authoring a/b).
 - Worktrees swept. The superseded narrow patch is saved as stopped-narrow-patch.diff for reference.
   The repro branch `investigate/sync-repro` is pushed and kept.
+
+## Decisions (Daniel, 2026-11-03): D1 = go, D2 = (a)
+- OPS-CONTRACT.md written. PR 1 (server ops) and PR 2 (tenant guard) dispatched in parallel; they
+  share no hot files. PR 3 is after PR 1; PR 4 is after PR 3.
