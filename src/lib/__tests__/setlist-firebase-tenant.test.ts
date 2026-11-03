@@ -48,16 +48,17 @@ vi.mock('firebase/firestore', () => {
 })
 vi.mock('@/lib/firebase', () => ({ getDb: async () => ({}), subscribeWithDb: vi.fn() }))
 vi.mock('@/lib/logger', () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() } }))
-vi.mock('@/lib/api-client', () => ({ apiFetch: vi.fn() }))
+const created = vi.hoisted(() => [] as Array<Record<string, unknown>>)
+vi.mock('@/lib/api-client', () => ({
+    apiFetch: vi.fn(async (_url: string, init: { body: string }) => {
+        const body = JSON.parse(init.body) as Record<string, unknown>
+        created.push(body)
+        return new Response(JSON.stringify({ ok: true, setlistId: body.setlistId }), { status: 200 })
+    }),
+}))
 vi.mock('@/lib/setlist-audit', () => ({ logSetlistChange: vi.fn() }))
 vi.mock('@/lib/sync/sentry-capture', () => ({ captureSyncFailure: vi.fn() }))
 vi.mock('@/types/schemas', () => ({ setlistConverter: {} }))
-vi.mock('@/lib/local/write', () => ({
-    applyEdit: async (edit: { doc: Record<string, unknown> }) => { h.edits.push(edit.doc) },
-}))
-vi.mock('@/lib/client-tracks', () => ({
-    fetchTracksForSetlistClient: async () => h.sourceTracks,
-}))
 vi.mock('@/lib/liturgical-calendar', () => ({
     getFullServiceContext: async () => ({}),
     getServiceContext: () => ({ type: 'friday_night' }),
@@ -84,53 +85,35 @@ beforeEach(() => {
 })
 afterEach(() => { delete document.documentElement.dataset.org })
 
-describe('seeded tracks carry the parent setlist orgId', () => {
-    it('createSetlist: host tenant on the setlist and on every track', async () => {
+/**
+ * Setlist sync PR 3: create-style paths are one server transaction
+ * (POST /api/setlists/create). The client never names a tenant: a copy names
+ * its source and the server takes the source's tenant; a fresh setlist takes
+ * the host's (x-org-id). Proven against the rules in create.emulator.test.ts.
+ */
+describe('create-style paths send no tenant and no row stamps', () => {
+    beforeEach(() => {
+        created.length = 0
+    })
+
+    it('createSetlist: explicit row fields only, no orgId anywhere', async () => {
         await svc().createSetlist('New', [
-            { id: 'a', title: 'A' } as never,
-            { id: 'b', title: 'B' } as never,
-        ])
-        expect(h.added[0].data.orgId).toBe(BL)
-        expect(h.edits.map((t) => t.orgId)).toEqual([BL, BL])
-        expect(h.edits.every((t) => t.setlistId === 'new-1')).toBe(true)
+            { id: 'a', title: 'A', fileId: 'c1', key: 'G', order: 4, version: 9 } as never,
+        ], { orgId: 'crc' } as never)
+        expect(created).toHaveLength(1)
+        expect(created[0]).not.toHaveProperty('orgId')
+        expect(created[0].rows).toEqual([{ title: 'A', fileId: 'c1', songId: 'c1', key: 'G', type: 'song' }])
     })
 
-    it('createSetlist: an explicit additionalData.orgId wins for both', async () => {
-        await svc().createSetlist('New', [{ id: 'a', title: 'A' } as never], { orgId: 'crc' } as never)
-        expect(h.added[0].data.orgId).toBe('crc')
-        expect(h.edits[0].orgId).toBe('crc')
-    })
-
-    it('duplicateSetlist: the source setlist tenant', async () => {
-        document.documentElement.dataset.org = 'crc'
-        await svc().duplicateSetlist('src', { id: 'src', name: 'S', orgId: BL } as Setlist)
-        expect(h.added[0].data.orgId).toBe(BL)
-        expect(h.edits.map((t) => t.orgId)).toEqual([BL, BL])
-    })
-
-    it('cloneSetlist: the source setlist tenant', async () => {
-        document.documentElement.dataset.org = 'crc'
-        await svc().cloneSetlist({ id: 'src', name: 'S', orgId: BL } as Setlist, new Date(2026, 9, 16))
-        expect(h.added[0].data.orgId).toBe(BL)
-        expect(h.edits.map((t) => t.orgId)).toEqual([BL, BL])
-    })
-
-    it('a source without orgId is crc (rowOrg)', async () => {
-        await svc().duplicateSetlist('src', { id: 'src', name: 'S' } as Setlist)
-        expect(h.edits.map((t) => t.orgId)).toEqual(['crc', 'crc'])
-    })
-})
-
-describe('saveAsTemplate', () => {
-    it('stamps orgId on the template setlist and its tracks', async () => {
-        await svc().saveAsTemplate({ id: 'src', name: 'S', orgId: BL } as Setlist)
-        expect(h.added[0].data).toMatchObject({ isTemplate: true, orgId: BL })
-        expect(h.edits.map((t) => t.orgId)).toEqual([BL, BL])
-    })
-
-    it('a crc source stays crc', async () => {
-        await svc().saveAsTemplate({ id: 'src', name: 'S', orgId: 'crc' } as Setlist)
-        expect(h.added[0].data.orgId).toBe('crc')
+    it.each([
+        ['duplicateSetlist', (s: ReturnType<typeof svc>) => s.duplicateSetlist('src', { id: 'src', name: 'S', orgId: BL } as Setlist), 'copiedFrom'],
+        ['cloneSetlist', (s: ReturnType<typeof svc>) => s.cloneSetlist({ id: 'src', name: 'S', orgId: BL } as Setlist, new Date(2026, 9, 16)), 'clonedFrom'],
+        ['saveAsTemplate', (s: ReturnType<typeof svc>) => s.saveAsTemplate({ id: 'src', name: 'S', orgId: BL } as Setlist), 'copiedFrom'],
+    ] as const)('%s: names the source; the server copies its rows in its tenant', async (_name, run, kind) => {
+        await run(svc())
+        expect(created[0]).toMatchObject({ copyFrom: 'src', copyKind: kind })
+        expect(created[0]).not.toHaveProperty('orgId')
+        expect(created[0]).not.toHaveProperty('rows')
     })
 })
 

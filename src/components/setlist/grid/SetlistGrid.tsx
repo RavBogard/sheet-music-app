@@ -28,7 +28,6 @@ import {
     type Table as TanstackTable,
     useReactTable,
 } from '@tanstack/react-table'
-import { useLiveQuery } from 'dexie-react-hooks'
 import { useTonightTitles } from '@/hooks/use-tonight-overrides'
 import { useFeature } from '@/lib/org/use-feature'
 import { Copy, Edit3, Music, Trash2 } from 'lucide-react'
@@ -59,6 +58,16 @@ import {
 } from '@/lib/local/undo-store'
 import { useLibraryStore } from '@/lib/library-store'
 import { applyEdit } from '@/lib/local/write'
+import {
+    duplicateRow as opsDuplicateRow,
+    editRow as opsEditRow,
+    insertRows as opsInsertRows,
+    moveRow as opsMoveRow,
+    removeRows as opsRemoveRows,
+    replayOps,
+} from '@/lib/setlist-ops-client/actions'
+import { getOpsClient } from '@/lib/setlist-ops-client/runtime'
+import { useSetlistView } from '@/lib/setlist-ops-client/use-setlist-view'
 import {
     propagateTrackEditToSong,
     seedTrackFromSong,
@@ -760,6 +769,10 @@ export interface SetlistGridProps {
      * back-compat `confirmDeleteWithTitle` and over the
      * `<DeleteConfirmProvider>` context fallback. */
     confirmDelete?: (info: ConfirmInfo) => Promise<boolean>
+    /** The server frame the page rendered with (SSR): shown until this tab's
+     *  listener delivers a live server set. */
+    initialSetlist?: LocalSetlist
+    initialTracks?: LocalTrack[]
 }
 
 /**
@@ -782,39 +795,30 @@ function requestLiturgyBind(setlistId: string, docId: string): void {
     }).catch(() => {})
 }
 
+/**
+ * A field edit on one row (setlist sync PR 3): an `editRow` intent whose base
+ * is the row as the author saw it (`row`, from the view), so a concurrent
+ * edit to the same field comes back as a conflict, never a silent overwrite.
+ * It queues offline and rebases on reconnect.
+ */
 async function commitTrackPatchImpl(
-    docId: string,
+    row: LocalTrack | undefined,
     patch: Record<string, unknown>,
-    expectedUpdatedAt?: number,
-    setlistId?: string,
+    setlistId: string,
 ): Promise<void> {
-    // v50-06-01: `expectedUpdatedAt` flows in from the cell's `row.original
-    // .updatedAt`, surfacing real two-writer races to the engine via
-    // VersionMismatchError (instead of silently last-write-winning).
-    // v50-05-05: undoKey scopes burst coalescing per-(docId, field-set)
-    // so different fields on the same row each get their own undo unit.
-    // Multi-field patches (e.g. ChartCell binding setting songId+title+
-    // defaults) coalesce as a single key — that's the right granularity.
-    const fields = Object.keys(patch).sort().join(',')
-    await applyEdit(
-        {
-            op: 'update',
-            collection: 'tracks',
-            docId,
-            patch,
-            expectedUpdatedAt,
-        },
-        { undoKey: `tracks:${docId}:${fields}` },
-    )
+    if (!row) return
+    await opsEditRow(setlistId, row, patch)
     // A title is the only field that can tell us which moment the row is.
     // A caller that already set the page itself is left alone.
     if (
-        setlistId &&
         typeof patch.title === 'string' &&
         patch.title.trim() &&
         patch.liturgyRef === undefined
     ) {
-        requestLiturgyBind(setlistId, docId)
+        // After the edit has reached the server, so it reads the new title.
+        void getOpsClient()
+            .drain(setlistId)
+            .then(() => requestLiturgyBind(setlistId, row.id))
     }
 }
 
@@ -911,6 +915,17 @@ async function executeEntry(
     entry: UndoEntry,
     mode: 'undo' | 'redo',
 ): Promise<void> {
+    // Setlist actions carry their own explicit undo/redo ops (setlist sync
+    // PR 3). A structural one offline is put back on its stack, untouched.
+    if (entry.kind === 'ops') {
+        const ok = await replayOps(entry.setlistId, mode === 'undo' ? entry.undo : entry.redo)
+        if (!ok) {
+            const s = useUndoStore.getState()
+            if (mode === 'undo') s.popRedo()
+            else s.popUndo()
+        }
+        return
+    }
     const builder = mode === 'undo' ? buildInverse : buildRedo
     if (entry.kind === 'simple') {
         const live = await readLiveUpdatedAt(entry.collection, entry.docId)
@@ -984,6 +999,8 @@ export function SetlistGrid({
     onUseTemplate,
     confirmDeleteWithTitle,
     confirmDelete,
+    initialSetlist,
+    initialTracks,
 }: SetlistGridProps) {
     const t = useT()
     const fmt = useFormat()
@@ -1019,27 +1036,24 @@ export function SetlistGrid({
         [confirmDelete, confirmDeleteWithTitle, dialogCtx, t],
     )
 
-    const tracks = useLiveQuery(
+    // Setlist sync PR 3: one read model. The server cache (Dexie, written
+    // only by the listener and /ops answers) with this device's pending edits
+    // drawn over it. Rows come in the server's canonical sequence (R11-b:
+    // `order`, then id) and `order` is each row's index in the view.
+    const initialView = useMemo(
         () =>
-            getDb()
-                .tracks.where('setlistId')
-                .equals(setlistId)
-                // R11-b: `order`, then id. Duplicate `order` values exist in
-                // production, and `sortBy('order')` alone would leave a tied
-                // pair in index order here and in Firestore's order on the
-                // server — two surfaces, two sequences, for rows nobody moved.
-                // Same tie-break as `getTracksForSetlist` and `addTrack`.
-                .toArray()
-                .then((rows) =>
-                    rows.sort(
-                        (a, b) => a.order - b.order || String(a.id).localeCompare(String(b.id)),
-                    ),
-                ),
-        [setlistId],
-    ) as LocalTrack[] | undefined
-
-    const isLoading = tracks === undefined
-    const rows = useMemo(() => tracks ?? [], [tracks])
+            initialSetlist || initialTracks
+                ? { setlist: initialSetlist, rows: initialTracks }
+                : undefined,
+        [initialSetlist, initialTracks],
+    )
+    const view = useSetlistView(setlistId, initialView)
+    const isLoading = view.loading
+    const rows = view.rows
+    const rowsRef = useRef(rows)
+    rowsRef.current = rows
+    const freshness = view.freshness
+    const structureLocked = freshness.canEditStructure ? undefined : t('setlistGrid.offlineStructureReason')
     // Listen shows only when some song in this setlist has a playable take.
     const featuredBySong = useFeaturedBySong()
     const hasAnyTake = useMemo(
@@ -1049,10 +1063,7 @@ export function SetlistGrid({
 
     // v70-09: live setlist doc — drives the metadata editor's seed values and
     // lets the top bar reflect name/date edits immediately (no reload).
-    const liveSetlist = useLiveQuery(
-        () => getDb().setlists.get(setlistId),
-        [setlistId],
-    ) as LocalSetlist | undefined
+    const liveSetlist = view.setlist
     const [metaSheetOpen, setMetaSheetOpen] = useState(false)
 
     const displayName =
@@ -1195,14 +1206,9 @@ export function SetlistGrid({
                 const ok = await confirmFn({ kind: 'row', title })
                 if (!ok) return
             }
-            await applyEdit({
-                op: 'delete',
-                collection: 'tracks',
-                docId: track.id,
-                expectedUpdatedAt: track.updatedAt,
-            })
+            await opsRemoveRows(setlistId, rowsRef.current, [track.id])
         },
-        [confirmFn],
+        [confirmFn, setlistId],
     )
 
     const handleBindChart = useCallback(
@@ -1227,15 +1233,12 @@ export function SetlistGrid({
             if (defaults.key !== undefined) patch.key = defaults.key
             if (defaults.lead !== undefined) patch.leadMusician = defaults.lead
             if (defaults.bpm !== undefined) patch.bpm = defaults.bpm
-            await applyEdit({
-                op: 'update',
-                collection: 'tracks',
-                docId: track.id,
-                patch,
-                expectedUpdatedAt: track.updatedAt,
-            })
+            // Base = the row as shown now (the view), not the possibly older
+            // copy the popover opened on.
+            const current = rowsRef.current.find((r) => r.id === track.id) ?? track
+            await opsEditRow(setlistId, current, patch)
         },
-        [],
+        [setlistId],
     )
 
     const selectedTracks = useMemo(
@@ -1248,36 +1251,11 @@ export function SetlistGrid({
         const count = selectedTracks.length
         const ok = await confirmFn({ kind: 'bulk', count })
         if (!ok) return
-        // Snapshot prevDocs before deletes — needed for the composite
-        // undo entry's inverse (which re-inserts each row).
-        const prevDocs = selectedTracks.map((t) => ({ ...t }))
-        await Promise.all(
-            selectedTracks.map((t) =>
-                applyEdit(
-                    {
-                        op: 'delete',
-                        collection: 'tracks',
-                        docId: t.id,
-                        expectedUpdatedAt: t.updatedAt,
-                    },
-                    { withoutUndo: true },
-                ),
-            ),
-        )
+        // One batch of removes; its undo re-inserts each row between its old
+        // neighbours (built by the ops client from the view).
+        await opsRemoveRows(setlistId, rowsRef.current, selectedTracks.map((t) => t.id))
         selection.clear()
-        useUndoStore.getState().pushEntry({
-            kind: 'composite',
-            label: `Bulk-delete ${selectedTracks.length} rows`,
-            entries: selectedTracks.map((t, i) => ({
-                op: 'delete' as const,
-                collection: 'tracks' as const,
-                docId: t.id,
-                prevDoc: prevDocs[i] as UndoableDoc,
-                newDoc: undefined,
-            })),
-            ts: Date.now(),
-        })
-    }, [selectedTracks, selection, confirmFn])
+    }, [selectedTracks, selection, confirmFn, setlistId])
 
     // v50-05-04 ContextMenu actions.
     const handleContextEditRow = useCallback(
@@ -1301,83 +1279,16 @@ export function SetlistGrid({
         [],
     )
 
-    // Duplicate row: cascade-bump existing orders >= newOrder by 1, then
-    // insert a clone of the source row at newOrder. Source's id and order
-    // are replaced; all other fields (songId, title, key, bpm,
-    // leadMusician, notes, type, setlistId) carry through. Per
-    // ARCHITECTURE.md §4 the new row gets its own id; the songId stays
-    // bound so the duplicate inherits the same chart and sticky-memory
-    // defaults — that's what users want when duplicating a song row.
+    // Duplicate row: ONE insert right after the source, carrying the
+    // source's fields as an explicit list (songId stays bound, so the copy
+    // has the same chart and defaults). No `version`, no `updatedAt`, no
+    // `undefined`, and no renumbering from here: the server places it and
+    // renumbers in the same transaction. Undo removes it.
     const handleContextDuplicate = useCallback(
         async (rowId: string) => {
-            const source = rows.find((r) => r.id === rowId)
-            if (!source) return
-            const newId = makeId()
-            const newOrder = source.order + 1
-
-            // Cascade prevDocs (rows whose order will bump by 1).
-            const cascadeRows = rows.filter((r) => r.order >= newOrder)
-            const cascadePrev = cascadeRows.map((r) => ({ ...r }))
-
-            await Promise.all(
-                cascadeRows.map((r) =>
-                    applyEdit(
-                        {
-                            op: 'update',
-                            collection: 'tracks',
-                            docId: r.id,
-                            patch: { order: r.order + 1 },
-                            expectedUpdatedAt: r.updatedAt,
-                        },
-                        { withoutUndo: true },
-                    ),
-                ),
-            )
-
-            const cloneDoc = { ...source, id: newId, order: newOrder }
-            await applyEdit(
-                {
-                    op: 'set',
-                    collection: 'tracks',
-                    doc: cloneDoc,
-                },
-                { withoutUndo: true },
-            )
-
-            // Composite undo: cascade-bump rows revert to their old order
-            // + the clone is deleted.
-            const db = getDb()
-            const cascadeNew = await Promise.all(
-                cascadeRows.map(
-                    async (r) =>
-                        (await db.tracks.get(r.id)) as
-                            | UndoableDoc
-                            | undefined,
-                ),
-            )
-            useUndoStore.getState().pushEntry({
-                kind: 'composite',
-                label: `Duplicate row ${source.title || source.id}`,
-                entries: [
-                    ...cascadeRows.map((r, i) => ({
-                        op: 'update' as const,
-                        collection: 'tracks' as const,
-                        docId: r.id,
-                        prevDoc: cascadePrev[i] as UndoableDoc,
-                        newDoc: cascadeNew[i],
-                    })),
-                    {
-                        op: 'set' as const,
-                        collection: 'tracks' as const,
-                        docId: newId,
-                        prevDoc: undefined,
-                        newDoc: cloneDoc as UndoableDoc,
-                    },
-                ],
-                ts: Date.now(),
-            })
+            await opsDuplicateRow(setlistId, rowsRef.current, rowId)
         },
-        [rows],
+        [setlistId],
     )
 
     // Selection-aware delete: route to bulk path when the right-clicked
@@ -1407,8 +1318,8 @@ export function SetlistGrid({
             handleCellKeyDown,
             setlistLeads,
             onDeleteRow: (track) => void handleDeleteRow(track),
-            onCommitTrackPatch: (docId, patch, expectedUpdatedAt) =>
-                commitTrackPatchImpl(docId, patch, expectedUpdatedAt, setlistId),
+            onCommitTrackPatch: (docId, patch) =>
+                commitTrackPatchImpl(rowsRef.current.find((r) => r.id === docId), patch, setlistId),
             onBindChart: (track, sel) => void handleBindChart(track, sel),
             setlistIdForPropagation: setlistId,
             selectedIds: selection.selectedIds,
@@ -1467,156 +1378,59 @@ export function SetlistGrid({
         async (e: DragEndEvent) => {
             const { active, over } = e
             if (!over) return
-            const updates = computeReorderUpdates(
-                rows,
-                String(active.id),
-                String(over.id),
-            )
-            if (updates.length === 0) return
-
-            // Snapshot prevDocs for the composite undo entry. Drag-end
-            // fires N parallel order updates that should revert as ONE
-            // user-perceived action.
-            const prevDocs = updates
-                .map(({ id }) => rows.find((r) => r.id === id))
-                .filter((r): r is LocalTrack => Boolean(r))
-                .map((r) => ({ ...r }))
-
-            await Promise.all(
-                updates.map(({ id, order }) => {
-                    const r = rows.find((row) => row.id === id)
-                    return applyEdit(
-                        {
-                            op: 'update',
-                            collection: 'tracks',
-                            docId: id,
-                            patch: { order },
-                            expectedUpdatedAt: r?.updatedAt,
-                        },
-                        { withoutUndo: true },
-                    )
-                }),
-            )
-
-            const db = getDb()
-            const newDocs = await Promise.all(
-                updates.map(
-                    async ({ id }) =>
-                        (await db.tracks.get(id)) as
-                            | UndoableDoc
-                            | undefined,
-                ),
-            )
-            useUndoStore.getState().pushEntry({
-                kind: 'composite',
-                label: `Reorder ${updates.length} rows`,
-                entries: updates.map((u, i) => ({
-                    op: 'update' as const,
-                    collection: 'tracks' as const,
-                    docId: u.id,
-                    prevDoc: prevDocs[i] as UndoableDoc,
-                    newDoc: newDocs[i],
-                })),
-                ts: Date.now(),
-            })
+            // ONE move op (setlist sync PR 3); its undo moves it back.
+            await opsMoveRow(setlistId, rowsRef.current, String(active.id), String(over.id))
         },
-        [rows],
+        [setlistId],
+    )
+
+    // Adds are one insert at the end of the view, with the song's defaults
+    // in the same row (no follow-up edit). They need a connection (D2(a)):
+    // the controls are disabled offline, and the action queues nothing then.
+    const appendRow = useCallback(
+        async (row: Record<string, unknown>) => {
+            const view = rowsRef.current
+            await opsInsertRows(setlistId, view, view.length, [row])
+        },
+        [setlistId],
     )
 
     const handlePickSong = useCallback(
         async (song: { id: string; title: string }) => {
-            const newId = makeId()
-            const order = rows.length
             const defaults = await seedTrackFromSong(song.id)
             // v70-01-01 Task 4: cache library_index.mimeType on the new track
-            // so queue-utils can route to ImageScoreViewer for image charts
-            // (PDF / MusicXML / text routing also benefits — extension on
-            // fileId is absent for upload-{uuid} and Google Drive IDs).
+            // so queue-utils can route to ImageScoreViewer for image charts.
             const libFile = useLibraryStore.getState().allFiles.find(f => f.id === song.id)
-            await applyEdit({
-                op: 'set',
-                collection: 'tracks',
-                doc: {
-                    id: newId,
-                    setlistId,
-                    songId: song.id,
-                    // v54-01-02: SetlistRow.tsx:47 gates clickability in
-                    // perform-view on `track.fileId`. Per v54-01-01 locked
-                    // decision, songs/{libId} uses the library_index doc
-                    // id as both songs/{id}.id AND songs/{id}.fileId, so
-                    // song.id IS the fileId. Without this, newly-picked
-                    // tracks would be unclickable in perform mode (UAT
-                    // regression 2026-05-08).
-                    fileId: song.id,
-                    order,
-                    title: song.title,
-                    type: 'song',
-                    ...(libFile?.mimeType ? { mimeType: libFile.mimeType } : {}),
-                },
+            await appendRow({
+                songId: song.id,
+                // v54-01-02: SetlistRow.tsx:47 gates clickability in
+                // perform-view on `track.fileId`; song.id IS the fileId.
+                fileId: song.id,
+                title: song.title,
+                type: 'song',
+                ...(libFile?.mimeType ? { mimeType: libFile.mimeType } : {}),
+                ...(defaults.key !== undefined ? { key: defaults.key } : {}),
+                ...(defaults.lead !== undefined ? { leadMusician: defaults.lead } : {}),
+                ...(defaults.bpm !== undefined ? { bpm: defaults.bpm } : {}),
             })
-            if (Object.keys(defaults).length > 0) {
-                const patch: Record<string, unknown> = {}
-                if (defaults.key !== undefined) patch.key = defaults.key
-                if (defaults.lead !== undefined)
-                    patch.leadMusician = defaults.lead
-                if (defaults.bpm !== undefined) patch.bpm = defaults.bpm
-                // expectedUpdatedAt: undefined OK — row was just created
-                // locally via the set above; first server commit hasn't
-                // landed yet so there's no server `updatedAt` to assert.
-                // The engine writeback (v50-06-01) will populate it after
-                // the set drains.
-                await applyEdit({
-                    op: 'update',
-                    collection: 'tracks',
-                    docId: newId,
-                    patch,
-                })
-            }
         },
-        [rows.length, setlistId],
+        [appendRow],
     )
 
     const handleCreateFreeText = useCallback(
         async (title: string) => {
-            const newId = makeId()
-            const order = rows.length
-            await applyEdit({
-                op: 'set',
-                collection: 'tracks',
-                doc: {
-                    id: newId,
-                    setlistId,
-                    order,
-                    title,
-                    type: 'song',
-                },
-            })
+            await appendRow({ title, type: 'song' })
         },
-        [rows.length, setlistId],
+        [appendRow],
     )
 
-    // v53-03-01: insert a new non-Song row from AddBar's chevron tile click.
-    // Mirrors handleCreateFreeText but writes the chosen TrackType with an
-    // empty title so the user fills inline. Single applyEdit write path —
-    // NO direct Dexie writes; NO embedded-array side effects (v5h-01 anti-
-    // pattern audit lock).
+    // v53-03-01: insert a new non-Song row from AddBar's chevron tile click,
+    // with an empty title so the user fills it inline.
     const handleAddTrackOfType = useCallback(
         async (type: NonSongTrackType) => {
-            const newId = makeId()
-            const order = rows.length
-            await applyEdit({
-                op: 'set',
-                collection: 'tracks',
-                doc: {
-                    id: newId,
-                    setlistId,
-                    order,
-                    title: '',
-                    type,
-                },
-            })
+            await appendRow({ title: '', type })
         },
-        [rows.length, setlistId],
+        [appendRow],
     )
 
     const [cloneBusy, setCloneBusy] = useState(false)
@@ -1696,6 +1510,7 @@ export function SetlistGrid({
                 statusParts={statusParts}
                 onBack={onBack ?? (() => router.back())}
                 onEditMeta={() => setMetaSheetOpen(true)}
+                syncProps={{ freshness }}
                 performHref={performOn ? `/perform/setlist/${setlistId}` : undefined}
                 listenHref={hasAnyTake ? `/rehearse/${setlistId}` : undefined}
                 gigSlot={isBand ? <GigPanel gig={gig} onEdit={() => setMetaSheetOpen(true)} /> : undefined}
@@ -1760,15 +1575,16 @@ export function SetlistGrid({
                             void handleContextDuplicate(id)
                         }
                         onContextDelete={handleContextDelete}
-                        onCommitTrackPatch={(docId, patch, expectedUpdatedAt) =>
+                        onCommitTrackPatch={(docId, patch) =>
                             commitTrackPatchImpl(
-                                docId,
+                                rowsRef.current.find((r) => r.id === docId),
                                 patch,
-                                expectedUpdatedAt,
                                 setlistId,
                             )
                         }
                         onDeleteRow={(track) => void handleDeleteRow(track)}
+                        structureLocked={structureLocked}
+                        pending={view.pending}
                         isBand={isBand}
                         showTiming={timing}
                         setTotalsByHeaderId={timing ? totals.byHeaderId : undefined}
@@ -1780,18 +1596,22 @@ export function SetlistGrid({
                 onPickSong={(song) => void handlePickSong(song)}
                 onCreateFreeText={(title) => void handleCreateFreeText(title)}
                 onAddTrackOfType={(type) => void handleAddTrackOfType(type)}
+                disabledReason={structureLocked}
             />
 
             {/* The round + at the bottom right: adding a song is one tap from
                 anywhere in the list (Daniel 2026-11-01). The EmptyState CTA
-                and tab-past-the-last-cell open this picker. */}
-            <AddRowPlaceholder
-                key={placeholderKey}
-                variant="fab"
-                autoOpen={addOpenSignal > 0}
-                onPickSong={(song) => void handlePickSong(song)}
-                onCreateFreeText={(title) => void handleCreateFreeText(title)}
-            />
+                and tab-past-the-last-cell open this picker. Hidden offline:
+                adding a row needs a connection, and the AddBar says why. */}
+            {!structureLocked && (
+                <AddRowPlaceholder
+                    key={placeholderKey}
+                    variant="fab"
+                    autoOpen={addOpenSignal > 0}
+                    onPickSong={(song) => void handlePickSong(song)}
+                    onCreateFreeText={(title) => void handleCreateFreeText(title)}
+                />
+            )}
 
             {/* Bug 3 fix (2026-05-12): centered command dialog for programmatic
                 "Bind chart" actions — used by BOTH the desktop row context-menu

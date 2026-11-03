@@ -1,9 +1,7 @@
 import { recordEdit } from '../sync/edit-log'
 import { getSyncEngine } from '../sync/init'
 
-import { rowOrg } from '../org/membership'
-
-import { getDb, type LocalDb } from './schema'
+import { getDb } from './schema'
 import {
     type EditDescriptor,
     type LocalCollection,
@@ -55,33 +53,12 @@ function buildOutboxRow(
 }
 
 /**
- * Multi-tenant phase 2: a new `tracks` row carries its parent setlist's
- * tenant (`orgId`). Every in-app track create (grid add, add-to-setlist,
- * duplicate row, undo/redo restore, live director, seeding) funnels through
- * applyEdit, so the stamp happens here once — before the Dexie transaction,
- * so the local row and the outbox payload agree. A row that already carries
- * an `orgId` (seeding, a copy of a server row) is left alone. When the parent
- * is not in Dexie the row goes out unstamped and the outbox commit stamps it
- * from the Firestore parent (src/lib/sync/init.ts) rather than guessing.
+ * Setlist sync PR 3: `tracks` and `setlists` are written only through the
+ * server ops endpoint (src/lib/setlist-ops-client), and Dexie holds the
+ * server's copy of them. applyEdit refuses them, so no caller can slip a
+ * local row into the server cache or the outbox.
  */
-export async function withTrackOrg(
-    edit: EditDescriptor,
-    db: LocalDb,
-): Promise<EditDescriptor> {
-    if (edit.op !== 'set' || edit.collection !== 'tracks') return edit
-    const current = edit.doc as Record<string, unknown>
-    if (typeof current.orgId === 'string' && current.orgId.length > 0) return edit
-    const setlistId = current.setlistId
-    if (typeof setlistId !== 'string' || setlistId.length === 0) return edit
-    let parent: { orgId?: unknown } | undefined
-    try {
-        parent = (await db.setlists.get(setlistId)) as { orgId?: unknown } | undefined
-    } catch {
-        parent = undefined
-    }
-    if (!parent) return edit
-    return { ...edit, doc: { ...edit.doc, orgId: rowOrg(parent.orgId) } }
-}
+const OPS_ONLY: ReadonlySet<LocalCollection> = new Set<LocalCollection>(['tracks', 'setlists'])
 
 function targetDocId(edit: EditDescriptor): string {
     return edit.op === 'set' ? edit.doc.id : edit.docId
@@ -98,8 +75,13 @@ export async function applyEdit(
     inputEdit: EditDescriptor,
     options?: ApplyEditOptions,
 ): Promise<void> {
+    if (OPS_ONLY.has(inputEdit.collection)) {
+        throw new WriteAtomicityError(
+            `applyEdit does not write ${inputEdit.collection}; use the setlist ops client`,
+        )
+    }
     const db = getDb()
-    const edit = await withTrackOrg(inputEdit, db)
+    const edit = inputEdit
     const collection: LocalCollection = edit.collection
     const now = Date.now()
     const docId = targetDocId(edit)

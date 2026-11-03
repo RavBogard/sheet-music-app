@@ -84,6 +84,8 @@ export interface AddBarProps {
     onAddTrackOfType: (type: NonSongTrackType) => void
     /** Imperative open trigger from the EmptyState "Add a song" CTA — flows through to the primary picker. */
     autoOpen?: boolean
+    /** Setlist sync D2(a): set (translated) while offline; the bar shows it and adds nothing. */
+    disabledReason?: string
 }
 
 /**
@@ -101,8 +103,8 @@ export interface AddBarProps {
  * SongRecentEntry.performedAt; cmdk value-format `${title}` only per v53-02-01 fix).
  *
  * Chevron popover: 5 colored tiles, ≥48×48 fine / ≥56×56 coarse, 8px gap (≥44px touch
- * floor + 8px touch-spacing per v50-05-04). Tile click → applyEdit('set', 'tracks', { type })
- * via SetlistGrid's handleAddTrackOfType handler — single write path preserved.
+ * floor + 8px touch-spacing per v50-05-04). Tile click → SetlistGrid's handleAddTrackOfType,
+ * one insert through the setlist ops client.
  *
  * Long-press disambiguation: explicit `onContextMenu={(e) => e.preventDefault()}` on the
  * chevron trigger, every tile, and the primary AddRowPlaceholder trigger so v50-05-04's
@@ -118,11 +120,27 @@ export function AddBar({
     onCreateFreeText,
     onAddTrackOfType,
     autoOpen = false,
+    disabledReason,
 }: AddBarProps) {
     const t = useT()
     const [tilesOpen, setTilesOpen] = useState(false)
 
     const closeTiles = () => setTilesOpen(false)
+
+    // D2(a): adding a row needs a connection. Offline the bar says why
+    // instead of offering a control that cannot work.
+    if (disabledReason) {
+        return (
+            <div
+                data-testid="add-bar"
+                data-disabled=""
+                role="status"
+                className="flex w-full items-center gap-2 border-t border-rule bg-card px-4 h-11 [@media(pointer:coarse)]:h-12 text-sm text-muted-foreground"
+            >
+                <span data-testid="add-bar-offline-reason">{disabledReason}</span>
+            </div>
+        )
+    }
 
     return (
         <div

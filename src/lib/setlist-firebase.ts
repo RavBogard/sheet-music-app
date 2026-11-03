@@ -1,11 +1,5 @@
-import { storedClassFor, storedRabbiSlot } from "@/lib/history/classify"
 import { getDb, subscribeWithDb } from "./firebase";
 import {
-    // eslint-disable-next-line no-restricted-imports -- write only: addDoc to setlists
-    collection,
-    addDoc,
-    updateDoc,
-    deleteDoc,
     doc,
     getDoc,
     setDoc,
@@ -13,15 +7,12 @@ import {
     serverTimestamp,
     Timestamp,
     getDocs,
-    writeBatch,
-    runTransaction,
-    deleteField,
-    type DocumentReference,
 } from "firebase/firestore";
 import type { OrgId } from "@/lib/org/types";
 import { recentSetlistsQuery } from "@/lib/tenant-query";
 import { coerceOrgId, DEFAULT_ORG_ID } from "@/lib/org/registry";
 import { rowOrg } from "@/lib/org/membership";
+import { ROW_FIELDS } from "@/lib/setlist-ops-client/fields";
 
 /**
  * v11-05-05: in-app setlist creates stamp the HOST org so the new doc is visible
@@ -45,55 +36,62 @@ export function defaultsDocId(org: OrgId): string {
     return org === DEFAULT_ORG_ID ? "defaults" : `defaults__${org}`
 }
 
-/** Thrown when a write precondition (expectedUpdatedAt) doesn't match the remote doc. */
-export class StaleWriteError extends Error {
-    remoteUpdatedAt: Timestamp | null
-    constructor(remoteUpdatedAt: Timestamp | null) {
-        super('STALE_WRITE')
-        this.name = 'StaleWriteError'
-        this.remoteUpdatedAt = remoteUpdatedAt
-    }
-}
-
-function timestampsMatch(a: Timestamp | null, b: Timestamp | null): boolean {
-    if (a === null && b === null) return true
-    if (a === null || b === null) return false
-    return a.seconds === b.seconds && a.nanoseconds === b.nanoseconds
-}
-
 /**
- * Concurrency-safe partial update. Reads the doc inside a transaction, verifies
- * expectedUpdatedAt matches, applies the patch, and stamps a new updatedAt.
- * Pass expectedUpdatedAt=null to skip the precondition (only for legacy docs
- * that have never been touched since the backfill).
+ * Setlist sync PR 3: every create-style path (new, duplicate, clone, save as
+ * template) is ONE server transaction at POST /api/setlists/create
+ * (src/lib/setlist-ops/create.ts): the setlist doc and all its rows, or
+ * nothing. The browser no longer writes `setlists/*` or `tracks/*`. Copies
+ * read the source rows on the server, so no copied row can carry a stale
+ * stamp or an `undefined`.
  */
-async function updateSetlistWithVersion(
-    ref: DocumentReference,
-    expectedUpdatedAt: Timestamp | null,
-    patch: Record<string, unknown>,
-): Promise<void> {
-    const db = await getDb()
-    await runTransaction(db, async (tx) => {
-        const snap = await tx.get(ref)
-        if (!snap.exists()) throw new Error('NOT_FOUND')
-        const remote = snap.data() as { updatedAt?: Timestamp; hydrated?: boolean }
-        const remoteUpdatedAt = remote.updatedAt ?? null
-        // Skip precondition only when both sides know there's no stamp yet.
-        if (expectedUpdatedAt !== null && !timestampsMatch(remoteUpdatedAt, expectedUpdatedAt)) {
-            throw new StaleWriteError(remoteUpdatedAt)
+async function createOnServer(body: Record<string, unknown>): Promise<string> {
+    // ONE id per user action: a retry after a lost answer resends the same id
+    // and request, and the server returns the setlist it already made.
+    const setlistId = typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `sl-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
+    const payload = JSON.stringify(stripUndefinedDeep({ ...body, setlistId }))
+    let lastError: unknown = null
+    for (let attempt = 0; attempt < 3; attempt++) {
+        let res: Response
+        try {
+            res = await apiFetch("/api/setlists/create", { method: "POST", body: payload })
+        } catch (err) {
+            lastError = err // no answer at all: try again with the same id
+            continue
         }
-        // v60-07-03: immediate FieldValue.delete strip for hydrated docs.
-        // If the remote setlist has been migrated (hydrated:true post-v60-07-02
-        // or post-v60-06-08 backfill), any update is a safe moment to clear
-        // the embedded `tracks` field. Legacy unhydrated docs are left alone —
-        // backfill (v60-06-08 --apply) will hydrate + strip them separately.
-        const applied: Record<string, unknown> = { ...patch, updatedAt: serverTimestamp() }
-        if (remote.hydrated === true) {
-            applied.tracks = deleteField()
+        if (res.status >= 500) {
+            lastError = new Error(`Create failed (${res.status})`)
+            continue
         }
-        // setlist-ops-allowlist: remove in PR 3 (client-side creation paths)
-        tx.update(ref, applied)
-    })
+        const data = (await res.json().catch(() => ({}))) as { ok?: boolean; setlistId?: string; reason?: string; message?: string }
+        if (!res.ok || data.ok !== true || typeof data.setlistId !== "string") {
+            throw new Error(data.message || data.reason || `Create failed (${res.status})`)
+        }
+        return data.setlistId
+    }
+    throw lastError instanceof Error ? lastError : new Error("Create failed")
+}
+
+/** A wizard / template track as explicit row fields (no ids, no stamps). */
+function rowFieldsOf(t: SetlistTrack): Record<string, unknown> {
+    const { id: _id, order: _order, ...rest } = t as SetlistTrack & { order?: unknown }
+    void _id
+    void _order
+    const out: Record<string, unknown> = {}
+    for (const [k, v] of Object.entries(rest)) {
+        if (v === undefined || v === null) continue
+        if ((ROW_FIELDS as readonly string[]).includes(k)) out[k] = v
+    }
+    if (typeof out.title !== "string") out.title = ""
+    if (typeof out.type !== "string") out.type = "song"
+    if (typeof out.fileId === "string" && out.songId === undefined) out.songId = out.fileId
+    return out
+}
+
+function eventIso(v: unknown): string | undefined {
+    const d = toDate(v as Parameters<typeof toDate>[0])
+    return d ? d.toISOString() : undefined
 }
 
 import { SetlistTrack } from "@/types/api"
@@ -107,7 +105,6 @@ export type { SetlistTrack }
 import { Setlist } from "@/types/api"
 import { logger } from "@/lib/logger"
 import { apiFetch } from "@/lib/api-client"
-import { applyEdit } from "@/lib/local/write"
 import { toDate } from "@/lib/firestore-helpers"
 import { getFullServiceContext, getServiceContext, ServiceType } from "@/lib/liturgical-calendar"
 import { generateSetlistName } from "@/lib/liturgical-templates"
@@ -176,75 +173,21 @@ function stripUndefinedDeep(value: unknown): unknown {
 export function createSetlistService(userId: string | null, userName?: string | null) {
     const COLLECTION_PATH = 'setlists';
 
-    // v60-07-02: per-track top-level seeding for create-style writers.
-    // The parent doc is created without an embedded `tracks` array; each
-    // SetlistTrack becomes one `tracks/{id}` doc via applyEdit fanout.
-    // `withoutUndo` because create-style flows are not user-undoable at
-    // the engine level (deletion is the surface-level inverse).
-    // Multi-tenant phase 2: every seeded row carries the parent setlist's
-    // tenant (`orgId`), stamped here because the parent was just created
-    // directly in Firestore and is not yet in Dexie for applyEdit to look up.
-    async function seedTopLevelTracks(
-        setlistId: string,
-        tracks: SetlistTrack[],
-        orgId: OrgId,
-    ): Promise<void> {
-        if (tracks.length === 0) return
-        await Promise.all(
-            tracks.map((t, i) =>
-                applyEdit(
-                    {
-                        op: "set",
-                        collection: "tracks",
-                        doc: stripUndefined({
-                            ...t,
-                            setlistId,
-                            orgId,
-                            order: i,
-                            type: t.type ?? "song",
-                            ...(t.fileId ? { songId: t.fileId } : {}),
-                        }) as unknown as Record<string, unknown> & { id: string },
-                    },
-                    { withoutUndo: true },
-                ),
-            ),
-        )
-    }
-
     return {
         async createSetlist(name: string, tracks: SetlistTrack[], additionalData: Partial<Setlist> = {}) {
             try {
-                const db = await getDb()
-                // v11-05-05: host-org default; an explicit additionalData.orgId
-                // wins (the in-app wizard passes none).
-                const orgId = rowOrg(additionalData.orgId ?? hostOrgId())
-                // setlist-ops-allowlist: remove in PR 3 (client-side creation paths)
-                const docRef = await addDoc(collection(db, COLLECTION_PATH), {
+                // The server places the new setlist in the host's tenant.
+                const id = await createOnServer({
                     name,
-                    date: serverTimestamp(),
-                    // v51-h01: stamp updatedAt so SetlistGridHydrator's lazy-hydration
-                    // can pass `expectedUpdatedAt: initialSetlist.updatedAt` and have
-                    // it match the remote on first edit.
-                    updatedAt: serverTimestamp(),
-                    // v60-07-02: parent doc carries denormalization markers only.
-                    // Top-level tracks/{id} rows are seeded post-create via
-                    // seedTopLevelTracks. No embedded `tracks` field is written.
-                    trackCount: tracks.length,
-                    hydrated: true,
-                    ownerId: userId,
-                    ownerName: userName || "Anonymous",
-                    // Setlist memory r2: the stored class follows the author's
-                    // templateType / rabbi (an explicit stored value wins).
-                    ...stripUndefined(storedClassFor({
-                        templateType: additionalData.templateType,
-                        rabbi: additionalData.rabbi,
-                    }) as Record<string, unknown>),
-                    ...stripUndefined(additionalData as Record<string, unknown>),
-                    orgId,
-                });
-                await seedTopLevelTracks(docRef.id, tracks, orgId)
-                logSetlistChange(docRef.id, 'created', userId || '', userName || 'Anonymous', { name, trackCount: tracks.length })
-                return docRef.id;
+                    eventDate: eventIso(additionalData.eventDate),
+                    templateType: additionalData.templateType ?? undefined,
+                    rabbi: additionalData.rabbi || undefined,
+                    isTemplate: additionalData.isTemplate === true ? true : undefined,
+                    musicians: (additionalData.musicians ?? undefined) as unknown,
+                    rows: tracks.map(rowFieldsOf),
+                })
+                logSetlistChange(id, 'created', userId || '', userName || 'Anonymous', { name, trackCount: tracks.length })
+                return id
             } catch (e) {
                 logger.error("Error creating setlist: ", e);
                 // v51-h01: instrument the direct-write path that v50-07-05 missed.
@@ -274,33 +217,8 @@ export function createSetlistService(userId: string | null, userName?: string | 
             })
         },
 
-        // Update a setlist with concurrency protection. Pass expectedUpdatedAt
-        // to enforce the precondition; the write will throw StaleWriteError
-        // if the remote doc has been modified since the caller last saw it.
-        async updateSetlist(id: string, data: Partial<Setlist>, expectedUpdatedAt: Timestamp | null = null) {
-            const db = await getDb()
-            const docRef = doc(db, COLLECTION_PATH, id);
-            const cleanData = stripUndefinedDeep(data) as Record<string, unknown>;
-            // updateSetlistWithVersion adds its own updatedAt; don't double-set
-            delete cleanData.updatedAt;
-            // v60-07-03: defensive strip — embedded-array writes are dead post v60-07.
-            // No production caller passes `tracks` today; this guards against future
-            // regressions. updateSetlistWithVersion separately emits FieldValue.delete()
-            // for hydrated docs (the actual cleanup mechanism).
-            delete cleanData.tracks;
-            await updateSetlistWithVersion(docRef, expectedUpdatedAt, cleanData);
-
-            // v60-07-03: audit-log action collapsed — non-rename writes log as `updated`.
-            // The dead-code embedded-tracks branch + tracks-snapshot extras are gone.
-            const action = data.name !== undefined ? 'renamed' : 'updated'
-            logSetlistChange(id, action, userId || '', userName || 'Anonymous', {
-                ...(data.name !== undefined && { newName: data.name }),
-                ...(data.trackCount !== undefined && { trackCount: data.trackCount }),
-            })
-
-            // Note: Update notifications are handled server-side (publish route)
-            // Client-side broadcast would fail because Firestore rules restrict user doc reads
-        },
+        // Setlist sync PR 3: there is no client setlist update here any more.
+        // Field edits go through the setlist ops client (editSetlist).
 
         async deleteSetlist(id: string) {
             try {
@@ -353,32 +271,12 @@ export function createSetlistService(userId: string | null, userName?: string | 
         // Duplicate a setlist (creates a copy owned by current user)
         async duplicateSetlist(sourceSetlistId: string, setlistData: Setlist) {
             try {
-                // v60-08-01: source tracks fetched from top-level collection.
-                const sourceTracks = await fetchTracksForSetlistClient(
-                    sourceSetlistId,
-                    setlistData,
-                ) as unknown as SetlistTrack[]
-                const freshTracks = sourceTracks.map((t, i) => ({
-                    ...t,
-                    id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${i}`,
-                }))
-                const copyData = stripUndefinedDeep({
+                // The server copies the source's rows and keeps its tenant.
+                return await createOnServer({
                     name: `${setlistData.name} (Copy)`,
-                    date: serverTimestamp(),
-                    trackCount: sourceTracks.length,
-                    hydrated: true,
-                    ownerId: userId,
-                    ownerName: userName || "Anonymous",
-                    // v11-05-05: a duplicate inherits the SOURCE setlist's tenant
-                    // (rowOrg: missing → 'crc', matching the v11-01-03 backfill).
-                    orgId: rowOrg(setlistData.orgId),
-                    copiedFrom: sourceSetlistId
-                }) as Record<string, unknown>
-                const db = await getDb()
-                // setlist-ops-allowlist: remove in PR 3 (client-side creation paths)
-                const docRef = await addDoc(collection(db, COLLECTION_PATH), copyData);
-                await seedTopLevelTracks(docRef.id, freshTracks, rowOrg(setlistData.orgId))
-                return docRef.id;
+                    copyFrom: sourceSetlistId,
+                    copyKind: "copiedFrom",
+                })
             } catch (e) {
                 logger.error("Error duplicating setlist: ", e);
                 throw e;
@@ -412,10 +310,9 @@ export function createSetlistService(userId: string | null, userName?: string | 
         // does not gate client-side beyond what rules already enforce.
         async setDefaultForServiceType(serviceType: ServiceType, setlistId: string, org: OrgId = hostOrgId()): Promise<void> {
             const db = await getDb()
-            const ref = doc(db, 'config', defaultsDocId(org))
-            // setlist-ops-allowlist: remove in PR 3 (client-side creation paths)
+            const defaultsRef = doc(db, 'config', defaultsDocId(org))
             await setDoc(
-                ref,
+                defaultsRef,
                 {
                     [serviceType]: setlistId,
                     updatedAt: serverTimestamp(),
@@ -495,44 +392,24 @@ export function createSetlistService(userId: string | null, userName?: string | 
                 const context = await getFullServiceContext(targetDate, rowOrg(source.orgId))
                 const name = generateSetlistName(context)
 
-                // v60-08-01: source tracks fetched from top-level collection;
-                // per-track values (key/bpm/leadMusician/notes/etc.) carry
-                // forward verbatim via the spread inside seedTopLevelTracks.
-                const sourceTracks = await fetchTracksForSetlistClient(
-                    source.id,
-                    source,
-                ) as unknown as SetlistTrack[]
-                const freshTracks = sourceTracks.map((t, i) => ({
-                    ...t,
-                    id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${i}`,
-                }))
-                const cloneData = stripUndefinedDeep({
+                // The server copies the source's rows verbatim (key, bpm, Vocal
+                // Lead, notes …) and keeps the source's tenant; the clone
+                // carries the source's musicians and rabbi.
+                const id = await createOnServer({
                     name,
-                    date: Timestamp.fromDate(targetDate),
-                    eventDate: Timestamp.fromDate(targetDate),
-                    // v51-h01: stamp updatedAt at clone time. See createSetlist
-                    // for the rationale — closes the lazy-hydration precondition
-                    // race that landed Daniel's editor in 'failed' state on phone.
-                    updatedAt: serverTimestamp(),
-                    trackCount: sourceTracks.length,
-                    hydrated: true,
-                    ownerId: userId,
-                    ownerName: userName || "Anonymous",
+                    eventDate: targetDate.toISOString(),
+                    ...(source.rabbi ? { rabbi: source.rabbi } : {}),
+                    // The source's stored slot carries through (it can differ
+                    // from the one its rabbi's name would imply).
+                    ...(typeof (source as { rabbiSlot?: unknown }).rabbiSlot === "string"
+                        ? { rabbiSlot: (source as { rabbiSlot: string }).rabbiSlot }
+                        : {}),
                     musicians: source.musicians || [],
-                    assignedUids: (source.musicians || []).map(m => m.uid).filter(Boolean),
-                    ...(source.rabbi ? { rabbi: source.rabbi, rabbiSlot: storedRabbiSlot((source as { rabbiSlot?: unknown }).rabbiSlot) ?? storedClassFor({ rabbi: source.rabbi }).rabbiSlot ?? null } : {}),
-                    // v11-05-05: a clone inherits the SOURCE setlist's tenant
-                    // (rowOrg: missing → 'crc', matching the v11-01-03 backfill).
-                    orgId: rowOrg(source.orgId),
-                    clonedFrom: source.id,
-                }) as Record<string, unknown>
-                const db = await getDb()
-                // setlist-ops-allowlist: remove in PR 3 (client-side creation paths)
-                const docRef = await addDoc(collection(db, COLLECTION_PATH), cloneData)
-                await seedTopLevelTracks(docRef.id, freshTracks, rowOrg(source.orgId))
-
-                logSetlistChange(docRef.id, 'cloned', userId || '', userName || 'Anonymous')
-                return docRef.id
+                    copyFrom: source.id,
+                    copyKind: "clonedFrom",
+                })
+                logSetlistChange(id, 'cloned', userId || '', userName || 'Anonymous')
+                return id
             } catch (e) {
                 logger.error("Error cloning setlist:", e)
                 captureSyncFailure(e, {
@@ -561,34 +438,16 @@ export function createSetlistService(userId: string | null, userName?: string | 
         // Save a setlist as a reusable template (strips date, musicians, rabbi)
         async saveAsTemplate(source: Setlist, templateName?: string): Promise<string> {
             try {
-                // v60-08-01: source tracks fetched from top-level collection.
-                const sourceTracks = await fetchTracksForSetlistClient(
-                    source.id,
-                    source,
-                ) as unknown as SetlistTrack[]
-                const freshTracks = sourceTracks.map((t, i) => ({
-                    ...t,
-                    id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${i}`,
-                }))
-                const templateData = stripUndefinedDeep({
+                // A template stays in its source's tenant (the server reads it).
+                const id = await createOnServer({
                     name: templateName || `${source.name} (Template)`,
-                    date: serverTimestamp(),
-                    trackCount: sourceTracks.length,
-                    hydrated: true,
                     isTemplate: true,
                     templateType: 'other',
-                    ownerId: userId,
-                    ownerName: userName || "Anonymous",
-                    // Multi-tenant phase 2: a template stays in its source's tenant.
-                    orgId: rowOrg(source.orgId),
-                }) as Record<string, unknown>
-                const db = await getDb()
-                // setlist-ops-allowlist: remove in PR 3 (client-side creation paths)
-                const docRef = await addDoc(collection(db, COLLECTION_PATH), templateData)
-                await seedTopLevelTracks(docRef.id, freshTracks, rowOrg(source.orgId))
-
-                logSetlistChange(docRef.id, 'saved_as_template', userId || '', userName || 'Anonymous')
-                return docRef.id
+                    copyFrom: source.id,
+                    copyKind: "copiedFrom",
+                })
+                logSetlistChange(id, 'saved_as_template', userId || '', userName || 'Anonymous')
+                return id
             } catch (e) {
                 logger.error("Error saving as template:", e)
                 throw e

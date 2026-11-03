@@ -1,6 +1,5 @@
 'use client'
 
-import { storedClassFor } from '@/lib/history/classify'
 import { Calendar as CalendarIcon, Check, Loader2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
@@ -33,8 +32,8 @@ import {
     SheetTitle,
 } from '@/components/ui/sheet'
 import { toDate } from '@/lib/firestore-helpers'
-import type { EditDescriptor } from '@/lib/local/types'
-import { applyEdit as defaultApplyEdit } from '@/lib/local/write'
+import { editSetlist, settleBatch, SetlistOpRefusedError } from '@/lib/setlist-ops-client/actions'
+import { refusalReasonText } from './refusal-text'
 import { useOrg } from '@/lib/org/org-context'
 import { hidesLiturgicalFields, isBandTenant } from '@/lib/org/vocab'
 import { HHMM_RE, type Gig, type SetTarget } from '@/lib/gig/model'
@@ -85,16 +84,27 @@ export interface SetlistMetaEditSheetProps {
      * target lengths, with the minutes each set's target resolves to today.
      */
     sets?: Array<{ id: string; title: string; targetMinutes?: number }>
-    /** Injectable for tests — defaults to the real outbox writer. */
-    applyEdit?: (edit: EditDescriptor) => Promise<void>
+    /**
+     * Injectable for tests. Defaults to the setlist ops client's
+     * `editSetlist`: one editSetlist intent whose base is `initial` (what the
+     * author saw), so it queues offline and a concurrent edit to the same
+     * field comes back as a conflict.
+     */
+    saveSetlist?: (setlistId: string, base: Record<string, unknown>, patch: Record<string, unknown>) => Promise<unknown>
+}
+
+/** Queue the edit and wait for the server's answer ('offline' = queued; a refusal throws). */
+const defaultSaveSetlist = async (setlistId: string, base: Record<string, unknown>, patch: Record<string, unknown>) => {
+    const batch = await editSetlist(setlistId, base as never, patch)
+    return batch ? settleBatch(setlistId, batch) : 'ok'
 }
 
 /**
  * v70-09: edit a setlist's metadata (name / event date / service type / rabbi)
- * after creation. Opened from the pencil button in SetlistGridTopBar. Writes
- * route through the v6.0 sync engine via `applyEdit('update', 'setlists', …)`;
- * the patch carries ONLY the fields that actually changed. Cancel / Escape /
- * an unchanged Save are all non-destructive (no write enqueued).
+ * after creation. Opened from the pencil button in SetlistGridTopBar. The
+ * patch carries ONLY the fields that actually changed; the server derives
+ * the stored class (serviceType / rabbiSlot) from them. Cancel / Escape / an
+ * unchanged Save are all non-destructive (nothing queued).
  */
 export function SetlistMetaEditSheet({
     setlistId,
@@ -102,7 +112,7 @@ export function SetlistMetaEditSheet({
     onOpenChange,
     initial,
     sets = EMPTY_SETS,
-    applyEdit = defaultApplyEdit,
+    saveSetlist = defaultSaveSetlist,
 }: SetlistMetaEditSheetProps) {
     const { t, isRtl } = useI18n()
     const fmt = useFormat()
@@ -160,24 +170,19 @@ export function SetlistMetaEditSheet({
 
         const initialMs = initialDate?.getTime() ?? null
         const currentMs = eventDate?.getTime() ?? null
-        if (currentMs !== initialMs) {
-            // firestoreTimestampSchema accepts Date / {seconds,nanoseconds} /
-            // string — NOT plain numbers. ISO string matches what
-            // service.createSetlist writes for this field.
-            patch.eventDate = eventDate ? eventDate.toISOString() : null
+        // A date can be moved, not cleared (the server keeps every setlist dated).
+        if (currentMs !== initialMs && eventDate) {
+            patch.eventDate = eventDate.toISOString()
         }
 
-        // Setlist memory r2: the stored class (serviceType / rabbiSlot) is
-        // written from the same normalisation as the edited field, so it can
-        // never go stale against what the author just typed.
+        // Setlist memory r2: the server writes the stored class (serviceType /
+        // rabbiSlot) from the same normalisation as the edited field.
         if (serviceType !== initial.templateType) {
             patch.templateType = serviceType ?? null
-            patch.serviceType = storedClassFor({ templateType: serviceType ?? null }).serviceType ?? null
         }
 
         if (rabbi !== (initial.rabbi ?? '')) {
             patch.rabbi = rabbi.trim() ? rabbi.trim() : null
-            patch.rabbiSlot = storedClassFor({ rabbi: rabbi.trim() || null }).rabbiSlot ?? null
         }
 
         if (isBand) {
@@ -191,7 +196,14 @@ export function SetlistMetaEditSheet({
             // gig whose keys sit in another order is not rewritten unchanged.
             const before = buildGig(gigDraftOf(initial.gig), initial.gig ?? null, null, sets)
             const beforeGig = before.ok ? before.gig : initial.gig ?? null
-            if (JSON.stringify(built.gig) !== JSON.stringify(beforeGig)) patch.gig = built.gig
+            // Only the parts that changed (null removes a part), so the engine
+            // merges per part and an MCP edit to another part is kept.
+            if (built.gig === null) {
+                if (beforeGig) patch.gig = null
+            } else {
+                const diff = gigDiff(beforeGig ?? {}, built.gig)
+                if (Object.keys(diff).length > 0) patch.gig = diff
+            }
         }
 
         // Nothing changed — close without enqueueing a write (AC-4).
@@ -202,16 +214,24 @@ export function SetlistMetaEditSheet({
 
         setSaving(true)
         try {
-            await applyEdit({
-                op: 'update',
-                collection: 'setlists',
-                docId: setlistId,
+            const outcome = await saveSetlist(
+                setlistId,
+                {
+                    name: initial.name,
+                    eventDate: initial.eventDate ?? null,
+                    templateType: initial.templateType ?? null,
+                    rabbi: initial.rabbi ?? null,
+                    gig: initial.gig ?? null,
+                },
                 patch,
-            })
-            toast.success(t('setlistGrid.metaSaved'))
+            )
+            // "Saved" only once the server took it; offline the edit stays
+            // queued and the save indicator says so.
+            if (outcome !== 'offline') toast.success(t('setlistGrid.metaSaved'))
             onOpenChange(false)
         } catch (err) {
-            toast.error(t('setlistGrid.metaSaveFailed', { error: formatError(err) }))
+            const why = err instanceof SetlistOpRefusedError ? refusalReasonText(err.reason, t, err.field) : formatError(err)
+            toast.error(t('setlistGrid.metaSaveFailed', { error: why }))
             // Keep the sheet open so the edits aren't lost — Daniel can retry.
         } finally {
             setSaving(false)
@@ -492,6 +512,16 @@ function targetDraftOf(sets: ReadonlyArray<{ id: string; targetMinutes?: number 
  * (by header row id) only when the author edited them; otherwise the stored
  * ones are kept as they are.
  */
+/** The gig parts that differ between `before` and `after` (removed parts as null). */
+export function gigDiff(before: Gig, after: Gig): Record<string, unknown> {
+    const out: Record<string, unknown> = {}
+    const keys = new Set([...Object.keys(before), ...Object.keys(after)]) as Set<keyof Gig>
+    for (const k of keys) {
+        if (JSON.stringify(before[k] ?? null) !== JSON.stringify(after[k] ?? null)) out[k] = after[k] ?? null
+    }
+    return out
+}
+
 export function buildGig(
     draft: GigDraft,
     previous: Gig | null,

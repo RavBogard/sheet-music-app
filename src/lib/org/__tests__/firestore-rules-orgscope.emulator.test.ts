@@ -110,87 +110,28 @@ describe("v11-01-04 firestore.rules org-scope", () => {
             .firestore()
     }
 
-    // ─── AC-1: CRC users (no orgIds claim) keep FULL write access ──────────
+    // ─── Setlist sync PR 3: setlists and tracks are server-written only ────
+    //
+    // Both tenants' leaders, in their own tenant or the other, are refused
+    // every browser create / update of setlists and tracks; the server op
+    // engine (with its own tenant check) is the only writer. Songs stay
+    // leader-writable; recordings stay server-only.
 
-    // Multi-tenant P2: creates must stamp orgId (every browser setlist writer
-    // does — createSetlist/duplicateSetlist/cloneSetlist, and saveAsTemplate
-    // after lane 4). An unstamped create is refused; reads/updates of a legacy
-    // unstamped row still treat it as crc.
-    it("AC-1: claimless CRC leader can create a setlist with orgId='crc'; an unstamped create is refused (P2)", async () => {
+    it("PR 3: a CRC leader and a BL leader cannot write setlists or tracks from a browser, in either tenant", async () => {
+        for (const [db, org] of [[crcLeader(), "crc"], [blLeader(), "brotherslazaroff"]] as const) {
+            for (const target of ["crc", "brotherslazaroff"]) {
+                await assertFails(db.collection("setlists").doc(`sl-new-${org}-${target}`).set({ name: "N", ownerId: "x", orgId: target }))
+                await assertFails(db.collection("tracks").doc(`tk-new-${org}-${target}`).set({ setlistId: "sl-crc", title: "T", order: 1, type: "song", orgId: target }))
+            }
+        }
+        await assertFails(crcLeader().collection("setlists").doc("sl-crc").update({ name: "Renamed" }))
+        await assertFails(crcLeader().collection("tracks").doc("tk-crc").update({ key: "G" }))
+    })
+
+    it("a claimless CRC leader can still write songs (orgId=crc); recordings are server-only", async () => {
         const db = crcLeader()
-        await assertSucceeds(
-            db.collection("setlists").doc("sl-new-crc").set({
-                name: "New", ownerId: "crc-leader", orgId: "crc",
-            }),
-        )
-        await assertFails(
-            db.collection("setlists").doc("sl-new-noorg").set({
-                name: "New2", ownerId: "crc-leader",
-            }),
-        )
-    })
-
-    it("AC-1: claimless CRC leader can update an existing crc setlist (no lock-out)", async () => {
-        await assertSucceeds(
-            crcLeader().collection("setlists").doc("sl-crc").update({ name: "Renamed" }),
-        )
-    })
-
-    it("AC-1: claimless CRC leader can create+update tracks (orgId=crc and absent)", async () => {
-        const db = crcLeader()
-        await assertSucceeds(
-            db.collection("tracks").doc("tk-new").set({
-                setlistId: "sl-crc", title: "T", order: 1, type: "song", orgId: "crc",
-            }),
-        )
-        await assertSucceeds(
-            db.collection("tracks").doc("tk-new-noorg").set({
-                setlistId: "sl-crc", title: "T2", order: 2, type: "song",
-            }),
-        )
-        await assertSucceeds(
-            db.collection("tracks").doc("tk-crc").update({ key: "G" }),
-        )
-    })
-
-    // Recordings 2026-11: recordings writes are server-only, so a leader's
-    // client create is denied (songs stay leader-writable).
-    it("AC-1: claimless CRC leader can write songs (orgId=crc); recordings are server-only", async () => {
-        const db = crcLeader()
-        await assertSucceeds(
-            db.collection("songs").doc("song-new").set({ title: "S", orgId: "crc" }),
-        )
-        await assertFails(
-            db.collection("recordings").doc("rec-new").set({
-                songId: "song-crc", title: "R", orgId: "crc",
-            }),
-        )
-    })
-
-    // ─── AC-2: cross-tenant writes are DENIED ──────────────────────────────
-
-    it("AC-2: BL-claim leader CANNOT create crc-tenant docs, CAN create bl-tenant docs", async () => {
-        const db = blLeader()
-        await assertFails(
-            db.collection("setlists").doc("sl-x").set({
-                name: "X", ownerId: "bl-leader", orgId: "crc",
-            }),
-        )
-        await assertSucceeds(
-            db.collection("setlists").doc("sl-bl").set({
-                name: "BL", ownerId: "bl-leader", orgId: "brotherslazaroff",
-            }),
-        )
-        await assertFails(
-            db.collection("tracks").doc("tk-x").set({
-                setlistId: "sl-bl", title: "T", order: 0, type: "song", orgId: "crc",
-            }),
-        )
-        await assertSucceeds(
-            db.collection("tracks").doc("tk-bl").set({
-                setlistId: "sl-bl", title: "T", order: 0, type: "song", orgId: "brotherslazaroff",
-            }),
-        )
+        await assertSucceeds(db.collection("songs").doc("song-new").set({ title: "S", orgId: "crc" }))
+        await assertFails(db.collection("recordings").doc("rec-new").set({ songId: "song-crc", title: "R", orgId: "crc" }))
     })
 
     // Multi-tenant P2: the admin exemption is gone. A tenant admin cannot move a
@@ -212,8 +153,9 @@ describe("v11-01-04 firestore.rules org-scope", () => {
             testEnv.authenticatedContext("owner", { po: true }).firestore()
                 .collection("setlists").doc("sl-crc").update({ orgId: "brotherslazaroff" }),
         )
-        // ...while po may otherwise edit any tenant's setlist.
-        await assertSucceeds(
+        // Setlist sync PR 3: not even po writes a setlist from a browser now;
+        // every setlist write goes through the server op engine.
+        await assertFails(
             testEnv.authenticatedContext("owner", { po: true }).firestore()
                 .collection("setlists").doc("sl-crc").update({ name: "po edit" }),
         )
@@ -231,8 +173,9 @@ describe("v11-01-04 firestore.rules org-scope", () => {
         await assertFails(foreignTrack.update({ key: "F#" }))
         await assertFails(foreignTrack.delete())
 
+        // Setlist sync PR 3: its own tenant's rows are server-written too.
         const ownTrack = blLeader().collection("tracks").doc("tk-bl-owned")
-        await assertSucceeds(
+        await assertFails(
             ownTrack.set({
                 setlistId: "sl-bl",
                 title: "Own tenant",
@@ -241,8 +184,6 @@ describe("v11-01-04 firestore.rules org-scope", () => {
                 orgId: "brotherslazaroff",
             }),
         )
-        await assertSucceeds(ownTrack.update({ key: "D" }))
-        await assertSucceeds(ownTrack.delete())
     })
 
     // ─── AC-3: reads UNCHANGED (err-public, no lock-out) ───────────────────

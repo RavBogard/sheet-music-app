@@ -28,7 +28,7 @@ function renderSheet(org: 'crc' | 'brotherslazaroff', gig?: Gig) {
                 onOpenChange={() => {}}
                 initial={{ name: 'Show', gig }}
                 sets={[{ id: 'h1', title: 'Set 1', targetMinutes: gig?.setTargets?.[0]?.minutes }]}
-                applyEdit={applyEdit}
+                saveSetlist={applyEdit}
             />
         </OrgProvider>,
     )
@@ -41,17 +41,20 @@ describe('BET-5 gig fields in the details sheet', () => {
         expect(screen.queryByTestId('gig-fields')).not.toBeInTheDocument()
     })
 
-    it('Brothers Lazaroff: saves only the changed gig, with the set target by header row', async () => {
+    it('Brothers Lazaroff: sends only the changed gig PARTS (with the set target by header row), so another edit to another part is kept', async () => {
         const applyEdit = renderSheet('brotherslazaroff', { start: '20:00', venue: 'The Hall' })
         fireEvent.change(screen.getByLabelText('Load-in'), { target: { value: '17:30' } })
         fireEvent.change(screen.getByLabelText('Set 1, minutes'), { target: { value: '45' } })
+        fireEvent.change(screen.getByLabelText('Venue'), { target: { value: '' } })
         await act(async () => {
             fireEvent.click(screen.getByRole('button', { name: /save/i }))
         })
         expect(applyEdit).toHaveBeenCalledTimes(1)
-        expect(applyEdit.mock.calls[0][0].patch).toEqual({
-            gig: { venue: 'The Hall', loadIn: '17:30', start: '20:00', setTargets: [{ headerRowId: 'h1', minutes: 45 }] },
+        expect(applyEdit.mock.calls[0][2]).toEqual({
+            gig: { venue: null, loadIn: '17:30', setTargets: [{ headerRowId: 'h1', minutes: 45 }] },
         })
+        // The base is the gig the sheet opened with.
+        expect(applyEdit.mock.calls[0][1]).toMatchObject({ gig: { start: '20:00', venue: 'The Hall' } })
     })
 
     it('Brothers Lazaroff: an unchanged gig (keys in another order) is not rewritten', async () => {

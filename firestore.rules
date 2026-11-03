@@ -138,7 +138,8 @@ service cloud.firestore {
       allow update: if signedIn() && request.auth.uid == userId && selfUpdateOk();
       allow delete: if signedIn() && request.auth.uid == userId;
 
-      match /setlists/{docId}        { allow read, write: if signedIn() && request.auth.uid == userId; }
+      // Setlist sync PR 3: nothing writes these from a browser; read as before.
+      match /setlists/{docId}        { allow read: if signedIn() && request.auth.uid == userId; allow write: if false; }
       match /songPreferences/{fileId} { allow read, write: if signedIn() && request.auth.uid == userId; }
       match /annotations/{fileId}    { allow read, write: if signedIn() && request.auth.uid == userId; }
       match /preferences/{docId}     { allow read, write: if signedIn() && request.auth.uid == userId; }
@@ -213,17 +214,13 @@ service cloud.firestore {
       // included. Every client query already filters by orgId, so nobody who
       // is served today is refused.
       allow list: if signedIn() && atLeast(listOrg(), 'pe');
-      allow create: if signedIn()
-        && request.resource.data.get('ownerId', '') == request.auth.uid
-        && newOrgSet()
-        && atLeast(newOrg(), 'me');
-      allow update: if signedIn()
-        && orgKept()
-        && (atLeast(docOrg(), 'bl') || (isOwner() && atLeast(docOrg(), 'me')))
-        && (request.resource.data.get('ownerId', null) == resource.data.get('ownerId', null)
-            || atLeast(docOrg(), 'ad'));
-      allow delete: if signedIn()
-        && (atLeast(docOrg(), 'bl') || (isOwner() && atLeast(docOrg(), 'me')));
+      // Setlist sync PR 3: setlists are written by the server only
+      // (src/lib/setlist-ops, behind /api/setlists/{id}/ops and
+      // /api/setlists/create, which check the caller in the setlist's
+      // tenant). A browser write is refused for everyone; an old tab's queued
+      // write fails here and its outbox row is converted to an op on the next
+      // load (src/lib/setlist-ops-client/migrate.ts).
+      allow create, update, delete: if false;
     }
     // Setlist ops idempotency receipts (OPS-CONTRACT). Written and read only
     // by the server op engine (src/lib/setlist-ops); no client may touch them.
@@ -293,21 +290,9 @@ service cloud.firestore {
       // above. Same bar as setlists: standing in the tenant, pending
       // included. Both client queries now carry the orgId filter this needs.
       allow list: if signedIn() && atLeast(listOrg(), 'pe');
-      allow create: if signedIn()
-        && request.resource.data.get('setlistId', '') is string
-        && request.resource.data.get('setlistId', '') != ''
-        && atLeast(trackOrg(request.resource.data), 'bl')
-        && (!('orgId' in request.resource.data)
-            || request.resource.data.orgId == setlistOrgOf(request.resource.data.setlistId));
-      allow update: if signedIn()
-        && atLeast(trackOrg(resource.data), 'bl')
-        && (('orgId' in resource.data)
-              ? request.resource.data.get('orgId', null) == resource.data.orgId
-              : (!('orgId' in request.resource.data)
-                  || request.resource.data.orgId == setlistOrgOf(resource.data.setlistId)))
-        && (request.resource.data.get('setlistId', '') == resource.data.get('setlistId', '')
-            || setlistOrgOf(request.resource.data.setlistId) == trackOrg(resource.data));
-      allow delete: if signedIn() && atLeast(trackOrg(resource.data), 'bl');
+      // Setlist sync PR 3: rows are written by the server op engine only
+      // (one transaction per batch, renumbered, stamped). See setlists above.
+      allow create, update, delete: if false;
     }
 
     // ── CATALOGUE ──────────────────────────────────────────────────────────

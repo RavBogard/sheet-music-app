@@ -1,6 +1,6 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
-import { checkUpdatePrecondition, stampTrackOrgForCommit, touchesDerivedTrackField } from '../init'
+import { checkUpdatePrecondition, outboxDocPath } from '../init'
 
 /**
  * T1.3 (2026-05-12) — unit tests for the precondition helper that the
@@ -48,51 +48,13 @@ describe('checkUpdatePrecondition', () => {
     })
 })
 
-/**
- * Multi-tenant phase 2 - the commit-time layer of track orgId stamping: a
- * track that reaches the outbox without orgId (parent not in Dexie, or queued
- * by a pre-P2 bundle) is stamped from the Firestore parent setlist.
- */
-describe('stampTrackOrgForCommit', () => {
-    const read = (exists: boolean, orgId?: unknown) =>
-        vi.fn(async (_id: string) => (exists ? { exists: true, orgId } : { exists: false }))
-
-    it('stamps an unstamped track from its parent setlist', async () => {
-        const r = read(true, 'brotherslazaroff')
-        const out = await stampTrackOrgForCommit('tracks', { setlistId: 's1', title: 'x' }, r)
-        expect(out).toEqual({ setlistId: 's1', title: 'x', orgId: 'brotherslazaroff' })
-        expect(r).toHaveBeenCalledWith('s1')
+describe('outboxDocPath (setlist sync PR 3)', () => {
+    it('refuses setlists and tracks: only the ops endpoint writes them', () => {
+        expect(() => outboxDocPath({ collection: 'tracks', docId: 't1' })).toThrow(/ops endpoint/)
+        expect(() => outboxDocPath({ collection: 'setlists', docId: 's1' })).toThrow(/ops endpoint/)
     })
 
-    it('parent without orgId -> crc', async () => {
-        expect((await stampTrackOrgForCommit('tracks', { setlistId: 's1' }, read(true))).orgId).toBe('crc')
-    })
-
-    it('keeps an existing orgId and does not read the parent', async () => {
-        const r = read(true, 'crc')
-        const p = { setlistId: 's1', orgId: 'brotherslazaroff' }
-        expect(await stampTrackOrgForCommit('tracks', p, r)).toBe(p)
-        expect(r).not.toHaveBeenCalled()
-    })
-
-    it('missing parent or a failed read leaves the payload unchanged', async () => {
-        const p = { setlistId: 's1' }
-        expect(await stampTrackOrgForCommit('tracks', p, read(false))).toBe(p)
-        expect(await stampTrackOrgForCommit('tracks', p, vi.fn(async () => { throw new Error('offline') }))).toBe(p)
-    })
-
-    it('other collections are untouched', async () => {
-        const r = read(true, 'brotherslazaroff')
-        const p = { setlistId: 's1' }
-        expect(await stampTrackOrgForCommit('setlists', p, r)).toBe(p)
-        expect(r).not.toHaveBeenCalled()
-    })
-})
-
-describe('touchesDerivedTrackField', () => {
-    it('re-derives the parent setlist only for a track type or chart change', () => {
-        expect(touchesDerivedTrackField({ type: 'header' })).toBe(true)
-        expect(touchesDerivedTrackField({ fileId: 'c', songId: 'c' })).toBe(true)
-        expect(touchesDerivedTrackField({ key: 'F', notes: 'slow' })).toBe(false)
+    it('other collections keep their path', () => {
+        expect(outboxDocPath({ collection: 'songs', docId: 'x' })).toBe('songs/x')
     })
 })

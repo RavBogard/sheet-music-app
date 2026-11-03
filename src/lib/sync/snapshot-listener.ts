@@ -1,25 +1,18 @@
-// Cross-leader live-edit visibility (v50-06-03): Firestore onSnapshot
-// listeners for `setlists/{setlistId}` + `tracks where setlistId == X` that
-// write deliveries directly into Dexie via `db.{setlists|tracks}.put` —
-// NOT via applyEdit. Server data is authoritative; bypassing the outbox
-// matches SetlistGridHydrator's idempotent priming pattern.
+// Live server state for one setlist: Firestore onSnapshot on
+// `setlists/{setlistId}` and on its tracks, written into the Dexie SERVER
+// CACHE (src/lib/setlist-ops-client/server-cache.ts).
 //
-// Two safety guards:
-//   1. "Skip if our own outbox has a pending row for this docId" — prevents
-//      a remote echo of our own in-flight edit from clobbering the local
-//      write before the engine drains it.
-//   2. LWW guard — only put if remote.updatedAt > local.updatedAt. Stale
-//      deliveries (queued before a more recent local commit's writeback)
-//      are dropped silently. NOTE: when local.updatedAt is undefined (e.g.,
-//      engine writeback skipped because adapter returned `{}` with no
-//      committedAt), we PREFER the local row — the alternative
-//      ((undefined ?? 0) >= remote) → false → put would silently overwrite
-//      a user edit the engine has yet to resolve. v5h-01-02 fix (B): the
-//      guard skips delivery under uncertainty rather than clobbering. See
-//      the v5h-01-01 reproduction harness in property-failures.test.ts.
+// Setlist sync PR 3: Dexie `tracks` and `setlists` hold server state only.
+// Local edits live in the intent queue and are drawn over the cache by the
+// view, so this listener has no guards for them any more: no "skip if the
+// outbox has a row", no tombstones, no LWW on `updatedAt`, no version-bump
+// exception. Each tracks snapshot that came from the SERVER (not the local
+// Firestore cache) is the full set of the setlist's rows: rows the server no
+// longer has are pruned, which is what makes ghost rows impossible.
 //
-// The listener never throws out of its callbacks. Firestore errors are
-// swallowed + logged; engine writes remain authoritative.
+// The listener never throws out of its callbacks. Firestore errors are logged
+// and reported; a refused tracks listener can hand over to the caller
+// (`onTracksRefused`, the public endpoint fallback).
 
 'use client'
 
@@ -35,8 +28,10 @@ import { tenantOfSetlist } from '@/lib/client-tracks'
 import { setlistTracksQuery } from '@/lib/tenant-query'
 import { subscribeWithDb } from '@/lib/firebase'
 import type { LocalDb } from '@/lib/local/schema'
-import type { LocalCollection, LocalSetlist, LocalTrack } from '@/lib/local/types'
 import { logger as defaultLogger } from '@/lib/logger'
+import { markLive } from '@/lib/setlist-ops-client/freshness'
+import { whenMigrated } from '@/lib/setlist-ops-client/runtime'
+import { putServerSetlist, replaceServerRows, type ServerRow } from '@/lib/setlist-ops-client/server-cache'
 import { recordEdit } from './edit-log'
 import { captureSyncFailure } from './sentry-capture'
 
@@ -58,9 +53,7 @@ export interface SnapshotListenerOpts {
      *  guessed tenant. */
     orgId?: string
     /** Override for tests. When provided, the subscriber wraps the given
-     *  Firestore synchronously (no lazy-load deferral). When absent, the
-     *  default subscriber lazy-resolves Firestore via `subscribeWithDb`
-     *  so the SDK chunk stays out of the eager preload graph. */
+     *  Firestore synchronously (no lazy-load deferral). */
     firestoreDb?: Firestore
     /** Override for tests. Defaults to the app logger. */
     logger?: ListenerLogger
@@ -68,15 +61,27 @@ export interface SnapshotListenerOpts {
      *  (`permission-denied`): a viewer signed in to another tenant than the
      *  setlist's. The caller falls back to the public tracks endpoint. */
     onTracksRefused?: (err: Error) => void
-    /** Test-only injection: a function pair returning unsubscribers for
-     *  setlist + tracks subscriptions. When provided, bypasses Firestore
-     *  entirely so unit tests don't need a live Firestore. */
+    /** Test-only: a transport that bypasses Firestore. */
     subscriber?: SnapshotSubscriber
+    /** Resolves before the first prune. Defaults to the old-outbox migration
+     *  (its anchors read the cache, so it must run before ghosts are pruned). */
+    ready?: () => Promise<void>
 }
 
-/** Test-seam: an injectable transport for snapshot deliveries. Production
- *  uses Firestore's onSnapshot; tests provide a hand-rolled fake that
- *  triggers callbacks on demand. */
+/** A setlist doc delivery. `fromCache` deliveries are ignored. */
+export interface SetlistDelivery {
+    data: Record<string, unknown>
+    updatedAt: number
+    fromCache?: boolean
+}
+
+/** One tracks snapshot: every row of the setlist. `fromCache` ones are ignored. */
+export interface TracksDelivery {
+    rows: ServerRow[]
+    fromCache: boolean
+}
+
+/** Test-seam: an injectable transport for snapshot deliveries. */
 export interface SnapshotSubscriber {
     subscribeSetlist(
         setlistId: string,
@@ -85,28 +90,11 @@ export interface SnapshotSubscriber {
     ): () => void
     subscribeTracks(
         setlistId: string,
-        onChanges: (changes: TrackChange[]) => void,
+        onSet: (delivery: TracksDelivery) => void,
         onError: (err: Error) => void,
         /** The setlist's tenant, when the caller knows it. */
         orgId?: string,
     ): () => void
-}
-
-export interface SetlistDelivery {
-    data: Record<string, unknown>
-    updatedAt: number
-}
-
-export type TrackChangeType = 'added' | 'modified' | 'removed'
-
-export interface TrackChange {
-    type: TrackChangeType
-    docId: string
-    /** For 'added' / 'modified': the new doc data. For 'removed': last
-     *  known data (Firestore provides this on removal). */
-    data: Record<string, unknown>
-    /** Server-stamped updatedAt in ms. 0 for 'removed' deliveries. */
-    updatedAt: number
 }
 
 function timestampToMs(value: unknown): number {
@@ -115,26 +103,18 @@ function timestampToMs(value: unknown): number {
     return 0
 }
 
-function toTrackChanges(snap: QuerySnapshot): TrackChange[] {
-    return snap.docChanges().map((c) => {
-        const data = c.doc.data() as Record<string, unknown>
-        const updatedAt =
-            c.type === 'removed' ? 0 : timestampToMs(data.updatedAt)
-        return {
-            type: c.type as TrackChangeType,
-            docId: c.doc.id,
-            data,
-            updatedAt,
-        }
-    })
+function toTracksDelivery(snap: QuerySnapshot): TracksDelivery {
+    return {
+        fromCache: snap.metadata.fromCache,
+        rows: snap.docs.map((d) => ({ id: d.id, data: d.data() as Record<string, unknown> })),
+    }
 }
 
 /** The live tracks query. The orgId filter is what makes it legal: the
  *  `tracks` list rule (`atLeast(listOrg(), 'pe')`) reads
  *  `resource.data.orgId`, and a query that does not pin orgId is refused for
- *  everyone but the platform owner. From caacfb34 (2026-10-13) until this fix
- *  the listener sent setlistId alone, so no band device got live rows.
- *  Exported so the emulator rules test runs this exact query. */
+ *  everyone but the platform owner. Exported so the emulator rules test runs
+ *  this exact query. */
 export function liveTracksQuery(
     firestoreDb: Firestore,
     setlistId: string,
@@ -143,25 +123,21 @@ export function liveTracksQuery(
     return setlistTracksQuery(firestoreDb, orgId, setlistId)
 }
 
-/** Attach the tracks listener once the tenant is known. With `orgId` it
- *  attaches at once. Without it, it reads the setlist doc first (a public
- *  `get`) and uses that doc's tenant, else the host's (`tenantOfSetlist`), so
- *  the query never goes out on a guess. A setlist that does not exist has no
- *  rows to watch, so nothing attaches. */
+/** Attach the tracks listener once the tenant is known (see `orgId`).
+ *  `includeMetadataChanges` so the server's confirmation of a set that the
+ *  local Firestore cache already held still arrives as a non-cache snapshot. */
 function attachTracks(
     firestoreDb: Firestore,
     setlistId: string,
     orgId: string | undefined,
-    onChanges: (changes: TrackChange[]) => void,
+    onSet: (delivery: TracksDelivery) => void,
     onError: (err: Error) => void,
 ): () => void {
     const listen = (tenant: string) =>
         onSnapshot(
             liveTracksQuery(firestoreDb, setlistId, tenant),
-            (snap) => {
-                const changes = toTrackChanges(snap)
-                if (changes.length > 0) onChanges(changes)
-            },
+            { includeMetadataChanges: true },
+            (snap) => onSet(toTracksDelivery(snap)),
             (err) => onError(err as Error),
         )
     if (orgId) return listen(orgId)
@@ -183,62 +159,42 @@ function attachTracks(
     }
 }
 
-/** Test-path subscriber: wraps `firebase/firestore` onSnapshot synchronously
- *  against a caller-provided Firestore instance. Used only when tests inject
- *  `opts.firestoreDb`. */
+function attachSetlist(
+    firestoreDb: Firestore,
+    setlistId: string,
+    onNext: (delivery: SetlistDelivery | null) => void,
+    onError: (err: Error) => void,
+): () => void {
+    return onSnapshot(
+        fsDoc(firestoreDb, 'setlists', setlistId),
+        { includeMetadataChanges: true },
+        (snap) => {
+            if (!snap.exists()) {
+                if (!snap.metadata.fromCache) onNext(null)
+                return
+            }
+            const data = snap.data() as Record<string, unknown>
+            onNext({ data, updatedAt: timestampToMs(data.updatedAt), fromCache: snap.metadata.fromCache })
+        },
+        (err) => onError(err as Error),
+    )
+}
+
 function makeFirestoreSubscriber(firestoreDb: Firestore): SnapshotSubscriber {
     return {
-        subscribeSetlist(setlistId, onNext, onError) {
-            const ref = fsDoc(firestoreDb, 'setlists', setlistId)
-            return onSnapshot(
-                ref,
-                (snap) => {
-                    if (!snap.exists()) {
-                        onNext(null)
-                        return
-                    }
-                    const data = snap.data() as Record<string, unknown>
-                    const updatedAt = timestampToMs(data.updatedAt)
-                    onNext({ data, updatedAt })
-                },
-                (err) => onError(err as Error),
-            )
-        },
-        subscribeTracks(setlistId, onChanges, onError, orgId) {
-            return attachTracks(firestoreDb, setlistId, orgId, onChanges, onError)
-        },
+        subscribeSetlist: (setlistId, onNext, onError) => attachSetlist(firestoreDb, setlistId, onNext, onError),
+        subscribeTracks: (setlistId, onSet, onError, orgId) => attachTracks(firestoreDb, setlistId, orgId, onSet, onError),
     }
 }
 
 /** Production subscriber: lazy-resolves Firestore via `subscribeWithDb` so the
- *  SDK chunk stays out of the eager preload graph. The sync unsubscribe
- *  contract is preserved by `subscribeWithDb` (calling it before the inner
- *  attach lands cleanly cancels). */
+ *  SDK chunk stays out of the eager preload graph. */
 function makeLazyFirestoreSubscriber(): SnapshotSubscriber {
     return {
-        subscribeSetlist(setlistId, onNext, onError) {
-            return subscribeWithDb((firestoreDb) => {
-                const ref = fsDoc(firestoreDb, 'setlists', setlistId)
-                return onSnapshot(
-                    ref,
-                    (snap) => {
-                        if (!snap.exists()) {
-                            onNext(null)
-                            return
-                        }
-                        const data = snap.data() as Record<string, unknown>
-                        const updatedAt = timestampToMs(data.updatedAt)
-                        onNext({ data, updatedAt })
-                    },
-                    (err) => onError(err as Error),
-                )
-            })
-        },
-        subscribeTracks(setlistId, onChanges, onError, orgId) {
-            return subscribeWithDb((firestoreDb) =>
-                attachTracks(firestoreDb, setlistId, orgId, onChanges, onError),
-            )
-        },
+        subscribeSetlist: (setlistId, onNext, onError) =>
+            subscribeWithDb((firestoreDb) => attachSetlist(firestoreDb, setlistId, onNext, onError)),
+        subscribeTracks: (setlistId, onSet, onError, orgId) =>
+            subscribeWithDb((firestoreDb) => attachTracks(firestoreDb, setlistId, orgId, onSet, onError)),
     }
 }
 
@@ -246,31 +202,6 @@ function makeLazyFirestoreSubscriber(): SnapshotSubscriber {
 function errorCode(err: unknown): string | undefined {
     const code = (err as { code?: unknown } | null)?.code
     return typeof code === 'string' ? code : undefined
-}
-
-/** Both versions numeric and the delivered one strictly greater. */
-export function isHigherVersion(delivered: unknown, local: unknown): boolean {
-    return (
-        typeof delivered === 'number' &&
-        typeof local === 'number' &&
-        Number.isFinite(delivered) &&
-        delivered > local
-    )
-}
-
-async function hasPendingOutboxRow(
-    db: LocalDb,
-    collection: LocalCollection,
-    docId: string,
-): Promise<boolean> {
-    // Outbox is small (<~50 rows in practice); a filter scan is cheaper
-    // than a compound index and reuses the schema as-is. Any row in outbox
-    // (status ∈ {pending, sending, failed}) means "engine has a write for
-    // this docId in flight or stuck — let the engine resolve it".
-    const found = await db.outbox
-        .filter((r) => r.collection === collection && r.docId === docId)
-        .first()
-    return found !== undefined
 }
 
 export function startSnapshotListener(opts: SnapshotListenerOpts): () => void {
@@ -282,6 +213,7 @@ export function startSnapshotListener(opts: SnapshotListenerOpts): () => void {
         logger = defaultLogger,
         subscriber,
         onTracksRefused,
+        ready = whenMigrated,
     } = opts
     const logError = logger.error ?? defaultLogger.error
     const logInfo = logger.info ?? defaultLogger.info
@@ -293,47 +225,17 @@ export function startSnapshotListener(opts: SnapshotListenerOpts): () => void {
             : makeLazyFirestoreSubscriber())
 
     let cancelled = false
+    // Deliveries apply one at a time, in arrival order.
+    let chain: Promise<void> = Promise.resolve()
+    const serial = (fn: () => Promise<void>) => {
+        chain = chain.then(fn, fn)
+    }
 
     async function handleSetlist(delivery: SetlistDelivery | null): Promise<void> {
-        if (cancelled || !delivery) return
+        if (cancelled || !delivery || delivery.fromCache) return
         try {
-            await db.transaction(
-                'rw',
-                db.setlists,
-                db.outbox,
-                db.tombstones,
-                async () => {
-                    if (await hasPendingOutboxRow(db, 'setlists', setlistId))
-                        return
-                    // Bug 2 fix (2026-05-12): tombstone guard. If the user
-                    // intentionally deleted this setlist, server priming must
-                    // not resurrect it — even if the outbox row was discarded
-                    // (auto-resolve / dead-letter / user-discard) since the
-                    // delete attempt.
-                    const tombstone = await db.tombstones.get([
-                        'setlists',
-                        setlistId,
-                    ])
-                    if (tombstone) return
-                    const local = await db.setlists.get(setlistId)
-                    // v5h-01-02 fix (B): strict-equality guard against undefined
-                    // local.updatedAt — falling open under uncertainty would let
-                    // a cached delivery clobber a user edit the engine hasn't
-                    // resolved yet. Prefer the local row in two cases:
-                    //   - local exists but has no resolved updatedAt yet
-                    //   - local.updatedAt is at least as new as delivery
-                    if (local) {
-                        if (local.updatedAt === undefined) return
-                        if (local.updatedAt >= delivery.updatedAt) return
-                    }
-                    const next: LocalSetlist = {
-                        ...(delivery.data as LocalSetlist),
-                        id: setlistId,
-                        updatedAt: delivery.updatedAt,
-                    } as LocalSetlist
-                    await db.setlists.put(next)
-                },
-            )
+            await putServerSetlist(db, setlistId, { ...delivery.data, updatedAt: delivery.updatedAt })
+            markLive('setlist', setlistId)
         } catch (err) {
             logger.warn('[SnapshotListener] setlist apply failed', err)
             captureSyncFailure(err, {
@@ -344,121 +246,21 @@ export function startSnapshotListener(opts: SnapshotListenerOpts): () => void {
         }
     }
 
-    async function handleTracks(changes: TrackChange[]): Promise<void> {
-        if (cancelled || changes.length === 0) return
+    async function handleTracks(delivery: TracksDelivery): Promise<void> {
+        if (cancelled || delivery.fromCache) return
         try {
-            // v5h3-01-02: collect per-change outcomes inside the tx so we
-            // can fire the recordEdit breadcrumbs OUTSIDE the tx (avoids
-            // nesting a second Dexie transaction inside this one).
-            const outcomes: Array<{
-                docId: string
-                outcome: string
-                localUpdatedAt?: number
-            }> = []
-            await db.transaction(
-                'rw',
-                db.tracks,
-                db.outbox,
-                db.tombstones,
-                async () => {
-                for (const change of changes) {
-                    if (await hasPendingOutboxRow(db, 'tracks', change.docId)) {
-                        // Engine has an in-flight write for this track —
-                        // skip both put and delete. Engine writeback (v50-06-01)
-                        // will sync the local row when its commit lands, OR
-                        // ReconciliationProvider (v50-06-02) will surface
-                        // the conflict.
-                        outcomes.push({
-                            docId: change.docId,
-                            outcome: 'guard-skipped-pending',
-                        })
-                        continue
-                    }
-
-                    if (change.type === 'removed') {
-                        const local = await db.tracks.get(change.docId)
-                        if (local) await db.tracks.delete(change.docId)
-                        // Server confirmed the delete — clear any tombstone
-                        // we wrote locally so it doesn't linger.
-                        await db.tombstones.delete(['tracks', change.docId])
-                        outcomes.push({
-                            docId: change.docId,
-                            outcome: 'remove-applied',
-                        })
-                        continue
-                    }
-
-                    // added / modified
-                    // Bug 2 fix (2026-05-12): tombstone guard. User
-                    // intentionally deleted this track; server priming must
-                    // not resurrect it.
-                    const tombstone = await db.tombstones.get([
-                        'tracks',
-                        change.docId,
-                    ])
-                    if (tombstone) {
-                        outcomes.push({
-                            docId: change.docId,
-                            outcome: 'guard-skipped-tombstoned',
-                        })
-                        continue
-                    }
-                    const local = await db.tracks.get(change.docId)
-                    // v5h-01-02 fix (B): strict-equality guard mirroring
-                    // the setlists branch — preserve local row when its
-                    // updatedAt is undefined (engine writeback unresolved)
-                    // OR when it's at least as new as the delivery.
-                    if (local) {
-                        if (local.updatedAt === undefined) {
-                            outcomes.push({
-                                docId: change.docId,
-                                outcome: 'guard-skipped-undefined',
-                            })
-                            continue
-                        }
-                        // A higher server `version` is newer even when
-                        // `updatedAt` did not move: server-derived page
-                        // writes (bind-row, liturgy bindings, re-book) bump
-                        // only `version` until PR 3 (setlist-ops writeRowFields).
-                        if (
-                            local.updatedAt >= change.updatedAt &&
-                            !isHigherVersion(change.data.version, (local as { version?: unknown }).version)
-                        ) {
-                            outcomes.push({
-                                docId: change.docId,
-                                outcome: 'guard-skipped-stale',
-                                localUpdatedAt: local.updatedAt,
-                            })
-                            continue
-                        }
-                    }
-                    const next: LocalTrack = {
-                        ...(change.data as LocalTrack),
-                        id: change.docId,
-                        updatedAt: change.updatedAt,
-                    } as LocalTrack
-                    await db.tracks.put(next)
-                    outcomes.push({
-                        docId: change.docId,
-                        outcome: 'applied',
-                        localUpdatedAt: change.updatedAt,
-                    })
-                }
+            await ready()
+            if (cancelled) return
+            const r = await replaceServerRows(db, setlistId, delivery.rows)
+            markLive('rows', setlistId)
+            void recordEdit({
+                ts: Date.now(),
+                source: 'snapshot-listener',
+                collection: 'tracks',
+                docId: setlistId,
+                outcome: r.pruned > 0 ? 'set-applied-pruned' : 'set-applied',
+                payloadKeys: [`put:${r.put}`, `pruned:${r.pruned}`, `kept:${r.kept}`],
             })
-            // v5h3-01-02: emit edit-log breadcrumbs AFTER the tx commits.
-            // Fire-and-forget; recordEdit is failure-swallowing so this
-            // never blocks or crashes the listener.
-            const breadcrumbTs = Date.now()
-            for (const o of outcomes) {
-                void recordEdit({
-                    ts: breadcrumbTs,
-                    source: 'snapshot-listener',
-                    collection: 'tracks',
-                    docId: o.docId,
-                    outcome: o.outcome,
-                    localUpdatedAt: o.localUpdatedAt,
-                })
-            }
         } catch (err) {
             logger.warn('[SnapshotListener] tracks apply failed', err)
             captureSyncFailure(err, {
@@ -471,17 +273,13 @@ export function startSnapshotListener(opts: SnapshotListenerOpts): () => void {
 
     const unsubSetlist = transport.subscribeSetlist(
         setlistId,
-        (delivery) => {
-            void handleSetlist(delivery)
-        },
+        (delivery) => serial(() => handleSetlist(delivery)),
         (err) => reportSubscribeError('setlist', err),
     )
 
     const unsubTracks = transport.subscribeTracks(
         setlistId,
-        (changes) => {
-            void handleTracks(changes)
-        },
+        (delivery) => serial(() => handleTracks(delivery)),
         (err) => {
             // A refusal the caller handles (another tenant's setlist, read
             // through the public endpoint instead) is expected: info, no Sentry.
@@ -499,10 +297,8 @@ export function startSnapshotListener(opts: SnapshotListenerOpts): () => void {
     )
 
     // A refused subscription is a dead one: Firestore terminates a query
-    // listener on error and this module does not re-attach it, so there is
-    // no retry loop to throttle. What it must not be is quiet: before the
-    // tracks orgId fix every band device's live rows died here at warn level.
-    // So it logs at error level with the Firestore code and goes to Sentry.
+    // listener on error and this module does not re-attach it. So it logs at
+    // error level with the Firestore code and goes to Sentry.
     function reportSubscribeError(kind: 'setlist' | 'tracks', err: Error): void {
         const code = errorCode(err) ?? 'unknown'
         logError(

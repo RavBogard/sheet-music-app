@@ -34,6 +34,19 @@ import {
 import type { DriveFile, SetlistTrack } from "@/types/models"
 import { rebaseOnServerOrder } from "@/lib/performance/live-reorder"
 import { useServerOrder } from "./live-order-context"
+import { SetlistOpRefusedError } from "@/lib/setlist-ops-client/actions"
+import { refusalReasonText } from "@/components/setlist/grid/refusal-text"
+import type { T } from "@/i18n/core"
+
+/**
+ * Setlist sync PR 3: the action waits for the server's answer. A refusal (or
+ * being offline) keeps the modal open with the reason; anything else falls
+ * back to the action's own failure line.
+ */
+function liveDirectorError(err: unknown, t: T, fallbackKey: string): string {
+    if (err instanceof SetlistOpRefusedError) return refusalReasonText(err.reason, t, err.field)
+    return err instanceof Error ? err.message : t(fallbackKey)
+}
 
 const SEARCH_RESULT_CAP = 60
 
@@ -64,7 +77,7 @@ export function ChangeKeyAction({ track, onDone }: ChangeKeyActionProps) {
             await changeTrackKey(track.id, key)
             onDone()
         } catch (err) {
-            setError(err instanceof Error ? err.message : t("perform.liveDirector.changeKeyFailed"))
+            setError(liveDirectorError(err, t, "perform.liveDirector.changeKeyFailed"))
             setBusy(false)
         }
     }
@@ -125,7 +138,7 @@ export function SwapChartAction({ track, onDone }: SwapChartActionProps) {
             await swapTrackChart(track.id, song)
             onDone()
         } catch (err) {
-            setError(err instanceof Error ? err.message : t("perform.liveDirector.swapFailed"))
+            setError(liveDirectorError(err, t, "perform.liveDirector.swapFailed"))
             setBusy(false)
         }
     }
@@ -204,7 +217,7 @@ export function InsertSongAction({
             })
             onDone()
         } catch (err) {
-            setError(err instanceof Error ? err.message : t("perform.liveDirector.insertFailed"))
+            setError(liveDirectorError(err, t, "perform.liveDirector.insertFailed"))
             setBusy(false)
         }
     }

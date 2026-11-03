@@ -1,10 +1,8 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 
 import { useAuth } from '@/lib/auth-context'
-import { logger } from '@/lib/logger'
-import { applyEdit as defaultApplyEdit } from '@/lib/local/write'
 import { getDb } from '@/lib/local/schema'
 import { primeSongsLibrary as defaultPrimeSongsLibrary } from '@/lib/songs/prime'
 import {
@@ -13,12 +11,7 @@ import {
 } from '@/lib/songs/subscribe'
 import { tenantOfSetlist } from '@/lib/client-tracks'
 import { useOrg } from '@/lib/org/org-context'
-import { captureSyncFailure } from '@/lib/sync/sentry-capture'
-import type {
-    EditDescriptor,
-    LocalSetlist,
-    LocalTrack,
-} from '@/lib/local/types'
+import type { LocalSetlist, LocalTrack } from '@/lib/local/types'
 import {
     type SnapshotListenerOpts,
     startSnapshotListener as defaultStartSnapshotListener,
@@ -26,391 +19,78 @@ import {
 
 import { SetlistGrid, type SetlistGridProps } from './SetlistGrid'
 
-/** v60-13-06: stable content hash that EXCLUDES `updatedAt` so the dedup ref
- *  matches when only the server timestamp advanced. Keys sorted for stable
- *  ordering across object-literal reshuffles. Cheap on setlist+track payloads
- *  (~tens of fields, ~50 tracks max). */
-function stableContentHash(obj: Record<string, unknown>): string {
-    const keys = Object.keys(obj)
-        .filter((k) => k !== 'updatedAt')
-        .sort()
-    const parts: string[] = []
-    for (const k of keys) {
-        parts.push(JSON.stringify(k))
-        parts.push(':')
-        parts.push(JSON.stringify(obj[k]))
-        parts.push(',')
-    }
-    return parts.join('')
-}
-
 export interface SetlistGridHydratorProps {
     setlistId: string
     initialSetlist: LocalSetlist
     initialTracks: LocalTrack[]
     gridProps?: Omit<SetlistGridProps, 'setlistId'>
     /** Test-seam: lets unit tests assert the listener is started/stopped
-     *  without booting Firestore. Defaults to the production
-     *  startSnapshotListener export. */
+     *  without booting Firestore. */
     startSnapshotListener?: (opts: SnapshotListenerOpts) => () => void
-    /** Test-seam (v50-07-03): lets unit tests assert lazy-hydration fan-out
-     *  without booting the real applyEdit/Dexie outbox path. Defaults to the
-     *  production applyEdit export. */
-    applyEdit?: (
-        edit: EditDescriptor,
-        options?: { withoutUndo?: boolean },
-    ) => Promise<void>
-    /** Test-seam (v53-02-01, deprecated post v60-09-01): existing tests may
-     *  still inject this; production no longer calls it (subscribeSongsLibrary
-     *  replaces it). Retained so old `primeSongsLibrary={spy}` test props
-     *  continue to compile without forcing test rewrites; the spy will simply
-     *  never fire. */
+    /** Deprecated test-seam (v53-02-01); production no longer calls it. */
     primeSongsLibrary?: () => Promise<{ written: number }>
-    /** Test-seam (v60-09-01): lets unit tests assert library subscription
-     *  starts once-per-mount without booting Firestore. Defaults to the
-     *  production subscribeSongsLibrary export. */
+    /** Test-seam (v60-09-01): the continuous songs subscription. */
     subscribeSongsLibrary?: (opts?: SubscribeSongsLibraryOptions) => () => void
 }
 
+/**
+ * The editor page's live wiring (setlist sync PR 3).
+ *
+ * It no longer writes Dexie. The server frame the page was rendered with goes
+ * to the grid as `initialSetlist` / `initialTracks`, and the view shows it
+ * until this tab's listener delivers a live server set. The listener is then
+ * the cache's only writer besides /ops answers (src/lib/setlist-ops-client/
+ * server-cache.ts). The old priming pass (LWW put with outbox / tombstone /
+ * content-hash guards) and the lazy-hydration fan-out (which re-`set` every
+ * server row from the SSR copy) are gone with the outbox path they served.
+ *
+ * SIGNED OUT, DO NOT SUBSCRIBE (R-0919-audit-2): the tracks `list` rule needs
+ * sign-in; a signed-out view renders from the server frame alone.
+ */
 export function SetlistGridHydrator({
     setlistId,
     initialSetlist,
     initialTracks,
     gridProps,
     startSnapshotListener = defaultStartSnapshotListener,
-    applyEdit = defaultApplyEdit,
     primeSongsLibrary: _primeSongsLibrary = defaultPrimeSongsLibrary,
     subscribeSongsLibrary = defaultSubscribeSongsLibrary,
 }: SetlistGridHydratorProps) {
     void _primeSongsLibrary
     const { user } = useAuth()
-    const [hydration, setHydration] = useState<'pending' | 'done'>('pending')
-    /** v50-07-03 fire-once guard. Lazy-hydration is a one-shot migration
-     *  cascade per mount; React effect dependency churn must not retrigger
-     *  it (would enqueue duplicate outbox rows). */
-    const fanoutStartedRef = useRef(false)
-    /** v60-09-01 fire-once guard. The continuous songs subscription mounts
-     *  once per Hydrator instance; re-mounts cleanly unsubscribe via the
-     *  effect's cleanup. Replaces the v53-02-01 primedRef one-shot. */
     const songsSubscribeRef = useRef<(() => void) | null>(null)
-    /** v60-13-06 content-hash dedup. Keyed `${collection}/${docId}`. Value is
-     *  a stable JSON of every field EXCEPT `updatedAt`. Layered ON TOP of the
-     *  existing outbox-pending / tombstone / LWW guards: when initialSetlist
-     *  or initialTracks arrive again with content identical to what we last
-     *  wrote here, skip the Dexie write so useLiveQuery subscribers do not
-     *  re-render and any in-progress mid-edit text in SetlistGrid is preserved.
-     *  Daniel UAT 2026-05-13: "auto refresh thing early on after loading is
-     *  a real pain". */
-    const lastWrittenContentHashRef = useRef<Map<string, string>>(new Map())
 
-    useEffect(() => {
-        let cancelled = false
-        const db = getDb()
-
-        async function hydrate() {
-            // LWW per-document: only overwrite local rows when the server's
-            // updatedAt is newer (or local is missing). Server data is
-            // authoritative — write directly to Dexie, NOT via applyEdit
-            // (which would enqueue an outbox row and re-send back to Firestore).
-            //
-            // v5h-01-02 fix (F): outbox-pending guard. Server data is
-            // authoritative ONLY when local has no in-flight edit. If an
-            // outbox row exists for a docId (status ∈ {pending, sending,
-            // failed}), the engine has yet to resolve a local edit — server
-            // priming would silently clobber user intent. Mirrors the
-            // snapshot-listener.ts:197 outbox-pending guard pattern.
-            await db.transaction(
-                'rw',
-                db.setlists,
-                db.tracks,
-                db.outbox,
-                db.tombstones,
-                async () => {
-                    // Bug 2 fix (2026-05-12): pre-fetch tombstones in this
-                    // setlist's scope so we can refuse to resurrect rows
-                    // the user intentionally deleted. Without this guard,
-                    // the loop below would treat "local missing" as "needs
-                    // server seed" — which is wrong when the user just
-                    // deleted the row and the outbox row was discarded
-                    // (via auto-resolve, dead-letter, or the user
-                    // clicking "Discard failed change").
-                    const tombstonedSetlist = await db.tombstones.get([
-                        'setlists',
-                        setlistId,
-                    ])
-
-                    const setlistOutboxRow = await db.outbox
-                        .filter(
-                            (r) =>
-                                r.collection === 'setlists' &&
-                                r.docId === setlistId,
-                        )
-                        .first()
-                    if (setlistOutboxRow === undefined && !tombstonedSetlist) {
-                        // v60-13-06: content-hash dedup gate. Skip the LWW
-                        // probe + put when the incoming payload is content-
-                        // equal to what we last wrote. Prevents the
-                        // useLiveQuery-driven re-render that Daniel reported
-                        // as a mid-edit "auto refresh".
-                        const setlistKey = `setlists/${setlistId}`
-                        const incomingHash = stableContentHash(
-                            initialSetlist as unknown as Record<string, unknown>,
-                        )
-                        if (
-                            lastWrittenContentHashRef.current.get(setlistKey) !==
-                            incomingHash
-                        ) {
-                            const localSetlist = await db.setlists.get(setlistId)
-                            if (
-                                !localSetlist ||
-                                (localSetlist.updatedAt ?? 0) <
-                                    (initialSetlist.updatedAt ?? 0)
-                            ) {
-                                await db.setlists.put(initialSetlist)
-                                lastWrittenContentHashRef.current.set(
-                                    setlistKey,
-                                    incomingHash,
-                                )
-                            }
-                        }
-                    }
-
-                    if (initialTracks.length === 0) return
-
-                    // Pre-fetch all pending track outbox rows in one scan to
-                    // avoid N round-trips inside the loop. Outbox is small
-                    // (<~50 rows in practice) so the unindexed scan is cheap.
-                    const trackOutboxIds = new Set<string>()
-                    const trackOutboxRows = await db.outbox
-                        .filter((r) => r.collection === 'tracks')
-                        .toArray()
-                    for (const r of trackOutboxRows)
-                        trackOutboxIds.add(r.docId)
-
-                    // Pre-fetch track tombstones for this initialTracks set.
-                    // We only need to check the ids the server is about to
-                    // hand us, not the whole table.
-                    const trackTombstoneIds = new Set<string>()
-                    if (initialTracks.length > 0) {
-                        const tombstones = await db.tombstones
-                            .where('[collection+docId]')
-                            .anyOf(
-                                initialTracks.map(
-                                    (t) =>
-                                        [
-                                            'tracks' as const,
-                                            t.id,
-                                        ] as [string, string],
-                                ),
-                            )
-                            .toArray()
-                        for (const tb of tombstones)
-                            trackTombstoneIds.add(tb.docId)
-                    }
-
-                    const localById = new Map<string, LocalTrack>()
-                    const localTracks = await db.tracks
-                        .where('setlistId')
-                        .equals(setlistId)
-                        .toArray()
-                    for (const t of localTracks) localById.set(t.id, t)
-
-                    const toPut: LocalTrack[] = []
-                    // v60-13-06: collect hashes to record only AFTER bulkPut
-                    // succeeds — if we recorded before write and the tx
-                    // rolled back, future emissions would be wrongly skipped.
-                    const trackHashesToRecord: Array<[string, string]> = []
-                    for (const t of initialTracks) {
-                        if (trackOutboxIds.has(t.id)) continue
-                        // Bug 2 fix: tombstone guard — user deleted this
-                        // track; server priming must not resurrect it.
-                        if (trackTombstoneIds.has(t.id)) continue
-                        // v60-13-06: content-hash dedup. Skip when this exact
-                        // payload (excluding updatedAt) was the last thing we
-                        // wrote — prevents the redundant put that triggers
-                        // useLiveQuery → SetlistGrid re-render mid-edit.
-                        const trackKey = `tracks/${t.id}`
-                        const incomingHash = stableContentHash(
-                            t as unknown as Record<string, unknown>,
-                        )
-                        if (
-                            lastWrittenContentHashRef.current.get(trackKey) ===
-                            incomingHash
-                        )
-                            continue
-                        const local = localById.get(t.id)
-                        if (
-                            !local ||
-                            ((local.updatedAt as number | undefined) ?? 0) <
-                                ((t.updatedAt as number | undefined) ?? 0)
-                        ) {
-                            toPut.push(t)
-                            trackHashesToRecord.push([trackKey, incomingHash])
-                        }
-                    }
-                    if (toPut.length > 0) {
-                        await db.tracks.bulkPut(toPut)
-                        for (const [k, v] of trackHashesToRecord) {
-                            lastWrittenContentHashRef.current.set(k, v)
-                        }
-                    }
-                },
-            )
-
-            if (!cancelled) setHydration('done')
-        }
-
-        void hydrate()
-        return () => {
-            cancelled = true
-        }
-    }, [setlistId, initialSetlist, initialTracks])
-
-    // v50-06-03: cross-leader live-edit visibility. Once the hydrator
-    // primes Dexie from the server-fetched snapshot, mount a Firestore
-    // onSnapshot listener so any subsequent leader-tab edit propagates
-    // here via direct db.put (NOT applyEdit — server data is authoritative).
-    // Replaces the deleted v50-02 live-swap UI with the implicit real-time
-    // setlist sync v5.0 promised. Closes the v50-06-02 'theirs' staleness
-    // gap automatically: after a 'theirs' resolution the listener delivers
-    // the winner's payload + updatedAt, restoring local-row freshness.
-    //
-    // SIGNED OUT, DO NOT SUBSCRIBE (R-0919-audit-2, 2026-09-20). The listener
-    // runs a tracks query (`where("setlistId","==",…)`), and `list` on
-    // /tracks now requires sign-in. A signed-out Perform view that mounts it
-    // gets one `Missing or insufficient permissions` per load and nothing
-    // else: the rows it is watching for can never arrive, because a
-    // signed-out visitor is not a leader and there is no cross-leader edit to
-    // see. The page itself is unaffected either way — it renders from the
-    // server slice and /api/setlists/{id}/tracks — so this changes no pixel.
-    // What it changes is the console during a service: a denied subscription
-    // that retries looks exactly like a real fault to whoever opens the
-    // inspector on an iPad at 7pm, and that is the wrong thing to hand them.
+    // The tracks query filters by the setlist's tenant; without it the rules
+    // refuse it for every non-po user (2026-11-03 fix).
     const listenerOrg = tenantOfSetlist(initialSetlist)
     useEffect(() => {
-        if (hydration !== 'done') return
         if (!user) return
-        // The tracks query filters by the setlist's tenant; without it the
-        // rules refuse it for every non-po user (2026-11-03 fix).
         const stop = startSnapshotListener({ setlistId, db: getDb(), orgId: listenerOrg })
         return stop
-    }, [hydration, setlistId, startSnapshotListener, user, listenerOrg])
+    }, [setlistId, startSnapshotListener, user, listenerOrg])
 
-    // v50-07-03 (Option C Hybrid Lazy Hydration): on first edit-open of a
-    // legacy setlist, fan out the embedded `tracks[]` into the top-level
-    // `tracks/{id}` collection via the sync engine, then mark the setlist
-    // `hydrated:true` so the migration is idempotent across mounts.
-    //
-    // Gates (any false → skip):
-    //   - Dexie priming finished (hydration === 'done')
-    //   - Setlist not already hydrated (initialSetlist.hydrated !== true)
-    //   - There is something to migrate (initialTracks.length > 0)
-    //   - We haven't already started the fan-out this mount (ref guard)
-    //
-    // applyEdit('set', ...) creates the top-level track + enqueues an outbox
-    // row; the engine drains them to Firestore. `withoutUndo: true` keeps the
-    // migration cascade off the undo stack — this is system intent, not user
-    // intent. Errors are warn-logged: the setlist stays unhydrated and will
-    // retry the cascade on the next mount.
-    useEffect(() => {
-        if (hydration !== 'done') return
-        if (initialSetlist.hydrated === true) return
-        if (initialTracks.length === 0) return
-        if (fanoutStartedRef.current) return
-        fanoutStartedRef.current = true
-
-        let cancelled = false
-
-        async function fanOut() {
-            try {
-                await Promise.all(
-                    initialTracks.map((t) =>
-                        applyEdit(
-                            {
-                                op: 'set',
-                                collection: 'tracks',
-                                doc: { ...t },
-                            },
-                            { withoutUndo: true },
-                        ),
-                    ),
-                )
-                if (cancelled) return
-                // The derived fields (trackCount / songCount / fileIds) are
-                // not written here: each fanned-out track `set` re-derives
-                // them from the server's tracks when it commits
-                // (reconcileSetlistTrackCount in the sync adapter).
-                await applyEdit(
-                    {
-                        op: 'update',
-                        collection: 'setlists',
-                        docId: setlistId,
-                        patch: { hydrated: true },
-                        expectedUpdatedAt: initialSetlist.updatedAt,
-                    },
-                    { withoutUndo: true },
-                )
-            } catch (err) {
-                logger.warn(
-                    `[SetlistGridHydrator] lazy-hydration fan-out failed for setlist ${setlistId}`,
-                    err,
-                )
-                captureSyncFailure(err, {
-                    feature: 'lazy-hydration',
-                    setlistId,
-                    trackCount: initialTracks.length,
-                })
-            }
-        }
-
-        void fanOut()
-        return () => {
-            cancelled = true
-        }
-    }, [
-        hydration,
-        setlistId,
-        initialSetlist,
-        initialTracks,
-        applyEdit,
-    ])
-
-    // v53-02-01: best-effort library priming after Dexie hydration
-    // completes. ChartBindPopover lives off `getDb().songs`; without a
-    // priming read the picker is empty on first session open. Fire-and-
-    // v60-09-01: continuous `songs/*` subscription replaces the v53-02-01
-    // one-shot prime. First snapshot delivers the same population effect;
-    // subsequent snapshots keep Dexie live so rename/archive/upload mutations
-    // from another device propagate to the picker without a reload. Single
-    // mount per Hydrator instance via songsSubscribeRef; clean unsubscribe
-    // on unmount. Server-authoritative reads — direct db.songs.put inside
-    // the helper, never through the engine (no circular writes).
-    // David's ask 2 (2026-09-22): scoped to the HOST org (this site), and
-    // re-subscribed when the org or the signed-in account changes.
+    // v60-09-01: continuous `songs/*` subscription (the chart pickers read
+    // `getDb().songs`). Scoped to the HOST org and re-subscribed when the
+    // org or the signed-in account changes.
     const hostOrg = useOrg()
     const songsUid = user?.uid ?? null
     useEffect(() => {
-        if (hydration !== 'done') return
         if (songsSubscribeRef.current) return
         songsSubscribeRef.current = subscribeSongsLibrary({ orgId: hostOrg, uid: songsUid })
         return () => {
             songsSubscribeRef.current?.()
             songsSubscribeRef.current = null
         }
-    }, [hydration, subscribeSongsLibrary, hostOrg, songsUid])
-
-    // The setlist's derived fields (trackCount / songCount / fileIds) are not
-    // reconciled from here. This component used to enqueue outbox updates for
-    // them from the local Dexie copy, which is routinely stale when the
-    // setlist is authored over MCP: those rows overwrote correct server
-    // counts and raised false "Remote changes detected" conflicts on open.
-    // Every server track writer maintains them, and the sync adapter
-    // re-derives them from the server's tracks after each client track write
-    // (src/lib/sync/track-count-sync.ts).
+    }, [subscribeSongsLibrary, hostOrg, songsUid])
 
     return (
-        <div data-testid="setlist-grid-hydrator" data-hydration={hydration}>
-            <SetlistGrid setlistId={setlistId} {...gridProps} />
+        <div data-testid="setlist-grid-hydrator" data-hydration="done">
+            <SetlistGrid
+                setlistId={setlistId}
+                initialSetlist={initialSetlist}
+                initialTracks={initialTracks}
+                {...gridProps}
+            />
         </div>
     )
 }

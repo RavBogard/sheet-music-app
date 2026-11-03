@@ -1,7 +1,7 @@
 import { z } from "zod"
 import { sanitizeFreeformString } from "@/lib/sanitize-freeform"
 import { liturgyRefGuard } from "@/lib/mcp/liturgy-ref-guard"
-import { DurationSecSchema, SingerKeysSchema } from "@/lib/gig/model"
+import { DurationSecSchema, GigPatchSchema, SingerKeysSchema } from "@/lib/gig/model"
 import type { LiturgyRef } from "@/lib/books/types"
 import { RESERVED_ROW_FIELDS, RESERVED_SETLIST_FIELDS } from "./types"
 
@@ -82,6 +82,15 @@ const ROW_FIELDS: Record<string, { schema: z.ZodTypeAny; nullable: boolean }> = 
     durationSec: { schema: DurationSecSchema, nullable: true },
     segue: { schema: z.boolean(), nullable: true },
     singerKeys: { schema: singerKeysSchema, nullable: true },
+    // Carried by clone / duplicate / undo (PR 3 fix round): the rest of a
+    // stored row an author can have set.
+    pageNumber: { schema: z.number().int().min(1).max(5000), nullable: true },
+    audioFileId: { schema: z.string().min(1).max(300), nullable: true },
+    audioFileName: { schema: z.string().max(500), nullable: true },
+    transposition: { schema: z.number().min(-24).max(24), nullable: true },
+    tune: { schema: freeform, nullable: true },
+    duration: { schema: z.string().max(40).transform(sanitizeFreeformString), nullable: true },
+    unmatched: { schema: z.boolean(), nullable: true },
 }
 
 const HHMM = /^([01]\d|2[0-3]):([0-5]\d)$/
@@ -89,8 +98,13 @@ const HHMM = /^([01]\d|2[0-3]):([0-5]\d)$/
 /**
  * Setlist fields a client may write through `editSetlist`, by their STORED
  * names. `book` is not here: a book change re-pages every row and stays on
- * MCP `update_setlist`. `gig` is not here yet (PR 3 adds it with dotted
- * merge). `eventDate` is sent as an ISO string and stored as a Timestamp.
+ * MCP `update_setlist`. `eventDate` is sent as an ISO string and stored as a
+ * Timestamp.
+ *
+ * `gig` (band tenants) is a PATCH merged per sub-field by the engine: the
+ * editor sends the parts it changed (null removes a part) with their base,
+ * so a concurrent MCP edit to another part is kept and one to the same part
+ * is a conflict on `gig.<part>`. `gig: null` clears the whole gig.
  */
 const SETLIST_FIELDS: Record<string, { schema: z.ZodTypeAny; nullable: boolean }> = {
     name: { schema: z.string().min(1).max(200).transform(sanitizeFreeformString), nullable: false },
@@ -107,7 +121,17 @@ const SETLIST_FIELDS: Record<string, { schema: z.ZodTypeAny; nullable: boolean }
     serviceNotes: { schema: freeform, nullable: true },
     startsAtLocal: { schema: z.string().regex(HHMM, "24-hour HH:mm"), nullable: true },
     special: { schema: z.boolean(), nullable: true },
+    gig: { schema: GigPatchSchema, nullable: true },
 }
+
+/** Row fields a client may write. The browser ops client mirrors this list (a test holds them equal). */
+export const ROW_FIELD_NAMES: readonly string[] = Object.keys(ROW_FIELDS)
+/** Row fields that may be cleared with `null`. */
+export const NULLABLE_ROW_FIELD_NAMES: readonly string[] = Object.keys(ROW_FIELDS).filter((k) => ROW_FIELDS[k].nullable)
+/** Setlist fields `editSetlist` accepts. */
+export const SETLIST_FIELD_NAMES: readonly string[] = Object.keys(SETLIST_FIELDS)
+/** Setlist fields that may be cleared with `null`. */
+export const NULLABLE_SETLIST_FIELD_NAMES: readonly string[] = Object.keys(SETLIST_FIELDS).filter((k) => SETLIST_FIELDS[k].nullable)
 
 export type FieldCheck = { ok: true; value: Record<string, unknown> } | { ok: false; message: string }
 
