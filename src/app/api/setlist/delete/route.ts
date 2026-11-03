@@ -139,6 +139,7 @@ export const POST = createApiHandler(
 
         // 6) recursiveDelete: parent + subcollections (history, emailEvents, ...)
         try {
+            // setlist-ops-allowlist: remove in PR 3 (setlist delete route)
             await db.recursiveDelete(setlistRef)
         } catch (e) {
             const msg = e instanceof Error ? e.message : String(e)

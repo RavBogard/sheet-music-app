@@ -5,97 +5,116 @@ import { join, relative, resolve } from "node:path"
 /**
  * OPS-CONTRACT §Single writer: `src/lib/setlist-ops/` is the ONLY code that
  * writes `setlists/*` or `tracks/*` (Admin or client SDK). Everything else
- * goes through it, so every write carries `updatedAt` + `version` and no
- * writer can drift past the stamps receivers compare.
+ * goes through it, so every write carries the stamps receivers compare.
  *
- * This scans src for Firestore writes on those two collections:
- *   - chained:   db.collection("tracks").doc(id).update(...)
- *   - sink call: tx.update(db.collection("tracks").doc(id), ...), batch.set(...)
- *   - client:    setDoc/updateDoc/deleteDoc(doc(db, "tracks", id), ...), addDoc(collection(db, "tracks"), ...)
- *   - via a variable holding such a doc ref or collection ref
- *   - via `.ref` of a doc read from a tracks/setlists query
- * Subcollections (`setlists/{id}/history`, …) are not the setlist doc and are
- * not counted.
+ * The scan finds, per CALL SITE, Firestore writes on those two collections:
+ *   - chained:   db.collection("tracks").doc(id).update(...), db.doc(`tracks/${id}`).set(...)
+ *   - sink call: tx.update(<doc ref>, ...), batch.set(...), bulkWriter.delete(...)
+ *   - client:    setDoc/updateDoc/deleteDoc(doc(db, "tracks", id)), addDoc(collection(db, "setlists"))
+ *   - through a variable, an arrow/function helper, or a collection variable
+ *     that holds such a ref (including a runtime collection name)
+ *   - through `.ref` of a doc read from a tracks/setlists query
+ *   - `recursiveDelete(...)` in a file that names either collection
+ *   - the module's internal refs imported from outside it
+ * The collection may be named by a literal, a template literal or a constant.
+ * Subcollections (`setlists/{id}/history`, …) are not the setlist doc.
  *
- * ALLOWLIST: each entry says why it is still here and when it goes. Removing
- * an entry once its file is clean is required (the stale-entry test fails).
+ * ALLOWLIST is per call site: the write's line, or the line above it, carries
+ *   // setlist-ops-allowlist: remove in PR 3 (<why>)
+ * A marker with no write under it fails the stale-marker test.
  */
 
 const ROOT = resolve(process.cwd(), "src")
 const MODULE_DIR = "lib/setlist-ops/"
+const MARKER = "setlist-ops-allowlist: remove in PR 3"
 
-/**
- * `dynamic: true` marks a writer whose collection is a runtime value (the
- * client outbox adapter writes `doc(db, row.collection, row.docId)`), which
- * the scanner cannot see; it is exempt from the stale-entry check only.
- */
-const ALLOWLIST: Record<string, { why: string; dynamic?: boolean }> = {
-    // The contract's own allowlist: client outbox writers and client creation paths.
-    "lib/sync/init.ts": { why: "client outbox adapter — remove in PR 3", dynamic: true },
-    "lib/sync/track-count-sync.ts": { why: "client count reconcile (outbox side write) — remove in PR 3" },
-    "lib/setlist-firebase.ts": { why: "client-side creation paths — remove in PR 3" },
-    // Server writers outside PR 1's named scope. They still write raw and
-    // move onto src/lib/setlist-ops with PR 3.
-    "lib/mcp/tools/clone-setlist.ts": { why: "clone_setlist new-setlist batch — remove in PR 3" },
-    "lib/mcp/tools/templates.ts": { why: "clone_setlist_from_template new-setlist batch — remove in PR 3" },
-    "lib/mcp/tools/performed.ts": { why: "performed-service clone batch — remove in PR 3" },
-    "lib/mcp/tools/open-items.ts": { why: "add/resolve_open_item setlist transaction — remove in PR 3" },
-    "lib/mcp/tools/setlist-publish.ts": { why: "notify / publish-era setlist stamps — remove in PR 3" },
-    "lib/mcp/tools/setlist-hygiene.ts": { why: "isTest hygiene backfill (migration) — remove in PR 3" },
-    "lib/mcp/tools/week-key-backfill.ts": { why: "week-key backfill (migration) — remove in PR 3" },
-    "lib/mcp/tools/backfill-track-mimetype.ts": { why: "mimetype backfill (migration) — remove in PR 3" },
-    "lib/mcp/tools/test-tokens.ts": { why: "test-fixture cleanup deletes — remove in PR 3" },
-    "lib/beit-mitzvah/service.ts": { why: "B'nei Mitzvah service creation — remove in PR 3" },
-    "lib/scheduling/assignment-service.ts": { why: "assignment fields on the setlist doc — remove in PR 3" },
-    "app/api/setlist/notify-band/route.ts": { why: "notify-band stamp on the setlist doc — remove in PR 3" },
-}
-
-const WRITE = "(?:set|update|delete|create)"
+const W = String.raw`(?:set|update|delete|create)`
 const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 
-/** Comments are not code. (A `//` inside a string only ever hides text, never adds a hit.) */
+/** Comments are not code. Block comments keep their newlines so line numbers hold. */
 function stripComments(src: string): string {
-    return src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:"'`\\])\/\/[^\n]*/g, "$1")
+    return src
+        .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ""))
+        .replace(/(^|[^:"'`\\])\/\/[^\n]*/g, "$1")
 }
 
-export function findWrites(raw: string): string[] {
+export interface WriteSite {
+    line: number
+    why: string
+    text: string
+}
+
+export function findWriteSites(raw: string): WriteSite[] {
     const src = stripComments(raw)
-    // The collection name: a literal, or a constant this file binds to one.
-    const consts = [...src.matchAll(/(?:const|let)\s+(\w+)\s*(?::\s*string\s*)?=\s*["'](?:tracks|setlists)["']/g)].map((m) => esc(m[1]))
-    const NAME = `(?:["'](?:tracks|setlists)["']${consts.length ? `|${consts.join("|")}` : ""})`
-    const COL = `collection\\(\\s*(?:\\w+\\s*,\\s*)?${NAME}\\s*\\)`
-    /** Admin doc ref, not a subcollection of it. */
-    const ADMIN_DOC = `(?:[\\w.]+\\.)?${COL}\\s*\\.doc\\([^()]*(?:\\([^()]*\\)[^()]*)*\\)(?!\\s*\\.collection)`
-    /** Client doc ref: doc(db, "tracks", id) — exactly three args. */
-    const CLIENT_DOC = `doc\\(\\s*\\w+\\s*,\\s*${NAME}\\s*,\\s*[^,()]+(?:\\([^()]*\\))?\\s*\\)`
-    const DOC = `(?:${ADMIN_DOC}|${CLIENT_DOC})`
+    const consts = [
+        ...src.matchAll(/(?:const|let)\s+(\w+)\s*(?::\s*string\s*)?=\s*["'`](?:tracks|setlists)["'`]/g),
+    ].map((m) => esc(m[1]))
+    const NAME = String.raw`(?:["'\`](?:tracks|setlists)["'\`]` + (consts.length ? `|${consts.join("|")}` : "") + ")"
+    const COL = String.raw`collection\(\s*(?:\w+\s*,\s*)?` + NAME + String.raw`\s*\)`
+    const ARGS = String.raw`[^()]*(?:\([^()]*\)[^()]*)*`
+    const ADMIN_DOC = String.raw`(?:[\w.]+\.)?` + COL + String.raw`\s*\.doc\(` + ARGS + String.raw`\)(?!\s*\.collection)`
+    /** db.doc(`tracks/${id}`) or db.doc("tracks/" + id) — exactly one segment after the collection. */
+    const PATH_DOC = String.raw`(?:[\w.]+\.)?doc\(\s*(?:\w+\s*,\s*)?(?:\`(?:tracks|setlists)\/[^\`/]*\`|["'](?:tracks|setlists)\/["']\s*\+\s*[\w.]+(?:\([^()]*\))?)\s*\)`
+    /** doc(db, "tracks", id) — exactly three args. */
+    const CLIENT_DOC = String.raw`doc\(\s*\w+\s*,\s*` + NAME + String.raw`\s*,\s*[^,()]+(?:\([^()]*\))?\s*\)`
+    /** doc(db, row.collection, row.docId) — the outbox adapter's runtime collection. */
+    const DYN_DOC = String.raw`doc\(\s*\w+\s*,\s*[\w.]+\.collection\s*,[^()]*\)`
+    const DOC = `(?:${ADMIN_DOC}|${PATH_DOC}|${CLIENT_DOC})`
 
-    const hits: string[] = []
-    const add = (why: string, re: RegExp) => {
-        const m = re.exec(src)
-        if (m) hits.push(`${why}: ${m[0].slice(0, 100).replace(/\s+/g, " ")}`)
+    const sites: WriteSite[] = []
+    const lineOf = (i: number) => src.slice(0, i).split("\n").length
+    const scan = (why: string, re: RegExp) => {
+        for (const m of src.matchAll(new RegExp(re.source, "g"))) {
+            // Report the line of the write call itself, not of any leading ref text.
+            sites.push({ line: lineOf(m.index ?? 0), why, text: m[0].slice(0, 90).replace(/\s+/g, " ") })
+        }
     }
-    add("chained", new RegExp(`${DOC}\\s*\\.${WRITE}\\(`))
-    add("sink", new RegExp(`\\.${WRITE}\\(\\s*${DOC}`))
-    add("client", new RegExp(`(?:setDoc|updateDoc|deleteDoc)\\(\\s*${DOC}`))
-    add("client-add", new RegExp(`addDoc\\(\\s*${COL}`))
+    scan("chained", new RegExp(`${DOC}\\s*\\.${W}\\(`))
+    scan("sink", new RegExp(`\\.${W}\\(\\s*${DOC}`))
+    scan("client", new RegExp(`(?:setDoc|updateDoc|deleteDoc)\\(\\s*${DOC}`))
+    scan("client-add", new RegExp(`addDoc\\(\\s*${COL}`))
+    scan("module-ref", new RegExp(`(?:trackRef|setlistRef)\\([^()]*\\)\\s*\\.${W}\\(|\\.${W}\\(\\s*(?:trackRef|setlistRef)\\(`))
+    scan("module-import", /import\s*(?:type\s*)?\{[^}]*\b(?:trackRef|setlistRef)\b[^}]*\}\s*from\s*["'](?:@\/lib\/setlist-ops[^"']*|\.{1,2}\/[^"']*setlist-ops[^"']*)["']/)
+    if (new RegExp(NAME).test(src)) scan("recursiveDelete", /\brecursiveDelete\s*\(/)
 
-    // Variables holding a doc ref or a collection ref.
-    for (const m of src.matchAll(new RegExp(`(?:const|let|var)\\s+(\\w+)\\s*=\\s*${DOC}`, "g"))) {
+    // Variables and helpers holding a doc ref (literal, path, client or runtime collection).
+    const REF = `(?:${DOC}|${DYN_DOC})`
+    for (const m of src.matchAll(new RegExp(String.raw`(?:const|let|var)\s+(\w+)\s*=\s*(?:await\s+)?` + REF, "g"))) {
         const v = esc(m[1])
-        add(`doc-var ${m[1]}`, new RegExp(`\\b${v}\\s*\\.${WRITE}\\(|\\.${WRITE}\\(\\s*${v}\\b|(?:setDoc|updateDoc|deleteDoc)\\(\\s*${v}\\b`))
+        scan(`doc-var ${m[1]}`, new RegExp(`\\b${v}\\s*\\.${W}\\(|\\.${W}\\(\\s*${v}\\b(?!\\s*\\.)|(?:setDoc|updateDoc|deleteDoc)\\(\\s*${v}\\b|recursiveDelete\\(\\s*${v}\\b`))
     }
-    for (const m of src.matchAll(new RegExp(`(?:const|let|var)\\s+(\\w+)\\s*=\\s*(?:[\\w.]+\\.)?${COL}(?!\\s*\\.)`, "g"))) {
+    const HELPER = String.raw`(?:(?:const|let)\s+(\w+)\s*=\s*(?:async\s*)?\([^)]*\)\s*(?::[^=]+)?=>\s*\{?\s*(?:return\s+)?|function\s+(\w+)\s*\([^)]*\)[^{]*\{\s*return\s+)` + REF
+    for (const m of src.matchAll(new RegExp(HELPER, "g"))) {
+        const v = esc(m[1] ?? m[2])
+        scan(`ref-helper ${m[1] ?? m[2]}`, new RegExp(`\\b${v}\\(${ARGS}\\)\\s*\\.${W}\\(|\\.${W}\\(\\s*${v}\\(|(?:setDoc|updateDoc|deleteDoc)\\(\\s*${v}\\(`))
+    }
+    for (const m of src.matchAll(new RegExp(String.raw`(?:const|let|var)\s+(\w+)\s*=\s*(?:[\w.]+\.)?` + COL + String.raw`(?!\s*\.)`, "g"))) {
         const v = esc(m[1])
-        add(`collection-var ${m[1]}`, new RegExp(`\\b${v}\\.doc\\([^)]*\\)\\s*\\.${WRITE}\\(|\\.${WRITE}\\(\\s*${v}\\.doc\\(|addDoc\\(\\s*${v}\\b|(?:setDoc|updateDoc|deleteDoc)\\(\\s*doc\\(\\s*${v}\\b`))
+        scan(`collection-var ${m[1]}`, new RegExp(`\\b${v}\\.doc\\([^)]*\\)\\s*\\.${W}\\(|\\.${W}\\(\\s*${v}\\.doc\\(|addDoc\\(\\s*${v}\\b|(?:setDoc|updateDoc|deleteDoc)\\(\\s*doc\\(\\s*${v}\\b`))
     }
 
-    // `.ref` of a doc read from a tracks/setlists query (a file that queries
-    // one of them and writes through some snapshot's `.ref`).
+    // `.ref` of a doc read from a tracks/setlists query.
     if (new RegExp(`${COL}\\s*\\.(?:where|orderBy|limit|get)\\b|query\\(\\s*${COL}`).test(src)) {
-        add("query-ref", new RegExp(`\\.${WRITE}\\(\\s*\\w+\\.ref\\b|\\b\\w+\\.ref\\s*\\.${WRITE}\\(`))
+        scan("query-ref", new RegExp(`\\.${W}\\(\\s*\\w+\\.ref\\b|\\b\\w+\\.ref\\s*\\.${W}\\(`))
     }
-    return hits
+    // One site per line.
+    const seen = new Set<number>()
+    return sites.filter((s) => (seen.has(s.line) ? false : (seen.add(s.line), true))).sort((a, b) => a.line - b.line)
+}
+
+/** Sites without an allowlist marker on their line or the line above, and markers covering nothing. */
+export function checkFile(raw: string): { unmarked: WriteSite[]; staleMarkers: number[] } {
+    const lines = raw.split(/\r?\n/)
+    const marked = (n: number) => !!lines[n - 1]?.includes(MARKER) || !!lines[n - 2]?.includes(MARKER)
+    const sites = findWriteSites(raw)
+    const unmarked = sites.filter((s) => !marked(s.line))
+    const used = new Set<number>()
+    for (const s of sites) {
+        if (lines[s.line - 1]?.includes(MARKER)) used.add(s.line)
+        if (lines[s.line - 2]?.includes(MARKER)) used.add(s.line - 1)
+    }
+    const staleMarkers = lines.flatMap((l, i) => (l.includes(MARKER) && !used.has(i + 1) ? [i + 1] : []))
+    return { unmarked, staleMarkers }
 }
 
 function walk(dir: string, out: string[] = []): string[] {
@@ -112,47 +131,65 @@ function walk(dir: string, out: string[] = []): string[] {
 }
 
 const files = walk(ROOT).map((p) => ({ rel: relative(ROOT, p).replace(/\\/g, "/"), src: readFileSync(p, "utf8") }))
+const outside = files.filter((f) => !f.rel.startsWith(MODULE_DIR))
 
 describe("OPS-CONTRACT single writer: only src/lib/setlist-ops writes setlists/* and tracks/*", () => {
     it("the scanner sees the write shapes it claims to (self-test)", () => {
-        expect(findWrites(`await db.collection("tracks").doc(id).update({ a: 1 })`)).not.toEqual([])
-        expect(findWrites(`tx.update(db.collection("setlists").doc(setlistId), patch)`)).not.toEqual([])
-        expect(findWrites(`const r = db.collection('tracks').doc(x)\nawait r.update({})`)).not.toEqual([])
-        expect(findWrites(`const r = db.collection('tracks').doc(x)\ntx.delete(r)`)).not.toEqual([])
-        expect(findWrites(`await updateDoc(doc(db, 'tracks', id), p)`)).not.toEqual([])
-        expect(findWrites(`await addDoc(collection(db, "setlists"), p)`)).not.toEqual([])
-        expect(findWrites(`const s = await tx.get(db.collection("tracks").where("setlistId","==",id))\ns.docs.forEach((d) => tx.delete(d.ref))`)).not.toEqual([])
-        // Reads and subcollections are not writes on the setlist doc.
-        expect(findWrites(`const s = await db.collection("tracks").doc(id).get()`)).toEqual([])
-        expect(findWrites(`await addDoc(collection(db, 'setlists', id, 'history'), e)`)).toEqual([])
-        expect(findWrites(`await db.collection("setlists").doc(id).collection("performance").doc("x").set({})`)).toEqual([])
-        expect(findWrites(`// tx.update(db.collection("tracks").doc(id), p) in a comment`)).toEqual([])
-        // A constant naming the collection is still the collection.
-        expect(findWrites(`const COLLECTION_PATH = 'setlists'\nawait addDoc(collection(db, COLLECTION_PATH), d)`)).not.toEqual([])
+        const hit = (s: string) => findWriteSites(s).length > 0
+        expect(hit(`await db.collection("tracks").doc(id).update({ a: 1 })`)).toBe(true)
+        expect(hit(`tx.update(db.collection("setlists").doc(setlistId), patch)`)).toBe(true)
+        expect(hit(`const r = db.collection('tracks').doc(x)\nawait r.update({})`)).toBe(true)
+        expect(hit(`const r = db.collection('tracks').doc(x)\ntx.delete(r)`)).toBe(true)
+        expect(hit(`await updateDoc(doc(db, 'tracks', id), p)`)).toBe(true)
+        expect(hit(`await addDoc(collection(db, "setlists"), p)`)).toBe(true)
+        expect(hit(`const s = await tx.get(db.collection("tracks").where("setlistId","==",id))\ns.docs.forEach((d) => tx.delete(d.ref))`)).toBe(true)
+        expect(hit(`const COLLECTION_PATH = 'setlists'\nawait addDoc(collection(db, COLLECTION_PATH), d)`)).toBe(true)
+        expect(hit(`const ref = doc(firestoreDb, row.collection, row.docId)\nawait setDoc(ref, data)`)).toBe(true)
+        // Reads, comments and subcollections are not writes on the setlist doc.
+        expect(hit(`const s = await db.collection("tracks").doc(id).get()`)).toBe(false)
+        expect(hit(`const r = db.collection("tracks").doc(id)\nconst s = await tx.get(r)`)).toBe(false)
+        expect(hit(`await addDoc(collection(db, 'setlists', id, 'history'), e)`)).toBe(false)
+        expect(hit(`await db.collection("setlists").doc(id).collection("performance").doc("x").set({})`)).toBe(false)
+        expect(hit(`// tx.update(db.collection("tracks").doc(id), p) in a comment`)).toBe(false)
     })
 
-    it("no file outside the module writes setlists/* or tracks/* unless allowlisted", () => {
-        const offenders = files
-            .filter((f) => !f.rel.startsWith(MODULE_DIR) && !(f.rel in ALLOWLIST))
-            .map((f) => ({ rel: f.rel, hits: findWrites(f.src) }))
-            .filter((f) => f.hits.length > 0)
-        expect(offenders, JSON.stringify(offenders, null, 2)).toEqual([])
+    it("catches the five evasions the review listed", () => {
+        const hit = (s: string) => findWriteSites(s).length > 0
+        // 1. the module's internal ref, imported from outside
+        expect(hit(`import { trackRef } from "@/lib/setlist-ops/writer"\nawait trackRef(db, id).update({ a: 1 })`)).toBe(true)
+        // 2. a path doc
+        expect(hit("await db.doc(`tracks/${id}`).update({ a: 1 })")).toBe(true)
+        expect(hit(`await db.doc("setlists/" + id).set({})`)).toBe(true)
+        // 3. a template-literal collection name
+        expect(hit("await db.collection(`tracks`).doc(id).update({ a: 1 })")).toBe(true)
+        // 4. an arrow helper that returns the ref
+        expect(hit(`const ref = (id: string) => db.collection("tracks").doc(id)\nawait ref(x).update({ a: 1 })`)).toBe(true)
+        expect(hit(`const ref = (id: string) => db.collection("tracks").doc(id)\ntx.update(ref(x), { a: 1 })`)).toBe(true)
+        // 5. recursiveDelete
+        expect(hit(`await db.recursiveDelete(db.collection("setlists").doc(id))`)).toBe(true)
     })
 
-    it("every allowlist entry still writes (remove it once the file is moved) and says when it goes", () => {
-        for (const [rel, entry] of Object.entries(ALLOWLIST)) {
-            const f = files.find((x) => x.rel === rel)
-            expect(f, `${rel} no longer exists`).toBeDefined()
-            expect(entry.why).toMatch(/remove in PR 3/)
-        }
-        const stale = Object.entries(ALLOWLIST)
-            .filter(([, entry]) => !entry.dynamic)
-            .map(([rel]) => rel)
-            .filter((rel) => findWrites(files.find((x) => x.rel === rel)!.src).length === 0)
-        expect(stale, `stale allowlist entries: ${stale.join(", ")}`).toEqual([])
+    it("a marker covers exactly the write under it, and a marker over nothing is stale", () => {
+        const ok = checkFile(`// ${MARKER} (test)\nawait db.collection("tracks").doc(id).update({})`)
+        expect(ok).toEqual({ unmarked: [], staleMarkers: [] })
+        const stale = checkFile(`// ${MARKER} (test)\nconst x = 1\nawait db.collection("tracks").doc(id).update({})`)
+        expect(stale.unmarked.length).toBe(1)
+        expect(stale.staleMarkers).toEqual([1])
     })
 
-    it("the moved writers write through the module", () => {
+    it("no file outside the module writes setlists/* or tracks/* at an unmarked call site", () => {
+        const offenders = outside.flatMap((f) =>
+            checkFile(f.src).unmarked.map((s) => `${f.rel}:${s.line} [${s.why}] ${s.text}`),
+        )
+        expect(offenders, offenders.join("\n")).toEqual([])
+    })
+
+    it("no allowlist marker is stale", () => {
+        const stale = outside.flatMap((f) => checkFile(f.src).staleMarkers.map((n) => `${f.rel}:${n}`))
+        expect(stale, stale.join("\n")).toEqual([])
+    })
+
+    it("the moved writers write through the module and carry no markers", () => {
         for (const rel of [
             "lib/mcp/server-tracks-write.ts",
             "lib/mcp/tools/setlist-write.ts",
@@ -166,7 +203,13 @@ describe("OPS-CONTRACT single writer: only src/lib/setlist-ops writes setlists/*
         ]) {
             const f = files.find((x) => x.rel === rel)!
             expect(f.src, rel).toMatch(/from ["']@\/lib\/setlist-ops["']/)
-            expect(findWrites(f.src), rel).toEqual([])
+            expect(findWriteSites(f.src), rel).toEqual([])
+            expect(f.src.includes(MARKER), rel).toBe(false)
         }
+    })
+
+    it("the module's public index does not export raw doc refs", () => {
+        const index = files.find((x) => x.rel === "lib/setlist-ops/index.ts")!.src
+        expect(index).not.toMatch(/\b(?:trackRef|setlistRef)\b\s*,|\b(?:trackRef|setlistRef)\s*\}/)
     })
 })

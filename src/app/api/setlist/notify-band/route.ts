@@ -152,6 +152,7 @@ export const POST = createApiHandler(
         // `wasNotifiedBefore` is what governs SMS below: the first time the
         // band is told we text; a re-notify does not, for cost.
         const wasNotifiedBefore = !!setlist.lastNotifiedAt
+        // setlist-ops-allowlist: remove in PR 3 (notify-band stamp)
         await setlistRef.update({
             lastNotifiedAt: FieldValue.serverTimestamp(),
             updatedAt: FieldValue.serverTimestamp(),

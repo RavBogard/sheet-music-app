@@ -130,6 +130,7 @@ export async function backfillWeekKeys(
             for (let i = 0; i < deltas.length; i += 400) {
                 const batch = db.batch()
                 for (const delta of deltas.slice(i, i + 400)) {
+                    // setlist-ops-allowlist: remove in PR 3 (week-key backfill)
                     batch.update(db.collection("setlists").doc(delta.setlistId), weekFields(weeks.get(delta.setlistId)!))
                 }
                 await batch.commit()

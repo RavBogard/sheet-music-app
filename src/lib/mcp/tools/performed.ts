@@ -341,6 +341,7 @@ async function promote(
         const target = cloneDocs[row.plannedPosition]
         if (!target) continue
         if (row.status === "skipped") {
+            // setlist-ops-allowlist: remove in PR 3 (performed-service clone)
             batch.delete(target.ref)
             removed.add(row.plannedPosition)
             rowsRemoved += 1
@@ -356,6 +357,7 @@ async function promote(
                 patch.title = row.chart.performedTitle || row.title
             }
             if (Object.keys(patch).length > 0) {
+                // setlist-ops-allowlist: remove in PR 3 (performed-service clone)
                 batch.update(target.ref, { ...patch, lastModifiedAt: nowIso })
                 rowsStamped += 1
             }
@@ -370,6 +372,7 @@ async function promote(
     for (const row of added) {
         const id = crypto.randomUUID()
         newIds.push(id)
+        // setlist-ops-allowlist: remove in PR 3 (performed-service clone)
         batch.set(db.collection("tracks").doc(id), {
             id,
             setlistId: cloneId,
@@ -392,6 +395,7 @@ async function promote(
     const finalRows: Array<{ type?: unknown; fileId?: unknown }> = []
     for (const row of diff.rows) {
         if (row.status === "added") {
+            // setlist-ops-allowlist: remove in PR 3 (performed-service clone)
             batch.update(db.collection("tracks").doc(newIds[addedCursor++]), { order: position++ })
             finalRows.push({ type: row.type ?? "prayer" })
             continue
@@ -400,10 +404,12 @@ async function promote(
         if (removed.has(row.plannedPosition)) continue
         const target = cloneDocs[row.plannedPosition]
         if (!target) continue
+        // setlist-ops-allowlist: remove in PR 3 (performed-service clone)
         batch.update(target.ref, { order: position++ })
         finalRows.push(target.data)
     }
 
+    // setlist-ops-allowlist: remove in PR 3 (performed-service clone)
     batch.update(db.collection("setlists").doc(cloneId), {
         // trackCount / songCount / fileIds of the performed version.
         ...deriveSetlistCounts(finalRows),

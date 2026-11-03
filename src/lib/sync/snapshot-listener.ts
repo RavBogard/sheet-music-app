@@ -248,6 +248,16 @@ function errorCode(err: unknown): string | undefined {
     return typeof code === 'string' ? code : undefined
 }
 
+/** Both versions numeric and the delivered one strictly greater. */
+export function isHigherVersion(delivered: unknown, local: unknown): boolean {
+    return (
+        typeof delivered === 'number' &&
+        typeof local === 'number' &&
+        Number.isFinite(delivered) &&
+        delivered > local
+    )
+}
+
 async function hasPendingOutboxRow(
     db: LocalDb,
     collection: LocalCollection,
@@ -404,7 +414,14 @@ export function startSnapshotListener(opts: SnapshotListenerOpts): () => void {
                             })
                             continue
                         }
-                        if (local.updatedAt >= change.updatedAt) {
+                        // A higher server `version` is newer even when
+                        // `updatedAt` did not move: server-derived page
+                        // writes (bind-row, liturgy bindings, re-book) bump
+                        // only `version` until PR 3 (setlist-ops writeRowFields).
+                        if (
+                            local.updatedAt >= change.updatedAt &&
+                            !isHigherVersion(change.data.version, (local as { version?: unknown }).version)
+                        ) {
                             outcomes.push({
                                 docId: change.docId,
                                 outcome: 'guard-skipped-stale',

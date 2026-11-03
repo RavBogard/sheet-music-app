@@ -256,6 +256,7 @@ export async function assignMusiciansService(
                 for (const g of guests) finalMusicians.push(g)
 
                 if (setlistSnap.exists) {
+                    // setlist-ops-allowlist: remove in PR 3 (assignment fields on the setlist doc)
                     transaction.update(setlistRef, {
                         musicians: finalMusicians,
                         assignedUids: finalMusicians
@@ -490,6 +491,7 @@ export async function unassignAssignmentService(
                         (m) => m.uid !== musicianUid,
                     )
                     if (filtered.length !== musicians.length) {
+                        // setlist-ops-allowlist: remove in PR 3 (assignment fields on the setlist doc)
                         transaction.update(setlistRef, {
                             musicians: filtered,
                             assignedUids: filtered
@@ -701,6 +703,7 @@ export async function respondToAssignmentService(
                         (m) => m.uid !== args.actorUid,
                     )
                     if (filtered.length !== musicians.length) {
+                        // setlist-ops-allowlist: remove in PR 3 (assignment fields on the setlist doc)
                         transaction.update(setlistRef, {
                             musicians: filtered,
                             assignedUids: filtered

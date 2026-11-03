@@ -31,7 +31,8 @@ const refusal = (r: OpsRefusal) => NextResponse.json(r, { status: REFUSAL_STATUS
 
 export const POST = createApiHandler<{ setlistId: string }>(async (ctx) => {
     if (!initAdmin()) {
-        return NextResponse.json({ ok: false, reason: "not-found", message: "Server not ready" }, { status: 503 })
+        // Machine code only; the client maps it to its own words.
+        return NextResponse.json({ ok: false, reason: "not-found", code: "server_not_ready" }, { status: 503 })
     }
     const setlistId = ctx.params?.setlistId ?? ""
 
@@ -39,7 +40,7 @@ export const POST = createApiHandler<{ setlistId: string }>(async (ctx) => {
     try {
         body = await ctx.req.json()
     } catch {
-        return refusal({ ok: false, reason: "invalid", message: "Invalid JSON" })
+        return refusal({ ok: false, reason: "invalid" })
     }
     const invalid = validateOpsRequest(body)
     if (invalid) return refusal(invalid)

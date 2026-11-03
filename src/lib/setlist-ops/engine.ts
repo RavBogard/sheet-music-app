@@ -1,16 +1,15 @@
+import crypto from "crypto"
 import { FieldValue, Timestamp } from "firebase-admin/firestore"
 import { deriveSetlistCounts } from "@/lib/setlist-derived-counts"
 import { rowOrg } from "@/lib/mcp/org-context"
 import { readVersion } from "@/lib/mcp/error-envelopes"
 import { readMembershipRole } from "@/lib/org/access"
 import type { OrgId } from "@/lib/org/types"
-import {
-    canonicalSort,
-    cleanRowPayload,
-    mergeFields,
-    placementIndex,
-    stripUndefined,
-} from "./pure"
+import { parseEventDate } from "@/lib/parse-event-date"
+import { computeWeek, isFamilyOrg, weekFields } from "@/lib/family/week-key"
+import { storedClassFor } from "@/lib/history/classify"
+import { canonicalSort, mergeFields, placementIndex, stripUndefined } from "./pure"
+import { checkRowFields, checkSetlistFields } from "./fields"
 import { runSetlistTransaction, setlistRef, trackRef, TRACKS } from "./writer"
 import {
     MAX_OPS,
@@ -30,7 +29,9 @@ type DB = FirebaseFirestore.Firestore
 
 export const OP_BATCHES = "opBatches"
 
-const ID_RE = /^[^/]{1,200}$/
+/** A Firestore doc id: 1-200 chars, no `/`, and not `.` or `..`. */
+const ID_RE = /^(?!\.\.?$)[^/]{1,200}$/
+const BATCH_ID_RE = /^(?!\.\.?$)[A-Za-z0-9_.:-]{1,128}$/
 
 const refuse = (reason: OpsRefusal["reason"], message?: string): OpsRefusal => ({
     ok: false,
@@ -42,42 +43,88 @@ const refuse = (reason: OpsRefusal["reason"], message?: string): OpsRefusal => (
 
 const isObj = (v: unknown): v is Record<string, unknown> =>
     !!v && typeof v === "object" && !Array.isArray(v)
-const isAnchor = (v: unknown) => v === null || (typeof v === "string" && ID_RE.test(v))
+const isId = (v: unknown): v is string => typeof v === "string" && ID_RE.test(v)
+const isAnchor = (v: unknown) => v === null || isId(v)
 
-function validOp(op: unknown): op is Op {
-    if (!isObj(op)) return false
-    switch (op.kind) {
-        case "insert":
-            return typeof op.rowId === "string" && ID_RE.test(op.rowId) &&
-                isAnchor(op.afterRowId) && isAnchor(op.beforeRowId) && isObj(op.row)
-        case "remove":
-            return typeof op.rowId === "string" && ID_RE.test(op.rowId)
-        case "move":
-            return typeof op.rowId === "string" && ID_RE.test(op.rowId) &&
-                isAnchor(op.afterRowId) && isAnchor(op.beforeRowId)
-        case "editRow":
-            return typeof op.rowId === "string" && ID_RE.test(op.rowId) && isObj(op.set) &&
-                (op.base === undefined || isObj(op.base))
-        case "editSetlist":
-            return isObj(op.set) && (op.base === undefined || isObj(op.base))
-        default:
-            return false
-    }
-}
-
-/** Shape check for a request. Returns a refusal, or null when it is well formed. */
-export function validateOpsRequest(req: unknown): OpsRefusal | null {
+/**
+ * Validate the shape AND every field of a request, returning a cleaned copy
+ * (freeform strings sanitized, undefined dropped). Field names must be plain
+ * (no dots, no `__`); server-owned fields in `row`/`set` are refused, not
+ * dropped; unknown fields are refused. Types and sizes are the MCP tools'.
+ */
+export function normalizeOpsRequest(req: unknown): { ok: true; req: OpsRequest } | OpsRefusal {
     if (!isObj(req)) return refuse("invalid", "body must be an object")
-    if (typeof req.clientBatchId !== "string" || !/^[A-Za-z0-9_.:-]{1,128}$/.test(req.clientBatchId))
+    if (typeof req.clientBatchId !== "string" || !BATCH_ID_RE.test(req.clientBatchId))
         return refuse("invalid", "clientBatchId must be 1-128 of [A-Za-z0-9_.:-]")
     if (typeof req.baseVersion !== "number" || !Number.isFinite(req.baseVersion))
         return refuse("invalid", "baseVersion must be a number")
     if (!Array.isArray(req.ops)) return refuse("invalid", "ops must be an array")
     if (req.ops.length > MAX_OPS) return refuse("too-large", `at most ${MAX_OPS} ops per batch`)
+    const ops: Op[] = []
     for (let i = 0; i < req.ops.length; i++) {
-        if (!validOp(req.ops[i])) return refuse("invalid", `op ${i} is malformed`)
+        const op = req.ops[i] as unknown
+        const bad = (why: string) => refuse("invalid", `op ${i}: ${why}`)
+        if (!isObj(op)) return bad("not an object")
+        switch (op.kind) {
+            case "insert": {
+                if (!isId(op.rowId) || !isAnchor(op.afterRowId) || !isAnchor(op.beforeRowId) || !isObj(op.row))
+                    return bad("malformed insert")
+                const row = checkRowFields(op.row, "row")
+                if (!row.ok) return bad(row.message)
+                ops.push({ kind: "insert", rowId: op.rowId, afterRowId: op.afterRowId as string | null, beforeRowId: op.beforeRowId as string | null, row: row.value })
+                break
+            }
+            case "remove":
+                if (!isId(op.rowId)) return bad("malformed remove")
+                ops.push({ kind: "remove", rowId: op.rowId })
+                break
+            case "move":
+                if (!isId(op.rowId) || !isAnchor(op.afterRowId) || !isAnchor(op.beforeRowId)) return bad("malformed move")
+                ops.push({ kind: "move", rowId: op.rowId, afterRowId: op.afterRowId as string | null, beforeRowId: op.beforeRowId as string | null })
+                break
+            case "editRow": {
+                if (!isId(op.rowId) || !isObj(op.set) || (op.base !== undefined && !isObj(op.base))) return bad("malformed editRow")
+                const set = checkRowFields(op.set, "set")
+                if (!set.ok) return bad(set.message)
+                const base = checkRowFields(isObj(op.base) ? op.base : {}, "base")
+                if (!base.ok) return bad(base.message)
+                ops.push({ kind: "editRow", rowId: op.rowId, set: set.value, base: base.value })
+                break
+            }
+            case "editSetlist": {
+                if (!isObj(op.set) || (op.base !== undefined && !isObj(op.base))) return bad("malformed editSetlist")
+                const set = checkSetlistFields(op.set, "set")
+                if (!set.ok) return bad(set.message)
+                const base = checkSetlistFields(isObj(op.base) ? op.base : {}, "base")
+                if (!base.ok) return bad(base.message)
+                ops.push({ kind: "editSetlist", set: set.value, base: base.value })
+                break
+            }
+            default:
+                return bad("unknown kind")
+        }
     }
-    return null
+    return { ok: true, req: { clientBatchId: req.clientBatchId, baseVersion: req.baseVersion, ops } }
+}
+
+/** Shape and field check for a request. Returns a refusal, or null when it is well formed. */
+export function validateOpsRequest(req: unknown): OpsRefusal | null {
+    const r = normalizeOpsRequest(req)
+    return r.ok ? null : r
+}
+
+/** Stable hash of a batch's ops, so a reused clientBatchId with other ops is caught. */
+export function opsHash(ops: readonly Op[]): string {
+    const stable = (v: unknown): unknown => {
+        if (Array.isArray(v)) return v.map(stable)
+        if (isObj(v)) {
+            const out: Record<string, unknown> = {}
+            for (const k of Object.keys(v).sort()) if (v[k] !== undefined) out[k] = stable(v[k])
+            return out
+        }
+        return v
+    }
+    return crypto.createHash("sha256").update(JSON.stringify(stable(ops))).digest("hex")
 }
 
 // ── authorization ──────────────────────────────────────────────────────────
@@ -94,7 +141,7 @@ export async function authorizeSetlistCaller(
     setlistId: string,
 ): Promise<{ ok: true; org: OrgId; role: string } | OpsRefusal> {
     if (!uid) return refuse("forbidden")
-    if (!ID_RE.test(setlistId)) return refuse("invalid", "bad setlist id")
+    if (!isId(setlistId)) return refuse("invalid", "bad setlist id")
     const snap = await setlistRef(db, setlistId).get()
     if (!snap.exists) return refuse("not-found")
     const org = rowOrg(snap.data()?.orgId)
@@ -135,17 +182,16 @@ interface RowState {
 
 interface StoredBatch {
     uid: string | null
+    opsHash: string
     version: number
     applied: number[]
     conflicts: OpConflict[]
     touched: string[]
     removed: string[]
-    createdAt: unknown
-    expiresAt: Timestamp
 }
 
 type Planned =
-    | { kind: "done"; stored: Omit<StoredBatch, "createdAt" | "expiresAt">; replayed: boolean }
+    | { kind: "done"; stored: StoredBatch; replayed: boolean }
     | { kind: "refused"; refusal: OpsRefusal }
 
 /** Firestore field patch: `null` means clear. */
@@ -174,36 +220,81 @@ export interface ApplyOpsOptions {
 }
 
 /**
+ * Turn the client's editSetlist values into stored ones before the
+ * transaction: `eventDate` ISO → Timestamp in the tenant's clock, and the
+ * week key a moved date implies (family tenant only).
+ */
+async function prepareSetlistEdits(
+    ops: Op[],
+    org: OrgId,
+): Promise<Map<number, Record<string, unknown>>> {
+    const derived = new Map<number, Record<string, unknown>>()
+    for (let i = 0; i < ops.length; i++) {
+        const op = ops[i]
+        if (op.kind !== "editSetlist") continue
+        for (const side of [op.set, op.base] as Array<Record<string, unknown>>) {
+            if (typeof side.eventDate === "string") side.eventDate = parseEventDate(side.eventDate, org)
+        }
+        if (op.set.eventDate instanceof Timestamp && isFamilyOrg(org)) {
+            const week = await computeWeek(op.set.eventDate, org)
+            derived.set(
+                i,
+                week ? weekFields(week) : { weekKey: FieldValue.delete(), weekKeyDay: FieldValue.delete(), parashaName: FieldValue.delete() },
+            )
+        }
+    }
+    return derived
+}
+
+/**
  * Apply a batch of ops to one setlist in ONE transaction. The caller has
  * already authorized (see `applyOps` for the authorizing entry point).
  */
 export async function applyOpsAuthorized(
     db: DB,
     setlistId: string,
-    req: OpsRequest,
+    rawReq: OpsRequest,
     opts: ApplyOpsOptions = {},
 ): Promise<OpsResult> {
-    const invalid = validateOpsRequest(req)
-    if (invalid) return invalid
+    if (!isId(setlistId)) return refuse("invalid", "bad setlist id")
+    const norm = normalizeOpsRequest(rawReq)
+    if (!norm.ok) return norm
+    const req = norm.req
+    const hash = opsHash(req.ops)
     const useReceipt = opts.receipt !== false
     const sRef = setlistRef(db, setlistId)
     const receiptRef = sRef.collection(OP_BATCHES).doc(req.clientBatchId)
 
+    const pre = await sRef.get()
+    if (!pre.exists) return refuse("not-found")
+    const org = rowOrg(pre.data()?.orgId) // a setlist's tenant never changes
+    const weekFor = await prepareSetlistEdits(req.ops, org)
+
+    const insertIds = [...new Set(req.ops.flatMap((op) => (op.kind === "insert" ? [op.rowId] : [])))]
+
     const planned = await runSetlistTransaction<Planned>(
         db,
         async (tx, w) => {
-            const [receiptSnap, setlistSnap, tracksSnap] = await Promise.all([
+            // Every read before any write.
+            const [receiptSnap, setlistSnap, tracksSnap, insertSnaps] = await Promise.all([
                 useReceipt ? tx.get(receiptRef) : Promise.resolve(null),
                 tx.get(sRef),
                 tx.get(db.collection(TRACKS).where("setlistId", "==", setlistId)),
+                insertIds.length ? tx.getAll(...insertIds.map((id) => trackRef(db, id))) : Promise.resolve([]),
             ])
             if (receiptSnap?.exists) {
                 const s = receiptSnap.data() as StoredBatch
+                if (s.opsHash !== hash) {
+                    return { kind: "refused", refusal: refuse("invalid", "clientBatchId was already used for different ops") }
+                }
                 return { kind: "done", replayed: true, stored: s }
             }
             if (!setlistSnap.exists) return { kind: "refused", refusal: refuse("not-found") }
             const setlist = setlistSnap.data() as Record<string, unknown>
-            const org = rowOrg(setlist.orgId)
+
+            // Any doc an insert names, wherever it lives (another setlist, another tenant).
+            const existingAnywhere = new Map<string, Record<string, unknown>>()
+            for (const s of insertSnaps) if (s.exists) existingAnywhere.set(s.id, s.data() as Record<string, unknown>)
 
             const rows = new Map<string, RowState>()
             const sorted = canonicalSort(
@@ -217,6 +308,8 @@ export async function applyOpsAuthorized(
             const removed = new Set<string>()
             const setlistCur: Record<string, unknown> = { ...setlist }
             let setlistPatch: Record<string, unknown> = {}
+            const setlistDerived: Record<string, unknown> = {}
+            let structural = false
 
             const applied: number[] = []
             const conflicts: OpConflict[] = []
@@ -224,28 +317,25 @@ export async function applyOpsAuthorized(
             req.ops.forEach((op, opIndex) => {
                 switch (op.kind) {
                     case "insert": {
-                        const existing = rows.get(op.rowId)
-                        if (existing || removed.has(op.rowId)) {
-                            if (existing?.original && existing.original.opBatchId === req.clientBatchId) {
-                                applied.push(opIndex) // the same batch already inserted it
-                            } else {
-                                conflicts.push({ opIndex, reason: "row-exists" })
-                            }
+                        const elsewhere = existingAnywhere.get(op.rowId)
+                        if (elsewhere || rows.has(op.rowId) || removed.has(op.rowId)) {
+                            const own =
+                                !!elsewhere &&
+                                elsewhere.setlistId === setlistId &&
+                                elsewhere.opBatchId === req.clientBatchId &&
+                                rows.has(op.rowId)
+                            if (own) applied.push(opIndex) // this same batch already inserted it
+                            else conflicts.push({ opIndex, reason: "row-exists" })
                             return
                         }
                         const at = placementIndex(seq, op.afterRowId, op.beforeRowId)
                         seq.splice(at, 0, op.rowId)
                         rows.set(op.rowId, {
                             original: null,
-                            cur: {
-                                ...cleanRowPayload(op.row, RESERVED_ROW_FIELDS),
-                                id: op.rowId,
-                                setlistId,
-                                orgId: org,
-                                opBatchId: req.clientBatchId,
-                            },
+                            cur: { ...op.row, id: op.rowId, setlistId, orgId: org, opBatchId: req.clientBatchId },
                             patch: {},
                         })
+                        structural = true
                         applied.push(opIndex)
                         return
                     }
@@ -256,6 +346,7 @@ export async function applyOpsAuthorized(
                             const st = rows.get(op.rowId)
                             rows.delete(op.rowId)
                             if (st?.original) removed.add(op.rowId)
+                            structural = true
                         }
                         applied.push(opIndex) // removing a missing row is a no-op success
                         return
@@ -266,9 +357,14 @@ export async function applyOpsAuthorized(
                             conflicts.push({ opIndex, reason: "row-gone" })
                             return
                         }
+                        // A row anchored on itself stays where it is.
+                        if (op.afterRowId === op.rowId || op.beforeRowId === op.rowId) {
+                            applied.push(opIndex)
+                            return
+                        }
                         seq.splice(i, 1)
-                        // An anchor equal to the row itself is gone from `seq` now, so it falls through.
                         seq.splice(placementIndex(seq, op.afterRowId, op.beforeRowId), 0, op.rowId)
+                        structural = true
                         applied.push(opIndex)
                         return
                     }
@@ -289,6 +385,12 @@ export async function applyOpsAuthorized(
                         const m = mergeFields(setlistCur, op.set, op.base ?? {}, RESERVED_SETLIST_FIELDS)
                         applyToCur(setlistCur, m.apply)
                         setlistPatch = { ...setlistPatch, ...m.apply }
+                        // Derived class fields follow the author's own entries, as on update_setlist.
+                        if ("templateType" in m.apply)
+                            setlistDerived.serviceType = storedClassFor({ templateType: m.apply.templateType as string | null }).serviceType ?? null
+                        if ("rabbi" in m.apply)
+                            setlistDerived.rabbiSlot = storedClassFor({ rabbi: m.apply.rabbi as string | null }).rabbiSlot ?? null
+                        if ("eventDate" in m.apply && weekFor.has(opIndex)) Object.assign(setlistDerived, weekFor.get(opIndex))
                         for (const c of m.conflicts) conflicts.push({ opIndex, reason: "field", ...c })
                         if (m.conflicts.length === 0 || Object.keys(m.apply).length > 0) applied.push(opIndex)
                         return
@@ -296,12 +398,15 @@ export async function applyOpsAuthorized(
                 }
             })
 
-            // Renumber 0..n-1 in the resulting sequence. A row whose order moves is touched.
-            seq.forEach((id, order) => {
-                const st = rows.get(id)!
-                st.cur.order = order
-                if (st.original && st.original.order !== order) st.patch.order = order
-            })
+            // Renumber 0..n-1 ONLY after a structural change (R11-b: an edit
+            // never rewrites order). A row whose order moves is touched.
+            if (structural) {
+                seq.forEach((id, order) => {
+                    const st = rows.get(id)!
+                    st.cur.order = order
+                    if (st.original && st.original.order !== order) st.patch.order = order
+                })
+            }
 
             const inserts = seq.filter((id) => rows.get(id)!.original === null)
             const updates = seq.filter((id) => {
@@ -319,18 +424,21 @@ export async function applyOpsAuthorized(
                 for (const id of removed) w.deleteTrack(id)
                 for (const id of inserts) {
                     const cur = rows.get(id)!.cur
-                    w.setTrack(id, { ...cur, version: 1, createdAt: FieldValue.serverTimestamp() })
+                    // `create`, never `set`: an existing doc can never be replaced.
+                    w.createTrack(id, { ...cur, version: 1, createdAt: FieldValue.serverTimestamp() })
                 }
                 for (const id of updates) w.updateTrack(id, toFieldPatch(rows.get(id)!.patch))
                 const finalRows = seq.map((id) => rows.get(id)!.cur)
                 w.updateSetlist(setlistId, {
                     ...toFieldPatch(setlistPatch),
+                    ...setlistDerived,
                     ...deriveSetlistCounts(finalRows),
                 })
             }
 
-            const stored = {
+            const stored: StoredBatch = {
                 uid: opts.actor ?? null,
+                opsHash: hash,
                 version: nextVersion,
                 applied,
                 conflicts: stripUndefined(conflicts),

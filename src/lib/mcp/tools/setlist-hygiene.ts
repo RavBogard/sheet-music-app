@@ -139,6 +139,7 @@ export async function backfillSetlistTestFlag(
         for (let i = 0; i < deltas.length; i += BATCH_MAX) {
             const batch = db.batch()
             for (const delta of deltas.slice(i, i + BATCH_MAX)) {
+                // setlist-ops-allowlist: remove in PR 3 (isTest hygiene backfill)
                 batch.update(
                     db.collection("setlists").doc(delta.setlistId),
                     { isTest: delta.to },

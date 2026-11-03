@@ -47,9 +47,19 @@ export function setlistRef(db: DB, id: string): DocRef {
     return db.collection(SETLISTS).doc(id)
 }
 
-function bumpStamps(): Record<string, unknown> {
+export interface StampOptions {
+    /**
+     * Default true. False bumps `version` (and `lastModifiedAt`) but leaves
+     * `updatedAt` alone: used for server-derived page fields until PR 3, so
+     * an open editor's `updatedAt` precondition does not trip "Remote changes
+     * detected", while iPads still take the row by its higher `version`.
+     */
+    touchUpdatedAt?: boolean
+}
+
+function bumpStamps(o: StampOptions = {}): Record<string, unknown> {
     return {
-        updatedAt: FieldValue.serverTimestamp(),
+        ...(o.touchUpdatedAt === false ? {} : { updatedAt: FieldValue.serverTimestamp() }),
         version: FieldValue.increment(1),
         lastModifiedAt: new Date().toISOString(),
     }
@@ -91,8 +101,10 @@ export class SetlistWriter {
     }
 
     /** Patch a row; stamps `updatedAt` and bumps `version`. */
-    updateTrack(id: string, patch: Record<string, unknown>): void {
-        this.sink.update(trackRef(this.db, id), { ...stripUndefined(patch), ...bumpStamps() })
+    updateTrack(id: string, patch: Record<string, unknown>, o: StampOptions = {}): void {
+        const clean = stripUndefined(patch)
+        if (o.touchUpdatedAt === false) delete clean.updatedAt
+        this.sink.update(trackRef(this.db, id), { ...clean, ...bumpStamps(o) })
         this.writes++
     }
 
@@ -124,11 +136,12 @@ export class SetlistWriter {
     }
 
     /** Patch a setlist; stamps `updatedAt`, `lastModifiedAt/By` and bumps `version`. */
-    updateSetlist(id: string, patch: Record<string, unknown>): void {
+    updateSetlist(id: string, patch: Record<string, unknown>, o: StampOptions = {}): void {
         const clean = stripUndefined(patch)
+        if (o.touchUpdatedAt === false) delete clean.updatedAt
         this.sink.update(setlistRef(this.db, id), {
             ...clean,
-            ...bumpStamps(),
+            ...bumpStamps(o),
             ...(this.opts.actor ? { lastModifiedBy: this.opts.actor } : {}),
         })
         this.writes++
@@ -203,11 +216,16 @@ export interface RowPatch {
 }
 
 /**
- * Server-authored field writes on existing rows of ONE setlist (page binds,
+ * Server-derived field writes on existing rows of ONE setlist (page binds,
  * re-book, identify). One transaction: rows that are gone or belong to another
- * setlist are skipped, every written row gets `updatedAt` + `version`, and the
+ * setlist are skipped, every written row's `version` is bumped and the
  * setlist's `version` is bumped once — so iPads holding the row see the new
- * page number instead of keeping the old one.
+ * page number (the snapshot listener takes a higher `version`) instead of
+ * keeping the old one.
+ *
+ * Interim until PR 3: `updatedAt` is NOT touched on the rows or the setlist,
+ * so an author's open editor (whose outbox preconditions key on `updatedAt`)
+ * does not hit "Remote changes detected" for a page the server filled in.
  *
  * `guard`, when given, runs against each row's current data inside the
  * transaction; returning false skips the row (bind-row's "never overwrite").
@@ -239,10 +257,10 @@ export async function writeRowFields(
                     skipped.push(rowId)
                     return
                 }
-                w.updateTrack(rowId, patch)
+                w.updateTrack(rowId, patch, { touchUpdatedAt: false })
                 written.push(rowId)
             })
-            if (written.length > 0) w.updateSetlist(setlistId, {})
+            if (written.length > 0) w.updateSetlist(setlistId, {}, { touchUpdatedAt: false })
             return { written, skipped }
         },
         opts,

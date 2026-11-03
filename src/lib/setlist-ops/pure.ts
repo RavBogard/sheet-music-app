@@ -66,16 +66,19 @@ export function canonicalSort<T extends OrderedRow>(rows: readonly T[]): T[] {
 
 /**
  * Where an inserted or moved row lands in the CURRENT sequence (which no
- * longer contains the row itself). After `afterRowId` if it is present;
- * else before `beforeRowId` if that is present; else at the end.
- * `null`/`null` means the start.
+ * longer contains the row itself). In order:
+ *   1. right after `afterRowId`, if that row is still there;
+ *   2. right before `beforeRowId`, if that row is still there;
+ *   3. at the START when `afterRowId` is null (the client put it first,
+ *      whether or not its `before` neighbour survived);
+ *   4. otherwise at the END (its `after` neighbour is gone and nothing
+ *      after it is left to hold on to).
  */
 export function placementIndex(
     sequence: readonly string[],
     afterRowId: string | null,
     beforeRowId: string | null,
 ): number {
-    if (afterRowId === null && beforeRowId === null) return 0
     if (afterRowId !== null) {
         const i = sequence.indexOf(afterRowId)
         if (i >= 0) return i + 1
@@ -84,6 +87,7 @@ export function placementIndex(
         const j = sequence.indexOf(beforeRowId)
         if (j >= 0) return j
     }
+    if (afterRowId === null) return 0
     return sequence.length
 }
 
@@ -123,18 +127,4 @@ export function mergeFields(
         conflicts.push({ field, server: current ?? null, mine })
     }
     return { apply, conflicts, considered }
-}
-
-/** Drop reserved keys and undefined values from a client row payload. */
-export function cleanRowPayload(
-    row: Record<string, unknown>,
-    reserved: ReadonlySet<string>,
-): Record<string, unknown> {
-    const out: Record<string, unknown> = {}
-    for (const [k, v] of Object.entries(stripUndefined(row ?? {}))) {
-        if (reserved.has(k)) continue
-        if (v === null) continue // a new row has nothing to clear
-        out[k] = v
-    }
-    return out
 }

@@ -122,6 +122,7 @@ class ProductionFirestoreAdapter implements FirestoreAdapter {
                                 : { exists: false }
                         },
                     )
+                    // setlist-ops-allowlist: remove in PR 3 (client outbox adapter)
                     await setDoc(ref, {
                         ...payload,
                         updatedAt: serverTimestamp(),
@@ -186,6 +187,7 @@ class ProductionFirestoreAdapter implements FirestoreAdapter {
                         if (preconditionError !== null) {
                             throw new VersionMismatchError(preconditionError)
                         }
+                        // setlist-ops-allowlist: remove in PR 3 (client outbox adapter)
                         tx.update(ref, {
                             ...row.payload,
                             updatedAt: serverTimestamp(),
@@ -231,6 +233,7 @@ class ProductionFirestoreAdapter implements FirestoreAdapter {
                             trackOrgId = data.orgId
                         }
                     }
+                    // setlist-ops-allowlist: remove in PR 3 (client outbox adapter)
                     await deleteDoc(ref)
                     if (trackParentSetlistId) {
                         await reconcileSetlistTrackCount(

@@ -221,18 +221,87 @@ describe("setlist ops engine (emulator)", () => {
     it("never writes undefined: it is stripped from inserts and edits; null clears", async () => {
         const { setlistId, ids } = await seed("crc", [0], [{ bpm: 80, key: "C" }])
         const r = (await applyOps(db(), CRC_LEAD, setlistId, req([
-            { kind: "insert", rowId: `${setlistId}-u`, afterRowId: ids[0], beforeRowId: null, row: { title: "U", bpm: undefined, liturgyRef: { book: "b", folio: 2, unitId: undefined } } },
+            { kind: "insert", rowId: `${setlistId}-u`, afterRowId: ids[0], beforeRowId: null, row: { title: "U", bpm: undefined, liturgyRef: { book: "crc-friday", folio: 4, unitId: undefined } } },
             { kind: "editRow", rowId: ids[0], set: { bpm: undefined, key: null }, base: { key: "C" } },
         ]))) as OpsOk
         expect(r.ok).toBe(true)
         const after = await rows(setlistId)
         expect("bpm" in after[1]).toBe(false)
-        expect(after[1].liturgyRef).toEqual({ book: "b", folio: 2 })
+        expect(after[1].liturgyRef).toEqual({ book: "crc-friday", folio: 4 })
         expect(after[0].bpm).toBe(80)
         expect("key" in after[0]).toBe(false)
     })
 
-    it("server field writes (page binds) bump the row's updatedAt + version and the setlist's version", async () => {
+    it("an insert naming an existing track anywhere is row-exists, and never overwrites it (other tenant's row included)", async () => {
+        const crc = await seed("crc", [0], [{ title: "CRC row", key: "C" }])
+        const bl = await seed("brotherslazaroff", [0])
+        const victim = crc.ids[0]
+        const r = (await applyOps(db(), BL_LEAD, bl.setlistId, req([
+            { kind: "insert", rowId: victim, afterRowId: null, beforeRowId: null, row: { title: "pwned" } },
+        ]))) as OpsOk
+        expect(r.ok).toBe(true)
+        expect(r.conflicts).toEqual([{ opIndex: 0, reason: "row-exists" }])
+        const after = (await db().collection("tracks").doc(victim).get()).data()!
+        expect(after).toMatchObject({ title: "CRC row", key: "C", orgId: "crc", setlistId: crc.setlistId, version: 1 })
+        expect((await rows(bl.setlistId)).map((x) => x.id)).toEqual(bl.ids)
+    })
+
+    it("an edit-only batch never renumbers, even over drifted orders (R11-b)", async () => {
+        const { setlistId, ids } = await seed("crc", [0, 2, 5])
+        await applyOps(db(), CRC_LEAD, setlistId, req([{ kind: "editRow", rowId: ids[1], set: { notes: "n" }, base: {} }]))
+        const after = await rows(setlistId)
+        expect(after.map((x) => x.order)).toEqual([0, 2, 5])
+        expect(after.map((x) => x.version)).toEqual([1, 2, 1])
+    })
+
+    it("a move anchored on itself stays put; after:null with a deleted before goes to the start", async () => {
+        const { setlistId, ids } = await seed("crc", [0, 1, 2])
+        const r = (await applyOps(db(), CRC_LEAD, setlistId, req([
+            { kind: "move", rowId: ids[1], afterRowId: ids[1], beforeRowId: ids[2] },
+        ]))) as OpsOk
+        expect(r.applied).toEqual([0])
+        expect((await rows(setlistId)).map((x) => x.id)).toEqual(ids)
+        expect((await setlist(setlistId)).version).toBe(5)
+        await applyOps(db(), CRC_LEAD, setlistId, req([
+            { kind: "move", rowId: ids[2], afterRowId: null, beforeRowId: "deleted-row" },
+        ]))
+        expect((await rows(setlistId)).map((x) => x.id)).toEqual([ids[2], ids[0], ids[1]])
+    })
+
+    it("the same clientBatchId with different ops is invalid", async () => {
+        const { setlistId, ids } = await seed("crc", [0, 1])
+        const id = batchId()
+        const a = await applyOps(db(), CRC_LEAD, setlistId, req([{ kind: "editRow", rowId: ids[0], set: { notes: "a" }, base: {} }], id))
+        expect(a.ok).toBe(true)
+        const b = await applyOps(db(), CRC_LEAD, setlistId, req([{ kind: "remove", rowId: ids[1] }], id))
+        expect(b).toMatchObject({ ok: false, reason: "invalid" })
+        expect((await rows(setlistId)).length).toBe(2)
+    })
+
+    it("refuses a reserved or dotted field instead of applying it", async () => {
+        const { setlistId, ids } = await seed("crc", [0])
+        for (const set of [{ orgId: "brotherslazaroff" }, { "orgId.x": 1 }, { "setlistId.x": 1 }, { "updatedAt.x": 1 }, { order: 9 }]) {
+            const r = await applyOps(db(), CRC_LEAD, setlistId, req([{ kind: "editRow", rowId: ids[0], set, base: {} }]))
+            expect(r).toMatchObject({ ok: false, reason: "invalid" })
+        }
+        const row = (await rows(setlistId))[0]
+        expect(row).toMatchObject({ orgId: "crc", setlistId, order: 0, version: 1 })
+    })
+
+    it("editSetlist stores eventDate as a Timestamp and derives the class fields", async () => {
+        const { setlistId } = await seed("crc", [0])
+        const r = (await applyOps(db(), CRC_LEAD, setlistId, req([
+            { kind: "editSetlist", set: { name: "New", eventDate: "2026-11-07T10:00:00", templateType: "shabbat_morning" }, base: { name: "S" } },
+        ]))) as OpsOk
+        expect(r.conflicts).toEqual([])
+        const s = await setlist(setlistId)
+        expect(s.name).toBe("New")
+        expect(s.eventDate).toBeInstanceOf(Timestamp)
+        expect("serviceType" in s).toBe(true)
+        expect(s.version).toBe(6)
+    })
+
+    it("server page writes bump the row's and the setlist's version but leave updatedAt alone (interim until PR 3)", async () => {
         const { setlistId, ids } = await seed("crc", [0, 1])
         const res = await writeRowFields(db(), setlistId, [
             { rowId: ids[0], patch: { liturgyRef: { book: "b", folio: 7 } } },
@@ -241,9 +310,12 @@ describe("setlist ops engine (emulator)", () => {
         expect(res).toEqual({ written: [ids[0]], skipped: ["gone"] })
         const [row0, row1] = await rows(setlistId)
         expect(row0.version).toBe(2)
-        expect((row0.updatedAt as Timestamp).toMillis()).toBeGreaterThan(1_000)
+        expect(row0.liturgyRef).toEqual({ book: "b", folio: 7 })
+        expect((row0.updatedAt as Timestamp).toMillis()).toBe(1_000)
         expect(row1.version).toBe(1)
-        expect((await setlist(setlistId)).version).toBe(6)
+        const s = await setlist(setlistId)
+        expect(s.version).toBe(6)
+        expect(s.updatedAt).toBeUndefined()
     })
 })
 
