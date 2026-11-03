@@ -25,16 +25,14 @@
 
 import {
     Timestamp,
-    collection as fsCollection,
     doc as fsDoc,
     getDoc,
     onSnapshot,
-    query,
-    where,
 } from 'firebase/firestore'
 import type { Firestore, Query, QuerySnapshot } from 'firebase/firestore'
 
 import { tenantOfSetlist } from '@/lib/client-tracks'
+import { setlistTracksQuery } from '@/lib/tenant-query'
 import { subscribeWithDb } from '@/lib/firebase'
 import type { LocalDb } from '@/lib/local/schema'
 import type { LocalCollection, LocalSetlist, LocalTrack } from '@/lib/local/types'
@@ -64,6 +62,10 @@ export interface SnapshotListenerOpts {
     firestoreDb?: Firestore
     /** Override for tests. Defaults to the app logger. */
     logger?: ListenerLogger
+    /** Called once when the rules refuse the tracks listener
+     *  (`permission-denied`): a viewer signed in to another tenant than the
+     *  setlist's. The caller falls back to the public tracks endpoint. */
+    onTracksRefused?: (err: Error) => void
     /** Test-only injection: a function pair returning unsubscribers for
      *  setlist + tracks subscriptions. When provided, bypasses Firestore
      *  entirely so unit tests don't need a live Firestore. */
@@ -136,11 +138,7 @@ export function liveTracksQuery(
     setlistId: string,
     orgId: string,
 ): Query {
-    return query(
-        fsCollection(firestoreDb, 'tracks'),
-        where('orgId', '==', orgId),
-        where('setlistId', '==', setlistId),
-    )
+    return setlistTracksQuery(firestoreDb, orgId, setlistId)
 }
 
 /** Attach the tracks listener once the tenant is known. With `orgId` it
@@ -271,6 +269,7 @@ export function startSnapshotListener(opts: SnapshotListenerOpts): () => void {
         firestoreDb,
         logger = defaultLogger,
         subscriber,
+        onTracksRefused,
     } = opts
     const logError = logger.error ?? defaultLogger.error
 
@@ -463,7 +462,10 @@ export function startSnapshotListener(opts: SnapshotListenerOpts): () => void {
         (changes) => {
             void handleTracks(changes)
         },
-        (err) => reportSubscribeError('tracks', err),
+        (err) => {
+            reportSubscribeError('tracks', err)
+            if (!cancelled && errorCode(err) === 'permission-denied') onTracksRefused?.(err)
+        },
         orgId,
     )
 

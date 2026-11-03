@@ -27,10 +27,11 @@
 // an empty list either way — but a musician mid-service is better served by
 // one more attempt than by a certain blank screen.
 
-import { collection, query, where, getDocs } from "firebase/firestore"
+import { getDocs } from "firebase/firestore"
 import { getDb, auth } from "@/lib/firebase"
 import { coerceOrgId } from "@/lib/org/registry"
 import { logger } from "@/lib/logger"
+import { setlistTracksQuery } from "@/lib/tenant-query"
 import type { LocalTrack } from "@/lib/local/types"
 import type { SetlistTrack } from "@/types/models"
 
@@ -57,8 +58,10 @@ function sortRows(rows: Record<string, unknown>[]): Record<string, unknown>[] {
     })
 }
 
-/** The public endpoint. Returns null when it cannot answer, so we can fall back. */
-async function fetchViaApi(setlistId: string): Promise<SetlistTrack[] | null> {
+/** The public endpoint. Returns null when it cannot answer, so we can fall back.
+ *  Perform uses it directly when the rules refuse the live listener (a viewer
+ *  signed in to another tenant). */
+export async function fetchTracksViaPublicApi(setlistId: string): Promise<SetlistTrack[] | null> {
     try {
         const res = await fetch(
             `/api/setlists/${encodeURIComponent(setlistId)}/tracks`,
@@ -99,7 +102,7 @@ export async function fetchTracksForSetlistClient(
     // Signed out, the Firestore query is denied by the rules — go to the
     // endpoint that can answer for one setlist.
     if (!auth?.currentUser) {
-        const viaApi = await fetchViaApi(setlistId)
+        const viaApi = await fetchTracksViaPublicApi(setlistId)
         if (viaApi) return viaApi
     }
 
@@ -111,11 +114,7 @@ export async function fetchTracksForSetlistClient(
     // (clone reads a source that may, in principle, be another tenant's),
     // otherwise the site this page is on, which the root layout puts on
     // <html data-org>.
-    const q = query(
-        collection(db, "tracks"),
-        where("orgId", "==", orgOf(setlistData)),
-        where("setlistId", "==", setlistId),
-    )
+    const q = setlistTracksQuery(db, orgOf(setlistData), setlistId)
     let snap
     try {
         snap = await getDocs(q)
@@ -125,7 +124,7 @@ export async function fetchTracksForSetlistClient(
         // which P2 kept working on purpose. The server can answer for one
         // setlist where a security rule can only answer for a whole
         // collection, so it answers this one.
-        return (await fetchViaApi(setlistId)) ?? []
+        return (await fetchTracksViaPublicApi(setlistId)) ?? []
     }
     const rows: Record<string, unknown>[] = snap.docs.map((d) => ({
         ...(d.data() as Record<string, unknown>),
@@ -135,7 +134,7 @@ export async function fetchTracksForSetlistClient(
     // was wrong, not that the setlist is empty; ask the server before
     // believing it.
     if (rows.length === 0) {
-        const viaApi = await fetchViaApi(setlistId)
+        const viaApi = await fetchTracksViaPublicApi(setlistId)
         if (viaApi && viaApi.length > 0) return viaApi
     }
     return sortRows(rows) as unknown as SetlistTrack[]

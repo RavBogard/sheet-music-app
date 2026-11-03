@@ -22,7 +22,10 @@ vi.mock("firebase/firestore", () => {
     }
     return {
         collection,
-        query: (col: unknown, ...cs: unknown[]) => ({ kind: "q", col, cs }),
+        // Non-enumerable withConverter: setlist queries take the converter on
+        // the query (tenantQuery), and toEqual must not see it.
+        query: (col: unknown, ...cs: unknown[]) =>
+            Object.defineProperty({ kind: "q", col, cs }, "withConverter", { value() { return this }, enumerable: false }),
         where: (f: unknown, op: string, v: unknown) => ({ where: [f, op, v] }),
         orderBy: (f: string, dir = "asc") => ({ orderBy: [f, dir] }),
         limit: (n: number) => ({ limit: n }),

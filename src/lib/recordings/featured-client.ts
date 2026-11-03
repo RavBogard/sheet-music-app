@@ -3,7 +3,8 @@
 // held or hidden take never shows. A signed-out visitor can't list from the
 // client, so the public Listen page reads on the server instead.
 
-import { collection, onSnapshot, query, where } from "firebase/firestore"
+import { onSnapshot } from "firebase/firestore"
+import { recordingsQuery } from "@/lib/tenant-query"
 
 import { recoverFromFirestoreShutdown, subscribeWithDb } from "@/lib/firebase"
 import type { OrgId } from "@/lib/org/types"
@@ -35,7 +36,7 @@ export function subscribeFeaturedBySong(
 ): () => void {
     return subscribeWithDb((db) =>
         onSnapshot(
-            query(collection(db, "recordings"), where("orgId", "==", orgId)),
+            recordingsQuery(db, orgId),
             (snap) => {
                 const recs = snap.docs.map((d) => ({ ...(d.data() as Recording), id: d.id }))
                 cb(featuredBySong(recs))

@@ -335,6 +335,25 @@ describe('v50-06-03: startSnapshotListener', () => {
         stop()
     })
 
+    it('a permission-denied tracks listener calls onTracksRefused; other errors do not', async () => {
+        for (const [code, expected] of [['permission-denied', 1], ['unavailable', 0]] as const) {
+            const { subscriber, handle } = makeSubscriberHarness()
+            const onTracksRefused = vi.fn()
+            const stop = startSnapshotListener({
+                setlistId: 's1',
+                db,
+                orgId: 'brotherslazaroff',
+                subscriber,
+                logger: { warn: vi.fn(), error: vi.fn() },
+                onTracksRefused,
+            })
+            handle.raiseTracksError(Object.assign(new Error(code), { code }))
+            await flush()
+            expect(onTracksRefused).toHaveBeenCalledTimes(expected)
+            stop()
+        }
+    })
+
     it('returned unsubscribe stops both setlist and tracks subscriptions', async () => {
         const { subscriber, handle } = makeSubscriberHarness()
         const stop = startSnapshotListener({

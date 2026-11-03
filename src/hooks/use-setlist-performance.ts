@@ -13,7 +13,7 @@ import { logger } from "@/lib/logger"
 import { subscribeToMusicianProfile } from "@/lib/musician-profile"
 import { getDb } from "@/lib/local/schema"
 import type { LocalTrack } from "@/lib/local/types"
-import { getTracksForSetlistClient, fetchTracksForSetlistClient, tenantOfSetlist } from "@/lib/client-tracks"
+import { getTracksForSetlistClient, fetchTracksForSetlistClient, fetchTracksViaPublicApi, tenantOfSetlist } from "@/lib/client-tracks"
 import { setlistMovedPast } from "@/lib/performance/setlist-freshness"
 import {
     type SnapshotListenerOpts,
@@ -179,8 +179,15 @@ export function useSetlistPerformance(
     // owner — which is what happened to every band device from 2026-10-13.
     // So the listener waits until the setlist doc is here and its tenant is
     // known, then mounts once with it.
+    //
+    // ANOTHER TENANT'S SETLIST (2026-11-03). A device signed in to one tenant
+    // that opens another tenant's Perform link has no standing there, so the
+    // rules refuse the tracks listener. That refusal sets `tracksRefused`, and
+    // the rows then come from the public endpoint (below), as signed out.
     const listenerOrg = setlistData ? tenantOfSetlist(setlistData) : null
+    const [tracksRefused, setTracksRefused] = useState(false)
     useEffect(() => {
+        setTracksRefused(false)
         if (!setlistId) return
         if (!user) return
         if (!listenerOrg) return
@@ -189,6 +196,7 @@ export function useSetlistPerformance(
                 setlistId,
                 db: getDb(),
                 orgId: listenerOrg,
+                onTracksRefused: () => setTracksRefused(true),
             })
             return stop
         } catch (err) {
@@ -293,13 +301,6 @@ export function useSetlistPerformance(
         }
     }, [setlistId, user, ssrEmpty])
 
-    const plannedTracks: SetlistTrack[] =
-        liveTracks.length > 0
-            ? liveTracks
-            : !ssrEmpty
-              ? (initial?.tracks ?? liveTracks)
-              : (fetchedTracks ?? liveTracks)
-
     // PERF-06: signed-out devices get no realtime rows, but the public setlist
     // doc is live (`setlistData`). If its version moved past the SSR frame,
     // say so; the page shows a strip and the musician taps to reload.
@@ -317,6 +318,49 @@ export function useSetlistPerformance(
         typeof liveVersion === "number"
             ? `v${liveVersion}`
             : toISOString(setlistData?.updatedAt as never)
+
+    // The refused-listener fallback: ask the public endpoint now, again on
+    // `online` / `visibilitychange`, and whenever the live setlist doc (a
+    // public get, still subscribed) moves. The answer is the server's full
+    // set, so it replaces what we had.
+    const [refusedTracks, setRefusedTracks] = useState<SetlistTrack[] | null>(null)
+    useEffect(() => { setRefusedTracks(null) }, [setlistId])
+    useEffect(() => {
+        if (!setlistId || !user || !tracksRefused) return
+        let cancelled = false
+        let inFlight = false
+        const load = async () => {
+            if (cancelled || inFlight) return
+            inFlight = true
+            try {
+                const rows = await fetchTracksViaPublicApi(setlistId)
+                if (!cancelled && rows) setRefusedTracks(rows)
+            } finally {
+                inFlight = false
+            }
+        }
+        void load()
+        const onVisible = () => {
+            if (document.visibilityState === "visible") void load()
+        }
+        window.addEventListener("online", load)
+        document.addEventListener("visibilitychange", onVisible)
+        return () => {
+            cancelled = true
+            window.removeEventListener("online", load)
+            document.removeEventListener("visibilitychange", onVisible)
+        }
+    }, [setlistId, user, tracksRefused, setlistLiveStamp])
+
+    const plannedTracks: SetlistTrack[] =
+        tracksRefused && refusedTracks
+            ? refusedTracks
+            : liveTracks.length > 0
+              ? liveTracks
+              : !ssrEmpty
+                ? (initial?.tracks ?? liveTracks)
+                : (fetchedTracks ?? liveTracks)
+
     const setlistUpdatedAt: Date | null =
         toDate((setlistData?.updatedAt ?? initial?.setlist?.updatedAt) as never) ?? null
 

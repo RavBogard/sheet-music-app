@@ -365,6 +365,36 @@ describe('useSetlistPerformance (v5h-01-04: Dexie-backed)', () => {
     expect((startFn.mock.calls[0]?.[0] as { orgId?: string }).orgId).toBe('brotherslazaroff')
   })
 
+  it("another tenant's setlist: a refused tracks listener falls back to the public endpoint and refreshes on visibility", async () => {
+    // A crc device opening a Brothers Lazaroff Perform link: the rules refuse
+    // the listener, so the rows come from /api/setlists/{id}/tracks.
+    mockUseSafeFirestoreSync.mockReturnValue({
+      data: { id: SETLIST_ID, orgId: 'brotherslazaroff', hydrated: true, tracks: [], musicians: [] },
+      loading: false,
+      error: null,
+    })
+    let rows = [{ id: 'r1', order: 0, title: 'One' }]
+    const fetchMock = vi.fn(async () => ({ ok: true, json: async () => ({ found: true, tracks: rows }) }))
+    vi.stubGlobal('fetch', fetchMock)
+    try {
+      const startFn = vi.fn((opts: { onTracksRefused?: (e: Error) => void }) => {
+        opts.onTracksRefused?.(Object.assign(new Error('denied'), { code: 'permission-denied' }))
+        return () => {}
+      })
+      const { result } = renderHook(() =>
+        useSetlistPerformance(SETLIST_ID, { startSnapshotListener: startFn as never }),
+      )
+      await waitFor(() => expect(result.current.plannedTracks.map((t) => t.id)).toEqual(['r1']))
+      expect(String((fetchMock.mock.calls[0] as unknown[])[0])).toBe(`/api/setlists/${SETLIST_ID}/tracks`)
+
+      rows = [{ id: 'r1', order: 0, title: 'One' }, { id: 'r2', order: 1, title: 'Two' }]
+      act(() => { document.dispatchEvent(new Event('visibilitychange')) })
+      await waitFor(() => expect(result.current.plannedTracks.map((t) => t.id)).toEqual(['r1', 'r2']))
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
   it('does NOT mount the snapshot listener for unauthenticated public sessions (R-0919-audit-2)', () => {
     // Contract reversal, twice over. Before v60-12-01 the listener was skipped
     // for public users; v60-12-01 mounted it because `tracks/*` had been opened

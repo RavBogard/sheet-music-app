@@ -15,7 +15,8 @@ const mockCollection = vi.fn((...args: unknown[]) => ({
     args,
     withConverter: vi.fn(() => ({ __ref: 'collection-converted', args })),
 }))
-const mockQuery = vi.fn((...args: unknown[]) => ({ __ref: 'query', args }))
+const mockQuery = vi.fn((...args: unknown[]) =>
+    Object.defineProperty({ __ref: 'query', args }, 'withConverter', { value() { return this }, enumerable: false }))
 const mockOrderBy = vi.fn((...args: unknown[]) => ({ __ref: 'orderBy', args }))
 const mockLimit = vi.fn((...args: unknown[]) => ({ __ref: 'limit', args }))
 

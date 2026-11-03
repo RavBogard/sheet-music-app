@@ -9,8 +9,9 @@
 import { useState, useEffect } from "react"
 import {
     doc, getDoc, setDoc, deleteDoc, onSnapshot,
-    collection, Timestamp, query, where,
+    Timestamp,
 } from "firebase/firestore"
+import { templatesQuery } from "@/lib/tenant-query"
 import { getDb, subscribeWithDb } from "./firebase"
 import type { TemplateSlot } from "./liturgical-templates"
 import { logger } from "@/lib/logger"
@@ -151,7 +152,7 @@ export function useCustomTemplates(): {
         // docs by the stamped `orgId` field, which the list rule can prove.
         // selectOrgOverrides still maps the doc ids back to bare keys.
         const unsub = subscribeWithDb((db) => onSnapshot(
-            query(collection(db, COLLECTION), where("orgId", "==", org)),
+            templatesQuery(db, org),
             (snap) => {
                 const docs = snap.docs.map((d) => ({
                     id: d.id,

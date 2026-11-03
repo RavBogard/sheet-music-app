@@ -24,11 +24,14 @@ vi.mock("firebase/firestore", () => {
         const col = { kind: "col", path, constraints: [] as unknown[], withConverter: () => col }
         return col
     }
-    const query = (col: { path: string; constraints: unknown[] }, ...cs: unknown[]) => ({
-        kind: "q",
-        path: col.path,
-        constraints: [...col.constraints, ...cs],
-    })
+    // Non-enumerable withConverter: setlist queries take the converter on the
+    // query (tenantQuery), and toEqual assertions must not see it.
+    const query = (col: { path: string; constraints: unknown[] }, ...cs: unknown[]) =>
+        Object.defineProperty(
+            { kind: "q", path: col.path, constraints: [...col.constraints, ...cs] },
+            "withConverter",
+            { value() { return this }, enumerable: false },
+        )
     const where = (f: unknown, op: string, v: unknown) => ({ type: "where", f, op, v })
     const orderBy = (f: string, dir = "asc") => ({ type: "orderBy", f, dir })
     const limit = (n: number) => ({ type: "limit", n })

@@ -174,7 +174,8 @@ export async function fetchMomentFileIds(
 ): Promise<Set<string>> {
     const out = new Set<string>()
     try {
-        const { collection, getDocs, limit, query, where } = await import("firebase/firestore")
+        const { getDocs } = await import("firebase/firestore")
+        const { tracksByMomentQuery, tracksByUnitsQuery } = await import("@/lib/tenant-query")
         const db = await getDb()
         // Phase 9: listing tracks needs standing in the tenant that owns the
         // rows, so every query carries the orgId of the site this page is on.
@@ -182,12 +183,12 @@ export async function fetchMomentFileIds(
         // tenant's settings, which it never should have.
         const org = coerceOrgId(typeof document !== "undefined" ? document.documentElement.dataset.org : undefined)
         const queries = [
-            query(collection(db, "tracks"), where("orgId", "==", org), where("momentId", "==", momentId), limit(500)),
+            tracksByMomentQuery(db, org, momentId),
         ]
         const units = unitIds.filter(Boolean).slice(0, 30)
         if (units.length > 0) {
             queries.push(
-                query(collection(db, "tracks"), where("orgId", "==", org), where("liturgyRef.unitId", "in", units), limit(500)),
+                tracksByUnitsQuery(db, org, units),
             )
         }
         const snaps = await Promise.allSettled(queries.map((q) => getDocs(q)))

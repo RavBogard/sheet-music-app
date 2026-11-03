@@ -4,7 +4,8 @@ import { useState, useEffect, useMemo } from "react"
 import { useAuth } from "@/lib/auth-context"
 import { useOrg } from "@/lib/org/org-context"
 import { getDb } from "@/lib/firebase"
-import { collection, query, where, orderBy, limit, doc, getDoc, getDocFromCache, setDoc, documentId, getDocs, Timestamp, serverTimestamp, type Query, type DocumentData } from "firebase/firestore"
+import { upcomingSetlistsQuery } from "@/lib/tenant-query"
+import { collection, query, where, doc, getDoc, getDocFromCache, setDoc, documentId, getDocs, serverTimestamp, type Query, type DocumentData } from "firebase/firestore"
 import { toDate } from "@/lib/firestore-helpers"
 import { Setlist, type SetlistTrack } from "@/lib/setlist-firebase"
 import { useSafeFirestoreSync } from "@/hooks/use-safe-firestore-sync"
@@ -98,14 +99,7 @@ export function useUpcomingPrep() {
             const nextWeek = new Date(now)
             nextWeek.setDate(nextWeek.getDate() + 7)
             // Multi-tenant phase 2: this tenant's setlists only.
-            setQ(query(
-                collection(db, 'setlists'),
-                where('orgId', '==', org),
-                where('eventDate', '>=', Timestamp.fromDate(now)),
-                where('eventDate', '<=', Timestamp.fromDate(nextWeek)),
-                orderBy('eventDate', 'asc'),
-                limit(5)
-            ))
+            setQ(upcomingSetlistsQuery(db, org, now, { to: nextWeek, max: 5 }))
         })
         return () => { cancelled = true }
     }, [user, isMember, org])
