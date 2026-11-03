@@ -142,3 +142,18 @@ not a patch of the particulars.
     "recording".
   - A typed BPM is never overwritten.
   - Clips with no confident beat are skipped.
+
+## Daniel's batch answers (2026-11-03)
+- Editor wording: keep all of it (offline note, "Couldn't save…" with Try again/Discard, Saving N /
+  N not saved / Offline since, "Sign in again to save").
+- Modes: Rehearse / Perform / Edit. Drop the Rehearse intro line. Hebrew: ship the drafts.
+- BPM: write into empty fields; the editor shows a small "from recording" mark that clears on a
+  human edit.
+- Perform: briefly highlight the changed row for leaders; no banners.
+- Friday setlist: tidy the titles and notes through MCP and read the result back.
+- Fold the "later" list into this push, as one PR after PR 4.
+- Dependabot: merge the safe ones; hold dexie-react-hooks (major). GATE: react-day-picker 9→10 is
+  also held as a major UI-library bump — proceeded because "safe" excludes untested majors in
+  app code.
+- GATE: cleanup_all_test_data gets restricted to the caller's tenant (po excepted) in the later-list
+  PR — proceeded because it follows from the tenant-isolation rulings.
