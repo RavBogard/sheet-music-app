@@ -1,14 +1,12 @@
 import {
-    collection,
     doc,
     getDocs,
-    query,
     updateDoc,
-    where,
     type Firestore,
 } from 'firebase/firestore'
 
 import { logger } from '@/lib/logger'
+import { setlistTracksQuery } from '@/lib/tenant-query'
 import { deriveSetlistCounts } from '@/lib/setlist-derived-counts'
 
 /**
@@ -80,11 +78,7 @@ export async function reconcileSetlistTrackCount(
     try {
         const org = orgId
         const snap = await getDocs(
-            query(
-                collection(fsDb, 'tracks'),
-                where('orgId', '==', org),
-                where('setlistId', '==', setlistId),
-            ),
+            setlistTracksQuery(fsDb, org, setlistId),
         )
         const derived = deriveSetlistCounts(
             snap.docs.map((d) => d.data() as { type?: unknown; fileId?: unknown }),

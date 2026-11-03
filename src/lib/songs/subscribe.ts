@@ -1,4 +1,5 @@
-import { collection, onSnapshot, query, where, type DocumentChange } from 'firebase/firestore'
+import { onSnapshot, type DocumentChange } from 'firebase/firestore'
+import { songsQuery } from '@/lib/tenant-query'
 
 import { subscribeWithDb, recoverFromFirestoreShutdown } from '@/lib/firebase'
 import { getDb, type LocalDb } from '@/lib/local/schema'
@@ -78,7 +79,7 @@ const defaultFirestoreAdapter: SubscribeAdapter = {
             // Every songs doc carries orgId (990 of 990, measured 2026-09-22;
             // the writers stamp it). A query for 'crc' cannot match an
             // unstamped doc, which is why the writers must.
-            const ref = query(collection(firestoreDb, 'songs'), where('orgId', '==', orgId))
+            const ref = songsQuery(firestoreDb, orgId)
             return onSnapshot(
                 ref,
                 (snap) => {

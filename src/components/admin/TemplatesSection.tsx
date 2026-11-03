@@ -5,7 +5,8 @@ import { Loader2, Import } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { GROUP_HEADING_CLASS, LIST_GROUP_CLASS } from "@/components/layout/Page"
-import { collection, query, where, orderBy, limit, getDocs } from "firebase/firestore"
+import { getDocs } from "firebase/firestore"
+import { recentSetlistsQuery } from "@/lib/tenant-query"
 import { getDb } from "@/lib/firebase"
 import { getDefaultTemplate, TEMPLATE_LABELS, convertSetlistToTemplate, type TemplateSlot } from "@/lib/liturgical-templates"
 import { useOrg } from "@/lib/org/org-context"
@@ -52,12 +53,7 @@ export function TemplatesSection() {
         try {
             const db = await getDb()
             // Multi-tenant phase 2: import only from this tenant's setlists.
-            const q = query(
-                collection(db, "setlists"),
-                where("orgId", "==", org),
-                orderBy("date", "desc"),
-                limit(10),
-            )
+            const q = recentSetlistsQuery(db, org, 10)
             const snap = await getDocs(q)
             const setlists: SetlistSummary[] = snap.docs.map(d => {
                 const data = d.data()

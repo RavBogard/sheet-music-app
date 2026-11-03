@@ -6,10 +6,8 @@
  */
 
 import { getDb, subscribeWithDb } from '@/lib/firebase'
-import {
-    collection, query, where, orderBy, onSnapshot,
-    updateDoc, doc, Timestamp,
-} from 'firebase/firestore'
+import { onSnapshot, updateDoc, doc } from 'firebase/firestore'
+import { myAssignmentsQuery, tenantAssignmentsQuery, upcomingSetlistsQuery } from '@/lib/tenant-query'
 import type { SchedulingAssignment } from '@/types/models'
 import { logger } from '@/lib/logger'
 import type { OrgId } from '@/lib/org/types'
@@ -24,12 +22,7 @@ export function subscribeToMyAssignments(
     callback: (assignments: SchedulingAssignment[]) => void
 ): () => void {
     return subscribeWithDb((db) => {
-        const q = query(
-            collection(db, 'scheduling_assignments'),
-            where('musicianUid', '==', uid),
-            where('status', 'in', ['pending', 'confirmed']),
-            orderBy('assignedAt', 'desc'),
-        )
+        const q = myAssignmentsQuery(db, uid)
 
         return onSnapshot(q, (snap) => {
             const assignments = snap.docs.map(d => ({
@@ -58,12 +51,7 @@ export function subscribeToAllUpcomingAssignments(
     callback: (assignments: SchedulingAssignment[]) => void
 ): () => void {
     return subscribeWithDb((db) => {
-        const q = query(
-            collection(db, 'scheduling_assignments'),
-            where('orgId', '==', org),
-            where('status', 'in', ['pending', 'confirmed']),
-            orderBy('assignedAt', 'desc'),
-        )
+        const q = tenantAssignmentsQuery(db, org)
 
         return onSnapshot(q, (snap) => {
             const assignments = snap.docs
@@ -89,12 +77,7 @@ export function subscribeToUpcomingSetlists(
     now.setHours(0, 0, 0, 0)
 
     return subscribeWithDb((db) => {
-        const q = query(
-            collection(db, 'setlists'),
-            where('orgId', '==', org),
-            where('eventDate', '>=', Timestamp.fromDate(now)),
-            orderBy('eventDate', 'asc'),
-        )
+        const q = upcomingSetlistsQuery(db, org, now)
 
         return onSnapshot(q, (snap) => {
             const setlists = snap.docs.map(d => ({

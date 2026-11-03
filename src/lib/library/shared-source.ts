@@ -14,7 +14,8 @@
  * local Dexie `songs` table, like own rows, so the picker works offline and
  * stale shared rows (unshared since) are dropped.
  */
-import { collection, doc, getDoc, getDocs, query, where, type Firestore } from 'firebase/firestore'
+import { doc, getDoc, getDocs, type Firestore } from 'firebase/firestore'
+import { sharedCollectionsQuery, sharedLibraryRowsQuery } from '@/lib/tenant-query'
 
 import { getDb as getFirestoreDb } from '@/lib/firebase'
 import { normalizeCollection } from '@/lib/library/collections'
@@ -68,7 +69,7 @@ const firestoreSource: SharedSource = {
         const out: SharedCollection[] = []
         for (const field of ['sharedWith', 'assignedTo'] as const) {
             try {
-                const snap = await getDocs(query(collection(db, 'collections'), where(field, 'array-contains', org)))
+                const snap = await getDocs(sharedCollectionsQuery(db, field, org))
                 for (const d of snap.docs) {
                     const rec = toSharedCollection(d.id, d.data())
                     if (rec) out.push(rec)
@@ -81,13 +82,7 @@ const firestoreSource: SharedSource = {
     },
     async listSharedRows(org) {
         const db: Firestore = await getFirestoreDb()
-        const snap = await getDocs(
-            query(
-                collection(db, 'library_index'),
-                where('visibleToOrgs', 'array-contains', org),
-                where('orgId', '!=', org),
-            ),
-        )
+        const snap = await getDocs(sharedLibraryRowsQuery(db, org))
         const out: SharedFile[] = []
         for (const d of snap.docs) {
             const row = toSharedFile(d.id, d.data())

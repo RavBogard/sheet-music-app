@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import { Loader2, CheckCircle, AlertCircle, Clock, ArchiveRestore, ChevronDown, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { getDb } from "@/lib/firebase"
+// eslint-disable-next-line no-restricted-imports -- non-tenant: sync_runs (platform log, no orgId)
 import { collection, query, orderBy, limit, getDocs } from "firebase/firestore"
 import { LibrarySyncCard } from "./library/LibrarySyncCard"
 import { Button } from "@/components/ui/button"

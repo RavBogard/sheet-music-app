@@ -34,6 +34,51 @@ const eslintConfig = defineConfig([
       "no-console": ["error", { allow: ["warn", "error"] }],
     },
   },
+  {
+    // Setlist sync PR 2: client list queries over tenant collections are built
+    // only in src/lib/tenant-query.ts (orgId filter first; the rules refuse a
+    // list without it). `collection`/`collectionGroup` from the client SDK are
+    // banned elsewhere, statically, as a namespace, or through a dynamic
+    // import. A file that needs collection() for a write or a non-tenant
+    // subcollection disables the rule on that line and says why.
+    files: ["src/**/*.ts", "src/**/*.tsx"],
+    ignores: [
+      "src/lib/tenant-query.ts",
+      "src/app/api/**",
+      "src/lib/mcp/**",
+      "src/test/**",
+      "**/__tests__/**",
+      "**/*.test.ts",
+      "**/*.test.tsx",
+    ],
+    rules: {
+      "no-restricted-imports": ["error", {
+        paths: [{
+          name: "firebase/firestore",
+          importNames: ["collection", "collectionGroup"],
+          message: "Build client list queries in src/lib/tenant-query.ts. For a write or a non-tenant subcollection, disable this line and name the reason.",
+        }],
+      }],
+      "no-restricted-syntax": ["error",
+        {
+          selector: "VariableDeclarator[init.argument.type='ImportExpression'][init.argument.source.value='firebase/firestore'] > ObjectPattern > Property[key.name=/^collection(Group)?$/]",
+          message: "Build client list queries in src/lib/tenant-query.ts (dynamic import of collection/collectionGroup).",
+        },
+        {
+          selector: "CallExpression[callee.property.name='then'][callee.object.type='ImportExpression'][callee.object.source.value='firebase/firestore'] ObjectPattern > Property[key.name=/^collection(Group)?$/]",
+          message: "Build client list queries in src/lib/tenant-query.ts (dynamic import of collection/collectionGroup).",
+        },
+        {
+          selector: "MemberExpression[object.argument.type='ImportExpression'][object.argument.source.value='firebase/firestore'][property.name=/^collection(Group)?$/]",
+          message: "Build client list queries in src/lib/tenant-query.ts (dynamic import of collection/collectionGroup).",
+        },
+        {
+          selector: "MemberExpression[object.type='ImportExpression'][object.source.value='firebase/firestore'][property.name=/^collection(Group)?$/]",
+          message: "Build client list queries in src/lib/tenant-query.ts (dynamic import of collection/collectionGroup).",
+        },
+      ],
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:

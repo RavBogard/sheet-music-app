@@ -1,6 +1,7 @@
 import { storedClassFor, storedRabbiSlot } from "@/lib/history/classify"
 import { getDb, subscribeWithDb } from "./firebase";
 import {
+    // eslint-disable-next-line no-restricted-imports -- write only: addDoc to setlists
     collection,
     addDoc,
     updateDoc,
@@ -9,12 +10,8 @@ import {
     getDoc,
     setDoc,
     onSnapshot,
-    query,
-    orderBy,
-    limit,
     serverTimestamp,
     Timestamp,
-    where,
     getDocs,
     writeBatch,
     runTransaction,
@@ -22,6 +19,7 @@ import {
     type DocumentReference,
 } from "firebase/firestore";
 import type { OrgId } from "@/lib/org/types";
+import { recentSetlistsQuery } from "@/lib/tenant-query";
 import { coerceOrgId, DEFAULT_ORG_ID } from "@/lib/org/registry";
 import { rowOrg } from "@/lib/org/membership";
 
@@ -335,8 +333,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
         // than every tenant's latest 50 — no caller omits it.
         subscribeToAllSetlists(callback: (setlists: Setlist[], fromCache: boolean) => void, onError?: (error: Error) => void, org: OrgId = DEFAULT_ORG_ID) {
             return subscribeWithDb((db) => {
-                const collectionRef = collection(db, COLLECTION_PATH).withConverter(setlistConverter)
-                const q = query(collectionRef, where("orgId", "==", org), orderBy("date", "desc"), limit(50));
+                const q = recentSetlistsQuery(db, org, 50).withConverter(setlistConverter)
 
                 return onSnapshot(q, {
                     next: (snapshot) => {
@@ -466,9 +463,8 @@ export function createSetlistService(userId: string | null, userName?: string | 
 
             try {
                 const db = await getDb()
-                const collectionRef = collection(db, COLLECTION_PATH).withConverter(setlistConverter)
                 // Multi-tenant phase 2: only this tenant's setlists.
-                const q = query(collectionRef, where('orgId', '==', org), orderBy('date', 'desc'), limit(20))
+                const q = recentSetlistsQuery(db, org, 20).withConverter(setlistConverter)
                 const snap = await getDocs(q)
                 for (const docSnap of snap.docs) {
                     const candidate = docSnap.data() as Setlist | null

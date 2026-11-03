@@ -12,9 +12,10 @@ export async function fetchPartPresets(orgId: string, signedIn: boolean): Promis
     try {
         const work = (async () => {
             const { getDb } = await import("@/lib/firebase")
-            const { collection, getDocs, query, where } = await import("firebase/firestore")
+            const { getDocs } = await import("firebase/firestore")
+            const { partPresetsQuery } = await import("@/lib/tenant-query")
             const db = await getDb()
-            const snap = await getDocs(query(collection(db, "part_presets"), where("orgId", "==", orgId)))
+            const snap = await getDocs(partPresetsQuery(db, orgId))
             const out: PartPreset[] = []
             snap.forEach((d) => {
                 const data = d.data() as { scope?: { kind?: string; uid?: string; instrument?: string }; patterns?: unknown }
