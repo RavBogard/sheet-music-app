@@ -9,6 +9,9 @@
 import { notFound } from "next/navigation"
 import type { Metadata } from "next"
 
+import { hasFeature } from "@/lib/org/features"
+import { requestOrg } from "@/lib/org/request-org"
+
 import { RehearseClient } from "./RehearseClient"
 import { ID_RE, loadRehearse } from "./load"
 
@@ -21,5 +24,6 @@ export default async function RehearsePage({ params }: { params: Promise<{ id: s
     if (!ID_RE.test(id)) notFound()
     const data = await loadRehearse(id)
     if (!data) notFound()
-    return <RehearseClient setlistId={id} name={data.name} eventDate={data.eventDate} rows={data.rows} />
+    const chartsEnabled = await hasFeature((await requestOrg()).orgId, "perform")
+    return <RehearseClient setlistId={id} chartsEnabled={chartsEnabled} name={data.name} eventDate={data.eventDate} rows={data.rows} />
 }

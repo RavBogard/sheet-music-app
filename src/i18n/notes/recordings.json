@@ -199,6 +199,7 @@
     "transposeReset": {
         "where": "Rehearse chart page: the key button resets transposition",
         "who": "musicians",
-        "maxLength": 30
+        "maxLength": 45,
+        "context": "{key} is a key name such as Dm."
     }
 }

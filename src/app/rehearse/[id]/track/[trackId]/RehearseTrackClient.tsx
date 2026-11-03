@@ -67,7 +67,7 @@ export function RehearseChart({ song, kind }: { song: RehearseSongRow; kind: Vie
                 </p>
             )
         default:
-            return <PDFViewer url={url} trackName={song.title} />
+            return <PDFViewer url={url} trackName={song.title} hideSuggestions />
     }
 }
 
@@ -79,12 +79,19 @@ function KeyControl({ keyName, canTranspose }: { keyName: string | null; canTran
     const t = useT()
     const transposition = useMusicStore((s) => s.transposition)
     const setTransposition = useMusicStore((s) => s.setTransposition)
+    const setMusicXmlKey = useMusicStore((s) => s.setMusicXmlKey)
     const detected = useMusicStore((s) => s.musicXmlKey)
-    // Every chart opens in its written key, and leaves that way.
+    // Every chart opens in its written key, and leaves that way. The detected
+    // key is shared store state, so clear it too: prev/next never shows the
+    // previous song's key.
     useEffect(() => {
         setTransposition(0)
-        return () => setTransposition(0)
-    }, [setTransposition])
+        setMusicXmlKey(null)
+        return () => {
+            setTransposition(0)
+            setMusicXmlKey(null)
+        }
+    }, [setTransposition, setMusicXmlKey])
     const base = keyName ?? (canTranspose ? detected : null)
     const shown = base ? (transposition ? transposeChord(base, transposition) : base) : null
     if (!canTranspose) {
@@ -107,10 +114,15 @@ function KeyControl({ keyName, canTranspose }: { keyName: string | null; canTran
             <button
                 type="button"
                 data-testid="rehearse-key"
-                aria-label={t("recordings.transposeReset")}
-                disabled={transposition === 0}
-                onClick={() => setTransposition(0)}
-                className="tnum inline-flex h-11 min-w-12 items-center justify-center rounded-md px-1 text-sm font-bold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default"
+                aria-label={t("recordings.transposeReset", { key: shown ?? "" })}
+                aria-disabled={transposition === 0}
+                onClick={() => {
+                    if (transposition !== 0) setTransposition(0)
+                }}
+                className={cn(
+                    "tnum inline-flex h-11 min-w-12 items-center justify-center rounded-md px-1 text-sm font-bold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    transposition === 0 && "cursor-default",
+                )}
             >
                 {shown ?? "–"}
             </button>
@@ -157,20 +169,25 @@ export function RehearseTrackClient({ setlistId, song, kind, prevId, nextId }: R
     const base = `/rehearse/${setlistId}`
     const step = (id: string | null) => (id ? `${base}/track/${id}` : null)
     return (
-        <div data-testid="rehearse-track" className="fixed inset-0 z-50 flex h-dvh flex-col bg-background">
-            <header className="flex items-center gap-2 border-b border-rule px-2 py-1 sm:px-4">
+        <div
+            data-testid="rehearse-track"
+            className="fixed inset-0 z-50 flex h-dvh flex-col bg-background pe-[env(safe-area-inset-right)] ps-[env(safe-area-inset-left)]"
+        >
+            <header className="flex flex-wrap items-center gap-x-2 border-b border-rule px-2 pb-1 pt-[max(0.25rem,env(safe-area-inset-top))] sm:px-4">
                 <Link
                     href={base}
                     data-testid="rehearse-back"
                     className="touch-hit inline-flex h-11 shrink-0 items-center gap-1 rounded-md px-2 text-sm font-semibold text-brand hover:bg-brand/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-safe:transition-colors"
                 >
                     <ChevronLeft aria-hidden className="h-4 w-4 rtl:-scale-x-100" />
-                    <span>{t("recordings.backToRehearse")}</span>
+                    <span className="sr-only sm:not-sr-only">{t("recordings.backToRehearse")}</span>
                 </Link>
                 <h1 className="min-w-0 flex-1 truncate text-center text-base font-extrabold leading-tight text-foreground">
                     {song.title}
                 </h1>
-                <KeyControl key={song.id} keyName={song.key} canTranspose={kind === "musicxml"} />
+                <div className="order-last flex w-full justify-center sm:order-none sm:w-auto">
+                    <KeyControl key={song.id} keyName={song.key} canTranspose={kind === "musicxml"} />
+                </div>
             </header>
 
             {/* The dock is a sibling, not an overlay, so it can never cover the last system. */}

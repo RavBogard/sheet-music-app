@@ -12,6 +12,8 @@ import type { RehearseRow } from "./rows"
 
 export interface RehearseClientProps {
     setlistId: string
+    /** False when the tenant has Perform off: the chart pages 404, so no Chart button. */
+    chartsEnabled?: boolean
     name: string
     /** ISO date string, or null. */
     eventDate: string | null
@@ -19,7 +21,7 @@ export interface RehearseClientProps {
 }
 
 /** The Rehearse page body: the setlist's name and date, then each song with its key, notes, take and chart. */
-export function RehearseClient({ setlistId, name, eventDate, rows }: RehearseClientProps) {
+export function RehearseClient({ setlistId, chartsEnabled = true, name, eventDate, rows }: RehearseClientProps) {
     const t = useT()
     const fmt = useFormat()
     const date = eventDate ? fmt.date(eventDate, { weekday: "long", month: "long", day: "numeric", year: "numeric" }) : ""
@@ -59,7 +61,7 @@ export function RehearseClient({ setlistId, name, eventDate, rows }: RehearseCli
                                 <div className="min-w-0 flex-1">
                                     <h3
                                         className={cn(
-                                            "text-[0.95rem] leading-snug",
+                                            "break-words text-[0.95rem] leading-snug",
                                             row.take ? "font-bold text-foreground" : "font-semibold text-muted-foreground",
                                         )}
                                     >
@@ -94,7 +96,7 @@ export function RehearseClient({ setlistId, name, eventDate, rows }: RehearseCli
                                             {t("recordings.noRecordingYet")}
                                         </p>
                                     )}
-                                    {row.fileId ? (
+                                    {row.fileId && chartsEnabled ? (
                                         <Link
                                             href={`/rehearse/${setlistId}/track/${row.id}`}
                                             data-testid="rehearse-chart-link"

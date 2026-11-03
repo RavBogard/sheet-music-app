@@ -36,5 +36,5 @@
     "transposeGroup": "Transpose",
     "transposeDown": "Down a semitone",
     "transposeUp": "Up a semitone",
-    "transposeReset": "Back to written key"
+    "transposeReset": "Key {key}, back to written key"
 }

@@ -36,5 +36,5 @@
     "transposeGroup": "שינוי טון",
     "transposeDown": "חצי טון למטה",
     "transposeUp": "חצי טון למעלה",
-    "transposeReset": "חזרה לטון הכתוב"
+    "transposeReset": "טון {key}, חזרה לטון הכתוב"
 }

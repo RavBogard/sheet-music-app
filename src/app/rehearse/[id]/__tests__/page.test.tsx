@@ -23,6 +23,7 @@ vi.mock('@/lib/firebase-admin', () => ({
     }),
 }))
 vi.mock('@/lib/org/request-org', () => ({ requestOrg: async () => ({ orgId: m.hostOrg }) }))
+vi.mock('@/lib/org/features', () => ({ hasFeature: async () => true }))
 vi.mock('@/lib/server-auth', () => ({ serializeSetlist: (id: string, d: object) => ({ id, ...d }) }))
 vi.mock('@/lib/server-tracks', () => ({ getTracksForSetlist: async () => m.tracks }))
 vi.mock('@/lib/recordings/featured-server', () => ({ getFeaturedForSongs: (...a: unknown[]) => m.featured(...a) }))

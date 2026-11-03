@@ -6,6 +6,9 @@
 import { notFound } from "next/navigation"
 import type { Metadata } from "next"
 
+import { hasFeature } from "@/lib/org/features"
+import { requestOrg } from "@/lib/org/request-org"
+
 import { ID_RE, loadRehearse } from "../../load"
 import { songNeighbors } from "../../rows"
 import { RehearseTrackClient } from "./RehearseTrackClient"
@@ -21,6 +24,8 @@ export default async function RehearseTrackPage({
 }) {
     const { id, trackId } = await params
     if (!ID_RE.test(id) || !ID_RE.test(trackId)) notFound()
+    // The chart view is Perform's viewer, so it follows the tenant's `perform` flag.
+    if (!(await hasFeature((await requestOrg()).orgId, "perform"))) notFound()
     const data = await loadRehearse(id)
     if (!data) notFound()
     const { song, prev, next } = songNeighbors(data.rows, trackId)
