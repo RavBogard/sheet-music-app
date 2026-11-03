@@ -97,3 +97,35 @@ not a patch of the particulars.
 - GATE: wording for the new editor strings is provisional ("Reconnect to add, move or remove rows";
   "Couldn't save: {row} — {reason}", with "Try again" / "Discard"). Batched for Daniel's wording
   pass at the end of the wave.
+- SECURITY (pre-existing in prod, found while reviewing #78): MCP `backfill_track_mimetype` scans
+  and writes track rows of EVERY tenant after checking only the caller's own tenant role. Impact:
+  a leader of one tenant can trigger mimeType corrections and stamps on the other tenant's rows (no
+  content read back, and no deletion). Fixed in the #78 fix round with a stored-org check inside
+  the transaction. Reported to Daniel.
+- #78 fix round 3f6ed3c6:
+  - Every maintenance helper takes a required org, checked against the stored orgId inside the
+    transaction. The mimetype and isTest back-fills are scoped to the caller's tenant.
+  - The escape hatches are closed. touchUpdatedAt:false is used for server-derived writes until PR 3.
+  - The lead spot-checked maintenance.ts.
+- GATE: cleanup_all_test_data still deletes test-owned/isTest fixtures in both tenants (each one
+  under its own stored tenant) — proceeded because the behaviour is unchanged, it reaches test data
+  only, and the F-05 dryRun/force gate stays in place. Revisit in the later review if leaders of
+  one tenant shouldn't sweep the other's fixtures.
+
+## PR 3 = #79 (setlist-sync/editor-ops)
+- Adversarial review: CONFIRMED field loss in clone/duplicate/undo (pageNumber, audio fields,
+  transposition…); Perform live-director edits are fire-and-forget; 401 pins "saving"; rules still
+  allow client writes; duplicate creates on retry. One fix round sent, covering 10 items, including:
+  deny client writes to setlists/tracks in the rules now; a server-side hydrate for unhydrated
+  setlists; per-sub-field merge for gig.
+- Rehearse (Listen → Rehearse, with a chart view and the recording docked) is being built in
+  parallel and touches no shared files. The mode switch comes with PR 4.
+- Open question to Daniel: derived BPM — "show" (recommended) or "write".
+
+## Pause point (usage limit, 2026-11-03)
+- #80 Rehearse: fix round pushed (cabf401f); a merge-if-green watcher was started. After deploy, take
+  screenshots at 820×1180 and 390×844 on prod.
+- #79 PR 3: the builder is in its fix round (10 items plus the TS2352 test error). When it lands:
+  re-review only the security deltas (rules deny client writes, /create), then merge.
+- Next: PR 4 (Perform read model + the Rehearse/Perform/Edit mode switch), then the wording pass,
+  then derived BPM (waiting on Daniel: show/write).
