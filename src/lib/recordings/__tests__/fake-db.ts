@@ -79,6 +79,9 @@ export function fakeDb(seed: Store = {}) {
                 },
             }
         },
+        async getAll(...refs: Array<{ get: () => Promise<unknown> }>) {
+            return Promise.all(refs.map((r) => r.get()))
+        },
         async runTransaction<T>(fn: (tx: unknown) => Promise<T>): Promise<T> {
             const writes: Array<() => Promise<void>> = []
             const tx = {

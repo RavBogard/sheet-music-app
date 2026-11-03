@@ -158,6 +158,7 @@ import { getSongHistoryTool, exportSetlistsTool } from "./history"
 import { setStandingChoiceTool, clearStandingChoiceTool } from "./standing"
 import { setPartPresetTool, listPartPresetsTool } from "./part-presets"
 import { listRecordingsTool, updateRecordingTool } from "./recordings"
+import { applyRecordingTemposTool } from "./recording-tempos"
 import { draftServiceTool, createSetlistFromDraftTool } from "./draft-service"
 import { addOpenItemTool, resolveOpenItemTool } from "./open-items"
 import { readBackSetlistTool } from "./read-back-setlist"
@@ -909,6 +910,21 @@ export function registerReadTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await updateRecordingTool(uidFrom(extra), args, orgFrom(extra))),
+    )
+
+    server.registerTool(
+        "apply_recording_tempos",
+        {
+            description:
+                "Fill EMPTY bpm fields from recordings' detected tempos: for each song, its most confident live take's tempo (clips with no confident beat, held or hidden takes are skipped) goes into the song's default bpm and the bpm of this tenant's setlist rows bonded to it. A bpm a person typed is never overwritten; a value this tool filled earlier (marked bpmSource 'recording') is updated when a more confident take says otherwise. Run after publishing recordings or after the tempo back-fill. Admin / band_leader. Tenant-scoped. F-05: `dryRun` defaults true and writes nothing; a real run needs `dryRun: false, force: true`. Returns `{ok, dryRun, applied, summary:{recordings, songsWithTempo, fill, update, keep, skip}, recordings:[{recordingId, songId, songTitle, detectedBpm, alt, confidence, confident, used, why, fields?:[{target:'song'|'row', id, setlistId?, action:'fill'|'update'|'keep'|'skip', before, after?, reason}]}], written?:{songs, rows, setlists}}`.",
+            inputSchema: {
+                songId: z.string().optional().describe("Only this chart's recordings (from search_library). Default: every song with a recording."),
+                dryRun: z.boolean().optional().describe("When true (default), report without writing. F-05 standing rule: dryRun does NOT require force."),
+                force: z.boolean().optional().describe("Required for a real write. Pair with `dryRun: false`."),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await applyRecordingTemposTool(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(

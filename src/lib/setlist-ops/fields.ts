@@ -60,6 +60,11 @@ const ROW_FIELDS: Record<string, { schema: z.ZodTypeAny; nullable: boolean }> = 
     type: { schema: z.enum(TRACK_TYPES), nullable: false },
     key: { schema: freeform, nullable: true },
     bpm: { schema: z.number().positive().max(400), nullable: true },
+    // 2026-11-03: provenance of a bpm filled from a recording (apply_recording_tempos).
+    // Accepted so a client that echoes a row back is not refused.
+    bpmSource: { schema: z.literal("recording"), nullable: true },
+    bpmSourceRecordingId: { schema: z.string().min(1).max(128), nullable: true },
+    bpmSourceValue: { schema: z.number().positive().max(400), nullable: true },
     leadMusician: { schema: freeform, nullable: true },
     referenceLink: { schema: freeform, nullable: true },
     notes: { schema: freeform, nullable: true },

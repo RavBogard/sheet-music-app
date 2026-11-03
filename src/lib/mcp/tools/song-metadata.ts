@@ -1,3 +1,4 @@
+import { FieldValue } from "firebase-admin/firestore"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { checkUserRateLimit } from "@/lib/rate-limit"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
@@ -46,6 +47,20 @@ export interface SongMetadataPatch {
     leadMusician?: string
     /** BET-5: the song's default length in seconds; a new setlist row copies it. */
     durationSec?: number
+    /**
+     * 2026-11-03: set only by apply_recording_tempos, with `bpm`: the bpm came
+     * from this recording (marker `bpmSource: "recording"`). A bpm written
+     * WITHOUT it is a person's, and clears the marker.
+     */
+    bpmSource?: { recordingId: string }
+}
+
+/** The bpm provenance marker a bpm write sets (from a recording) or clears (a person's). */
+function bpmMarker(patch: SongMetadataPatch): Record<"bpmSource" | "bpmSourceRecordingId" | "bpmSourceValue", unknown> {
+    if (patch.bpmSource && patch.bpm !== undefined) {
+        return { bpmSource: "recording", bpmSourceRecordingId: patch.bpmSource.recordingId, bpmSourceValue: patch.bpm }
+    }
+    return { bpmSource: FieldValue.delete(), bpmSourceRecordingId: FieldValue.delete(), bpmSourceValue: FieldValue.delete() }
 }
 
 export interface ApplySongMetadataResult {
@@ -182,7 +197,10 @@ export async function applySongMetadata(
         // of `defaults` (and `recent[]`) intact.
         const songUpdate: Record<string, unknown> = { updatedAt: Date.now() }
         if (patch.key !== undefined) songUpdate["defaults.key"] = patch.key
-        if (patch.bpm !== undefined) songUpdate["defaults.bpm"] = patch.bpm
+        if (patch.bpm !== undefined) {
+            songUpdate["defaults.bpm"] = patch.bpm
+            for (const [k, v] of Object.entries(bpmMarker(patch))) songUpdate[`defaults.${k}`] = v
+        }
         if (patch.leadMusician !== undefined)
             songUpdate["defaults.lead"] = patch.leadMusician
         if (patch.durationSec !== undefined)
@@ -192,7 +210,10 @@ export async function applySongMetadata(
     if (willWriteIndex) {
         const indexUpdate: Record<string, unknown> = {}
         if (patch.key !== undefined) indexUpdate.key = patch.key
-        if (patch.bpm !== undefined) indexUpdate.bpm = patch.bpm
+        if (patch.bpm !== undefined) {
+            indexUpdate.bpm = patch.bpm
+            Object.assign(indexUpdate, bpmMarker(patch))
+        }
         if (patch.leadMusician !== undefined)
             indexUpdate.leadMusician = patch.leadMusician
         if (patch.durationSec !== undefined)

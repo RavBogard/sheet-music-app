@@ -117,6 +117,7 @@ export const WRITE_TOOLS: ReadonlySet<string> = new Set([
     "clear_standing_choice",
     "set_part_preset",
     "update_recording",
+    "apply_recording_tempos",
     "draft_service",
     "create_setlist_from_draft",
     "reseed_service_profile",

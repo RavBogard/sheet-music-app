@@ -123,6 +123,7 @@
     "columnChart": "Chart",
     "trackTitleAria": "Track title",
     "trackTempoAria": "Track tempo (BPM)",
+    "bpmFromRecording": "from recording",
     "trackNotesAria": "Track notes",
     "rowsSelected_one": "{count} row selected",
     "rowsSelected_other": "{count} rows selected",

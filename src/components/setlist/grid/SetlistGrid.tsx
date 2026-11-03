@@ -44,6 +44,7 @@ import {
     ContextMenuTrigger,
 } from '@/components/ui/context-menu'
 import { useT } from '@/i18n/client'
+import { isAutoFilled } from '@/lib/recordings/tempo-fill'
 import { useFormat } from '@/i18n/format-client'
 import { formatUpdatedWhen } from '@/lib/format/updated-when'
 import type { T } from '@/i18n/core'
@@ -312,7 +313,11 @@ header: (ctx) => getMeta(ctx.table).t('setlistGrid.columnBpm'),
             const colId = 'bpm'
             const isSong = !row.type || row.type === 'song'
             if (!isSong) return <div className="flex h-full w-full items-center justify-center text-muted-foreground/20 text-xs font-mono select-none">—</div>
+            // 2026-11-03: a bpm filled from a recording (apply_recording_tempos) carries a faint
+            // mark; it goes once a person changes the value (the marker no longer matches).
+            const fromRecording = isAutoFilled(row)
             return (
+                <div className="relative h-full w-full">
                 <TextCell
                     value={
                         ctx.getValue() === undefined
@@ -353,6 +358,15 @@ header: (ctx) => getMeta(ctx.table).t('setlistGrid.columnBpm'),
                         )
                     }}
                 />
+                {fromRecording && (
+                    <span
+                        data-testid="bpm-from-recording"
+                        className="pointer-events-none absolute bottom-0 inset-x-0 truncate text-center text-[9px] leading-none text-muted-foreground/50 select-none"
+                    >
+                        {meta.t('setlistGrid.bpmFromRecording')}
+                    </span>
+                )}
+                </div>
             )
         },
     },

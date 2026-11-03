@@ -632,6 +632,12 @@
         "who": "leaders",
         "maxLength": 30
     },
+    "bpmFromRecording": {
+        "where": "Setlist editor: small faint mark under a BPM that was filled in automatically from a recording's detected tempo; gone once someone edits the BPM",
+        "who": "leaders",
+        "maxLength": 16,
+        "context": "Hebrew is a draft for review"
+    },
     "trackNotesAria": {
         "where": "Setlist editor: screen-reader label of the notes cell",
         "who": "leaders",
