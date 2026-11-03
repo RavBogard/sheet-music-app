@@ -24,13 +24,17 @@ vi.mock('@/lib/setlist-firebase', () => ({
 
 // Setlist sync PR 3: rows are appended through the ops client (one batch of
 // inserts at the end); undo is one batch of removes. No parent-doc write.
-const mockAppendRows = vi.fn(async (_setlistId: string, rows: unknown[]) => rows.map((_r, i) => `new-${i}`))
+const mockAppendRows = vi.fn(async (_setlistId: string, rows: unknown[], opts?: { onBatch?: (k: string) => void }) => {
+  opts?.onBatch?.('b1')
+  return rows.map((_r, i) => `new-${i}`)
+})
+const mockSettle = vi.fn(async (): Promise<'ok' | 'offline'> => 'ok')
+const mockReplay = vi.fn(async () => true)
 vi.mock('@/lib/setlist-ops-client/actions', () => ({
-  appendRows: (setlistId: string, rows: unknown[]) => mockAppendRows(setlistId, rows),
-}))
-const mockEnqueue = vi.fn().mockResolvedValue('b')
-vi.mock('@/lib/setlist-ops-client/runtime', () => ({
-  getOpsClient: () => ({ enqueue: mockEnqueue }),
+  appendRows: (setlistId: string, rows: unknown[], opts?: { onBatch?: (k: string) => void }) => mockAppendRows(setlistId, rows, opts),
+  settleBatch: () => mockSettle(),
+  replayOps: (...a: unknown[]) => mockReplay(...(a as [])),
+  SetlistOpRefusedError: class extends Error {},
 }))
 
 const mockAuth: { user: { uid: string; displayName: string } | null; isAdmin: boolean; isBandLeader: boolean; isMusician: boolean } = {
@@ -236,6 +240,18 @@ describe('useAddToSetlist', () => {
       expect(mockToastError).toHaveBeenCalledOnce()
     })
 
+    it('"Added" waits for the server: no success toast until the batch is answered', async () => {
+      mockSettle.mockResolvedValueOnce('offline')
+      const { result } = renderHook(() => useAddToSetlist())
+      act(() => { result.current.openForSongs([makeDriveFile()]) })
+      await act(async () => {
+        await result.current.addToSetlist('sl-1', makeSetlist())
+      })
+      expect(mockSettle).toHaveBeenCalled()
+      expect(mockToast).not.toHaveBeenCalled()
+      expect(mockToastError).toHaveBeenCalledOnce()
+    })
+
     it('closes the sheet after adding', async () => {
       const { result } = renderHook(() => useAddToSetlist())
       const file = makeDriveFile()
@@ -345,8 +361,8 @@ describe('useAddToSetlist', () => {
         await toastOptions.action.onClick()
       })
 
-      expect(mockEnqueue).toHaveBeenCalledOnce()
-      expect(mockEnqueue).toHaveBeenCalledWith('sl-1', [{ op: { kind: 'remove', rowId: 'new-0' } }])
+      expect(mockReplay).toHaveBeenCalledOnce()
+      expect(mockReplay).toHaveBeenCalledWith('sl-1', [{ kind: 'remove', rowId: 'new-0' }])
     })
   })
 })

@@ -32,12 +32,40 @@ function pushUndo(entry: Omit<OpsUndoEntry, 'kind' | 'ts'>): void {
     useUndoStore.getState().pushEntry({ kind: 'ops', ts: Date.now(), ...entry })
 }
 
+/** Called with the batch key once an action is queued (to `settle` it). */
+type OnBatch = (batchKey: string) => void
+
+/** A refused (or, for structural edits, offline) action, for callers that wait. */
+export class SetlistOpRefusedError extends Error {
+    constructor(
+        readonly reason: string,
+        readonly field?: string,
+    ) {
+        super(`setlist op refused: ${reason}${field ? ` (${field})` : ''}`)
+        this.name = 'SetlistOpRefusedError'
+    }
+}
+
+/**
+ * Wait for a queued action's answer. Throws SetlistOpRefusedError when it was
+ * refused. `offline` is returned, not thrown: a field edit stays queued.
+ */
+export async function settleBatch(setlistId: string, batchKey: string): Promise<'ok' | 'offline'> {
+    const r = await getOpsClient().settle(setlistId, batchKey)
+    if (r.ok) return 'ok'
+    if (r.reason === 'offline') return 'offline'
+    throw new SetlistOpRefusedError(r.reason, r.field)
+}
+
+/** Row fields the server will not clear: an undo never sends them as null. */
+const NOT_CLEARABLE_ROW = new Set(['title', 'type'])
+
 /** Field edit on one row. Works offline (queues and rebases). */
 export async function editRow(
     setlistId: string,
     row: LocalTrack,
     patch: Record<string, unknown>,
-    opts: { undo?: boolean } = {},
+    opts: { undo?: boolean; onBatch?: OnBatch } = {},
 ): Promise<void> {
     const want = rowEditSet(patch)
     const set: Record<string, unknown> = {}
@@ -45,30 +73,41 @@ export async function editRow(
     if (Object.keys(set).length === 0) return
     const base = baseOf(row as Record<string, unknown>, Object.keys(set))
     const op: WireOp = { kind: 'editRow', rowId: row.id, set, base }
-    await getOpsClient().enqueue(setlistId, [{ op, label: labelOf(row) }])
+    const key = await getOpsClient().enqueue(setlistId, [{ op, label: labelOf(row) }])
+    opts.onBatch?.(key)
     if (opts.undo !== false) {
-        pushUndo({
-            setlistId,
-            label: `Edit ${labelOf(row) ?? row.id}`,
-            undo: [{ kind: 'editRow', rowId: row.id, set: base, base: set }],
-            redo: [op],
-        })
+        // Undo sets each field back. A field the server cannot clear (title,
+        // type) that had no value before is left as it is, never sent as null.
+        const undoSet: Record<string, unknown> = {}
+        const undoBase: Record<string, unknown> = {}
+        for (const k of Object.keys(set)) {
+            if (base[k] === null && NOT_CLEARABLE_ROW.has(k)) continue
+            undoSet[k] = base[k]
+            undoBase[k] = set[k]
+        }
+        if (Object.keys(undoSet).length > 0) {
+            pushUndo({
+                setlistId,
+                label: `Edit ${labelOf(row) ?? row.id}`,
+                undo: [{ kind: 'editRow', rowId: row.id, set: undoSet, base: undoBase }],
+                redo: [op],
+            })
+        }
     }
 }
 
-/** Setlist metadata edit (name, date, service type, rabbi, gig). Works offline. */
+/** Setlist metadata edit (name, date, service type, rabbi, gig parts). Works offline. Returns the batch key ('' when nothing changed). */
 export async function editSetlist(
     setlistId: string,
     current: LocalSetlist | undefined,
     patch: Record<string, unknown>,
-): Promise<boolean> {
+): Promise<string> {
     const set = setlistEditSet(patch)
-    if (Object.keys(set).length === 0) return false
+    if (Object.keys(set).length === 0) return ''
     const base = setlistBaseOf(current as Record<string, unknown> | undefined, Object.keys(set))
-    await getOpsClient().enqueue(setlistId, [
+    return getOpsClient().enqueue(setlistId, [
         { op: { kind: 'editSetlist', set, base }, label: typeof current?.name === 'string' ? current.name : undefined },
     ])
-    return true
 }
 
 /**
@@ -80,7 +119,7 @@ export async function insertRows(
     view: readonly LocalTrack[],
     index: number,
     rows: ReadonlyArray<Record<string, unknown>>,
-    opts: { undo?: boolean; label?: string } = {},
+    opts: { undo?: boolean; label?: string; onBatch?: OnBatch } = {},
 ): Promise<string[] | null> {
     if (!isOnline()) return null
     if (rows.length === 0) return []
@@ -99,7 +138,9 @@ export async function insertRows(
         }
         return { op, label: labelOf(src as { title?: unknown }) }
     })
-    await getOpsClient().enqueue(setlistId, ops)
+    // Enqueue first: `onBatch?.(…)` would skip its argument when there is no callback.
+    const batchKey = await getOpsClient().enqueue(setlistId, ops)
+    opts.onBatch?.(batchKey)
     if (opts.undo !== false) {
         pushUndo({
             setlistId,
@@ -119,6 +160,7 @@ export async function insertRows(
 export async function appendRows(
     setlistId: string,
     rows: ReadonlyArray<Record<string, unknown>>,
+    opts: { onBatch?: OnBatch } = {},
 ): Promise<string[] | null> {
     if (!isOnline()) return null
     const ids: string[] = []
@@ -130,7 +172,9 @@ export async function appendRows(
             label: labelOf(src as { title?: unknown }),
         }
     })
-    await getOpsClient().enqueue(setlistId, ops)
+    // Enqueue first: `onBatch?.(…)` would skip its argument when there is no callback.
+    const batchKey = await getOpsClient().enqueue(setlistId, ops)
+    opts.onBatch?.(batchKey)
     return ids
 }
 

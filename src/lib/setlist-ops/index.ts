@@ -48,6 +48,7 @@ export {
 } from "./maintenance"
 export { stripUndefined, placementIndex, mergeFields, canonicalSort, valuesEqual } from "./pure"
 export { checkRowFields, checkSetlistFields, isSafeKey } from "./fields"
+export { hydrateEmbeddedTracks, type HydrateResult } from "./hydrate"
 export {
     createSetlistForCaller,
     validateCreateRequest,

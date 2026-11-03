@@ -135,11 +135,13 @@ describe('v60-12-01 firestore.rules tracks/{trackId}', () => {
         )
     })
 
-    it('Scenario G: band-leader CAN write — existing behavior regression check', async () => {
+    // Setlist sync PR 3: rows are written by the server op engine only; no
+    // browser persona writes them, band leader and admin included.
+    it('Scenario G: band-leader can NOT write from a browser (server-written only)', async () => {
         const leader = testEnv
             .authenticatedContext('leader-uid', { m: { crc: 'bl' } })
             .firestore()
-        await assertSucceeds(
+        await assertFails(
             leader.collection('tracks').doc('leader-track').set({
                 setlistId: 'setlist-1',
                 title: 'Leader Song',
@@ -149,9 +151,9 @@ describe('v60-12-01 firestore.rules tracks/{trackId}', () => {
         )
     })
 
-    it('Scenario H: admin CAN write — existing behavior regression check', async () => {
+    it('Scenario H: admin can NOT write from a browser (server-written only)', async () => {
         const admin = testEnv.authenticatedContext('admin-uid', { m: { crc: 'ad' } }).firestore()
-        await assertSucceeds(
+        await assertFails(
             admin.collection('tracks').doc('admin-track').set({
                 setlistId: 'setlist-1',
                 title: 'Admin Song',

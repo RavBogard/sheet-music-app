@@ -4,10 +4,12 @@
  * unsaved rows in a live tab).
  *
  *   create (set)  → insert, with the row's id and its neighbours in the local
- *                   cache as anchors. If the server already has the row (the
- *                   create landed after all, or it was a re-`set` of an
- *                   existing row) the server says `row-exists` and the intent
- *                   is dropped quietly.
+ *                   cache as anchors. Resolved against the server just before
+ *                   it is sent (client.ts resolveMigrated): a row that exists
+ *                   now becomes an edit of it with the base resolved, never
+ *                   dropped; a row the old cache had seen on the server and
+ *                   that is gone was removed since, and is refused
+ *                   ("the row was removed"), never resurrected.
  *   update        → editRow / editSetlist. The old outbox kept only the
  *                   `updatedAt` it expected, so the base is resolved against
  *                   the server just before sending: unchanged since → the
@@ -79,6 +81,18 @@ export async function migrateOutbox(db: LocalDb, reader: ServerReader): Promise<
         }
     }
 
+    // Rows the old listener once delivered from the server (its edit log keeps
+    // the doc id): a create of one of those that the server no longer has
+    // was removed since, and must not come back.
+    const seen = new Set<string>()
+    try {
+        for (const e of await db.edit_log.toArray()) {
+            if (e.source === 'snapshot-listener' && e.collection === 'tracks' && typeof e.docId === 'string') seen.add(e.docId)
+        }
+    } catch {
+        // No log: every missing create is treated as never saved.
+    }
+
     // Phase 2: one transaction, so a reload can never see half of it.
     await db.transaction('rw', db.outbox, db.tracks, db.intents, db.tombstones, async () => {
         const rows = (await db.outbox.toArray())
@@ -95,6 +109,10 @@ export async function migrateOutbox(db: LocalDb, reader: ServerReader): Promise<
         const movesBySetlist = new Map<string, Set<string>>()
 
         for (const r of rows) {
+            // A `set` carries the stamp its copy was taken at: if the row exists
+            // now, the edit it becomes applies only over that same version.
+            const expected =
+                r.expectedUpdatedAt ?? (r.op === 'set' && typeof r.payload?.updatedAt === 'number' ? (r.payload.updatedAt as number) : undefined)
             const base = (setlistId: string, op: SetlistIntent['op'], label?: string): SetlistIntent => ({
                 setlistId,
                 batchKey: key(),
@@ -103,7 +121,11 @@ export async function migrateOutbox(db: LocalDb, reader: ServerReader): Promise<
                 status: 'pending',
                 createdAt: r.createdAt ?? now,
                 ...(label ? { label } : {}),
-                migrated: { from: r.op, ...(r.expectedUpdatedAt !== undefined ? { expectedUpdatedAt: r.expectedUpdatedAt } : {}) },
+                migrated: {
+                    from: r.op,
+                    ...(expected !== undefined ? { expectedUpdatedAt: expected } : {}),
+                    ...(r.op === 'set' && seen.has(r.docId) ? { seenOnServer: true } : {}),
+                },
             })
             if (r.collection === 'setlists') {
                 if (r.op !== 'update') {

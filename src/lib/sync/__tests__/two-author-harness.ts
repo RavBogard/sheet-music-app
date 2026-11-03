@@ -152,6 +152,9 @@ export async function makeDevice(name: string, uid: string, claims: Record<strin
     const sent: OpsRequest[] = []
     runtime.configureOpsClient({
         db,
+        // Devices are separate browsers: no shared tab lock, no token refresh.
+        lock: undefined,
+        refreshAuth: undefined,
         transport: async (setlistId, body) => {
             if (gate) await gate
             sent.push(body as OpsRequest)

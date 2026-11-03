@@ -77,6 +77,15 @@ const ROW_FIELDS: Record<string, { schema: z.ZodTypeAny; nullable: boolean }> = 
     durationSec: { schema: DurationSecSchema, nullable: true },
     segue: { schema: z.boolean(), nullable: true },
     singerKeys: { schema: singerKeysSchema, nullable: true },
+    // Carried by clone / duplicate / undo (PR 3 fix round): the rest of a
+    // stored row an author can have set.
+    pageNumber: { schema: z.number().int().min(1).max(5000), nullable: true },
+    audioFileId: { schema: z.string().min(1).max(300), nullable: true },
+    audioFileName: { schema: z.string().max(500), nullable: true },
+    transposition: { schema: z.number().min(-24).max(24), nullable: true },
+    tune: { schema: freeform, nullable: true },
+    duration: { schema: z.string().max(40).transform(sanitizeFreeformString), nullable: true },
+    unmatched: { schema: z.boolean(), nullable: true },
 }
 
 const HHMM = /^([01]\d|2[0-3]):([0-5]\d)$/
@@ -87,10 +96,10 @@ const HHMM = /^([01]\d|2[0-3]):([0-5]\d)$/
  * MCP `update_setlist`. `eventDate` is sent as an ISO string and stored as a
  * Timestamp.
  *
- * `gig` (band tenants) merges as ONE field: the editor's sheet always sends
- * the whole gig it shows, so a concurrent edit to any part of it is a
- * conflict the author sees, never a silent half-merge. Its stored form has
- * no nulls (an absent part is simply not set), so `null` inside it is refused.
+ * `gig` (band tenants) is a PATCH merged per sub-field by the engine: the
+ * editor sends the parts it changed (null removes a part) with their base,
+ * so a concurrent MCP edit to another part is kept and one to the same part
+ * is a conflict on `gig.<part>`. `gig: null` clears the whole gig.
  */
 const SETLIST_FIELDS: Record<string, { schema: z.ZodTypeAny; nullable: boolean }> = {
     name: { schema: z.string().min(1).max(200).transform(sanitizeFreeformString), nullable: false },
@@ -107,13 +116,7 @@ const SETLIST_FIELDS: Record<string, { schema: z.ZodTypeAny; nullable: boolean }
     serviceNotes: { schema: freeform, nullable: true },
     startsAtLocal: { schema: z.string().regex(HHMM, "24-hour HH:mm"), nullable: true },
     special: { schema: z.boolean(), nullable: true },
-    gig: {
-        schema: GigPatchSchema.superRefine((gig, ctx) => {
-            if (Object.values(gig).some((v) => v === null))
-                ctx.addIssue({ code: z.ZodIssueCode.custom, message: "send the whole gig; leave a part out instead of null" })
-        }),
-        nullable: true,
-    },
+    gig: { schema: GigPatchSchema, nullable: true },
 }
 
 /** Row fields a client may write. The browser ops client mirrors this list (a test holds them equal). */

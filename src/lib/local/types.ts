@@ -157,7 +157,14 @@ export interface SetlistIntent {
      * edit is resolved against the server just before it is sent: the old
      * outbox kept only the `updatedAt` it expected, not the field values.
      */
-    migrated?: { expectedUpdatedAt?: number; from: 'set' | 'update' | 'delete' }
+    migrated?: {
+        expectedUpdatedAt?: number
+        from: 'set' | 'update' | 'delete'
+        /** The old cache had seen this row arrive from the server (edit log). */
+        seenOnServer?: boolean
+    }
+    /** ms the intent went out; a 'sending' intent older than 30 s is sent again. */
+    sentAt?: number
 }
 
 export type EditDescriptor =

@@ -71,6 +71,49 @@ describe("createSetlistForCaller (emulator)", () => {
         expect((await db().collection("setlists").doc(setlistId).get()).data()?.copiedFrom).toBe("bl-src")
     })
 
+    it("a clone loses nothing: every stored field of the row is copied except identity, tenant, parent and stamps", async () => {
+        const full = {
+            title: "T", type: "song", key: "G", bpm: 90, leadMusician: "Sam", referenceLink: "x", notes: "n",
+            songId: "s1", fileId: "s1", fileName: "f.pdf", mimeType: "application/pdf", performer: "p", description: "d",
+            estimatedMinutes: 3, momentId: "m", fixed: true, honors: [{ name: "A" }], durationSec: 200, segue: true,
+            singerKeys: [{ musician: "Sam", key: "A" }], pageNumber: 3, audioFileId: "a1", audioFileName: "a.mp3",
+            transposition: -2, tune: "Carlebach", duration: "3:30", unmatched: true,
+            chartStatus: "needs-check", // a stored field the editor does not write: still carried
+        }
+        await db().collection("setlists").doc("crc-full").set({ id: "crc-full", orgId: "crc", name: "Full", rabbiSlot: "randy" })
+        await db().collection("tracks").doc("crc-full-r0").set({
+            ...full, id: "crc-full-r0", setlistId: "crc-full", orgId: "crc", order: 0, version: 7, updatedAt: new Date(), opBatchId: "z",
+        })
+        const setlistId = id()
+        const r = await createSetlistForCaller(db(), CRC_LEAD, "crc", {
+            setlistId, name: "Clone", copyFrom: "crc-full", copyKind: "clonedFrom", rabbiSlot: "randy",
+        })
+        expect(r).toMatchObject({ ok: true })
+        const [row] = await rowsOf(setlistId)
+        const { id: _i, setlistId: _s, orgId, order, version, createdAt: _c, updatedAt: _u, lastModifiedAt: _l, ...rest } = row as Record<string, unknown>
+        expect(rest).toEqual(full)
+        expect({ orgId, order, version }).toEqual({ orgId: "crc", order: 0, version: 1 })
+        expect((await db().collection("setlists").doc(setlistId).get()).data()?.rabbiSlot).toBe("randy")
+    })
+
+    it("musicians: a uid with no standing in the tenant is dropped; a status sent by the client is ignored", async () => {
+        const setlistId = id()
+        await createSetlistForCaller(db(), CRC_LEAD, "crc", {
+            setlistId,
+            name: "Band",
+            musicians: [
+                { uid: CRC_MUS, name: "Member", email: "m@x", status: "confirmed" },
+                { uid: BL_LEAD, name: "Other tenant", email: "o@x" },
+            ],
+        })
+        const s = (await db().collection("setlists").doc(setlistId).get()).data()!
+        expect(s.musicians).toEqual([
+            { uid: CRC_MUS, name: "Member", email: "m@x" },
+            { name: "Other tenant", email: "o@x" },
+        ])
+        expect(s.assignedUids).toEqual([CRC_MUS])
+    })
+
     it("the other tenant: copying its setlist reads as not-found, and nothing is written", async () => {
         const setlistId = id()
         const r = await createSetlistForCaller(db(), CRC_LEAD, "crc", { setlistId, name: "Steal", copyFrom: "bl-src" })

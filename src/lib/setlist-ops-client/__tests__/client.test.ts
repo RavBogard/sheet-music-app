@@ -6,7 +6,7 @@ import { LocalDb } from '@/lib/local/schema'
 import type { LocalTrack, SetlistIntent } from '@/lib/local/types'
 import { checkSetlistFields, ROW_FIELD_NAMES, SETLIST_FIELD_NAMES } from '@/lib/setlist-ops/fields'
 
-import { useUndoStore } from '@/lib/local/undo-store'
+import { useUndoStore, type OpsUndoEntry } from '@/lib/local/undo-store'
 
 import { editRow, insertRows, moveRow, removeRows } from '../actions'
 import { SetlistOpsClient, type OpsTransport } from '../client'
@@ -38,10 +38,24 @@ describe('fields mirror the server table', () => {
         expect(out).toEqual({ title: 'A', type: 'song' })
     })
 
-    it('the server takes a whole gig as one field (the meta sheet), refuses nulls inside it, and clears it with null', () => {
+    it('the server takes a gig PATCH (a null part removes it) and clears the whole gig with null', () => {
         expect(checkSetlistFields({ gig: { venue: 'The Hall', start: '20:00' } }, 'set').ok).toBe(true)
-        expect(checkSetlistFields({ gig: { venue: null } }, 'set').ok).toBe(false)
+        expect(checkSetlistFields({ gig: { venue: null } }, 'set').ok).toBe(true)
+        expect(checkSetlistFields({ gig: { start: '25:00' } }, 'set').ok).toBe(false)
         expect(checkSetlistFields({ gig: null }, 'set')).toEqual({ ok: true, value: { gig: null } })
+    })
+
+    it('every stored field an author can set survives an explicit copy (duplicate / undo)', () => {
+        const full: Record<string, unknown> = {
+            title: 'T', type: 'song', key: 'G', bpm: 90, leadMusician: 'Sam', referenceLink: 'x', notes: 'n',
+            songId: 's', fileId: 's', fileName: 'f.pdf', mimeType: 'application/pdf', performer: 'p', description: 'd',
+            estimatedMinutes: 3, liturgyRef: { book: 'b', folio: 2 }, momentId: 'm', fixed: true,
+            honors: [{ name: 'A' }], durationSec: 200, segue: true, singerKeys: [{ musician: 'Sam', key: 'A' }],
+            pageNumber: 3, audioFileId: 'a1', audioFileName: 'a.mp3', transposition: -2, tune: 'Carlebach',
+            duration: '3:30', unmatched: true,
+        }
+        expect(Object.keys(full).sort()).toEqual([...ROW_FIELDS].sort())
+        expect(rowForInsert({ ...full, id: 'x', version: 4, orgId: 'crc', order: 2 })).toEqual(full)
     })
 
     it("a cleared cell's `undefined` goes out as null; a cleared title as ''", () => {
@@ -96,7 +110,11 @@ describe('editor actions: one batch each, and an explicit undo', () => {
         await Dexie.delete(NAME)
     })
 
-    const lastUndo = () => useUndoStore.getState().undoStack.at(-1) as { kind: string; undo: unknown[]; redo: unknown[] }
+    const lastUndo = (): OpsUndoEntry => {
+        const e = useUndoStore.getState().undoStack.at(-1)
+        if (e?.kind !== 'ops') throw new Error('expected an ops undo entry')
+        return e
+    }
 
     it('a field edit: base = what the author saw; undo sets it back with the edit as its base', async () => {
         await editRow('s1', view[0], { key: 'G', bpm: undefined })
@@ -218,6 +236,75 @@ describe('SetlistOpsClient', () => {
             ['refused', 'forbidden'],
             ['refused', 'forbidden'],
         ])
+    })
+
+    it('401: one token refresh and one resend; still 401 → refused `unauthenticated`, kept, never retried on its own', async () => {
+        const refreshAuth = vi.fn(async () => {})
+        const scheduled: Array<() => void> = []
+        const c = new SetlistOpsClient({
+            db,
+            transport: transport as unknown as OpsTransport,
+            reader,
+            refreshAuth,
+            schedule: (fn) => scheduled.push(fn),
+        })
+        transport.mockResolvedValue({ status: 401, json: { error: 'unauthenticated' } })
+        const key = await c.enqueue('s1', [{ op: { kind: 'editRow', rowId: 'a', set: { key: 'G' }, base: { key: null } } }])
+        expect(await c.settle('s1', key)).toEqual({ ok: false, reason: 'unauthenticated' })
+        expect(refreshAuth).toHaveBeenCalledTimes(1)
+        expect(transport).toHaveBeenCalledTimes(2)
+        expect((await db.intents.toArray())[0].status).toBe('refused')
+        expect(scheduled).toHaveLength(0)
+
+        // After refresh succeeds the resend goes through.
+        transport.mockReset()
+        transport.mockResolvedValueOnce({ status: 401, json: {} }).mockResolvedValueOnce(ok({}))
+        const k2 = await c.enqueue('s1', [{ op: { kind: 'editRow', rowId: 'b', set: { key: 'D' }, base: { key: null } } }])
+        expect(await c.settle('s1', k2)).toEqual({ ok: true })
+    })
+
+    it('two tabs: a setlist another tab is draining is left alone (looked at again later)', async () => {
+        const scheduled: number[] = []
+        const lock = vi.fn(async () => false)
+        const c = new SetlistOpsClient({ db, transport: transport as unknown as OpsTransport, reader, lock, schedule: (_fn, ms) => scheduled.push(ms) })
+        await c.enqueue('s1', [{ op: { kind: 'remove', rowId: 'a' } }])
+        await c.idle()
+        expect(lock).toHaveBeenCalledWith('s1', expect.any(Function))
+        expect(transport).not.toHaveBeenCalled()
+        expect(scheduled).toEqual([30_000])
+    })
+
+    it("a 'sending' intent with no answer is re-sent once older than 30 s (same batch id), not before", async () => {
+        let now = 1_000_000
+        const c = new SetlistOpsClient({ db, transport: transport as unknown as OpsTransport, reader, now: () => now, schedule: () => 0 })
+        await db.intents.add({ setlistId: 's1', batchKey: 'b-old', attempt: 0, op: { kind: 'remove', rowId: 'a' }, status: 'sending', createdAt: 1, sentAt: now - 10_000 })
+        c.kick('s1')
+        await c.idle()
+        expect(transport).not.toHaveBeenCalled()
+        now += 25_000
+        transport.mockResolvedValue(ok({ removed: ['a'] }))
+        c.kick('s1')
+        await c.idle()
+        expect(transport).toHaveBeenCalledTimes(1)
+        expect(transport.mock.calls[0][1].clientBatchId).toBe('b-old')
+    })
+
+    it('a field conflict inside the gig names the part, and Try again re-sends only that part over the server value', async () => {
+        transport.mockResolvedValueOnce(
+            ok({ applied: [0], conflicts: [{ opIndex: 0, reason: 'field', field: 'gig.venue', server: 'Their Hall', mine: 'My Hall' }] }),
+        )
+        await client.enqueue('s1', [
+            { op: { kind: 'editSetlist', set: { gig: { venue: 'My Hall', start: '20:00' } }, base: { gig: { venue: 'Old', start: '19:00' } } } },
+        ])
+        await client.idle()
+        const [refused] = await db.intents.toArray()
+        expect(refused.op).toMatchObject({ set: { gig: { venue: 'My Hall' } }, base: { gig: { venue: 'Old' } } })
+        transport.mockResolvedValueOnce(ok({}))
+        await client.retry(refused.localId!)
+        await client.idle()
+        expect(transport.mock.calls[1][1].ops[0]).toMatchObject({ set: { gig: { venue: 'My Hall' } }, base: { gig: { venue: 'Their Hall' } } })
+        // The part that applied (start) reached the cache.
+        expect(((await db.setlists.get('s1'))?.gig as Record<string, unknown>)?.start).toBe('20:00')
     })
 
     it('offline: nothing is sent until the browser is back online', async () => {

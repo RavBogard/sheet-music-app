@@ -10,6 +10,8 @@ import { cn } from '@/lib/utils'
 import type { Freshness, FreshnessState, RefusedItem } from '@/lib/setlist-ops-client/freshness'
 import { getOpsClient } from '@/lib/setlist-ops-client/runtime'
 
+import { refusalReasonText } from './refusal-text'
+
 /**
  * The editor's save indicator (setlist sync PR 3). It reads ONE setlist's
  * freshness: current, saving(n), refused(list) or offline-since. Nothing in
@@ -59,25 +61,7 @@ const VISUALS: Record<FreshnessState, VisualSpec> = {
 
 const CURRENT: Freshness = { state: 'current', saving: 0, refused: [], offlineSince: null, canEditStructure: true }
 
-function reasonText(item: RefusedItem, t: T): string {
-    switch (item.reason) {
-        case 'field':
-            return t('setlistGrid.refusedReasonField', { field: item.field ?? '' })
-        case 'row-gone':
-            return t('setlistGrid.refusedReasonRowGone')
-        case 'row-exists':
-            return t('setlistGrid.refusedReasonRowExists')
-        case 'forbidden':
-            return t('setlistGrid.refusedReasonForbidden')
-        case 'not-found':
-            return t('setlistGrid.refusedReasonNotFound')
-        case 'invalid':
-        case 'too-large':
-            return t('setlistGrid.refusedReasonInvalid')
-        default:
-            return t('setlistGrid.refusedReasonOther')
-    }
-}
+const reasonText = (item: RefusedItem, t: T): string => refusalReasonText(item.reason, t, item.field)
 
 export interface SyncIndicatorProps {
     /** This setlist's freshness (useSetlistView). */
@@ -149,6 +133,16 @@ export function SyncIndicator({ freshness = CURRENT, onRetry, onDiscard }: SyncI
                                 className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs leading-tight text-destructive"
                             >
                                 <span className="break-words">{t('setlistGrid.refusedItem', { row, reason: reasonText(item, t) })}</span>
+                                {item.reason === 'unauthenticated' && (
+                                    // Signed out: the edit is kept; sign in, then Try again.
+                                    <a
+                                        href="/login"
+                                        data-testid={`sync-refused-signin-${item.localId}`}
+                                        className="font-semibold underline underline-offset-2 text-foreground rounded-sm px-1 [@media(pointer:coarse)]:min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                                    >
+                                        {t('setlistGrid.refusedSignIn')}
+                                    </a>
+                                )}
                                 {item.canRetry && (
                                     <button
                                         type="button"

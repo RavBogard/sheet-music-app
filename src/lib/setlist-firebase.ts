@@ -45,18 +45,32 @@ export function defaultsDocId(org: OrgId): string {
  * stamp or an `undefined`.
  */
 async function createOnServer(body: Record<string, unknown>): Promise<string> {
+    // ONE id per user action: a retry after a lost answer resends the same id
+    // and request, and the server returns the setlist it already made.
     const setlistId = typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
         ? crypto.randomUUID()
         : `sl-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
-    const res = await apiFetch("/api/setlists/create", {
-        method: "POST",
-        body: JSON.stringify(stripUndefinedDeep({ ...body, setlistId })),
-    })
-    const data = (await res.json().catch(() => ({}))) as { ok?: boolean; setlistId?: string; reason?: string; message?: string }
-    if (!res.ok || data.ok !== true || typeof data.setlistId !== "string") {
-        throw new Error(data.message || data.reason || `Create failed (${res.status})`)
+    const payload = JSON.stringify(stripUndefinedDeep({ ...body, setlistId }))
+    let lastError: unknown = null
+    for (let attempt = 0; attempt < 3; attempt++) {
+        let res: Response
+        try {
+            res = await apiFetch("/api/setlists/create", { method: "POST", body: payload })
+        } catch (err) {
+            lastError = err // no answer at all: try again with the same id
+            continue
+        }
+        if (res.status >= 500) {
+            lastError = new Error(`Create failed (${res.status})`)
+            continue
+        }
+        const data = (await res.json().catch(() => ({}))) as { ok?: boolean; setlistId?: string; reason?: string; message?: string }
+        if (!res.ok || data.ok !== true || typeof data.setlistId !== "string") {
+            throw new Error(data.message || data.reason || `Create failed (${res.status})`)
+        }
+        return data.setlistId
     }
-    return data.setlistId
+    throw lastError instanceof Error ? lastError : new Error("Create failed")
 }
 
 /** A wizard / template track as explicit row fields (no ids, no stamps). */
@@ -385,6 +399,11 @@ export function createSetlistService(userId: string | null, userName?: string | 
                     name,
                     eventDate: targetDate.toISOString(),
                     ...(source.rabbi ? { rabbi: source.rabbi } : {}),
+                    // The source's stored slot carries through (it can differ
+                    // from the one its rabbi's name would imply).
+                    ...(typeof (source as { rabbiSlot?: unknown }).rabbiSlot === "string"
+                        ? { rabbiSlot: (source as { rabbiSlot: string }).rabbiSlot }
+                        : {}),
                     musicians: source.musicians || [],
                     copyFrom: source.id,
                     copyKind: "clonedFrom",

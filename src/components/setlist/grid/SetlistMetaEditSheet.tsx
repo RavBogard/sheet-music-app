@@ -32,7 +32,8 @@ import {
     SheetTitle,
 } from '@/components/ui/sheet'
 import { toDate } from '@/lib/firestore-helpers'
-import { editSetlist } from '@/lib/setlist-ops-client/actions'
+import { editSetlist, settleBatch, SetlistOpRefusedError } from '@/lib/setlist-ops-client/actions'
+import { refusalReasonText } from './refusal-text'
 import { useOrg } from '@/lib/org/org-context'
 import { hidesLiturgicalFields, isBandTenant } from '@/lib/org/vocab'
 import { HHMM_RE, type Gig, type SetTarget } from '@/lib/gig/model'
@@ -92,8 +93,11 @@ export interface SetlistMetaEditSheetProps {
     saveSetlist?: (setlistId: string, base: Record<string, unknown>, patch: Record<string, unknown>) => Promise<unknown>
 }
 
-const defaultSaveSetlist = (setlistId: string, base: Record<string, unknown>, patch: Record<string, unknown>) =>
-    editSetlist(setlistId, base as never, patch)
+/** Queue the edit and wait for the server's answer ('offline' = queued; a refusal throws). */
+const defaultSaveSetlist = async (setlistId: string, base: Record<string, unknown>, patch: Record<string, unknown>) => {
+    const batch = await editSetlist(setlistId, base as never, patch)
+    return batch ? settleBatch(setlistId, batch) : 'ok'
+}
 
 /**
  * v70-09: edit a setlist's metadata (name / event date / service type / rabbi)
@@ -192,7 +196,14 @@ export function SetlistMetaEditSheet({
             // gig whose keys sit in another order is not rewritten unchanged.
             const before = buildGig(gigDraftOf(initial.gig), initial.gig ?? null, null, sets)
             const beforeGig = before.ok ? before.gig : initial.gig ?? null
-            if (JSON.stringify(built.gig) !== JSON.stringify(beforeGig)) patch.gig = built.gig
+            // Only the parts that changed (null removes a part), so the engine
+            // merges per part and an MCP edit to another part is kept.
+            if (built.gig === null) {
+                if (beforeGig) patch.gig = null
+            } else {
+                const diff = gigDiff(beforeGig ?? {}, built.gig)
+                if (Object.keys(diff).length > 0) patch.gig = diff
+            }
         }
 
         // Nothing changed — close without enqueueing a write (AC-4).
@@ -203,7 +214,7 @@ export function SetlistMetaEditSheet({
 
         setSaving(true)
         try {
-            await saveSetlist(
+            const outcome = await saveSetlist(
                 setlistId,
                 {
                     name: initial.name,
@@ -214,10 +225,13 @@ export function SetlistMetaEditSheet({
                 },
                 patch,
             )
-            toast.success(t('setlistGrid.metaSaved'))
+            // "Saved" only once the server took it; offline the edit stays
+            // queued and the save indicator says so.
+            if (outcome !== 'offline') toast.success(t('setlistGrid.metaSaved'))
             onOpenChange(false)
         } catch (err) {
-            toast.error(t('setlistGrid.metaSaveFailed', { error: formatError(err) }))
+            const why = err instanceof SetlistOpRefusedError ? refusalReasonText(err.reason, t, err.field) : formatError(err)
+            toast.error(t('setlistGrid.metaSaveFailed', { error: why }))
             // Keep the sheet open so the edits aren't lost — Daniel can retry.
         } finally {
             setSaving(false)
@@ -498,6 +512,16 @@ function targetDraftOf(sets: ReadonlyArray<{ id: string; targetMinutes?: number 
  * (by header row id) only when the author edited them; otherwise the stored
  * ones are kept as they are.
  */
+/** The gig parts that differ between `before` and `after` (removed parts as null). */
+export function gigDiff(before: Gig, after: Gig): Record<string, unknown> {
+    const out: Record<string, unknown> = {}
+    const keys = new Set([...Object.keys(before), ...Object.keys(after)]) as Set<keyof Gig>
+    for (const k of keys) {
+        if (JSON.stringify(before[k] ?? null) !== JSON.stringify(after[k] ?? null)) out[k] = after[k] ?? null
+    }
+    return out
+}
+
 export function buildGig(
     draft: GigDraft,
     previous: Gig | null,

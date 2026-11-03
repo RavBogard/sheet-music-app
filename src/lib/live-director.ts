@@ -28,7 +28,7 @@
 
 import { getDb } from "@/lib/local/schema"
 import type { LocalTrack } from "@/lib/local/types"
-import { editRow, insertRows } from "@/lib/setlist-ops-client/actions"
+import { editRow, insertRows, settleBatch, SetlistOpRefusedError } from "@/lib/setlist-ops-client/actions"
 import { seedTrackFromSong } from "@/lib/songs/defaults"
 import type { DriveFile, SetlistTrack } from "@/types/models"
 
@@ -47,7 +47,9 @@ async function serverRow(trackId: string): Promise<LocalTrack> {
 /** Write `tracks/{id}.key`. Empty string clears the key (DiscoverySpec). */
 export async function changeTrackKey(trackId: string, key: string): Promise<void> {
     const row = await serverRow(trackId)
-    await editRow(row.setlistId, row, { key }, { undo: false })
+    let batch = ""
+    await editRow(row.setlistId, row, { key }, { undo: false, onBatch: (k) => (batch = k) })
+    await waitForAnswer(row.setlistId, batch)
 }
 
 /**
@@ -88,7 +90,9 @@ export async function swapTrackChart(
         // the band the right chart in their iPad. Defaults are nice-to-have.
     }
     const row = await serverRow(trackId)
-    await editRow(row.setlistId, row, patch, { undo: false })
+    let batch = ""
+    await editRow(row.setlistId, row, patch, { undo: false, onBatch: (k) => (batch = k) })
+    await waitForAnswer(row.setlistId, batch)
 }
 
 export type InsertPlacement = "before" | "after" | "append"
@@ -141,8 +145,19 @@ export async function insertTrack(input: InsertTrackInput): Promise<string> {
     }
 
     const view = currentTracks.map((t, i) => ({ ...t, setlistId, order: i })) as unknown as LocalTrack[]
-    const ids = await insertRows(setlistId, view, insertAt, [row], { undo: false })
-    // Machine text only (offline): the caller shows its own translated error.
-    if (!ids || ids.length === 0) throw new Error("offline: structural edits need a connection")
+    let batch = ""
+    const ids = await insertRows(setlistId, view, insertAt, [row], { undo: false, onBatch: (k) => (batch = k) })
+    if (!ids || ids.length === 0) throw new SetlistOpRefusedError("offline")
+    await waitForAnswer(setlistId, batch)
     return ids[0]
+}
+
+/**
+ * The director's modal waits for the server: it closes on success and stays
+ * open with the reason on a refusal. Offline throws `offline` too (the modal
+ * shows the offline reason); a queued field edit still goes when back online.
+ */
+async function waitForAnswer(setlistId: string, batch: string): Promise<void> {
+    if (!batch) return
+    if ((await settleBatch(setlistId, batch)) === "offline") throw new SetlistOpRefusedError("offline")
 }

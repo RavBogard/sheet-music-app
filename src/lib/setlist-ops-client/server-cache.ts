@@ -17,6 +17,8 @@
 import type { LocalDb } from '@/lib/local/schema'
 import type { LocalSetlist, LocalTrack } from '@/lib/local/types'
 
+import { overlay } from './view'
+
 /** How long an /ops write outranks a full set that disagrees with it. */
 export const RECENT_OPS_MS = 10_000
 
@@ -178,10 +180,7 @@ export async function applySetlistEdit(
         if (!cur) return
         if (versionOf(cur) > version) return
         const next: Record<string, unknown> = { ...cur, version }
-        for (const [k, v] of Object.entries(applied)) {
-            if (v === null) delete next[k]
-            else next[k] = v
-        }
+        overlay(next, applied)
         await db.setlists.put(next as LocalSetlist)
     })
 }

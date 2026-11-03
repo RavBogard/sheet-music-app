@@ -249,5 +249,7 @@
     "refusedReasonForbidden": "אין לך הרשאה לערוך את הרשימה",
     "refusedReasonNotFound": "הרשימה כבר לא קיימת",
     "refusedReasonInvalid": "השרת לא קיבל את השינוי",
-    "refusedReasonOther": "השרת דחה את השינוי"
+    "refusedReasonOther": "השרת דחה את השינוי",
+    "refusedReasonUnauthenticated": "יש להתחבר שוב כדי לשמור",
+    "refusedSignIn": "התחברות"
 }

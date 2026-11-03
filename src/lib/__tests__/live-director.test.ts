@@ -11,10 +11,26 @@ const cached = new Map<string, Record<string, unknown>>()
 vi.mock('@/lib/local/schema', () => ({
     getDb: () => ({ tracks: { get: async (id: string) => cached.get(id) } }),
 }))
-vi.mock('@/lib/setlist-ops-client/actions', () => ({
-    editRow: vi.fn(async () => undefined),
-    insertRows: vi.fn(async () => ['new-row']),
-}))
+const settle = vi.hoisted(() => ({ outcome: 'ok' as 'ok' | 'offline' | 'refused' }))
+vi.mock('@/lib/setlist-ops-client/actions', () => {
+    class SetlistOpRefusedError extends Error {
+        constructor(readonly reason: string, readonly field?: string) {
+            super(reason)
+        }
+    }
+    return {
+        SetlistOpRefusedError,
+        editRow: vi.fn(async (_s: string, _r: unknown, _p: unknown, o?: { onBatch?: (k: string) => void }) => o?.onBatch?.('b1')),
+        insertRows: vi.fn(async (_s: string, _v: unknown, _i: number, _r: unknown, o?: { onBatch?: (k: string) => void }) => {
+            o?.onBatch?.('b2')
+            return ['new-row']
+        }),
+        settleBatch: vi.fn(async () => {
+            if (settle.outcome === 'refused') throw new SetlistOpRefusedError('field', 'key')
+            return settle.outcome
+        }),
+    }
+})
 vi.mock('@/lib/songs/defaults', () => ({
     seedTrackFromSong: vi.fn(async () => ({})),
 }))
@@ -37,6 +53,7 @@ beforeEach(() => {
     mockedSeed.mockResolvedValue({})
     mockedInsert.mockResolvedValue(['new-row'])
     cached.clear()
+    settle.outcome = "ok"
     cached.set('t1', { id: 't1', setlistId: 's1', order: 0, title: 'Lecha Dodi', key: 'F' })
 })
 
@@ -48,7 +65,14 @@ describe('changeTrackKey', () => {
         expect(setlistId).toBe('s1')
         expect(row).toMatchObject({ id: 't1', key: 'F' })
         expect(patch).toEqual({ key: 'D' })
-        expect(opts).toEqual({ undo: false })
+        expect(opts).toMatchObject({ undo: false })
+    })
+
+    it('waits for the answer: a refusal throws with its reason (the modal stays open); offline throws offline', async () => {
+        settle.outcome = 'refused'
+        await expect(changeTrackKey('t1', 'D')).rejects.toMatchObject({ reason: 'field', field: 'key' })
+        settle.outcome = 'offline'
+        await expect(changeTrackKey('t1', 'D')).rejects.toMatchObject({ reason: 'offline' })
     })
 })
 

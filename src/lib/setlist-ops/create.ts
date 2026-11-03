@@ -6,10 +6,11 @@ import { readMembershipRole } from "@/lib/org/access"
 import type { OrgId } from "@/lib/org/types"
 import { parseEventDate } from "@/lib/parse-event-date"
 import { computeWeek, isFamilyOrg, weekFields } from "@/lib/family/week-key"
-import { storedClassFor } from "@/lib/history/classify"
+import { storedClassFor, storedRabbiSlot } from "@/lib/history/classify"
 import { isTestSetlist } from "@/types/models"
 import { canonicalSort, stripUndefined } from "./pure"
-import { checkRowFields, checkSetlistFields, ROW_FIELD_NAMES } from "./fields"
+import { checkRowFields, checkSetlistFields, isSafeKey, ROW_FIELD_NAMES } from "./fields"
+import { RESERVED_ROW_FIELDS } from "./types"
 import { runSetlistTransaction, setlistRef, TRACKS } from "./writer"
 import { writeNewSetlist } from "./maintenance"
 import type { OpsRefusal, RowFields } from "./types"
@@ -45,6 +46,8 @@ export interface CreateSetlistRequest {
     templateType?: string | null
     rabbi?: string | null
     isTemplate?: boolean
+    /** The source's stored rabbi slot (clone); a known slot key or ignored. */
+    rabbiSlot?: string
     /** Assigned musicians, as the wizard and clone carry them. */
     musicians?: Array<Record<string, unknown>>
     /** Copy this setlist's rows (server-side, in its order). */
@@ -71,12 +74,24 @@ const refuse = (reason: OpsRefusal["reason"], message?: string): OpsRefusal => (
 
 const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v)
 
-/** Keep only the fields a client may write, each validated; a field that fails is dropped (a copy is best effort). */
-function copyableRow(data: Record<string, unknown>): RowFields {
+const KNOWN_ROW_FIELDS = new Set(ROW_FIELD_NAMES)
+
+/**
+ * A server-side copy carries EVERY stored field of the source row except its
+ * identity, tenant, parent and server stamps (RESERVED_ROW_FIELDS). Fields the
+ * client may write are re-validated (one that fails is left off; a copy is
+ * best effort); any other stored field is the source's own data and is copied
+ * as it is, so a clone never loses what the author had on the row.
+ */
+export function copyableRow(data: Record<string, unknown>): RowFields {
     const out: RowFields = {}
-    for (const k of ROW_FIELD_NAMES) {
-        if (data[k] === undefined || data[k] === null) continue
-        const r = checkRowFields({ [k]: data[k] }, "row")
+    for (const [k, v] of Object.entries(data)) {
+        if (v === undefined || v === null || RESERVED_ROW_FIELDS.has(k) || !isSafeKey(k)) continue
+        if (!KNOWN_ROW_FIELDS.has(k)) {
+            out[k] = v
+            continue
+        }
+        const r = checkRowFields({ [k]: v }, "row")
         if (r.ok && r.value[k] !== undefined) out[k] = r.value[k]
     }
     return out
@@ -89,7 +104,9 @@ function cleanMusicians(v: unknown): Array<Record<string, unknown>> | OpsRefusal
     for (const m of v) {
         if (!isObj(m)) return refuse("invalid", "each musician is an object")
         const clean: Record<string, unknown> = {}
-        for (const k of ["uid", "name", "email", "instrument", "role", "status"]) {
+        // The roster status and role are the scheduling flow's, never a client's; a uid
+        // is kept only when that person is a member of the tenant (checked below).
+        for (const k of ["uid", "name", "email", "instrument"]) {
             const val = m[k]
             // Only short strings are kept; anything else is left off the copy.
             if (typeof val !== "string" || val.length > 300) continue
@@ -142,6 +159,7 @@ export function validateCreateRequest(body: unknown): { ok: true; req: CreateSet
             ...(meta.value.templateType !== undefined ? { templateType: meta.value.templateType as string | null } : {}),
             ...(meta.value.rabbi !== undefined ? { rabbi: meta.value.rabbi as string | null } : {}),
             ...(body.isTemplate !== undefined ? { isTemplate: body.isTemplate as boolean } : {}),
+            ...(storedRabbiSlot(body.rabbiSlot) ? { rabbiSlot: storedRabbiSlot(body.rabbiSlot) as string } : {}),
             musicians,
             ...(typeof body.copyFrom === "string" ? { copyFrom: body.copyFrom } : {}),
             ...(body.copyKind ? { copyKind: body.copyKind as "copiedFrom" | "clonedFrom" } : {}),
@@ -217,7 +235,20 @@ export async function createSetlistForCaller(
         ...(typeof r.fileId === "string" && r.songId === undefined ? { songId: r.fileId } : {}),
         order: i,
     }))
-    const musicians = req.musicians ?? []
+    // A musician uid stays only when that person has standing in the tenant.
+    const musicians: Array<Record<string, unknown>> = []
+    for (const m of req.musicians ?? []) {
+        if (typeof m.uid === "string" && m.uid) {
+            const r = await readMembershipRole(db, m.uid, org)
+            if (!r || r === "denied") {
+                const { uid: _drop, ...rest } = m
+                void _drop
+                musicians.push(rest)
+                continue
+            }
+        }
+        musicians.push(m)
+    }
 
     const outcome = await runSetlistTransaction<CreateSetlistOk | OpsRefusal>(
         db,
@@ -252,6 +283,7 @@ export async function createSetlistForCaller(
                 ...(req.templateType ? { templateType: req.templateType } : {}),
                 ...(req.rabbi ? { rabbi: req.rabbi } : {}),
                 ...stripUndefined(storedClassFor({ templateType: req.templateType ?? null, rabbi: req.rabbi ?? null }) as Record<string, unknown>),
+                ...(req.rabbiSlot ? { rabbiSlot: req.rabbiSlot } : {}),
                 ...(req.isTemplate ? { isTemplate: true } : {}),
                 ...(musicians.length > 0
                     ? { musicians, assignedUids: musicians.map((m) => m.uid).filter((u): u is string => typeof u === "string" && !!u) }

@@ -245,5 +245,7 @@
     "refusedReasonForbidden": "you can't edit this setlist",
     "refusedReasonNotFound": "the setlist is gone",
     "refusedReasonInvalid": "the server couldn't accept it",
-    "refusedReasonOther": "the server refused it"
+    "refusedReasonOther": "the server refused it",
+    "refusedReasonUnauthenticated": "Sign in again to save",
+    "refusedSignIn": "Sign in"
 }

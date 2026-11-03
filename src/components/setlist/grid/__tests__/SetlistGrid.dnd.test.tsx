@@ -35,6 +35,7 @@ vi.mock('@/lib/songs/defaults', () => ({
 }))
 
 import { SetlistGrid } from '../SetlistGrid'
+import { configureOpsClient } from '@/lib/setlist-ops-client/runtime'
 
 async function seedTracks(setlistId: string, rows: Partial<LocalTrack>[]) {
     const db = getDb()
@@ -74,6 +75,7 @@ describe('SetlistGrid (drag / add / delete)', () => {
         await resetDbForTests()
         seedSpy.mockReset()
         seedSpy.mockResolvedValue({})
+        configureOpsClient({ lock: undefined, transport: () => new Promise(() => {}), refreshAuth: undefined })
         mockBack.mockClear()
     })
 

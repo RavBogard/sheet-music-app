@@ -28,6 +28,13 @@ export const ROW_FIELDS = [
     'durationSec',
     'segue',
     'singerKeys',
+    'pageNumber',
+    'audioFileId',
+    'audioFileName',
+    'transposition',
+    'tune',
+    'duration',
+    'unmatched',
 ] as const
 
 /** Row fields the server will not clear with `null`: a clear becomes ''. */

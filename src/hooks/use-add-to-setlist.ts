@@ -5,8 +5,34 @@ import { displayChartTitle } from '@/lib/format/chart-title'
 import { toast } from "sonner"
 import { useAuth } from "@/lib/auth-context"
 import { useOrg } from "@/lib/org/org-context"
-import { appendRows } from "@/lib/setlist-ops-client/actions"
-import { getOpsClient } from "@/lib/setlist-ops-client/runtime"
+import { appendRows, replayOps, settleBatch, SetlistOpRefusedError } from "@/lib/setlist-ops-client/actions"
+import { refusalReasonText } from "@/components/setlist/grid/refusal-text"
+import type { T } from "@/i18n/core"
+
+/**
+ * Append the rows and wait for the server's answer, so "Added" is said only
+ * once they are saved. Offline or refused: an error toast with the reason,
+ * and null.
+ */
+async function appendAndWait(setlistId: string, rows: Array<Record<string, unknown>>, t: T): Promise<string[] | null> {
+  let batch = ""
+  const ids = await appendRows(setlistId, rows, { onBatch: (k) => (batch = k) })
+  if (!ids) {
+    toast.error(t("setlistGrid.offlineStructureReason"))
+    return null
+  }
+  try {
+    if ((await settleBatch(setlistId, batch)) === "offline") {
+      toast.error(t("setlistGrid.offlineStructureReason"))
+      return null
+    }
+  } catch (err) {
+    const refused = err instanceof SetlistOpRefusedError ? err : null
+    toast.error(refusalReasonText(refused?.reason ?? "other", t, refused?.field))
+    return null
+  }
+  return ids
+}
 import { createSetlistService } from "@/lib/setlist-firebase"
 import type { DriveFile, Setlist, SetlistTrack } from "@/types/models"
 import { useT } from "@/i18n/client"
@@ -155,11 +181,8 @@ export function useAddToSetlist() {
     // Setlist sync PR 3: ONE batch of inserts at the end of that setlist,
     // through the ops endpoint (the server stamps the tenant, renumbers and
     // keeps the counts). Adding rows needs a connection (D2(a)).
-    const ids = await appendRows(setlistId, newTracks.map(rowFromTrack))
-    if (!ids) {
-      toast.error(t("setlistGrid.offlineStructureReason"))
-      return
-    }
+    const ids = await appendAndWait(setlistId, newTracks.map(rowFromTrack), t)
+    if (!ids) return
     lastAddedTrackIdsRef.current = ids
 
     // Build toast message
@@ -183,11 +206,13 @@ export function useAddToSetlist() {
       action: {
         label: t("hooks.undo"),
         onClick: async () => {
-          // One batch of removes: the inverse of the inserts above.
-          await getOpsClient().enqueue(
+          // One batch of removes, the inverse of the inserts above. Removing
+          // needs a connection; offline it says why and removes nothing.
+          const ok = await replayOps(
             undoSetlistId,
-            undoTrackIds.map((rowId) => ({ op: { kind: "remove" as const, rowId } })),
+            undoTrackIds.map((rowId) => ({ kind: "remove" as const, rowId })),
           )
+          if (!ok) toast.error(t("setlistGrid.offlineStructureReason"))
         },
       },
       duration: 5000,
@@ -222,11 +247,8 @@ export function useAddToSetlist() {
     }))
 
     // Setlist sync PR 3: one batch of inserts at the end (see addToSetlist).
-    const ids = await appendRows(setlistId, newTracks.map(rowFromTrack))
-    if (!ids) {
-      toast.error(t("setlistGrid.offlineStructureReason"))
-      return
-    }
+    const ids = await appendAndWait(setlistId, newTracks.map(rowFromTrack), t)
+    if (!ids) return
 
     let message: string
     if (files.length === 1) {

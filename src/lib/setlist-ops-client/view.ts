@@ -52,10 +52,22 @@ function mark(pending: Record<string, PendingMark>, id: string): PendingMark {
     return (pending[id] ??= { row: false, fields: [] })
 }
 
-function overlay(target: Record<string, unknown>, set: Record<string, unknown>): void {
+/** Apply an op's `set`. `gig` is a patch of its parts (null removes a part). */
+export function overlay(target: Record<string, unknown>, set: Record<string, unknown>): void {
     for (const [k, v] of Object.entries(set)) {
-        if (v === null) delete target[k]
-        else target[k] = v
+        if (v === null) {
+            delete target[k]
+        } else if (k === 'gig' && v && typeof v === 'object' && !Array.isArray(v)) {
+            const cur = target.gig && typeof target.gig === 'object' ? { ...(target.gig as Record<string, unknown>) } : {}
+            for (const [sub, sv] of Object.entries(v as Record<string, unknown>)) {
+                if (sv === null) delete cur[sub]
+                else cur[sub] = sv
+            }
+            if (Object.keys(cur).length > 0) target.gig = cur
+            else delete target.gig
+        } else {
+            target[k] = v
+        }
     }
 }
 

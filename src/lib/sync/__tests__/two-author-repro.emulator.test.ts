@@ -1,6 +1,8 @@
 import 'fake-indexeddb/auto'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
+import { doc, setDoc } from 'firebase/firestore'
+
 import { addTrack } from '@/lib/mcp/server-tracks-write'
 
 import {
@@ -330,12 +332,23 @@ describe('(d) receivers go straight from the old order to the new one', () => {
 describe('PR 3 migration: the old outbox converts to intents on first load', () => {
     const S = 'reproMig'
     let daniel: Device
+    let t04Stamp = 0
+    let oldTabWrite = ''
     beforeAll(async () => {
         await seedSetlist(S, 5)
         // t03 is gone from the server, but Daniel's old tab queued an edit to it.
         await (await adminDb()).collection('tracks').doc(`${S}-t03`).delete()
         daniel = await makeDevice('daniel', DANIEL.uid, DANIEL.claims)
         const now = Date.now()
+        const t04Snap = await (await adminDb()).collection('tracks').doc(`${S}-t04`).get()
+        t04Stamp = (t04Snap.get('updatedAt') as { toMillis: () => number }).toMillis()
+        // The old tab's listener had delivered `gone` once (its edit log says so).
+        await daniel.db.edit_log.add({ ts: now - 60_000, source: 'snapshot-listener', collection: 'tracks', docId: `${S}-gone`, outcome: 'applied' })
+        // An old tab's direct write is refused by the rules now; it would sit
+        // in that tab's outbox as a failed row, which is what the rows below are.
+        oldTabWrite = await setDoc(doc(daniel.fs, 'tracks', `${S}-oldtab`), { setlistId: S, orgId: 'crc', title: 'x', order: 9 })
+            .then(() => 'written')
+            .catch((e: { code?: string }) => e.code ?? 'error')
         // The old cache: his failed duplicate sits after t01; t03 is still shown.
         await daniel.db.tracks.bulkPut([
             ...[0, 1, 2, 3, 4].map((i) => ({ id: `${S}-t0${i}`, setlistId: S, order: i < 2 ? i : i + 1, title: `Song ${i}`, updatedAt: 1 })),
@@ -348,6 +361,13 @@ describe('PR 3 migration: the old outbox converts to intents on first load', () 
             // An edit to a row the server has since removed.
             { status: 'pending', scheduledFor: now, op: 'update', collection: 'tracks', docId: `${S}-t03`, attempts: 0, createdAt: now,
               payload: { key: 'G' }, expectedUpdatedAt: 1 },
+            // An old tab re-`set` a row the server still has, from the copy it
+            // had at t04's current stamp: it becomes an edit, never dropped.
+            { status: 'failed', scheduledFor: now, op: 'set', collection: 'tracks', docId: `${S}-t04`, attempts: 5, createdAt: now,
+              payload: { id: `${S}-t04`, setlistId: S, order: 5, title: 'Song 4 (old tab)', type: 'song', updatedAt: t04Stamp } },
+            // A create of a row the old listener had seen on the server, removed since.
+            { status: 'pending', scheduledFor: now, op: 'set', collection: 'tracks', docId: `${S}-gone`, attempts: 0, createdAt: now,
+              payload: { id: `${S}-gone`, setlistId: S, order: 6, title: 'Removed elsewhere', type: 'song' } },
             // A songs row stays in the outbox.
             { status: 'pending', scheduledFor: now, op: 'update', collection: 'songs', docId: 'song-x', attempts: 0, createdAt: now,
               payload: { defaults: { key: 'G' } } },
@@ -368,9 +388,22 @@ describe('PR 3 migration: the old outbox converts to intents on first load', () 
         expect(srv[2]).not.toHaveProperty('bpm')
     })
 
-    it('the edit to the server-deleted row lands in the refused list (Discard only), not silently dropped', async () => {
+    it('the edit to the server-deleted row, and a create of a row removed since, land in the refused list (Discard only); nothing is resurrected', async () => {
         const f = await daniel.freshness(S)
-        expect(f.refused.map((r) => [r.reason, r.canRetry])).toEqual([['row-gone', false]])
+        expect(f.refused.map((r) => [r.reason, r.canRetry])).toEqual([
+            ['row-gone', false],
+            ['row-gone', false],
+        ])
+        expect((await serverRows(S)).map((r) => r.id)).not.toContain(`${S}-gone`)
+    })
+
+    it("an old tab's re-set of a row the server still has becomes an edit of it (never dropped)", async () => {
+        const t04 = (await serverRows(S)).find((r) => r.id === `${S}-t04`)!
+        expect(t04.title).toBe('Song 4 (old tab)')
+    })
+
+    it("the rules refuse an old tab's direct write now (it would be a failed outbox row, converted as above)", () => {
+        expect(oldTabWrite).toBe('permission-denied')
     })
 
     it('the converted outbox rows and the tracks tombstones are gone; other collections keep theirs', async () => {

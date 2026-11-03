@@ -1238,5 +1238,15 @@
         "where": "Setlist editor: {reason} in refusedItem",
         "who": "leaders",
         "maxLength": 50
+    },
+    "refusedReasonUnauthenticated": {
+        "where": "Setlist editor and Perform live director: {reason} in refusedItem / the modal's error line when the session expired; the change is kept",
+        "who": "leaders",
+        "maxLength": 50
+    },
+    "refusedSignIn": {
+        "where": "Setlist editor: link on a refused change whose session expired; opens sign-in",
+        "who": "leaders",
+        "maxLength": 14
     }
 }
