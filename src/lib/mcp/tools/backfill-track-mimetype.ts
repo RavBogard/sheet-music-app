@@ -1,6 +1,7 @@
 import "server-only"
 
-import { FieldValue } from "firebase-admin/firestore"
+import { maintainRows } from "@/lib/setlist-ops"
+import { rowOrg } from "@/lib/org/membership"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { assertEditor } from "@/lib/mcp/server-tracks-write"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
@@ -173,12 +174,15 @@ export async function backfillTrackMimetype(
         // absent", so we filter in memory — mirrors reconcile_library's full
         // library_index scan.
         const snap = await db.collection("tracks").get()
-        const scannedTracks = snap.size
+        // Only the caller's tenant: a leader of one tenant never heals (or
+        // version-bumps) another tenant's rows. Unstamped rows read as crc.
+        const mine = snap.docs.filter((d) => rowOrg(d.data().orgId) === org)
+        const scannedTracks = mine.length
 
         let bondedTracks = 0
         let alreadyHealthy = 0
         const candidates: Candidate[] = []
-        for (const d of snap.docs) {
+        for (const d of mine) {
             const data = d.data()
             const fileId =
                 typeof data.fileId === "string" ? data.fileId.trim() : ""
@@ -299,30 +303,18 @@ export async function backfillTrackMimetype(
             )
         }
 
-        // ─── force run: batched merge-set of mimeType + version bump ──────────
-        // merge-set so we touch ONLY mimeType (+ the W-04 version/timestamp
-        // contract every track write stamps) and never clobber bond fields.
-        const nowIso = new Date().toISOString()
-        let committed = 0
-        for (let i = 0; i < healRows.length; i += WRITE_BATCH_MAX) {
-            const slice = healRows.slice(i, i + WRITE_BATCH_MAX)
-            const batch = db.batch()
-            for (const r of slice) {
-                // setlist-ops-allowlist: remove in PR 3 (mimetype backfill)
-                batch.set(
-                    db.collection("tracks").doc(r.trackId),
-                    {
-                        mimeType: r.after,
-                        updatedAt: FieldValue.serverTimestamp(),
-                        version: FieldValue.increment(1),
-                        lastModifiedAt: nowIso,
-                    },
-                    { merge: true },
-                )
-            }
-            await batch.commit()
-            committed += slice.length
-        }
+        // ─── force run: mimeType through the single writer ─────────────────
+        // One transaction per setlist: each healed row gets `updatedAt` and a
+        // `version` bump, and its setlist's `version` is bumped once, so iPads
+        // holding the row take the new mimeType. Rows deleted since the scan
+        // are skipped (an update never resurrects a row), never re-created.
+        const { written } = await maintainRows(
+            db,
+            org,
+            healRows.map((r) => ({ rowId: r.trackId, setlistId: r.setlistId, patch: { mimeType: r.after } })),
+            { actor: uid },
+        )
+        const committed = written.length
 
         logger.info("[mcp] backfill_track_mimetype committed", {
             uid,

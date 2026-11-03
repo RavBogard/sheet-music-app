@@ -11,7 +11,7 @@ import { stripUndefined } from "./pure"
  *  - a setlist update does the same and stamps `lastModifiedAt`/`lastModifiedBy`;
  *  - `undefined` is never written.
  *
- * The one exception is `updateSetlistDerived`: the derived counts heal
+ * The one exception is `writeSetlistDerived`: the derived counts heal
  * (`trackCount`, `songCount`, `fileIds`) writes no stamp on purpose, because
  * it changes nothing an author wrote.
  *
@@ -82,7 +82,9 @@ export class SetlistWriter {
         readonly db: DB,
         private readonly sink: WriteSink,
         private readonly opts: WriterOptions = {},
-    ) {}
+    ) {
+        SINKS.set(this, sink)
+    }
 
     // ── tracks ────────────────────────────────────────────────────────────
 
@@ -147,22 +149,40 @@ export class SetlistWriter {
         this.writes++
     }
 
-    /**
-     * Derived counts only (`trackCount`, `songCount`, `fileIds`). No stamps:
-     * a heal that changes no authored field must not look like an edit.
-     */
-    updateSetlistDerived(
-        id: string,
-        patch: { trackCount?: number; songCount?: number; fileIds?: string[] },
-    ): void {
-        this.sink.update(setlistRef(this.db, id), stripUndefined({ ...patch }))
-        this.writes++
-    }
-
     deleteSetlist(id: string): void {
         this.sink.delete(setlistRef(this.db, id))
         this.writes++
     }
+}
+
+/**
+ * The raw sink behind each writer. Module-private: only the two unstamped
+ * writes below reach it, and the guard refuses them outside setlist-ops.
+ */
+const SINKS = new WeakMap<SetlistWriter, WriteSink>()
+
+/**
+ * Derived counts only (`trackCount`, `songCount`, `fileIds`). No stamps: a
+ * heal that changes no authored field must not look like an edit. Internal to
+ * src/lib/setlist-ops (not exported from the index; guarded).
+ */
+export function writeSetlistDerived(
+    w: SetlistWriter,
+    id: string,
+    patch: { trackCount?: number; songCount?: number; fileIds?: string[] },
+): void {
+    SINKS.get(w)!.update(setlistRef(w.db, id), stripUndefined({ ...patch }))
+    w.writes++
+}
+
+/**
+ * A setlist patch with NO stamps, for `maintainSetlist(..., { bump: false })`
+ * only, which allows just the fields in `NO_BUMP_FIELDS`. Internal to
+ * src/lib/setlist-ops (not exported from the index; guarded).
+ */
+export function writeSetlistUnstamped(w: SetlistWriter, id: string, patch: Record<string, unknown>): void {
+    SINKS.get(w)!.update(setlistRef(w.db, id), stripUndefined(patch))
+    w.writes++
 }
 
 /** Run `fn` in one Admin transaction with a stamped writer. */
@@ -200,7 +220,7 @@ export async function updateSetlistFields(
 
 /**
  * The derived counts heal on one setlist doc (`trackCount`, `songCount`,
- * `fileIds`), with no stamps — see `SetlistWriter.updateSetlistDerived`.
+ * `fileIds`), with no stamps — see `writeSetlistDerived`.
  */
 export async function updateSetlistDerivedCounts(
     db: DB,

@@ -17,18 +17,17 @@ const recursiveDeleteSpy = vi.fn(async () => undefined)
 const historyAddSpy = vi.fn(async (_entry: Record<string, unknown>) => ({ id: "h-1" }))
 
 function makeQuery(factory: DocsFactory) {
-    const whereMock = () => ({
-        limit: (_n: number) => ({
-            get: async () => {
-                const docs = factory()
-                return {
-                    size: docs.length,
-                    empty: docs.length === 0,
-                    docs,
-                }
-            },
-        }),
-    })
+    const get = async () => {
+        const docs = factory()
+        return {
+            size: docs.length,
+            empty: docs.length === 0,
+            docs,
+        }
+    }
+    // `.limit(n).get()` (the route's own cascade) and a plain `.get()` (the
+    // setlist-ops row delete, which checks every row's tenant first).
+    const whereMock = () => ({ limit: (_n: number) => ({ get }), get })
     return { where: whereMock }
 }
 
@@ -104,6 +103,8 @@ beforeAll(async () => {
 
 function mkDocs(n: number) {
     return Array.from({ length: n }, (_, i) => ({
+        id: `d-${i}`,
+        data: () => ({}), // unstamped: reads as crc, the caller's tenant
         ref: { delete: () => undefined, id: `d-${i}` } as unknown as { delete: () => void },
     }))
 }

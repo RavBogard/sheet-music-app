@@ -70,7 +70,7 @@ describe("BET-6 back-fill and ceremony card (emulator)", () => {
         expect((await db().collection("setlists").doc("missing").get()).data()?.weekKey).toBeUndefined()
     })
 
-    it("a real run needs force; with it, writes only the week fields", async () => {
+    it("a real run needs force; with it, writes the week fields and bumps the setlist version", async () => {
         const refused = await backfillWeekKeys(ADMIN, { dryRun: false }, "crc", compute)
         expect((refused as { ok?: boolean }).ok).toBe(false)
         expect((await db().collection("setlists").doc("missing").get()).data()?.weekKey).toBeUndefined()
@@ -78,9 +78,9 @@ describe("BET-6 back-fill and ceremony card (emulator)", () => {
         const r = await backfillWeekKeys(ADMIN, { dryRun: false, force: true }, "crc", compute)
         expect("rowsChanged" in r && r.rowsChanged).toBe(2)
         const missing = (await db().collection("setlists").doc("missing").get()).data()!
-        expect([missing.weekKey, missing.weekKeyDay, missing.parashaName, missing.version]).toEqual(["5787-bereshit", "2026-10-10", "Bereshit", 3])
+        expect([missing.weekKey, missing.weekKeyDay, missing.parashaName, missing.version]).toEqual(["5787-bereshit", "2026-10-10", "Bereshit", 4])
         const moved = (await db().collection("setlists").doc("moved").get()).data()!
-        expect([moved.weekKey, moved.weekKeyDay, moved.parashaName, moved.version]).toEqual(["5787-noach", "2026-10-17", "Noach", 5])
+        expect([moved.weekKey, moved.weekKeyDay, moved.parashaName, moved.version]).toEqual(["5787-noach", "2026-10-17", "Noach", 6])
         // Brothers Lazaroff and test rows are untouched.
         expect((await db().collection("setlists").doc("bl").get()).data()?.weekKey).toBeUndefined()
         expect((await db().collection("setlists").doc("test").get()).data()?.weekKey).toBeUndefined()

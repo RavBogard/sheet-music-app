@@ -22,11 +22,26 @@ import { join, relative, resolve } from "node:path"
  * ALLOWLIST is per call site: the write's line, or the line above it, carries
  *   // setlist-ops-allowlist: remove in PR 3 (<why>)
  * A marker with no write under it fails the stale-marker test.
+ *
+ * A call site the scan flags that is NOT a setlists/tracks write (a bulk delete
+ * of another collection in a file that also reads setlists) carries instead
+ *   // setlist-ops-not-a-setlist-write: <what it writes>
+ * and that marker does not cover a write whose target names setlists, tracks,
+ * setlistRef or trackRef.
+ *
+ * `maintainSetlist(..., { bump: false })` writes with no stamps; every such
+ * call carries `// no-bump: <why nobody renders the field>` on its line or the
+ * line above, `bump` is only ever a literal, and the maintenance helpers'
+ * options are inline object literals with no spread. The module's unstamped
+ * writes (`writeSetlistUnstamped`, `writeSetlistDerived`) are never used
+ * outside it.
  */
 
 const ROOT = resolve(process.cwd(), "src")
 const MODULE_DIR = "lib/setlist-ops/"
 const MARKER = "setlist-ops-allowlist: remove in PR 3"
+const NOT_A_SETLIST = /setlist-ops-not-a-setlist-write:\s*\S.{4,}/
+const NO_BUMP = /\/\/\s*no-bump:\s*\S.{9,}/
 
 const W = String.raw`(?:set|update|delete|create)`
 const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
@@ -105,16 +120,63 @@ export function findWriteSites(raw: string): WriteSite[] {
 /** Sites without an allowlist marker on their line or the line above, and markers covering nothing. */
 export function checkFile(raw: string): { unmarked: WriteSite[]; staleMarkers: number[] } {
     const lines = raw.split(/\r?\n/)
-    const marked = (n: number) => !!lines[n - 1]?.includes(MARKER) || !!lines[n - 2]?.includes(MARKER)
+    const code = stripComments(raw).split("\n")
+    const hasPr3 = (n: number) => !!lines[n - 1]?.includes(MARKER)
+    const hasNot = (n: number) => NOT_A_SETLIST.test(lines[n - 1] ?? "")
+    const has = (n: number) => hasPr3(n) || hasNot(n)
+    // A not-a-setlist marker never covers a write whose target names the collections.
+    const namesSetlist = (n: number) => /setlists|tracks|setlistRef|trackRef/.test(code[n - 1] ?? "")
+    const marked = (n: number) =>
+        hasPr3(n) || hasPr3(n - 1) || ((hasNot(n) || hasNot(n - 1)) && !namesSetlist(n))
     const sites = findWriteSites(raw)
     const unmarked = sites.filter((s) => !marked(s.line))
     const used = new Set<number>()
     for (const s of sites) {
-        if (lines[s.line - 1]?.includes(MARKER)) used.add(s.line)
-        if (lines[s.line - 2]?.includes(MARKER)) used.add(s.line - 1)
+        if (has(s.line)) used.add(s.line)
+        if (has(s.line - 1)) used.add(s.line - 1)
     }
-    const staleMarkers = lines.flatMap((l, i) => (l.includes(MARKER) && !used.has(i + 1) ? [i + 1] : []))
+    const staleMarkers = lines.flatMap((l, i) => (has(i + 1) && !used.has(i + 1) ? [i + 1] : []))
     return { unmarked, staleMarkers }
+}
+
+/** The top-level arguments of a call whose `(` ends just before `start`. */
+export function topLevelArgs(src: string, start: number): string[] {
+    const args: string[] = []
+    let depth = 0
+    let cur = ""
+    let quote: string | null = null
+    for (let i = start; i < src.length; i++) {
+        const ch = src[i]
+        if (quote) {
+            cur += ch
+            if (ch === "\\") {
+                cur += src[++i] ?? ""
+                continue
+            }
+            if (ch === quote) quote = null
+            continue
+        }
+        if (ch === '"' || ch === "'" || ch === "`") {
+            quote = ch
+            cur += ch
+            continue
+        }
+        if (ch === "(" || ch === "[" || ch === "{") depth++
+        if (ch === ")" || ch === "]" || ch === "}") {
+            if (depth === 0) {
+                if (cur.trim()) args.push(cur)
+                return args
+            }
+            depth--
+        }
+        if (ch === "," && depth === 0) {
+            args.push(cur)
+            cur = ""
+            continue
+        }
+        cur += ch
+    }
+    return args
 }
 
 function walk(dir: string, out: string[] = []): string[] {
@@ -184,6 +246,58 @@ describe("OPS-CONTRACT single writer: only src/lib/setlist-ops writes setlists/*
         expect(offenders, offenders.join("\n")).toEqual([])
     })
 
+    it("every bump:false maintenance write carries a no-bump justification", () => {
+        const bare = outside.flatMap((f) => {
+            const lines = f.src.split(/\r?\n/)
+            const code = stripComments(f.src).split("\n")
+            return code.flatMap((l, i) =>
+                /\bbump\s*:\s*false\b/.test(l) && !NO_BUMP.test(lines[i]) && !NO_BUMP.test(lines[i - 1] ?? "")
+                    ? [`${f.rel}:${i + 1}`]
+                    : [],
+            )
+        })
+        expect(bare, bare.join("\n")).toEqual([])
+    })
+
+    it("bump is only ever a literal, and maintenance options are inline literals with no spread", () => {
+        const bad = outside.flatMap((f) => {
+            const code = stripComments(f.src)
+            const out: string[] = []
+            const lineOf = (i: number) => code.slice(0, i).split("\n").length
+            for (const m of code.matchAll(/\bbump\b(?!\s*:\s*(?:true|false)\b)/g)) out.push(`${f.rel}:${lineOf(m.index ?? 0)} non-literal bump`)
+            if (/\bMaintainOptions\b/.test(code)) out.push(`${f.rel}: MaintainOptions used outside the module`)
+            for (const m of code.matchAll(/\bmaintain(Setlist|Setlists|Rows)\s*(?:<[^()]*?>)?\s*\(/g)) {
+                const args = topLevelArgs(code, (m.index ?? 0) + m[0].length)
+                const optsAt = m[1] === "Setlist" ? 4 : 3
+                const o = args[optsAt]
+                if (o !== undefined && (!/^\s*\{/.test(o) || o.includes("..."))) {
+                    out.push(`${f.rel}:${lineOf(m.index ?? 0)} options must be an inline literal without spread`)
+                }
+            }
+            return out
+        })
+        expect(bad, bad.join("\n")).toEqual([])
+    })
+
+    it("the module's unstamped writes are never used outside it", () => {
+        const bad = outside.flatMap((f) => {
+            const code = stripComments(f.src)
+            return /\.updateUnstamped\s*\(|\.updateSetlistDerived\s*\(|\bwriteSetlistUnstamped\b|\bwriteSetlistDerived\b/.test(code) ? [f.rel] : []
+        })
+        expect(bad, bad.join("\n")).toEqual([])
+        const index = files.find((x) => x.rel === "lib/setlist-ops/index.ts")!.src
+        expect(index).not.toMatch(/writeSetlistUnstamped|writeSetlistDerived/)
+    })
+
+    it("the guards above see what they claim to (self-test)", () => {
+        // A not-a-setlist marker over a tracks write does not cover it.
+        const misused = checkFile(`// setlist-ops-not-a-setlist-write: other docs\nfor (const t of q) bw.delete(db.collection("tracks").doc(t))`)
+        expect(misused.unmarked.length).toBe(1)
+        const fine = checkFile(`const s = await db.collection("setlists").get()\n// setlist-ops-not-a-setlist-write: token docs\nfor (const t of snap.docs) bw.delete(t.ref)`)
+        expect(fine).toEqual({ unmarked: [], staleMarkers: [] })
+        expect(topLevelArgs("a, (b, c), { d: [1, 2] }, e)", 0)).toEqual(["a", " (b, c)", " { d: [1, 2] }", " e"])
+    })
+
     it("no allowlist marker is stale", () => {
         const stale = outside.flatMap((f) => checkFile(f.src).staleMarkers.map((n) => `${f.rel}:${n}`))
         expect(stale, stale.join("\n")).toEqual([])
@@ -200,6 +314,19 @@ describe("OPS-CONTRACT single writer: only src/lib/setlist-ops writes setlists/*
             "app/api/liturgy/bind-row/route.ts",
             "app/api/setlist/rename/route.ts",
             "app/api/setlist/transfer/route.ts",
+            // PR 3b: the server stragglers.
+            "lib/mcp/tools/clone-setlist.ts",
+            "lib/mcp/tools/templates.ts",
+            "lib/mcp/tools/performed.ts",
+            "lib/mcp/tools/open-items.ts",
+            "lib/mcp/tools/setlist-publish.ts",
+            "lib/mcp/tools/setlist-hygiene.ts",
+            "lib/mcp/tools/week-key-backfill.ts",
+            "lib/mcp/tools/backfill-track-mimetype.ts",
+            "lib/beit-mitzvah/service.ts",
+            "lib/scheduling/assignment-service.ts",
+            "app/api/setlist/delete/route.ts",
+            "app/api/setlist/notify-band/route.ts",
         ]) {
             const f = files.find((x) => x.rel === rel)!
             expect(f.src, rel).toMatch(/from ["']@\/lib\/setlist-ops["']/)

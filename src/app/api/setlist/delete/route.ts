@@ -5,6 +5,7 @@ import { z } from "zod"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { createApiHandler, apiError } from "@/lib/api-wrapper"
 import { logger } from "@/lib/logger"
+import { deleteSetlistRows, deleteSetlistTree } from "@/lib/setlist-ops"
 import type { Firestore, Query, DocumentSnapshot } from "firebase-admin/firestore"
 
 /**
@@ -130,7 +131,7 @@ export const POST = createApiHandler(
         // The reverse shape (parent gone, top-level tracks present) is what
         // we close here.
         try {
-            tracks = await batchDeleteByField(db, "tracks", "setlistId", setlistId)
+            tracks = await deleteSetlistRows(db, ctx.auth.orgId, setlistId)
         } catch (e) {
             const msg = e instanceof Error ? e.message : String(e)
             logger.error(`[setlist/delete] tracks cleanup failed for ${setlistId}: ${msg}`)
@@ -139,8 +140,7 @@ export const POST = createApiHandler(
 
         // 6) recursiveDelete: parent + subcollections (history, emailEvents, ...)
         try {
-            // setlist-ops-allowlist: remove in PR 3 (setlist delete route)
-            await db.recursiveDelete(setlistRef)
+            await deleteSetlistTree(db, ctx.auth.orgId, setlistId)
         } catch (e) {
             const msg = e instanceof Error ? e.message : String(e)
             logger.error(`[setlist/delete] recursiveDelete failed for ${setlistId}: ${msg}`)

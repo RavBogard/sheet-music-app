@@ -23,6 +23,8 @@ vi.mock("@/lib/logger", () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }))
 vi.mock("firebase-admin/firestore", () => ({ FieldValue: { serverTimestamp: () => "ts" } }))
 vi.mock("@/lib/song-usage", () => ({ recordSongUsage: vi.fn(async () => ({ recorded: 0, skipped: 0 })) }))
+// The notify stamp goes through the single writer; this test is about SMS and song usage.
+vi.mock("@/lib/setlist-ops", () => ({ maintainSetlist: vi.fn(async () => undefined) }))
 vi.mock("@/lib/server-tracks", () => ({
     getTracksForSetlist: vi.fn(async () => [{ fileId: "f1", title: "Song One", type: "song" }]),
 }))

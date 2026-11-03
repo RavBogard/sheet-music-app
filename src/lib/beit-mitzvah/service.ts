@@ -9,6 +9,7 @@ import { resolveSlotLiturgyRef } from "@/lib/books/slot-liturgy"
 import { codeOrgConfig } from "@/lib/org/config-code"
 import { parseOrgConfig } from "@/lib/org/config-schema"
 import { computeWeek, weekFields } from "@/lib/family/week-key"
+import { runSetlistTransaction, writeNewSetlist } from "@/lib/setlist-ops"
 import { type DetailsRequest, type EnsureRequest, type BridgeResponse, type Projection, type SharedRow, sharedRow } from "./contract"
 
 type Data = Record<string, unknown>
@@ -83,7 +84,7 @@ export async function ensureService(db: Firestore, request: EnsureRequest): Prom
     })
     // BET-6: the advisory week key for a newly created service (CRC only).
     const week = await computeWeek(request.localDate, "crc")
-    return db.runTransaction(async tx => {
+    return runSetlistTransaction(db, async (tx, w) => {
         const receipt = (await tx.get(receiptRef)).data()
         if (receipt && receipt.inputHash !== inputHash) throw new BridgeError("idempotency_conflict")
         const intent = (await tx.get(intentRef)).data()
@@ -158,8 +159,9 @@ export async function ensureService(db: Firestore, request: EnsureRequest): Prom
             const rows = seedTemplateRows(slots, book)
             setlistId = candidateId
             const stamp = FieldValue.serverTimestamp()
-            // setlist-ops-allowlist: remove in PR 3 (B'nei Mitzvah service creation)
-            tx.create(db.collection("setlists").doc(setlistId), clean({
+            // The new service and all its rows, in this same transaction, through
+            // the single writer (OPS-CONTRACT).
+            const setlist = clean({
                 id: setlistId, orgId: "crc", name: request.displayName ?? `B'nei Mitzvah ${request.ceremonyType === "morning" ? "Morning" : "Havdalah"} — ${request.localDate}`,
                 eventDate: parseEventDate(`${request.localDate}T${request.ceremonyType === "morning" ? "10:00" : "16:00"}`, "crc"), templateType: key, serviceType: storedClassFor({ templateType: key }).serviceType ?? null,
                 date: stamp, updatedAt: stamp, version: 1, lastModifiedAt: new Date().toISOString(),
@@ -169,20 +171,20 @@ export async function ensureService(db: Firestore, request: EnsureRequest): Prom
                 // BET-6: the ceremony this service belongs to (opaque id, no names).
                 ceremonyId: request.ceremonyId, ceremonyIds: [request.ceremonyId], occasion: "bnei-mitzvah",
                 ...(week ? weekFields(week) : {}),
-            }))
-            // setlist-ops-allowlist: remove in PR 3 (B'nei Mitzvah service creation)
-            for (const row of rows) tx.create(db.collection("tracks").doc(String(row.id)), { ...row, setlistId })
+            })
+            writeNewSetlist(w, "crc", { setlistId, setlist, rows: rows.map(row => ({ id: String(row.id), data: row })) }, "create")
         }
         // BET-6: a linked existing service learns its ceremony. A setlist that a
         // second ceremony also links to keeps its first ceremonyId and lists
         // every ceremony in ceremonyIds, so each one's card shows.
         if (selected) {
             const first = typeof selected.ceremonyId === "string" ? selected.ceremonyId : request.ceremonyId
-            // setlist-ops-allowlist: remove in PR 3 (B'nei Mitzvah service creation)
-            tx.update(db.collection("setlists").doc(setlistId), {
+            // Version-bumped, so every device sees the ceremony link; `updatedAt`
+            // stays as it was (server-derived, until PR 3).
+            w.updateSetlist(setlistId, {
                 ceremonyId: first, occasion: "bnei-mitzvah",
                 ceremonyIds: FieldValue.arrayUnion(first, request.ceremonyId),
-            })
+            }, { touchUpdatedAt: false })
         }
         const reviewRequired = !!selected && (dateOf(selected.eventDate) !== request.localDate || selected.templateType !== templateType(request.ceremonyType))
         tx.create(ceremonyRef, clean({ orgId: "crc", ceremonyId: request.ceremonyId, setlistId, localDate: request.localDate, ceremonyType: request.ceremonyType,
