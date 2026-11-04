@@ -17,6 +17,7 @@ import { updateSong } from "../tools/song-metadata"
 import { mirrorLegacyRoles } from "@/test-stubs/mirror-legacy-roles"
 import { applyOps, checkRowFields } from "@/lib/setlist-ops"
 import { copyableRow } from "@/lib/setlist-ops/create"
+import { saveSongDefaults } from "@/lib/library/catalog-mirror"
 
 /**
  * apply_recording_tempos against the emulator: a real run fills empty bpm
@@ -124,5 +125,15 @@ describe("apply_recording_tempos (emulator)", () => {
         await applyRecordingTemposTool("crc-lead", { dryRun: false, force: true }, "crc")
         expect((await get("tracks", "rt-empty")).bpm).toBe(110)
         expect((await get("tracks", "rt-empty")).bpmSource).toBeUndefined()
+    })
+
+    it("the browser's sticky bpm (POST /api/songs/defaults) clears the songs marker too", async () => {
+        await db().collection("songs").doc("rt-sticky").set({ title: "S", orgId: "crc", defaults: { bpm: 90, bpmSource: "recording", bpmSourceRecordingId: "r", bpmSourceValue: 90 } })
+        const r = await saveSongDefaults(db(), "crc", { songId: "rt-sticky", setlistId: null, patch: { bpm: 90 } })
+        expect(r.ok).toBe(true)
+        const d = (await get("songs", "rt-sticky")).defaults
+        expect(d.bpm).toBe(90)
+        expect(d.bpmSource).toBeUndefined()
+        expect(d.bpmSourceValue).toBeUndefined()
     })
 })

@@ -15,6 +15,7 @@ import {
     provisionTestAccount,
     listTestAccountsCore,
     revokeTestAccountCore,
+    cleanupAllTestData,
     cleanupAllTestDataCore,
     sweepOrphanTestDataCore,
     disableExpiredLoginableAccounts,
@@ -22,6 +23,7 @@ import {
 import { verifyBearer } from "../auth"
 import { checkUserRateLimit } from "@/lib/rate-limit"
 import { mirrorLegacyRoles } from "@/test-stubs/mirror-legacy-roles"
+import { __resetPlatformOwnerMemo } from "@/lib/org/access"
 
 // Storage isn't backed by the emulator; treat the best-effort purge as a no-op.
 vi.mock("@/lib/firebase-admin", async () => {
@@ -459,10 +461,14 @@ describe("MCP test tokens (emulator)", () => {
         })
         if ("error" in minted) throw new Error("mint failed")
 
-        // Create an orphan: Auth user with test- prefix but no index doc.
+        // Create an orphan: Auth user with test- prefix but no index doc,
+        // still a crc member (tenancy comes from the memberships collection).
         await getAuth().createUser({
             uid: "test-musician-orphan1",
             disabled: true,
+        })
+        await db().collection("memberships").doc("crc__test-musician-orphan1").set({
+            uid: "test-musician-orphan1", tenantId: "crc", role: "musician",
         })
 
         const result = await cleanupAllTestDataCore(ADMIN_UID)
@@ -470,6 +476,31 @@ describe("MCP test tokens (emulator)", () => {
         expect(result.removed).toBeGreaterThanOrEqual(2)
 
         await expect(getAuth().getUser("test-musician-orphan1")).rejects.toThrow()
+    })
+
+    it("an account of unknown tenancy (no membership) is out of a leader's sweep, never read as crc; po sweeps it", async () => {
+        // Its claims even say crc: the memberships collection is the truth.
+        await getAuth().createUser({ uid: "test-musician-nomember", disabled: true })
+        await getAuth().setCustomUserClaims("test-musician-nomember", { m: { crc: "mu" }, orgIds: ["crc"] })
+
+        const leader = await cleanupAllTestDataCore(ADMIN_UID, {}, "crc")
+        if ("error" in leader) throw new Error("cleanup failed: " + leader.error)
+        expect(leader.removed).toBe(0)
+        expect(leader.skippedOtherTenants).toBe(1)
+        await expect(getAuth().getUser("test-musician-nomember")).resolves.toBeTruthy()
+
+        const PO = "platform-owner-2"
+        await db().collection("platform").doc("owners").set({ uids: [PO] })
+        __resetPlatformOwnerMemo()
+        try {
+            const po = await cleanupAllTestDataCore(PO, {}, "crc")
+            if ("error" in po) throw new Error("cleanup failed: " + po.error)
+            expect(po.removed).toBe(1)
+            await expect(getAuth().getUser("test-musician-nomember")).rejects.toThrow()
+        } finally {
+            await db().collection("platform").doc("owners").delete()
+            __resetPlatformOwnerMemo()
+        }
     })
 
     it("create_test_account with uidPrefix emits `test-<prefix>-<role>-<hex>`", async () => {
@@ -522,6 +553,11 @@ describe("MCP test tokens (emulator)", () => {
         await getAuth().createUser({
             uid: "test-insta-musician-orphan2",
             disabled: true,
+        })
+        // A crc member, so a crc leader's sweep covers it (tenancy is read
+        // from the memberships collection).
+        await db().collection("memberships").doc("crc__test-insta-musician-orphan2").set({
+            uid: "test-insta-musician-orphan2", tenantId: "crc", role: "musician",
         })
         // And an orphan under instb — must NOT be swept.
         await getAuth().createUser({
@@ -701,6 +737,106 @@ describe("MCP test tokens (emulator)", () => {
         expect(result.aggregate["setlists.isTest"]).toBe(1)
         expect((await db().collection("setlists").doc("sl-flag").get()).exists).toBe(false)
         await expect(getAuth().getUser(driver.uid)).rejects.toThrow()
+    })
+
+    // ── Tenant scope (setlist sync later list, 2026-11-03) ───────────────────
+    // A band leader sweeps only their own tenant; the platform owner keeps the
+    // cross-tenant sweep. Fixtures: one crc test account, one BL test account,
+    // and one isTest setlist per tenant.
+    async function seedBothTenants() {
+        const crcUser = await provisionTestAccount(LEADER_UID, { role: "musician", orgIds: ["crc"] }, "crc")
+        const blUser = await provisionTestAccount(LEADER_UID, { role: "musician", orgIds: ["brotherslazaroff"] }, "brotherslazaroff")
+        if ("error" in crcUser || "error" in blUser) throw new Error("mint failed")
+        await db().collection("setlists").doc("sl-flag-crc").set({ ownerId: ADMIN_UID, orgId: "crc", name: "scratch", isTest: true })
+        await db().collection("setlists").doc("sl-flag-bl").set({ ownerId: ADMIN_UID, orgId: "brotherslazaroff", name: "scratch", isTest: true })
+        return { crcUser, blUser }
+    }
+    const exists = async (path: string) => (await db().doc(path).get()).exists
+
+    it("tenant A's leader cannot sweep tenant B: B's test account and isTest setlist survive", async () => {
+        const { crcUser, blUser } = await seedBothTenants()
+
+        const plan = await cleanupAllTestData(LEADER_UID, {}, "crc")
+        if ("error" in plan || !("wouldRevoke" in plan)) throw new Error("plan failed")
+        expect(plan.scope).toBe("crc")
+        expect(plan.wouldRevoke).toEqual([crcUser.uid])
+        expect(plan.wouldSweepFlaggedSetlists).toBe(1)
+        expect(plan.skippedOtherTenants).toBe(1)
+
+        const result = await cleanupAllTestDataCore(LEADER_UID, {}, "crc")
+        if ("error" in result) throw new Error("cleanup failed: " + result.error)
+        expect(result.failures).toEqual([])
+        expect(result.removed).toBe(1)
+        expect(await exists(`mcpTestUsers/${crcUser.uid}`)).toBe(false)
+        expect(await exists("setlists/sl-flag-crc")).toBe(false)
+        // Tenant B is untouched.
+        expect(await exists(`mcpTestUsers/${blUser.uid}`)).toBe(true)
+        await expect(getAuth().getUser(blUser.uid)).resolves.toBeTruthy()
+        expect(await exists("setlists/sl-flag-bl")).toBe(true)
+
+        // And the other way round: the BL sweep does not reach crc rows.
+        await db().collection("setlists").doc("sl-flag-crc").set({ ownerId: ADMIN_UID, orgId: "crc", name: "scratch", isTest: true })
+        const bl = await cleanupAllTestDataCore(LEADER_UID, {}, "brotherslazaroff")
+        if ("error" in bl) throw new Error("cleanup failed: " + bl.error)
+        expect(bl.removed).toBe(1)
+        expect(await exists(`mcpTestUsers/${blUser.uid}`)).toBe(false)
+        expect(await exists("setlists/sl-flag-bl")).toBe(false)
+        expect(await exists("setlists/sl-flag-crc")).toBe(true)
+    })
+
+    it("a test account in two tenants is left for the platform owner", async () => {
+        const both = await provisionTestAccount(LEADER_UID, { role: "musician", orgIds: ["crc", "brotherslazaroff"] }, "crc")
+        if ("error" in both) throw new Error("mint failed")
+        const result = await cleanupAllTestDataCore(LEADER_UID, {}, "crc")
+        if ("error" in result) throw new Error("cleanup failed: " + result.error)
+        expect(result.removed).toBe(0)
+        expect(result.skippedOtherTenants).toBe(1)
+        expect(await exists(`mcpTestUsers/${both.uid}`)).toBe(true)
+    })
+
+    it("the platform owner keeps the cross-tenant sweep", async () => {
+        const PO = "platform-owner-1"
+        await db().collection("platform").doc("owners").set({ uids: [PO] })
+        __resetPlatformOwnerMemo()
+        try {
+            const { crcUser, blUser } = await seedBothTenants()
+            const result = await cleanupAllTestDataCore(PO, {}, "crc")
+            if ("error" in result) throw new Error("cleanup failed: " + result.error)
+            expect(result.scope).toBe("all-tenants")
+            expect(result.removed).toBe(2)
+            expect(await exists(`mcpTestUsers/${crcUser.uid}`)).toBe(false)
+            expect(await exists(`mcpTestUsers/${blUser.uid}`)).toBe(false)
+            expect(await exists("setlists/sl-flag-crc")).toBe(false)
+            expect(await exists("setlists/sl-flag-bl")).toBe(false)
+        } finally {
+            await db().collection("platform").doc("owners").delete()
+            __resetPlatformOwnerMemo()
+        }
+    })
+
+    it("self-inclusion, tenant-scoped: a BL test leader's own fixtures are in the operand set; it sweeps them and itself, last, with no failures", async () => {
+        // The caller is a BL test bearer; its own setlist (and tracks) and a
+        // sibling BL test account are swept. Its users doc goes mid-sweep, so
+        // the gate must not re-run per revoke. feedback_self_inclusion_test_fixtures.
+        const driver = await provisionTestAccount(LEADER_UID, { role: "band_leader", orgIds: ["brotherslazaroff"] }, "brotherslazaroff")
+        if ("error" in driver) throw new Error("driver mint failed")
+        const sibling = await provisionTestAccount(driver.uid, { role: "musician", orgIds: ["brotherslazaroff"] }, "brotherslazaroff")
+        if ("error" in sibling) throw new Error("sibling mint failed: " + sibling.error)
+        const crcUser = await provisionTestAccount(LEADER_UID, { role: "musician", orgIds: ["crc"] }, "crc")
+        if ("error" in crcUser) throw new Error("crc mint failed")
+        await db().collection("setlists").doc("sl-driver").set({ ownerId: driver.uid, orgId: "brotherslazaroff", name: "gig" })
+        await db().collection("tracks").doc("tr-driver").set({ setlistId: "sl-driver", orgId: "brotherslazaroff", title: "x" })
+
+        const result = await cleanupAllTestDataCore(driver.uid, {}, "brotherslazaroff")
+        if ("error" in result) throw new Error("cleanup failed entirely: " + result.error)
+        expect(result.failures).toEqual([])
+        expect(result.removed).toBe(2)
+        expect(await exists("setlists/sl-driver")).toBe(false)
+        expect(await exists("tracks/tr-driver")).toBe(false)
+        await expect(getAuth().getUser(driver.uid)).rejects.toThrow()
+        await expect(getAuth().getUser(sibling.uid)).rejects.toThrow()
+        // The crc test account is another tenant's.
+        expect(await exists(`mcpTestUsers/${crcUser.uid}`)).toBe(true)
     })
 
     // ── loginable-test-accounts Plan 01: opt-in browser login ────────────────

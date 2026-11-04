@@ -1,3 +1,4 @@
+import { writeCatalog } from "@/lib/library/catalog-mirror"
 import 'server-only'
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import {
@@ -524,7 +525,13 @@ async function commitResolvedBytes(
     // Phase 5: the row as it was, for the shared-bytes audit below.
     const rowBefore = (await db.collection("library_index").doc(fileId).get().catch(() => null))?.data() ?? {}
     try {
-        await db.collection("library_index").doc(fileId).set(patch, { merge: true })
+        // Status mirrors onto songs/{id} when it exists (an orphaned song
+        // row used to stay orphaned after its bytes were healed).
+        const { status: _status, ...indexOnly } = patch
+        await writeCatalog(db, [{ fileId, patch: { status: "active" }, index: indexOnly }], {
+            org: orgId,
+            broadcast: false,
+        })
     } catch (err) {
         // Compensating-delete: roll the Storage blob back so we don't
         // leave a reverse orphan (bytes-without-index-update). force:true
@@ -810,6 +817,7 @@ async function commitRebondBatch(
 async function commitOrphanBatch(
     db: FirebaseFirestore.Firestore,
     plan: ProbeResult[],
+    org: OrgId,
 ): Promise<{ committed: number; heldArchived: number }> {
     const writable = plan.filter(
         (p) => p.candidate.currentStatus !== "archived",
@@ -821,30 +829,17 @@ async function commitOrphanBatch(
     let committed = 0
     for (let i = 0; i < writable.length; i += BATCH_MAX) {
         const slice = writable.slice(i, i + BATCH_MAX)
-        const batch = db.batch()
-        for (const p of slice) {
-            // Multi-tenant P2 (W8/W9): the row was read moments ago by the
-            // org-scoped scan; stamping its tenant keeps a racing delete from
-            // leaving an unstamped stub behind (a batch update would instead
-            // fail the whole slice on one vanished row).
-            batch.set(
-                db.collection("library_index").doc(p.candidate.fileId),
-                { status: "orphaned", orphanedAt: nowIso, orgId: p.candidate.orgId },
-                { merge: true },
-            )
-            // Mirror onto songs/{id} when present so search_library's
-            // status filter agrees on either collection. set+merge is
-            // safe — songs/{id} may not exist for every library row,
-            // and a stub `{status:'orphaned'}` doc is still a valid
-            // shape there (verify_setlist_charts uses the same pattern).
-            batch.set(
-                db.collection("songs").doc(p.candidate.fileId),
-                { status: "orphaned", orgId: p.candidate.orgId },
-                { merge: true },
-            )
-        }
-        await batch.commit()
-        committed += slice.length
+        // Both collections through the catalogue writer (songs/{id} stubbed
+        // when absent, so search_library's status filter agrees on either).
+        // Rows were read moments ago by the org-scoped scan; the writer
+        // re-checks each one against the caller's tenant, and a row that
+        // vanished since is skipped, never re-created as a stub.
+        const res = await writeCatalog(
+            db,
+            slice.map((p) => ({ fileId: p.candidate.fileId, patch: { status: "orphaned" as const }, index: { orphanedAt: nowIso } })),
+            { org, missingSong: "stub", broadcast: false },
+        )
+        committed += res.written.length
     }
     return { committed, heldArchived }
 }
@@ -1068,7 +1063,7 @@ export async function reconcileLibrary(
         const finalNeedsRebondRows: NeedsRebondRow[] =
             rebondOutcome.stillNeedsRebond
 
-        const orphanCommit = await commitOrphanBatch(db, fullOrphanPlan)
+        const orphanCommit = await commitOrphanBatch(db, fullOrphanPlan, org)
         const orphansCommitted = orphanCommit.committed
         if (orphanCommit.heldArchived > 0) {
             logger.info(

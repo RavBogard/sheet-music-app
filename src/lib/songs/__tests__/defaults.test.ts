@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { getDb, resetDbForTests } from '../../local/schema'
 import {
     __resetForTests,
+    __setDefaultsSenderForTests,
     flushPendingPropagations,
     propagateTrackEditToSong,
     seedTrackFromSong,
@@ -50,6 +51,12 @@ class FakeClock implements PropagationClock {
         await flushAll()
     }
 }
+
+const sent: Array<{ songId: string; setlistId: string; patch: object }> = []
+__setDefaultsSenderForTests(async (body) => {
+    sent.push(body)
+    return { ok: true, status: 200 }
+})
 
 async function flushAll(rounds = 6): Promise<void> {
     for (let i = 0; i < rounds; i++) {
@@ -131,7 +138,8 @@ describe('propagateTrackEditToSong', () => {
         })
     }
 
-    it('debounces three rapid calls within window into ONE applyEdit', async () => {
+    it('debounces three rapid calls within window into ONE server save', async () => {
+        sent.length = 0
         await seed('songA')
         const clock = new FakeClock()
 
@@ -174,13 +182,12 @@ describe('propagateTrackEditToSong', () => {
             setlistId: 'sl1',
         })
 
-        // Outbox should have exactly ONE update for songs/songA
-        const all = await getDb().outbox.toArray()
-        const matches = all.filter(
-            (r) => r.collection === 'songs' && r.docId === 'songA',
-        )
+        // Exactly ONE server save for songA, carrying only the changed
+        // fields; nothing goes through the outbox.
+        const matches = sent.filter((b) => b.songId === 'songA')
         expect(matches).toHaveLength(1)
-        expect(matches[0].op).toBe('update')
+        expect(matches[0]).toMatchObject({ setlistId: 'sl1', patch: { key: 'E', lead: 'Daniel' } })
+        expect(await getDb().outbox.toArray()).toHaveLength(0)
     })
 
     it('debounces two different songs independently', async () => {

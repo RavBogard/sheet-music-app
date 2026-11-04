@@ -1,61 +1,65 @@
 "use client"
 
-import { apiFetch } from "@/lib/api-client"
+import { getOpsClient } from "@/lib/setlist-ops-client/runtime"
+import type { WireOp } from "@/lib/setlist-ops-client/client"
 
 export type LiveReorderFailure = "offline" | "rejected" | "network" | "conflict"
 
 export type LiveReorderResult =
     | { ok: true }
-    /** Someone changed the setlist since this page last saw it. */
-    | { ok: false; reason: "stale"; currentVersion: number; currentOrder: string[] }
     | { ok: false; reason: Exclude<LiveReorderFailure, "conflict">; code?: string }
 
 /**
- * Write a new row order from the Perform page through `/api/setlist/reorder`
- * (the server path MCP `reorder_setlist` uses), gated on the setlist version
- * the page last saw. Never throws: the caller rolls its optimistic order
- * back on any `ok: false`, or re-applies the move on a stale answer.
+ * ONE anchored `move` per dragged row: the row's new neighbours in the order
+ * the leader sees (`order`). The server rebases the anchors onto its own
+ * order, so a move never half-applies and never needs a stale-version retry.
+ */
+export function moveOps(order: readonly string[], moved: readonly string[]): WireOp[] {
+    const ops: WireOp[] = []
+    for (const id of new Set(moved)) {
+        const at = order.indexOf(id)
+        if (at < 0) continue
+        ops.push({
+            kind: "move",
+            rowId: id,
+            afterRowId: at > 0 ? order[at - 1] : null,
+            beforeRowId: at + 1 < order.length ? order[at + 1] : null,
+        })
+    }
+    return ops
+}
+
+/**
+ * Write a reorder from Perform through the setlist ops client (the one writer
+ * MCP and the editor use), as ONE batch. What the leader is told is what
+ * happens: when the write is not confirmed (offline, refused, a network
+ * failure) the batch is also REMOVED from the ops queue, so a move that was
+ * rolled back on screen can never land minutes later. Never throws.
  */
 export async function commitLiveReorder(
     setlistId: string,
-    orderedTrackIds: string[],
-    lastSeenVersion?: number,
+    order: string[],
+    moved: string[],
 ): Promise<LiveReorderResult> {
     if (typeof navigator !== "undefined" && navigator.onLine === false) {
         return { ok: false, reason: "offline" }
     }
+    const ops = moveOps(order, moved)
+    if (ops.length === 0) return { ok: true }
+    const client = getOpsClient()
+    let key = ""
     try {
-        const res = await apiFetch("/api/setlist/reorder", {
-            method: "POST",
-            body: JSON.stringify(
-                lastSeenVersion === undefined
-                    ? { setlistId, orderedTrackIds }
-                    : { setlistId, orderedTrackIds, lastSeenVersion },
-            ),
-            timeout: 15_000,
-        })
-        if (res.ok) return { ok: true }
-        let body: { code?: unknown; currentVersion?: unknown; orderedTrackIds?: unknown } = {}
-        try {
-            body = ((await res.json()) ?? {}) as typeof body
-        } catch {
-            // non-JSON error body
-        }
-        if (
-            body.code === "stale_version" &&
-            typeof body.currentVersion === "number" &&
-            Array.isArray(body.orderedTrackIds) &&
-            body.orderedTrackIds.every((id) => typeof id === "string")
-        ) {
-            return {
-                ok: false,
-                reason: "stale",
-                currentVersion: body.currentVersion,
-                currentOrder: body.orderedTrackIds as string[],
-            }
-        }
-        return { ok: false, reason: "rejected", code: typeof body.code === "string" ? body.code : undefined }
+        key = await client.enqueue(
+            setlistId,
+            ops.map((op) => ({ op })),
+        )
+        const r = await client.settle(setlistId, key)
+        if (r.ok) return { ok: true }
+        await client.dropBatch(key).catch(() => 0)
+        if (r.reason === "offline") return { ok: false, reason: "offline" }
+        return { ok: false, reason: "rejected", code: r.reason }
     } catch {
+        if (key) await client.dropBatch(key).catch(() => 0)
         return {
             ok: false,
             reason: typeof navigator !== "undefined" && navigator.onLine === false ? "offline" : "network",

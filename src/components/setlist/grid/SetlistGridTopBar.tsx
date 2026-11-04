@@ -28,6 +28,8 @@ export interface SetlistGridTopBarProps {
     performHref?: string
     /** Recordings: link to the quiet Listen page for this setlist. Never shown in Perform. */
     listenHref?: string
+    /** Rehearse / Perform / Edit switch. When given it replaces the two links above. */
+    modeSlot?: ReactNode
     /** BET-5: the gig line under the status line (band tenants). */
     gigSlot?: ReactNode
     /** BET-6: the parasha, joined to the meta line (an inline node). */
@@ -50,6 +52,7 @@ export function SetlistGridTopBar({
     onEditMeta,
     performHref,
     listenHref,
+    modeSlot,
     gigSlot,
     metaSlot,
     familySlot,
@@ -123,7 +126,8 @@ export function SetlistGridTopBar({
 
                 <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
                     <SyncIndicator {...syncProps} />
-                    {listenHref ? (
+                    {modeSlot ?? null}
+                    {!modeSlot && listenHref ? (
                         <Link
                             href={listenHref}
                             data-testid="setlist-grid-listen-link"
@@ -139,7 +143,7 @@ export function SetlistGridTopBar({
                             <span>{t('recordings.rehearse')}</span>
                         </Link>
                     ) : null}
-                    {performHref ? (
+                    {!modeSlot && performHref ? (
                         <Link
                             href={performHref}
                             data-testid="setlist-grid-perform-link"

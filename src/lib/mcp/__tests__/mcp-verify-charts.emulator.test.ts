@@ -425,6 +425,32 @@ describe("MCP chart-health tools (emulator)", () => {
         expect(idxFlaky.status).toBe("active")
     })
 
+    it("markOrphaned on a BL setlist bonding a CRC chart leaves CRC's rows untouched, and the counts cannot tell it from no row", async () => {
+        const BL_LEADER = "bl-leader-verify"
+        await db().collection("users").doc(BL_LEADER).set({ role: "band_leader", membershipsMigratedAt: new Date() })
+        await db().collection("memberships").doc(`brotherslazaroff__${BL_LEADER}`).set({
+            uid: BL_LEADER, tenantId: "brotherslazaroff", role: "band_leader", soundEngineer: false,
+        })
+        const id = "set-verify-bl"
+        await db().collection("setlists").doc(id).set({ name: "Gig", ownerId: BL_LEADER, orgId: "brotherslazaroff" })
+        await seedTrack("bl-a", id, 0, { title: "CRC chart", fileId: "crc-chart", songId: "crc-chart", type: "song", orgId: "brotherslazaroff" })
+        await seedTrack("bl-b", id, 1, { title: "No row", fileId: "no-row-x", songId: "no-row-x", type: "song", orgId: "brotherslazaroff" })
+        await db().collection("library_index").doc("crc-chart").set({ name: "CRC chart", status: "active", orgId: "crc" })
+        await db().collection("songs").doc("crc-chart").set({ title: "CRC chart", status: "active", orgId: "crc", version: 4 })
+        mockGetChartHealth.mockResolvedValue({ status: "missing", reason: "not found" })
+
+        const r = await verifySetlistCharts(BL_LEADER, { setlistId: id, markOrphaned: true }, "brotherslazaroff")
+        expect("ok" in r && r.ok).toBe(true)
+        if (!("ok" in r) || !r.ok) return
+        expect(r.orphanedMarked).toBe(0)
+        // The foreign row and the absent one count the same way.
+        expect(r.phantomBonds).toBe(2)
+        expect(r.skippedNotOwned).toBe(2)
+        expect((await db().collection("library_index").doc("crc-chart").get()).data()?.status).toBe("active")
+        expect((await db().collection("songs").doc("crc-chart").get()).data()).toMatchObject({ status: "active", version: 4 })
+        expect((await db().collection("songs").doc("no-row-x").get()).exists).toBe(false)
+    })
+
     it("markOrphaned defaults to false — missing rows surface in the report but stay 'active' in the catalog", async () => {
         const id = "set-verify-no-mark"
         await db().collection("setlists").doc(id).set({

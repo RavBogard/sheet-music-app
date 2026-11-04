@@ -151,11 +151,6 @@
         "maxLength": 60,
         "context": "{name} is the setlist's name."
     },
-    "rehearseIntro": {
-        "where": "Rehearse page: one line under the setlist name",
-        "who": "musicians",
-        "maxLength": 60
-    },
     "chart": {
         "where": "Rehearse page: button that opens a song's chart full screen",
         "who": "musicians",
@@ -201,5 +196,25 @@
         "who": "musicians",
         "maxLength": 45,
         "context": "{key} is a key name such as Dm."
+    },
+    "modePerform": {
+        "where": "Mode switch in every setlist header: opens Perform",
+        "who": "musicians",
+        "maxLength": 20
+    },
+    "modeEdit": {
+        "where": "Mode switch in every setlist header: opens the editor (leaders only)",
+        "who": "leaders",
+        "maxLength": 20
+    },
+    "modeSwitchAria": {
+        "where": "Aria label of the Rehearse / Perform / Edit mode switch",
+        "who": "musicians",
+        "maxLength": 40
+    },
+    "chartLoading": {
+        "where": "Rehearse chart page: shown in the chart area while the chart loads",
+        "who": "musicians",
+        "maxLength": 40
     }
 }

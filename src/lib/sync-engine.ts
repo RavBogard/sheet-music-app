@@ -114,6 +114,9 @@ export async function syncLibraryIndex(): Promise<SyncStats> {
     const syncRunId = crypto.randomUUID()
     const syncRunRef = db.collection('sync_runs').doc(syncRunId)
     await syncRunRef.set({
+        // The Drive root is CRC's library (new rows are stamped crc below).
+        // The admin Data tab lists sync_runs by this tenant (firestore.rules).
+        orgId: 'crc',
         startedAt: new Date().toISOString(),
         status: 'running',
         completedAt: null,

@@ -1,3 +1,4 @@
+import { writeCatalog } from "@/lib/library/catalog-mirror"
 import "server-only"
 
 import { FieldValue } from "firebase-admin/firestore"
@@ -339,17 +340,20 @@ export async function applyRevision(
     try {
         const prior = str(previous.data.status)
         const at = new Date().toISOString()
-        const batch = db.batch()
-        batch.update(db.collection(LIBRARY).doc(previous.id), {
-            status: "archived",
-            ...(prior && prior !== "archived" ? { priorStatus: prior } : {}),
-            canonicalFileId: newFileId,
-            archivedAt: at,
-            archivedReason: `Superseded by ${newFileId} via ${opts.tool}`,
-        })
-        const songRef = db.collection(SONGS).doc(previous.id)
-        if ((await songRef.get()).exists) batch.update(songRef, { status: "archived" })
-        await batch.commit()
+        await writeCatalog(
+            db,
+            [{
+                fileId: previous.id,
+                patch: { status: "archived" },
+                index: {
+                    ...(prior && prior !== "archived" ? { priorStatus: prior } : {}),
+                    canonicalFileId: newFileId,
+                    archivedAt: at,
+                    archivedReason: `Superseded by ${newFileId} via ${opts.tool}`,
+                },
+            }],
+            { org },
+        )
         previousArchived = true
     } catch (err) {
         warnings.push(`previous version ${previous.id} was not archived: ${err instanceof Error ? err.message : String(err)}`)

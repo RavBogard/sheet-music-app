@@ -1,4 +1,4 @@
-import { FieldValue } from "firebase-admin/firestore"
+import { ANY_TENANT, broadcastLibraryChange, readCatalogRowTx, writeCatalog, writeCatalogRowTx } from "@/lib/library/catalog-mirror"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { checkUserRateLimit } from "@/lib/rate-limit"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
@@ -49,15 +49,6 @@ export interface SongMetadataPatch {
     leadMusician?: string
     /** BET-5: the song's default length in seconds; a new setlist row copies it. */
     durationSec?: number
-}
-
-/**
- * 2026-11-03: a bpm written here is a person's, so it clears the
- * recording-tempo marker (apply_recording_tempos writes through
- * applyRecordingTempoToSong instead).
- */
-function bpmMarker(_patch: SongMetadataPatch): Record<"bpmSource" | "bpmSourceRecordingId" | "bpmSourceValue", unknown> {
-    return { bpmSource: FieldValue.delete(), bpmSourceRecordingId: FieldValue.delete(), bpmSourceValue: FieldValue.delete() }
 }
 
 export interface ApplySongMetadataResult {
@@ -188,36 +179,22 @@ export async function applySongMetadata(
         }
     }
 
-    const batch = db.batch()
-    if (willWriteSong) {
-        // Dotted field paths touch only the nested default, leaving the rest
-        // of `defaults` (and `recent[]`) intact.
-        const songUpdate: Record<string, unknown> = { updatedAt: Date.now() }
-        if (patch.key !== undefined) songUpdate["defaults.key"] = patch.key
-        if (patch.bpm !== undefined) {
-            songUpdate["defaults.bpm"] = patch.bpm
-            for (const [k, v] of Object.entries(bpmMarker(patch))) songUpdate[`defaults.${k}`] = v
-        }
-        if (patch.leadMusician !== undefined)
-            songUpdate["defaults.lead"] = patch.leadMusician
-        if (patch.durationSec !== undefined)
-            songUpdate["defaults.durationSec"] = patch.durationSec
-        batch.update(db.collection("songs").doc(fileId), songUpdate)
-    }
-    if (willWriteIndex) {
-        const indexUpdate: Record<string, unknown> = {}
-        if (patch.key !== undefined) indexUpdate.key = patch.key
-        if (patch.bpm !== undefined) {
-            indexUpdate.bpm = patch.bpm
-            Object.assign(indexUpdate, bpmMarker(patch))
-        }
-        if (patch.leadMusician !== undefined)
-            indexUpdate.leadMusician = patch.leadMusician
-        if (patch.durationSec !== undefined)
-            indexUpdate.durationSec = patch.durationSec
-        batch.update(db.collection("library_index").doc(fileId), indexUpdate)
-    }
-    await batch.commit()
+    // Both catalogue surfaces through the one writer: songs `defaults.*`
+    // (nested merge: the rest of `defaults` and `recent[]` stay intact) and
+    // the library_index fields. The tenant was checked above.
+    await writeCatalog(
+        db,
+        [{
+            fileId,
+            patch: {
+                ...(patch.key !== undefined ? { key: patch.key } : {}),
+                ...(patch.bpm !== undefined ? { bpm: patch.bpm } : {}),
+                ...(patch.leadMusician !== undefined ? { leadMusician: patch.leadMusician } : {}),
+                ...(patch.durationSec !== undefined ? { durationSec: patch.durationSec } : {}),
+            },
+        }],
+        { org: opts.org ?? ANY_TENANT, broadcast: false },
+    )
 
     return {
         existed,
@@ -231,10 +208,10 @@ export async function applySongMetadata(
 
 /** Best-effort cache-invalidation broadcast — same channel processChartUpload
  *  / delete_chart use so open in-app library views refetch. Never throws. */
-export async function broadcastLibrarySignal(
+async function broadcastLibrarySignal(
     db: FirebaseFirestore.Firestore,
-    _fileId: string,
-    _uid: string,
+    fileId: string,
+    uid: string,
 ): Promise<void> {
     try {
         // No fileId, no uid: every tenant can read this doc (phase 9).
@@ -273,44 +250,39 @@ function songTempoFields(lib: Record<string, unknown> | null, song: Record<strin
 /**
  * apply_recording_tempos' write to a song default. library_index.bpm and
  * songs.defaults.bpm are decided SEPARATELY (each doc is written only when its
- * own field is empty or still auto-filled), read and written in ONE
- * transaction so a bpm a person typed meanwhile is kept. Only a chart the
- * caller's tenant owns is written. `dryRun` decides without writing.
+ * own field is empty or still auto-filled), read and written through
+ * catalog-mirror in ONE transaction, so a bpm a person typed meanwhile is
+ * kept. Only a chart the caller's tenant owns is written. `dryRun` decides
+ * without writing.
  */
 export async function applyRecordingTempoToSong(
     db: FirebaseFirestore.Firestore,
     org: OrgId,
     fileId: string,
     pick: TempoPick,
-    opts: { dryRun?: boolean; uid?: string } = {},
+    opts: { dryRun?: boolean } = {},
 ): Promise<{ owned: boolean; exists: boolean; decisions: SongTempoDecision[]; written: TempoDoc[] }> {
-    const libRef = db.collection("library_index").doc(fileId)
-    const songRef = db.collection("songs").doc(fileId)
     const res = await db.runTransaction(async (tx) => {
-        const [libSnap, songSnap] = await tx.getAll(libRef, songRef)
-        const lib = libSnap.exists ? ((libSnap.data() ?? {}) as Record<string, unknown>) : null
-        const song = songSnap.exists ? ((songSnap.data() ?? {}) as Record<string, unknown>) : null
-        const owner = lib ?? song
+        const row = await readCatalogRowTx(tx, db, fileId)
+        const owner = row.index ?? row.song
         if (!owner) return { owned: false, exists: false, decisions: [], written: [] as TempoDoc[] }
-        if (!isOwnedBy(owner as Record<string, unknown> & { orgId?: string }, org)) return { owned: false, exists: true, decisions: [], written: [] as TempoDoc[] }
-        const decisions = songTempoFields(lib, song).map(({ doc, field }) => ({ doc, decision: decideField(field, pick) }))
-        const written: TempoDoc[] = []
-        if (!opts.dryRun) {
-            const marker = { bpmSource: "recording", bpmSourceRecordingId: pick.recordingId, bpmSourceValue: pick.bpm }
-            for (const { doc, decision } of decisions) {
-                if (decision.action !== "fill" && decision.action !== "update") continue
-                if (doc === "library_index") tx.update(libRef, { bpm: pick.bpm, ...marker })
-                else {
-                    const u: Record<string, unknown> = { updatedAt: Date.now(), "defaults.bpm": pick.bpm }
-                    for (const [k, v] of Object.entries(marker)) u[`defaults.${k}`] = v
-                    tx.update(songRef, u)
-                }
-                written.push(doc)
-            }
+        if (!isOwnedBy(owner, org)) return { owned: false, exists: true, decisions: [], written: [] as TempoDoc[] }
+        const decisions = songTempoFields(row.index, row.song).map(({ doc, field }) => ({ doc, decision: decideField(field, pick) }))
+        const written = decisions
+            .filter((d) => d.decision.action === "fill" || d.decision.action === "update")
+            .map((d) => d.doc)
+        if (!opts.dryRun && written.length > 0) {
+            writeCatalogRowTx(
+                tx,
+                db,
+                row,
+                { bpm: pick.bpm, bpmSource: "recording", bpmSourceRecordingId: pick.recordingId, bpmSourceValue: pick.bpm },
+                { org, docs: { index: written.includes("library_index"), song: written.includes("songs") } },
+            )
         }
-        return { owned: true, exists: true, decisions, written }
+        return { owned: true, exists: true, decisions, written: opts.dryRun ? [] : written }
     })
-    if (res.written.length > 0) await broadcastLibrarySignal(db, fileId, opts.uid ?? "")
+    if (res.written.length > 0) await broadcastLibraryChange(db)
     return res
 }
 

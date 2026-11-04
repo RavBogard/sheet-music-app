@@ -2,20 +2,26 @@ import 'fake-indexeddb/auto'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Multi-tenant phase 5: a shared chart's songs doc belongs to its owner, so a
-// key/lead edit on this site's track row must not queue a write to it (the
-// rules would refuse it and the outbox would keep retrying).
+// key/lead edit on this site's track row must not send a save for it (the
+// server would refuse it).
 
-const applyEdit = vi.hoisted(() => vi.fn(async () => {}))
-vi.mock('@/lib/local/write', () => ({ applyEdit }))
+const send = vi.hoisted(() => vi.fn(async (_b: { songId: string }) => ({ ok: true, status: 200 })))
 
 import { getDb, resetDbForTests } from '@/lib/local/schema'
-import { __resetForTests, flushPendingPropagations, propagateTrackEditToSong } from '@/lib/songs/defaults'
+import {
+    __resetForTests,
+    __setDefaultsSenderForTests,
+    flushPendingPropagations,
+    propagateTrackEditToSong,
+} from '@/lib/songs/defaults'
+
+__setDefaultsSenderForTests(send)
 
 describe('sticky song defaults on shared charts', () => {
     beforeEach(async () => {
         await resetDbForTests()
         document.documentElement.dataset.org = 'crc'
-        applyEdit.mockClear()
+        send.mockClear()
     })
     afterEach(async () => {
         __resetForTests()
@@ -37,6 +43,6 @@ describe('sticky song defaults on shared charts', () => {
         ])
         for (const id of ['own', 'legacy', 'nava']) propagateTrackEditToSong(id, { key: 'D' }, 'set-1')
         await flushPendingPropagations()
-        expect(applyEdit.mock.calls.map((c) => (c as unknown as [{ docId: string }])[0].docId).sort()).toEqual(['legacy', 'own'])
+        expect(send.mock.calls.map((c) => c[0].songId).sort()).toEqual(['legacy', 'own'])
     })
 })

@@ -1,4 +1,5 @@
-import { rowOrg } from "@/lib/org/membership"
+import { writeCatalog } from "@/lib/library/catalog-mirror"
+import { isOwnedBy } from "@/lib/library/visibility"
 import { NextResponse } from "next/server"
 import { getT } from "@/i18n/server"
 import { revalidatePath } from "next/cache"
@@ -40,7 +41,9 @@ export const PATCH = createApiHandler(
         const docRef = db.collection('library_index').doc(fileId)
         const docSnap = await docRef.get()
 
-        if (!docSnap.exists) {
+        // Another tenant's chart (or one only shared with this one) reads as
+        // not found.
+        if (!docSnap.exists || !isOwnedBy(docSnap.data() ?? {}, ctx.auth.orgId)) {
             const t = await getT()
             return NextResponse.json({ error: t("api-library.fileNotFound") }, { status: 404 })
         }
@@ -48,27 +51,18 @@ export const PATCH = createApiHandler(
         // v60-09-01: mirror status to songs/{fileId} so the picker can filter.
         // sticky memory (recent[] + defaults from v50-04) is preserved — we
         // only flip the status flag, never delete the songs doc.
-        const songRef = db.collection('songs').doc(fileId)
-        const [, songWriteResult] = await Promise.allSettled([
-            docRef.update({
-                status: archive ? 'archived' : 'active',
+        const written = await writeCatalog(db, [{
+            fileId,
+            patch: { status: archive ? 'archived' : 'active' },
+            index: {
                 modifiedTime: new Date().toISOString(),
                 archivedBy: archive ? ctx.auth.uid : null,
                 archivedAt: archive ? new Date().toISOString() : null,
-            }),
-            songRef.set(
-                {
-                    status: archive ? 'archived' : 'active',
-                    updatedAt: Date.now(),
-                    // The pickers read songs/* by orgId; if this set creates
-                    // the doc, it must carry the row's tenant.
-                    orgId: rowOrg(docSnap.data()?.orgId),
-                },
-                { merge: true },
-            ),
-        ])
-        if (songWriteResult.status === 'rejected') {
-            logger.warn(`[Archive] songs/{${fileId}} mirror failed`, songWriteResult.reason)
+            },
+        }], { org: ctx.auth.orgId, missingSong: 'stub' })
+        if (written.written.length === 0) {
+            const t = await getT()
+            return NextResponse.json({ error: t("api-library.fileNotFound") }, { status: 404 })
         }
 
         logger.info(`[Archive] ${archive ? 'Archived' : 'Restored'} ${fileId}`)

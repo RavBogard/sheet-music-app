@@ -227,7 +227,7 @@ export async function applyRecordingTemposTool(
         let songsWritten = 0
         for (const { songId: id, pick } of songWrites) {
             // Re-decided inside the write's transaction: a bpm a person typed since the plan is kept.
-            const res = await applyRecordingTempoToSong(db, org, id, pick, { uid })
+            const res = await applyRecordingTempoToSong(db, org, id, pick)
             if (res.written.length > 0) songsWritten++
         }
 
