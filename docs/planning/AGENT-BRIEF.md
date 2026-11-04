@@ -5,8 +5,10 @@ Every builder or reviewer prompt in this repo points here, then adds only its ow
 ## Setup
 - Repo: `C:\Users\dsbog\centralreform.live\sheet-music-app`. Work in your own git worktree on a
   branch named `<topic>/<short-slug>`, off the current `origin/master`.
-- First command in a new worktree: `git config user.name "<your-agent-name>"` and
-  `git config user.email "<your-agent-name>@coord.local"`.
+- First commands in a new worktree: `git config extensions.worktreeConfig true`, then
+  `git config --worktree user.name "<your-agent-name>"` and
+  `git config --worktree user.email "<your-agent-name>@coord.local"`. Never write the shared
+  repo config (a plain `git config user.*` in a worktree renames every later commit in the repo).
 - `npm ci` if `node_modules` is missing.
 
 ## Rules (from `CLAUDE.md`; read it once)
@@ -31,6 +33,8 @@ Every builder or reviewer prompt in this repo points here, then adds only its ow
 - CI runs everything else.
 
 ## Tests
+Server pages that pass Firestore rows to Client Components: test with a row written by the
+setlist-ops engine (Timestamp fields) — #85 was a production crash from exactly that.
 Assert behaviour, roles and ids, not exact prose. One deliberate wording test per tool
 description at most. Don't cover the same flow at two levels.
 

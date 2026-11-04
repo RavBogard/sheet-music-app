@@ -164,3 +164,26 @@ not a patch of the particulars.
   recordings pipeline's publish.ts gets its credentials.
 - Dependabot: all 8 "safe" PRs failed on a stale base; asked them to rebase, with a merge watcher
   running.
+
+## Evening 2026-11-03: merged and live
+- #79 editor on ops (727587c2), #82 Perform read model + Rehearse/Perform/Edit switch (b77b6fc2),
+  #83 repro-harness teardown flake, #84 later list (0da39a98), #85 Perform SSR fix, #81 tempo
+  (1c942c56), #86 deps (dexie-react-hooks 4, react-day-picker 10, types, eslint-config-next,
+  setup-java). Rules + indexes deployed by deploy-rules.yml on each.
+- GATE: #82 and #84 were built stacked on #79 before it merged — proceeded because #79 was final
+  (security re-review closed, only CI pending), and the stacks shared no hot files.
+- SECURITY (pre-existing in prod, closed by #84): /api/library/rename and /archive didn't check
+  the chart's tenant; verify_setlist_charts markOrphaned wrote other tenants' rows. Reported to Daniel.
+- INCIDENT: #82 deployed, Perform SSR crashed ("Chart failed to load") on setlists with rows the
+  ops engine inserted — a Timestamp createdAt can't cross to a Client Component. getTracksForSetlist
+  converted only updatedAt. Fixed in #85 (toPlain: plain objects only, Timestamps -> millis);
+  verified on prod at 820x1180. Lesson: the SSR path had no test with an ops-written row.
+- Vercel preview builds OOM-killed in "Running TypeScript" (35 min) on #81 x3 and #84 x1; locally
+  the TS step is 24-47 s and production builds pass. Not explained by the code; watch it.
+- Lint: the new React Compiler rules (refs/immutability/purity/incompatible-library) are off,
+  because CI runs --max-warnings 0; re-enable file by file when Perform is refactored.
+- BPM from recordings (Daniel): tempo stored on all 66 CRC recordings (12 confident). Applied for
+  9 songs (fills on song defaults + setlist rows, marked from-recording). Daniel's rulings:
+  skip anything at or under 70 BPM (Sim Shalom 67, Eitz Chayim 66 left blank); earlier typed BPMs
+  were not real, so Ashir Oz 95->104 and Refa Tsiri 95->118 were overwritten (one-off script via
+  writeCatalog + maintainRows; the tool itself still never overwrites a person's value).
