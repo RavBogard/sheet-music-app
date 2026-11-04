@@ -157,3 +157,10 @@ not a patch of the particulars.
   app code.
 - GATE: cleanup_all_test_data gets restricted to the caller's tenant (po excepted) in the later-list
   PR — proceeded because it follows from the tenant-isolation rulings.
+- #81 tempo from recordings is open. Merge AFTER #79, rebasing because both touch fields.ts and
+  SetlistGrid.tsx. On the rebase, add bpmSource/bpmSourceRecordingId/bpmSourceValue to the clone
+  copy list, which #79's fix round creates. The back-fill needs Admin credentials
+  (GOOGLE_APPLICATION_CREDENTIALS), and this machine's .env.local has none. Find where the
+  recordings pipeline's publish.ts gets its credentials.
+- Dependabot: all 8 "safe" PRs failed on a stale base; asked them to rebase, with a merge watcher
+  running.
