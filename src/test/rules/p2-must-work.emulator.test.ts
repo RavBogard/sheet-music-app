@@ -207,11 +207,10 @@ describe("P2 §7.5 — CRC and BL parity (must still work)", () => {
     })
 
     describe("aBL — songs, overrides", () => {
-        it("updates an A song", async () => {
-            await assertSucceeds(db("aBL").doc("songs/songA").update({ defaults: { key: "D" } }))
-        })
-        it("creates a song stamped A; a client recording create is denied (server-only, 2026-11)", async () => {
-            await assertSucceeds(db("aBL").doc("songs/blSong").set({ title: "New", orgId: A }))
+        it("songs and recordings are server-only writes (sticky defaults: POST /api/songs/defaults)", async () => {
+            await assertSucceeds(db("aBL").doc("songs/songA").get())
+            await assertFails(db("aBL").doc("songs/songA").update({ defaults: { key: "D" } }))
+            await assertFails(db("aBL").doc("songs/blSong").set({ title: "New", orgId: A }))
             await assertFails(db("aBL").doc("recordings/blRec").set({ songId: "blSong", title: "R", orgId: A, createdAt: 2 }))
         })
         it("saves a custom template (saveCustomTemplate, bare key = crc)", async () => {
@@ -293,7 +292,8 @@ describe("P2 §7.5 — CRC and BL parity (must still work)", () => {
         it("reads and writes across tenants (B song, B setlist, B history, B auditLogs, B defaults)", async () => {
             const d = db("po")
             await assertSucceeds(d.doc("songs/songB").get())
-            await assertSucceeds(d.doc("songs/songB").update({ title: "po edit" }))
+            // songs/* is a server-only write for everyone (catalog-mirror.ts).
+            await assertFails(d.doc("songs/songB").update({ title: "po edit" }))
             await assertSucceeds(d.doc("setlists/sB/history/h1").get())
             await assertSucceeds(d.collection("auditLogs").get())
             await assertSucceeds(d.doc(`config/defaults__${B}`).set({ shabbat_morning: "sB" }))

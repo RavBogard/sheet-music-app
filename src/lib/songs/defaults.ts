@@ -4,7 +4,8 @@
 
 import { getDb } from '../local/schema'
 import type { SongDefaults, SongRecentEntry } from '../local/types'
-import { applyEdit } from '../local/write'
+import { apiFetch } from '../api-client'
+import { logger } from '../logger'
 import { isOwnedBy } from '../library/visibility'
 import { coerceOrgId } from '../org/registry'
 
@@ -97,12 +98,40 @@ async function flushOne(songId: string): Promise<void> {
         RECENT_CAP,
     )
 
-    await applyEdit({
-        op: 'update',
-        collection: 'songs',
-        docId: songId,
-        patch: { defaults: mergedDefaults, recent: newRecent },
+    // The local copy updates at once (the next row seeded from this song
+    // sees it); the server write is authoritative and the songs listener
+    // brings its result back. Browser writes to songs/* are denied: the save
+    // goes through POST /api/songs/defaults (one transaction, only the
+    // changed fields, so it never reverts an MCP default).
+    if (existing) {
+        await getDb().songs.update(songId, { defaults: mergedDefaults, recent: newRecent })
+    }
+    try {
+        const res = await sendDefaults({ songId, setlistId: pendingSetlistId, patch: pendingPatch })
+        if (!res.ok) logger.warn(`[songs/defaults] save for ${songId} refused (${res.status})`)
+    } catch (err) {
+        // Sticky memory is a convenience: a failed save is logged, never
+        // retried forever, and never holds up a setlist's save state.
+        logger.warn(`[songs/defaults] save for ${songId} failed`, err)
+    }
+}
+
+/** The server write; replaced in tests. */
+export type DefaultsSender = (body: { songId: string; setlistId: string; patch: TrackDefaults }) => Promise<{ ok: boolean; status: number }>
+
+const apiSender: DefaultsSender = async (body) => {
+    const res = await apiFetch('/api/songs/defaults', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
     })
+    return { ok: res.ok, status: res.status }
+}
+
+let sendDefaults: DefaultsSender = apiSender
+
+export function __setDefaultsSenderForTests(sender: DefaultsSender | null): void {
+    sendDefaults = sender ?? apiSender
 }
 
 export function propagateTrackEditToSong(

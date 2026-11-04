@@ -52,6 +52,7 @@ export const TENANT_COLLECTIONS = [
     "songUsage",
     "songs",
     "standing_choices",
+    "sync_runs",
     "tasks",
     "templates",
     "tracks",
@@ -131,6 +132,11 @@ export function partPresetsQuery(db: Firestore, orgId: string): Query {
     return tenantQuery(db, "part_presets", orgId)
 }
 
+/** The tenant's latest Drive sync run (admin Data tab). */
+export function lastSyncRunQuery(db: Firestore, orgId: string): Query {
+    return tenantQuery(db, "sync_runs", orgId, orderBy("startedAt", "desc"), limit(1))
+}
+
 /** Every pending or confirmed assignment in the tenant (band leader view). */
 export function tenantAssignmentsQuery(db: Firestore, orgId: string): Query {
     return tenantQuery(
@@ -196,6 +202,7 @@ export const CLIENT_QUERIES = {
     recordingsForSongQuery,
     auditLogsQuery,
     partPresetsQuery,
+    lastSyncRunQuery,
     tenantAssignmentsQuery,
     myAssignmentsQuery,
     sharedCollectionsQuery,

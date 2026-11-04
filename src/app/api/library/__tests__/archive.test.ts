@@ -10,11 +10,21 @@ const mockSongsSet = vi.fn()
 const mockFirestoreLocal = {
     collection: vi.fn((name: string) => ({
         doc: vi.fn(() => ({
+            collectionName: name,
             get: vi.fn(async () => ({ exists: docExists, data: () => ({ orgId: "crc" }) })),
             update: mockUpdate,
             // v60-09-01: songs/{fileId} mirror writes go through .set() with merge.
             set: name === 'songs' ? mockSongsSet : vi.fn(),
         })),
+    })),
+    // The catalogue writer (catalog-mirror.ts) reads both docs with getAll
+    // and writes them in one batch: library_index → mockUpdate, songs →
+    // mockSongsSet.
+    getAll: vi.fn(async (...refs: unknown[]) => refs.map(() => ({ exists: docExists, data: () => ({ orgId: "crc" }) }))),
+    batch: vi.fn(() => ({
+        set: (ref: { collectionName: string }, data: unknown, o: unknown) =>
+            ref.collectionName === 'songs' ? mockSongsSet(data, o) : mockUpdate(data),
+        commit: vi.fn(async () => {}),
     })),
 }
 

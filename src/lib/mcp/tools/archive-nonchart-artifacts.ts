@@ -1,3 +1,4 @@
+import { writeCatalog } from "@/lib/library/catalog-mirror"
 import "server-only"
 
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
@@ -319,24 +320,17 @@ export async function archiveNonChartArtifacts(
         let committed = 0
         for (let i = 0; i < archiveRows.length; i += WRITE_BATCH_MAX) {
             const slice = archiveRows.slice(i, i + WRITE_BATCH_MAX)
-            const batch = db.batch()
-            for (const r of slice) {
-                batch.update(db.collection("library_index").doc(r.fileId), {
-                    status: "archived",
-                    modifiedTime: nowIso,
-                    archivedBy: uid,
-                    archivedAt: nowIso,
-                })
-                if (songExists.has(r.fileId)) {
-                    batch.set(
-                        db.collection("songs").doc(r.fileId),
-                        { status: "archived", updatedAt: Date.now() },
-                        { merge: true },
-                    )
-                }
-            }
-            await batch.commit()
-            committed += slice.length
+            // Both collections (songs/{id} only where it exists).
+            const res = await writeCatalog(
+                db,
+                slice.map((r) => ({
+                    fileId: r.fileId,
+                    patch: { status: "archived" as const },
+                    index: { modifiedTime: nowIso, archivedBy: uid, archivedAt: nowIso },
+                })),
+                { org },
+            )
+            committed += res.written.length
         }
 
         // ── read-back verify (atomic-guard read-verify contract) ──────────────

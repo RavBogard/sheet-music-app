@@ -1,4 +1,5 @@
-import { rowOrg } from "@/lib/org/membership"
+import { writeCatalog } from "@/lib/library/catalog-mirror"
+import { isOwnedBy } from "@/lib/library/visibility"
 import { NextResponse } from "next/server"
 import { getT } from "@/i18n/server"
 import { revalidatePath } from "next/cache"
@@ -62,7 +63,9 @@ export const PATCH = createApiHandler(
         const docRef = db.collection('library_index').doc(fileId)
         const docSnap = await docRef.get()
 
-        if (!docSnap.exists) {
+        // A chart of another tenant (or one only shared with this one) reads
+        // as not found: it is renamed by its owner only.
+        if (!docSnap.exists || !isOwnedBy(docSnap.data() ?? {}, ctx.auth.orgId)) {
             const t = await getT()
             return NextResponse.json({ error: t("api-library.fileNotFound") }, { status: 404 })
         }
@@ -92,14 +95,13 @@ export const PATCH = createApiHandler(
         const siblingsInCatalog = existingSiblings.length + 1
         const w02 = recomputeIndexNameFields(trimmed, siblingsInCatalog)
 
-        // v60-09-01: mirror rename to songs/{fileId} so the ChartBindPopover
-        // picker (driven by Dexie via subscribeSongsLibrary) reflects the new
-        // title across devices without a manual reload.
-        const songRef = db.collection('songs').doc(fileId)
-        const [, songWriteResult] = await Promise.allSettled([
-            docRef.update({
-                // Canonical name + W-02 derivatives (F-7).
-                name: trimmed,
+        // v60-09-01: the rename lands on songs/{fileId} too (the pickers read
+        // it), through the one catalogue writer, which checks the tenant.
+        const written = await writeCatalog(db, [{
+            fileId,
+            patch: { title: trimmed },
+            index: {
+                // W-02 derivatives (F-7).
                 nameLower: w02.nameLower,
                 normalizedName: w02.normalizedName,
                 stem: w02.stem,
@@ -111,21 +113,11 @@ export const PATCH = createApiHandler(
                 // grid, bind picker fallback) read `displayName` directly.
                 displayName: trimmed,
                 modifiedTime: new Date().toISOString(),
-            }),
-            songRef.set(
-                {
-                    title: trimmed,
-                    normalizedTitle: trimmed.toLowerCase(),
-                    updatedAt: Date.now(),
-                    // The pickers read songs/* by orgId; if this set creates
-                    // the doc, it must carry the row's tenant.
-                    orgId: rowOrg(docSnap.data()?.orgId),
-                },
-                { merge: true },
-            ),
-        ])
-        if (songWriteResult.status === 'rejected') {
-            logger.warn(`[Rename] songs/{${fileId}} mirror failed`, songWriteResult.reason)
+            },
+        }], { org: ctx.auth.orgId, missingSong: 'stub' })
+        if (written.written.length === 0) {
+            const t = await getT()
+            return NextResponse.json({ error: t("api-library.fileNotFound") }, { status: 404 })
         }
 
         logger.info(`[Rename] ${fileId} → "${trimmed}"`)

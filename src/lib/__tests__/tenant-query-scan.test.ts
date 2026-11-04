@@ -382,6 +382,7 @@ describe("tenant-query builders", () => {
         recordingsForSongQuery: ["crc", "song-1"],
         auditLogsQuery: ["crc", 20],
         partPresetsQuery: ["crc"],
+        lastSyncRunQuery: ["crc"],
         tenantAssignmentsQuery: ["crc"],
         myAssignmentsQuery: ["uid-1"],
         sharedCollectionsQuery: ["sharedWith", "crc"],

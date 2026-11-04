@@ -17,10 +17,20 @@ import type { OrgId } from '@/lib/org/types'
  */
 export interface SubscribeAdapter {
     subscribe(
-        handler: (changes: DocChange[]) => void,
+        handler: (changes: DocChange[], snapshot?: SnapshotMeta) => void,
         onError: (err: unknown) => void,
         orgId: OrgId,
     ): () => void
+}
+
+/**
+ * The whole result a snapshot describes. `fromCache: false` means `ids` is
+ * the server's complete list of this tenant's songs, so any owned local row
+ * missing from it was deleted while the device was away.
+ */
+export interface SnapshotMeta {
+    fromCache: boolean
+    ids: string[]
 }
 
 /** Library-collection doc-change descriptor — provider-agnostic shape that the
@@ -88,7 +98,10 @@ const defaultFirestoreAdapter: SubscribeAdapter = {
                         id: c.doc.id,
                         data: c.doc.data() as Partial<LocalSong>,
                     }))
-                    handler(changes)
+                    handler(changes, {
+                        fromCache: snap.metadata.fromCache,
+                        ids: snap.docs.map((d) => d.id),
+                    })
                 },
                 (err) => onError(err),
             )
@@ -128,8 +141,29 @@ export function subscribeSongsLibrary(
         logger.warn('[subscribeSongsLibrary] local scope reset failed', err)
     })
 
-    const apply = (changes: DocChange[]) => {
+    // Once per subscription, on the first complete server result: drop the
+    // tenant's own cached rows the server no longer has (a song deleted while
+    // this device was away would otherwise stay in the pickers). Rows shared
+    // from another tenant are not in this query; the shared-rows read owns
+    // them. A cached snapshot is never complete, so it never prunes.
+    let pruned = false
+    const prune = async (ids: string[]) => {
+        const present = new Set(ids)
+        const gone = await localDb.songs
+            .filter((s) => isOwnedBy(s, orgId) && !present.has(s.id))
+            .primaryKeys()
+        if (gone.length) await localDb.songs.bulkDelete(gone)
+    }
+
+    const apply = async (changes: DocChange[], snapshot?: SnapshotMeta) => {
         if (!live) return
+        if (!pruned && snapshot && !snapshot.fromCache) {
+            pruned = true
+            await prune(snapshot.ids).catch((err) => {
+                logger.warn('[subscribeSongsLibrary] prune failed', err)
+            })
+            if (!live) return
+        }
         for (const change of changes) {
             if (change.type === 'removed') {
                 // A row that left this tenant's own query but is now shared
@@ -172,8 +206,8 @@ export function subscribeSongsLibrary(
         }
     }
     const stop = firestore.subscribe(
-        (changes) => {
-            chain = chain.then(() => apply(changes))
+        (changes, snapshot) => {
+            chain = chain.then(() => apply(changes, snapshot))
         },
         onError,
         orgId,

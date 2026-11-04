@@ -35,6 +35,7 @@ import { useAuth } from "@/lib/auth-context"
 import { apiFetch } from "@/lib/api-client"
 import { toast } from "sonner"
 import { getDb } from "@/lib/local/schema"
+import { uploadedSongRow } from "@/lib/songs/local-stub"
 import { AudioPlayer } from "@/components/audio/AudioPlayer"
 import { UploadDialog } from "./UploadDialog"
 import { ScraperModal } from "./ScraperModal"
@@ -417,12 +418,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
                                 try {
                                     // Add to local Dexie immediately so the Setlist picker sees it
                                     if (fileId && title) {
-                                        await getDb().songs.put({
-                                            id: fileId,
-                                            title,
-                                            normalizedTitle: title.toLowerCase(),
-                                            updatedAt: Date.now()
-                                        })
+                                        await getDb().songs.put(uploadedSongRow(fileId, title, org))
                                     }
                                     // Bust both browser and CDN caches to instantly show the new file
                                     const res = await apiFetch(`/api/library/list?all=true&t=${Date.now()}`)
@@ -442,12 +438,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
                                 try {
                                     // Add to local Dexie immediately so the Setlist picker sees it
                                     if (fileId && title) {
-                                        await getDb().songs.put({
-                                            id: fileId,
-                                            title,
-                                            normalizedTitle: title.toLowerCase(),
-                                            updatedAt: Date.now()
-                                        })
+                                        await getDb().songs.put(uploadedSongRow(fileId, title, org))
                                     }
                                     const res = await apiFetch(`/api/library/list?all=true&t=${Date.now()}`)
                                     if (res.ok) {

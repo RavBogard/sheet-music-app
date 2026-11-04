@@ -1,3 +1,4 @@
+import { writeCatalog, type CatalogWrite } from "@/lib/library/catalog-mirror"
 import { getAllSongs, getSongById, type SongRecord } from "@/lib/mcp/server-songs"
 import { songVisibilityOf, visibilityFieldsOf } from "@/lib/mcp/song-visibility"
 import {
@@ -2512,45 +2513,20 @@ export async function dedupeLibraryIndex(
             // no-op. The reverse leaves hidden rows nothing can reach.
             await db.collection("dedupeRuns").doc(runId).set(runRecord)
 
-            // Firestore caps batches at 500 writes. Stay under with headroom.
-            const BATCH_MAX = 400
-            interface Op {
-                ref: FirebaseFirestore.DocumentReference
-                data: Record<string, unknown>
-            }
-            const ops: Op[] = []
-            for (const loser of losers) {
-                // W2: the prior state travels in the SAME update as the
-                // status. A single `batch.update` is one atomic write, so
-                // there is no window in which a row is `duplicate` while its
-                // own `priorStatus` is missing.
-                ops.push({
-                    ref: db.collection("library_index").doc(loser.fileId),
-                    data: {
-                        priorStatus: loser.status ?? null,
-                        dedupeRunId: runId,
-                        status: "duplicate",
-                        dedupedAt: nowIso,
-                    },
-                })
-                if (songsToTag.has(loser.fileId)) {
-                    ops.push({
-                        ref: db.collection("songs").doc(loser.fileId),
-                        data: {
-                            priorStatus: loser.status ?? null,
-                            dedupeRunId: runId,
-                            status: "duplicate",
-                        },
-                    })
-                }
-            }
-            for (let i = 0; i < ops.length; i += BATCH_MAX) {
-                const batch = db.batch()
-                for (const { ref, data } of ops.slice(i, i + BATCH_MAX)) {
-                    batch.update(ref, data)
-                }
-                await batch.commit()
-            }
+            // Both collections through the catalogue writer (songs/{id} only
+            // where it exists). W2: the prior state travels in the SAME write
+            // as the status, so no row is `duplicate` without its own
+            // `priorStatus`.
+            await writeCatalog(
+                db,
+                losers.map((loser) => ({
+                    fileId: loser.fileId,
+                    patch: { status: "duplicate" as const },
+                    index: { priorStatus: loser.status ?? null, dedupeRunId: runId, dedupedAt: nowIso },
+                    song: { priorStatus: loser.status ?? null, dedupeRunId: runId },
+                })),
+                { org },
+            )
             committedRunId = runId
         }
 
@@ -2918,32 +2894,22 @@ export async function backfillLibraryIndex(
         // Apply writes — batched, idempotent. Firestore caps at 500
         // writes per batch; one row may produce one write (we collapse
         // name + nameLower + fileSize into one update per fileId).
-        const BATCH_MAX = 400
-        const ops: Array<{
-            ref: FirebaseFirestore.DocumentReference
-            data: Record<string, unknown>
-        }> = []
+        // A normalized name lands on songs/{id}.title too (catalogue
+        // writer), so the pickers show the same title as the library.
+        const writes: CatalogWrite[] = []
         for (const row of deltas) {
-            const data: Record<string, unknown> = {}
+            const index: Record<string, unknown> = {}
+            let title: string | undefined
             for (const change of row.changes) {
-                if (change.field === "name") data.name = change.to
-                else if (change.field === "nameLower") data.nameLower = change.to
-                else if (change.field === "fileSize") data.fileSize = change.to
+                if (change.field === "name") title = change.to as string
+                else if (change.field === "nameLower") index.nameLower = change.to
+                else if (change.field === "fileSize") index.fileSize = change.to
             }
-            if (Object.keys(data).length > 0) {
-                ops.push({
-                    ref: db.collection("library_index").doc(row.fileId),
-                    data,
-                })
+            if (title !== undefined || Object.keys(index).length > 0) {
+                writes.push({ fileId: row.fileId, patch: title !== undefined ? { title } : {}, index })
             }
         }
-        for (let i = 0; i < ops.length; i += BATCH_MAX) {
-            const batch = db.batch()
-            for (const { ref, data } of ops.slice(i, i + BATCH_MAX)) {
-                batch.update(ref, data)
-            }
-            await batch.commit()
-        }
+        await writeCatalog(db, writes, { org })
 
         const reportDeltas = deltas.slice(0, BACKFILL_DELTA_REPORT_CAP)
         return {

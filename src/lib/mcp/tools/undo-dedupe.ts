@@ -1,3 +1,4 @@
+import { writeCatalog, type CatalogStatus } from "@/lib/library/catalog-mirror"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
@@ -201,44 +202,21 @@ export async function undoDedupeGroup(
 
         const toWrite = plan.rows.filter((r) => !r.skipped)
         if (!dryRun && toWrite.length > 0) {
-            const BATCH_MAX = 400
-            interface Op {
-                ref: FirebaseFirestore.DocumentReference
-                data: Record<string, unknown>
-            }
-            const ops: Op[] = []
-            for (const r of toWrite) {
-                // The restore clears the dedupe stamps as well as the status.
-                // A row left carrying `dedupeRunId` after being restored would
-                // report itself as belonging to a run that no longer holds it,
-                // and the next undo of that run would try to restore it twice.
-                ops.push({
-                    ref: db.collection(LIBRARY).doc(r.fileId),
-                    data: {
-                        status: r.toStatus,
-                        dedupedAt: null,
-                        dedupeRunId: null,
-                        priorStatus: null,
-                    },
-                })
-                if (r.songMirrored) {
-                    ops.push({
-                        ref: db.collection(SONGS).doc(r.fileId),
-                        data: {
-                            status: r.toStatus,
-                            dedupeRunId: null,
-                            priorStatus: null,
-                        },
-                    })
-                }
-            }
-            for (let i = 0; i < ops.length; i += BATCH_MAX) {
-                const batch = db.batch()
-                for (const { ref, data } of ops.slice(i, i + BATCH_MAX)) {
-                    batch.update(ref, data)
-                }
-                await batch.commit()
-            }
+            // The restore clears the dedupe stamps as well as the status. A
+            // row left carrying `dedupeRunId` after being restored would
+            // report itself as belonging to a run that no longer holds it,
+            // and the next undo of that run would try to restore it twice.
+            // Both collections through the catalogue writer.
+            await writeCatalog(
+                db,
+                toWrite.map((r) => ({
+                    fileId: r.fileId,
+                    patch: { status: r.toStatus as CatalogStatus },
+                    index: { dedupedAt: null, dedupeRunId: null, priorStatus: null },
+                    song: { dedupeRunId: null, priorStatus: null },
+                })),
+                { org },
+            )
         }
 
         return {

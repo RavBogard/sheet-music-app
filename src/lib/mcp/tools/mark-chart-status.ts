@@ -1,3 +1,4 @@
+import { writeCatalog, type CatalogStatus } from "@/lib/library/catalog-mirror"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
@@ -340,21 +341,16 @@ export async function markChartStatus(
         // (4) The record lands FIRST. Reversibility precedes hiding.
         await db.collection(RUNS).doc(runId).set(record)
 
-        const batch = db.batch()
-        batch.update(db.collection(LIBRARY).doc(fileId), {
-            priorStatus,
-            dedupeRunId: runId,
-            status: toStatus,
-            dedupedAt: at,
-        })
-        if (songSnap.exists) {
-            batch.update(db.collection(SONGS).doc(fileId), {
-                priorStatus,
-                dedupeRunId: runId,
-                status: toStatus,
-            })
-        }
-        await batch.commit()
+        await writeCatalog(
+            db,
+            [{
+                fileId,
+                patch: { status: toStatus as CatalogStatus },
+                index: { priorStatus, dedupeRunId: runId, dedupedAt: at },
+                song: { priorStatus, dedupeRunId: runId },
+            }],
+            { org },
+        )
 
         logger.info("mark_chart_status", {
             fileId,
