@@ -6,6 +6,22 @@
 
 import type { LocalTrack } from "@/lib/local/types"
 
+/**
+ * Firestore Timestamps (and any other class instance) can't cross the
+ * Server -> Client Component boundary. Rows written by the setlist-ops engine
+ * carry a Timestamp `createdAt`, which crashed the Perform page render
+ * (2026-11-03). Every Timestamp-like value becomes epoch millis, recursively.
+ */
+export function toPlain(v: unknown): unknown {
+    if (v === null || typeof v !== "object") return v
+    const ts = v as { toMillis?: () => number }
+    if (typeof ts.toMillis === "function") return ts.toMillis()
+    if (Array.isArray(v)) return v.map(toPlain)
+    const out: Record<string, unknown> = {}
+    for (const [k, x] of Object.entries(v as Record<string, unknown>)) out[k] = toPlain(x)
+    return out
+}
+
 export async function getTracksForSetlist(
     db: FirebaseFirestore.Firestore,
     setlistId: string,
@@ -31,7 +47,7 @@ export async function getTracksForSetlist(
                   ? updatedAtRaw
                   : 0
         return {
-            ...data,
+            ...(toPlain(data) as Record<string, unknown>),
             id: d.id,
             setlistId,
             order: typeof data.order === "number" ? data.order : 0,
