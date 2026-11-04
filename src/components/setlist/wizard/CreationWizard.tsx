@@ -126,7 +126,7 @@ export function CreationWizard({ open, onOpenChange, prefilledDate }: CreationWi
                                     mode="single"
                                     selected={wizard.eventDate ?? undefined}
                                     onSelect={(d) => wizard.setEventDate(d ?? null)}
-                                    initialFocus
+                                    autoFocus
                                 />
                             </PopoverContent>
                         </Popover>

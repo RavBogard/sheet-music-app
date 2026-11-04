@@ -92,7 +92,7 @@ export function NamePrompt({
                                         mode="single"
                                         selected={date}
                                         onSelect={setDate}
-                                        initialFocus
+                                        autoFocus
                                         className="text-foreground"
                                     />
                                 </PopoverContent>
