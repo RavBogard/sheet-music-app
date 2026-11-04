@@ -38,6 +38,7 @@ export default function MainError({
                     onClick={() => { 
                         if (typeof window !== 'undefined') {
                             localStorage.clear()
+                            // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- a full reload is the point: error recovery must drop client state
                             window.location.href = '/'
                         }
                     }}
