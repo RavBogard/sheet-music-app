@@ -12,13 +12,22 @@ import type { LocalTrack } from "@/lib/local/types"
  * carry a Timestamp `createdAt`, which crashed the Perform page render
  * (2026-11-03). Every Timestamp-like value becomes epoch millis, recursively.
  */
-export function toPlain(v: unknown): unknown {
-    if (v === null || typeof v !== "object") return v
+export function toPlain(v: unknown, depth = 0): unknown {
+    if (v === null || typeof v !== "object") return typeof v === "function" ? undefined : v
+    if (depth > 12) return undefined
     const ts = v as { toMillis?: () => number }
     if (typeof ts.toMillis === "function") return ts.toMillis()
-    if (Array.isArray(v)) return v.map(toPlain)
+    if (Array.isArray(v)) return v.map((x) => toPlain(x, depth + 1))
+    // Only plain objects are copied. Any other class instance (a
+    // DocumentReference, a GeoPoint, anything holding a client) is dropped,
+    // never walked, so no internals can reach the browser.
+    const proto = Object.getPrototypeOf(v)
+    if (proto !== Object.prototype && proto !== null) return undefined
     const out: Record<string, unknown> = {}
-    for (const [k, x] of Object.entries(v as Record<string, unknown>)) out[k] = toPlain(x)
+    for (const [k, x] of Object.entries(v as Record<string, unknown>)) {
+        const p = toPlain(x, depth + 1)
+        if (p !== undefined) out[k] = p
+    }
     return out
 }
 

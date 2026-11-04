@@ -17,4 +17,13 @@ describe("toPlain (Perform SSR rows)", () => {
         // Only plain objects remain, so React can pass it to a Client Component.
         expect(Object.getPrototypeOf(out.gig)).toBe(Object.prototype)
     })
+
+    it("drops class instances other than Timestamps instead of walking them", () => {
+        class Ref {
+            firestore = { secret: "k" }
+            path = "songs/x"
+        }
+        const out = toPlain({ ref: new Ref(), keep: 1 }) as Record<string, unknown>
+        expect(out).toEqual({ keep: 1 })
+    })
 })
