@@ -295,7 +295,7 @@ export function SetlistMetaEditSheet({
                                     mode="single"
                                     selected={eventDate}
                                     onSelect={(d) => setEventDate(d ?? undefined)}
-                                    initialFocus
+                                    autoFocus
                                 />
                             </PopoverContent>
                         </Popover>

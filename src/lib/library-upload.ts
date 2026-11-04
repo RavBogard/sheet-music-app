@@ -402,12 +402,9 @@ export async function processChartUpload(
         stage("convert-heic:start")
         try {
             const originalBuffer = buffer
-            const heicArrayBuffer = originalBuffer.buffer.slice(
-                originalBuffer.byteOffset,
-                originalBuffer.byteOffset + originalBuffer.byteLength,
-            )
+            const heicBytes = new Uint8Array(originalBuffer) // copy; heic-convert types want Uint8Array
             const jpegBytes = await heicConvert({
-                buffer: heicArrayBuffer,
+                buffer: heicBytes,
                 format: "JPEG",
                 quality: 0.9,
             })

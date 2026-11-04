@@ -54,6 +54,7 @@ export class ErrorBoundary extends Component<Props, State> {
                     error={this.state.error}
                     onReload={() => {
                         this.setState({ hasError: false })
+                        // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- a full reload is the point: error recovery must drop client state
                         window.location.href = '/'
                     }}
                 />

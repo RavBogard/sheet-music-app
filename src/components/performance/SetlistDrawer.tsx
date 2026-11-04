@@ -173,7 +173,6 @@ export function SetlistDrawer() {
 
     const parentRef = useRef<HTMLDivElement>(null)
 
-    // eslint-disable-next-line react-hooks/incompatible-library
     const rowVirtualizer = useVirtualizer({
         count: virtualItemsData.length,
         getScrollElement: () => parentRef.current,
