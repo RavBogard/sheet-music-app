@@ -1,5 +1,6 @@
 import { FieldValue } from "firebase-admin/firestore"
 import { stripUndefined } from "./pure"
+import { BPM_MARKER_FIELDS } from "./types"
 
 /**
  * THE ONLY CODE THAT WRITES `setlists/*` OR `tracks/*` (OPS-CONTRACT §Single
@@ -106,6 +107,10 @@ export class SetlistWriter {
     updateTrack(id: string, patch: Record<string, unknown>, o: StampOptions = {}): void {
         const clean = stripUndefined(patch)
         if (o.touchUpdatedAt === false) delete clean.updatedAt
+        // A bpm written without `bpmSource` is a person's: the recording marker goes in the same write.
+        if (Object.hasOwn(clean, "bpm") && !Object.hasOwn(clean, "bpmSource")) {
+            for (const k of BPM_MARKER_FIELDS) clean[k] = FieldValue.delete()
+        }
         this.sink.update(trackRef(this.db, id), { ...clean, ...bumpStamps(o) })
         this.writes++
     }

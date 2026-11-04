@@ -246,6 +246,7 @@
   "ops": [
     "__test_delete_storage_object",
     "accept_enrichment",
+    "apply_recording_tempos",
     "archive_nonchart_artifacts",
     "backfill_chart_lineage",
     "backfill_content_hash",

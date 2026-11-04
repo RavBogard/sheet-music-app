@@ -124,7 +124,7 @@ describe("forSurface — registration is filtered, nothing else is", () => {
 
 describe("OPS_TOOLS — the list itself", () => {
     it("has no duplicates and is not accidentally empty or enormous", () => {
-        expect(OPS_TOOLS.size).toBe(51) // BET-6: + backfill_week_keys
+        expect(OPS_TOOLS.size).toBe(52) // BET-6: + backfill_week_keys; 2026-11-03: + apply_recording_tempos
     })
 
     it("keeps the hygiene sweeps that still find live drift", () => {

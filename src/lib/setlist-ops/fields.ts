@@ -3,7 +3,7 @@ import { sanitizeFreeformString } from "@/lib/sanitize-freeform"
 import { liturgyRefGuard } from "@/lib/mcp/liturgy-ref-guard"
 import { DurationSecSchema, GigPatchSchema, SingerKeysSchema } from "@/lib/gig/model"
 import type { LiturgyRef } from "@/lib/books/types"
-import { RESERVED_ROW_FIELDS, RESERVED_SETLIST_FIELDS } from "./types"
+import { CLIENT_REFUSED_ROW_FIELDS, RESERVED_SETLIST_FIELDS } from "./types"
 
 /**
  * Per-field validation for op payloads. The types and limits are the MCP
@@ -169,7 +169,7 @@ function checkFields(
 }
 
 export const checkRowFields = (obj: Record<string, unknown>, mode: "row" | "set" | "base") =>
-    checkFields(obj, ROW_FIELDS, RESERVED_ROW_FIELDS, mode)
+    checkFields(obj, ROW_FIELDS, CLIENT_REFUSED_ROW_FIELDS, mode)
 
 export const checkSetlistFields = (obj: Record<string, unknown>, mode: "set" | "base") =>
     checkFields(obj, SETLIST_FIELDS, RESERVED_SETLIST_FIELDS, mode)

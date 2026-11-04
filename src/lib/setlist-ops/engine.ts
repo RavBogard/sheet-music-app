@@ -16,6 +16,7 @@ import {
     MAX_WRITES,
     OP_BATCH_TTL_MS,
     RESERVED_ROW_FIELDS,
+    BPM_MARKER_FIELDS,
     RESERVED_SETLIST_FIELDS,
     type Op,
     type OpConflict,
@@ -376,6 +377,11 @@ export async function applyOpsAuthorized(
                             return
                         }
                         const m = mergeFields(st.cur, op.set, op.base ?? {}, RESERVED_ROW_FIELDS)
+                        // A person typed a bpm (even the same number): it is theirs now, so the
+                        // recording marker goes (apply_recording_tempos never writes through ops).
+                        if (Object.hasOwn(op.set, "bpm") && !m.conflicts.some((c) => c.field === "bpm")) {
+                            for (const k of BPM_MARKER_FIELDS) if (st.cur[k] !== undefined) m.apply[k] = null
+                        }
                         applyToCur(st.cur, m.apply)
                         Object.assign(st.patch, m.apply)
                         for (const c of m.conflicts) conflicts.push({ opIndex, reason: "field", ...c })

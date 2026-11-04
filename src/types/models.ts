@@ -295,6 +295,28 @@ export interface Recording {
     source?: RecordingSource
     /** Ingest idempotency key (source file + cut times); a re-run never duplicates. */
     ingestKey?: string
+    /** 2026-11-03: the clip's detected tempo (scripts/recordings/tempo.py), stored either way for audit. */
+    tempo?: RecordingTempo
+}
+
+/**
+ * A clip's detected tempo. Only `confident` tempos are written into empty bpm
+ * fields (apply_recording_tempos); the rest are kept for audit with a `reason`.
+ */
+export interface RecordingTempo {
+    /** Chosen tempo, preferring 60–160 BPM; null when no beat was found. */
+    bpm: number | null
+    /** The other octave (half or double time). */
+    alt: number | null
+    /** 0..1. */
+    confidence: number
+    confident: boolean
+    /** Why it is not confident (free-time, tempo changes, rubato…). */
+    reason?: string
+    method: string
+    threshold?: number
+    analyzedAt?: string
+    diag?: Record<string, number>
 }
 
 /** Recordings 2026-11: 'live' is listed and played; 'held' awaits review; 'hidden' was ruled out. */

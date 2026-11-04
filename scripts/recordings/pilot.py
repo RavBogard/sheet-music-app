@@ -23,6 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import cut  # noqa: E402
 import encode  # noqa: E402
 import services as S  # noqa: E402
+import tempo  # noqa: E402
 from transcribe import transcribe  # noqa: E402
 
 WORK = Path(os.environ.get("RECORDINGS_WORK", ".recordings-work")).resolve()
@@ -63,6 +64,16 @@ def song_uses(catalog: dict) -> dict[str, int]:
     return uses
 
 
+def clip_tempo_of(clip: Path) -> dict | None:
+    """The clip's detected tempo (tempo.py), or None when it can't be analysed here; the
+    back-fill (tempo-backfill.ts) analyses any published clip that has none."""
+    try:
+        return tempo.analyse_file(clip)
+    except Exception as e:  # librosa missing, a bad decode: the clip still publishes
+        print(f"  tempo: {clip.name}: not analysed ({e})")
+        return None
+
+
 def run_folder(folder: str, inventory: list[dict], catalog: dict) -> list[dict]:
     entry = next(e for e in inventory if e["folder"] == folder)
     svc = next(s for s in S.resolve_services([entry], catalog))
@@ -97,10 +108,12 @@ def run_folder(folder: str, inventory: list[dict], catalog: dict) -> list[dict]:
                 seg.status = "dropped"
                 seg.reason = f"matched '{seg.title}', which has no chart; " + seg.reason
             clip = None
+            clip_tempo = None
             if seg.status != "dropped":
                 clip = clip_dir / f"{n:02d}_{slug(seg.title)}_{int(seg.startSec)}.mp3"
                 if not clip.exists():
                     encode.encode_clip(mp3, seg.startSec, seg.endSec, clip)
+                clip_tempo = clip_tempo_of(clip)
             rows.append(
                 {
                     "folder": folder,
@@ -116,6 +129,7 @@ def run_folder(folder: str, inventory: list[dict], catalog: dict) -> list[dict]:
                     "whisperModel": tr.get("model"),
                     "sourceSec": tr.get("duration"),
                     "clip": str(clip.relative_to(WORK)).replace("\\", "/") if clip else None,
+                    "tempo": clip_tempo,
                     **seg.to_dict(),
                 }
             )

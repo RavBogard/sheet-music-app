@@ -67,6 +67,8 @@ export const OPS_TOOLS: ReadonlySet<string> = new Set([
     "backfill_library_index",
     "backfill_setlist_test_flag",
     "backfill_week_keys",
+    // 2026-11-03: recording tempos into empty bpm fields (after a publish or the tempo back-fill).
+    "apply_recording_tempos",
     "seed_service_profiles",
     "archive_nonchart_artifacts",
     "reconcile_library",

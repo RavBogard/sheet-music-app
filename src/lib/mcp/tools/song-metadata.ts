@@ -1,4 +1,4 @@
-import { ANY_TENANT, writeCatalog } from "@/lib/library/catalog-mirror"
+import { ANY_TENANT, broadcastLibraryChange, readCatalogRowTx, writeCatalog, writeCatalogRowTx } from "@/lib/library/catalog-mirror"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { checkUserRateLimit } from "@/lib/rate-limit"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
@@ -8,6 +8,8 @@ import { notOwnerError } from "@/lib/mcp/not-owner"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import { parseSongDuration } from "@/lib/gig/model"
 import type { OrgId } from "@/lib/org/types"
+import { isOwnedBy } from "@/lib/library/visibility"
+import { decideField, type BpmFieldState, type FieldDecision, type TempoPick } from "@/lib/recordings/tempo-fill"
 import {
     loadUploader,
     isUploadAllowed,
@@ -224,6 +226,64 @@ async function broadcastLibrarySignal(
             }`,
         )
     }
+}
+
+// ─── recording tempo into a song's default (2026-11-03) ──────────────────────
+
+type TempoDoc = "library_index" | "songs"
+
+export interface SongTempoDecision {
+    doc: TempoDoc
+    decision: FieldDecision
+}
+
+function songTempoFields(lib: Record<string, unknown> | null, song: Record<string, unknown> | null): Array<{ doc: TempoDoc; field: BpmFieldState }> {
+    const out: Array<{ doc: TempoDoc; field: BpmFieldState }> = []
+    if (lib) out.push({ doc: "library_index", field: { bpm: lib.bpm, bpmSource: lib.bpmSource, bpmSourceRecordingId: lib.bpmSourceRecordingId, bpmSourceValue: lib.bpmSourceValue } })
+    if (song) {
+        const d = (song.defaults ?? {}) as Record<string, unknown>
+        out.push({ doc: "songs", field: { bpm: d.bpm, bpmSource: d.bpmSource, bpmSourceRecordingId: d.bpmSourceRecordingId, bpmSourceValue: d.bpmSourceValue } })
+    }
+    return out
+}
+
+/**
+ * apply_recording_tempos' write to a song default. library_index.bpm and
+ * songs.defaults.bpm are decided SEPARATELY (each doc is written only when its
+ * own field is empty or still auto-filled), read and written through
+ * catalog-mirror in ONE transaction, so a bpm a person typed meanwhile is
+ * kept. Only a chart the caller's tenant owns is written. `dryRun` decides
+ * without writing.
+ */
+export async function applyRecordingTempoToSong(
+    db: FirebaseFirestore.Firestore,
+    org: OrgId,
+    fileId: string,
+    pick: TempoPick,
+    opts: { dryRun?: boolean } = {},
+): Promise<{ owned: boolean; exists: boolean; decisions: SongTempoDecision[]; written: TempoDoc[] }> {
+    const res = await db.runTransaction(async (tx) => {
+        const row = await readCatalogRowTx(tx, db, fileId)
+        const owner = row.index ?? row.song
+        if (!owner) return { owned: false, exists: false, decisions: [], written: [] as TempoDoc[] }
+        if (!isOwnedBy(owner, org)) return { owned: false, exists: true, decisions: [], written: [] as TempoDoc[] }
+        const decisions = songTempoFields(row.index, row.song).map(({ doc, field }) => ({ doc, decision: decideField(field, pick) }))
+        const written = decisions
+            .filter((d) => d.decision.action === "fill" || d.decision.action === "update")
+            .map((d) => d.doc)
+        if (!opts.dryRun && written.length > 0) {
+            writeCatalogRowTx(
+                tx,
+                db,
+                row,
+                { bpm: pick.bpm, bpmSource: "recording", bpmSourceRecordingId: pick.recordingId, bpmSourceValue: pick.bpm },
+                { org, docs: { index: written.includes("library_index"), song: written.includes("songs") } },
+            )
+        }
+        return { owned: true, exists: true, decisions, written: opts.dryRun ? [] : written }
+    })
+    if (res.written.length > 0) await broadcastLibraryChange(db)
+    return res
 }
 
 // ─── update_song (cowork #5) ─────────────────────────────────────────────────

@@ -41,6 +41,26 @@ export interface CatalogPatch {
     /** library_index `leadMusician`; songs `defaults.lead`. */
     leadMusician?: string
     durationSec?: number
+    /**
+     * 2026-11-03: the bpm came from a recording (apply_recording_tempos). Set
+     * all three with `bpm`. A `bpm` written WITHOUT `bpmSource` is a person's
+     * and deletes the three on both docs (library_index top level, songs
+     * `defaults.*`).
+     */
+    bpmSource?: "recording"
+    bpmSourceRecordingId?: string
+    bpmSourceValue?: number
+}
+
+export const BPM_MARKER_KEYS = ["bpmSource", "bpmSourceRecordingId", "bpmSourceValue"] as const
+
+/** The marker fields a patch's bpm write sets (from a recording) or deletes (a person's). */
+function bpmMarker(patch: CatalogPatch): DocumentData {
+    if (patch.bpm === undefined) return {}
+    if (patch.bpmSource === "recording") {
+        return { bpmSource: "recording", bpmSourceRecordingId: patch.bpmSourceRecordingId ?? null, bpmSourceValue: patch.bpmSourceValue ?? patch.bpm }
+    }
+    return Object.fromEntries(BPM_MARKER_KEYS.map((k) => [k, FieldValue.delete()]))
 }
 
 export interface CatalogWrite {
@@ -88,7 +108,7 @@ export function indexFields(patch: CatalogPatch): DocumentData {
     if (patch.title !== undefined) out.name = patch.title
     if (patch.status !== undefined) out.status = patch.status
     if (patch.key !== undefined) out.key = patch.key
-    if (patch.bpm !== undefined) out.bpm = patch.bpm
+    if (patch.bpm !== undefined) Object.assign(out, { bpm: patch.bpm }, bpmMarker(patch))
     if (patch.leadMusician !== undefined) out.leadMusician = patch.leadMusician
     if (patch.durationSec !== undefined) out.durationSec = patch.durationSec
     return out
@@ -104,7 +124,7 @@ export function songFields(patch: CatalogPatch): DocumentData {
     if (patch.status !== undefined) out.status = patch.status
     const defaults: DocumentData = {}
     if (patch.key !== undefined) defaults.key = patch.key
-    if (patch.bpm !== undefined) defaults.bpm = patch.bpm
+    if (patch.bpm !== undefined) Object.assign(defaults, { bpm: patch.bpm }, bpmMarker(patch))
     if (patch.leadMusician !== undefined) defaults.lead = patch.leadMusician
     if (patch.durationSec !== undefined) defaults.durationSec = patch.durationSec
     if (Object.keys(defaults).length > 0) out.defaults = defaults
@@ -185,6 +205,51 @@ export async function writeCatalog(
     return result
 }
 
+/** One row's two docs, read inside the caller's transaction (`readCatalogRowTx`). */
+export interface CatalogRow {
+    fileId: string
+    index: DocumentData | null
+    song: DocumentData | null
+}
+
+export async function readCatalogRowTx(tx: FirebaseFirestore.Transaction, db: DB, fileId: string): Promise<CatalogRow> {
+    const [iSnap, sSnap] = await tx.getAll(db.collection(LIBRARY).doc(fileId), db.collection(SONGS).doc(fileId))
+    return {
+        fileId,
+        index: iSnap.exists ? (iSnap.data() ?? {}) : null,
+        song: sSnap.exists ? (sSnap.data() ?? {}) : null,
+    }
+}
+
+/**
+ * `writeCatalog` for one row inside the caller's transaction, after
+ * `readCatalogRowTx`, so the caller can decide on what it read. `docs` limits
+ * the write to one collection's doc when the caller decided them separately
+ * (default both). No broadcast: call `broadcastLibraryChange` after commit.
+ */
+export function writeCatalogRowTx(
+    tx: FirebaseFirestore.Transaction,
+    db: DB,
+    row: CatalogRow,
+    patch: CatalogPatch,
+    opts: { org: OrgId; docs?: { index?: boolean; song?: boolean }; now?: number },
+): "written" | "missing" | "refused" {
+    const owner = ownerRow(row.index, row.song)
+    if (!owner) return "missing"
+    if (!isOwnedBy(owner, opts.org)) return "refused"
+    const org = rowOrg(owner.orgId)
+    const now = opts.now ?? Date.now()
+    if (row.index && opts.docs?.index !== false) {
+        const data = indexFields(patch)
+        if (Object.keys(data).length > 0) tx.set(db.collection(LIBRARY).doc(row.fileId), { ...data, orgId: org }, { merge: true })
+    }
+    if (row.song && opts.docs?.song !== false) {
+        const data = songFields(patch)
+        if (Object.keys(data).length > 0) tx.set(db.collection(SONGS).doc(row.fileId), { ...data, ...songStamp(org, now) }, { merge: true })
+    }
+    return "written"
+}
+
 // ── Sticky song memory (the browser's per-song defaults) ───────────────────
 
 export interface SongDefaultsPatch {
@@ -236,7 +301,10 @@ export async function saveSongDefaults(
         const defaults = { ...((song.defaults ?? {}) as DocumentData), ...changed }
         const prior = Array.isArray(song.recent) ? (song.recent as DocumentData[]) : []
         const recent = [{ ...changed, ...(setlistId ? { setlistId } : {}), performedAt: now }, ...prior].slice(0, RECENT_CAP)
-        tx.set(songRef, { defaults: changed, recent, ...songStamp(rowOrg(row.orgId), now) }, { merge: true })
+        // A bpm a person set is theirs: the recording marker goes (2026-11-03).
+        const written = changed.bpm !== undefined ? { ...changed, ...bpmMarker({ bpm: changed.bpm as number }) } : changed
+        if (changed.bpm !== undefined) for (const k of BPM_MARKER_KEYS) delete defaults[k]
+        tx.set(songRef, { defaults: written, recent, ...songStamp(rowOrg(row.orgId), now) }, { merge: true })
         return { ok: true as const, defaults, recent }
     })
     if (out.ok) await broadcastLibraryChange(db)

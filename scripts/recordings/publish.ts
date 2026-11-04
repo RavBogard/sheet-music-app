@@ -11,7 +11,9 @@
  *   - ingestKey = sha1(folder|file|startSec|endSec|songId); a row whose key already exists
  *     is skipped, so a re-run never duplicates a doc or a file;
  *   - the clip goes to recordings/<newId>.mp3 (contentType audio/mpeg);
- *   - the doc is written with orgId 'crc', status, featured:false, source, ingestKey.
+ *   - the doc is written with orgId 'crc', status, featured:false, source, ingestKey, and the
+ *     clip's detected `tempo` when pilot.py measured one (tempo.py). After publishing, run
+ *     the MCP tool `apply_recording_tempos` (dry run first) to fill empty BPM fields.
  * Then each touched song with no explicitly featured take gets `featured: true` on its
  * pickFeatured() take (playable only, so a song with only held takes stays unfeatured).
  *
@@ -24,7 +26,7 @@ import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 
 import { pickFeatured } from '../../src/lib/recordings/featured'
-import type { Recording, RecordingSource, RecordingStatus } from '../../src/types/models'
+import type { Recording, RecordingSource, RecordingStatus, RecordingTempo } from '../../src/types/models'
 
 export const ORG_ID = 'crc'
 const IN_CHUNK = 30
@@ -45,6 +47,8 @@ export interface ManifestRow {
     status: 'live' | 'held' | 'dropped'
     reason?: string
     clip: string | null
+    /** tempo.py's result for the clip (absent on manifests cut before 2026-11-03). */
+    tempo?: RecordingTempo | null
 }
 
 /** The slice of the Admin SDK this script uses; tests pass fakes. */
@@ -148,6 +152,7 @@ export async function publish(manifest: ManifestRow[], deps: PublishDeps, opts: 
             featured: false,
             source,
             ingestKey: r.key,
+            ...(r.tempo ? { tempo: { ...r.tempo, analyzedAt: deps.now() } } : {}),
         }
         plan.toWrite.push({ id, ingestKey: r.key, songId: r.songId!, status: doc.status!, title: doc.title, clip: r.clip!, bytes: bytes.length })
         plan.bytes += bytes.length
