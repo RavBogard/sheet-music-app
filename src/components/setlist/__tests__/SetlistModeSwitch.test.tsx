@@ -20,8 +20,8 @@ describe('visibleModes', () => {
         expect(visibleModes({ canEdit: false, eventDate: LATER, now: NOW })).toEqual(['rehearse', 'perform'])
         expect(visibleModes({ canEdit: true, eventDate: LATER, now: NOW })).toEqual(['rehearse', 'perform', 'edit'])
     })
-    it('Rehearse is hidden on the service day only', () => {
-        expect(visibleModes({ canEdit: true, eventDate: TODAY, now: NOW })).toEqual(['perform', 'edit'])
+    it('Rehearse shows every day, the service day included', () => {
+        expect(visibleModes({ canEdit: true, eventDate: TODAY, now: NOW })).toEqual(['rehearse', 'perform', 'edit'])
         expect(visibleModes({ canEdit: false, eventDate: null, now: NOW })).toEqual(['rehearse', 'perform'])
     })
 })
