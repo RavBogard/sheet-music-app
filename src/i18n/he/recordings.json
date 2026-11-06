@@ -39,5 +39,7 @@
     "modePerform": "ביצוע",
     "modeEdit": "עריכה",
     "modeSwitchAria": "הצגת הסט־ליסט כ־",
-    "chartLoading": "טוען תווים…"
+    "chartLoading": "טוען תווים…",
+    "recordedCount_one": "אחד מוקלט",
+    "recordedCount_other": "{count} מוקלטים"
 }

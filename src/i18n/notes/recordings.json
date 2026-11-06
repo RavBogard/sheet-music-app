@@ -216,5 +216,15 @@
         "where": "Rehearse chart page: shown in the chart area while the chart loads",
         "who": "musicians",
         "maxLength": 40
+    },
+    "recordedCount_one": {
+        "where": "Rehearse setlist header meta line: how many songs have a recording, e.g. '13 recorded'",
+        "who": "musicians",
+        "maxLength": 24
+    },
+    "recordedCount_other": {
+        "where": "Rehearse setlist header meta line: how many songs have a recording, e.g. '13 recorded'",
+        "who": "musicians",
+        "maxLength": 24
     }
 }

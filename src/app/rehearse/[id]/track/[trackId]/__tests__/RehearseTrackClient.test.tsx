@@ -39,6 +39,7 @@ const song = (over: Partial<RehearseSongRow> = {}): RehearseSongRow => ({
     key: 'Dm',
     bpm: null,
     notes: null,
+    folio: null,
     fileId: 'f2',
     take: { id: 'rec-a', title: 'Take A' },
     ...over,
@@ -59,8 +60,21 @@ describe('Rehearse chart page', () => {
         expect(screen.getByTestId('rehearse-key')).toHaveTextContent('Dm')
     })
 
-    it('header links back; dock holds the player and prev/next links', () => {
-        render(<RehearseTrackClient setlistId="sl1" song={song()} kind="pdf" prevId="t1" nextId="t4" />)
+    it('the toolbar holds the note, position, next song, player, exit and prev/next links', () => {
+        render(
+            <RehearseTrackClient
+                setlistId="sl1"
+                song={song({ notes: 'Slow start' })}
+                kind="pdf"
+                prevId="t1"
+                nextId="t4"
+                position={2}
+                total={5}
+                next={{ title: 'Adon Olam', key: 'G' }}
+            />,
+        )
+        expect(screen.getByTestId('chart-note-strip')).toHaveTextContent('Slow start')
+        expect(screen.getByTestId('rehearse-position')).toHaveTextContent('Adon Olam')
         expect(screen.getByTestId('rehearse-back')).toHaveAttribute('href', '/rehearse/sl1')
         expect(screen.getByRole('heading', { level: 1, name: 'Hashkivenu' })).toBeInTheDocument()
         expect(screen.getByTestId('rehearse-prev')).toHaveAttribute('href', '/rehearse/sl1/track/t1')

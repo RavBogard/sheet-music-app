@@ -1,11 +1,12 @@
 "use client"
 
-import { ChevronLeft, ChevronRight, Loader2, Minus, Plus } from "lucide-react"
+import { ChevronLeft, ChevronRight, Loader2, Minus, Plus, X } from "lucide-react"
 import dynamic from "next/dynamic"
 import Link from "next/link"
 import { useEffect } from "react"
 
 import { useChartContentDir } from "@/components/i18n/ChartContent"
+import { ChartNoteStrip } from "@/components/performance/ChartNoteStrip"
 import type { ViewerKind } from "@/components/performance/resolveViewerKind"
 import { RecordingPlayer } from "@/components/recordings/RecordingPlayer"
 import { SectionErrorBoundary } from "@/components/ui/SectionErrorBoundary"
@@ -52,6 +53,11 @@ export interface RehearseTrackClientProps {
     kind: ViewerKind | null
     prevId: string | null
     nextId: string | null
+    /** 1-based place among the setlist's songs, and how many there are; the position line shows when both are set. */
+    position?: number
+    total?: number
+    /** The next song, for the "Next:" line, as Perform's viewer shows it. */
+    next?: { title: string; key: string | null } | null
 }
 
 /** The chart for one song. Always read-only: nothing here writes the song's key. */
@@ -154,32 +160,37 @@ function KeyControl({ keyName, canTranspose }: { keyName: string | null; canTran
     )
 }
 
+
+/** Previous / next song, shaped like Perform's viewer chevrons. A missing end is a disabled stand-in. */
 function StepLink({ href, label, dir }: { href: string | null; label: string; dir: "prev" | "next" }) {
     const Icon = dir === "prev" ? ChevronLeft : ChevronRight
     const cls = cn(
-        "touch-hit inline-flex h-11 shrink-0 items-center gap-1 rounded-md border border-input px-3 text-sm font-semibold text-foreground",
+        "touch-hit inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full sm:h-14 sm:w-14",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-safe:transition-colors",
-        dir === "next" && "flex-row-reverse",
+        // Perform marks the forward step: the way through a setlist.
+        dir === "next" ? "border border-brand/20 bg-brand/10 text-foreground" : "text-muted-foreground",
     )
-    const icon = <Icon aria-hidden className="h-4 w-4 rtl:-scale-x-100" />
+    const icon = <Icon aria-hidden className="h-8 w-8 rtl:-scale-x-100" />
     if (!href) {
         return (
-            <span aria-disabled="true" data-testid={`rehearse-${dir}`} className={cn(cls, "pointer-events-none opacity-40")}>
+            <span aria-disabled="true" aria-label={label} role="link" data-testid={`rehearse-${dir}`} className={cn(cls, "pointer-events-none opacity-40")}>
                 {icon}
-                <span className="sr-only sm:not-sr-only">{label}</span>
             </span>
         )
     }
     return (
-        <Link href={href} replace data-testid={`rehearse-${dir}`} className={cn(cls, "hover:bg-accent")}>
+        <Link href={href} replace aria-label={label} data-testid={`rehearse-${dir}`} className={cn(cls, "hover:bg-brand/10 hover:text-foreground")}>
             {icon}
-            <span className="sr-only sm:not-sr-only">{label}</span>
         </Link>
     )
 }
 
-/** /rehearse/[id]/track/[trackId]: the chart full screen, a docked bar with the song's player and prev/next. */
-export function RehearseTrackClient({ setlistId, song, kind, prevId, nextId }: RehearseTrackClientProps) {
+/**
+ * /rehearse/[id]/track/[trackId]: the chart full screen in Perform's viewer
+ * chrome (the note strip above the chart, the toolbar below it), with the
+ * song's recording and the local key control in the toolbar's first row.
+ */
+export function RehearseTrackClient({ setlistId, song, kind, prevId, nextId, position, total, next }: RehearseTrackClientProps) {
     const t = useT()
     const chartDir = useChartContentDir()
     const base = `/rehearse/${setlistId}`
@@ -187,26 +198,12 @@ export function RehearseTrackClient({ setlistId, song, kind, prevId, nextId }: R
     return (
         <div
             data-testid="rehearse-track"
-            className="fixed inset-0 z-50 flex h-dvh flex-col bg-background pe-[env(safe-area-inset-right)] ps-[env(safe-area-inset-left)]"
+            className="fixed inset-0 z-50 flex h-dvh flex-col bg-background pe-[env(safe-area-inset-right)] ps-[env(safe-area-inset-left)] pt-[env(safe-area-inset-top)]"
         >
-            <header className="flex flex-wrap items-center gap-x-2 border-b border-rule px-2 pb-1 pt-[max(0.25rem,env(safe-area-inset-top))] sm:px-4">
-                <Link
-                    href={base}
-                    data-testid="rehearse-back"
-                    className="touch-hit inline-flex h-11 shrink-0 items-center gap-1 rounded-md px-2 text-sm font-semibold text-brand hover:bg-brand/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-safe:transition-colors"
-                >
-                    <ChevronLeft aria-hidden className="h-4 w-4 rtl:-scale-x-100" />
-                    <span className="sr-only sm:not-sr-only">{t("recordings.backToRehearse")}</span>
-                </Link>
-                <h1 className="min-w-0 flex-1 truncate text-center text-base font-extrabold leading-tight text-foreground">
-                    {song.title}
-                </h1>
-                <div className="order-last flex w-full justify-center sm:order-none sm:w-auto">
-                    <KeyControl key={song.id} keyName={song.key} canTranspose={kind === "musicxml"} />
-                </div>
-            </header>
+            {/* Perform's strip: the row's note, one line, a tap for all of it. */}
+            <ChartNoteStrip key={song.id} notes={song.notes ?? undefined} />
 
-            {/* The dock is a sibling, not an overlay, so it can never cover the last system. */}
+            {/* The toolbar is a sibling, not an overlay, so it never covers the last system. */}
             <div
                 data-testid="rehearse-chart"
                 {...chartDir}
@@ -221,21 +218,56 @@ export function RehearseTrackClient({ setlistId, song, kind, prevId, nextId }: R
                 </SectionErrorBoundary>
             </div>
 
-            <footer
-                data-testid="rehearse-dock"
-                className="flex items-center gap-2 border-t border-rule bg-background px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:px-4"
-            >
-                <StepLink href={step(prevId)} label={t("recordings.previousSong")} dir="prev" />
-                <div className="min-w-0 flex-1">
-                    {song.take ? (
-                        <RecordingPlayer key={song.take.id} recordingId={song.take.id} title={song.take.title} compact />
-                    ) : (
-                        <p className="truncate text-center text-xs text-muted-foreground">
-                            {t("recordings.noRecordingYet")}
-                        </p>
-                    )}
+            <footer data-testid="rehearse-dock" className="shrink-0 border-t border-rule bg-card pb-[env(safe-area-inset-bottom)]">
+                {/* Row 1: the recording, and the key (local transposition for MusicXML). */}
+                <div className="flex min-h-14 items-center gap-3 border-b border-rule px-3 sm:px-4">
+                    <div className="min-w-0 flex-1">
+                        {song.take ? (
+                            <RecordingPlayer key={song.take.id} recordingId={song.take.id} title={song.take.title} />
+                        ) : (
+                            <p className="text-xs text-muted-foreground">{t("recordings.noRecordingYet")}</p>
+                        )}
+                    </div>
+                    <KeyControl key={song.id} keyName={song.key} canTranspose={kind === "musicxml"} />
                 </div>
-                <StepLink href={step(nextId)} label={t("recordings.nextSong")} dir="next" />
+                {/* Row 2: exit, then song navigation, as in Perform. */}
+                <div className="flex min-h-16 items-center gap-2 px-2 sm:px-3">
+                    <Link
+                        href={base}
+                        data-testid="rehearse-back"
+                        aria-label={t("recordings.backToRehearse")}
+                        className="touch-hit inline-flex h-12 min-w-12 shrink-0 items-center justify-center gap-2 rounded-md border border-input bg-card px-3 text-foreground hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-safe:transition-colors"
+                    >
+                        <X aria-hidden className="h-5 w-5" />
+                        <span className="hidden text-xs font-bold uppercase tracking-wider sm:inline">{t("perform.toolbar.exit")}</span>
+                    </Link>
+                    <div className="flex min-w-0 flex-1 items-center justify-center gap-1 sm:gap-4">
+                        <StepLink href={step(prevId)} label={t("recordings.previousSong")} dir="prev" />
+                        <div className="flex min-w-0 flex-1 flex-col items-center px-1 sm:max-w-md">
+                            <h1 className="w-full truncate text-center text-lg font-bold leading-tight text-foreground sm:text-2xl">
+                                {song.title}
+                            </h1>
+                            {position && total ? (
+                                <p data-testid="rehearse-position" className="tnum flex w-full min-w-0 items-baseline justify-center gap-1 text-xs font-medium text-muted-foreground sm:text-sm">
+                                    <span className="shrink-0 uppercase tracking-wide">
+                                        {t("perform.songPosition", { position, total })}
+                                    </span>
+                                    {next ? (
+                                        <span className="min-w-0 truncate">
+                                            <span aria-hidden="true">· </span>
+                                            {next.key
+                                                ? t("perform.nav.nextUp", { title: next.title, key: next.key })
+                                                : t("perform.nav.nextUpNoKey", { title: next.title })}
+                                        </span>
+                                    ) : null}
+                                </p>
+                            ) : null}
+                        </div>
+                        <StepLink href={step(nextId)} label={t("recordings.nextSong")} dir="next" />
+                    </div>
+                    {/* Balances the exit button so the title sits centred. */}
+                    <span aria-hidden="true" className="hidden h-12 min-w-12 shrink-0 sm:block sm:w-[5.5rem]" />
+                </div>
             </footer>
         </div>
     )
