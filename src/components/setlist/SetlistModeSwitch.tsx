@@ -24,12 +24,12 @@ export function isEventToday(eventDate: unknown, org: OrgId = DEFAULT_ORG_ID, no
 
 /**
  * Which modes this viewer is offered, in the fixed order Rehearse, Perform,
- * Edit. Edit is for band leaders and admins. Rehearse is hidden on the
- * setlist's service day so nobody drifts off the band's chart mid-service.
+ * Edit. Edit is for band leaders and admins. Rehearse is always offered,
+ * the service day included: people rehearse that day too (2026-11-06).
  */
 export function visibleModes(opts: { canEdit: boolean; eventDate: unknown; org?: OrgId; now?: Date }): SetlistMode[] {
     const modes: SetlistMode[] = []
-    if (!isEventToday(opts.eventDate, opts.org, opts.now)) modes.push('rehearse')
+    modes.push('rehearse')
     modes.push('perform')
     if (opts.canEdit) modes.push('edit')
     return modes
