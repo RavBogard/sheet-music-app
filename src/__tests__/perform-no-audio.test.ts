@@ -152,6 +152,10 @@ describe('Perform stays silent', () => {
 
     it('nothing reachable from /perform links to /rehearse', () => {
         const hits = files.filter((f) => /['\"`]\/(?:listen|rehearse)(?![A-Za-z])/.test(fs.readFileSync(f, 'utf8')))
-        expect(hits.map((f) => norm(path.relative(SRC, f)))).toEqual(['components/setlist/SetlistModeSwitch.tsx'])
+        expect(hits.map((f) => norm(path.relative(SRC, f))).sort()).toEqual([
+            // Only highlights the Setlist tab on /rehearse/* (a pathname test, not a link).
+            'components/nav/MobileTabBar.tsx',
+            'components/setlist/SetlistModeSwitch.tsx',
+        ])
     })
 })
