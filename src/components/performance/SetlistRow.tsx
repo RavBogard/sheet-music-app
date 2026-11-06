@@ -14,6 +14,19 @@ import { SECTION_BAND_CLASS, SECTION_LABEL_META_CLASS, type SectionBand } from "
 import { SetTotalText } from "@/components/setlist/gig/SetTotalText"
 import { leadSingerKey } from "@/lib/gig/display"
 import type { SetTotal } from "@/lib/gig/set-totals"
+import {
+    KEY_COLUMN_CLASS,
+    KEY_TAG_CLASS,
+    PAGE_CALL_CLASS,
+    ROW_BELOW_CLASS,
+    ROW_BPM_CLASS,
+    ROW_NOTES_CLASS,
+    ROW_NUMBER_CLASS,
+    ROW_TITLE_CLASS,
+    SECTION_LABEL_ROW_CLASS,
+    SECTION_LABEL_TITLE_CLASS,
+    SETLIST_ROW_CLASS,
+} from "./row-grammar"
 
 export interface SetlistRowProps {
     track: WithTonight<SetlistTrack>
@@ -150,7 +163,7 @@ export function SetlistRow({
     const pageCell = folio !== undefined ? (
         <span
             data-testid="folio"
-            className="tnum shrink-0 w-11 text-end text-[0.95rem] font-bold whitespace-nowrap text-page-call"
+            className={PAGE_CALL_CLASS}
         >
             <span className="sr-only">{t("performSetlist.row.folio", { page: folio })}</span>
             <span aria-hidden="true">{folio}</span>
@@ -238,7 +251,7 @@ export function SetlistRow({
         // jump section to section. A leader's label stays a button, inside the
         // heading, with a 44px hit area; the drawn label stays thin.
         const bandClass = cn(
-            "flex items-end gap-3 px-4 pt-3 pb-1 w-full text-start border-b-2 bg-card",
+            SECTION_LABEL_ROW_CLASS,
             SECTION_BAND_CLASS[band?.hue ?? "blue"],
             highlighted && "ring-4 ring-inset ring-brand/40",
         )
@@ -246,7 +259,7 @@ export function SetlistRow({
         const bandSpacing = ""
         const headerInner = (
             <>
-                <span className="flex-1 min-w-0 truncate text-xs font-extrabold uppercase tracking-[0.1em]">
+                <span className={SECTION_LABEL_TITLE_CLASS}>
                     {track.title}
                 </span>
                 {setTotal && <SetTotalText total={setTotal} />}
@@ -292,13 +305,13 @@ export function SetlistRow({
     // title (with its second lines under it), then two fixed columns that
     // always render, key and page, so neither ever floats.
     const keyCell = (
-        <span className="shrink-0 w-10 sm:w-12 flex justify-center">
+        <span className={KEY_COLUMN_CLASS}>
             {displayKey ? (
                 // A small outlined key tag in full ink.
                 <span
                     data-testid="key-badge"
                     data-lead-key={sungKey ? "" : undefined}
-                    className="tnum inline-flex items-center justify-center px-1.5 rounded-[3px] border border-input text-xs font-bold leading-[1.125rem] text-foreground"
+                    className={KEY_TAG_CLASS}
                 >
                     {sungKey && track.leadMusician ? (
                         <span className="sr-only">{t("gig.leadKeyHint", { name: track.leadMusician })} </span>
@@ -309,7 +322,7 @@ export function SetlistRow({
         </span>
     )
     const numberCell = (
-        <span aria-hidden="true" className="tnum shrink-0 w-6 text-end text-xs text-muted-foreground">
+        <span aria-hidden="true" className={ROW_NUMBER_CLASS}>
             {position ?? ""}
         </span>
     )
@@ -325,11 +338,11 @@ export function SetlistRow({
     )
     // Second lines sit under the title, past the number column, and stop
     // short of the key and page columns.
-    const below = (children: React.ReactNode) => <div className="ps-8 sm:pe-[6.25rem] min-w-0">{children}</div>
+    const below = (children: React.ReactNode) => <div className={ROW_BELOW_CLASS}>{children}</div>
 
     const notesLine = track.notes ? (
         // Notes: a small quiet second line (the mock's oxblood), two lines at most.
-        <p data-testid="row-notes" className="text-xs text-section-oxblood-ink line-clamp-2 break-words">
+        <p data-testid="row-notes" className={cn(ROW_NOTES_CLASS, "line-clamp-2")}>
             {track.notes}
         </p>
     ) : null
@@ -337,10 +350,10 @@ export function SetlistRow({
     const songContent = isSong ? (
         <div className="flex-1 min-w-0">
             {firstLine(
-                <div className="flex-1 min-w-0 break-words text-base font-medium leading-6 text-foreground">
+                <div className={ROW_TITLE_CLASS}>
                     <span>{title}</span>
                     {track.bpm ? (
-                        <span className="tnum ms-2 text-xs font-normal text-muted-foreground whitespace-nowrap">
+                        <span className={ROW_BPM_CLASS}>
                             {t("performSetlist.row.bpm", { bpm: track.bpm })}
                         </span>
                     ) : null}
@@ -396,7 +409,8 @@ export function SetlistRow({
     // current position is a tinted row with an inset ring; `data-current`
     // carries it for tests.
     const rowClasses = cn(
-        "flex items-center ps-1 pe-4 py-2.5 border-b border-rule transition-colors",
+        SETLIST_ROW_CLASS,
+        "transition-colors",
         // A strong keyboard focus mark, readable at arm's length (WCAG 2.4.7):
         // an outline, so it never fights the current-position ring.
         "outline-none focus-visible:outline-3 focus-visible:outline-solid focus-visible:outline-ring focus-visible:-outline-offset-3",

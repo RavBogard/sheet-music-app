@@ -28,7 +28,7 @@ export default async function RehearseTrackPage({
     if (!(await hasFeature((await requestOrg()).orgId, "perform"))) notFound()
     const data = await loadRehearse(id)
     if (!data) notFound()
-    const { song, prev, next } = songNeighbors(data.rows, trackId)
+    const { song, prev, next, position, total } = songNeighbors(data.rows, trackId)
     if (!song) notFound()
     return (
         <RehearseTrackClient
@@ -37,6 +37,9 @@ export default async function RehearseTrackPage({
             kind={song.fileId ? data.kinds[song.fileId] ?? "pdf" : null}
             prevId={prev?.id ?? null}
             nextId={next?.id ?? null}
+            position={position}
+            total={total}
+            next={next ? { title: next.title, key: next.key } : null}
         />
     )
 }

@@ -9,7 +9,7 @@ afterEach(cleanup)
 
 const tracks = [
     { id: 't1', title: 'Opening', type: 'header' },
-    { id: 't2', title: 'Hashkivenu', type: 'song', songId: 's-a', key: 'Dm', bpm: 92, notes: 'Slow start\nthen build', fileId: 'f2' },
+    { id: 't2', title: 'Hashkivenu', type: 'song', songId: 's-a', key: 'Dm', bpm: 92, notes: 'Slow start\nthen build', fileId: 'f2', liturgyRef: { folio: 12 } },
     { id: 't3', title: 'Torah reading', type: 'reading' },
     { id: 't4', title: 'Adon Olam', songId: 's-b' },
     { id: 't5', title: 'Closing', type: 'section' },
@@ -39,6 +39,7 @@ describe('buildRehearseRows', () => {
         expect(songNeighbors(rows, 't2')).toMatchObject({ prev: null, next: { id: 't4' } })
         expect(songNeighbors(rows, 't4')).toMatchObject({ prev: { id: 't2' }, next: { id: 't6' } })
         expect(songNeighbors(rows, 't6').next).toBeNull()
+        expect(songNeighbors(rows, 't4')).toMatchObject({ position: 2, total: 3 })
         expect(songNeighbors(rows, 't1').song).toBeNull()
         expect(songNeighbors(rows, 't3').song).toBeNull()
     })
@@ -54,17 +55,28 @@ describe('Rehearse page', () => {
 
         const songs = screen.getAllByTestId('rehearse-song')
         expect(songs).toHaveLength(3)
-        expect(within(songs[0]).getByTestId('rehearse-meta')).toHaveTextContent('Dm')
-        expect(within(songs[0]).getByTestId('rehearse-meta')).toHaveTextContent('92 BPM')
+        expect(within(songs[0]).getByTestId('rehearse-key-tag')).toHaveTextContent('Dm')
+        expect(within(songs[0]).getByTestId('rehearse-bpm')).toHaveTextContent('92 BPM')
+        expect(within(songs[0]).getByTestId('rehearse-folio')).toHaveTextContent('12')
+        expect(within(songs[0]).getByTestId('rehearse-take')).toHaveTextContent('Shir Shabbat, Nov 14, 2025')
         expect(within(songs[0]).getByTestId('rehearse-notes')).toHaveTextContent('Slow start')
         expect(within(songs[0]).getByTestId('recording-player')).toBeInTheDocument()
         expect(within(songs[0]).getByTestId('rehearse-chart-link')).toHaveAttribute('href', '/rehearse/sl1/track/t2')
 
         expect(within(songs[1]).getByText('No recording yet')).toBeInTheDocument()
         expect(within(songs[1]).queryByTestId('rehearse-chart-link')).not.toBeInTheDocument()
-        expect(within(songs[1]).queryByTestId('rehearse-meta')).not.toBeInTheDocument()
+        expect(within(songs[1]).queryByTestId('rehearse-key-tag')).not.toBeInTheDocument()
+        expect(within(songs[1]).queryByTestId('rehearse-bpm')).not.toBeInTheDocument()
+        expect(within(songs[1]).queryByTestId('rehearse-folio')).not.toBeInTheDocument()
         expect(within(songs[2]).queryByTestId('rehearse-chart-link')).not.toBeInTheDocument()
         expect(document.querySelectorAll('audio')).toHaveLength(1)
+
+        // Section headings draw as Perform's labels: a level-2 heading with its hue and pages.
+        const sections = screen.getAllByTestId('rehearse-section')
+        expect(sections.map((s) => s.tagName)).toEqual(['H2', 'H2'])
+        expect(sections[0]).toHaveAttribute('data-section-hue')
+        expect(sections[0]).toHaveTextContent('p. 12')
+        expect(screen.getByTestId('rehearse-status-line')).toHaveTextContent('3 songs')
     })
 
     it('titles drop a stray file extension like the editor rows', () => {

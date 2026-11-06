@@ -14,6 +14,7 @@ import { isSectionRow, sectionBands } from "@/components/setlist/grid/section-ba
 import { isSegue, setTotalsByHeader } from "@/lib/gig/display"
 import type { Gig } from "@/lib/gig/model"
 import { SegueMark } from "./SegueMark"
+import { SETLIST_LIST_CLASS } from "./row-grammar"
 
 export interface SetlistViewProps {
     tracks: SetlistTrack[]
@@ -219,7 +220,7 @@ export function SetlistView({
                 {/* One continuous card (Option B): sections are thin labelled
                     rules inside it, never separate cards. */}
                 {tracks.length > 0 && (
-                <div data-testid="perform-list" className="flex flex-col bg-card border-y sm:border border-rule sm:rounded-lg overflow-hidden">
+                <div data-testid="perform-list" className={SETLIST_LIST_CLASS}>
                 {(() => {
                     const out: React.ReactNode[] = []
                     for (let index = 0; index < tracks.length; index++) {

@@ -39,5 +39,7 @@
     "modePerform": "Perform",
     "modeEdit": "Edit",
     "modeSwitchAria": "View this setlist as",
-    "chartLoading": "Loading chart…"
+    "chartLoading": "Loading chart…",
+    "recordedCount_one": "{count} recorded",
+    "recordedCount_other": "{count} recorded"
 }
