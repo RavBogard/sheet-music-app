@@ -17,9 +17,11 @@ export interface ServiceTypeCatalogEntry {
 export const SERVICE_TYPE_CATALOG: readonly ServiceTypeCatalogEntry[] = [
     { key: "friday_night", label: "Friday Night", category: "regular" },
     { key: "shir_shabbat", label: "Shir Shabbat", category: "regular" },
+    { key: "shir_keter", label: "Shir Keter", category: "regular" },
     { key: "shabbat_morning", label: "Shabbat Morning", category: "regular" },
     { key: "bnei_mitzvah_saturday", label: "B'nei Mitzvah Saturday", category: "regular" },
     { key: "havdalah_bnei_mitzvah", label: "Havdalah B'nei Mitzvah", category: "regular" },
+    { key: "adult_bnei_mitzvah", label: "Adult B'nei Mitzvah", category: "regular" },
     { key: "rosh_hashanah_evening", label: "Rosh Hashanah Evening", category: "holiday" },
     { key: "rosh_hashanah_morning", label: "Rosh Hashanah Morning", category: "holiday" },
     { key: "yom_kippur_kol_nidre", label: "Yom Kippur Kol Nidre", category: "holiday" },

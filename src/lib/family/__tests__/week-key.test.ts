@@ -95,7 +95,8 @@ describe("storedWeek — a stale key reads as absent", () => {
 describe("occasion", () => {
     it("stored bridge value wins; otherwise the stricter classification", () => {
         expect(occasionOf({ name: "Shabbat Morning", occasion: "bnei-mitzvah" }, "crc")).toBe("bnei-mitzvah")
-        expect(occasionOf({ name: "Bat Mitzvah of R. — Nov 7", templateType: "shabbat_morning" }, "crc")).toBe("bnei-mitzvah")
+        expect(occasionOf({ name: "Bat Mitzvah of R. — Nov 7", templateType: "bnei_mitzvah_saturday" }, "crc")).toBe("bnei-mitzvah")
+        expect(occasionOf({ name: "R.'s third Bar Mitzvah", serviceType: "adult_bnei_mitzvah" }, "crc")).toBe("bnei-mitzvah")
         expect(occasionOf({ name: "Yom Kippur Morning", templateType: "yom_kippur_morning" }, "crc")).toBe("holiday")
         expect(occasionOf({ name: "Shabbat with Joe Buchanan", templateType: "shabbat_morning" }, "crc")).toBe("guest")
         expect(occasionOf({ name: "Shabbat Morning — Oct 10", templateType: "shabbat_morning" }, "crc")).toBe("regular")

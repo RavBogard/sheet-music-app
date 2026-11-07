@@ -28,6 +28,8 @@ export interface ReadbackRow {
     /** The tier phrase, verbatim. */
     phrase: string | null
     keyOnRecord: boolean
+    /** Draft only: a pinned row, always in the order (pin_profile_row). */
+    pinned?: boolean
     standing?: { byName: string; at: string } | null
     promotion?: Promotion
     /**
@@ -87,6 +89,8 @@ export interface ReadbackItem {
         | "open_item"
         | "dead_chart"
         | "key_mismatch"
+        /** A pinned row with no chart, or a pin placed last because its `after` row is missing. */
+        | "pinned"
     index: number | null
     text: string
     /** What is said aloud when it differs from `text` (a setting, not a file name; a month). */
@@ -119,7 +123,7 @@ export interface ReadbackInput {
     /** Draft only: where the running order came from, said after the headline (MCP-03). */
     origin?: string | null
     /** Said first, beside `existing` (e.g. the book differs from the profile's). Never blocks. */
-    notices?: Array<{ kind: "book_differs" | "dropped"; text: string }>
+    notices?: Array<{ kind: "book_differs" | "dropped" | "pinned"; text: string }>
 }
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
@@ -234,8 +238,10 @@ export function serviceNoun(serviceType: string, label: string, n: number): stri
         shabbat_morning: ["Shabbat morning", "Shabbat mornings"],
         friday_night: ["Friday night", "Friday nights"],
         shir_shabbat: ["Shir Shabbat", "Shir Shabbat services"],
+        shir_keter: ["Shir Keter", "Shir Keter services"],
         bnei_mitzvah_saturday: ["B'nei Mitzvah service", "B'nei Mitzvah services"],
         havdalah_bnei_mitzvah: ["Havdalah B'nei Mitzvah", "Havdalah B'nei Mitzvah services"],
+        adult_bnei_mitzvah: ["adult B'nei Mitzvah", "adult B'nei Mitzvah services"],
     }
     const pair = nouns[serviceType] ?? [`${label} service`, `${label} services`]
     return n === 1 ? pair[0] : pair[1]
@@ -308,7 +314,11 @@ export function buildReadback(input: ReadbackInput): Readback {
     for (const r of rows) {
         if (!r.isSong) continue
         const before = exceptions.length
-        if (r.tier && OPEN_TIERS.has(r.tier)) {
+        if (r.pinned && !r.hasChart) {
+            // A pinned row is always in the order, chart or not: say that it has none.
+            const had = r.tier && OPEN_TIERS.has(r.tier) && r.tier !== "new" ? ` (${r.phrase})` : ""
+            exceptions.push({ kind: "pinned", index: r.index, text: `${r.label}: pinned, no chart${had}` })
+        } else if (r.tier && OPEN_TIERS.has(r.tier)) {
             const item: ReadbackItem = { kind: "open_slot", index: r.index, text: `${r.label}: ${r.phrase ?? ""}`.trim() }
             const voice = r.tier === "new" ? `${r.label}: new, which chart?` : openVoice(r)
             if (voice && voice !== item.text) item.voice = voice

@@ -1,7 +1,7 @@
 import { classifyService } from "@/lib/history/classify"
 import type { OrgId } from "@/lib/org/types"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
-import { legacySlotKeyFor, memoryServiceType, profileKeyFor, rabbiRequired, slotKeyFor } from "./keys"
+import { memoryServiceType, profileKeyFor, rabbiRequired, slotKeyAliases, slotKeyFor } from "./keys"
 import type { SlotTier, StandingChoice } from "./tiers"
 
 /**
@@ -104,11 +104,13 @@ export async function profileSlotInfo(
     const groupOf = new Map(candidates.map((c) => [c.fileId, c.partGroup]))
     const partGroupOf = (fid: string) => groupOf.get(fid) ?? index.partGroupOf(fid)
     const byTitle = org === DEFAULT_ORG_ID
+    const keyOpts = { byTitle, momentOfChart: index.momentOfChart }
     const slots = candidates.map((c) => {
         const t = { momentId: c.momentId ?? null, title: c.title, fileId: c.fileId }
-        const slotKey = slotKeyFor(t, partGroupOf, { byTitle })
-        const legacy = legacySlotKeyFor(t, partGroupOf)
-        const aliases = [...new Set([legacy, ...historyAliases(index, slotKey)])].filter((a) => a !== slotKey)
+        const slotKey = slotKeyFor(t, partGroupOf, keyOpts)
+        const aliases = [...new Set([...slotKeyAliases(t, partGroupOf, slotKey, keyOpts), ...historyAliases(index, slotKey)])].filter(
+            (a) => a !== slotKey,
+        )
         return { slotKey, aliases }
     })
     const standing = await readStandingFor(org, profileKey, slots)

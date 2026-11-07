@@ -163,6 +163,7 @@ import { draftServiceTool, createSetlistFromDraftTool } from "./draft-service"
 import { addOpenItemTool, resolveOpenItemTool } from "./open-items"
 import { readBackSetlistTool } from "./read-back-setlist"
 import { seedServiceProfiles, getServiceProfileTool, reseedServiceProfileTool } from "./service-profiles"
+import { pinProfileRowTool, unpinProfileRowTool } from "./profile-pins"
 import { richError, liftLegacyErrorEnvelope } from "@/lib/mcp/error-envelopes"
 export { registerTestTokenTools } from "./test-tokens"
 export { registerMintAdminBearerTools } from "./mint-admin-bearer"
@@ -830,10 +831,25 @@ export function registerReadTools(server: McpServer): void {
         "set_standing_choice",
         {
             description:
-                "Remember a row's chart, key and vocal lead as the standard for that slot of the service's profile (\"keep it in Dm\"). Use only when the author says to keep a choice for next time; never on your own judgment. Point at the row by `setlistId` + `trackId`; the profile comes from the setlist's service type and rabbi slot, and the choice is remembered for that profile only. Replacing someone else's choice from the last 28 days is reported in `overrode`. Undo with clear_standing_choice. Admin / band_leader. Returns `{ok, announcement, scope, slotKey, choice, overrode?}`; read `announcement` back to the author.",
+                "Remember a chart and key as the standard for one slot of a service's profile (\"keep it in Dm\", \"make the Klepper standard\"). Use only when the author says to keep a choice; never on your own judgment. Two ways: point at a row with `setlistId` + `trackId` (the profile comes from the setlist's service type and rabbi slot; the row's chart, key and vocal lead are kept), or, with no row, name the profile (`serviceType`, `rabbiSlot` where needed), the chart (`fileId` from search_library), its `key`, and the `slot` when the chart alone does not name it (a moment such as 'Ahava Raba', or a slotKey from get_service_profile). The slot is keyed as history keys it (prayer moment first, then chart), so a standard fills the learned row it was meant for; `fills` names that row, and when no row of the order has the slot yet, `note` says to pin it with pin_profile_row. Replacing someone else's choice from the last 28 days is reported in `overrode`. Undo with clear_standing_choice. Admin / band_leader. Returns `{ok, announcement, scope, slotKey, choice, overrode?, fills?, note?}`; read `announcement` back to the author.",
             inputSchema: {
-                setlistId: z.string().describe("The setlist the row is on."),
-                trackId: z.string().describe("The row whose chart and key become standard."),
+                setlistId: z.string().optional().describe("Row path: the setlist the row is on."),
+                trackId: z.string().optional().describe("Row path: the row whose chart and key become standard."),
+                serviceType: z
+                    .string()
+                    .optional()
+                    .describe("Library path: the profile's service type, e.g. 'bnei_mitzvah_saturday'."),
+                rabbiSlot: z
+                    .enum(["daniel_karen", "randy"])
+                    .optional()
+                    .describe("Library path: required for friday_night and shabbat_morning. Ask; never infer."),
+                slot: z
+                    .string()
+                    .optional()
+                    .describe("Library path: the slot — a prayer moment ('Ahava Raba', 'mi-chamocha'), a slotKey from get_service_profile, or the song's title. Omit when the chart names it."),
+                fileId: z.string().optional().describe("Library path: the chart (a library fileId)."),
+                key: z.string().optional().describe("Library path: the key it is played in, e.g. 'Dm'."),
+                leadMusician: z.string().optional().describe("Library path: the vocal lead, when the author names one."),
                 quote: z
                     .string()
                     .optional()
@@ -931,10 +947,14 @@ export function registerReadTools(server: McpServer): void {
         "clear_standing_choice",
         {
             description:
-                "Undo the standing choice for a row's slot: the choice it replaced comes back, or the slot has no standard. Same `setlistId` + `trackId` as set_standing_choice. Admin / band_leader. Returns `{ok, announcement, scope, slotKey, restored}`; read `announcement` back to the author.",
+                "Undo the standing choice for a slot: the choice it replaced comes back, or the slot has no standard. Name the slot as set_standing_choice did: a row (`setlistId` + `trackId`), or the profile (`serviceType`, `rabbiSlot` where needed) and the `slot` or chart `fileId`. Admin / band_leader. Returns `{ok, announcement, scope, slotKey, restored}`; read `announcement` back to the author.",
             inputSchema: {
-                setlistId: z.string().describe("The setlist the row is on."),
-                trackId: z.string().describe("The row whose slot's standard is undone."),
+                setlistId: z.string().optional().describe("Row path: the setlist the row is on."),
+                trackId: z.string().optional().describe("Row path: the row whose slot's standard is undone."),
+                serviceType: z.string().optional().describe("Library path: the profile's service type."),
+                rabbiSlot: z.enum(["daniel_karen", "randy"]).optional().describe("Library path: required for friday_night and shabbat_morning."),
+                slot: z.string().optional().describe("Library path: the slot (a moment, or a slotKey from get_service_profile)."),
+                fileId: z.string().optional().describe("Library path: the chart, when it names the slot."),
             },
         },
         async (args, extra) =>
@@ -945,11 +965,11 @@ export function registerReadTools(server: McpServer): void {
         "get_service_profile",
         {
             description:
-                "The living profile of a recurring service: its running order, and for every song slot how sure the server is about the chart and key, computed now from standing choices and history. Each slot's `tier` is `standard` (someone set it with set_standing_choice), `usual` (the same chart on 3 of the last 5 regular weeks), `last_time`, `other_service` or `new`, with a `phrase` to read back. Only standard and usual are ever filled; it never picks a setting nobody chose. friday_night and shabbat_morning need `rabbiSlot`; other services have one profile whoever leads. Tenant-scoped. Returns `{ok, templateId, profile, rows: [{index, type, title, slotKind, slotKey, house, tier?}], truncated}`.",
+                "The living profile of a recurring service: its running order and, for every song slot, how sure the server is about the chart and key, computed now. The order is re-learned on every read from the profile's last 5 regular services — setlists tagged with this service type (and rabbi slot), not special, counted as soon as they are saved — with the profile's pinned rows laid over it (`pinned: true`, always in the order; pin_profile_row). Each slot's `tier` is `standard` (set with set_standing_choice), `usual` (the same chart on 3 of the last 5 regular weeks), `last_time`, `other_service` or `new`, with a `phrase` to read back. A slot is one prayer moment, else one chart, whatever the row's title. Only standard and usual are ever filled; it never picks a setting nobody chose. friday_night and shabbat_morning need `rabbiSlot`; other services have one profile whoever leads. Tenant-scoped. Returns `{ok, templateId, profile, origin, learnedFrom:[{setlistId, name, date}], pins, pinNotices?, rows: [{index, type, title, slotKind, slotKey, house, pinned?, tier?}], truncated}`.",
             inputSchema: {
                 serviceType: z
                     .string()
-                    .describe("Service type key, e.g. 'shabbat_morning', 'friday_night', 'shir_shabbat'."),
+                    .describe("Service type key, e.g. 'shabbat_morning', 'friday_night', 'shir_shabbat', 'shir_keter', 'bnei_mitzvah_saturday', 'adult_bnei_mitzvah'."),
                 rabbiSlot: z
                     .enum(["daniel_karen", "randy"])
                     .optional()
@@ -964,7 +984,7 @@ export function registerReadTools(server: McpServer): void {
         "reseed_service_profile",
         {
             description:
-                "Re-learn one service profile's running order now, from its last 5 regular services (never a special week or a B'nei Mitzvah), and show it: the order, the services it was learned from, and which slots are open. draft_service re-learns on every draft anyway; use this when the author asks what the order would be, or to refresh the saved profile on purpose. friday_night and shabbat_morning need `rabbiSlot`. Admin / band_leader. F-05: `dryRun` defaults true and writes nothing; a real run needs `dryRun: false, force: true`. A learned order that is empty or under half the saved one is refused (`shrinkGuard` in the dry run says why) unless `allowShrink: true`. Returns `{ok, dryRun, profileKey, label, outcome, learnedFrom:[{setlistId, name, date}], order:[{index, type, title, slotKind, fileId, key}], unsure, rowChanges?, shrinkGuard?, templateId}`.",
+                "Re-learn one service profile's running order now and show it: the order, the services it was learned from, and which slots are open. A profile learns from its last 5 regular services: setlists TAGGED with its service type (and rabbi slot where the rabbi splits it) that are not special, counted as soon as they are saved, whatever their date. The setlist's name never decides: an untagged setlist counts toward no profile, so a B'nei Mitzvah counts toward the B'nei Mitzvah profile only when it is tagged bnei_mitzvah_saturday (an adult's is adult_bnei_mitzvah, which never feeds the youth profile), and a Shir Shabbat or Shir Keter never feeds Friday night. A row stays in the order when its slot (prayer moment, else chart; never the row's title) is in at least half of those services; pinned rows (pin_profile_row) are always in it and shown with `pinned: true`, and only the learned rows are written. draft_service re-learns on every draft anyway; use this when the author asks what the order would be, or to refresh the saved profile on purpose. friday_night and shabbat_morning need `rabbiSlot`. Admin / band_leader. F-05: `dryRun` defaults true and writes nothing; a real run needs `dryRun: false, force: true`. A learned order that is empty or under half the saved one is refused (`shrinkGuard` in the dry run says why) unless `allowShrink: true`. Returns `{ok, dryRun, profileKey, label, outcome, learnedFrom:[{setlistId, name, date}], order:[{index, type, title, slotKind, fileId, key, pinned?}], unsure, pins, pinNotices?, rowChanges?, shrinkGuard?, templateId}`.",
             inputSchema: {
                 serviceType: z
                     .string()
@@ -986,16 +1006,56 @@ export function registerReadTools(server: McpServer): void {
     )
 
     server.registerTool(
+        "pin_profile_row",
+        {
+            description:
+                "Pin a row into a service profile's running order: a pinned row is always in the order, in its pinned place, whatever history shows (\"Ma Tovu, the Hakafah and Adon Olam are in every B'nei Mitzvah\"). History still decides every other row and fills the charts. Give the row's `title` and `type` (song by default), its place as `position` (1 is first) or `after` (the label of the row it follows); with neither it keeps the place the learned order gives it, else goes last. A row that is already in the learned order (the same slot, chart or name) is moved, never doubled; pinning a row again moves it. With `fileId` (and `key`) the chart also becomes that slot's standard, so the draft fills it; without one the row is filled from its standard or usual, and the readback says when a pinned row has no chart. Use only when the author asks. Admin / band_leader. Returns `{ok, announcement, pin, replaced, order:[{index, type, title, pinned?}], pinNotices?}`; read `announcement` back.",
+            inputSchema: {
+                serviceType: z.string().describe("The profile's service type, e.g. 'bnei_mitzvah_saturday'."),
+                rabbiSlot: z
+                    .enum(["daniel_karen", "randy"])
+                    .optional()
+                    .describe("Required for friday_night and shabbat_morning. Ask; never infer."),
+                title: z.string().min(1).max(200).describe("The row as the order says it, e.g. 'Ma Tovu', 'Hakafah', 'Adon Olam'."),
+                type: z.string().optional().describe("Row type: 'song' (default), 'header', 'reading', 'note', 'transition'."),
+                position: z.number().int().min(1).optional().describe("Its place in the order, 1 for first. Or pass `after`."),
+                after: z.string().optional().describe("The label of the row it follows, e.g. 'Bar'chu'. Or pass `position`."),
+                fileId: z.string().optional().describe("A library chart for it (search_library); becomes the slot's standard."),
+                key: z.string().optional().describe("The key that chart is played in, e.g. 'Cm'. With fileId."),
+                quote: z.string().optional().describe("The author's words, kept with the standard."),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await pinProfileRowTool(uidFrom(extra), args, orgFrom(extra))),
+    )
+
+    server.registerTool(
+        "unpin_profile_row",
+        {
+            description:
+                "Unpin a row from a service profile's running order. It then stays in the order only while history keeps it (its slot in at least half of the last 5 regular services). Its standard, if any, is unchanged (clear_standing_choice undoes that). Name the pin by `pinId` (get_service_profile lists `pins`) or `title`. Admin / band_leader. Returns `{ok, announcement, removed, pins}`.",
+            inputSchema: {
+                serviceType: z.string().describe("The profile's service type."),
+                rabbiSlot: z.enum(["daniel_karen", "randy"]).optional().describe("Required for friday_night and shabbat_morning."),
+                pinId: z.string().optional().describe("The pin's id, from get_service_profile."),
+                title: z.string().optional().describe("Or the pinned row's title."),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await unpinProfileRowTool(uidFrom(extra), args, orgFrom(extra))),
+    )
+
+    server.registerTool(
         "draft_service",
         {
             description:
-                "Draft one service from its living profile, for the author to review before anything is created. The running order is re-learned on every draft from the service's last 5 regular weeks (never a special week or a B'nei Mitzvah; `origin` and the headline say what it was learned from); with no history yet it comes from a matching template, every song open. A song slot (one per prayer moment, whatever its setting) is filled only when it is `standard` (set with set_standing_choice) or `usual` (the same chart on 3 of the last 5 regular weeks); every other song slot is left open with its label, listed in `openIndexes`, and carries `recall` (the exact chart it had last time) when there is one. It never picks a setting nobody chose. A filled row that is worth hearing (a usual not played for 8 weeks, a different chart last week, no key on record) is named in the readback. `vsLast` lists what the last regular service had per slot. friday_night and shabbat_morning need `rabbiSlot`: ask who is leading, never infer it. `special` defaults to true for holiday services. With no history and no template it returns `no_profile`: build that week from a recent setlist with the rabbi set, and the next draft learns from it. A band passes `basedOnSetlistId` (a past set) instead of serviceType: the draft keeps that set's order, leaves every song open with its old chart as `recall`, and fills only the songs the band said to keep. The draft is kept 30 minutes; create the setlist with create_setlist_from_draft. Say `readback.text` aloud (exceptions first, then one line for everything else) and show `readback.exceptions` as a short list; give the full rows only when asked. Admin / band_leader. Tenant-scoped. Returns `{ok, draftId, expiresAt, profile:{key,label,book}, origin, special, rows:[{index, label, type, slotKey, fileId?, chartName?, key?, tier, phrase, promotion?, recall?, parts?}], openIndexes, truncated, vsLast, readback:{headline, exceptions:[{kind, index, text, voice?}], rest, text}}`.",
+                "Draft one service from its living profile, for the author to review before anything is created. The running order is re-learned on every draft from the profile's last 5 regular services: setlists tagged with this service type (and rabbi slot) that are not special, counted as soon as they are saved, except any already on this date (`origin` and the headline say what it was learned from). The tag decides, never the name: a B'nei Mitzvah draft (bnei_mitzvah_saturday) learns from the B'nei Mitzvah setlists tagged so, never from an adult's (adult_bnei_mitzvah) or an untagged one; Shir Shabbat (shir_shabbat) and Shir Keter (shir_keter) have their own profiles and never feed Friday night. Pinned rows (pin_profile_row) are always in the order, in their place, marked `pinned`; a pinned row with no chart is said in the readback. With no history yet the order comes from a matching template, every song open. A song slot (one per prayer moment, else one per chart, whatever the row's title or setting) is filled only when it is `standard` (set with set_standing_choice) or `usual` (the same chart on 3 of the last 5 regular weeks); every other song slot is left open with its label, listed in `openIndexes`, and carries `recall` (the exact chart it had last time) when there is one. It never picks a setting nobody chose. A filled row that is worth hearing (a usual not played for 8 weeks, a different chart last week, no key on record) is named in the readback. `vsLast` lists what the last regular service had per slot. friday_night and shabbat_morning need `rabbiSlot`: ask who is leading, never infer it. `special` defaults to true for holiday services. With no history and no template it returns `no_profile`: build that week from a recent setlist with the rabbi set, and the next draft learns from it. A band passes `basedOnSetlistId` (a past set) instead of serviceType: the draft keeps that set's order, leaves every song open with its old chart as `recall`, and fills only the songs the band said to keep. The draft is kept 30 minutes; create the setlist with create_setlist_from_draft. Say `readback.text` aloud (exceptions first, then one line for everything else) and show `readback.exceptions` as a short list; give the full rows only when asked. Admin / band_leader. Tenant-scoped. Returns `{ok, draftId, expiresAt, profile:{key,label,book}, origin, special, rows:[{index, label, type, slotKey, fileId?, chartName?, key?, tier, phrase, promotion?, recall?, parts?}], openIndexes, truncated, vsLast, readback:{headline, exceptions:[{kind, index, text, voice?}], rest, text}}`.",
             inputSchema: {
                 date: z.string().describe("Service date, YYYY-MM-DD."),
                 serviceType: z
                     .string()
                     .optional()
-                    .describe("Service type key, e.g. 'shabbat_morning', 'friday_night', 'shir_shabbat'. Required for a congregation."),
+                    .describe("Service type key, e.g. 'shabbat_morning', 'friday_night', 'shir_shabbat', 'shir_keter', 'bnei_mitzvah_saturday', 'adult_bnei_mitzvah'. Required for a congregation."),
                 rabbiSlot: z
                     .enum(["daniel_karen", "randy"])
                     .optional()
@@ -1011,6 +1071,13 @@ export function registerReadTools(server: McpServer): void {
                     .optional()
                     .describe(
                         "Bands only: the past set to build this one from (list_setlists). Its order is kept; every song is open, with the chart it had as `recall`, except songs the band said to keep. No serviceType or rabbiSlot is needed.",
+                    ),
+                book: z
+                    .string()
+                    .nullable()
+                    .optional()
+                    .describe(
+                        "The book this service prays from when it is not the profile's. null = the family's own booklet: no row gets a page. A B'nei Mitzvah prays from the Beit Mitzvah Siddur (the profile's book) or the family's booklet; ask which. Omit for the profile's book.",
                     ),
             },
         },

@@ -8,39 +8,32 @@ describe("classifyService strictness (MCP-12)", () => {
         "Maxine Weil Retirement Celebration",
         "Camp Sabra — June 7",
         "Simchat Torah — Oct 3",
-        "Shir Keter Shabbat — Oct 16 · Crown Center",
     ])("%s counts as a special week", (name) => {
         expect(classifyService({ name }).special).toBe(true)
     })
 
-    it("Shir Keter Shabbat is a Shir Shabbat, not a Friday night", () => {
-        expect(classifyService({ name: "Shir Keter Shabbat — Oct 16", templateType: "friday_night" }).serviceType).toBe("shir_shabbat")
+    it("the tag decides the type, never the name (Daniel 2026-11-07)", () => {
+        // A Shir Keter or Shir Shabbat filed as Friday night is a Friday night until it is retagged.
+        expect(classifyService({ name: "Shir Keter Shabbat — Oct 16", templateType: "friday_night" }).serviceType).toBe("friday_night")
+        expect(classifyService({ name: "Shir Keter Shabbat — Oct 16", serviceType: "shir_keter", templateType: "friday_night" }).serviceType).toBe("shir_keter")
+        // A B'nei Mitzvah name no longer beats the stored type.
+        expect(classifyService({ name: "Ami Chesed Bar Mitzvah — Oct 24", serviceType: "shabbat_morning" }).serviceType).toBe("shabbat_morning")
+        expect(classifyService({ name: "Ray Slavin's 3rd Bar Mitzvah", serviceType: "adult_bnei_mitzvah", templateType: "shabbat_morning" }).serviceType).toBe("adult_bnei_mitzvah")
     })
 
-    it("a regular Shir Shabbat or Shabbat morning is not special", () => {
-        expect(classifyService({ name: "Shir Shabbat — Oct 2" }).special).toBe(false)
+    it.each(["Max bar Mitzvah", "Bnei Mitzvah Morning", "Shir Shabbat — Oct 2", "Kabbalat Shabbat — May 22"])(
+        "an untagged setlist (%s) has no type and counts toward no profile",
+        (name) => {
+            const c = classifyService({ name })
+            expect(c.serviceType).toBeNull()
+            expect(c.special).toBe(true)
+        },
+    )
+
+    it("a tagged regular Shir Shabbat, Shir Keter or Shabbat morning is not special", () => {
+        expect(classifyService({ name: "Shir Shabbat — Oct 2", serviceType: "shir_shabbat" }).special).toBe(false)
+        expect(classifyService({ name: "Shir Keter Shabbat — Oct 16 · Crown Center", serviceType: "shir_keter" }).special).toBe(false)
         expect(classifyService({ name: "Shabbat Morning — Parashat Noach", serviceType: "shabbat_morning" }).special).toBe(false)
-    })
-
-    it("a B'nei Mitzvah name beats a stored shabbat_morning", () => {
-        const c = classifyService({ name: "Ami Chesed Bar Mitzvah — Oct 24", serviceType: "shabbat_morning" })
-        expect(c.serviceType).toBe("bnei_mitzvah_saturday")
-        expect(classifyService({ name: "Shabbat Morning — Parashat Noach", serviceType: "shabbat_morning" }).serviceType).toBe("shabbat_morning")
-    })
-
-    it.each([
-        "Ami Chesed B&#39;nei Mitzvah — Oct 24",
-        "Ami Chesed B’nai Mitzvah",
-        "Sam Bnei Mitzvah",
-        "Dana B'not Mitzvah",
-        "Eli Bat-Mitzvah",
-        "Mitzvah of Sam",
-    ])("%s is a B'nei Mitzvah service", (name) => {
-        expect(classifyService({ name }).serviceType).toBe("bnei_mitzvah_saturday")
-    })
-
-    it("applies whatever the stored type (a Friday-night Bat Mitzvah)", () => {
-        expect(classifyService({ name: "Maya Bat Mitzvah", serviceType: "friday_night", templateType: "friday_night" }).serviceType).toBe("bnei_mitzvah_saturday")
     })
 
     it("leaves a Havdalah B'nei Mitzvah as its own type", () => {

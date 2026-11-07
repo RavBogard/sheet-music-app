@@ -96,6 +96,7 @@ export function familyForServiceType(serviceType: string): string | null {
             return "friday_night"
         case "shabbat_morning":
         case "bnei_mitzvah_saturday":
+        case "adult_bnei_mitzvah":
             return "shabbat_morning"
         default:
             return null

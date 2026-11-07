@@ -1,7 +1,7 @@
 import { getMoment } from "@/lib/books/moments"
 import type { HistorySetlist, LibraryLite } from "@/lib/history/song-history"
 import { isSongType } from "@/lib/setlist-track-count"
-import { slotKeyFor } from "./keys"
+import { slotKeyFor, type SlotTrack } from "./keys"
 import { settingOf } from "./readback"
 import { cleanLabel } from "./tiers"
 
@@ -32,7 +32,14 @@ export interface VsLast {
 export function vsLastOf(
     profileSetlists: HistorySetlist[],
     library: Map<string, LibraryLite>,
-    opts: { before?: string | null; excludeId?: string | null; dayOf?: (iso: string) => string; byTitle?: boolean } = {},
+    opts: {
+        before?: string | null
+        excludeId?: string | null
+        dayOf?: (iso: string) => string
+        byTitle?: boolean
+        /** The slot index's own key function, so recall and tiers name one slot alike. */
+        slotKeyOf?: (t: SlotTrack) => string
+    } = {},
 ): VsLast | null {
     const dayOf = opts.dayOf ?? ((iso: string) => iso.slice(0, 10))
     const last = profileSetlists.find(
@@ -48,7 +55,7 @@ export function vsLastOf(
     const rows: VsLastRow[] = []
     for (const t of last.tracks) {
         if (!isSongType(t.type) || !t.fileId) continue
-        const slotKey = slotKeyFor(t, partGroupOf, { byTitle: opts.byTitle !== false })
+        const slotKey = opts.slotKeyOf ? opts.slotKeyOf(t) : slotKeyFor(t, partGroupOf, { byTitle: opts.byTitle !== false })
         if (seen.has(slotKey)) continue
         seen.add(slotKey)
         const lib = library.get(t.fileId)

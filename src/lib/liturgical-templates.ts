@@ -316,9 +316,13 @@ export const TEMPLATES: Record<string, TemplateSlot[]> = {
     // Regular templates (7)
     friday_night: FRIDAY_NIGHT_TEMPLATE,
     shir_shabbat: SHIR_SHABBAT_TEMPLATE,
+    // Shir Keter: the Friday-afternoon program at a senior home; its own type, never Friday night.
+    shir_keter: SHIR_SHABBAT_TEMPLATE,
     shabbat_morning: SHABBAT_MORNING_TEMPLATE,
     bnei_mitzvah_saturday: BNEI_MITZVAH_SATURDAY_TEMPLATE,
     havdalah_bnei_mitzvah: HAVDALAH_BNEI_MITZVAH_TEMPLATE,
+    // An adult's B'nei Mitzvah: the same service, its own type, so it never feeds the youth profile.
+    adult_bnei_mitzvah: BNEI_MITZVAH_SATURDAY_TEMPLATE,
     // Holiday stubs (9)
     rosh_hashanah_evening: ROSH_HASHANAH_EVENING_TEMPLATE,
     rosh_hashanah_morning: ROSH_HASHANAH_MORNING_TEMPLATE,
@@ -591,9 +595,11 @@ export function generateSetlistName(context: TemplateContext): string {
     const typeLabels: Record<string, string> = {
         friday_night: 'Friday Night',
         shir_shabbat: 'Shir Shabbat',
+        shir_keter: 'Shir Keter',
         shabbat_morning: 'Shabbat Morning',
         bnei_mitzvah_saturday: "B'nei Mitzvah Saturday",
         havdalah_bnei_mitzvah: "Havdalah B'nei Mitzvah",
+        adult_bnei_mitzvah: "Adult B'nei Mitzvah",
         rosh_hashanah: 'Rosh Hashanah',
         rosh_hashanah_evening: 'Rosh Hashanah Evening',
         rosh_hashanah_morning: 'Rosh Hashanah Morning',

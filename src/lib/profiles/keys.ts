@@ -49,8 +49,10 @@ export const CRC_CORE_PROFILES: readonly CoreProfile[] = [
     { key: "shabbat_morning:daniel_karen", label: "Daniel Shabbat morning", serviceType: "shabbat_morning", rabbiSlot: "daniel_karen", book: "crc-saturday" },
     { key: "shabbat_morning:randy", label: "Randy Shabbat morning", serviceType: "shabbat_morning", rabbiSlot: "randy", book: "crc-saturday" },
     { key: "shir_shabbat", label: "Shir Shabbat", serviceType: "shir_shabbat", rabbiSlot: null, book: "legacy-shabbat-evening" },
+    { key: "shir_keter", label: "Shir Keter", serviceType: "shir_keter", rabbiSlot: null, book: "crc-friday" },
     { key: "bnei_mitzvah_saturday", label: "B'nei Mitzvah", serviceType: "bnei_mitzvah_saturday", rabbiSlot: null, book: "legacy-beit-mitzvah" },
     { key: "havdalah_bnei_mitzvah", label: "Havdalah B'nei Mitzvah", serviceType: "havdalah_bnei_mitzvah", rabbiSlot: null, book: "legacy-beit-mitzvah" },
+    { key: "adult_bnei_mitzvah", label: "Adult B'nei Mitzvah", serviceType: "adult_bnei_mitzvah", rabbiSlot: null, book: "legacy-beit-mitzvah" },
 ]
 
 const RABBI_REQUIRED = new Set(["friday_night", "shabbat_morning"])
@@ -86,20 +88,86 @@ export interface SlotKeyOptions {
      * gig memory never changes key.
      */
     byTitle?: boolean
+    /**
+     * The one moment a chart (its partGroup, else its fileId) has been played
+     * at across the history, or null (`chartMomentsOf` in slot-uses.ts). Lets
+     * a row whose title names no moment ("Oseh shalom - Nava tehila") share
+     * the slot of the rows that do, so a standard and a learned slot line up.
+     * Used only with `byTitle`.
+     */
+    momentOfChart?: (chart: string) => string | null
+}
+
+/** A chart's identity for memory: its partGroup (every instrument copy shares it), else its fileId. */
+export function chartOf(fileId: string, partGroupOf: (fileId: string) => string | null): string {
+    return partGroupOf(fileId) ?? fileId
 }
 
 /**
- * The slot a row fills: `moment:<momentId>` when the row names a moment — a
- * stored momentId, else the moment its title names on a single clear match
- * (bind-on-type's matcher; see moment-key.ts) — so every setting of one
- * prayer is one slot. Otherwise `song:<partGroup>` (every instrument copy of one
- * arrangement shares it), falling back to the title's stem when the chart has
- * none.
+ * The last-resort slot of a row with no moment and no chart: its title with
+ * case, punctuation, whitespace, clarifiers and a file extension removed, so
+ * "Ma tovu / Hinei ma tov ", "Ma Tovu > Hinei Ma Tov" and
+ * "Ma tovu_Hinei ma tov - trad" are one song.
+ */
+export function titleSlotStem(title: string): string {
+    return historyStem(title ?? "")
+        .replace(/['‘’]/g, "")
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim()
+}
+
+/**
+ * The slot a row fills (Daniel 2026-11-07: by prayer moment first, then by
+ * chart, never by row title):
+ * 1. `moment:<id>` — the row's stored moment; else the moment its title names
+ *    on a single clear match (moment-key.ts); else the one moment its chart
+ *    has been played at (`momentOfChart`);
+ * 2. `song:<chart>` — the chart's partGroup, else its fileId;
+ * 3. `song:<title stem>` — only for a row with no chart.
  */
 export function slotKeyFor(
     track: SlotTrack,
     partGroupOf: (fileId: string) => string | null,
     opts: SlotKeyOptions = {},
+): string {
+    if (typeof track.momentId === "string" && track.momentId) return `moment:${track.momentId}`
+    const byTitle = opts.byTitle !== false
+    if (byTitle) {
+        const moment = momentForTitle(track.title, track.type ?? "song")
+        if (moment) return `moment:${moment}`
+    }
+    if (track.fileId) {
+        const chart = chartOf(track.fileId, partGroupOf)
+        const moment = byTitle && opts.momentOfChart ? opts.momentOfChart(chart) : null
+        if (moment) return `moment:${moment}`
+        return `song:${chart}`
+    }
+    return `song:${titleSlotStem(track.title ?? "") || (track.title ?? "").trim().toLowerCase()}`
+}
+
+/**
+ * Every older key a standing choice for this row may be stored under: the
+ * key before MCP-02, the key before charts and history were consulted, and
+ * the chart's own song key. Reads fall back to these when the slot's own key
+ * holds no choice.
+ */
+export function slotKeyAliases(
+    track: SlotTrack,
+    partGroupOf: (fileId: string) => string | null,
+    slotKey: string,
+    opts: SlotKeyOptions = {},
+): string[] {
+    const out = new Set<string>([legacySlotKeyFor(track, partGroupOf), previousSlotKeyFor(track, partGroupOf, opts)])
+    if (track.fileId) out.add(`song:${chartOf(track.fileId, partGroupOf)}`)
+    out.delete(slotKey)
+    return [...out]
+}
+
+/** The key before 2026-11-07: a stored or title moment, else partGroup, else the title's stem. */
+function previousSlotKeyFor(
+    track: SlotTrack,
+    partGroupOf: (fileId: string) => string | null,
+    opts: SlotKeyOptions,
 ): string {
     if (typeof track.momentId === "string" && track.momentId) return `moment:${track.momentId}`
     if (opts.byTitle !== false) {

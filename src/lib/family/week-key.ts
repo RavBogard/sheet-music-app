@@ -207,7 +207,12 @@ export function occasionOf(data: Record<string, unknown> | null | undefined, org
         rabbiSlot: typeof data.rabbiSlot === "string" ? data.rabbiSlot : null,
         special: typeof data.special === "boolean" ? data.special : null,
     })
-    if (cls.serviceType === "bnei_mitzvah_saturday" || cls.serviceType === "havdalah_bnei_mitzvah") return "bnei-mitzvah"
+    if (
+        cls.serviceType === "bnei_mitzvah_saturday" ||
+        cls.serviceType === "havdalah_bnei_mitzvah" ||
+        cls.serviceType === "adult_bnei_mitzvah"
+    )
+        return "bnei-mitzvah"
     if (cls.serviceType && HOLIDAY_TYPES.has(cls.serviceType)) return "holiday"
     const name = typeof data.name === "string" ? data.name : ""
     if (/\b(with|w\/)\s/i.test(name)) return "guest"

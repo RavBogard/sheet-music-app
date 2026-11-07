@@ -3,12 +3,12 @@ import { classifyService, storedClassFor } from "../classify"
 
 describe("classifyService", () => {
     it.each([
-        ["Shir Shabbat — Nov 6, 2026 (w/ Duo Andalus)", "friday_night", null, "shir_shabbat", null, true, null],
+        ["Shir Shabbat — Nov 6, 2026 (w/ Duo Andalus)", "friday_night", null, "friday_night", null, true, null],
         ["Shir Shabbat — Oct 2, 2026 · Bb", "shir-shabbat", null, "shir_shabbat", null, false, "Bb"],
         ["Shir Shabbat — Oct 2, 2026 · Piano/Keys", "shir_shabbat", null, "shir_shabbat", null, false, "Piano/Keys"],
         ["Kabbalat Shabbat — May 22, 2026", "kabbalat-shabbat", "Daniel", "friday_night", "daniel_karen", false, null],
         ["Shabbat Morning — Parashat Ha'azinu — September 19", "shabbat_morning", "Randy Fleisher", "shabbat_morning", "randy", false, null],
-        ["Ami Chesed Bar Mitzvah — Oct 24", null, "Daniel Bogard &amp; Karen Bogard (Rabbi Randy — Torah service)", "bnei_mitzvah_saturday", "daniel_karen", false, null],
+        ["Ami Chesed Bar Mitzvah — Oct 24", null, "Daniel Bogard &amp; Karen Bogard (Rabbi Randy — Torah service)", null, "daniel_karen", true, null],
         ["Eliana Levine Bat Mitzvah — October 10", "bnei_mitzvah_saturday", "Daniel Bogard", "bnei_mitzvah_saturday", "daniel_karen", false, null],
         ["Yom Kippur Morning — September 21", "yom-kippur-morning", "Karen / Randy", "yom_kippur_morning", null, true, null],
         ["Erev Sukkot with Nefesh Mountain — September 25", "friday_night", null, "friday_night", null, true, null],

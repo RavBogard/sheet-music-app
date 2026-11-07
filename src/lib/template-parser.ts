@@ -47,7 +47,9 @@ export function parseTemplateRequest(
     // Non-rabbi-specific templates
     const templatePatterns: [RegExp, string][] = [
         [/friday\s*night|kabbalat\s*shabbat|erev\s*shabbat/, 'friday_night'],
+        [/shir\s*keter/, 'shir_keter'],
         [/shir\s*shabbat/, 'shir_shabbat'],
+        [/adult\s*b.?nei\s*mitzvah/i, 'adult_bnei_mitzvah'],
         [/shabbat\s*morning|saturday\s*morning/, 'shabbat_morning'],
         [/b.?nei\s*mitzvah\s*(saturday|morning)/i, 'bnei_mitzvah_saturday'],
         [/havdalah\s*b.?nei\s*mitzvah/i, 'havdalah_bnei_mitzvah'],

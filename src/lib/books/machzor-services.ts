@@ -93,6 +93,7 @@ export function bookServiceFor(
 const FEED_SERVICES: Readonly<Record<string, Readonly<Record<string, string>>>> = Object.freeze({
     "legacy-beit-mitzvah": Object.freeze({
         bnei_mitzvah_saturday: "bm-shacharit",
+        adult_bnei_mitzvah: "bm-shacharit",
         havdalah_bnei_mitzvah: "bm-maariv",
     }),
 })

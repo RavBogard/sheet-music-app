@@ -121,6 +121,8 @@ export const WRITE_TOOLS: ReadonlySet<string> = new Set([
     "draft_service",
     "create_setlist_from_draft",
     "reseed_service_profile",
+    "pin_profile_row",
+    "unpin_profile_row",
     "add_open_item",
     "resolve_open_item",
     // congregation, contacts, people

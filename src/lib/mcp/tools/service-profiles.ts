@@ -11,16 +11,11 @@ import { logger } from "@/lib/logger"
 import { dayInZone, orgTimeZone } from "@/lib/org/locale"
 import { isSongType } from "@/lib/setlist-track-count"
 import { classifyService, rabbiSlotOf } from "@/lib/history/classify"
-import {
-    CRC_CORE_PROFILES,
-    profileKeyFor,
-    rabbiRequired,
-    legacySlotKeyFor,
-    slotKeyFor,
-    type CoreProfile,
-} from "@/lib/profiles/keys"
+import { CRC_CORE_PROFILES, profileKeyFor, rabbiRequired, type CoreProfile } from "@/lib/profiles/keys"
+import { applyPins, parsePins, type ProfilePin } from "@/lib/profiles/pins"
 import { seedProfile, type LearnedFrom, type SeedResult, type SeedUnsure, type SeededTrack } from "@/lib/profiles/seed"
-import { buildSlotUses, existingOnDate, historyAliases, loadMemoryHistory, type SlotUseIndex } from "@/lib/profiles/slot-uses"
+import { buildSlotUses, loadMemoryHistory, type SlotUseIndex } from "@/lib/profiles/slot-uses"
+import type { HistorySetlist, LibraryLite } from "@/lib/history/song-history"
 import { readStandingFor, type StandingChoice } from "@/lib/profiles/standing"
 import { computeSlotTier, type SlotTier } from "@/lib/profiles/tiers"
 import type { TemplateProfile } from "./templates"
@@ -188,9 +183,8 @@ export async function seedServiceProfiles(
 
         const { setlists, library, truncated } = await loadMemoryHistory(org)
         const now = new Date()
-        // Learned from services before today: a setlist already made for next week is not history.
-        const today = dayInZone(now.getTime(), orgTimeZone(org))
-        const seeds = defs.map((def) => ({ def, seed: seedProfile(def, setlists, library, now, { before: today }) }))
+        // A saved setlist counts as soon as it is saved, whatever its date (Daniel 2026-11-07).
+        const seeds = defs.map((def) => ({ def, seed: seedProfile(def, setlists, library, now) }))
 
         const profiles: SeededProfileReport[] = seeds.map(({ def, seed }) => ({
             key: def.key,
@@ -483,14 +477,24 @@ export interface ProfileRow {
     slotKind: string | null
     slotKey: string | null
     house: unknown
+    /** Always in the order (pin_profile_row). */
+    pinned?: boolean
     /** Song rows only: the slot's live tier. */
     tier?: SlotTier
 }
 
 export interface GetServiceProfileResult {
     ok: true
-    templateId: string
+    /** Null for a core profile no draft has saved yet: it is still learned from its history. */
+    templateId: string | null
     profile: TemplateProfile
+    /** Where the rows before pins came from: the last regular services, the saved profile, or nothing yet. */
+    origin: "history" | "saved_profile" | "none"
+    /** The regular services the order was learned from, newest first. */
+    learnedFrom: Array<{ setlistId: string; name: string; date: string }>
+    pins: ProfilePin[]
+    /** A pin whose `after` row is not in the order (placed last). */
+    pinNotices?: string[]
     rows: ProfileRow[]
     truncated: boolean
 }
@@ -508,21 +512,12 @@ export interface LoadedProfileRow {
     house: unknown
     /** The stored template row, as written. */
     track: Record<string, unknown>
+    /** A pinned row: always in the order (pin_profile_row). */
+    pinned?: boolean
     /** Song rows only. */
     tier?: SlotTier
     /** The standing choice behind a `standard` tier. */
     standing?: StandingChoice
-}
-
-export interface LoadedProfile {
-    templateId: string
-    profileKey: string
-    profile: TemplateProfile
-    serviceNotes: string | null
-    rows: LoadedProfileRow[]
-    truncated: boolean
-    /** Setlists already on the asked date for this service type (empty without a date). */
-    existing: { setlistId: string; name: string }[]
 }
 
 /** The profile template for a key in this org, or null (a template without `profile` never matches). */
@@ -532,6 +527,104 @@ export async function findProfileTemplateFor(
 ): Promise<FirebaseFirestore.QueryDocumentSnapshot | null> {
     initAdmin()
     return findProfileTemplate(getFirestore(), org, profileKey)
+}
+
+/**
+ * The slot of one profile row, resolved exactly as history and standards
+ * resolve it (moment, then chart, then title), with the older keys a standing
+ * choice may be stored under. A row with no chart and no moment keeps the slot
+ * it was learned (or pinned) under. Null for a non-song row.
+ */
+export function profileRowSlot(
+    t: Record<string, unknown>,
+    index: SlotUseIndex,
+): { slotKey: string; aliases: string[] } | null {
+    if (!isSongType(t.type)) return null
+    const row = {
+        momentId: str(t.momentId),
+        title: typeof t.title === "string" ? t.title : "",
+        fileId: str(t.fileId),
+        type: "song",
+    }
+    const resolved = index.slotKeyOf(row)
+    const stored = str(t.slotKey)
+    const slotKey = !row.fileId && !row.momentId && !resolved.startsWith("moment:") && stored ? stored : resolved
+    const aliases = [...new Set([stored, ...index.aliasesOf(row, slotKey)].filter((a): a is string => !!a && a !== slotKey))]
+    return { slotKey, aliases }
+}
+
+/** A profile's running order as it stands now: learned (or saved) rows with its pins laid over them. */
+export interface ProfileOrderNow {
+    def: CoreProfile | null
+    doc: FirebaseFirestore.QueryDocumentSnapshot | null
+    index: SlotUseIndex
+    /** The learned order (null for a profile that is not a core profile). */
+    learned: SeedResult | null
+    /** Where the rows before pins came from. */
+    source: "history" | "saved_profile" | "none"
+    /** The learned order would have emptied or halved the saved one, so the saved rows were used. */
+    shrunk: boolean
+    pins: ProfilePin[]
+    /** Rows before pins: what a re-learn stores. */
+    baseTracks: Record<string, unknown>[]
+    /** Rows with pins laid over them: the order a draft uses. */
+    tracks: Record<string, unknown>[]
+    pinNotices: string[]
+}
+
+export interface ProfileOrderOptions {
+    /** A past date's view: only setlists before this day are history. */
+    before?: string
+    /** Setlists that are not history (the ones already on the date being drafted). */
+    excludeIds?: readonly string[]
+}
+
+/**
+ * Re-learn a profile now and lay its pins over the order. Every saved
+ * setlist of the profile counts as soon as it is saved (Daniel 2026-11-07),
+ * except those `opts` leaves out. The learned order replaces the saved rows
+ * unless it would empty or halve them (a learning fault, not a change).
+ */
+export function profileOrderNow(
+    org: OrgId,
+    serviceType: string,
+    rabbiSlot: string | null,
+    doc: FirebaseFirestore.QueryDocumentSnapshot | null,
+    memory: { setlists: HistorySetlist[]; library: Map<string, LibraryLite> },
+    now: Date = new Date(),
+    opts: ProfileOrderOptions = {},
+): ProfileOrderNow {
+    const profileKey = profileKeyFor(serviceType, rabbiSlot)
+    const def = coreProfileFor(org, profileKey)
+    const byTitle = org === DEFAULT_ORG_ID
+    const index = buildSlotUses(memory.setlists, memory.library, {
+        serviceType,
+        rabbiSlot,
+        before: opts.before,
+        excludeIds: opts.excludeIds,
+        byTitle,
+    })
+    const learned = def
+        ? seedProfile(def, memory.setlists, memory.library, now, { before: opts.before, excludeIds: opts.excludeIds, byTitle })
+        : null
+    const stored = doc?.data()
+    const storedTracks = Array.isArray(stored?.tracks) ? (stored!.tracks as Record<string, unknown>[]) : []
+    const shrunk = !!doc && !!learned?.learnedFrom && learnedOrderGuard(learned.tracks.length, storedTracks.length) !== null
+    let source: ProfileOrderNow["source"]
+    let baseTracks: Record<string, unknown>[]
+    if (learned?.learnedFrom && !shrunk) {
+        source = "history"
+        baseTracks = learned.tracks as unknown as Record<string, unknown>[]
+    } else if (doc) {
+        source = "saved_profile"
+        baseTracks = storedTracks
+    } else {
+        source = "none"
+        baseTracks = []
+    }
+    const pins = parsePins(stored?.pins)
+    const laid = applyPins(baseTracks, pins, (row) => profileRowSlot(row, index)?.slotKey ?? null)
+    return { def, doc, index, learned, source, shrunk, pins, baseTracks, tracks: laid.tracks, pinNotices: laid.notices }
 }
 
 /**
@@ -546,26 +639,7 @@ export async function tierProfileRows(
     profileKey: string,
     index: SlotUseIndex,
 ): Promise<LoadedProfileRow[]> {
-    const slots = tracks.map((t) => {
-        if (!isSongType(t.type)) return null
-        const row = {
-            momentId: str(t.momentId),
-            title: typeof t.title === "string" ? t.title : "",
-            fileId: str(t.fileId),
-            type: "song",
-        }
-        // A prayer's moment wins (MCP-02); a song row keeps the slot it was learned under.
-        const viaMoment = slotKeyFor(row, index.partGroupOf)
-        const slotKey = viaMoment.startsWith("moment:") ? viaMoment : (str(t.slotKey) ?? viaMoment)
-        const aliases = [
-            ...new Set(
-                [str(t.slotKey), legacySlotKeyFor(row, index.partGroupOf), ...historyAliases(index, slotKey)].filter(
-                    (a): a is string => !!a && a !== slotKey,
-                ),
-            ),
-        ]
-        return { slotKey, aliases }
-    })
+    const slots = tracks.map((t) => profileRowSlot(t, index))
     // Only the profile's own scope: a choice for another rabbi's profile never shows here.
     const standing = await readStandingFor(
         org,
@@ -583,6 +657,7 @@ export async function tierProfileRows(
             house: t.house ?? null,
             track: t,
         }
+        if (t.pinned === true) row.pinned = true
         if (slotKey) {
             const choice = standing.get(slotKey) ?? null
             row.tier = computeSlotTier({
@@ -594,33 +669,6 @@ export async function tierProfileRows(
         }
         return row
     })
-}
-
-/** A profile template with its live tiers (get_service_profile). */
-export async function loadProfileTiers(
-    org: OrgId,
-    doc: FirebaseFirestore.QueryDocumentSnapshot,
-    serviceType: string,
-    rabbiSlot: string | null,
-    date?: string,
-): Promise<LoadedProfile> {
-    const data = doc.data()
-    const profile = data.profile as TemplateProfile
-    const profileKey = profileKeyFor(serviceType, rabbiSlot)
-    const tracks = Array.isArray(data.tracks) ? (data.tracks as Record<string, unknown>[]) : []
-    const { setlists, library, truncated } = await loadMemoryHistory(org)
-    const index = buildSlotUses(setlists, library, { serviceType, rabbiSlot, before: date, byTitle: org === DEFAULT_ORG_ID })
-    const existing = date ? existingOnDate(setlists, date, serviceType, orgTimeZone(org)) : []
-    const rows = await tierProfileRows(org, tracks, profileKey, index)
-    return {
-        templateId: doc.id,
-        profileKey,
-        profile,
-        serviceNotes: typeof data.serviceNotes === "string" ? data.serviceNotes : null,
-        rows,
-        truncated,
-        existing,
-    }
 }
 
 export async function getServiceProfileTool(
@@ -648,7 +696,8 @@ export async function getServiceProfileTool(
         initAdmin()
         const db = getFirestore()
         const doc = await findProfileTemplate(db, org, profileKey)
-        if (!doc) {
+        const def = coreProfileFor(org, profileKey)
+        if (!doc && !def) {
             return richError(
                 "profile_not_found",
                 `No profile '${profileKey}' in this tenant.`,
@@ -656,8 +705,11 @@ export async function getServiceProfileTool(
                 "Call draft_service once; it creates the profile.",
             )
         }
-        const loaded = await loadProfileTiers(org, doc, serviceType, rabbiSlot)
-        const rows: ProfileRow[] = loaded.rows.map((r) => {
+        // The profile is re-learned on every read, as on every draft: a setlist saved a minute ago counts.
+        const memory = await loadMemoryHistory(org)
+        const order = profileOrderNow(org, serviceType, rabbiSlot, doc, memory)
+        const loaded = await tierProfileRows(org, order.tracks, profileKey, order.index)
+        const rows: ProfileRow[] = loaded.map((r) => {
             const row: ProfileRow = {
                 index: r.index,
                 type: r.type,
@@ -666,11 +718,28 @@ export async function getServiceProfileTool(
                 slotKey: r.slotKey,
                 house: r.house,
             }
+            if (r.pinned) row.pinned = true
             if (r.tier) row.tier = r.tier
             return row
         })
-        const { profile, truncated } = loaded
-        return { ok: true, templateId: doc.id, profile, rows, truncated }
+        const stored = (doc?.data().profile ?? null) as TemplateProfile | null
+        const profile: TemplateProfile = stored ?? profileBlock(def!)
+        const zone = orgTimeZone(org)
+        return {
+            ok: true,
+            templateId: doc?.id ?? null,
+            profile,
+            origin: order.source,
+            learnedFrom: (order.source === "history" ? (order.learned?.learnedFrom?.setlists ?? []) : []).map((s) => ({
+                setlistId: s.setlistId,
+                name: s.name,
+                date: dayInZone(Date.parse(s.eventDate), zone),
+            })),
+            pins: order.pins,
+            ...(order.pinNotices.length > 0 ? { pinNotices: order.pinNotices } : {}),
+            rows,
+            truncated: memory.truncated,
+        }
     } catch (error) {
         logger.warn("get_service_profile failed:", error)
         return richError(
@@ -702,8 +771,12 @@ export interface ReseedServiceProfileReport {
     outcome: "created" | "updated" | "unchanged" | "no_history"
     /** The regular services the order is learned from, newest first. */
     learnedFrom: Array<{ setlistId: string; name: string; date: string }>
-    order: Array<{ index: number; type: string; title: string; slotKind: string | null; fileId: string | null; key: string | null }>
+    /** The learned order with the pins laid over it (pinned rows say `pinned: true`). Only the learned rows are written. */
+    order: Array<{ index: number; type: string; title: string; slotKind: string | null; fileId: string | null; key: string | null; pinned?: true }>
     unsure: SeedUnsure[]
+    /** Rows pinned with pin_profile_row: always in the order, whatever history shows. */
+    pins: ProfilePin[]
+    pinNotices?: string[]
     rowChanges?: RowChange[]
     /** Set when a real run would be refused: the learned order is empty or under half the stored one. */
     shrinkGuard?: ShrinkGuard & { overridden: boolean }
@@ -712,7 +785,8 @@ export interface ReseedServiceProfileReport {
 
 /**
  * MCP-25 — re-learn one profile's running order now, from its last regular
- * services, and show it. Admin / band_leader. F-05: `dryRun` defaults true
+ * services (every saved, non-special setlist tagged with the profile's type,
+ * whatever its date), lay its pins over it, and show it. Admin / band_leader. F-05: `dryRun` defaults true
  * and returns the full report; a real run needs `dryRun: false, force: true`.
  * A draft re-learns on its own; this is for looking, and for refreshing the
  * saved profile on purpose.
@@ -755,10 +829,14 @@ export async function reseedServiceProfileTool(
             )
         }
         const now = new Date()
-        const today = dayInZone(now.getTime(), orgTimeZone(org))
         const { setlists, library } = await loadMemoryHistory(org)
-        const seed = seedProfile(def, setlists, library, now, { before: today })
+        // A saved setlist counts as soon as it is saved, whatever its date (Daniel 2026-11-07).
+        const seed = seedProfile(def, setlists, library, now)
         const existing = await findProfileTemplate(db, org, profileKey)
+        // Pins are laid over the order the author sees; the learned rows alone are what is written.
+        const pins = parsePins(existing?.data().pins)
+        const index = buildSlotUses(setlists, library, { serviceType, rabbiSlot, byTitle: org === DEFAULT_ORG_ID })
+        const pinned = applyPins(seed.tracks as unknown as Record<string, unknown>[], pins, (row) => profileRowSlot(row, index)?.slotKey ?? null)
         const outcome: ReseedServiceProfileReport["outcome"] = !seed.learnedFrom
             ? "no_history"
             : !existing
@@ -777,15 +855,18 @@ export async function reseedServiceProfileTool(
                 name: s.name,
                 date: dayInZone(Date.parse(s.eventDate), orgTimeZone(org)),
             })),
-            order: seed.tracks.map((t, index) => ({
-                index,
-                type: t.type,
-                title: t.title,
-                slotKind: t.slotKind ?? null,
-                fileId: t.fileId ?? null,
-                key: t.key ?? null,
+            order: pinned.tracks.map((t, i) => ({
+                index: i,
+                type: typeof t.type === "string" ? t.type : "song",
+                title: typeof t.title === "string" ? t.title : "",
+                slotKind: typeof t.slotKind === "string" ? t.slotKind : null,
+                fileId: typeof t.fileId === "string" ? t.fileId : null,
+                key: typeof t.key === "string" ? t.key : null,
+                ...(t.pinned === true ? { pinned: true } : {}),
             })),
             unsure: seed.unsure,
+            pins,
+            ...(pinned.notices.length > 0 ? { pinNotices: pinned.notices } : {}),
             templateId: existing?.id ?? null,
         }
         if (outcome === "updated" && existing) {

@@ -2,8 +2,8 @@ import { getMoment } from "@/lib/books/moments"
 import { validateLiturgyRef } from "@/lib/books/registry"
 import { historyStem, type HistorySetlist, type HistoryTrack, type LibraryLite } from "@/lib/history/song-history"
 import { isSongType } from "@/lib/setlist-track-count"
-import type { CoreProfile, SlotKeyOptions } from "./keys"
-import { slotKeyFor } from "./keys"
+import type { CoreProfile, SlotTrack } from "./keys"
+import { labelStem } from "./pins"
 import { buildSlotUses } from "./slot-uses"
 import { cleanLabel, computeSlotTier, USUAL_WINDOW, type Tier } from "./tiers"
 
@@ -17,10 +17,12 @@ import { cleanLabel, computeSlotTier, USUAL_WINDOW, type Tier } from "./tiers"
  * newest one's. Otherwise a row is in the order when it is in at least half
  * of them, and two rows keep the order most of those services gave them.
  *
- * A song's place in the order is its moment, else its position (the n-th
- * song after the last moment or non-song row), so a slot whose song changes
- * every week keeps its place and is drafted open; its slot (what tiers read) is still
- * its moment or chart. Rows of one slot in one service (a moment's piano, lyrics and lead-sheet
+ * A song's place in the order is its slot — its moment, else its chart
+ * (2026-11-07: by moment first, then by chart, never by row title) — when
+ * that slot is in enough of the services to be kept. Otherwise it is its
+ * position (the n-th song after the last kept row), so a slot whose song
+ * changes every week keeps its place and is drafted open; its slot (what
+ * tiers read) is still its moment or chart. Rows of one slot in one service (a moment's piano, lyrics and lead-sheet
  * rows, or the instrument copies of one arrangement) collapse into one row,
  * and the per-part charts are kept as `parts` (MCP-14).
  *
@@ -99,8 +101,14 @@ export interface SeedResult {
 }
 
 export interface LearnOptions {
-    /** Only setlists before this day (YYYY-MM-DD) are history. */
+    /** Only setlists before this day (YYYY-MM-DD) are history: a past date's view. */
     before?: string
+    /**
+     * These setlists are not history: the ones already on the date being
+     * drafted. Every other saved setlist counts as soon as it is saved,
+     * whatever its date (Daniel 2026-11-07).
+     */
+    excludeIds?: readonly string[]
     /** Slot keys look the moment up from the title (CRC). Default true. */
     byTitle?: boolean
 }
@@ -112,17 +120,84 @@ export function seedProfile(
     now: Date = new Date(),
     opts: LearnOptions = {},
 ): SeedResult {
-    const keyOpts: SlotKeyOptions = { byTitle: opts.byTitle !== false }
     const index = buildSlotUses(setlists, library, {
         serviceType: def.serviceType,
         rabbiSlot: def.rabbiSlot,
         before: opts.before,
-        byTitle: keyOpts.byTitle,
+        excludeIds: opts.excludeIds,
+        byTitle: opts.byTitle !== false,
     })
     const window = regularWindow(index.profileSetlists)
     if (window.length === 0) return { tracks: [], unsure: [], basedOn: null }
 
-    const services = window.map((s) => collapseService(s, index.partGroupOf, library, keyOpts))
+    // A song slot (moment or chart) in at least as many services as a kept row needs holds its own
+    // place in the order, whatever its neighbours; the rest are placed by position.
+    const firstPass = window.map((s) => collapseService(s, index.slotKeyOf, library))
+    const need = window.length < 3 ? 1 : Math.ceil(window.length / 2)
+    const slotCount = new Map<string, number>()
+    for (const items of firstPass) {
+        for (const k of new Set(items.map((i) => i.slotKey).filter((k): k is string => !!k))) {
+            slotCount.set(k, (slotCount.get(k) ?? 0) + 1)
+        }
+    }
+    const kept = new Set([...slotCount].filter(([, n]) => n >= need).map(([k]) => k))
+    // Where each kept slot sits by position (the place it held before slots were kept), so a
+    // service that played another chart in that place keeps it as the same row of the order.
+    const placesOf = new Map<string, Set<string>>()
+    for (const items of firstPass) {
+        for (const i of items) {
+            if (!i.slotKey || !kept.has(i.slotKey) || !i.place) continue
+            const set = placesOf.get(i.slotKey) ?? new Set<string>()
+            set.add(i.place)
+            placesOf.set(i.slotKey, set)
+        }
+    }
+    // Charts that take turns in one place (never in the same service, holding the same place) are
+    // one row of the order, keyed by the most played of them.
+    const slotsOf = firstPass.map((items) => new Set(items.map((i) => i.slotKey).filter((k): k is string => !!k)))
+    const rowOf = new Map<string, string>()
+    const members = new Map<string, string[]>()
+    const byCount = [...kept].sort((a, b) => slotCount.get(b)! - slotCount.get(a)!)
+    for (const k of byCount) {
+        const rep = k.startsWith("moment:")
+            ? undefined
+            : [...members.keys()].find((r) => {
+                  const group = members.get(r)!
+                  const sharesPlace = group.some((g) => [...(placesOf.get(g) ?? [])].some((p) => placesOf.get(k)?.has(p)))
+                  const together = slotsOf.some((set) => set.has(k) && group.some((g) => set.has(g)))
+                  return sharesPlace && !together
+              })
+        if (rep) {
+            members.get(rep)!.push(k)
+            rowOf.set(k, rep)
+        } else {
+            members.set(k, [k])
+            rowOf.set(k, k)
+        }
+    }
+    // The names a kept row has gone by: another setting of the same song may take its place.
+    const namesOf = new Map<string, Set<string>>()
+    for (const items of firstPass) {
+        for (const i of items) {
+            const r = i.slotKey ? rowOf.get(i.slotKey) : undefined
+            if (!r) continue
+            const set = namesOf.get(r) ?? new Set<string>()
+            set.add(labelStem(i.track.title ?? ""))
+            namesOf.set(r, set)
+        }
+    }
+    const services = window.map((s, si) => {
+        const has = new Set([...slotsOf[si]].map((k) => rowOf.get(k)).filter((k): k is string => !!k))
+        const stand = (place: string, title: string): string | null =>
+            [...members.keys()].filter(
+                (r) =>
+                    !has.has(r) &&
+                    !r.startsWith("moment:") &&
+                    !!namesOf.get(r)?.has(labelStem(title)) &&
+                    members.get(r)!.some((g) => placesOf.get(g)?.has(place)),
+            )[0] ?? null
+        return collapseService(s, index.slotKeyOf, library, (k) => rowOf.get(k) ?? null, stand)
+    })
     const order = modalOrder(services.map((items) => items.map((i) => i.key)))
     const seededAt = now.toISOString()
     const tracks: SeededTrack[] = []
@@ -186,9 +261,9 @@ export function seedProfile(
         unsure.push({ label: openLabel === title ? title : `${openLabel} (last: ${title})`, reason: tier.tier, phrase: tier.phrase })
     }
 
-    const kept = new Set(order)
+    const inOrder = new Set(order)
     const dropped = services[0]
-        .filter((i) => !kept.has(i.key))
+        .filter((i) => !inOrder.has(i.key))
         .map((i) => ({
             label: i.slotKey ? songLabel(i.track.title ?? "") : i.track.title ?? "",
             count: services.filter((items) => items.some((x) => x.key === i.key)).length,
@@ -253,6 +328,8 @@ export function regularWindow(profileSetlists: HistorySetlist[]): HistorySetlist
 interface ServiceItem {
     /** The order key: the moment, else the song's position after its anchor, so a song keeps its place when it changes. */
     key: string
+    /** Songs with no moment: the n-th such song after the last moment or non-song row. */
+    place?: string
     /** Song rows: the slot the tiers read. */
     slotKey: string | null
     track: HistoryTrack
@@ -261,25 +338,34 @@ interface ServiceItem {
 
 /**
  * One service's rows as order items: rows of one song slot collapse into the
- * first (their charts kept as parts); repeated non-song rows are numbered.
+ * first (their charts kept as parts); repeated non-song rows are numbered. A
+ * song whose slot is a moment, or is kept (`rowKeyOf`), is placed by its slot
+ * and anchors the songs after it; any other song takes the place of a kept
+ * slot this service lacks (`standIn`), else is placed by position.
  */
 export function collapseService(
     s: HistorySetlist,
-    partGroupOf: (fileId: string) => string | null,
+    slotKeyOf: (t: SlotTrack) => string,
     library: Map<string, LibraryLite> = new Map(),
-    opts: SlotKeyOptions = {},
+    /** The order key of a kept slot (several charts taking turns in one place share one), else null. */
+    rowKeyOf: (slotKey: string) => string | null = () => null,
+    /** For a song in no kept slot: the kept row (absent from this service) whose place and name it has. */
+    standIn: (place: string, title: string) => string | null = () => null,
 ): ServiceItem[] {
     const items: ServiceItem[] = []
     const bySlot = new Map<string, ServiceItem>()
     const rowCount = new Map<string, number>()
-    // A song row with no moment holds a place by position: the n-th such song after the last
-    // anchor (a moment row or a non-song row). A rotating opening song is one slot.
+    // A song row with no kept slot holds a place by position: the n-th such song after the last
+    // anchor (a placed song or a non-song row). A rotating opening song is one slot.
     let anchor = "start"
     let sinceAnchor = 0
+    // The same count with only moments and non-song rows as anchors: a song's place.
+    let placeAnchor = "start"
+    let sincePlace = 0
     let prevSong: ServiceItem | null = null
     for (const t of s.tracks) {
         if (isSongType(t.type)) {
-            const slotKey = slotKeyFor(t, partGroupOf, opts)
+            const slotKey = slotKeyOf(t)
             const part = t.fileId
                 ? { fileId: t.fileId, chartName: library.get(t.fileId)?.name ?? t.fileName ?? t.title, title: t.title }
                 : null
@@ -292,28 +378,44 @@ export function collapseService(
                 if (part && !cur.parts.some((p) => p.fileId === part.fileId)) cur.parts.push(part)
                 continue
             }
-            let key: string
+            let place: string | undefined
             if (slotKey.startsWith("moment:")) {
-                key = slotKey
-                anchor = slotKey
+                placeAnchor = slotKey
+                sincePlace = 0
+            } else {
+                sincePlace += 1
+                place = `pos:${placeAnchor}#${sincePlace}`
+            }
+            const rowKey = slotKey.startsWith("moment:") ? slotKey : rowKeyOf(slotKey)
+            const stand = !rowKey && place ? standIn(place, t.title ?? "") : null
+            let key: string
+            if (rowKey || stand) {
+                key = (rowKey ?? stand)!
+                anchor = key
                 sinceAnchor = 0
             } else {
                 sinceAnchor += 1
                 key = `pos:${anchor}#${sinceAnchor}`
             }
-            const item: ServiceItem = { key, slotKey, track: t, parts: part ? [part] : [] }
+            const item: ServiceItem = { key, slotKey, track: t, parts: part ? [part] : [], ...(place ? { place } : {}) }
             bySlot.set(slotKey, item)
             items.push(item)
             prevSong = item
             continue
         }
-        const base = `row:${t.type}:${t.momentId ?? (historyStem(t.title ?? "") || (t.title ?? "").trim().toLowerCase())}`
+        // A header and a section are one kind of row, named by the label before any clarifier:
+        // "Torah Service" and "TORAH SERVICE — Rabbi Randy takes over" are one row.
+        const structural = t.type === "header" || t.type === "section"
+        const name = structural ? labelStem(t.title ?? "") : historyStem(t.title ?? "")
+        const base = `row:${structural ? "section" : t.type}:${t.momentId ?? (name || (t.title ?? "").trim().toLowerCase())}`
         const n = (rowCount.get(base) ?? 0) + 1
         rowCount.set(base, n)
         const key = n === 1 ? base : `${base}#${n}`
         items.push({ key, slotKey: null, track: t, parts: [] })
         anchor = key
         sinceAnchor = 0
+        placeAnchor = key
+        sincePlace = 0
         prevSong = null
     }
     return items

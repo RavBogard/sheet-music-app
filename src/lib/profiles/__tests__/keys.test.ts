@@ -19,8 +19,10 @@ describe("CRC_CORE_PROFILES", () => {
             "shabbat_morning:daniel_karen",
             "shabbat_morning:randy",
             "shir_shabbat",
+            "shir_keter",
             "bnei_mitzvah_saturday",
             "havdalah_bnei_mitzvah",
+            "adult_bnei_mitzvah",
         ])
         for (const p of CRC_CORE_PROFILES) {
             expect(p.key).toBe(profileKeyFor(p.serviceType, p.rabbiSlot))
@@ -36,8 +38,10 @@ describe("CRC_CORE_PROFILES", () => {
             "shabbat_morning:daniel_karen": "crc-saturday",
             "shabbat_morning:randy": "crc-saturday",
             shir_shabbat: "legacy-shabbat-evening",
+            shir_keter: "crc-friday",
             bnei_mitzvah_saturday: "legacy-beit-mitzvah",
             havdalah_bnei_mitzvah: "legacy-beit-mitzvah",
+            adult_bnei_mitzvah: "legacy-beit-mitzvah",
         })
     })
 
@@ -48,8 +52,10 @@ describe("CRC_CORE_PROFILES", () => {
             "Daniel Shabbat morning",
             "Randy Shabbat morning",
             "Shir Shabbat",
+            "Shir Keter",
             "B'nei Mitzvah",
             "Havdalah B'nei Mitzvah",
+            "Adult B'nei Mitzvah",
         ])
     })
 })
@@ -116,9 +122,9 @@ describe("slotKeyFor", () => {
         expect(legacySlotKeyFor({ title: "Barchu (Walkdown)", fileId: "barchu" }, pg)).toBe("song:barchu walkdown")
     })
 
-    it("falls back to the title stem without a partGroup", () => {
-        expect(slotKeyFor({ title: "Oseh Shalom", fileId: "unknown" }, pg)).toMatch(/^song:oseh shalom/)
-        expect(slotKeyFor({ momentId: "", title: "Oseh Shalom" }, pg)).toMatch(/^song:oseh shalom/)
+    it("keys a chart with no partGroup by its fileId, and only a row with no chart by its title", () => {
+        expect(slotKeyFor({ title: "Oseh Shalom", fileId: "unknown" }, pg)).toBe("song:unknown")
+        expect(slotKeyFor({ momentId: "", title: "Oseh Shalom " }, pg)).toBe("song:oseh shalom")
     })
 })
 

@@ -183,9 +183,9 @@ describe("learned profile (MCP-02, -03, -14)", () => {
 })
 
 describe("Havdalah B'nei Mitzvah is its own preset", () => {
-    it("a Havdalah Bat Mitzvah name classifies to havdalah_bnei_mitzvah", () => {
-        expect(classifyService({ name: "Noa Bat Mitzvah Havdalah", serviceType: "shabbat_morning" }).serviceType).toBe("havdalah_bnei_mitzvah")
-        expect(classifyService({ name: "Noa Bat Mitzvah", serviceType: "shabbat_morning" }).serviceType).toBe("bnei_mitzvah_saturday")
+    it("a Havdalah B'nei Mitzvah is one by its tag, not its name", () => {
+        expect(classifyService({ name: "Noa Bat Mitzvah Havdalah", serviceType: "havdalah_bnei_mitzvah" }).serviceType).toBe("havdalah_bnei_mitzvah")
+        expect(classifyService({ name: "Noa Bat Mitzvah Havdalah", serviceType: "shabbat_morning" }).serviceType).toBe("shabbat_morning")
     })
 })
 

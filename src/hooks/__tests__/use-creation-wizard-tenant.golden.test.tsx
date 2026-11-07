@@ -26,9 +26,11 @@ import { useCreationWizard } from "@/hooks/use-creation-wizard"
 const GOLDEN_KEYS = [
     "friday_night",
     "shir_shabbat",
+    "shir_keter",
     "shabbat_morning",
     "bnei_mitzvah_saturday",
     "havdalah_bnei_mitzvah",
+    "adult_bnei_mitzvah",
     "rosh_hashanah_evening",
     "rosh_hashanah_morning",
     "yom_kippur_kol_nidre",

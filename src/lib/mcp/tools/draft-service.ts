@@ -53,13 +53,13 @@ import {
     type Readback,
     type ReadbackRow,
 } from "@/lib/profiles/readback"
-import { seedProfile } from "@/lib/profiles/seed"
-import { buildSlotUses, existingOnDate, loadMemoryHistory } from "@/lib/profiles/slot-uses"
+import { existingOnDate, loadMemoryHistory } from "@/lib/profiles/slot-uses"
 import { vsLastOf, type VsLast } from "@/lib/profiles/vs-last"
 import { writeStanding } from "@/lib/profiles/standing"
 import type { Promotion, Tier } from "@/lib/profiles/tiers"
 import { readOpenItems } from "./open-items"
-import { cacheLearnedProfile, coreProfileFor, findLegacyTemplate, findProfileTemplateFor, learnedOrderGuard, tierProfileRows } from "./service-profiles"
+import { cacheLearnedProfile, findLegacyTemplate, findProfileTemplateFor, profileOrderNow, tierProfileRows } from "./service-profiles"
+import { labelStem } from "@/lib/profiles/pins"
 import { profileLabelFor, setAnnouncement } from "./standing"
 import { rateLimitGate, writeSetlistFromTemplateRows, type TemplateProfile, type UnresolvedLiturgyRow } from "./templates"
 
@@ -115,6 +115,12 @@ export interface DraftServiceArgs {
      * is kept; every song is open except a standing choice ("keep it").
      */
     basedOnSetlistId?: string
+    /**
+     * The book this service prays from, when it is not the profile's: a slug,
+     * or `null` for no book (a B'nei Mitzvah family's own booklet). Omitted:
+     * the profile's book. create_setlist_from_draft can still change it.
+     */
+    book?: string | null
 }
 
 export interface DraftServiceRowOut {
@@ -133,6 +139,8 @@ export interface DraftServiceRowOut {
     recall?: Recall
     /** The per-part charts of a slot that had several rows (piano, lyrics, lead sheet). */
     parts?: Array<{ fileId: string; chartName: string; title: string }>
+    /** Always in this service's order (pin_profile_row). */
+    pinned?: true
 }
 
 export interface DraftServiceResult {
@@ -195,6 +203,7 @@ function rowOut(r: DraftRow): DraftServiceRowOut {
     if (r.promotion) out.promotion = r.promotion
     if (r.recall) out.recall = r.recall
     if (r.parts) out.parts = r.parts
+    if (r.track.pinned === true) out.pinned = true
     return out
 }
 
@@ -246,6 +255,10 @@ export async function draftServiceTool(
     // A service not split by rabbi has one profile whoever leads it.
     const rabbiSlot = rabbiRequired(serviceType) ? askedRabbi : null
     const profileKey = profileKeyFor(serviceType, rabbiSlot)
+    const bookArg = args?.book
+    if (bookArg !== undefined && bookArg !== null && (typeof bookArg !== "string" || !bookArg || bookSlugGuard(bookArg))) {
+        return richError("invalid_argument", "`book` is a book slug, or null for no book.", { book: bookArg }, "Call list_books for valid slugs.")
+    }
     try {
         initAdmin()
         const db = getFirestore()
@@ -258,37 +271,41 @@ export async function draftServiceTool(
             return Number.isNaN(t) ? iso.slice(0, 10) : dayInZone(t, zone)
         }
         const now = new Date()
-        const def = coreProfileFor(org, profileKey)
         const memory = await loadMemoryHistory(org)
         // Brothers Lazaroff keeps song slots: no title lookup outside CRC.
         const byTitle = org === DEFAULT_ORG_ID
-        const index = buildSlotUses(memory.setlists, memory.library, { serviceType, rabbiSlot, before: date, byTitle })
-        // MCP-03: the running order is re-learned from the last regular services on every draft.
-        const learned = def ? seedProfile(def, memory.setlists, memory.library, now, { before: date, byTitle }) : null
+        // A saved setlist counts toward its profile as soon as it is saved, whatever its date
+        // (Daniel 2026-11-07); only the setlists already on this date are left out (they are the
+        // service being drafted). A past date's view still reads only what came before it.
+        const current = date >= dayInZone(now.getTime(), zone)
+        const onDate = existingOnDate(memory.setlists, date, serviceType, zone)
+        const learnOpts = current ? { excludeIds: onDate.map((e) => e.setlistId) } : { before: date }
         const doc = await findProfileTemplateFor(org, profileKey)
+        // MCP-03: the running order is re-learned from the last regular services on every draft,
+        // and the profile's pins are laid over it (always in the order, in their place).
+        const order = profileOrderNow(org, serviceType, rabbiSlot, doc, memory, now, learnOpts)
+        const { def, index, learned } = order
         const stored = doc?.data()
         const storedProfile = (stored?.profile ?? null) as TemplateProfile | null
         const label = def?.label ?? storedProfile?.label ?? profileLabelFor(profileKey, serviceType)
-        const book = def?.book ?? storedProfile?.book ?? null
+        const profileBook = def?.book ?? storedProfile?.book ?? null
+        // A B'nei Mitzvah prays from the Beit Mitzvah Siddur or the family's own booklet (`book: null`).
+        const book = bookArg !== undefined ? bookArg : profileBook
         const catalogLabel = serviceLabelFor(serviceType) ?? serviceType
 
         let tracks: Record<string, unknown>[]
         let templateId: string
         let serviceNotes: string | null = typeof stored?.serviceNotes === "string" ? stored.serviceNotes : null
         let origin: DraftOrigin
-        // A learned order that is empty or under half the saved one is a learning fault: draft from the saved profile.
-        const storedCount = Array.isArray(stored?.tracks) ? (stored!.tracks as unknown[]).length : 0
-        const shrunk = !!doc && !!learned?.learnedFrom && learnedOrderGuard(learned.tracks.length, storedCount) !== null
-        if (def && learned?.learnedFrom && !shrunk) {
+        if (def && learned?.learnedFrom && order.source === "history") {
             // The profile doc is a cache: refresh it for a current draft, never from a past date's view.
-            // A past date's view never creates or rewrites it.
-            const current = date >= dayInZone(now.getTime(), zone)
+            // A past date's view never creates or rewrites it. Only the learned rows are cached; pins stay apart.
             templateId = current ? await cacheLearnedProfile(uid, org, def, learned, doc) : (doc?.id ?? `profile__${org}__${def.key}`)
-            tracks = learned.tracks as unknown as Record<string, unknown>[]
+            tracks = order.tracks
             const dates = learned.learnedFrom.setlists.map((s) => dayOf(s.eventDate))
             origin = { kind: "history", count: learned.learnedFrom.count, from: dates[dates.length - 1], to: dates[0], setlists: learned.learnedFrom.setlists.map((s) => s.setlistId) }
         } else if (doc) {
-            tracks = Array.isArray(stored?.tracks) ? (stored!.tracks as Record<string, unknown>[]) : []
+            tracks = order.tracks
             templateId = doc.id
             origin = { kind: "saved_profile" }
         } else {
@@ -299,11 +316,11 @@ export async function draftServiceTool(
                     "no_profile",
                     hidesLiturgicalFields(org)
                         ? `There is no profile for '${profileKey}' yet: no past set is marked with this kind of gig, and no template matches it.`
-                        : `There is no profile for '${profileKey}' yet: no past setlist is marked with this service and rabbi, and no template matches it.`,
+                        : `There is no profile for '${profileKey}' yet: no past setlist is tagged with this service (and rabbi), and no template matches it.`,
                     { profileKey },
                     hidesLiturgicalFields(org)
                         ? "Build this one from a template or a recent set with clone_setlist. The next draft_service for this kind of gig learns from it."
-                        : "Build this one from a template or a recent setlist (clone_setlist or create_setlist with serviceType and rabbiSlot set). The next draft_service for this service learns from it.",
+                        : "Build this one from a template or a recent setlist (clone_setlist or create_setlist with serviceType and rabbiSlot set), or pin its rows with pin_profile_row. The next draft_service for this service learns from it.",
                 )
             }
             tracks = legacy.tracks.map(openTemplateRow)
@@ -331,24 +348,27 @@ export async function draftServiceTool(
         const filledIds = rows.map((r) => r.fileId).filter((f): f is string => !!f)
         const warnings = annotateCharts(rows, await loadLibraryLite(org, filledIds))
         const special = typeof args.special === "boolean" ? args.special : defaultSpecial(serviceType)
-        const existing = existingOnDate(memory.setlists, date, serviceType, zone)
+        const existing = onDate
 
         // MCP-21: the profile's previous setlist — its unresolved open items carry into this
         // readback, and a book other than the profile's is said.
         const previous = index.profileSetlists[0] ?? null
         const carried = previous ? await carriedOpenItems(db, org, previous.id, dayOf(previous.eventDate!)) : []
-        const notices: Array<{ kind: "book_differs" | "dropped"; text: string }> = []
+        const notices: Array<{ kind: "book_differs" | "dropped" | "pinned"; text: string }> = []
         // A row of the latest service the learned order leaves out is said, never silent.
-        for (const d of learned?.learnedFrom ? (learned.dropped ?? []) : []) {
+        const pinnedTitles = new Set(order.pins.map((p) => labelStem(p.title)))
+        for (const d of origin.kind === "history" ? (learned?.dropped ?? []) : []) {
+            if (pinnedTitles.has(labelStem(d.label))) continue
             notices.push({ kind: "dropped", text: `Dropped: ${d.label} (in ${d.count} of the last ${d.of} services)` })
         }
+        for (const text of origin.kind === "template" ? [] : order.pinNotices) notices.push({ kind: "pinned", text })
         if (previous?.book && book && previous.book !== book) {
             notices.push({
                 kind: "book_differs",
                 text: `Book differs from profile: your last ${label} (${monthDay(dayOf(previous.eventDate!))}) used ${bookName(previous.book)}; the profile uses ${bookName(book)}`,
             })
         }
-        const vsLast = vsLastOf(index.profileSetlists, memory.library, { before: date, dayOf, byTitle })
+        const vsLast = vsLastOf(index.profileSetlists, memory.library, { before: current ? null : date, dayOf, byTitle, slotKeyOf: index.slotKeyOf })
 
         const expiresAt = new Date(now.getTime() + DRAFT_TTL_MS)
         const ref = db.collection(DRAFTS_COLLECTION).doc(crypto.randomUUID())
@@ -390,6 +410,7 @@ export async function draftServiceTool(
                     tier: r.tier,
                     phrase: r.phrase,
                     keyOnRecord: r.key != null,
+                    pinned: lr?.pinned === true,
                     standing: choice ? { byName: choice.byName, at: choice.at } : null,
                     promotion: r.promotion,
                     deadChart: warnings.find((w) => w.kind === "dead_chart" && w.index === r.index)?.text,

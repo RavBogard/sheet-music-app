@@ -12,9 +12,9 @@ import type { OrgId } from "@/lib/org/types"
 import { logger } from "@/lib/logger"
 import { isSongType } from "@/lib/setlist-track-count"
 import { getBook } from "@/lib/books/registry"
-import { legacySlotKeyFor, profileKeyFor, rabbiRequired, slotKeyFor } from "@/lib/profiles/keys"
+import { profileKeyFor, rabbiRequired } from "@/lib/profiles/keys"
 import { buildReadback, settingOf, type Readback, type ReadbackRow } from "@/lib/profiles/readback"
-import { buildSlotUses, historyAliases, loadSlotUses } from "@/lib/profiles/slot-uses"
+import { buildSlotUses, loadSlotUses } from "@/lib/profiles/slot-uses"
 import { readStandingFor } from "@/lib/profiles/standing"
 import { computeSlotTier, phrase as tierPhrase, type SlotTier } from "@/lib/profiles/tiers"
 import { vsLastOf, type VsLast } from "@/lib/profiles/vs-last"
@@ -23,7 +23,7 @@ import { readOpenItems } from "./open-items"
 import { hidesLiturgicalFields } from "@/lib/org/vocab"
 import { readGig } from "@/lib/gig/model"
 import { anyDuration, setTotals, type SetTotal } from "@/lib/gig/set-totals"
-import { findProfileTemplateFor } from "./service-profiles"
+import { coreProfileFor, findProfileTemplateFor } from "./service-profiles"
 import { featuredLinksFor } from "./recordings"
 import type { FeaturedRecording } from "@/lib/recordings/featured"
 
@@ -171,8 +171,10 @@ export async function readBackSetlistTool(
         let vsLast: VsLast | null = null
         const notices: Array<{ kind: "book_differs"; text: string }> = []
         const day = eventDay(data.eventDate, org)
-        if (profileDoc && profileKey && serviceType) {
-            const profile = profileDoc.data().profile as TemplateProfile | undefined
+        // A core profile is learned from its history even before any draft has saved it.
+        const coreDef = profileKey ? coreProfileFor(org, profileKey) : null
+        if ((profileDoc || coreDef) && profileKey && serviceType) {
+            const profile = (profileDoc?.data().profile as TemplateProfile | undefined) ?? (coreDef ? { book: coreDef.book, label: coreDef.label } : undefined)
             profileLabel = str(profile?.label) ?? null
             const tiered = await tieredRows(org, setlistId, serviceType, rabbiSlot, profileKey, rows, day)
             readbackRows = tiered.rows
@@ -246,17 +248,14 @@ async function tieredRows(
         library,
         filter,
     )
-    const partGroupOf = (fileId: string) => library.get(fileId)?.partGroup ?? null
     // The loader derives a row's moment from its page when momentId is not stored.
     const ownMoment = new Map((own?.tracks ?? []).map((t) => [t.id, t.momentId]))
 
     const slots = rows.map((r) => {
         if (!isSongType(r.type)) return null
         const t = { momentId: r.momentId ?? ownMoment.get(r.id) ?? null, title: r.title, fileId: r.fileId }
-        const slotKey = slotKeyFor(t, partGroupOf, { byTitle })
-        const legacy = legacySlotKeyFor(t, partGroupOf)
-        const aliases = [...new Set([legacy, ...historyAliases(index, slotKey)])].filter((a) => a !== slotKey)
-        return { slotKey, aliases }
+        const slotKey = index.slotKeyOf(t)
+        return { slotKey, aliases: index.aliasesOf(t, slotKey) }
     })
     const slotKeys = slots.map((x) => x?.slotKey ?? null)
     const standing = await readStandingFor(org, profileKey, slots.filter((x): x is { slotKey: string; aliases: string[] } => !!x))
@@ -265,7 +264,7 @@ async function tieredRows(
         const t = Date.parse(iso)
         return Number.isNaN(t) ? iso.slice(0, 10) : dayInZone(t, zone)
     }
-    const vsLast = vsLastOf(index.profileSetlists, library, { before: day, excludeId: setlistId, dayOf, byTitle })
+    const vsLast = vsLastOf(index.profileSetlists, library, { before: day, excludeId: setlistId, dayOf, byTitle, slotKeyOf: index.slotKeyOf })
 
     const out = rows.map((r, i) => {
         const slotKey = slotKeys[i]
@@ -298,7 +297,7 @@ async function tieredRows(
         if (choice) row.standing = { byName: choice.byName, at: choice.at }
         if (tier.promotion) row.promotion = tier.promotion
         if (r.fileId && (tier.tier === "standard" || tier.tier === "usual")) {
-            const differs = differsFrom(tier, r, partGroupOf)
+            const differs = differsFrom(tier, r, index.partGroupOf)
             if (differs) {
                 row.differs = tier.chartName
                     ? `${chartName}${inKey(r.key)} this week; usual is ${tier.chartName}${inKey(tier.key)}`

@@ -37,6 +37,8 @@ const CATALOG_CATEGORY = new Map(SERVICE_TYPE_CATALOG.map((e) => [e.key, e.categ
 const TEMPLATE_ALIASES: Record<string, string> = {
     "kabbalat-shabbat": "friday_night",
     "shir-shabbat": "shir_shabbat",
+    "shir-keter": "shir_keter",
+    "adult-bnei-mitzvah": "adult_bnei_mitzvah",
     bnei_mitzvah_havdallah: "havdalah_bnei_mitzvah",
     "rosh-hashanah-day": "rosh_hashanah_morning",
     "erev-rosh-hashanah": "rosh_hashanah_evening",
@@ -71,23 +73,12 @@ function mapTemplateType(templateType: string | null | undefined): string | null
     return null
 }
 
-const BNEI_MITZVAH_RE =
-    /\b(?:b['’‘]?(?:nai|nei|not)|bar|bat|beit)[\s-]+mitzvah\b|\bmitzvah of\b/i
-const SHIR_SHABBAT_RE = /shir\s+(\w+\s+)?shabbat/i
-/** A named holiday, camp, celebration or retirement is a special week, whatever its stored type. */
+/**
+ * A named holiday, camp, celebration or retirement is a special week, whatever its stored type.
+ * (Shir Keter is no longer one: it is its own service type with its own profile.)
+ */
 const SPECIAL_NAME_RE =
-    /\b(sukkot|shavuot|yizkor|simchat|rosh hashana[h]?|yom kippur|pesach|passover|camp|celebration|retirement)\b|shir\s+\w+\s+shabbat/i
-
-function serviceTypeFor(rawName: string, templateType: string | null | undefined): string | null {
-    const name = decodeHtml(rawName)
-    if (SHIR_SHABBAT_RE.test(name)) return "shir_shabbat"
-    const mapped = mapTemplateType(templateType)
-    if (mapped) return mapped
-    if (/\b(bar|bat|b'?nai|b'?nei|bnei) mitzvah\b/i.test(name)) return "bnei_mitzvah_saturday"
-    if (/shabbat morning/i.test(name)) return "shabbat_morning"
-    if (/kabbalat|friday/i.test(name)) return "friday_night"
-    return null
-}
+    /\b(sukkot|shavuot|yizkor|simchat|rosh hashana[h]?|yom kippur|pesach|passover|camp|celebration|retirement)\b/i
 
 const HTML_ENTITIES: Record<string, string> = {
     amp: "&",
@@ -130,10 +121,14 @@ export function storedRabbiSlot(v: unknown): RabbiSlotKey | null {
 }
 
 /**
- * Classify a setlist. Values stored on the setlist (`serviceType`,
- * `rabbiSlot`, `special`, written only by explicit author actions) win; a stored value that is missing,
- * null or not a known key falls back to inference from name / templateType /
- * rabbi text. `part` always comes from the name.
+ * Classify a setlist. The service type is its TAG: the stored `serviceType`,
+ * else the `templateType` it was made from — both written only by an author's
+ * own choice. A setlist's name never decides its type (Daniel 2026-11-07): an
+ * untagged setlist belongs to no profile, and a B'nei Mitzvah, a Shir Shabbat
+ * or a Shir Keter is one because it is tagged so. `rabbiSlot` is the stored
+ * slot, else the rabbi field. `special` is the stored flag, else inferred (a
+ * holiday, a guest, a memorial or an untagged setlist is special). `part`
+ * always comes from the name.
  */
 export function classifyService(s: {
     name: string
@@ -145,18 +140,7 @@ export function classifyService(s: {
 }): ServiceClass {
     const name = typeof s.name === "string" ? s.name : ""
     const part = setlistPart(name)
-    const inferred = mapTemplateType(s.serviceType) ?? serviceTypeFor(name, s.templateType)
-    // B'nei Mitzvah is its own service type: its name beats a stored or inferred shabbat_morning,
-    // so it never counts toward the regular Shabbat-morning profile.
-    // Whatever the stored type: B'nei Mitzvah is its own flow (a Friday-night Bat Mitzvah too).
-    // A Havdalah (evening) B'nei Mitzvah is its own preset: its name says so.
-    const decoded = decodeHtml(name)
-    const serviceType =
-        inferred !== "havdalah_bnei_mitzvah" && BNEI_MITZVAH_RE.test(decoded)
-            ? /\bhavdall?ah\b/i.test(decoded)
-                ? "havdalah_bnei_mitzvah"
-                : "bnei_mitzvah_saturday"
-            : inferred
+    const serviceType = mapTemplateType(s.serviceType) ?? mapTemplateType(s.templateType)
     const rabbiSlot = storedRabbiSlot(s.rabbiSlot) ?? rabbiSlotFor(s.rabbi)
     const tt = typeof s.templateType === "string" ? s.templateType.trim() : ""
     const special =
@@ -165,7 +149,7 @@ export function classifyService(s: {
             : (serviceType !== null && CATALOG_CATEGORY.get(serviceType) === "holiday") ||
               /\b(with|w\/)\s/i.test(name) ||
               /memorial/i.test(name) ||
-              SPECIAL_NAME_RE.test(name) ||
+              SPECIAL_NAME_RE.test(decodeHtml(name)) ||
               SPECIAL_TEMPLATE_TYPES.has(tt) ||
               serviceType === null
     return { serviceType, rabbiSlot, special, part }
