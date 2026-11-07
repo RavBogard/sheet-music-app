@@ -65,3 +65,62 @@ with their charts. Adon Olam is in too few services to be learned, so it needs i
 - The browser app has no profile screen, so pins and standards are MCP-only for now.
 - A chart whose newer version has no partGroup is a different chart to memory (lineage is not
   followed for slot identity).
+
+## One-time cleanup (applied 2026-11-07 through the CRC Music MCP, before this branch deployed)
+
+"Type" is the classified type the learner read before the change (stored type, else the old name
+rules). Every write set the type explicitly, so each setlist now counts by its tag alone.
+
+| Setlist | Date | Type before → after | Other change | Why |
+|---|---|---|---|---|
+| Bat Mitzvah — Nov 7 (`9f288c3b`) | Nov 7 | bnei_mitzvah_saturday → same, now stored | — | tag made explicit |
+| Sterneck Memorial Bar Mitzvah (`81e959e7`) | Oct 31 | bnei_mitzvah_saturday → same, stored | special stays true | Daniel excluded it from the pattern |
+| Ami Chesed Bar Mitzvah (`4d4c5630`) | Oct 24 | by name only → bnei_mitzvah_saturday | special stays true | was untagged; Daniel excluded it |
+| B'nei Mitzvah of Gavin Stein (`cd2010f4`) | May 30 | by name only → bnei_mitzvah_saturday | special false | untagged youth B'nei Mitzvah |
+| Bnei Mitzvah Morning (`zyJGXUdI`) | May 9 | by name only → bnei_mitzvah_saturday | special false | untagged youth B'nei Mitzvah |
+| Chase, Havdalah (`c5d41b02`) | May 16 | havdalah (legacy key) → havdalah_bnei_mitzvah | — | tag made explicit |
+| Ray Slavin's 3rd Bar Mitzvah (`S7RaXpuS`) | Jun 27 | bnei_mitzvah_saturday (name) → adult_bnei_mitzvah | special stays true until deploy | an adult's; never feeds the youth profile |
+| Ki Tavo Aug 29 copy (`JZd5mZhl`) | Aug 29 | bnei_mitzvah_saturday → same | renamed "Duplicate of Noa & Ezra Bogard B'nai Mitzvah (Aug 22) — not a service"; special true | copy of Aug 22 (carries its aliyot) |
+| Shir Shabbat w/ Duo Andalus (`77d140d9`) | Nov 6 | friday_night stored (name made it Shir Shabbat) → shir_shabbat | — | Shir Shabbat |
+| Shir Shabbat Oct 2 + 7 part copies (`2ddbe895`, `7d4ab95c`, `4caa619d`, `cc5b8c69`, `6b183c1c`, `b9e5d787`, `509e3eb8`, `c4265c51`) | Oct 2 | friday_night stored → shir_shabbat | — | Shir Shabbat; part copies never vote |
+| Shir Shabbat Juneteenth (`a84f8cce`) | Jun 19 | by name → shir_shabbat | — | tag made explicit |
+| 5/15 Shir Shabbat (`NWPBba50`) | May 15 | by name → shir_shabbat | — | tag made explicit |
+| Shir Shabbat — — May 13 (`Ikl0sS4X`) | May 13 | by name → shir_shabbat | special true | copy of May 15 (same timestamp, a Wednesday) |
+| Shir Keter Oct 16 · Crown Center + 3 part copies (`7470f02d`, `a8f2c7c0`, `e353277f`, `c03bb45a`) | Oct 16 | shir_shabbat (name) → shir_keter | special false on the main one after deploy | Shir Keter |
+| Shir Shabbat — Crown Center (`993bd6bc`) | Aug 7 | shir_shabbat (name) → shir_keter | special false after deploy | Crown Center is the Shir Keter program |
+| Shir Shabbat at Crown Center for Senior Living (`BeWLvkBJ`) | Aug 7 | shir_shabbat → shir_keter | special true | earlier copy of `993bd6bc` |
+| Shabbat Morning — Sukkot I (`fff7942d`) | Sep 26 | shabbat_morning → sukkot | special true | holiday |
+| Erev Sukkot with Nefesh Mountain (`9121d459`) | Sep 25 | friday_night → sukkot | special true | holiday |
+| Simchat Torah with Klezundheit! (`6096fe3d`) | Oct 3 | shabbat_morning → simchat_torah | special true | holiday |
+| Shavuot Yizkor (`UnjLqKTt`) | May 23 | shabbat_morning → shavuot | special true | holiday |
+| Passover (`FB2yEICg`) | Apr 3 | untagged → passover | special true | holiday |
+| Shabbat Morning Sh'lach (`QSlxlW63`) | Jun 13 | by name → shabbat_morning | special true | fewer-row copy of `ncbvBvwF`, same date and name |
+| Shabbat mornings Sep 19, Sep 5, Aug 29 (`q1VvDawj`), Aug 1, Jul 11, Jul 4, Jun 13 (`ncbvBvwF`), Apr 25, Apr 18, Apr 11, Apr 4 | — | mostly by name → shabbat_morning | — | regular Shabbat mornings, tag made explicit |
+| Retirement Celebration (`A4Ioe6v8`) | Jun 6 | by name → shabbat_morning | special true | a celebration week |
+| Kabbalat Shabbat (`226309e2`) | May 22 | kabbalat-shabbat → friday_night | — | tag made explicit |
+
+Already done in Daniel's chat session and kept: Eliana Levine Oct 10, Noa & Ezra Aug 22 and Max
+Aug 8 tagged bnei_mitzvah_saturday; the standards set on bnei_mitzvah_saturday (an older slot key
+is still read as an alias).
+
+### Rabbi slots
+
+None set: no regular Shabbat morning names its rabbi in the rabbi field or any row, and a rabbi is
+never inferred. These need Daniel's word (each is a `shabbat_morning` with no rabbi slot, so it
+feeds neither Shabbat-morning profile until set): Sep 19, Sep 5, Aug 29 (`q1VvDawj`), Aug 1,
+Jul 11, Jul 4, Jun 13, Apr 25, Apr 18, Apr 11. Apr 4 already reads Daniel from its rabbi field.
+
+### Left as they are
+
+- `TX95Tb1N` (Noa & Ezra Aug 22 copy): undated, so it never counts.
+- `yGl9DLjY` "B'nei Mitzvah Saturday — March 14" is dated Mar 21; the date is unclear.
+- Empty shells (no song rows; never counted): Mar 28 ×3, Mar 21, Mar 14, Feb 28, Feb 21, Jan 31,
+  Jan 3, Mar 27, Feb 20.
+- Camp Sabra, Selichot, Yizkor, Confirmation, Mother's Day, Seui: untagged or special; no profile.
+
+### After this branch deploys
+
+- Set `special: false` on Ray Slavin (`S7RaXpuS`), Shir Keter Oct 16 (`7470f02d`) and Shir Keter
+  Aug 7 (`993bd6bc`), so each feeds its own new profile. Doing it before the deploy would let the
+  old name rules read Ray as a youth B'nei Mitzvah and Shir Keter as Shir Shabbat.
+- Pin Ma Tovu, the Hakafah and Adon Olam on bnei_mitzvah_saturday (`pin_profile_row`).
