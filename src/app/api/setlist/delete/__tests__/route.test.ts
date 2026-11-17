@@ -278,12 +278,11 @@ describe("POST /api/setlist/delete — D01 cascade", () => {
         expect(recursiveDeleteSpy).toHaveBeenCalledTimes(1)
     })
 
-    it("multi-tenant P2: writes the 'deleted' history entry server-side, after the recursive delete", async () => {
+    it("writes no 'deleted' history entry (it would land under a deleted parent; nothing reads it)", async () => {
         mockAuth("band_leader")
         const res = await POST(makeReq("/api/setlist/delete", { method: "POST", token: "valid", body: { setlistId: "s-1" } }))
         expect(res.status).toBe(200)
-        expect(historyAddSpy).toHaveBeenCalledTimes(1)
-        expect(historyAddSpy.mock.calls[0][0]).toMatchObject({ action: "deleted", userId: "user-1", userName: "user@example.com" })
-        expect(recursiveDeleteSpy.mock.invocationCallOrder[0]).toBeLessThan(historyAddSpy.mock.invocationCallOrder[0])
+        expect(historyAddSpy).not.toHaveBeenCalled()
+        expect(recursiveDeleteSpy).toHaveBeenCalledTimes(1)
     })
 })

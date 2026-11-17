@@ -235,9 +235,9 @@ export function createSetlistService(userId: string | null, userName?: string | 
                     const data = await res.json().catch(() => ({}))
                     throw new Error(data?.error || `Delete failed (${res.status})`)
                 }
-                // Multi-tenant phase 2: the 'deleted' history entry is written by
-                // the delete route before the cascade; a client write after the
-                // parent is gone would be refused.
+                // No 'deleted' history entry: the cascade removes the setlist's
+                // history with it, and a client write after the parent is gone
+                // would be refused.
             } catch (e) {
                 logger.error("Error deleting setlist:", e)
                 throw e

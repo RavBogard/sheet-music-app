@@ -5,51 +5,21 @@ import { z } from "zod"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { createApiHandler, apiError } from "@/lib/api-wrapper"
 import { logger } from "@/lib/logger"
-import { deleteSetlistRows, deleteSetlistTree } from "@/lib/setlist-ops"
-import type { Firestore, Query, DocumentSnapshot } from "firebase-admin/firestore"
+import { deleteSetlistCascade } from "@/lib/setlist-ops"
 
 /**
  * D01 — Cascading setlist delete (Admin SDK).
  *
- * Removes the setlist doc + every collection that references it:
- *   - scheduling_assignments where setlistId == id
- *   - tasks where setlistId == id
- *   - notifications (collectionGroup) where entityId == id
- *   - setlists/{id}/** (history, emailEvents, any other subcollection)
- *
+ * Checks existence, tenant and owner-or-admin, then runs the shared cascade
+ * `deleteSetlistCascade` (src/lib/setlist-ops/cascade.ts): assignments,
+ * tasks, notifications, tracks, and the setlist doc with every subcollection.
  * Each phase is best-effort: failures log + accumulate into errors[] but
- * don't halt the cascade. Retrying the same id is a no-op because each
- * phase's query will simply find 0 docs.
+ * don't halt the cascade. Retrying the same id is a no-op.
  */
 
 const bodySchema = z
     .object({ setlistId: z.string().min(1) })
     .strict()
-
-async function batchDeleteByField(
-    db: Firestore,
-    collectionPath: string,
-    field: string,
-    value: string,
-    opts: { collectionGroup?: boolean } = {},
-): Promise<number> {
-    const ref: Query = opts.collectionGroup
-        ? db.collectionGroup(collectionPath).where(field, "==", value)
-        : db.collection(collectionPath).where(field, "==", value)
-
-    let total = 0
-    // Chunk at 500 per WriteBatch (Firestore hard limit).
-    while (true) {
-        const snap = await ref.limit(500).get()
-        if (snap.empty) break
-        const batch = db.batch()
-        snap.docs.forEach((d: DocumentSnapshot) => batch.delete(d.ref))
-        await batch.commit()
-        total += snap.size
-        if (snap.size < 500) break
-    }
-    return total
-}
 
 export const POST = createApiHandler(
     async (ctx) => {
@@ -86,85 +56,15 @@ export const POST = createApiHandler(
             return apiError(t("api-setlist.deleteOwnerOrAdminOnly"), 403, "forbidden")
         }
 
-        const errors: string[] = []
-        let assignments = 0
-        let tasks = 0
-        let notifications = 0
-        let tracks = 0
-
-        // 2) scheduling_assignments where setlistId == id
-        try {
-            assignments = await batchDeleteByField(db, "scheduling_assignments", "setlistId", setlistId)
-        } catch (e) {
-            const msg = e instanceof Error ? e.message : String(e)
-            logger.error(`[setlist/delete] assignment cleanup failed for ${setlistId}: ${msg}`)
-            errors.push(`assignments: ${msg}`)
-        }
-
-        // 3) tasks where setlistId == id
-        try {
-            tasks = await batchDeleteByField(db, "tasks", "setlistId", setlistId)
-        } catch (e) {
-            const msg = e instanceof Error ? e.message : String(e)
-            logger.error(`[setlist/delete] task cleanup failed for ${setlistId}: ${msg}`)
-            errors.push(`tasks: ${msg}`)
-        }
-
-        // 4) notifications (collectionGroup) where entityId == id
-        try {
-            notifications = await batchDeleteByField(db, "notifications", "entityId", setlistId, {
-                collectionGroup: true,
-            })
-        } catch (e) {
-            const msg = e instanceof Error ? e.message : String(e)
-            logger.error(`[setlist/delete] notification cleanup failed for ${setlistId}: ${msg}`)
-            errors.push(`notifications: ${msg}`)
-        }
-
-        // 5) tracks (top-level) where setlistId == id.
-        // v60-07-02 moved tracks from embedded → top-level. The MCP
-        // `delete_setlist` tool (src/lib/mcp/tools/setlist-write.ts) cascades
-        // these in a transaction; this HTTP route never picked up the
-        // cascade and orphaned the rows. Cycle-7 Lane 3 (C7I4-002): observed
-        // setlist `b12a5221-…` with `list_setlists.trackCount=43` but
-        // `tracks/{setlistId:b12a5221-…}` empty AND parent doc still present.
-        // The reverse shape (parent gone, top-level tracks present) is what
-        // we close here.
-        try {
-            tracks = await deleteSetlistRows(db, ctx.auth.orgId, setlistId)
-        } catch (e) {
-            const msg = e instanceof Error ? e.message : String(e)
-            logger.error(`[setlist/delete] tracks cleanup failed for ${setlistId}: ${msg}`)
-            errors.push(`tracks: ${msg}`)
-        }
-
-        // 6) recursiveDelete: parent + subcollections (history, emailEvents, ...)
-        try {
-            await deleteSetlistTree(db, ctx.auth.orgId, setlistId)
-        } catch (e) {
-            const msg = e instanceof Error ? e.message : String(e)
-            logger.error(`[setlist/delete] recursiveDelete failed for ${setlistId}: ${msg}`)
-            errors.push(`setlist: ${msg}`)
-        }
-
-        // 7) Multi-tenant P2 (design §1.2): the 'deleted' history entry is
-        // written here with the Admin SDK — the browser's own write is refused
-        // by the rules once the parent setlist is gone. Written AFTER the
-        // recursive delete so it survives it, exactly where the browser's
-        // entry used to land. Best-effort, like every other phase.
-        try {
-            const { FieldValue } = await import("firebase-admin/firestore")
-            const token = ctx.auth.token as unknown as Record<string, unknown> | undefined
-            await setlistRef.collection("history").add({
-                action: "deleted",
-                userId: ctx.auth.uid,
-                userName: (typeof token?.name === "string" && token.name) || ctx.auth.email || "Unknown",
-                timestamp: FieldValue.serverTimestamp(),
-            })
-        } catch (e) {
-            const msg = e instanceof Error ? e.message : String(e)
-            logger.warn(`[setlist/delete] history entry failed for ${setlistId}: ${msg}`)
-        }
+        // 2) The shared cascade (src/lib/setlist-ops/cascade.ts), the same one
+        // the MCP delete_setlist tool runs. No "deleted" history entry is
+        // written: it landed in setlists/{id}/history after the recursive
+        // delete, under a parent that no longer exists, and nothing reads it.
+        const { assignments, tasks, notifications, tracks, errors } = await deleteSetlistCascade(
+            db,
+            ctx.auth.orgId,
+            setlistId,
+        )
 
         logger.info(
             `[setlist/delete] ${setlistId} — assignments=${assignments} tasks=${tasks} notifications=${notifications} tracks=${tracks} errors=${errors.length}`,
