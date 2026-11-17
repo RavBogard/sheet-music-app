@@ -21,9 +21,11 @@ import { isSongType } from "@/lib/setlist-track-count"
  *   - `snapshotDiff`    — what changed since the band was last told
  *                         (added / removed / modified tracks). Empty on a
  *                         first publish.
- *   - `flaggedBonds`    — open `bond_flags` docs awaiting batch review
- *                         (Task 4 collection). The agent should walk them
- *                         via `review_flagged_bonds` before publishing.
+ *   - `flaggedBonds`    — open `bond_flags` docs on this setlist (Task 4
+ *                         collection). INFORMATIONAL: flags are written and
+ *                         reviewed only by ops-surface tools, which the
+ *                         authoring agent cannot call, so they do not move
+ *                         the recommendation gate.
  *   - `unbondedSongCount`/`unbondedSongs` — v11.2-04 (BUG-4): song-type rows
  *                         (isSongType) with NO chart bond (fileId AND songId
  *                         both null). These render blank in Perform but are
@@ -34,7 +36,7 @@ import { isSongType } from "@/lib/setlist-track-count"
  *                         intentionally chart-less and NOT counted.
  *   - `recommendation`  — derived gate:
  *                         "hard_block"   any chart status is "missing"/"shortcut_unresolved"
- *                         "review_first" flaggedBonds > 0 OR unbondedSongCount > 0
+ *                         "review_first" unbondedSongCount > 0
  *                         "send"         otherwise (clean)
  *
  * Recommendation is advisory only — the operator still has to call
@@ -240,13 +242,13 @@ export async function previewPublish(
     // v11.2-04 (BUG-4): unbonded song rows escalate to review_first (they're
     // publishable but the operator should bond or remove them first); hard_block
     // (missing/shortcut) still takes precedence.
-    const recommendation: PreviewPublishResult["recommendation"] =
-        published.chartHealth.missingCount > 0 ||
-        published.chartHealth.shortcutUnresolvedCount > 0
-            ? "hard_block"
-            : flaggedBonds > 0 || unbondedSongCount > 0
-              ? "review_first"
-              : "send"
+    // Open bond flags are informational only: the tools that clear them are
+    // on the ops surface, so the authoring agent cannot act on them.
+    const recommendation = notifyRecommendation({
+        missingCount: published.chartHealth.missingCount,
+        shortcutUnresolvedCount: published.chartHealth.shortcutUnresolvedCount,
+        unbondedSongCount,
+    })
 
     return {
         ok: true,
@@ -301,6 +303,23 @@ async function loadSavedContacts(
 }
 
 // ─── helpers ────────────────────────────────────────────────────────────────
+
+/**
+ * The preview gate. Only signals the authoring agent can act on count:
+ * missing / shortcut-unresolved charts block; unbonded song rows ask for a
+ * review (bond or remove them). Open `bond_flags` are deliberately not an
+ * input — clearing them takes ops-surface tools.
+ */
+export function notifyRecommendation(input: {
+    missingCount: number
+    shortcutUnresolvedCount: number
+    unbondedSongCount: number
+}): PreviewPublishResult["recommendation"] {
+    if (input.missingCount > 0 || input.shortcutUnresolvedCount > 0)
+        return "hard_block"
+    if (input.unbondedSongCount > 0) return "review_first"
+    return "send"
+}
 
 type SnapshotRow = { title: string; key: string; fileId: string }
 

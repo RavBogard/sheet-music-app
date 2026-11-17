@@ -70,6 +70,19 @@ export async function listToolNames(handler: Handler, opts: RpcOpts = {}): Promi
     return (result.tools as Array<{ name: string }>).map((t) => t.name)
 }
 
+/** tools/list with each tool's description. */
+export async function listTools(
+    handler: Handler,
+    opts: RpcOpts = {},
+): Promise<Array<{ name: string; description: string }>> {
+    const res = await handler(req({ jsonrpc: "2.0", id: 2, method: "tools/list" }, opts))
+    const result = await readResult(res)
+    return (result.tools as Array<{ name: string; description?: string }>).map((t) => ({
+        name: t.name,
+        description: t.description ?? "",
+    }))
+}
+
 /** tools/call; returns the tool result (content / isError). */
 export async function callTool(
     handler: Handler,
