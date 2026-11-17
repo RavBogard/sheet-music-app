@@ -1,12 +1,2 @@
-# Force LF line endings for bash scripts + git hooks so they don't break
-# when checked out on Linux/macOS via Windows-stored CRLF (`bad interpreter:
-# /usr/bin/env bash^M`). Targets the per-worktree-git-identity-enforcement
-# scripts; broader normalization not needed.
-scripts/setup-coord-worktree.sh text eol=lf
-scripts/setup-cowork-worktree.sh text eol=lf
-scripts/dev/test-setup-cowork-worktree.sh text eol=lf
-scripts/lib/cowork-warm-worktree.sh text eol=lf
-scripts/git-hooks/** text eol=lf
-
 # Multi-tenant phase 5: golden captures compared byte for byte by vitest file snapshots.
 **/__goldens__/*.json text eol=lf
