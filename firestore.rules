@@ -539,7 +539,6 @@ service cloud.firestore {
     // Platform-wide operational records: platform owner only (was isAdmin()).
     match /bond_corrections/{id}         { allow read: if po(); allow write: if false; }
     match /titleContextHints/{hintId}    { allow read: if po(); allow write: if false; }
-    match /chart_bond_alerts/{alertId}   { allow read: if po(); allow write: if false; }
     match /webVitalsObservations/{id}    { allow read: if po(); allow write: if false; }
     match /backups/{backupId}            { allow read: if po(); allow write: if false; }
     match /dedupeRuns/{runId}            { allow read: if po(); allow write: if false; }

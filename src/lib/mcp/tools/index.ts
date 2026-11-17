@@ -1997,7 +1997,7 @@ export function registerWriteTools(server: McpServer): void {
         "recompute_setlist_track_count",
         {
             description:
-                "Cycle-7-fixes Lane 3 — admin-only repair for a stale denormalized `setlists/{id}.trackCount` counter. Recomputes from the actual `tracks/{*}` top-level subcollection and writes the corrected count when drifted. Idempotent (no-op when already in sync). The /api/cron/verify-chart-bond-health daily run auto-heals upcoming-published setlists; this tool is the manual backstop for past services + drafts. Returns `{setlistId, declared, actual, drifted, written}`.",
+                "Cycle-7-fixes Lane 3 — admin-only repair for a stale denormalized `setlists/{id}.trackCount` counter. Recomputes from the actual `tracks/{*}` top-level subcollection and writes the corrected count when drifted. Idempotent (no-op when already in sync). Every setlist write keeps the counts itself; this tool is the manual repair for a count found wrong. Returns `{setlistId, declared, actual, drifted, written}`.",
             inputSchema: {
                 setlistId: z.string().min(1).describe("Setlist id whose trackCount counter to recompute."),
             },

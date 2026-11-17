@@ -12,12 +12,10 @@ import {
  * Cycle-7-fixes Lane 3 — shared trackCount-reconcile helper.
  *
  * Recompute a setlist's denormalized `trackCount` from the actual
- * `tracks/{*}` top-level subcollection. Used by:
- *
- *   - the `verify-chart-bond-health` cron (per-tick auto-heal for upcoming
- *     published setlists), and
- *   - the `recompute_setlist_track_count` MCP tool (admin one-shot for
- *     setlists outside the cron's window — past services, drafts).
+ * `tracks/{*}` top-level subcollection. Used by the
+ * `recompute_setlist_track_count` MCP tool, the manual repair. Every setlist
+ * writer derives the counts in its own transaction, so nothing heals them on
+ * a schedule any more.
  *
  * C7I4-002 (Eitan Shabbat Morning 2/21 reports trackCount=43; actual
  * subcollection empty) — root cause was the `/api/setlist/delete` HTTP
@@ -30,8 +28,8 @@ import {
  * previously only maintained by the client-side SetlistGridHydrator
  * reconciler, which never runs for MCP-authored track adds — so flagship
  * services authored via Claude Desktop showed "0 songs" on the landing.
- * Healing it here means both the `verify-chart-bond-health` cron and the
- * `recompute_setlist_track_count` admin backfill correct the landing.
+ * Healing it here means the `recompute_setlist_track_count` repair corrects
+ * the landing too.
  *
  * Returns the repair record (or null when the counters were already
  * correct). Does not throw on write failures — logs + returns the failure

@@ -25,10 +25,11 @@ interface SetlistFixture {
 
 let setlistFixtures: SetlistFixture[] = []
 const setlistsWhereSpy = vi.fn()
-const alertWrites: Array<Record<string, unknown>> = []
+const collectionsTouched: string[] = []
 
 const mockFirestore = {
     collection: vi.fn((name: string) => {
+        collectionsTouched.push(name)
         if (name === "setlists") {
             const query = {
                 where: (...args: unknown[]) => {
@@ -43,14 +44,6 @@ const mockFirestore = {
                 }),
             }
             return query
-        }
-        if (name === "chart_bond_alerts") {
-            return {
-                add: async (payload: Record<string, unknown>) => {
-                    alertWrites.push(payload)
-                    return { id: `alert-${alertWrites.length}` }
-                },
-            }
         }
         return {}
     }),
@@ -76,17 +69,6 @@ vi.mock("@/lib/error-reporting", () => ({
 
 vi.mock("@/env.mjs", () => ({
     env: { CRON_SECRET: "test-secret" },
-}))
-
-// recomputeTrackCount is a no-op for these scope tests — we're locking the
-// candidate-set shape, not the inline-repair side effect.
-vi.mock("@/lib/setlist-track-count", () => ({
-    recomputeTrackCount: vi.fn(async () => ({
-        drifted: false,
-        written: false,
-        declared: 0,
-        actual: 0,
-    })),
 }))
 
 // verifySetlistCharts returns a healthy stub for every surveyed setlist; the
@@ -132,7 +114,7 @@ beforeEach(() => {
     vi.useFakeTimers()
     vi.setSystemTime(NOW)
     setlistFixtures = []
-    alertWrites.length = 0
+    collectionsTouched.length = 0
     setlistsWhereSpy.mockClear()
     captureMessageMock.mockClear()
     captureExceptionMock.mockClear()
@@ -287,5 +269,42 @@ describe("scope filter — publishedAt no longer gates the sweep", () => {
         // re-excluding `publishedAt:null` rows or legacy `isTest`-absent
         // setlists. Test-fixture exclusion happens in-process.
         expect(setlistsWhereSpy).not.toHaveBeenCalled()
+    })
+})
+
+describe("breach alert", () => {
+    it("reports a broken upcoming setlist to Sentry and writes nothing", async () => {
+        setlistFixtures = [setlist("broken", { eventDate: "2026-05-30T18:00:00Z" })]
+        verifyMock.mockResolvedValueOnce({
+            ok: true as const,
+            setlistId: "broken",
+            trackCount: 10,
+            bondedCount: 10,
+            okCount: 5,
+            missingCount: 5,
+            needsSyncCount: 0,
+            shortcutUnresolvedCount: 0,
+            phantomBonds: 0,
+            rows: [],
+        })
+        const res = await GET(
+            makeReq("/api/cron/verify-chart-bond-health", { token: SECRET }),
+        )
+        expect(await res.json()).toMatchObject({ ok: true, perSetlistBreached: 1, alerted: true })
+        expect(captureMessageMock).toHaveBeenCalledTimes(1)
+        expect(captureMessageMock.mock.calls[0][1]).toMatchObject({
+            extra: { perSetlistBreached: [expect.objectContaining({ setlistId: "broken", missingCount: 5 })] },
+        })
+        // Only the setlists read: no alert collection, no count repair.
+        expect([...new Set(collectionsTouched)]).toEqual(["setlists"])
+    })
+
+    it("stays quiet when every bond is healthy", async () => {
+        setlistFixtures = [setlist("fine", { eventDate: "2026-05-30T18:00:00Z" })]
+        const res = await GET(
+            makeReq("/api/cron/verify-chart-bond-health", { token: SECRET }),
+        )
+        expect(await res.json()).toMatchObject({ ok: true, alerted: false })
+        expect(captureMessageMock).not.toHaveBeenCalled()
     })
 })
