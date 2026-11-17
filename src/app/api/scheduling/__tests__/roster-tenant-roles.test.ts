@@ -9,8 +9,8 @@
  *   cy    — users.role 'musician';    crc: musician
  *
  * In BL, dana is a plain member: excluded from musician+ rosters (suggest,
- * suggest-band, email-packets) but included in the member+ broadcast
- * (notify-updated). bo is in every BL roster despite users.role 'member'.
+ * suggest-band, email-packets). bo is in every BL roster despite users.role
+ * 'member'.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { FakeFirestore } from "@/lib/org/__tests__/fake-admin-firestore"
@@ -57,24 +57,6 @@ function seed(): FakeFirestore {
             crcSet: { orgId: "crc", ownerId: "owner", name: "Shabbat" },
         })
         .seed("config", { congregation__brotherslazaroff: {}, congregation: {} })
-    // notify-updated writes users/{uid}/notifications/{auto} through db.batch()
-    const baseDocRef = f.docRef.bind(f)
-    ;(f as unknown as { docRef: (c: string, id: string) => unknown }).docRef = (c: string, id: string) => {
-        const ref = baseDocRef(c, id)
-        return {
-            ...ref,
-            collection: (sub: string) => ({ ...ref.collection(sub), doc: () => ({ _path: `${c}/${id}/${sub}/auto` }) }),
-        }
-    }
-    ;(f as unknown as { batch: () => unknown }).batch = () => {
-        const refs: string[] = []
-        return {
-            set: (ref: { _path: string }) => refs.push(ref._path),
-            commit: async () => {
-                for (const p of refs) sent.push(p)
-            },
-        }
-    }
     return f
 }
 
@@ -134,15 +116,5 @@ describe("roster listings use the tenant membership role", () => {
         expect(missing.status).toBe(404)
         expect(await res.json()).toEqual(await missing.json())
         expect(sent).toEqual([])
-    })
-
-    it("notify-updated (BL host): member+ broadcast includes BL member dana and musician bo, not crc-only cy", async () => {
-        const { POST } = await import("@/app/api/setlists/notify-updated/route")
-        const body = await call(
-            POST,
-            ctx("brotherslazaroff", "/api/setlists/notify-updated", { setlistId: "blSet", setlistName: "BL Gig", trackCount: 3 }),
-        )
-        expect(body).toEqual({ ok: true, count: 2 })
-        expect(sent.map((p) => p.split("/")[1]).sort()).toEqual(["bo", "dana"])
     })
 })

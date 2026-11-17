@@ -196,7 +196,7 @@ export function setlistBatch(
 
 /**
  * Patch fields on one setlist doc, stamped and version-bumped. Used by the
- * rename and transfer routes and other single-doc metadata writers.
+ * transfer route and other single-doc metadata writers.
  */
 export async function updateSetlistFields(
     db: DB,

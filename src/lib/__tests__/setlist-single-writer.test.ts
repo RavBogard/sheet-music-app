@@ -311,7 +311,6 @@ describe("OPS-CONTRACT single writer: only src/lib/setlist-ops writes setlists/*
             "lib/setlist-write.ts",
             "lib/setlist-track-count.ts",
             "app/api/liturgy/bind-row/route.ts",
-            "app/api/setlist/rename/route.ts",
             "app/api/setlist/transfer/route.ts",
             // PR 3b: the server stragglers.
             "lib/mcp/tools/clone-setlist.ts",

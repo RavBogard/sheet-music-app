@@ -55,27 +55,6 @@
         "maxLength": 80,
         "context": "'charts' = sheet-music files; 'packet' = the PDF bundle"
     },
-    "renameNotAllowed": {
-        "where": "Setlist editor: error when renaming a setlist without permission",
-        "who": "leaders",
-        "maxLength": 50
-    },
-    "invalidRequestSetlistId": {
-        "where": "Resend email: error when the request named no setlist (developer error)",
-        "who": "leaders",
-        "maxLength": 50,
-        "context": "'setlistId' is a technical field name"
-    },
-    "noEmailRecipients": {
-        "where": "Resend email: error when none of the setlist's musicians has an email address",
-        "who": "leaders",
-        "maxLength": 60
-    },
-    "resendFailed": {
-        "where": "Resend email: error when sending the emails failed",
-        "who": "leaders",
-        "maxLength": 40
-    },
     "transferUserNotFound": {
         "where": "Transfer setlist (admin): error when no account has the given email",
         "who": "admins",
