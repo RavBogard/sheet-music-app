@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { timingSafeEqual } from "crypto"
+import { bearerSecretMatches } from "@/lib/http/bearer-secret"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
 import { captureException } from "@/lib/error-reporting"
@@ -53,18 +53,13 @@ import { SNAPSHOTS_ROOT } from "@/lib/monitor/saved-mixes"
  * none of this. Protected by CRON_SECRET bearer token, like every other cron here.
  */
 
-function safeCompare(a: string, b: string): boolean {
-    if (a.length !== b.length) return false
-    return timingSafeEqual(Buffer.from(a), Buffer.from(b))
-}
-
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
 
 export async function GET(req: Request) {
     const authHeader = req.headers.get("authorization")
     const cronSecret = env.CRON_SECRET
-    if (!cronSecret || !authHeader || !safeCompare(authHeader, `Bearer ${cronSecret}`)) {
+    if (!bearerSecretMatches(authHeader, cronSecret)) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
