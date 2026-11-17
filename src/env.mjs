@@ -63,10 +63,9 @@ export const env = createEnv({
         // unset the cron is a graceful no-op so the route ships dormant until
         // Daniel sets it in Vercel env.
         CRC_BACKUP_DRIVE_FOLDER_ID: z.string().optional(),
-        // Gemini key read by /api/ai/transposer/scan, and by
-        // /api/setlists/import/parse as the fallback when
-        // GOOGLE_GENERATIVE_AI_API_KEY is unset. Optional. (Its first user, the
-        // AI library enrichment layer, was removed 2026-11-17.)
+        // Gemini key read by /api/ai/transposer/scan. Optional. (Its first
+        // user, the AI library enrichment layer, was removed 2026-11-17, and
+        // the setlist importer that also read it was removed the same day.)
         GEMINI_API_KEY: z.string().optional(),
         // Harness-only admin test-session gate (Daniel-ratified 2026-05-27).
         // The /api/auth/admin-test-session endpoint mints a short-lived

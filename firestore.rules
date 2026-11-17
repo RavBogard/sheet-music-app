@@ -138,10 +138,7 @@ service cloud.firestore {
       allow update: if signedIn() && request.auth.uid == userId && selfUpdateOk();
       allow delete: if signedIn() && request.auth.uid == userId;
 
-      // Setlist sync PR 3: nothing writes these from a browser; read as before.
-      match /setlists/{docId}        { allow read: if signedIn() && request.auth.uid == userId; allow write: if false; }
       match /songPreferences/{fileId} { allow read, write: if signedIn() && request.auth.uid == userId; }
-      match /annotations/{fileId}    { allow read, write: if signedIn() && request.auth.uid == userId; }
       match /preferences/{docId}     { allow read, write: if signedIn() && request.auth.uid == userId; }
       match /notifications/{notifId} {
         allow read: if signedIn() && request.auth.uid == userId;
@@ -451,11 +448,6 @@ service cloud.firestore {
         && request.resource.data.get('broadcasterId', '') == request.auth.uid
         && orgKept() && atLeast(docOrg(), 'mu');
       allow delete: if signedIn() && resource.data.get('broadcasterId', '') == request.auth.uid;
-    }
-    match /publicSetlists/{docId} {
-      allow get: if true;
-      allow list: if po();
-      allow write: if false;
     }
 
     // ── CONFIG ─────────────────────────────────────────────────────────────

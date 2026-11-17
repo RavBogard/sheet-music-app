@@ -46,7 +46,7 @@ demands `isTest === true` on that row. So the authorized set really is empty for
 by one.
 
 The admin surface used is **Daniel's own already-authenticated `firebase-tools` credential on this host**
-(`daniel@centralreform.org`, project `crcmusiccharts`), refreshed into an access token in-process. **No
+(`[redacted]`, project `crcmusiccharts`), refreshed into an access token in-process. **No
 production service-account secret was pulled, and none is stored in the scratchpad.** `gcloud`/`gsutil` are not
 installed on this box; the Firebase CLI has no object-level delete, so the GCS and Firestore REST APIs were
 called directly.

@@ -1,8 +1,8 @@
 /**
  * CentralReform X32 Monitor Bridge
  * 
- * This server runs on the production PC at CRC and bridges
- * WebSocket connections from iPads to OSC commands for the X32.
+ * This program runs on the production PC at CRC and bridges commands
+ * from iPads, carried through Firestore, to OSC commands for the X32.
  * 
  * Setup:
  *   1. Copy .env.example → .env and fill in values
@@ -12,7 +12,9 @@
  * The bridge:
  *   - Connects to the X32 via OSC (UDP)
  *   - Reads config from Firestore (config/monitor)
- *   - Accepts WebSocket connections from authenticated iPads
+ *   - Reads iPad commands from Firestore (monitor-live/commands/pending)
+ *     and writes mixer state back (monitor-live/state); it opens no
+ *     inbound network ports
  *   - Syncs fader state bidirectionally in real-time
  */
 

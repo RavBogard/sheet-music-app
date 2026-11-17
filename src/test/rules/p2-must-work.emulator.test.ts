@@ -150,7 +150,7 @@ describe("P2 §7.5 — CRC and BL parity (must still work)", () => {
         await assertSucceeds(db("aMu").doc("tasks/taskA").get())
     })
 
-    // Setlist sync PR 3: setlists/*, tracks/* and users/{uid}/setlists are
+    // Setlist sync PR 3: setlists/* and tracks/* are
     // written by the server only (src/lib/setlist-ops, behind /ops and
     // /api/setlists/create). No persona of either tenant may write them from
     // a browser; reads are unchanged (the signed-out gets above, the list
@@ -169,11 +169,9 @@ describe("P2 §7.5 — CRC and BL parity (must still work)", () => {
                 await assertFails(d.doc(`tracks/new-${p}`).set({ setlistId: sl, title: "T", order: 9, type: "song", orgId: own }))
                 await assertFails(d.doc(`tracks/${tr}`).update({ key: "D" }))
                 await assertFails(d.doc(`tracks/${tr}`).delete())
-                await assertFails(d.doc(`users/${p}/setlists/x`).set({ name: "x" }))
                 // Reads stay as they were.
                 await assertSucceeds(d.doc(`setlists/${sl}`).get())
                 await assertSucceeds(d.doc(`tracks/${tr}`).get())
-                await assertSucceeds(d.doc(`users/${p}/setlists/x`).get())
             })
         }
         it("an unstamped legacy track and a cross-setlist move are denied too", async () => {

@@ -119,12 +119,6 @@ export type ClientMessage =
 
 // ─── Bridge-only types (not in canonical source) ───
 
-export interface X32State {
-    channels: ChannelInfo[]
-    buses: BusInfo[]
-    matrices: MatrixInfo[]
-}
-
 /**
  * Remote bridge control & diagnostics channel (v10.0.4 — R1). An admin writes
  * this to `config/monitor.bridgeControl` (via the app / Firebase MCP); the
