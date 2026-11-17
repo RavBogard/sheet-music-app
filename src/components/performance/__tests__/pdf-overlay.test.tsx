@@ -118,7 +118,6 @@ vi.mock("@/hooks/use-monitor-access", () => ({ useMonitorAccess: () => ({ hasAcc
 vi.mock("@/hooks/use-monitor-connection", () => ({ useMonitorConnection: () => {} }))
 vi.mock("@/lib/auth-context", () => ({ useAuth: () => ({ user: null, isAdmin: false, isBandLeader: false }) }))
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }), useParams: () => ({ id: 'test-setlist' }) }))
-vi.mock("@/lib/live-session-firebase", () => ({ subscribeToLiveSessions: () => () => {} }))
 
 // Mock sub-components of PerformanceToolbar
 vi.mock("@/components/music/TransposerMenu", () => ({

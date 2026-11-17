@@ -56,7 +56,6 @@ import { expectNoUntranslatedText, renderPseudo } from '@/test-utils/i18n'
 import { useLibraryStore } from '@/lib/library-store'
 import { getDb, resetDbForTests } from '@/lib/local/schema'
 import type { LocalTrack } from '@/lib/local/types'
-import { useSyncStatus } from '@/lib/sync/store'
 import { computeFreshness } from '@/lib/setlist-ops-client/freshness'
 import type { DriveFile } from '@/types/models'
 
@@ -123,7 +122,6 @@ describe('setlist grid i18n (pseudo-locale)', () => {
         mockSubscribe.mockReset()
         chartLoad.mockReset()
         chartLoad.mockImplementation(() => Promise.resolve({ kind: 'image', url: 'blob:page1' }))
-        useSyncStatus.setState({ state: 'idle', queued: 0, lastError: undefined, lastSyncAt: undefined })
     })
     afterEach(async () => {
         await resetDbForTests()

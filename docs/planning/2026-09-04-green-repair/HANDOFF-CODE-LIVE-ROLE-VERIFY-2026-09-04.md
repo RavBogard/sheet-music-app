@@ -27,7 +27,7 @@ shows the role unchanged, **the answer is that Daniel has not clicked yet**, and
 NEXT: V0 → V1 → V2 → return → STOP. **V0 CAN END THE WAVE — if the role still reads `musician`, STOP and return; do
 not wait, do not retry, do not route around it.**
 
-- [ ] **V0 · precondition read.** `find_user` on `karen@centralreform.org` over the sanctioned root-bearer route. If `role` is not `admin`, **STOP** and return "not yet elevated" with the value you read. If it is `admin`, continue.
+- [ ] **V0 · precondition read.** `find_user` on `[redacted]` over the sanctioned root-bearer route. If `role` is not `admin`, **STOP** and return "not yet elevated" with the value you read. If it is `admin`, continue.
 - [ ] **V1 · report the second surface honestly.** The Firestore doc and the Auth custom claim are set by two separate steps and the second is allowed to fail (`-37` §6). `find_user` reads the DOC. **If you have no instrument that reads the custom claim, say so and mark the claim `(unmeasured)`** — do not infer it from the doc.
 - [ ] **V2 · confirm nothing else moved on her account** — name, email, uid, `orgIds` unchanged against `live`'s 17:0xZ reading. **`orgIds` is the field to watch:** it is preserved only when omitted from the call, and rewritten when supplied (`-37` §4).
 - [ ] **Return** `RETURN-CODE-LIVE-ROLE-VERIFY-2026-09-04.md` + a CLOSED board row.

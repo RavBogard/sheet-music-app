@@ -4,7 +4,6 @@ import { Setlist } from "@/lib/setlist-firebase"
 import { notFound, redirect } from "next/navigation"
 import {
     DeleteConfirmProvider,
-    ReconciliationProvider,
     SetlistGrid,
     SetlistGridHydrator,
 } from "@/components/setlist/grid"
@@ -60,9 +59,7 @@ export default async function SetlistEditorPage({
         const newId = randomUUID()
         return (
             <DeleteConfirmProvider>
-                <ReconciliationProvider>
-                    <SetlistGrid setlistId={newId} />
-                </ReconciliationProvider>
+                <SetlistGrid setlistId={newId} />
             </DeleteConfirmProvider>
         )
     }
@@ -109,15 +106,13 @@ export default async function SetlistEditorPage({
 
     return (
         <DeleteConfirmProvider>
-            <ReconciliationProvider>
-                <SetlistGridHydrator
-                    key={id}
-                    setlistId={id}
-                    initialSetlist={initialSetlist}
-                    initialTracks={initialTracks}
-                    gridProps={{ name: setlistName }}
-                />
-            </ReconciliationProvider>
+            <SetlistGridHydrator
+                key={id}
+                setlistId={id}
+                initialSetlist={initialSetlist}
+                initialTracks={initialTracks}
+                gridProps={{ name: setlistName }}
+            />
         </DeleteConfirmProvider>
     )
 }

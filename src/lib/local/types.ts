@@ -167,35 +167,6 @@ export interface SetlistIntent {
     sentAt?: number
 }
 
-export type EditDescriptor =
-    | {
-          op: 'set'
-          collection: LocalCollection
-          doc: Record<string, unknown> & { id: string }
-      }
-    | {
-          op: 'update'
-          collection: LocalCollection
-          docId: string
-          patch: Record<string, unknown>
-          expectedUpdatedAt?: number
-      }
-    | {
-          op: 'delete'
-          collection: LocalCollection
-          docId: string
-          expectedUpdatedAt?: number
-      }
-
-export class WriteAtomicityError extends Error {
-    cause?: unknown
-    constructor(message: string, cause?: unknown) {
-        super(message)
-        this.name = 'WriteAtomicityError'
-        this.cause = cause
-    }
-}
-
 // v5h3-01-02: edit-log instrumentation row.
 //
 // Append-only IDB-persisted breadcrumb for the v5.0 sync substrate's hot

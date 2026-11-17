@@ -7,7 +7,6 @@ const dash = vi.hoisted(() => ({ value: {} as Record<string, unknown> }))
 vi.mock("@/hooks/use-setlist-dashboard", () => ({ useSetlistDashboard: () => dash.value }))
 vi.mock("@/lib/congregation-store", () => ({ useCongregation: () => ({ shortName: "CRC" }) }))
 vi.mock("../wizard/CreationWizard", () => ({ CreationWizard: () => null }))
-vi.mock("../importer/ImporterModal", () => ({ ImporterModal: () => null }))
 vi.mock("@/lib/cache-utils", () => ({ isFileCached: vi.fn(async () => false) }))
 vi.mock("next/link", () => ({ default: ({ href, children }: { href: string; children: React.ReactNode }) => <a href={href}>{children}</a> }))
 
@@ -40,7 +39,6 @@ function dashboardValue(over: Record<string, unknown> = {}) {
         deleteConfirmOpen: false, setDeleteConfirmOpen: noop, setlistToDelete: null,
         duplicateConfirmOpen: false, setDuplicateConfirmOpen: noop, setlistToDuplicate: null,
         showTransferDialog: false, setShowTransferDialog: noop,
-        showImporterModal: false, setShowImporterModal: noop,
         selectedSetlistForTransfer: null, transferEmail: "", setTransferEmail: noop,
         handleSelect: noop, handleDeleteClick: noop, confirmDelete: noop,
         handleDuplicateClick: noop, confirmDuplicate: noop, handleCloneNextWeekClick: noop,

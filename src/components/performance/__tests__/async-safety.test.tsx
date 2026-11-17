@@ -203,8 +203,6 @@ describe("PDFViewer retry cap", () => {
                 { getState: () => ({ zoom: 1, transposition: 0 }) }
             ),
         }))
-        vi.doMock("./PDFPageWrapper", () => ({ PDFPageWrapper: () => null }))
-        vi.doMock("./ChartSuggestions", () => ({ ChartSuggestions: () => null }))
         vi.doMock("@/lib/logger", () => ({
             logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
         }))
@@ -356,8 +354,6 @@ describe("PDFViewer IDB-first cached load", () => {
                 { getState: () => ({ zoom: 1, transposition: 0 }) }
             ),
         }))
-        vi.doMock("./PDFPageWrapper", () => ({ PDFPageWrapper: () => null }))
-        vi.doMock("./ChartSuggestions", () => ({ ChartSuggestions: () => null }))
         vi.doMock("@/lib/logger", () => ({
             logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
         }))

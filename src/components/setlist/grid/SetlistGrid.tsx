@@ -47,17 +47,9 @@ import { isAutoFilled } from '@/lib/recordings/tempo-fill'
 import { useFormat } from '@/i18n/format-client'
 import { formatUpdatedWhen } from '@/lib/format/updated-when'
 import type { T } from '@/i18n/core'
-import { getDb } from '@/lib/local/schema'
-import type { EditDescriptor, LocalSetlist, LocalTrack } from '@/lib/local/types'
-import {
-    flushAllBursts,
-    useUndoStore,
-    type SimpleUndoEntry,
-    type UndoEntry,
-    type UndoableDoc,
-} from '@/lib/local/undo-store'
+import type { LocalSetlist, LocalTrack } from '@/lib/local/types'
+import { useUndoStore, type UndoEntry } from '@/lib/local/undo-store'
 import { useLibraryStore } from '@/lib/library-store'
-import { applyEdit } from '@/lib/local/write'
 import {
     duplicateRow as opsDuplicateRow,
     editRow as opsEditRow,
@@ -823,139 +815,18 @@ async function commitTrackPatchImpl(
     }
 }
 
-/**
- * v50-05-05 undo helpers — produce the EditDescriptor that reverses a
- * SimpleUndoEntry (for Cmd-Z) or replays it (for Cmd-Shift-Z). Composite
- * entries fan out to N parallel descriptors.
- *
- * v50-06-01: builders accept the live `expectedUpdatedAt` (read at
- * undo/redo time, NOT snapshot-time) so an inverse that races a remote
- * write surfaces as VersionMismatchError rather than silently overwriting.
- */
-function buildInverse(
-    entry: SimpleUndoEntry,
-    expectedUpdatedAt: number | undefined,
-): EditDescriptor | null {
-    if (entry.op === 'set') {
-        return {
-            op: 'delete',
-            collection: entry.collection,
-            docId: entry.docId,
-            expectedUpdatedAt,
-        }
-    }
-    if (entry.op === 'update') {
-        if (!entry.prevDoc) return null
-        return {
-            op: 'update',
-            collection: entry.collection,
-            docId: entry.docId,
-            patch: { ...entry.prevDoc },
-            expectedUpdatedAt,
-        }
-    }
-    if (entry.op === 'delete') {
-        if (!entry.prevDoc) return null
-        return {
-            op: 'set',
-            collection: entry.collection,
-            doc: { ...entry.prevDoc, id: entry.docId },
-        }
-    }
-    return null
-}
-
-function buildRedo(
-    entry: SimpleUndoEntry,
-    expectedUpdatedAt: number | undefined,
-): EditDescriptor | null {
-    if (entry.op === 'set') {
-        if (!entry.newDoc) return null
-        return {
-            op: 'set',
-            collection: entry.collection,
-            doc: { ...entry.newDoc, id: entry.docId },
-        }
-    }
-    if (entry.op === 'update') {
-        if (!entry.newDoc) return null
-        return {
-            op: 'update',
-            collection: entry.collection,
-            docId: entry.docId,
-            patch: { ...entry.newDoc },
-            expectedUpdatedAt,
-        }
-    }
-    if (entry.op === 'delete') {
-        return {
-            op: 'delete',
-            collection: entry.collection,
-            docId: entry.docId,
-            expectedUpdatedAt,
-        }
-    }
-    return null
-}
-
-async function readLiveUpdatedAt(
-    collection: SimpleUndoEntry['collection'],
-    docId: string,
-): Promise<number | undefined> {
-    try {
-        const live = (await getDb()[collection].get(docId)) as
-            | { updatedAt?: number }
-            | undefined
-        return live?.updatedAt
-    } catch {
-        return undefined
-    }
-}
-
 async function executeEntry(
     entry: UndoEntry,
     mode: 'undo' | 'redo',
 ): Promise<void> {
     // Setlist actions carry their own explicit undo/redo ops (setlist sync
     // PR 3). A structural one offline is put back on its stack, untouched.
-    if (entry.kind === 'ops') {
-        const ok = await replayOps(entry.setlistId, mode === 'undo' ? entry.undo : entry.redo)
-        if (!ok) {
-            const s = useUndoStore.getState()
-            if (mode === 'undo') s.popRedo()
-            else s.popUndo()
-        }
-        return
+    const ok = await replayOps(entry.setlistId, mode === 'undo' ? entry.undo : entry.redo)
+    if (!ok) {
+        const s = useUndoStore.getState()
+        if (mode === 'undo') s.popRedo()
+        else s.popUndo()
     }
-    const builder = mode === 'undo' ? buildInverse : buildRedo
-    if (entry.kind === 'simple') {
-        const live = await readLiveUpdatedAt(entry.collection, entry.docId)
-        const desc = builder(entry, live)
-        if (desc) await applyEdit(desc, { withoutUndo: true })
-        return
-    }
-    // composite: fan out N inverses in parallel. Each leg's inverse is
-    // independent at the docId level (per-doc drain ordering invariant
-    // from v50-03 keeps each doc's outbox serialized).
-    const descriptors = await Promise.all(
-        entry.entries.map(async (e) => {
-            const live = await readLiveUpdatedAt(e.collection, e.docId)
-            return builder(
-                {
-                    kind: 'simple',
-                    ts: entry.ts,
-                    ...e,
-                } as SimpleUndoEntry,
-                live,
-            )
-        }),
-    )
-    const filtered = descriptors.filter(
-        (d): d is EditDescriptor => d !== null,
-    )
-    await Promise.all(
-        filtered.map((d) => applyEdit(d, { withoutUndo: true })),
-    )
 }
 
 function makeId(): string {
@@ -1127,9 +998,6 @@ export function SetlistGrid({
 
             if (isUndo) {
                 e.preventDefault()
-                // Settle in-flight cell-blur bursts first so the most
-                // recent edit is captured before we pop.
-                flushAllBursts()
                 const entry = useUndoStore.getState().popUndo()
                 if (entry) void executeEntry(entry, 'undo')
                 return

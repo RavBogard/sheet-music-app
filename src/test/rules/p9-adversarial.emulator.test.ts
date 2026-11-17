@@ -140,7 +140,6 @@ beforeAll(async () => {
         await set(`proposal_stages/ps-nava`, { orgId: N })
         await set(`tasks/task-nava`, { orgId: N, assigneeId: 'u-nSomeone' })
         await set(`live_sessions/ls-nava`, { orgId: N, broadcasterId: p.nAd.uid })
-        await set(`publicSetlists/ps-nava`, { orgId: N, name: 'Nava' })
 
         await set(`auditLogs/al-nava`, { orgId: N, timestamp: 1 })
 
@@ -636,9 +635,6 @@ describe('deny-all fallback + unlisted paths', () => {
     })
     it('an unlisted setlist subcollection is denied', async () => {
         await assertFails(getDocs(collection(fs_(p.aAd), 'setlists/sl-nava/somethingNew')))
-    })
-    it('a navatehila admin cannot list publicSetlists', async () => {
-        await assertFails(getDocs(collection(fs_(p.nAd), 'publicSetlists')))
     })
     it('a navatehila admin cannot write system/globalAlert', async () => {
         await assertFails(setDoc(doc(fs_(p.nAd), 'system/globalAlert'), { text: 'pwned' }))

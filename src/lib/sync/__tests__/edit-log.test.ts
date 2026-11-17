@@ -162,39 +162,6 @@ describe('edit-log helper (v5h3-01-02)', () => {
     //     enforces this at compile time (LocalEditLog has no value field);
     //     this is the runtime trip-wire.
 
-    it('site-contract: applyEdit records a stable-identifier-only row on success', async () => {
-        const db = getDb()
-        // applyEdit calls recordEdit() WITHOUT an injected db — it uses the
-        // singleton from getDb(). resetDbForTests() above resets _db so the
-        // singleton lookup yields the same fresh instance the test holds.
-        const { applyEdit } = await import('../../local/write')
-        await applyEdit({
-            op: 'set',
-            collection: 'songs',
-            doc: { id: 't-site-1', setlistId: 's1', order: 0, title: 'Adon Olam' },
-        })
-        // recordEdit fires fire-and-forget — yield microtasks for it to land.
-        await new Promise<void>((r) => setTimeout(r, 0))
-
-        const rows = await db.edit_log
-            .filter((r) => r.source === 'apply-edit')
-            .toArray()
-        expect(rows.length).toBeGreaterThanOrEqual(1)
-        const row = rows[rows.length - 1] as unknown as Record<string, unknown>
-        expect(row.source).toBe('apply-edit')
-        expect(row.op).toBe('set')
-        expect(row.collection).toBe('songs')
-        expect(row.docId).toBe('t-site-1')
-        // payloadKeys is the LIST OF KEY NAMES from the doc, not values.
-        const keys = row.payloadKeys as string[]
-        expect(keys).toContain('id')
-        expect(keys).toContain('title')
-        // CRITICAL: 'Adon Olam' (the value of `title`) MUST NOT appear
-        // anywhere in the row.
-        const json = JSON.stringify(row)
-        expect(json.includes('Adon Olam')).toBe(false)
-    })
-
     it('LocalEditLog shape — no payload-value field exists at the type or runtime level', async () => {
         // Compile-time guard: writing a `payload`/`text`/`value`/`draft` field
         // would be a type error. Runtime guard: payloadKeys is string[] —

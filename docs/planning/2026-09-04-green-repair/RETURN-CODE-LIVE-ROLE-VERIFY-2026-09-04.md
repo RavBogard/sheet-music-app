@@ -13,11 +13,11 @@ I dropped the sort rather than write config for a read). Reads and a return.
 
 ## V0 · PRECONDITION — **PASS.** The wave continues.
 
-`find_user {email: "karen@centralreform.org"}` over the sanctioned root-bearer route:
+`find_user {email: "[redacted]"}` over the sanctioned root-bearer route:
 
 ```json
 { "uid": "6Ej2hgTrNTO74SiAB7RbSq35B5Q2", "displayName": "Karen Bogard",
-  "email": "karen@centralreform.org", "role": "admin",
+  "email": "[redacted]", "role": "admin",
   "instrument": null, "instrumentLabel": null, "schedulingTier": "regular", "phone": null }
 ```
 
@@ -68,7 +68,7 @@ semantics, I read the document **as it was before the write**, by point-in-time 
 | `role` | **`musician`** | **`admin`** | the ordered change |
 | `orgIds` | `["crc","brotherslazaroff"]` | `["crc","brotherslazaroff"]` | **unchanged** |
 | `displayName` | `Karen Bogard` | `Karen Bogard` | unchanged |
-| `email` | `karen@centralreform.org` | same | unchanged |
+| `email` | `[redacted]` | same | unchanged |
 | `uid` | `6Ej2hgTrNTO74SiAB7RbSq35B5Q2` | same | unchanged |
 | `claimsUpdatedAt` | `2026-05-14T22:56:02Z` | `2026-09-04T18:04:37Z` | expected |
 
@@ -91,7 +91,7 @@ was already reading, I measured whether it actually happened:
 auditLogs/1WJZ8zWW8maktBhDb0sq
   action: ROLE_CHANGE   targetUserId: 6Ej2hgTrNTO74SiAB7RbSq35B5Q2
   previousRole: "musician"   newRole: "admin"
-  actorUid: 93Xn3DbS0bSNb8zmfzLyfOMX1A13   actorEmail: daniel@centralreform.org
+  actorUid: 93Xn3DbS0bSNb8zmfzLyfOMX1A13   actorEmail: [redacted]
   timestamp: 2026-09-04T18:04:37.662Z
 ```
 
@@ -104,7 +104,7 @@ non-firing is not a fix.
 
 ```
 auditLogs/8BTYzBMt6EvS2871yf7H   previousRole: "pending"   newRole: "musician"
-  timestamp: 2026-05-14T22:56:02.489Z   actor: daniel@centralreform.org
+  timestamp: 2026-05-14T22:56:02.489Z   actor: [redacted]
 ```
 
 `previousRole: "pending"` there is **indistinguishable** between a genuine new-user state and exactly the defect `-37`
