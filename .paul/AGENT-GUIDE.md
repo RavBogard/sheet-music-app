@@ -90,7 +90,7 @@ Rule of thumb:
   Daniel the alternatives from `search_library` and let him pick.
 - `confidence: 'low'` AND `siblingsInCatalog === 1` → commit-and-flag.
   The bond may be the only option, but the title is generic enough that
-  Daniel should sanity-check at end-of-session via `review_flagged_bonds`.
+  Daniel should sanity-check it at end-of-session (below).
 - `flags: ['no_library_record']` → never commit. The `songId` doesn't
   resolve. Ask Daniel for clarification or search the library yourself.
 
@@ -126,14 +126,11 @@ when there's a batch to review.
 
 ## Batch review pattern at end of authoring
 
-Anything you committed with `flags.length > 0` lives as an open
-`bond_flags` entry. Walk them at end-of-session, before you hand the
-setlist back:
+Walk every row you committed with `flags.length > 0` at end-of-session,
+before you hand the setlist back:
 
-1. Call `review_flagged_bonds(setlistId)`. Returns each open flag joined
-   with the current track and up to 5 alternative songIds ranked by W-02
-   signals (titleSpecificity, bondCorrectionHistory bias, contextHint
-   boost when the setlist has a templateType).
+1. Re-read the setlist with `get_setlist`, and for each flagged row look up
+   the alternatives with `search_library`.
 2. Present each row in chat. For every correction Daniel confirms,
    call `update_track` (or `swap_chart` if you want the title/key to
    auto-refresh from the new song) to flip the row's `songId`. When he
@@ -248,7 +245,6 @@ Each musician has a bus (1-5) on the X32. "Turn my vocal up" is a short loop:
   `get_service_profile`, `set_standing_choice`, `clear_standing_choice`,
   `get_song_history`, `export_setlists`, `read_back_setlist`,
   `add_open_item`, `resolve_open_item`
-- Flag / review: `flag_bond`, `review_flagged_bonds`
 - Mutate rows: `update_track`, `swap_chart`, `bulk_update_tracks`,
   `reorder_setlist`, `remove_track`, `add_track_to_setlist`,
   `bulk_add_tracks`
@@ -276,8 +272,5 @@ centralreform.live is the music/setlist satellite of a three-repo family
 siddur app; this one) worked in parallel by several Claude instances under
 several accounts. The coordination policy is canonical at
 `shireishabbat/COORDINATION.md` — read it before any work that leaves this
-server's own data. The moment work reads or writes liturgy data or another
-family repo, it takes a row on the family baton board,
-`shireishabbat/STATUS.md`, with its path claims. Nothing here overrides the
-propose → confirm → commit loop above; setlist authoring for Daniel needs no
-row.
+server's own data. Nothing here overrides the propose → confirm → commit loop
+above.

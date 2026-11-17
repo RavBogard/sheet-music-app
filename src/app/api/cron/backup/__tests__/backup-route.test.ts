@@ -84,6 +84,14 @@ describe("GET /api/cron/backup — auth", () => {
         expect(res.status).toBe(401)
         expect(requestSpy).not.toHaveBeenCalled()
     })
+
+    it("401s, not 500s, on a same-length bearer with a non-ASCII character", async () => {
+        // "é" is one UTF-16 code unit but two UTF-8 bytes; the old per-route
+        // compare checked string length and let timingSafeEqual throw.
+        const res = await GET(makeReq("/api/cron/backup", { token: "test-secreé" }))
+        expect(res.status).toBe(401)
+        expect(requestSpy).not.toHaveBeenCalled()
+    })
 })
 
 describe("GET /api/cron/backup — dormant-safe (BACKUP_BUCKET unset)", () => {

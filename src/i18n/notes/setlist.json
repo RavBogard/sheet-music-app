@@ -19,54 +19,6 @@
         "who": "leaders",
         "maxLength": 20
     },
-    "audioChangeBackingTrack": {
-        "where": "Setlist row: icon button (screen-reader label) when a backing track is already linked",
-        "who": "leaders",
-        "maxLength": 40
-    },
-    "audioLinkBackingTrack": {
-        "where": "Setlist row: icon button (screen-reader label) when no backing track is linked",
-        "who": "leaders",
-        "maxLength": 40
-    },
-    "audioPickerTitle": {
-        "where": "Backing-track picker dialog: title",
-        "who": "leaders",
-        "maxLength": 30,
-        "context": "A backing track is a recorded audio file (MP3/WAV) played along with a song."
-    },
-    "audioSearchPlaceholder": {
-        "where": "Backing-track picker dialog: search box placeholder",
-        "who": "leaders",
-        "maxLength": 30
-    },
-    "audioLoadingLibrary": {
-        "where": "Backing-track picker dialog: loading state",
-        "who": "leaders",
-        "maxLength": 30
-    },
-    "audioEmpty": {
-        "where": "Backing-track picker dialog: empty state heading",
-        "who": "leaders",
-        "maxLength": 50
-    },
-    "audioEmptyHint": {
-        "where": "Backing-track picker dialog: empty state hint",
-        "who": "leaders",
-        "maxLength": 110,
-        "context": "MP3, WAV and Google Drive are product/format names; keep them."
-    },
-    "audioOpenLibrary": {
-        "where": "Backing-track picker dialog: link to the library page",
-        "who": "leaders",
-        "maxLength": 25,
-        "context": "The arrow points to where the link goes; in a right-to-left language use ←."
-    },
-    "audioBackingTrackLabel": {
-        "where": "Backing-track picker dialog: small label under each audio file name",
-        "who": "leaders",
-        "maxLength": 20
-    },
     "deleteDialogTitle": {
         "where": "Setlists dashboard: delete confirmation dialog title",
         "who": "leaders",

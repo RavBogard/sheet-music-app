@@ -50,10 +50,6 @@ vi.mock('@/lib/charts/chart-page1', async (orig) => {
     const actual = await orig<typeof import('@/lib/charts/chart-page1')>()
     return { ...actual, chartPage1Loader: () => ({ load: chartLoad, stats: () => ({}) }) }
 })
-vi.mock('@/lib/sync/cleanup', () => ({
-    discardFailedOutboxRows: vi.fn(async () => ({ removed: 0 })),
-    retryFailedOutboxRows: vi.fn(async () => ({ retried: 0 })),
-}))
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 
 import { expectNoUntranslatedText, renderPseudo } from '@/test-utils/i18n'

@@ -13,12 +13,10 @@ vi.mock('sonner', () => ({
 }))
 
 const mockSubscribeToAllSetlists = vi.fn()
-const mockSubscribeToSetlist = vi.fn()
 
 vi.mock('@/lib/setlist-firebase', () => ({
   createSetlistService: () => ({
     subscribeToAllSetlists: mockSubscribeToAllSetlists,
-    subscribeToSetlist: mockSubscribeToSetlist,
   }),
 }))
 

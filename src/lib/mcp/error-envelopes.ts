@@ -278,42 +278,6 @@ export function zodFormatterFromSdkProse(
 }
 
 /**
- * Legacy 1-key envelope kept ONLY for back-compat with callers that
- * already parse the older `{error: "Validation error — ..."}` shape.
- * New code MUST call `zodFormatter` and emit the rich envelope. The
- * wire-level remap (`zod-envelope-remap.remapValidationResult`) lifts
- * the SDK prose directly into the rich envelope, so this function
- * isn't on any hot path today.
- *
- * @deprecated Cycle-2 REG-001 — use `zodFormatter` for the rich envelope.
- */
-export function zodErrorToEnvelope(
-    err: unknown,
-): { error: string; details?: Array<{ path: string; message: string }> } | null {
-    if (!err || typeof err !== "object") return null
-    const maybe = err as { name?: unknown; issues?: unknown }
-    const isZod =
-        maybe.name === "ZodError" ||
-        (Array.isArray(maybe.issues) &&
-            maybe.issues.length > 0 &&
-            typeof (maybe.issues as Array<Record<string, unknown>>)[0]?.path !==
-                "undefined")
-    if (!isZod) return null
-    const issues = Array.isArray(maybe.issues)
-        ? (maybe.issues as Array<{ path?: unknown; message?: unknown }>)
-        : []
-    const details = issues.map((i) => ({
-        path: Array.isArray(i.path) ? i.path.map(String).join(".") : "",
-        message: typeof i.message === "string" ? i.message : "invalid",
-    }))
-    const summary =
-        details.length > 0
-            ? details.map((d) => `${d.path || "(root)"}: ${d.message}`).join("; ")
-            : "validation failed"
-    return { error: `Validation error — ${summary}`, details }
-}
-
-/**
  * REG-001b (cycle-2) — uniform role-refusal envelope. The MCP wire
  * surface used to mix bare-prose throws (`return {error: "Only admins
  * may ..."}`) with the rich shape; this factory standardizes the

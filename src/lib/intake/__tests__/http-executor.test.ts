@@ -12,10 +12,6 @@ import { describe, expect, it, vi } from "vitest"
 const envOf = (vars: Record<string, string>) =>
     vars as unknown as NodeJS.ProcessEnv
 
-vi.mock("@/inngest/client", () => ({
-    inngest: { send: vi.fn(), createFunction: () => ({}) },
-}))
-
 import {
     RUN_TIME_BUDGET_MS,
     intakeRunUrl,

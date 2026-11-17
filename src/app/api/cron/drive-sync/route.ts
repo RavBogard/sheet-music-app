@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server"
-import { timingSafeEqual } from "crypto"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { runDriveSyncProd } from "@/lib/drive-sync/poller"
 import { tenantInboxFolder } from "@/lib/drive-sync/tenant-inbox"
@@ -8,11 +7,7 @@ import { logger } from "@/lib/logger"
 import { captureException } from "@/lib/error-reporting"
 import { env } from "@/env.mjs"
 import { httpError } from "@/lib/http/error-envelope"
-
-function safeCompare(a: string, b: string): boolean {
-    if (a.length !== b.length) return false
-    return timingSafeEqual(Buffer.from(a), Buffer.from(b))
-}
+import { bearerSecretMatches } from "@/lib/http/bearer-secret"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 300
@@ -51,11 +46,7 @@ export async function GET(req: NextRequest) {
     try {
         const authHeader = req.headers.get("authorization")
         const cronSecret = env.CRON_SECRET
-        if (
-            !cronSecret ||
-            !authHeader ||
-            !safeCompare(authHeader, `Bearer ${cronSecret}`)
-        ) {
+        if (!bearerSecretMatches(authHeader, cronSecret)) {
             // Cycle-3 REG-002: rich envelope on the wire. Vercel cron's
             // bearer auth is distinct from MCP bearers — any non-Vercel
             // caller gets refused here regardless of MCP role.

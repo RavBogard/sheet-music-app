@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server"
-import { timingSafeEqual } from "node:crypto"
 import { env } from "@/env.mjs"
 import { logger } from "@/lib/logger"
 import { httpError } from "@/lib/http/error-envelope"
@@ -9,6 +8,7 @@ import {
     SELFTEST_HTML,
     type RenderFormat,
 } from "@/lib/chart-render/html-to-pdf"
+import { bearerSecretMatches } from "@/lib/http/bearer-secret"
 
 /**
  * POST /api/render/chart — headless-Chromium render of authored chart HTML.
@@ -31,16 +31,10 @@ export const dynamic = "force-dynamic"
 
 const MAX_HTML_BYTES = 512 * 1024
 
-function safeCompare(a: string, b: string): boolean {
-    const ab = Buffer.from(a)
-    const bb = Buffer.from(b)
-    return ab.length === bb.length && timingSafeEqual(ab, bb)
-}
-
 function authorized(req: NextRequest): boolean {
     const secret = renderSecret({ ...process.env, CRON_SECRET: env.CRON_SECRET })
     const header = req.headers.get("authorization") ?? ""
-    return Boolean(secret) && safeCompare(header, `Bearer ${secret}`)
+    return bearerSecretMatches(header, secret)
 }
 
 function refuse() {

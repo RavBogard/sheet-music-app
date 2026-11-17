@@ -84,14 +84,13 @@ export function isLocalHost(host: string): boolean {
  *
  *   /api/cron/*            — Vercel Cron, `Authorization: Bearer CRON_SECRET`
  *   /api/webhooks/*        — Resend (Svix signature)
- *   /api/inngest           — Inngest (signing key)
  *   /api/intake/run        — INTAKE_RUN_SECRET / CRON_SECRET
  *   /api/bridge/setup-code — the mixer bridge exe redeeming a setup code
  *   /api/org-hosts         — the proxy's own address-list fetch (never resolved
  *                            through the list, or it would recurse)
  */
 const SERVER_TO_SERVER_PREFIXES = ["/api/cron/", "/api/webhooks/"]
-const SERVER_TO_SERVER_EXACT = new Set(["/api/inngest", "/api/intake/run", "/api/bridge/setup-code", ORG_HOSTS_PATH])
+const SERVER_TO_SERVER_EXACT = new Set(["/api/intake/run", "/api/bridge/setup-code", ORG_HOSTS_PATH])
 
 export function isServerToServerPath(pathname: string): boolean {
     const p = pathname.length > 1 && pathname.endsWith("/") ? pathname.slice(0, -1) : pathname

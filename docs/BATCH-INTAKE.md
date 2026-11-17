@@ -79,16 +79,10 @@ stopped, because "where it got to" is the item statuses in Firestore, not
 anything held in memory. When no rows are left it closes the batch out as
 `done`.
 
-That is the DEFAULT, and it is what production runs: no queue service, no extra
-keys, and the batch document is always the truth.
+That is what production runs: no queue service, no extra keys, and the batch
+document is always the truth.
 
-`INTAKE_EXECUTOR=inngest` switches to the original durable-step path instead —
-and only if `INNGEST_EVENT_KEY` is also set, so opting in on a deployment that
-has no Inngest credentials quietly stays on HTTP rather than failing to queue
-every batch. Production has never had those keys; the Inngest function stays
-registered and unused.
-
-Both paths are idempotent per row, so a duplicate trigger costs one wasted read
+The importer is idempotent per row, so a duplicate trigger costs one wasted read
 and never a double import. That is what makes the safety net safe: every 10
 minutes `/api/cron/import-batches-resume` re-sends any batch still `committed`
 after 5 minutes AND any batch stuck in `processing` whose rows have not moved
@@ -177,9 +171,7 @@ node scripts/upload-batch.mjs <path>... \
 | `MCP_PUBLIC_URL` | **Do NOT set this.** See the warning below. |
 | `CRON_SECRET` | Already configured. Guards `/api/cron/import-batches-resume` like every other cron, AND — unless `INTAKE_RUN_SECRET` is set — the internal `/api/intake/run` executor route. |
 | `INTAKE_RUN_SECRET` | Optional. The bearer `/api/intake/run` demands, when it should rotate separately from cron. Falls back to `CRON_SECRET`. With neither configured the route refuses every request and nothing is processed. |
-| `INTAKE_EXECUTOR` | Optional, `http` (default) or `inngest`. See *The executor*. `inngest` is honoured only when `INNGEST_EVENT_KEY` is also set. |
 | `INTAKE_INTERNAL_BASE_URL` | **Set in Vercel production to `https://www.centralreform.live`** (the apex `centralreform.live` 307-redirects to `www`, and a redirect strips the bearer). The origin the run route calls itself back on. It defaults to `VERCEL_PROJECT_PRODUCTION_URL`, then `VERCEL_URL`, then `http://localhost:3000` — but those are `*.vercel.app` hosts, which SSO deployment protection covers, so a self-chained request to one answers with the Vercel login page instead of running the batch. The custom domain is not protected, so pointing the executor at it is what makes self-chaining work in production. |
-| `INNGEST_EVENT_KEY`, `INNGEST_SIGNING_KEY` | Only for the opt-in Inngest executor. NOT set in production. |
 | `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`, `FIREBASE_STORAGE_BUCKET` | Only needed locally, by `scripts/set-storage-cors.mjs`. |
 
 ### Do not set `MCP_PUBLIC_URL` / `ui.domain`

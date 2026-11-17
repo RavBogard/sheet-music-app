@@ -46,6 +46,7 @@ export {
     type MaintainOptions,
     type NewSetlistInput,
 } from "./maintenance"
+export { deleteSetlistCascade, type SetlistCascadeResult } from "./cascade"
 export { stripUndefined, placementIndex, mergeFields, canonicalSort, valuesEqual } from "./pure"
 export { checkRowFields, checkSetlistFields, isSafeKey } from "./fields"
 export { hydrateEmbeddedTracks, type HydrateResult } from "./hydrate"

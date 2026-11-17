@@ -917,9 +917,9 @@ describe("PGR-03 — startedButNotFinished alarm (Fix B — externally-killed si
 })
 
 // ── Bridge-health alarms (added 2026-05-25 — closes bridge-analysis ──────────
-// FINDINGS TOP-10 #1+#8). Three independent Sentry warnings:
+// FINDINGS TOP-10 #1+#8). Two independent Sentry warnings:
 //   - errCount delta > 5 per run
-//   - lastSeen > 3 minutes
+//   - (a stale heartbeat no longer alarms; bridge-watch covers that)
 //   - x32Connected==false sustained > 5 minutes
 // Snapshot doc `config/bridgeHealth` carries cross-run delta state.
 
@@ -1066,36 +1066,41 @@ describe("bridge-health — errCount spike alarm (delta > 5/run)", () => {
     })
 })
 
-describe("bridge-health — lastSeen staleness alarm (> 3 min)", () => {
-    it("captures a 'warning' when lastSeen is > 3 minutes ago (bridge silent)", async () => {
+describe("bridge-health — a stale heartbeat does not alarm", () => {
+    // The studio PC is off except around services, so a stale heartbeat is the
+    // normal state. /api/cron/bridge-watch tells the owner before a service.
+    it("does NOT warn when lastSeen is > 3 minutes ago, and still reports the staleness", async () => {
         bridgeMonitorBridgeField = healthyBridge({
             lastSeen: new Date(NOW - 5 * MIN),
         })
         bridgeLogDoc = { errCount: 0 }
         bridgeHealthSnapshot = { errCount: 0, x32DisconnectedSince: null }
-        await GET(makeReq("/api/cron/admin-consistency", { token: SECRET }))
-        const silentCall = captureMessageMock.mock.calls.find((c) =>
-            /bridge silent/i.test(String(c[0])),
+        const res = await GET(makeReq("/api/cron/admin-consistency", { token: SECRET }))
+        const bridgeCall = captureMessageMock.mock.calls.find((c) =>
+            /bridge silent|X32 disconnected|errCount spike/i.test(String(c[0])),
         )
-        expect(silentCall).toBeTruthy()
-        const [, ctx, level] = silentCall!
-        expect(ctx.extra.subsystem).toBe("bridge-health")
-        expect(ctx.extra.stalenessSeconds).toBeGreaterThanOrEqual(5 * 60)
-        expect(ctx.extra.lastSeen).toBe(new Date(NOW - 5 * MIN).toISOString())
-        expect(level).toBe("warning")
+        expect(bridgeCall).toBeFalsy()
+        const json = (await res.json()) as {
+            bridgeHealth: { stalenessSeconds: number }
+        }
+        expect(json.bridgeHealth.stalenessSeconds).toBeGreaterThanOrEqual(5 * 60)
     })
 
-    it("does NOT alarm when lastSeen is fresh (< 3 minutes)", async () => {
+    it("does NOT warn about a disconnected desk when the bridge itself is not heartbeating", async () => {
         bridgeMonitorBridgeField = healthyBridge({
-            lastSeen: new Date(NOW - 90 * 1000),
+            lastSeen: new Date(NOW - 3 * 60 * MIN),
+            x32Connected: false,
         })
         bridgeLogDoc = { errCount: 0 }
-        bridgeHealthSnapshot = { errCount: 0, x32DisconnectedSince: null }
+        bridgeHealthSnapshot = {
+            errCount: 0,
+            x32DisconnectedSince: new Date(NOW - 3 * 60 * MIN),
+        }
         await GET(makeReq("/api/cron/admin-consistency", { token: SECRET }))
-        const silentCall = captureMessageMock.mock.calls.find((c) =>
-            /bridge silent/i.test(String(c[0])),
+        const x32Call = captureMessageMock.mock.calls.find((c) =>
+            /X32 disconnected/i.test(String(c[0])),
         )
-        expect(silentCall).toBeFalsy()
+        expect(x32Call).toBeFalsy()
     })
 })
 
@@ -1156,9 +1161,8 @@ describe("bridge-health — X32 sustained-disconnect alarm (> 5 min)", () => {
 })
 
 describe("bridge-health — co-fire with PGR-03 + PGR-04 on a really bad day", () => {
-    it("all three alarms can fire in the same tick (errCount spike + stale heartbeat + sustained X32 disconnect)", async () => {
+    it("both alarms can fire in the same tick (errCount spike + sustained X32 disconnect)", async () => {
         bridgeMonitorBridgeField = healthyBridge({
-            lastSeen: new Date(NOW - 10 * MIN),
             x32Connected: false,
             errCount: 30,
         })
@@ -1170,7 +1174,7 @@ describe("bridge-health — co-fire with PGR-03 + PGR-04 on a really bad day", (
         await GET(makeReq("/api/cron/admin-consistency", { token: SECRET }))
         const subjects = captureMessageMock.mock.calls.map((c) => String(c[0]))
         expect(subjects.some((s) => /errCount spike/i.test(s))).toBe(true)
-        expect(subjects.some((s) => /bridge silent/i.test(s))).toBe(true)
+        expect(subjects.some((s) => /bridge silent/i.test(s))).toBe(false)
         expect(subjects.some((s) => /X32 disconnected/i.test(s))).toBe(true)
     })
 })

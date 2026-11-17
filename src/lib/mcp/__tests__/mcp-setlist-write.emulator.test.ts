@@ -777,6 +777,44 @@ describe("MCP setlist write tools (emulator)", () => {
             expect(await tracksOf(b)).toHaveLength(1)
             expect((await db().collection("setlists").doc(b).get()).exists).toBe(true)
         })
+
+        it("cascades like POST /api/setlist/delete: subcollections and related docs go, another setlist's stay", async () => {
+            const a = await newSetlist(ADMIN)
+            const b = await newSetlist(ADMIN)
+            const seed = async (id: string) => {
+                await db().doc(`setlists/${id}/history/h1`).set({ action: "created" })
+                await db().doc(`setlists/${id}/performance/p1`).set({ at: 1 })
+                await db().doc(`setlists/${id}/opBatches/o1`).set({ at: 1 })
+                await db().doc(`scheduling_assignments/as-${id}`).set({ setlistId: id })
+                await db().doc(`tasks/task-${id}`).set({ setlistId: id })
+                await db().doc(`users/${ADMIN}/notifications/n-${id}`).set({ entityId: id })
+            }
+            await seed(a)
+            await seed(b)
+
+            expect(await deleteSetlist(ADMIN, { id: a })).toEqual({ ok: true, tracksDeleted: 0 })
+
+            const exists = async (path: string) => (await db().doc(path).get()).exists
+            for (const sub of ["history/h1", "performance/p1", "opBatches/o1"]) {
+                expect(await exists(`setlists/${a}/${sub}`), sub).toBe(false)
+                expect(await exists(`setlists/${b}/${sub}`), sub).toBe(true)
+            }
+            expect(await exists(`scheduling_assignments/as-${a}`)).toBe(false)
+            expect(await exists(`tasks/task-${a}`)).toBe(false)
+            expect(await exists(`users/${ADMIN}/notifications/n-${a}`)).toBe(false)
+            expect(await exists(`scheduling_assignments/as-${b}`)).toBe(true)
+            expect(await exists(`tasks/task-${b}`)).toBe(true)
+            expect(await exists(`users/${ADMIN}/notifications/n-${b}`)).toBe(true)
+        })
+
+        it("a refused delete (not the owner) cascades nothing", async () => {
+            const id = await newSetlist(ADMIN)
+            await db().doc(`setlists/${id}/history/h1`).set({ action: "created" })
+            await db().doc(`tasks/task-${id}`).set({ setlistId: id })
+            expect(await deleteSetlist(LEADER, { id })).toMatchObject({ ok: false })
+            expect((await db().doc(`setlists/${id}/history/h1`).get()).exists).toBe(true)
+            expect((await db().doc(`tasks/task-${id}`).get()).exists).toBe(true)
+        })
     })
 
     describe("update_track + bulk_update_tracks (CF1)", () => {

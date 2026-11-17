@@ -115,10 +115,7 @@ export function normalizeStem(title: string): string {
  * flag) — a `song.pdf.pdf` input strips one extension, normalizeStem
  * folds the inner period away.
  *
- * Extend by adding a token; downstream parity test
- * (`src/lib/library/__tests__/index-name-fields-compute-parity.test.ts`)
- * will catch any drift from the mirror at
- * `scripts/lib/index-name-fields-compute.mjs`.
+ * Extend by adding a token.
  */
 export const STRIPPABLE_EXTENSION_RE =
     /\.(pdf|musicxml|xml|mxl|jpg|png|webp|mp3|m4a|wav)$/i

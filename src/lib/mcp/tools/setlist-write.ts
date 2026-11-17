@@ -48,7 +48,7 @@ import {
 } from "@/lib/liturgy/bind-on-type"
 import type { LiturgyRef } from "@/lib/books/types"
 import { logger } from "@/lib/logger"
-import { runSetlistTransaction, writeRowFields } from "@/lib/setlist-ops"
+import { deleteSetlistCascade, runSetlistTransaction, writeRowFields } from "@/lib/setlist-ops"
 import { parseGigArg, parseTrackGigPatch, readGig, type Gig, type GigPatch } from "@/lib/gig/model"
 import { chartChangeKey } from "@/lib/library/lineage-pure"
 import { isTestSetlist } from "@/types/models"
@@ -1402,7 +1402,8 @@ export interface DeleteSetlistArgs {
 }
 
 /**
- * Delete a setlist and cascade-delete all of its tracks. Stricter than the
+ * Delete a setlist and cascade-delete all of its tracks, then everything else
+ * that references it (the shared `deleteSetlistCascade`). Stricter than the
  * other write tools: admin OR the setlist's owner. A band_leader cannot delete
  * a setlist they did not create — delete is destructive and irreversible, and
  * the surface area of "any leader can torch any service" was deemed too wide.
@@ -1501,8 +1502,21 @@ export async function deleteSetlist(
         return { ok: true, tracksDeleted: tracksSnap.size }
     })
 
-    if (result.ok) return { ok: true, tracksDeleted: result.tracksDeleted }
-    return result.envelope
+    if (!result.ok) return result.envelope
+
+    // The setlist and its rows went in the version-gated transaction above.
+    // Everything else that hangs off it (subcollections such as history,
+    // performance and opBatches; assignments; tasks; notifications) goes
+    // through the same cascade POST /api/setlist/delete runs. Its row and
+    // setlist phases find nothing left; the subcollections are still removed.
+    const cascade = await deleteSetlistCascade(db, org, args.id)
+    if (cascade.errors.length > 0) {
+        logger.error("[delete_setlist] cascade left work undone", {
+            setlistId: args.id,
+            errors: cascade.errors,
+        })
+    }
+    return { ok: true, tracksDeleted: result.tracksDeleted + cascade.tracks }
 }
 
 // ─── recompute_setlist_track_count ──────────────────────────────────────────

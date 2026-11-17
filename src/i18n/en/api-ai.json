@@ -1,6 +1,4 @@
 {
-    "noImage": "No image provided",
     "missingFileId": "Missing fileId",
-    "noStrips": "No strips provided",
     "missingImage": "Missing base64Image in request body"
 }

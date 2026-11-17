@@ -11,7 +11,6 @@ import { primeTestOrg } from "@/lib/org/__tests__/test-org-config"
 import { getAllTemplateKeys, TEMPLATE_LABELS } from "@/lib/liturgical-templates"
 import { listBooks } from "@/lib/books/registry"
 import { listBooksTool } from "@/lib/mcp/tools/books"
-import { parseTemplateRequest } from "@/lib/template-parser"
 import { systemInstructionFor } from "@/lib/library/ai-enrichment"
 import {
     KNOWN_COLLECTIONS,
@@ -118,19 +117,14 @@ describe("a third tenant's rabbi slots", () => {
             },
         })
 
-    it("parseTemplateRequest picks the tenant's slot keys", () => {
+    it("rabbiSlotsFor returns the tenant's slot keys", () => {
         withSlots()
         expect(rabbiSlotsFor("testshul").map((r) => r.key)).toEqual(["rav_cohen"])
-        expect(parseTemplateRequest("cohen friday", "testshul")).toMatchObject({ templateKey: "friday_night", rabbi: "rav_cohen" })
-        expect(parseTemplateRequest("Cohen shabbat morning", "testshul")).toMatchObject({ templateKey: "shabbat_morning", rabbi: "rav_cohen" })
-        // CRC's names mean nothing here.
-        expect(parseTemplateRequest("daniel friday", "testshul")).toBeNull()
     })
 
     it("a tenant listing none gets CRC's keys (as every tenant did)", () => {
         primeTestOrg({ liturgy: { ...codeOrgConfig("crc")!.liturgy, rabbiSlots: [] } })
         expect(rabbiSlotsFor("testshul").map((r) => r.key)).toEqual(["daniel_karen", "randy"])
-        expect(parseTemplateRequest("randy friday", "testshul")).toMatchObject({ rabbi: "randy" })
     })
 })
 

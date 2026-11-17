@@ -1,6 +1,6 @@
 import { listTenantMembers } from "@/lib/org/access"
 import { NextResponse } from "next/server"
-import { timingSafeEqual } from "crypto"
+import { bearerSecretMatches } from "@/lib/http/bearer-secret"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
 import { sendBridgeHealthAlert } from "@/lib/email"
@@ -35,8 +35,9 @@ import { bridgeConfigOrg, mixerOn, MIXER_ORG_ID } from "@/lib/org/mixer"
  *
  * ## Relationship to admin-consistency
  *
- * `/api/cron/admin-consistency` ALREADY watches bridge silence, errCount spikes
- * and sustained X32 disconnects — but every one of those alarms is a Sentry
+ * `/api/cron/admin-consistency` watches errCount spikes and sustained X32
+ * disconnects (it no longer warns on bridge silence, which is the normal state
+ * with the PC off) — but every one of those alarms is a Sentry
  * `captureMessage`, which reaches a human only if that human is reading Sentry.
  * This route is the other half: a push + email that arrives on the owner's phone,
  * timed to the service, naming the remedy. It does not replace those alarms and
@@ -76,18 +77,13 @@ import { bridgeConfigOrg, mixerOn, MIXER_ORG_ID } from "@/lib/org/mixer"
  * Protected by CRON_SECRET bearer token, like every other cron route here.
  */
 
-function safeCompare(a: string, b: string): boolean {
-    if (a.length !== b.length) return false
-    return timingSafeEqual(Buffer.from(a), Buffer.from(b))
-}
-
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
 
 export async function GET(req: Request) {
     const authHeader = req.headers.get("authorization")
     const cronSecret = env.CRON_SECRET
-    if (!cronSecret || !authHeader || !safeCompare(authHeader, `Bearer ${cronSecret}`)) {
+    if (!bearerSecretMatches(authHeader, cronSecret)) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 

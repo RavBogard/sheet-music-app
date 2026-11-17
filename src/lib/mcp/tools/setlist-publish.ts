@@ -695,7 +695,7 @@ export async function publishSetlist(
                     setlistId: args.setlistId,
                     suppliedCount: args.recipients.length,
                 },
-                "Pass uid (a user account) or email per entry, or omit `recipients` to auto-derive from the band audience.",
+                "Pass uid (a user account) or email per entry. Run preview_notify_band to see the default candidate audience.",
             )
         }
         recipients = await resolveOverrideRecipients(
@@ -730,7 +730,7 @@ export async function publishSetlist(
                     suppliedCount: args.recipients.length,
                     resolvedCount: recipients.length,
                 },
-                "Verify the uids via list_users (or omit `recipients` to auto-derive from the band audience).",
+                "Verify the uids via find_user, or run preview_notify_band to see the default candidate audience.",
             )
         }
     }

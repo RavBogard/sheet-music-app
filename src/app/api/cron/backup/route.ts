@@ -1,15 +1,10 @@
 import { tenantRoleFromClaims } from "@/lib/org/membership-types"
 import { NextRequest, NextResponse } from "next/server"
-import { timingSafeEqual } from "crypto"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
 import { captureException } from "@/lib/error-reporting"
 import { env } from "@/env.mjs"
-
-function safeCompare(a: string, b: string): boolean {
-    if (a.length !== b.length) return false
-    return timingSafeEqual(Buffer.from(a), Buffer.from(b))
-}
+import { bearerSecretMatches } from "@/lib/http/bearer-secret"
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -35,7 +30,7 @@ export async function GET(req: NextRequest) {
         const authHeader = req.headers.get('authorization')
         const cronSecret = env.CRON_SECRET
 
-        if (!cronSecret || !authHeader || !safeCompare(authHeader, `Bearer ${cronSecret}`)) {
+        if (!bearerSecretMatches(authHeader, cronSecret)) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
         }
 

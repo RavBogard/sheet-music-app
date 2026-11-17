@@ -12,7 +12,7 @@ import { BPM_MARKER_FIELDS } from "./types"
  *  - a setlist update does the same and stamps `lastModifiedAt`/`lastModifiedBy`;
  *  - `undefined` is never written.
  *
- * The one exception is `writeSetlistDerived`: the derived counts heal
+ * The one exception is `updateSetlistDerivedCounts`: the derived counts heal
  * (`trackCount`, `songCount`, `fileIds`) writes no stamp on purpose, because
  * it changes nothing an author wrote.
  *
@@ -161,24 +161,10 @@ export class SetlistWriter {
 }
 
 /**
- * The raw sink behind each writer. Module-private: only the two unstamped
- * writes below reach it, and the guard refuses them outside setlist-ops.
+ * The raw sink behind each writer. Module-private: only the unstamped
+ * write below reaches it, and the guard refuses it outside setlist-ops.
  */
 const SINKS = new WeakMap<SetlistWriter, WriteSink>()
-
-/**
- * Derived counts only (`trackCount`, `songCount`, `fileIds`). No stamps: a
- * heal that changes no authored field must not look like an edit. Internal to
- * src/lib/setlist-ops (not exported from the index; guarded).
- */
-export function writeSetlistDerived(
-    w: SetlistWriter,
-    id: string,
-    patch: { trackCount?: number; songCount?: number; fileIds?: string[] },
-): void {
-    SINKS.get(w)!.update(setlistRef(w.db, id), stripUndefined({ ...patch }))
-    w.writes++
-}
 
 /**
  * A setlist patch with NO stamps, for `maintainSetlist(..., { bump: false })`
@@ -210,7 +196,7 @@ export function setlistBatch(
 
 /**
  * Patch fields on one setlist doc, stamped and version-bumped. Used by the
- * rename and transfer routes and other single-doc metadata writers.
+ * transfer route and other single-doc metadata writers.
  */
 export async function updateSetlistFields(
     db: DB,
@@ -225,7 +211,8 @@ export async function updateSetlistFields(
 
 /**
  * The derived counts heal on one setlist doc (`trackCount`, `songCount`,
- * `fileIds`), with no stamps — see `writeSetlistDerived`.
+ * `fileIds`). No stamps: a heal that changes no authored field must not look
+ * like an edit.
  */
 export async function updateSetlistDerivedCounts(
     db: DB,

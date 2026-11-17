@@ -1,6 +1,3 @@
-export { NoSetlistsIllustration } from "./NoSetlistsIllustration"
-export { NoSetlistsIllustration as EmptySetlistsIllustration } from "./NoSetlistsIllustration"
-export { EmptyFolderIllustration } from "./EmptyFolderIllustration"
 export { NoSearchResultsIllustration } from "./NoSearchResultsIllustration"
 export { NoSearchResultsIllustration as NoResultsIllustration } from "./NoSearchResultsIllustration"
 export { NoAudioIllustration } from "./NoAudioIllustration"

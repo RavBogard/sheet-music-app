@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { FakeFirestore, tenantFilters } from "@/lib/org/__tests__/fake-admin-firestore"
-import { scopeRowsToTenant, scopeUsersToTenant, readsUntaggedRows } from "@/lib/org/tenant-query"
+import { scopeRowsToTenant, readsUntaggedRows } from "@/lib/org/tenant-query"
 
 /**
  * Multi-tenant phase 1 — the scheduling reads query by tenant for every org
@@ -47,13 +47,10 @@ describe("tenant-query helpers", () => {
         const q = { where: (...a: unknown[]) => (calls.push(a), q) }
         expect(readsUntaggedRows("crc")).toBe(true)
         expect(scopeRowsToTenant(q, "crc")).toBe(q)
-        expect(scopeUsersToTenant(q, "crc")).toBe(q)
         expect(calls).toEqual([])
         scopeRowsToTenant(q, "brotherslazaroff")
-        scopeUsersToTenant(q, "testshul")
         expect(calls).toEqual([
             ["orgId", "==", "brotherslazaroff"],
-            ["orgIds", "array-contains", "testshul"],
         ])
     })
 })

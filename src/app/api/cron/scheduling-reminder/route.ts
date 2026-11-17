@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server"
-import { timingSafeEqual } from "crypto"
 import { getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
 import { sendSchedulingEmail } from "@/lib/email-scheduling"
@@ -12,11 +11,7 @@ import { tenantsWithFeature } from "@/lib/org/features"
 import { reminderDue } from "@/lib/org/locale"
 import { scopeRowsToTenant } from "@/lib/org/tenant-query"
 import type { OrgId } from "@/lib/org/types"
-
-function safeCompare(a: string, b: string): boolean {
-    if (a.length !== b.length) return false
-    return timingSafeEqual(Buffer.from(a), Buffer.from(b))
-}
+import { bearerSecretMatches } from "@/lib/http/bearer-secret"
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -55,7 +50,7 @@ export async function GET(req: Request) {
     // Verify cron secret (constant-time comparison to prevent timing attacks)
     const authHeader = req.headers.get('authorization')
     const cronSecret = env.CRON_SECRET
-    if (!cronSecret || !authHeader || !safeCompare(authHeader, `Bearer ${cronSecret}`)) {
+    if (!bearerSecretMatches(authHeader, cronSecret)) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
