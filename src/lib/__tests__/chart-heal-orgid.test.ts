@@ -16,7 +16,6 @@ vi.mock("@/lib/firebase-storage", () => ({
     getStorageObjectSize: h.size,
 }))
 vi.mock("@/lib/library/safely-delete-library-object", () => ({ safelyDeleteLibraryObject: vi.fn() }))
-vi.mock("@/lib/library/library-events", () => ({ emitLibraryRowCreated: vi.fn() }))
 vi.mock("@/lib/logger", () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }))
 
 import { healChartBytes } from "@/lib/chart-heal"

@@ -18,13 +18,6 @@ import { rowOrg } from "@/lib/mcp/org-context"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 import type { KnownCollection } from "@/lib/library/collections"
-import {
-    EMPTY_ENRICHMENT_PROJECTION,
-    loadEnrichmentProjection,
-    loadRetryQueueIds,
-    projectionFromLibraryIndexData,
-    type EnrichmentProjection,
-} from "@/lib/library/enrichment-projection"
 import type { HygieneCoverage } from "./reconcile-library"
 // v11.5-04-02: `isNonChartArtifactShape` moved to the firebase-admin-free
 // `@/lib/library/junk-filter` (single source of truth shared with the browser
@@ -368,11 +361,6 @@ interface LibraryW02Fields {
      *  when a row carries no `name`. Joined so search_library resolves the
      *  displayed name through exactly the precedence `toLibraryEntry` uses. */
     indexTitle?: string
-    /** Cycle-3 AI-001: enrichment projection joined alongside W-02 so the
-     *  single library_index scan in loadLibraryW02Map serves both feature
-     *  groups. Always populated (defaults to EMPTY_ENRICHMENT_PROJECTION
-     *  when the row pre-dates NEW-3 enrichment). */
-    enrichment?: EnrichmentProjection
     /** R-0904-live-cw-34 §1: `library_index.status` is the source of truth;
      *  `songs/{id}.status` is a mirror that cannot represent "unknown" —
      *  server-songs.ts's G-15 default rewrites an absent value to "active",
@@ -401,22 +389,7 @@ async function loadLibraryW02Map(): Promise<Map<string, LibraryW02Fields>> {
     try {
         initAdmin()
         const db = getFirestore()
-        // Cycle-3 AI-001: parallel fetch of library_index + the in-flight
-        // AI retry queue so the enrichment projection rides on the same
-        // join pass W-02 already pays for. Both reads fail-soft inside the
-        // outer try/catch — a retry-queue read failure degrades to
-        // `retryQueued: false` (the projection rolls forward); a
-        // library_index failure aborts the whole map (existing behavior).
-        const [snap, retryIds] = await Promise.all([
-            db.collection("library_index").get(),
-            loadRetryQueueIds(db).catch((err) => {
-                logger.warn(
-                    "[mcp] aiEnrichmentRetryQueue ids fetch failed (retryQueued will read false):",
-                    err,
-                )
-                return new Set<string>()
-            }),
-        ])
+        const snap = await db.collection("library_index").get()
         const map = new Map<string, LibraryW02Fields>()
         const stemCounts = new Map<string, number>()
         // First pass — count siblings per stem (excluding orphans).
@@ -427,8 +400,7 @@ async function loadLibraryW02Map(): Promise<Map<string, LibraryW02Fields>> {
             if (!stem) continue
             stemCounts.set(stem, (stemCounts.get(stem) ?? 0) + 1)
         }
-        // Second pass — attach W-02 fields + computed siblingsInCatalog
-        // + AI-001 enrichment projection.
+        // Second pass — attach W-02 fields + computed siblingsInCatalog.
         for (const d of snap.docs) {
             const data = d.data()
             const stem = typeof data.stem === "string" ? data.stem : undefined
@@ -483,10 +455,6 @@ async function loadLibraryW02Map(): Promise<Map<string, LibraryW02Fields>> {
                 name: typeof data.name === "string" ? data.name : undefined,
                 indexTitle:
                     typeof data.title === "string" ? data.title : undefined,
-                enrichment: projectionFromLibraryIndexData(
-                    data,
-                    retryIds.has(d.id),
-                ),
                 // R-0904-live-cw-34 §1(b): no `?? "active"` here — an absent
                 // value joins as undefined so the gate can fall back to the
                 // songs mirror for that row instead of inventing a status.
@@ -694,26 +662,21 @@ export async function searchLibrary(
             // Phase 5: the owning tenant, from the index row when joined.
             const ownerOrgId = ownerOf(w02?.visibility ?? songVisibilityOf(s))
             if (!w02) {
-                // Row has no library_index — surface empty enrichment so the
-                // wire shape is consistent (callers can rely on the four
-                // AI-001 fields always being present).
-                return { ...s, ...EMPTY_ENRICHMENT_PROJECTION, ownerOrgId }
+                return { ...s, ownerOrgId }
             }
-            // Promote enrichment projection onto the row's top-level so it
-            // rides alongside the W-02 fields. The W-02 sub-object also
-            // carries `mimeType` / `name` for the non-chart-artifact filter
+            // The W-02 fields ride on the row's top level. The W-02 sub-object
+            // also carries `mimeType` / `name` for the non-chart-artifact filter
             // below — those get stripped in the final mapper.
             // R-0905-live-cw-1 §1: the wire carries the value the GATE used.
             // The joined `status` is still destructured out of the spread —
             // spreading it would put `undefined` over a good songs value for
             // an index row carrying no status field — and assigned explicitly
             // from effectiveStatus(), the same derivation the filter read.
-            const { enrichment, status: _joinedStatus, visibility: _vis, ...rest } = w02
+            const { status: _joinedStatus, visibility: _vis, ...rest } = w02
             void _vis
             return {
                 ...s,
                 ...rest,
-                ...(enrichment ?? EMPTY_ENRICHMENT_PROJECTION),
                 status: effectiveStatus(s, w02Map),
                 ownerOrgId,
             }
@@ -867,20 +830,6 @@ export async function getSong(
     // v11-02-02 / phase 5: cross-tenant wall by VISIBILITY — a chart the
     // caller neither owns nor has shared with it reads as not-found (no leak).
     if (!visibleTo(songVis, org) && !(idxVis && visibleTo(idxVis, org))) return null
-    // Cycle-3 AI-001: project enrichment fields off the matching library_index
-    // row so single-song reads carry the same AI state the bulk read tools
-    // surface. Fail-soft — a library_index miss returns an empty projection
-    // (pre-NEW-3 uploads / catalog-only rows) without bubbling the failure.
-    let projection: EnrichmentProjection = EMPTY_ENRICHMENT_PROJECTION
-    try {
-        initAdmin()
-        projection = await loadEnrichmentProjection(getFirestore(), args.id)
-    } catch (err) {
-        logger.warn(
-            `[mcp] get_song enrichment projection load failed for ${args.id}:`,
-            err,
-        )
-    }
     // Recordings 2026-11: the song's featured take (this org's only), or null.
     // Fail-soft: a read miss says no recording rather than failing get_song.
     let recording: FeaturedRecording | null = null
@@ -890,7 +839,7 @@ export async function getSong(
     } catch (err) {
         logger.warn(`[mcp] get_song recording read failed for ${args.id}:`, err)
     }
-    return { ...song, ...projection, ownerOrgId: ownerOf(idxVis ?? songVis), recording }
+    return { ...song, ownerOrgId: ownerOf(idxVis ?? songVis), recording }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -987,43 +936,6 @@ export interface LibraryIndexEntry {
         correctedAwayFrom: number
         lastCorrectionAt?: string
     }
-    // ─── AI-001 enrichment projection (cycle-3) ───────────────────────────
-    // Always populated — pre-NEW-3 rows surface the empty projection so the
-    // wire shape is consistent.
-    enrichmentStatus: EnrichmentProjection["enrichmentStatus"]
-    enrichmentConfidence: EnrichmentProjection["enrichmentConfidence"]
-    aiSuggestion: EnrichmentProjection["aiSuggestion"]
-    retryQueued: EnrichmentProjection["retryQueued"]
-    // Cowork #9 — last AI enrichment run timestamp (age/lag signal).
-    enrichmentRanAt: EnrichmentProjection["enrichmentRanAt"]
-}
-
-/**
- * Cowork #9 (cowork-2026-05-22) — enrichment backlog summary surfaced on
- * list_library so a curator can see at a glance how many rows are still
- * unenriched (no collection / key / bpm filled in by the AI pass yet) instead
- * of guessing core-vs-supplemental from filenames. Computed over the same
- * `filtered` set that `total` reflects, so the counts match the rows the
- * caller is browsing.
- */
-export interface EnrichmentCoverage {
-    /** Row counts keyed by enrichmentStatus. `unenriched` = status is null
-     *  (pre-NEW-3 rows enrichment never touched). */
-    byStatus: {
-        pending: number
-        review_pending: number
-        enriched: number
-        failed: number
-        human_curated: number
-        human_rejected: number
-        unenriched: number
-    }
-    /**
-     * Rows that still need enrichment attention: `pending` + `review_pending`
-     * + `failed` + `unenriched`. The single number a curator watches as the
-     * backlog. (`enriched` / `human_curated` / `human_rejected` are settled.)
-     */
-    pendingEnrichmentCount: number
 }
 
 export interface ListLibraryResult {
@@ -1033,44 +945,11 @@ export interface ListLibraryResult {
     limit: number
     /** Cycle-3 DATA-002 — uniform hygiene scan coverage. */
     coverage: HygieneCoverage
-    /** Cowork #9 — enrichment backlog summary over the `total` set. */
-    enrichmentCoverage: EnrichmentCoverage
-}
-
-/**
- * Pure enrichment-backlog tally over a set of library rows. Extracted so the
- * count logic is unit-testable without the emulator. `enrichmentStatus: null`
- * (the empty projection) counts as `unenriched`.
- */
-export function computeEnrichmentCoverage(
-    rows: Array<{ enrichmentStatus: EnrichmentProjection["enrichmentStatus"] }>,
-): EnrichmentCoverage {
-    const byStatus = {
-        pending: 0,
-        review_pending: 0,
-        enriched: 0,
-        failed: 0,
-        human_curated: 0,
-        human_rejected: 0,
-        unenriched: 0,
-    }
-    for (const r of rows) {
-        const s = r.enrichmentStatus
-        if (s === null || s === undefined) byStatus.unenriched++
-        else byStatus[s]++
-    }
-    const pendingEnrichmentCount =
-        byStatus.pending +
-        byStatus.review_pending +
-        byStatus.failed +
-        byStatus.unenriched
-    return { byStatus, pendingEnrichmentCount }
 }
 
 function toLibraryEntry(
     id: string,
     data: Record<string, unknown>,
-    retryQueued: boolean,
 ): LibraryIndexEntry {
     const name =
         (typeof data.name === "string" && data.name) ||
@@ -1083,7 +962,6 @@ function toLibraryEntry(
               ? data.modifiedTime
               : null
     const bch = data.bondCorrectionHistory as Record<string, unknown> | undefined
-    const enrichment = projectionFromLibraryIndexData(data, retryQueued)
     return {
         fileId: id,
         // R-0902-live-cw-1 §2: the extension is packaging. Display-side only —
@@ -1136,8 +1014,6 @@ function toLibraryEntry(
                           : undefined,
               }
             : undefined,
-        // ─── AI-001 enrichment projection ────────────────────────────────
-        ...enrichment,
     }
 }
 
@@ -1170,21 +1046,7 @@ export async function listLibrary(
     try {
         initAdmin()
         const db = getFirestore()
-        // Cycle-3 AI-001: parallel pull of library_index + the in-flight AI
-        // retry queue so the projection rides on a single round-trip
-        // alongside the existing scan. retry-queue read fails-soft: a fetch
-        // miss collapses to `retryQueued: false` on every row but keeps the
-        // catalog browse working.
-        const [snap, retryIds] = await Promise.all([
-            db.collection("library_index").get(),
-            loadRetryQueueIds(db).catch((err) => {
-                logger.warn(
-                    "[mcp] list_library retryQueue ids fetch failed (retryQueued will read false):",
-                    err,
-                )
-                return new Set<string>()
-            }),
-        ])
+        const snap = await db.collection("library_index").get()
         const includeShared = args.includeShared === true
         // Phase 5: each kept row's collection record id, for `collectionId`.
         const collectionIdById = new Map<string, string>()
@@ -1195,7 +1057,7 @@ export async function listLibrary(
             .filter((d) => includedFor(d.data(), org, includeShared))
             .map((d) => {
                 collectionIdById.set(d.id, collectionIdOf(d.data()))
-                return toLibraryEntry(d.id, d.data(), retryIds.has(d.id))
+                return toLibraryEntry(d.id, d.data())
             })
         attachSiblingCounts(all)
 
@@ -1308,8 +1170,6 @@ export async function listLibrary(
                 scanned: filtered.length,
                 filteredOut,
             },
-            // Cowork #9 — backlog over the same `filtered` set `total` reflects.
-            enrichmentCoverage: computeEnrichmentCoverage(filtered),
         }
     } catch (err) {
         logger.warn("[mcp] list_library failed:", err)

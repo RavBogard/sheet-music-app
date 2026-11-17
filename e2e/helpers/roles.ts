@@ -17,9 +17,9 @@ import {
  * so a role-gated probe is one line:
  *
  *   import { test, expect } from './helpers/roles'
- *   test('musician cannot see admin surface', async ({ roleGate, page }) => {
- *       await roleGate.gotoAs('musician', '/manage/library-review')
- *       expect(new URL(page.url()).pathname).toBe('/manage')
+ *   test('musician cannot see the leader surface', async ({ roleGate, page }) => {
+ *       await roleGate.gotoAs('musician', '/manage')
+ *       expect(new URL(page.url()).pathname).toBe('/setlists')
  *   })
  *
  * Every account `roleGate` mints is tracked and cascade-revoked (by uid, NOT

@@ -20,11 +20,11 @@ import type { TestRole } from './helpers/roles'
  * pattern as the MCP_BEARER skip), so the suite stays green on a deployment
  * where Daniel hasn't set the secret.
  *
- * Surfaces probed (admin-gated; verified against
- * `src/app/(main)/manage/library-review/page.tsx` and the `/manage` parent
- * which redirects to `/manage/library-review` only for `isAdmin`):
- *   - `/manage/library-review` — strict isAdmin gate; non-admin → /manage;
- *     admin → REACHES it (the positive 4th cell).
+ * Surface probed: `/manage` (`src/app/(main)/manage/page.tsx`), the
+ * band-leader gate — musician and member are redirected to /setlists;
+ * band_leader and admin reach it. (This matrix used to probe the admin-only
+ * `/manage/library-review`, removed with the AI enrichment review queue; no
+ * admin-only page remains.)
  *
  * All accounts the matrix mints (incl. the `test-admin-*` session) are
  * cascade-revoked by uid on teardown via the `roleGate` fixture — NEVER
@@ -39,9 +39,9 @@ import type { TestRole } from './helpers/roles'
 
 const MCP_BEARER = process.env.MCP_BEARER ?? ''
 
-const NON_ADMIN_ROLES: TestRole[] = ['band_leader', 'musician', 'member']
+const NON_LEADER_ROLES: TestRole[] = ['musician', 'member']
 
-test.describe('role-gate-matrix — 4-of-4 roles × admin surfaces', () => {
+test.describe('role-gate-matrix — 4-of-4 roles × the /manage leader gate', () => {
     test.skip(
         !MCP_BEARER,
         'role-gate matrix needs MCP_BEARER (admin or band_leader) to mint test accounts.',
@@ -57,37 +57,36 @@ test.describe('role-gate-matrix — 4-of-4 roles × admin surfaces', () => {
         )
     })
 
-    for (const role of NON_ADMIN_ROLES) {
-        test(`${role} is redirected off /manage/library-review to /manage`, async ({ roleGate, page }, testInfo) => {
-            await roleGate.gotoAs(role, '/manage/library-review', { webSdk: 'optional' })
+    for (const role of NON_LEADER_ROLES) {
+        test(`${role} is redirected off /manage`, async ({ roleGate, page }, testInfo) => {
+            await roleGate.gotoAs(role, '/manage', { webSdk: 'optional' })
             const finalPath = new URL(page.url()).pathname
-            if (finalPath === '/manage/library-review') {
+            if (finalPath === '/manage') {
                 testInfo.annotations.push({
                     type: 'FINDING',
-                    description: `${role} REACHED /manage/library-review — admin gate did not redirect. Privilege escalation risk.`,
+                    description: `${role} REACHED /manage — leader gate did not redirect. Privilege escalation risk.`,
                 })
                 testInfo.annotations.push({ type: 'severity', description: 'BLOCKER' })
             }
-            expect(finalPath, `${role} (non-admin) must be redirected off /manage/library-review`).not.toBe(
-                '/manage/library-review',
-            )
-            // Acceptable destinations: /manage (redirect target) or /login
+            expect(finalPath, `${role} (not a band leader) must be redirected off /manage`).not.toBe('/manage')
+            // Acceptable destinations: /setlists (redirect target) or /login
             // (cookie-only degrade scenario where session is rejected).
             expect(
-                ['/manage', '/login'].includes(finalPath) || finalPath.startsWith('/login?'),
-                `${role} redirect target must be /manage or /login; got ${finalPath}`,
+                finalPath === '/setlists' || finalPath === '/login' || finalPath.startsWith('/login?'),
+                `${role} redirect target must be /setlists or /login; got ${finalPath}`,
             ).toBe(true)
-            // Admin heading must NOT be present in the rendered destination.
-            await expect(
-                page.getByRole('heading', { name: 'Library Review' }),
-                `${role} must not see the admin Library Review heading`,
-            ).toHaveCount(0)
         })
     }
 
-    // The 4th cell — admin REACHES the admin surface. Self-skips when the
-    // secret is absent (deployment without MCP_ADMIN_TEST_SESSION_SECRET).
-    test('admin reaches /manage/library-review (positive 4-of-4 cell, via secret-gated session)', async ({
+    test('band_leader reaches /manage', async ({ roleGate, page }) => {
+        await roleGate.gotoAs('band_leader', '/manage', { webSdk: 'optional' })
+        expect(new URL(page.url()).pathname, 'band_leader must REACH /manage').toBe('/manage')
+        await expect(page.getByRole('heading', { name: 'Manage' })).toBeVisible()
+    })
+
+    // The 4th cell — admin. Self-skips when the secret is absent (deployment
+    // without MCP_ADMIN_TEST_SESSION_SECRET).
+    test('admin reaches /manage (positive 4-of-4 cell, via secret-gated session)', async ({
         roleGate,
         page,
     }, testInfo) => {
@@ -95,22 +94,16 @@ test.describe('role-gate-matrix — 4-of-4 roles × admin surfaces', () => {
             !adminTestSessionAvailable,
             'admin cell needs MCP_ADMIN_TEST_SESSION_SECRET (the secret-gated admin-test-session surface). Set it to enable 4-of-4.',
         )
-        await roleGate.gotoAs('admin', '/manage/library-review', { webSdk: 'optional' })
+        await roleGate.gotoAs('admin', '/manage', { webSdk: 'optional' })
         const finalPath = new URL(page.url()).pathname
-        if (finalPath !== '/manage/library-review') {
+        if (finalPath !== '/manage') {
             testInfo.annotations.push({
                 type: 'FINDING',
-                description: `admin session did NOT reach /manage/library-review (landed ${finalPath}) — admin gate may be over-restrictive OR the admin_test session lacks the admin claim.`,
+                description: `admin session did NOT reach /manage (landed ${finalPath}) — the gate may be over-restrictive OR the admin_test session lacks the admin claim.`,
             })
             testInfo.annotations.push({ type: 'severity', description: 'HIGH' })
         }
-        expect(finalPath, 'admin must REACH /manage/library-review (not be redirected)').toBe(
-            '/manage/library-review',
-        )
-        // The admin Library Review surface must actually render for admin.
-        await expect(
-            page.getByRole('heading', { name: 'Library Review' }),
-            'admin must see the Library Review heading the non-admin roles were denied',
-        ).toBeVisible()
+        expect(finalPath, 'admin must REACH /manage (not be redirected)').toBe('/manage')
+        await expect(page.getByRole('heading', { name: 'Manage' })).toBeVisible()
     })
 })

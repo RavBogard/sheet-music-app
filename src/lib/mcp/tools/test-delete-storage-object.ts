@@ -163,7 +163,7 @@ export async function testDeleteStorageObject(
             "storage_delete_failed",
             "No Storage object found at any candidate path for this fileId — already deleted or never uploaded.",
             { fileId },
-            "The library_index row exists with isTest:true but no Storage object backs it — call upload_chart first or inspect /api/admin/library-review for the fixture state.",
+            "The library_index row exists with isTest:true but no Storage object backs it — call upload_chart first, or read the row with get_chart_status.",
         )
     }
 

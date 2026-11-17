@@ -74,7 +74,7 @@ export const CATEGORIES = {
     D: {
         label: "Library workflow + chart search",
         severity: "MED",
-        specs: ["library-ipad.spec.ts", "library-review-flow.spec.ts"],
+        specs: ["library-ipad.spec.ts"],
     },
     E: {
         label: "Setlist editing + chart-bind picker",

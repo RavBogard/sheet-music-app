@@ -64,10 +64,8 @@ describe("surfaceFor — the partition", () => {
         }
     })
 
-    it("keeps editing a library row on authoring even though the AI review queue is ops", () => {
+    it("keeps editing a library row on authoring", () => {
         expect(surfaceFor("edit_library_entry")).toBe("authoring")
-        expect(surfaceFor("edit_enrichment")).toBe("ops")
-        expect(surfaceFor("list_review_queue")).toBe("ops")
     })
 
     it("sends an unknown tool to authoring — a new tool must not vanish", () => {
@@ -124,13 +122,12 @@ describe("forSurface — registration is filtered, nothing else is", () => {
 
 describe("OPS_TOOLS — the list itself", () => {
     it("has no duplicates and is not accidentally empty or enormous", () => {
-        expect(OPS_TOOLS.size).toBe(52) // BET-6: + backfill_week_keys; 2026-11-03: + apply_recording_tempos
+        expect(OPS_TOOLS.size).toBe(39) // BET-6: + backfill_week_keys; 2026-11-03: + apply_recording_tempos; 2026-11-17: - 13 AI enrichment tools
     })
 
     it("keeps the hygiene sweeps that still find live drift", () => {
         for (const t of [
             "backfill_content_hash",
-            "backfill_heal_metadata",
             "backfill_track_mimetype",
             "backfill_library_index",
             "backfill_setlist_test_flag",

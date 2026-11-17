@@ -49,8 +49,7 @@ import { DEFAULT_ORG_ID } from "@/lib/org/registry"
  *      tags, leadMusician, composer, arranger, bondCorrectionHistory) and
  *      RECOMPUTES the derived dedup/search fields (normalizedName, stem,
  *      titleSpecificity) from the title. Sets: mimeType, fileSize,
- *      source:'salvage', status:'active', salvagedAt, enrichmentStatus:
- *      'pending' (so the AI enrichment pass re-runs on the new bytes).
+ *      source:'salvage', status:'active', salvagedAt.
  *   5. Compensating-delete on Firestore failure — rolls Storage back so we
  *      never leave a reverse orphan (bytes-without-index-update).
  *   6. `library_signals/latest` broadcast — invalidates in-tab caches.

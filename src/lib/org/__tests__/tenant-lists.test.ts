@@ -12,7 +12,6 @@ import { getAllTemplateKeys, TEMPLATE_LABELS } from "@/lib/liturgical-templates"
 import { listBooks } from "@/lib/books/registry"
 import { listBooksTool } from "@/lib/mcp/tools/books"
 import { parseTemplateRequest } from "@/lib/template-parser"
-import { systemInstructionFor } from "@/lib/library/ai-enrichment"
 import {
     KNOWN_COLLECTIONS,
     isKnownCollection,
@@ -96,16 +95,6 @@ describe("a third tenant's library sections come from its config", () => {
             { id: "core", label: "Charts" },
             { id: "uploads", label: "Uploads" },
         ])
-    })
-})
-
-describe("a third tenant's Gemini prompt is its own", () => {
-    it("names the tenant, not CRC", () => {
-        primeTestOrg()
-        const p = systemInstructionFor("testshul")
-        expect(p.startsWith("You are an enrichment assistant for the Test Shul Tehila music library.")).toBe(true)
-        expect(p).toContain("\n\nLibrary naming conventions (Test Shul Tehila music library):")
-        expect(p).not.toMatch(/CRC|Central Reform|David/)
     })
 })
 

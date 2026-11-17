@@ -16,23 +16,20 @@ import { getFirestore } from "firebase-admin/firestore"
  * `executeSetlistImport`, the testable core of POST /api/setlists/import/execute.
  *
  * Pre-fix the route wrote `library_index/{newLibraryId}` directly via 11-field
- * literal — diverging from PCU's 18+ field shape, skipping enrichment-emit,
- * and writing no `songs/{id}.defaults`. The drive-id-write-symmetry fix at
+ * literal — diverging from PCU's 18+ field shape and writing no `songs/{id}.defaults`. The drive-id-write-symmetry fix at
  * master `0c0392a72` patched ONE field (`driveFileId`) onto the divergent
  * shape; THIS lane closes the divergence entirely.
  *
  * Tests assert:
  *  (a) new rows have full PCU 18+ field shape (incl. `nameLower`,
  *      `normalizedName`, `stem`, `titleSpecificity`,
- *      `bondCorrectionHistory`, `enrichmentStatus: 'pending'`, `driveFileId`,
- *      `collection: 'uploads'`)
+ *      `bondCorrectionHistory`, `driveFileId`, `collection: 'uploads'`; no
+ *      `enrichmentStatus` — AI enrichment is gone)
  *  (b) `songs/{id}.defaults.{key,lead}` is populated when the parsed row
  *      carried `item.key` / `item.performer` (F-5 mirror)
  *  (c) a `duplicate_exact` or `duplicate_similar` collision in the middle of
  *      a multi-chart import returns a per-row outcome and does NOT abort the
  *      whole import (auditor's specific call-out for this lane)
- *  (d) `emitLibraryRowCreated` fires for every new row (AI enrichment
- *      subscriber gate)
  */
 
 // ─── Mock Firebase Storage (mirror drive-sync.emulator.test.ts pattern) ───
@@ -67,21 +64,6 @@ vi.mock("@/lib/firebase-storage", () => ({
     deleteStorageObjectAtPath: (...args: unknown[]) =>
         mockDeleteStorageObjectAtPath(...(args as [string])),
 }))
-
-// Spy on emitLibraryRowCreated — assert (d). The real implementation is a
-// fire-and-forget event bus; spying lets us verify it was called once per
-// successful PCU write without exercising any subscriber.
-const mockEmit = vi.fn()
-vi.mock("@/lib/library/library-events", async (orig) => {
-    const real =
-        (await orig()) as typeof import("@/lib/library/library-events")
-    return {
-        ...real,
-        emitLibraryRowCreated: (e: unknown) => {
-            mockEmit(e)
-        },
-    }
-})
 
 // PCU's safelyDeleteLibraryObject uses bond-aware logic that pokes Firestore
 // + Storage; in this test we never need to exercise the compensating-delete
@@ -177,7 +159,6 @@ describe("executeSetlistImport — F-3 + F-5 (emulator)", () => {
         }
         storageState.clear()
         driveFiles.clear()
-        mockEmit.mockClear()
     })
 
     afterEach(() => {
@@ -191,7 +172,7 @@ describe("executeSetlistImport — F-3 + F-5 (emulator)", () => {
     // ────────────────────────────────────────────────────────────────────
     // (a) — new rows minted via setlist-import now have full PCU shape
     // ────────────────────────────────────────────────────────────────────
-    it("(a) new row has full PCU 18+ field shape incl. driveFileId + collection + enrichmentStatus", async () => {
+    it("(a) new row has full PCU 18+ field shape incl. driveFileId + collection", async () => {
         const driveId = "drive-id-a1"
         driveFiles.set(driveId, makePdf(driveId))
 
@@ -235,7 +216,7 @@ describe("executeSetlistImport — F-3 + F-5 (emulator)", () => {
             correctedTo: 0,
             correctedAwayFrom: 0,
         })
-        expect(data.enrichmentStatus).toBe("pending")
+        expect(data.enrichmentStatus).toBeUndefined()
         expect(data.collection).toBe("uploads")
         expect(data.driveFileId).toBe(driveId) // coder-3 F-1 preserved through PCU route
         expect(data.source).toBe("upload")
@@ -398,61 +379,6 @@ describe("executeSetlistImport — F-3 + F-5 (emulator)", () => {
         expect(songTracks).toHaveLength(3)
         const bondedTracks = songTracks.filter((t) => !!t.fileId)
         expect(bondedTracks).toHaveLength(2) // dupe stayed unbonded
-    })
-
-    // ────────────────────────────────────────────────────────────────────
-    // (d) — emitLibraryRowCreated fires for each new row (AI subscriber gate)
-    // ────────────────────────────────────────────────────────────────────
-    it("(d) emitLibraryRowCreated fires once per successful PCU write (AI enrichment subscriber gate)", async () => {
-        const idA = "drive-id-d1"
-        const idB = "drive-id-d2"
-        driveFiles.set(idA, makePdf(idA))
-        driveFiles.set(idB, makePdf(idB))
-
-        const result = await executeSetlistImport({
-            orgId: "crc",
-            db: db(),
-            setName: "F-3 emit test",
-            uploaderUid: UPLOADER_UID,
-            uploaderEmail: UPLOADER_EMAIL,
-            items: [
-                {
-                    type: "song",
-                    title: "Mi Shebeirach",
-                    chartUrl: driveUrl(idA),
-                    key: null,
-                    performer: null,
-                    referenceLink: null,
-                    chartError: null,
-                    libraryMatchId: null,
-                    libraryMatchName: null,
-                },
-                {
-                    type: "song",
-                    title: "Shalom Rav",
-                    chartUrl: driveUrl(idB),
-                    key: null,
-                    performer: null,
-                    referenceLink: null,
-                    chartError: null,
-                    libraryMatchId: null,
-                    libraryMatchName: null,
-                },
-            ],
-        })
-
-        expect(result.importOutcomes.every((o) => o.status === "imported")).toBe(
-            true,
-        )
-        // 2 successful writes → 2 emits. Pre-fix the legacy direct-write
-        // path never called emitLibraryRowCreated, so enrichment never ran.
-        expect(mockEmit).toHaveBeenCalledTimes(2)
-        const emitArgs = mockEmit.mock.calls.map((c) => c[0])
-        const fileIds = emitArgs.map((e) => e.fileId).sort()
-        const outcomeIds = result.importOutcomes
-            .map((o) => o.fileId!)
-            .sort()
-        expect(fileIds).toEqual(outcomeIds)
     })
 
     // ────────────────────────────────────────────────────────────────────

@@ -358,8 +358,6 @@ export interface ImportChartFromDriveDryRunResult {
     dedupMatchedRow:
         | { fileId: string; name: string; matchKind: "exact" | "similar" }
         | null
-    /** Whether the AI enrichment subscriber would run on the committed row. */
-    aiEnrichmentPlan: { wouldRun: boolean; reason: string }
 }
 
 /**
@@ -680,7 +678,6 @@ export async function importChartFromDrive(
         const dedup = await probeDedup(db, title, org)
         const ext = predictedExtensionFor(mimeType, originalFileName)
         const targetStoragePath = `library/upload-<new-uuid>${ext}`
-        const wouldRunAi = !!process.env.GEMINI_API_KEY
         return {
             ok: true,
             wouldCommit: false,
@@ -694,12 +691,6 @@ export async function importChartFromDrive(
             dedupScore: previous ? null : dedup.score,
             dedupMatchedRow: previous ? null : dedup.matchedRow,
             ...(previous ? { revisionOf: previous.id } : {}),
-            aiEnrichmentPlan: {
-                wouldRun: wouldRunAi,
-                reason: wouldRunAi
-                    ? "GEMINI_API_KEY is configured; the post-import subscriber will run."
-                    : "GEMINI_API_KEY is not set; the post-import subscriber will skip enrichment (status stays 'pending').",
-            },
         }
     }
 

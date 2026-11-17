@@ -32,7 +32,7 @@ vi.mock("@/lib/file-fetcher", () => ({
 import { createSetlist, addTrackToSetlist } from "../tools/setlist-write"
 import { commitStagedChanges, proposeSetlistChanges, type StageRecord } from "../tools/propose-changes"
 import { flagBond, recordBondCorrection } from "../tools/bond-corrections"
-import { listReviewQueue } from "../tools/library-review"
+import { archiveNonChartArtifacts } from "../tools/archive-nonchart-artifacts"
 import { listMusicians, findUser } from "../tools/roster"
 import { listMonitorBuses } from "../tools/monitor"
 import { loadMonitorUser } from "../server-monitor"
@@ -149,11 +149,14 @@ describe("multi-tenant P2 lane 3 — MCP tenant roles + writer orgId (emulator)"
     })
 
     it("a dual member (crc band_leader + BL admin) gets admin-only tools only with a BL token", async () => {
-        const crc = await listReviewQueue(DUAL, {}, CRC)
+        // A read-only dry run of an admin-only tool (targeted mode, one id
+        // that does not exist), so the only thing that differs is the gate.
+        const args = { fileIds: ["p2-no-such-row"] }
+        const crc = await archiveNonChartArtifacts(DUAL, args, CRC)
         expect(crc).toMatchObject({ ok: false, error: { machine_code: "forbidden_role" } })
         expect((crc as { error: { context?: { callerRole?: string } } }).error).toBeTruthy()
 
-        const bl = await listReviewQueue(DUAL, {}, BL)
+        const bl = await archiveNonChartArtifacts(DUAL, args, BL)
         expect(bl).toMatchObject({ ok: true })
     })
 

@@ -1,11 +1,7 @@
 // @vitest-environment node
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 
 process.env.FIREBASE_STORAGE_BUCKET = "demo-p5-bytes.appspot.com"
-vi.mock("@/lib/library/library-events", async (orig) => ({
-    ...(await orig<typeof import("@/lib/library/library-events")>()),
-    emitLibraryRowCreated: vi.fn(),
-}))
 
 import { deleteApp, getApps, initializeApp, type App } from "firebase-admin/app"
 import { getFirestore, type Firestore } from "firebase-admin/firestore"

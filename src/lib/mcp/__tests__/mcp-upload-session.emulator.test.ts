@@ -99,11 +99,6 @@ import {
     commitChunkedChartUpload,
 } from "../tools/library-upload-session"
 import { bareStem, titleSpecificity } from "@/lib/mcp/title-specificity"
-import {
-    onLibraryRowCreated,
-    __resetLibraryEventHandlersForTesting,
-    type LibraryRowCreatedEvent,
-} from "@/lib/library/library-events"
 import { mirrorLegacyRoles } from "@/test-stubs/mirror-legacy-roles"
 
 describe("MCP chunked-upload session tools (emulator)", () => {
@@ -149,7 +144,6 @@ describe("MCP chunked-upload session tools (emulator)", () => {
         mockStagedDelete.mockClear()
         mockProcessChartUpload.mockReset()
         stagedStore.clear()
-        __resetLibraryEventHandlersForTesting()
     })
 
     // SEC-02: role gates read memberships only; give each seeded person the
@@ -485,12 +479,6 @@ describe("MCP chunked-upload session tools (emulator)", () => {
         mockStagedExists.mockResolvedValueOnce([true])
         mockStagedDownload.mockResolvedValueOnce([staged])
 
-        // Capture the library.row.created emit (re-arms AI enrichment on heal).
-        const healEvents: LibraryRowCreatedEvent[] = []
-        onLibraryRowCreated((e) => {
-            healEvents.push(e)
-        })
-
         const r = await finalizeChartUpload(ADMIN, {
             uploadSessionId: sessionId,
             targetFileId: ORPHAN,
@@ -517,27 +505,19 @@ describe("MCP chunked-upload session tools (emulator)", () => {
         expect(row.key).toBe("G")
         expect(row.bpm).toBe(96)
 
-        // Derived dedup/search fields recomputed from the title + enrichment
-        // re-armed (coder-1 §3 delta fix). chart-heal strips the trailing
+        // Derived dedup/search fields recomputed from the title (coder-1 §3
+        // delta fix). chart-heal strips the trailing
         // ".pdf" before deriving keys, so they reflect "Adon Olam (Folk)"
         // (→ stem "adon olam", a generic liturgical stem). siblingsInCatalog
         // === 1 (the orphan had no stem at compute time).
-        const HEAL_NAME = "Adon Olam (Folk).pdf"
         const CLEAN = "Adon Olam (Folk)"
         expect(row.normalizedName).toBe(
             CLEAN.toLowerCase().replace(/[^a-z0-9]/g, ""),
         )
         expect(row.stem).toBe(bareStem(CLEAN))
         expect(row.titleSpecificity).toBe(titleSpecificity(CLEAN, 1))
-        expect(row.enrichmentStatus).toBe("pending")
-
-        // library.row.created emitted with the target row's collection. The
-        // event title carries the row's actual name (extension not stripped).
-        expect(healEvents).toHaveLength(1)
-        expect(healEvents[0].fileId).toBe(ORPHAN)
-        expect(healEvents[0].title).toBe(HEAL_NAME)
-        expect(healEvents[0].collection).toBe("supplemental")
-        expect(healEvents[0].contentHash).toMatch(/^[0-9a-f]{64}$/)
+        // No AI enrichment stamp (AI enrichment is gone).
+        expect(row.enrichmentStatus).toBeUndefined()
 
         // songs mirror flipped; bonded track untouched (bond preserved).
         const song = (await db().collection("songs").doc(ORPHAN).get()).data()!
