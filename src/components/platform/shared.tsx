@@ -219,7 +219,6 @@ export function StatusChip({ tone, children }: { tone: "good" | "warn" | "bad" |
 export const FEATURE_LABELS: Record<string, { label: string; hint: string }> = {
     mixer: { label: "Mixer", hint: "Wedge mixes from phones and iPads" },
     driveInbox: { label: "Drive chart inbox", hint: "Charts dropped in a shared Drive folder come into the library" },
-    schedulingEmails: { label: "Scheduling emails", hint: "Reminder emails about who plays when" },
     todayFeed: { label: "Today feed", hint: "Today's services on the home page" },
     notifyBand: { label: "Notify band", hint: "Send a setlist to the band" },
     perform: { label: "Perform mode", hint: "Charts full screen on iPads" },

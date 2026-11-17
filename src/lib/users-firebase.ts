@@ -246,10 +246,7 @@ export async function updateUserRole(
 /**
  * Update user's profile display name.
  *
- * v4.4 DL-010: routes through /api/profile/update so the server can fan out the
- * new name to every scheduling_assignments doc (musicianName / assignedByName)
- * in the same round-trip. Direct Firestore writes from the browser would leave
- * the denormalized copies drifting until the assignment reached a terminal state.
+ * Routes through /api/profile/update (the server writes users/{uid}).
  *
  * The `uid` parameter is retained for backwards-compatibility with callers but
  * the server route uses ctx.auth.uid — users can only self-update.

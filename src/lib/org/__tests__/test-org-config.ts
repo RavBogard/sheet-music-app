@@ -36,8 +36,6 @@ export function makeTestOrgConfig(overrides: Partial<OrgConfigInput> = {}): OrgC
             direction: "rtl",
             timeZone: "Asia/Jerusalem",
             calendar: "israel",
-            reminderLocalHour: 5,
-            reminderUtcHour: null,
         },
         email: { ...crc.email, fromName: "Test Shul Music", footerText: "Test Shul Tehila" },
         legal: { operatorName: "Test Shul Tehila", contactEmail: "music@testshul.example", useCrcText: false },

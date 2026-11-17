@@ -84,13 +84,6 @@ export const LocaleSchema = z.object({
     timeZone: z.string().min(1),
     /** Hebcal parasha schedule. */
     calendar: z.enum(["diaspora", "israel"]).default("diaspora"),
-    /** Local hour (0-23) the daily scheduling reminder goes out. */
-    reminderLocalHour: z.number().int().min(0).max(23).default(5),
-    /**
-     * Pin the reminder to a UTC hour instead (CRC: 10, today's cron time, kept
-     * as-is rather than "fixed" to local 05:00 — CRC unchanged wins).
-     */
-    reminderUtcHour: z.number().int().min(0).max(23).nullable().default(null),
     /**
      * Phase 7: the zone the UI formats dates in. "tenant": `timeZone` (a
      * Hebrew tenant sees Asia/Jerusalem wherever the viewer is). "runtime": the
@@ -119,11 +112,10 @@ export const LegalSchema = z.object({
     useCrcText: z.boolean().default(false),
 })
 
-export const FEATURE_KEYS = ["mixer", "driveInbox", "schedulingEmails", "todayFeed", "notifyBand", "perform"] as const
+export const FEATURE_KEYS = ["mixer", "driveInbox", "todayFeed", "notifyBand", "perform"] as const
 export const FeaturesSchema = z.object({
     mixer: z.boolean().default(false),
     driveInbox: z.boolean().default(false),
-    schedulingEmails: z.boolean().default(false),
     todayFeed: z.boolean().default(false),
     notifyBand: z.boolean().default(false),
     perform: z.boolean().default(true),

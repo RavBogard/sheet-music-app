@@ -54,7 +54,7 @@ export function newTenantDefaults(orgId: OrgId, name: string, subdomain: string)
         locale: { language: "en", direction: "ltr", timeZone: "America/Chicago" },
         email: { fromName: name, headerBg: NEW_TENANT_THEME, footerText: name },
         legal: { operatorName: "Rabbi Daniel Bogard" },
-        features: { mixer: false, driveInbox: false, schedulingEmails: false, todayFeed: false, notifyBand: false, perform: true },
+        features: { mixer: false, driveInbox: false, todayFeed: false, notifyBand: false, perform: true },
         library: {
             collections: [
                 { id: "core", label: "Charts" },

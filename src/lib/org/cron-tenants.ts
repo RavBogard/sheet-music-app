@@ -15,7 +15,7 @@ import type { OrgId } from "@/lib/org/types"
  * so CRC and BL never lose a run to it.
  *
  * Each returned tenant's config is resolved through getOrgConfig, which primes
- * the synchronous cache the locale helpers (orgTimeZone, reminderDue) read.
+ * the synchronous cache the locale helpers (orgTimeZone) read.
  */
 export async function cronTenantIds(): Promise<OrgId[]> {
     const ids: OrgId[] = [...CODE_ORG_IDS]

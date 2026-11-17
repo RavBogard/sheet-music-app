@@ -128,21 +128,10 @@
         "phonePlaceholder": "(555) 123-4567",
         "phoneHint": "For SMS scheduling notifications (optional)",
         "notifications": "Scheduling Notifications",
-        "email": "Email",
-        "emailDescription": "Assignment and reminder emails",
         "sms": "SMS",
         "smsDescription": "Text message notifications",
         "push": "Push",
-        "pushDescription": "Browser push notifications",
-        "calendarTitle": "Calendar Subscription",
-        "copy": "Copy",
-        "calendarCopied": "Calendar URL copied!",
-        "calendarAddHint": "Add this URL to Google Calendar, Apple Calendar, or Outlook to see your {community} schedule.",
-        "calendarGenerated": "Calendar feed URL generated!",
-        "calendarGenerateFailed": "Failed to generate calendar URL",
-        "calendarGenerating": "Generating...",
-        "calendarGenerate": "Generate Calendar URL",
-        "calendarGenerateHint": "Generate a URL to subscribe to your {community} schedule in your personal calendar app."
+        "pushDescription": "Browser push notifications"
     },
     "performThemeHint": "Perform mode follows this setting. Choose Dark for a dim stage.",
     "helpDescription": "Step-by-step guides for the band iPads, the sound system and each service."

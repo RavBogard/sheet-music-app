@@ -65,12 +65,11 @@ const PERSONAS: Persona[] = [
 const RANK: Record<string, number> = { ad: 4, bl: 3, mu: 2, me: 1, pe: 0 }
 
 /** What the rules require of the caller for each query. */
-type Need = "pe" | "me" | "bl" | "ad" | "self" | "po-only"
+type Need = "pe" | "me" | "bl" | "ad" | "po-only"
 
 function allowed(p: Persona, need: Need): boolean {
     if (p.po) return true
     if (!p.m) return false
-    if (need === "self") return true
     if (need === "po-only") return false
     const code = p.m[p.host]
     return code !== undefined && RANK[code] >= RANK[need]
@@ -107,12 +106,6 @@ const CASES: Record<keyof typeof CLIENT_QUERIES, Case> = {
     auditLogsQuery: { need: "ad", visible: own, build: (db, p) => CLIENT_QUERIES.auditLogsQuery(db, p.host, 20) },
     partPresetsQuery: { need: "me", visible: own, build: (db, p) => CLIENT_QUERIES.partPresetsQuery(db, p.host) },
     lastSyncRunQuery: { need: "ad", visible: own, build: (db, p) => CLIENT_QUERIES.lastSyncRunQuery(db, p.host) },
-    tenantAssignmentsQuery: { need: "bl", visible: own, build: (db, p) => CLIENT_QUERIES.tenantAssignmentsQuery(db, p.host) },
-    myAssignmentsQuery: {
-        need: "self",
-        visible: (row, p) => row.musicianUid === p.id,
-        build: (db, p) => CLIENT_QUERIES.myAssignmentsQuery(db, p.id),
-    },
     sharedCollectionsQuery: {
         need: "me",
         visible: (row, p) => [...(row.sharedWith ?? []), ...(row.assignedTo ?? [])].includes(p.host),
@@ -186,14 +179,6 @@ describe("client queries × personas vs firestore.rules", () => {
                 await db.doc(`auditLogs/log-${org}`).set({ orgId: org, timestamp: NOW })
                 await db.doc(`part_presets/pp-${org}`).set({ orgId: org, patterns: ["x"] })
                 await db.doc(`sync_runs/run-${org}`).set({ orgId: org, startedAt: new Date(NOW).toISOString(), status: "completed" })
-                for (const p of PERSONAS) {
-                    await db.doc(`scheduling_assignments/sa-${org}-${p.id}`).set({
-                        orgId: org,
-                        musicianUid: p.id,
-                        status: "pending",
-                        assignedAt: NOW,
-                    })
-                }
                 await db.doc(`collections/col-${org}`).set({ ownerOrgId: org, sharedWith: [other], assignedTo: [other] })
                 await db.doc(`library_index/li-${org}`).set({ orgId: org, visibleToOrgs: [org, other] })
             }

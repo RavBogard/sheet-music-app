@@ -12,7 +12,6 @@ vi.mock("@/lib/auth-context", () => ({ useAuth: () => ({ user: { uid: "u1" } }) 
 vi.mock("@/lib/setlist-firebase", () => ({
     createSetlistService: () => ({ createSetlist: vi.fn(), findLastMatchingService: vi.fn().mockResolvedValue(null), cloneSetlist: vi.fn() }),
 }))
-vi.mock("@/lib/scheduling-firebase", () => ({ assignMusicians: vi.fn() }))
 vi.mock("@/lib/library-store", () => ({ useLibraryStore: { getState: () => ({ allFiles: [] }) } }))
 vi.mock("@/lib/template-firebase", () => ({ useCustomTemplates: () => ({ overrides: {} }) }))
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn(), loading: vi.fn(), dismiss: vi.fn() } }))

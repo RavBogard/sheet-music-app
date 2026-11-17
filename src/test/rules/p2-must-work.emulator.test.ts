@@ -15,8 +15,6 @@ import { A, B, busCmd, dbOf, EVENT_DAY, makeEnv, matrixCmd, pendingCmds, seedFix
  *   T1/T2/T3   tracks    setlistId==  (any tenant's setlist — Perform links)
  *   G1         songs     orgId==
  *   R1         recordings orgId==, songId==, orderBy createdAt desc
- *   SA1        scheduling_assignments musicianUid==me, status in, orderBy assignedAt desc
- *   SA3        scheduling_assignments orgId==, status in, orderBy assignedAt desc (≥bl)
  *   TK1        tasks     assigneeId==me, status==, orderBy createdAt desc, limit 5
  *   TM1/TM2    templates get by key (existing and missing); orgId==
  *   AL1        auditLogs orgId==, orderBy timestamp desc, limit 20 (admin)
@@ -59,7 +57,6 @@ function readsFor(p: Persona, own: string): Array<[string, Op]> {
         ["T1 tracks orgId==own + setlistId==own setlist", (db) => db.collection("tracks").where("orgId", "==", own).where("setlistId", "==", ownSetlist).get()],
         ["G1 songs orgId==own", (db) => db.collection("songs").where("orgId", "==", own).get()],
         ["R1 recordings orgId==own songId== orderBy createdAt desc", (db) => db.collection("recordings").where("orgId", "==", own).where("songId", "==", own === A ? "songA" : "songB").orderBy("createdAt", "desc").get()],
-        ["SA1 own assignments", (db) => db.collection("scheduling_assignments").where("musicianUid", "==", p).where("status", "in", ["pending", "confirmed"]).orderBy("assignedAt", "desc").get()],
         ["TK1 tasks by assignee", (db) => db.collection("tasks").where("assigneeId", "==", p).where("status", "==", "todo").orderBy("createdAt", "desc").limit(5).get()],
         ["TM2 templates orgId==own", (db) => db.collection("templates").where("orgId", "==", own).get()],
         ["TM1 get template by key (existing)", (db) => db.doc(`templates/${tplKey}`).get()],
@@ -81,7 +78,6 @@ function readsFor(p: Persona, own: string): Array<[string, Op]> {
 
 function leaderReadsFor(own: string): Array<[string, Op]> {
     return [
-        ["SA3 assignments orgId==own status in orderBy assignedAt desc", (db) => db.collection("scheduling_assignments").where("orgId", "==", own).where("status", "in", ["pending", "confirmed"]).orderBy("assignedAt", "desc").get()],
         ["memberships tenantId==own (≥bl)", (db) => db.collection("memberships").where("tenantId", "==", own).get()],
         ["contacts orgId==own", (db) => db.collection("contacts").where("orgId", "==", own).get()],
         ["setlistTemplates orgId==own", (db) => db.collection("setlistTemplates").where("orgId", "==", own).get()],
@@ -148,18 +144,10 @@ describe("P2 §7.5 — CRC and BL parity (must still work)", () => {
         expect(a.docs.map((d) => d.id)).toEqual(["songA"])
         const b = await db("bBL").collection("setlists").where("orgId", "==", B).orderBy("date", "desc").get()
         expect(b.docs.map((d) => d.id)).toEqual(["sB"])
-        const mine = await db("aMu").collection("scheduling_assignments").where("musicianUid", "==", "aMu").get()
-        expect(mine.docs.map((d) => d.id)).toEqual(["asgA"])
     })
 
-    it("aMu reads its own assignment, availability and task by id", async () => {
-        await assertSucceeds(db("aMu").doc("scheduling_assignments/asgA").get())
-        await assertSucceeds(db("aMu").doc("musician_availability/avA").get())
+    it("aMu reads its own task by id", async () => {
         await assertSucceeds(db("aMu").doc("tasks/taskA").get())
-    })
-
-    it("bSE reads its own B assignment by query (cross-tenant musician reads its own rows)", async () => {
-        await assertSucceeds(db("bSE").collection("scheduling_assignments").where("musicianUid", "==", "bSE").get())
     })
 
     // Setlist sync PR 3: setlists/*, tracks/* and users/{uid}/setlists are
@@ -200,9 +188,6 @@ describe("P2 §7.5 — CRC and BL parity (must still work)", () => {
                 await c.firestore().doc("setlists/me1").set({ name: "Mine", ownerId: "aMe", orgId: A })
             })
             await assertSucceeds(db("aMe").doc("setlists/me1/history/h1").set({ action: "renamed", timestamp: 2 }))
-        })
-        it("creates own musician_availability stamped A", async () => {
-            await assertSucceeds(db("aMe").doc("musician_availability/meAv").set({ musicianUid: "aMe", orgId: A, startDate: 1 }))
         })
     })
 

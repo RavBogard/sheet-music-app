@@ -65,7 +65,6 @@ import { getOrgBranding } from "@/lib/org/branding"
 import { verifyBearer } from "@/lib/mcp/auth"
 import { requireAuth } from "@/lib/api-auth"
 import { getServerUser } from "@/lib/server-auth"
-import { sendSchedulingAssignmentSMS } from "@/lib/sms"
 
 beforeEach(() => {
     clearPrimedOrgConfigs()
@@ -140,19 +139,6 @@ describe("server entry points prime the tenant they resolve", () => {
         headerStore.set("x-org-id", "testshul")
         const user = await getServerUser()
         expect(user?.orgId).toBe("testshul")
-        expect(getOrgConfig).toHaveBeenCalledWith("testshul")
-    })
-
-    it("SMS senders prime the tenant they are called with", async () => {
-        await sendSchedulingAssignmentSMS({
-            to: "+15555550100",
-            musicianName: "A B",
-            setlistName: "S",
-            eventDate: "2026-10-16",
-            status: "pending",
-            scheduleUrl: "https://testshul.vercel.app/schedule",
-            org: "testshul",
-        })
         expect(getOrgConfig).toHaveBeenCalledWith("testshul")
     })
 })

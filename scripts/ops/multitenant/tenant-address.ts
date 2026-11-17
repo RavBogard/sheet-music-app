@@ -129,7 +129,7 @@ function throwawayConfig(id: string) {
         locale: { language: "en", direction: "ltr", timeZone: "America/Chicago" },
         email: { fromName: `Probe Tenant ${id}`, headerBg: "#4f46e5", footerText: "" },
         legal: { operatorName: "Rabbi Daniel Bogard" },
-        features: { mixer: false, driveInbox: false, schedulingEmails: false, todayFeed: false, notifyBand: false, perform: true },
+        features: { mixer: false, driveInbox: false, todayFeed: false, notifyBand: false, perform: true },
         library: {},
         liturgy: {},
         congregationDefaults: { name: `Probe Tenant ${id}`, shortName: `Probe ${id}`, themeColor: "#4f46e5" },

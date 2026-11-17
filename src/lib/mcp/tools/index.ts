@@ -143,15 +143,7 @@ import {
     listMusicians,
     findUser,
     getMusicianProfile,
-    listMusiciansOnDate,
-    listPendingAssignments,
-    suggestMusicians,
-    suggestBand,
-    assignMusician,
-    unassignMusician,
-    respondToAssignment,
 } from "./roster"
-import { listServicePersonnel } from "./service-personnel"
 import { updateSong } from "./song-metadata"
 import { listBooksTool, lookupBookPageTool } from "./books"
 import { getSongHistoryTool, exportSetlistsTool } from "./history"
@@ -4247,43 +4239,27 @@ export function registerChartUploadTools(server: McpServer): void {
 }
 
 /**
- * Cycle-3 c1 — roster + scheduling MCP tools. Wraps the existing in-app
- * scheduling system (six HTTP routes + state machine + ranking engine)
- * so Daniel + David can manage rosters, assignments, and "who's playing
- * tonight" via Claude Desktop instead of opening the in-app /schedule
- * page. Read + assignment tools only — no set_unavailability (deferred
- * to c1.5).
- *
- * Auth model:
- *   - Trusted-leader (admin OR band_leader) on every tool except
- *     respond_to_assignment.
- *   - respond_to_assignment is musician-self-write — any authenticated
- *     user may accept/decline their OWN pending assignment. The
- *     own-assignment gate is `assignment.musicianUid === callerUid`.
- *   - assign_musician + unassign_musician default `dryRun: true` and
- *     require `force: true` for real writes (F-05 standing rule — these
- *     trigger email + SMS + push fan-out).
- *   - Trusted-leader rate-limit bypass per
- *     [[feedback_admin_rate_limit_bypass]] on writes.
+ * Roster MCP tools (read-only): list_musicians, find_user,
+ * get_musician_profile. Trusted-leader (admin OR band_leader) on each.
  */
 export function registerRosterTools(server: McpServer): void {
     server.registerTool(
         "list_musicians",
         {
             description:
-                "Admin/band_leader only — enumerate every user with a configured `musicianProfile.instrument`. The canonical 'who is in the band' query, returning displayName, role, instrument (slug + label), schedulingTier ('core' | 'regular' | 'guest'), phone, and notification preferences (email/sms/push booleans with sensible defaults: email=true, sms=false, push=true). Optional filters: `instrument` (slug key like 'acoustic_guitar' OR a fragment that matches the preset label/slug like 'guitar') narrows to one instrument; `schedulingTier` narrows to one tier. Sorted alphabetically by displayName. Use this BEFORE assign_musician to find the right uid. Returns `{ok: true, musicians: [...], count}`.",
+                "Admin/band_leader only — enumerate every user with a configured `musicianProfile.instrument`. The canonical 'who is in the band' query, returning displayName, role, instrument (slug + label), schedulingTier ('core' | 'regular' | 'guest'), phone, and notification preferences (email/sms/push booleans with sensible defaults: email=true, sms=false, push=true). Optional filters: `instrument` (slug key like 'acoustic_guitar' OR a fragment that matches the preset label/slug like 'guitar') narrows to one instrument; `schedulingTier` narrows to one tier. Sorted alphabetically by displayName. Use this to find the right uid. Returns `{ok: true, musicians: [...], count}`.",
             inputSchema: {
                 instrument: z
                     .string()
                     .optional()
                     .describe(
-                        "Filter by instrument slug key ('acoustic_guitar', 'electric_bass', 'voice', etc.) or a substring of the preset label. Loose matching mirrors the in-app /schedule picker.",
+                        "Filter by instrument slug key ('acoustic_guitar', 'electric_bass', 'voice', etc.) or a substring of the preset label. Loose matching.",
                     ),
                 schedulingTier: z
                     .enum(["core", "regular", "guest"])
                     .optional()
                     .describe(
-                        "Filter by scheduling tier. 'core' = always-invite (auto-confirmed on assign); 'regular' = standard pending; 'guest' = occasional.",
+                        "Filter by scheduling tier. 'core', 'regular' or 'guest' (the tier recorded on the musician's profile).",
                     ),
                 includeProfileless: z
                     .boolean()
@@ -4301,7 +4277,7 @@ export function registerRosterTools(server: McpServer): void {
         "find_user",
         {
             description:
-                "Admin/band_leader only — the user DIRECTORY search: resolve a person's uid (and profile row) by email, name fragment, or role. Unlike list_musicians, this returns EVERY user in your org INCLUDING those with no instrument set (band leaders, admins) — use it to find the uid you need BEFORE assign_musician, assign_monitor_bus, or get_musician_profile when you only know someone's name or email. Filters (all optional, combine with AND): `email` (exact, case-insensitive), `nameContains` (case-insensitive substring of displayName), `role` (musician|band_leader|admin), `includeProfileless` (default TRUE — pass false to narrow to instrument-bearing musicians). An empty call returns the whole org directory, sorted by displayName. Tenant-scoped: only your org's users, never the other tenant's. Returns `{ok: true, users: [{uid, displayName, email, role, instrument|null, instrumentLabel|null, schedulingTier, phone, notificationPreferences}], count}`.",
+                "Admin/band_leader only — the user DIRECTORY search: resolve a person's uid (and profile row) by email, name fragment, or role. Unlike list_musicians, this returns EVERY user in your org INCLUDING those with no instrument set (band leaders, admins) — use it to find the uid you need BEFORE assign_monitor_bus or get_musician_profile when you only know someone's name or email. Filters (all optional, combine with AND): `email` (exact, case-insensitive), `nameContains` (case-insensitive substring of displayName), `role` (musician|band_leader|admin), `includeProfileless` (default TRUE — pass false to narrow to instrument-bearing musicians). An empty call returns the whole org directory, sorted by displayName. Tenant-scoped: only your org's users, never the other tenant's. Returns `{ok: true, users: [{uid, displayName, email, role, instrument|null, instrumentLabel|null, schedulingTier, phone, notificationPreferences}], count}`.",
             inputSchema: {
                 email: z
                     .string()
@@ -4335,235 +4311,18 @@ export function registerRosterTools(server: McpServer): void {
         "get_musician_profile",
         {
             description:
-                "Admin/band_leader only — read one user's musicianProfile by uid. Returns the same shape as list_musicians but for a single user. Use after list_musicians or suggest_musicians to inspect details (phone, notification prefs, full preset label) before assigning. Returns rich `not_found` envelope when the uid has no profile or doesn't exist as a user.",
+                "Admin/band_leader only — read one user's musicianProfile by uid. Returns the same shape as list_musicians but for a single user. Use after list_musicians to inspect details (phone, notification prefs, full preset label). Returns rich `not_found` envelope when the uid has no profile or doesn't exist as a user.",
             inputSchema: {
                 uid: z
                     .string()
                     .min(1)
                     .describe(
-                        "Firebase user uid. Get from list_musicians, suggest_musicians, or list_pending_assignments.",
+                        "Firebase user uid. Get from list_musicians or find_user.",
                     ),
             },
         },
         async (args, extra) =>
             jsonResult(await getMusicianProfile(uidFrom(extra), args, orgFrom(extra))),
-    )
-
-    server.registerTool(
-        "list_musicians_on_date",
-        {
-            description:
-                "Admin/band_leader only — answer 'who's playing on date X'. Queries setlists whose `eventDate` falls on the given UTC day (optionally narrowed by `templateType` like 'shabbat_morning' or 'friday_night'), then groups every `scheduling_assignments` row for those setlists by status: `pending` (awaiting musician response), `confirmed` (responded yes OR auto-confirmed core musician), `declined` (responded no), `cancelled` (band leader cancelled). Each entry carries `{assignmentId, setlistId, setlistName, musicianUid, musicianName, instrument, status, autoConfirmed}`. Use for the weekly 'who's playing tonight' check. Returns `{ok: true, eventDate, matchedSetlists, grouped:{pending,confirmed,declined,cancelled}, total}`.",
-            inputSchema: {
-                eventDate: z
-                    .string()
-                    .min(1)
-                    .describe(
-                        "Date to query. Accepts YYYY-MM-DD (interpreted as a UTC day) or a full ISO timestamp.",
-                    ),
-                templateType: z
-                    .enum([
-                        "shabbat_morning",
-                        "friday_night",
-                        "rosh_hashanah",
-                        "yom_kippur",
-                        "festival",
-                        "other",
-                    ])
-                    .optional()
-                    .describe(
-                        "Narrow to one service template when multiple services share a date (e.g., 'friday_night' for the Erev Shabbat service).",
-                    ),
-            },
-        },
-        async (args, extra) =>
-            jsonResult(await listMusiciansOnDate(uidFrom(extra), args, orgFrom(extra))),
-    )
-
-    server.registerTool(
-        "list_service_personnel",
-        {
-            description:
-                "Admin/band_leader only — unified 'who's playing & leading this week' pivot (cycle-5 C5C-014). Joins `list_musicians_on_date`'s scheduled-band-roster lookup with `get_setlist`'s per-track `leadMusician` vocal-lead read so authors don't need two round trips to answer the weekly-flow question. Accepts EITHER `setlistId` (one specific service) OR `eventDate` (every setlist on the given UTC day). Returns `scheduling_assignments` grouped by status (pending/confirmed/declined/cancelled — same shape as list_musicians_on_date) AND `vocal_leads`: distinct non-null `track.leadMusician` strings across every bonded track on the matched setlists, sorted alphabetically. Returns `{ok: true, setlistId, eventDate, matchedSetlists, scheduling_assignments, vocal_leads, total}`.",
-            inputSchema: {
-                setlistId: z
-                    .string()
-                    .min(1)
-                    .optional()
-                    .describe(
-                        "Direct setlist lookup. One of `setlistId` or `eventDate` is required.",
-                    ),
-                eventDate: z
-                    .string()
-                    .min(1)
-                    .optional()
-                    .describe(
-                        "UTC-day window across every setlist on the date. Accepts YYYY-MM-DD or a full ISO timestamp. One of `setlistId` or `eventDate` is required.",
-                    ),
-            },
-        },
-        async (args, extra) =>
-            jsonResult(await listServicePersonnel(uidFrom(extra), args, orgFrom(extra))),
-    )
-
-    server.registerTool(
-        "list_pending_assignments",
-        {
-            description:
-                "Admin/band_leader only — list every `scheduling_assignments` row currently in `status: 'pending'`. Optional `uid` filter narrows to one musician's pending invitations. Use to find the queue of un-responded invites that may need a nudge (or to confirm a swap candidate isn't already pending elsewhere). Sorted by setlistName then musicianName. Returns `{ok: true, assignments: [...], count}`.",
-            inputSchema: {
-                uid: z
-                    .string()
-                    .optional()
-                    .describe(
-                        "Optional musician uid filter — only pending assignments for this musician.",
-                    ),
-            },
-        },
-        async (args, extra) =>
-            jsonResult(await listPendingAssignments(uidFrom(extra), args, orgFrom(extra))),
-    )
-
-    server.registerTool(
-        "suggest_musicians",
-        {
-            description:
-                "Admin/band_leader only — suggest available replacement musicians for a declined/empty slot on the given setlist. Filters out anyone already actively assigned (pending OR confirmed) to the setlist, then optionally surfaces instrument matches first (the `instrument` argument matches the preset slug like 'acoustic_guitar' OR a label fragment like 'guitar' — loose match parity with the in-app /schedule picker). Sorted by scheduling tier (core > regular > guest), capped at 10 suggestions. Returns `{ok: true, suggestions: [{uid, name, email, instrument, instrumentLabel, schedulingTier, phone, instrumentMatch}]}` — `instrumentMatch` is true/false when an instrument filter was supplied, null otherwise.",
-            inputSchema: {
-                setlistId: z
-                    .string()
-                    .min(1)
-                    .describe(
-                        "Setlist id — defines the 'already assigned' set to exclude.",
-                    ),
-                instrument: z
-                    .string()
-                    .optional()
-                    .describe(
-                        "Optional instrument filter for 'fill THIS slot' searches (slug or label fragment).",
-                    ),
-            },
-        },
-        async (args, extra) =>
-            jsonResult(await suggestMusicians(uidFrom(extra), args, orgFrom(extra))),
-    )
-
-    server.registerTool(
-        "suggest_band",
-        {
-            description:
-                "Admin/band_leader only — full-band rabbi-aware ranking for the given setlist. Uses the smart suggestion engine (recent play frequency, scheduling tier, instrument coverage gap against the REQUIRED_INSTRUMENTS core set, rabbi musical-role fit). Reads the setlist's `rabbi` field + `config/congregation.scheduling.rabbiProfiles[]` to surface rabbi-specific band-size guidance and avoid double-stacking the rabbi's own instrument. Already-assigned musicians (per `setlist.assignedUids`) drop out of the candidate pool but their instruments count toward coverage. Returns `{ok: true, rabbiGuidance, coverageGap, suggestions: [{uid, name, email, instrumentKey, instrumentLabel, schedulingTier, score, reasons[]}]}` — top 12 ranked.",
-            inputSchema: {
-                setlistId: z
-                    .string()
-                    .min(1)
-                    .describe(
-                        "Setlist id — the rabbi + already-assigned musicians are read from this setlist's fields.",
-                    ),
-            },
-        },
-        async (args, extra) =>
-            jsonResult(await suggestBand(uidFrom(extra), args, orgFrom(extra))),
-    )
-
-    server.registerTool(
-        "assign_musician",
-        {
-            description:
-                "Admin/band_leader only — assign one musician to a setlist. dryRun-default + force-gated per the F-05 dry-run-is-observability rule: a real run requires `dryRun: false, force: true`. dryRun returns the plan with the projected status ('confirmed' for core musicians who auto-confirm; 'pending' otherwise), the resolved musician profile (denormalized name/email/instrument/tier), and `alreadyAssigned: true` when an active assignment already exists (the real run becomes a no-op in that case — idempotent). Force-run commits the assignment AND triggers the notification cascade (email + SMS + push + in-app), honoring the musician's notification preferences. The musician's instrument defaults to their `musicianProfile.instrument` unless overridden via the `instrument` argument (e.g., booking a multi-instrumentalist on their secondary). Trusted-leader (admin/band_leader) bypasses the per-uid rate limiter — non-trusted callers hit the standard 'api' tier limit. Returns `{ok: true, setlistId, setlistName, musician, projectedStatus, alreadyAssigned, dryRun, committed}`.",
-            inputSchema: {
-                setlistId: z
-                    .string()
-                    .min(1)
-                    .describe("Setlist id from list_setlists / create_setlist."),
-                uid: z
-                    .string()
-                    .min(1)
-                    .describe(
-                        "Musician uid — discover via list_musicians or suggest_musicians.",
-                    ),
-                instrument: z
-                    .string()
-                    .optional()
-                    .describe(
-                        "Optional override of the musician's default instrument (slug key or human-readable label). Useful for multi-instrumentalists.",
-                    ),
-                dryRun: z
-                    .boolean()
-                    .optional()
-                    .describe(
-                        "When true (default), returns the plan without writing. F-05 standing rule: dryRun does NOT require force.",
-                    ),
-                force: z
-                    .boolean()
-                    .optional()
-                    .describe(
-                        "Required for real writes. Pair with `dryRun: false`. Omitting it returns the rich `force_required` envelope (REG-003) and no writes. The notification cascade fires on commit — make sure intent is clear before forcing.",
-                    ),
-            },
-        },
-        async (args, extra) =>
-            jsonResult(await assignMusician(uidFrom(extra), args, orgFrom(extra))),
-    )
-
-    server.registerTool(
-        "unassign_musician",
-        {
-            description:
-                "Admin/band_leader only — cancel a musician's active assignment on a setlist (flips status `pending|confirmed → cancelled`). Resolves the assignmentId from `(setlistId, uid)` so the agent never has to fetch it first. dryRun-default + force-gated per F-05: a real run requires `dryRun: false, force: true`. dryRun returns the plan with the previous status (null when no active assignment exists — the real run is a safe no-op). Force-run commits the cancellation, removes the musician from `setlists/{id}.musicians[]` + `assignedUids[]` in the same transaction, and fires the cancellation notification cascade (email + SMS + in-app). Cancelling an assignment already in a terminal state (declined or cancelled) returns the rich `validation_error` envelope. Trusted-leader rate-limit bypass applies. Returns `{ok: true, setlistId, uid, assignmentId, previousStatus, dryRun, committed}`.",
-            inputSchema: {
-                setlistId: z.string().min(1).describe("Setlist id."),
-                uid: z
-                    .string()
-                    .min(1)
-                    .describe(
-                        "Musician uid — the active assignment for (setlistId, uid) will be cancelled.",
-                    ),
-                dryRun: z
-                    .boolean()
-                    .optional()
-                    .describe(
-                        "When true (default), returns the plan without writing. F-05 standing rule.",
-                    ),
-                force: z
-                    .boolean()
-                    .optional()
-                    .describe(
-                        "Required for real writes. Pair with `dryRun: false`. Cancellation notifications fire on commit — make sure intent is clear.",
-                    ),
-            },
-        },
-        async (args, extra) =>
-            jsonResult(await unassignMusician(uidFrom(extra), args, orgFrom(extra))),
-    )
-
-    server.registerTool(
-        "respond_to_assignment",
-        {
-            description:
-                "Musician-self-write — accept or decline YOUR OWN pending assignment. The own-assignment gate is enforced via `assignment.musicianUid === callerUid` — there is no admin/band_leader role gate, so any authenticated musician can call this for their own invites. Accepting flips the status to 'confirmed'; declining flips to 'declined' and removes the musician from the setlist's denormalized `musicians[]` + `assignedUids[]` in the same transaction. The assigning band leader gets an in-app notification post-commit so they can react. Calling on an assignment in a terminal state (already confirmed/declined/cancelled) returns the rich `validation_error` envelope with `currentStatus`. Calling on someone else's assignment returns `forbidden_assignment`. Returns `{ok: true, assignmentId, status}`.",
-            inputSchema: {
-                assignmentId: z
-                    .string()
-                    .min(1)
-                    .describe(
-                        "Assignment id — discover via list_pending_assignments({uid: yourUid}).",
-                    ),
-                status: z
-                    .enum(["confirmed", "declined"])
-                    .describe(
-                        "The new status. 'confirmed' accepts the invitation; 'declined' refuses it.",
-                    ),
-                declineReason: z
-                    .string()
-                    .optional()
-                    .describe(
-                        "Optional free-form reason — surfaced to the assigner in the post-commit notification when status='declined'.",
-                    ),
-            },
-        },
-        async (args, extra) =>
-            jsonResult(await respondToAssignment(uidFrom(extra), args)),
     )
 
     // People and access (the /manage People tab): list_access_requests, set_member_role.

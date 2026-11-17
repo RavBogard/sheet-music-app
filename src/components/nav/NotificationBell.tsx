@@ -11,7 +11,7 @@ import {
     markAllAsRead,
 } from "@/lib/notification-store"
 import { useMusicStore } from "@/lib/store"
-import { Bell, ListMusic, Upload, Shield, Calendar, CalendarCheck, CalendarX } from "lucide-react"
+import { Bell, ListMusic, Upload, Shield } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useT } from "@/i18n/client"
 import { useFormat } from "@/i18n/format-client"
@@ -24,11 +24,6 @@ const ICON_MAP: Record<string, typeof Bell> = {
     chart_uploaded: Upload,
     role_changed: Shield,
     general: Bell,
-    scheduling_request: Calendar,
-    scheduling_confirmed: CalendarCheck,
-    scheduling_declined: CalendarX,
-    scheduling_reminder: Calendar,
-    scheduling_cancelled: CalendarX,
 }
 
 export function NotificationBell() {

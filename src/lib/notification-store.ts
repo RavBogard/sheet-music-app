@@ -9,11 +9,6 @@
  *   - setlist_updated: Tracks were added/removed from a setlist
  *   - chart_uploaded: A new chart was added to the library
  *   - role_changed: User's role was updated
- *   - scheduling_request: You've been scheduled for a service (accept/decline)
- *   - scheduling_confirmed: A musician confirmed their assignment
- *   - scheduling_declined: A musician declined their assignment
- *   - scheduling_reminder: Reminder about upcoming service assignment
- *   - scheduling_cancelled: A service assignment was cancelled
  */
 
 import { getDb, subscribeWithDb, recoverFromFirestoreShutdown } from '@/lib/firebase'
@@ -27,8 +22,6 @@ import { logger } from '@/lib/logger'
 
 export type NotificationType =
     | 'setlist_published' | 'setlist_updated' | 'chart_uploaded' | 'role_changed' | 'general'
-    | 'scheduling_request' | 'scheduling_confirmed' | 'scheduling_declined'
-    | 'scheduling_reminder' | 'scheduling_cancelled'
 
 export interface Notification {
     id: string
@@ -41,8 +34,6 @@ export interface Notification {
     link?: string
     /** Related entity ID (setlist, file, etc.) */
     entityId?: string
-    /** Action buttons for scheduling notifications (accept/decline links) */
-    actions?: { label: string; url: string }[]
 }
 
 /**

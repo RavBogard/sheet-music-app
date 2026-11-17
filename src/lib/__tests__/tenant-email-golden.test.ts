@@ -2,8 +2,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 /**
- * Multi-tenant phase 1 golden: the task-assignment, task-completion and
- * scheduling emails. The crc and brotherslazaroff payloads (from line, subject,
+ * Multi-tenant phase 1 golden: the task-assignment and task-completion
+ * emails. The crc and brotherslazaroff payloads (from line, subject,
  * HTML) were recorded from the code BEFORE these emails took an `org`, and must
  * never change. The testshul cases prove the copy now comes from tenant config.
  */
@@ -15,7 +15,6 @@ vi.mock("resend", () => ({
 vi.mock("@/lib/logger", () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }))
 
 import { sendTaskAssignmentEmail, sendTaskCompletionEmail } from "@/lib/email"
-import { sendSchedulingEmail } from "@/lib/email-scheduling"
 import { clearPrimedOrgConfigs } from "@/lib/org/config-cache"
 import { primeTestOrg } from "@/lib/org/__tests__/test-org-config"
 
@@ -37,16 +36,6 @@ const completion = {
     taskTitle: "Learn the bridge",
     taskUrl: "https://example.test/setlists/s1",
 }
-const scheduling = {
-    to: "player@example.com",
-    recipientName: "Alex Player",
-    setlistName: "Friday Night Set",
-    eventDate: "Friday, March 13, 2026",
-    instrument: "Bass",
-    scheduleUrl: "https://example.test/schedule",
-    assignmentId: "as-1",
-    newSongs: [{ title: "Song One", fileId: "f1" }],
-}
 
 type Payload = { from: string; to: string; subject: string; html: string; cc?: string[] }
 const lastPayload = (): Payload => sendSpy.mock.calls.at(-1)![0] as Payload
@@ -67,7 +56,7 @@ afterEach(() => {
 
 const ORGS = ["crc", "brotherslazaroff"] as const
 
-describe("golden: task + scheduling emails render today's text for crc and BL", () => {
+describe("golden: task emails render today's text for crc and BL", () => {
     for (const org of ORGS) {
         it(`golden task assignment (${org})`, async () => {
             await sendTaskAssignmentEmail({ ...assignment, org } as typeof assignment)
@@ -77,12 +66,6 @@ describe("golden: task + scheduling emails render today's text for crc and BL", 
             await sendTaskCompletionEmail({ ...completion, org } as typeof completion)
             await expect(asText(lastPayload())).toMatchFileSnapshot("__goldens__/email-task-completion.golden.txt")
         })
-        for (const status of ["pending", "confirmed", "cancelled"] as const) {
-            it(`golden scheduling ${status} (${org})`, async () => {
-                await sendSchedulingEmail({ ...scheduling, status, org } as typeof scheduling & { status: typeof status })
-                await expect(asText(lastPayload())).toMatchFileSnapshot(`__goldens__/email-scheduling-${status}.golden.txt`)
-            })
-        }
     }
 
     it("golden: omitting org is the crc rendering", async () => {
@@ -105,16 +88,5 @@ describe("testshul: emails read tenant config", () => {
         await sendTaskCompletionEmail({ ...completion, org: "testshul" })
         expect(lastPayload().from).toBe("Test Shul Music <noreply@centralreform.live>")
         expect(lastPayload().html).toContain(">Test Shul Music — Test Shul Tehila</p>")
-    })
-    it("scheduling email names the tenant as the venue", async () => {
-        primeTestOrg()
-        await sendSchedulingEmail({ ...scheduling, status: "pending", org: "testshul" })
-        const p = lastPayload()
-        expect(p.from).toBe("Test Shul Music <noreply@centralreform.live>")
-        expect(p.html).toContain("for an upcoming service at Test Shul Tehila.")
-        expect(p.html).toContain(">Test Shul Music — Test Shul Tehila</p>")
-        expect(p.html).not.toContain("Central Reform")
-        await sendSchedulingEmail({ ...scheduling, status: "cancelled", org: "testshul" })
-        expect(lastPayload().html).toContain("upcoming service at Test Shul Tehila has been cancelled.")
     })
 })

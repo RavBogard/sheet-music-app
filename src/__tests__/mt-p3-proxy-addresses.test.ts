@@ -154,7 +154,6 @@ describe("production", () => {
 
     it.each([
         "/api/cron/drive-sync",
-        "/api/cron/scheduling-reminder",
         "/api/webhooks/resend",
         "/api/intake/run",
         "/api/bridge/setup-code",

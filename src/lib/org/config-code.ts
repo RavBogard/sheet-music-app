@@ -94,18 +94,9 @@ const BL_VOCAB: Partial<Record<StringKey, string>> = {
 export const BL_FROZEN_CRC_KEYS: StringKey[] = [
     "email.notificationFromName",
     "email.notificationFooter",
-    "email.venueName",
-    "sms.venueShort",
     "sms.publishPrefix",
-    "feed.productName",
-    "feed.calendarNamePrefix",
-    "feed.location",
-    "feed.uidPrefix",
-    "feed.uidDomain",
-    "feed.filePrefix",
     "page.unauthorizedTitle",
     "page.skeletonBrand",
-    "profile.scheduleName",
     "library.ownBadge",
     "seo.baseUrl",
     "library.coreSectionLabel",
@@ -134,10 +125,10 @@ const CRC: OrgConfigInput = {
         mode: "shul",
         overrides: { "ai.libraryConventions": CRC_LIBRARY_CONVENTIONS },
     },
-    locale: { language: "en", direction: "ltr", timeZone: "America/Chicago", calendar: "diaspora", reminderLocalHour: 5, reminderUtcHour: 10 },
+    locale: { language: "en", direction: "ltr", timeZone: "America/Chicago", calendar: "diaspora" },
     email: { ...crcEmail, fromAddress: "", replyTo: "" },
     legal: { operatorName: "Central Reform Congregation", contactEmail: "music@centralreform.live", useCrcText: true },
-    features: { mixer: true, driveInbox: true, schedulingEmails: true, todayFeed: true, notifyBand: true, perform: true },
+    features: { mixer: true, driveInbox: true, todayFeed: true, notifyBand: true, perform: true },
     // "" means CHART_INBOX_DRIVE_FOLDER_ID, CRC's inbox since before phase 6.
     driveInbox: { folderId: "" },
     library: {
@@ -204,7 +195,7 @@ const BL: OrgConfigInput = {
         mode: "band",
         overrides: { ...BL_VOCAB, ...frozenCrcOverrides() } as Record<string, string>,
     },
-    locale: { language: "en", direction: "ltr", timeZone: "America/Chicago", calendar: "diaspora", reminderLocalHour: 5, reminderUtcHour: 10 },
+    locale: { language: "en", direction: "ltr", timeZone: "America/Chicago", calendar: "diaspora" },
     email: { ...blEmail, fromAddress: "", replyTo: "" },
     // Frozen: BL has always been served CRC's legal pages.
     legal: { operatorName: "Central Reform Congregation", contactEmail: "music@centralreform.live", useCrcText: true },
@@ -213,9 +204,9 @@ const BL: OrgConfigInput = {
     // today.json is emitted every 15 minutes. notifyBand: on because the packet
     // email (/api/setlist/email-packets) leaves no record, so BL's use of it
     // cannot be ruled out (when in doubt, on). mixer: CRC's console (and
-    // CRC-only regardless). driveInbox, schedulingEmails: never used by BL (no
-    // inbox folder, no Drive-synced rows, no assignment ever made).
-    features: { mixer: false, driveInbox: false, schedulingEmails: false, todayFeed: true, notifyBand: true, perform: true },
+    // CRC-only regardless). driveInbox: never used by BL (no
+    // inbox folder, no Drive-synced rows).
+    features: { mixer: false, driveInbox: false, todayFeed: true, notifyBand: true, perform: true },
     driveInbox: { folderId: "" },
     library: {
         collections: [

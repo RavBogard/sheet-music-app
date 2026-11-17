@@ -88,49 +88,9 @@
         "maxLength": 60,
         "context": "Tokens only: {shortName} — {name}."
     },
-    "email.venueName": {
-        "where": "Venue name in emails.",
-        "who": "musicians",
-        "translate": false
-    },
-    "sms.venueShort": {
-        "where": "Venue abbreviation in SMS.",
-        "who": "musicians",
-        "translate": false
-    },
     "sms.publishPrefix": {
         "where": "Prefix of SMS messages.",
         "who": "musicians",
-        "translate": false
-    },
-    "feed.productName": {
-        "where": ".ics calendar feed PRODID.",
-        "who": "calendar apps",
-        "translate": false
-    },
-    "feed.calendarNamePrefix": {
-        "where": ".ics calendar name prefix.",
-        "who": "musicians' calendar apps",
-        "translate": false
-    },
-    "feed.location": {
-        "where": ".ics event location.",
-        "who": "musicians' calendar apps",
-        "translate": false
-    },
-    "feed.uidPrefix": {
-        "where": ".ics event UID (machine id).",
-        "who": "nobody (machine)",
-        "translate": false
-    },
-    "feed.uidDomain": {
-        "where": ".ics event UID domain (machine id).",
-        "who": "nobody (machine)",
-        "translate": false
-    },
-    "feed.filePrefix": {
-        "where": ".ics download file name.",
-        "who": "nobody (file name)",
         "translate": false
     },
     "print.footer": {
@@ -178,11 +138,6 @@
         "where": "Brand shown while the public setlist loads.",
         "who": "anyone",
         "translate": false
-    },
-    "profile.scheduleName": {
-        "where": "Profile page: name of the personal schedule feed.",
-        "who": "musicians",
-        "maxLength": 40
     },
     "seo.baseUrl": {
         "where": "robots.txt / sitemap origin (URL).",

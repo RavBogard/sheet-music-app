@@ -12,7 +12,7 @@ vi.mock("@/lib/org/cron-tenants", () => ({ cronTenantIds: () => cronTenantIds() 
 import { hasFeature, requireFeature, tenantFeatures, tenantsWithFeature } from "@/lib/org/features"
 import { featureOn, featuresOf } from "@/lib/org/features-client"
 
-const ALL_ON = { mixer: true, driveInbox: true, schedulingEmails: true, todayFeed: true, notifyBand: true, perform: true }
+const ALL_ON = { mixer: true, driveInbox: true, todayFeed: true, notifyBand: true, perform: true }
 
 function tenant(id: string, features: Partial<typeof ALL_ON>): OrgConfig {
     const base = codeOrgConfig("crc")!
@@ -82,5 +82,23 @@ describe("featureOn (client)", () => {
     it("schema defaults with neither", () => {
         expect(featureOn(null, "perform")).toBe(true)
         expect(featureOn(null, "todayFeed")).toBe(false)
+    })
+})
+
+describe("retired flags and fields on stored tenant docs", () => {
+    it("an orgs/{id} doc that still carries features.schedulingEmails and the reminder hours parses, and they are dropped", () => {
+        const base = codeOrgConfig("crc")!
+        const stored = {
+            ...base,
+            id: "throwaway",
+            domains: { primary: "throwaway.vercel.app", aliases: [] },
+            locale: { ...base.locale, reminderLocalHour: 5, reminderUtcHour: 10 },
+            features: { ...ALL_ON, schedulingEmails: true },
+        }
+        const r = OrgConfigSchema.safeParse(stored)
+        expect(r.success).toBe(true)
+        expect(r.data!.features).toEqual(ALL_ON)
+        expect("schedulingEmails" in r.data!.features).toBe(false)
+        expect("reminderUtcHour" in r.data!.locale).toBe(false)
     })
 })

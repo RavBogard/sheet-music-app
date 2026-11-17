@@ -8,26 +8,15 @@ import { INSTRUMENT_LABEL_KEYS as INSTRUMENT_LABEL, INSTRUMENT_NOTE_KEYS as INST
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
-import { Guitar, Check, Phone, CalendarDays, Bell, Shield, Users, Star, Loader2 } from "lucide-react"
+import { Guitar, Check, Phone, Bell } from "lucide-react"
 import { toast } from "sonner"
-import type { SchedulingTier } from "@/types/models"
-import { useFeature } from "@/lib/org/use-feature"
 import { useT } from "@/i18n/client"
-import { useOrg, useOrgConfig } from "@/lib/org/org-context"
 
 export function MusicianProfileSettings() {
     const { user } = useAuth()
     const t = useT()
-    // The calendar hints said "your CRC schedule" on CRC and Brothers Lazaroff
-    // before phase 7; they keep that, and every other tenant gets its own name.
-    const org = useOrg()
-    const orgConfig = useOrgConfig()
-    const scheduleOwner = org === "crc" || org === "brotherslazaroff" ? "CRC" : (orgConfig?.branding.shortName ?? "")
-    // Multi-tenant phase 6: the Email toggle is for scheduling emails.
-    const schedulingEmailsOn = useFeature("schedulingEmails")
     const [profile, setProfile] = useState<MusicianProfile>({})
     const [saving, setSaving] = useState(false)
-    const [generatingCal, setGeneratingCal] = useState(false)
     const [hasChanges, setHasChanges] = useState(false)
     const [loaded, setLoaded] = useState(false)
     const fieldId = useId()
@@ -265,10 +254,9 @@ export function MusicianProfileSettings() {
                     </label>
                     <div className="space-y-3">
                         {([
-                            { key: 'email' as const, label: t("settings.scheduling.email"), desc: t("settings.scheduling.emailDescription") },
                             { key: 'sms' as const, label: t("settings.scheduling.sms"), desc: t("settings.scheduling.smsDescription") },
                             { key: 'push' as const, label: t("settings.scheduling.push"), desc: t("settings.scheduling.pushDescription") },
-                        ]).filter(({ key }) => key !== 'email' || schedulingEmailsOn).map(({ key, label, desc }) => (
+                        ]).map(({ key, label, desc }) => (
                             <div key={key} className="flex items-center justify-between gap-3 py-1">
                                 <div>
                                     <label htmlFor={`${fieldId}-notify-${key}`} className="text-sm font-medium text-foreground">{label}</label>
@@ -277,7 +265,7 @@ export function MusicianProfileSettings() {
                                 <Switch
                                     id={`${fieldId}-notify-${key}`}
                                     aria-describedby={`${fieldId}-notify-${key}-desc`}
-                                    checked={profile.notificationPreferences?.[key] ?? (key === 'email' || key === 'push')}
+                                    checked={profile.notificationPreferences?.[key] ?? (key === 'push')}
                                     onCheckedChange={() => {
                                         const current = profile.notificationPreferences || { email: true, sms: false, push: true }
                                         updateField('notificationPreferences', {
@@ -289,69 +277,6 @@ export function MusicianProfileSettings() {
                             </div>
                         ))}
                     </div>
-                </div>
-
-                {/* Calendar Feed URL */}
-                <div className="space-y-2 p-3 rounded-md border border-rule">
-                    <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                        <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
-                        {t("settings.scheduling.calendarTitle")}
-                    </label>
-                    {profile.calendarFeedToken ? (
-                        <>
-                            <div className="flex gap-2">
-                                <Input
-                                    readOnly
-                                    value={`${typeof window !== 'undefined' ? window.location.origin : ''}/api/scheduling/calendar-feed/${profile.calendarFeedToken}`}
-                                    className="h-11 text-xs font-mono bg-muted rounded-lg"
-                                />
-                                <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="h-11 shrink-0 text-xs rounded-lg"
-                                    onClick={() => {
-                                        const url = `${window.location.origin}/api/scheduling/calendar-feed/${profile.calendarFeedToken}`
-                                        navigator.clipboard.writeText(url)
-                                        toast.success(t("settings.scheduling.calendarCopied"))
-                                    }}
-                                >
-                                    {t("settings.scheduling.copy")}
-                                </Button>
-                            </div>
-                            <p className="text-xs text-muted-foreground">
-                                {t("settings.scheduling.calendarAddHint", { community: scheduleOwner })}
-                            </p>
-                        </>
-                    ) : (
-                        <div>
-                            <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-auto min-h-11 whitespace-normal text-start text-xs gap-1.5 rounded-lg fluid-interaction"
-                                disabled={generatingCal}
-                                onClick={async () => {
-                                    if (!user) return
-                                    setGeneratingCal(true)
-                                    try {
-                                        const { generateCalendarFeedToken } = await import('@/lib/scheduling-firebase')
-                                        const token = await generateCalendarFeedToken(user.uid)
-                                        setProfile(prev => ({ ...prev, calendarFeedToken: token }))
-                                        toast.success(t("settings.scheduling.calendarGenerated"))
-                                    } catch {
-                                        toast.error(t("settings.scheduling.calendarGenerateFailed"))
-                                    } finally {
-                                        setGeneratingCal(false)
-                                    }
-                                }}
-                            >
-                                {generatingCal ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CalendarDays className="h-3.5 w-3.5" />}
-                                {generatingCal ? t("settings.scheduling.calendarGenerating") : t("settings.scheduling.calendarGenerate")}
-                            </Button>
-                            <p className="text-xs text-muted-foreground mt-1.5">
-                                {t("settings.scheduling.calendarGenerateHint", { community: scheduleOwner })}
-                            </p>
-                        </div>
-                    )}
                 </div>
             </div>
 

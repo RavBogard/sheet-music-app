@@ -10,7 +10,7 @@
 // required argument, never defaulted.
 //
 // The few queries that are legal without an orgId filter (rows shared with a
-// tenant, a musician's own assignments) are named builders here too, so that
+// tenant) are named builders here too, so that
 // `tenant-query-scan.test.ts` can refuse any tenant-collection query built
 // anywhere else, and `client-queries-tenancy.emulator.test.ts` runs every
 // builder in `CLIENT_QUERIES` against the rules as each persona.
@@ -41,12 +41,9 @@ export const TENANT_COLLECTIONS = [
     "contacts",
     "library_index",
     "live_sessions",
-    "musician_availability",
     "part_presets",
     "proposal_stages",
     "recordings",
-    "scheduling_assignments",
-    "scheduling_history",
     "setlistTemplates",
     "setlists",
     "songUsage",
@@ -137,29 +134,7 @@ export function lastSyncRunQuery(db: Firestore, orgId: string): Query {
     return tenantQuery(db, "sync_runs", orgId, orderBy("startedAt", "desc"), limit(1))
 }
 
-/** Every pending or confirmed assignment in the tenant (band leader view). */
-export function tenantAssignmentsQuery(db: Firestore, orgId: string): Query {
-    return tenantQuery(
-        db,
-        "scheduling_assignments",
-        orgId,
-        where("status", "in", ["pending", "confirmed"]),
-        orderBy("assignedAt", "desc"),
-    )
-}
-
 // ── Named exceptions: legal without an orgId filter ────────────────────────
-
-/** A musician's own assignments. The rule's `musicianUid == auth.uid` branch
- *  proves it; the tenant is not needed. */
-export function myAssignmentsQuery(db: Firestore, uid: string): Query {
-    return query(
-        collection(db, "scheduling_assignments"),
-        where("musicianUid", "==", uid),
-        where("status", "in", ["pending", "confirmed"]),
-        orderBy("assignedAt", "desc"),
-    )
-}
 
 /** Chart collections another tenant shared with or assigned to `orgId`. */
 export function sharedCollectionsQuery(
@@ -183,7 +158,6 @@ export function sharedLibraryRowsQuery(db: Firestore, orgId: string): Query {
  *  rules still prove it. `tenant-query-scan.test.ts` fails on a builder that
  *  lacks the orgId filter and is not listed here. */
 export const ORG_FILTER_EXCEPTIONS: Readonly<Record<string, string>> = {
-    myAssignmentsQuery: "the list rule's `musicianUid == auth.uid` branch proves a caller's own rows in any tenant",
     sharedCollectionsQuery: "collections carry ownerOrgId, not orgId; the rule proves `sharedWith`/`assignedTo` array-contains a tenant the caller belongs to",
     sharedLibraryRowsQuery: "rows OTHER tenants shared: `visibleToOrgs` array-contains the caller's tenant (sharedSeesList), with orgId != it",
 }
@@ -203,8 +177,6 @@ export const CLIENT_QUERIES = {
     auditLogsQuery,
     partPresetsQuery,
     lastSyncRunQuery,
-    tenantAssignmentsQuery,
-    myAssignmentsQuery,
     sharedCollectionsQuery,
     sharedLibraryRowsQuery,
 } as const

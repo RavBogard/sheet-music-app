@@ -84,10 +84,8 @@ describe("P2 step-1 additive rules", () => {
             await assertSucceeds(db("bBL").collection("setlists").where("orgId", "==", B).where("eventDate", ">=", new Date(0)).orderBy("eventDate").limit(1).get())
             await assertSucceeds(db("oldBL").collection("setlists").where("orgId", "==", A).orderBy("date", "desc").limit(10).get())
         })
-        it("templates orgId== (TM2), assignments orgId== (SA3), auditLogs orgId== (AL1, admin)", async () => {
+        it("templates orgId== (TM2), auditLogs orgId== (AL1, admin)", async () => {
             await assertSucceeds(db("bBL").collection("templates").where("orgId", "==", B).get())
-            const leader = env.authenticatedContext("blLegacy", { role: "band_leader", orgIds: [B] }).firestore()
-            await assertSucceeds(leader.collection("scheduling_assignments").where("orgId", "==", B).where("status", "in", ["pending"]).orderBy("assignedAt", "desc").get())
             const admin = env.authenticatedContext("admLegacy", { role: "admin" }).firestore()
             await assertSucceeds(admin.collection("auditLogs").where("orgId", "==", A).orderBy("timestamp", "desc").limit(20).get())
         })

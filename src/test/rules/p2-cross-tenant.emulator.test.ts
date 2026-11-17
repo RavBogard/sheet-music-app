@@ -22,9 +22,6 @@ const B_READS: Array<[string, string]> = [
     ["contacts", "cB"],
     ["templates", `${B}__shabbat_morning`],
     ["setlistTemplates", "stB"],
-    ["scheduling_assignments", "asgB"],
-    ["scheduling_history", "histB"],
-    ["musician_availability", "avB"],
     ["live_sessions", "lsB"],
     ["bond_flags", "bfB"],
     ["proposal_stages", "psB"],
@@ -42,8 +39,6 @@ const unfiltered = (coll: string) => (db: Db) => db.collection(coll).get()
 const UNFILTERED: Array<[Persona, string]> = [
     ...B_READS.map(([coll]): [Persona, string] => ["aMe", coll]),
     ...B_READS.map(([coll]): [Persona, string] => ["aBL", coll]),
-    ["aMu", "scheduling_assignments"],
-    ["aMu", "musician_availability"],
     ["aMu", "tasks"],
     ["oldBL", "songs"],
     ["oldBL", "contacts"],
