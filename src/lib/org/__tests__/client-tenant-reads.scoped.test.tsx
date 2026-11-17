@@ -59,7 +59,7 @@ vi.mock("@/lib/firebase", () => ({
     },
 }))
 vi.mock("@/lib/setlist-audit", () => ({ logSetlistChange: vi.fn() }))
-vi.mock("@/lib/notification-store", () => ({ notifySetlistPublished: vi.fn(), notifySetlistUpdated: vi.fn() }))
+vi.mock("@/lib/notification-store", () => ({ notifySetlistPublished: vi.fn() }))
 vi.mock("@/types/schemas", () => ({ setlistConverter: {} }))
 vi.mock("@/lib/liturgical-templates", () => ({ generateSetlistName: vi.fn() }))
 

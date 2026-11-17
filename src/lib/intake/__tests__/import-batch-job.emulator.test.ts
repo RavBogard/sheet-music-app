@@ -91,26 +91,7 @@ vi.mock("@/lib/google-drive", async () => {
     }
 })
 
-// The Inngest client must not try to reach the dev server from a unit test.
-// `createFunction` is stubbed to a plain descriptor — this suite drives
-// `runImportBatch` directly, so the registered function object is never run.
-vi.mock("@/inngest/client", () => ({
-    inngest: {
-        send: vi.fn(async () => ({ ids: ["evt-test"] })),
-        createFunction: (config: unknown, trigger: unknown, handler: unknown) => ({
-            config,
-            trigger,
-            handler,
-        }),
-    },
-}))
-
-import {
-    failedRunBatchId,
-    finalizeBatch,
-    processBatchItem,
-    runImportBatch,
-} from "../import-batch-job"
+import { finalizeBatch, processBatchItem } from "../import-batch-job"
 import { createBatch, addItems, getBatch, setBatchStatus } from "../batch-store"
 import { stagedObjectPath } from "../staged-storage"
 import {
@@ -123,9 +104,25 @@ import {
 const OWNER = "rabbi-daniel"
 const ORG = "crc"
 
-/** Straight-through `step` shim: run each step body inline, once. */
-const inlineStep = {
-    run: <T,>(_name: string, fn: () => Promise<T>) => fn(),
+/**
+ * Run every `staged`/`pending` item in `itemId` order, then close the batch
+ * out — the same sequence the HTTP executor walks, without its deadline or
+ * re-trigger. Returns the final counts.
+ */
+async function runAllItems(
+    firestore: FirebaseFirestore.Firestore,
+    batchId: string,
+) {
+    const batch = await getBatch(firestore, batchId)
+    if (!batch) throw new Error("batch_not_found")
+    const queued = Object.values(batch.items)
+        .filter((i) => i.status === "staged" || i.status === "pending")
+        .map((i) => i.itemId)
+        .sort()
+    for (const itemId of queued) {
+        await processBatchItem(firestore, batchId, itemId)
+    }
+    return finalizeBatch(firestore, batchId)
 }
 
 describe("import-batch-job (emulator)", () => {
@@ -240,7 +237,7 @@ describe("import-batch-job (emulator)", () => {
     it("runs every staged item, rolls up counts and cleans staged bytes by outcome", async () => {
         const { batchId, ids } = await seedBatch()
 
-        const counts = await runImportBatch(db(), batchId, inlineStep)
+        const counts = await runAllItems(db(), batchId)
 
         expect(counts).toMatchObject({
             total: 3,
@@ -300,11 +297,11 @@ describe("import-batch-job (emulator)", () => {
 
     it("is idempotent on retry — a second run touches no terminal item", async () => {
         const { batchId } = await seedBatch()
-        await runImportBatch(db(), batchId, inlineStep)
+        await runAllItems(db(), batchId)
         expect(mockProcessChartUpload).toHaveBeenCalledTimes(3)
 
         mockProcessChartUpload.mockClear()
-        const counts = await runImportBatch(db(), batchId, inlineStep)
+        const counts = await runAllItems(db(), batchId)
 
         expect(mockProcessChartUpload).not.toHaveBeenCalled()
         expect(counts).toMatchObject({ imported: 1, parked: 1, failed: 1, pending: 0 })
@@ -312,7 +309,7 @@ describe("import-batch-job (emulator)", () => {
 
     it("processBatchItem no-ops on a terminal item unless force is set", async () => {
         const { batchId, ids } = await seedBatch()
-        await runImportBatch(db(), batchId, inlineStep)
+        await runAllItems(db(), batchId)
         mockProcessChartUpload.mockClear()
 
         const untouched = await processBatchItem(db(), batchId, ids.beta)
@@ -335,7 +332,7 @@ describe("import-batch-job (emulator)", () => {
 
     it("retries a failed item from its retained staged bytes", async () => {
         const { batchId, ids } = await seedBatch()
-        await runImportBatch(db(), batchId, inlineStep)
+        await runAllItems(db(), batchId)
         expect(stagedStore.has(stagedObjectPath(batchId, ids.gamma))).toBe(true)
 
         mockProcessChartUpload.mockClear()
@@ -428,7 +425,7 @@ describe("import-batch-job (emulator)", () => {
             },
         )
 
-        const counts = await runImportBatch(db(), batchId, inlineStep)
+        const counts = await runAllItems(db(), batchId)
 
         // One bad chart costs exactly one failed item — the run still completes.
         expect(counts).toMatchObject({ imported: 1, parked: 1, failed: 1, pending: 0 })
@@ -447,7 +444,7 @@ describe("import-batch-job (emulator)", () => {
 
     it("clears the stale parked block when a forced re-run fails", async () => {
         const { batchId, ids } = await seedBatch()
-        await runImportBatch(db(), batchId, inlineStep)
+        await runAllItems(db(), batchId)
         expect((await getBatch(db(), batchId))!.items[ids.beta].parked).toBeTruthy()
 
         // The human forces the parked item; this time the pipeline rejects it.
@@ -487,17 +484,6 @@ describe("import-batch-job (emulator)", () => {
         const batch = await getBatch(db(), batchId)
         expect(batch!.status).toBe("done")
         expect(batch!.finishedAt).toBeTruthy()
-    })
-
-    it("failedRunBatchId reads the original event out of a function.failed event", () => {
-        expect(
-            failedRunBatchId({
-                name: "inngest/function.failed",
-                data: { event: { name: "library/import-batch", data: { batchId: "ub-1" } } },
-            }),
-        ).toBe("ub-1")
-        expect(failedRunBatchId({ data: {} })).toBeNull()
-        expect(failedRunBatchId(null)).toBeNull()
     })
 
     it("throws batch_not_found / item_not_found for unknown ids", async () => {

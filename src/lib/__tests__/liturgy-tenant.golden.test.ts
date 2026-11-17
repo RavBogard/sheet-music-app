@@ -1,66 +1,15 @@
 import { afterEach, describe, expect, it } from 'vitest'
 
 import { clearPrimedOrgConfigs } from '@/lib/org/config-cache'
-import { parseTemplateRequest } from '@/lib/template-parser'
 import { getAllTemplateKeys, TEMPLATE_LABELS } from '@/lib/liturgical-templates'
 import { listBooksTool } from '@/lib/mcp/tools/books'
 
 /**
- * Multi-tenant phase 1 golden (lane 3, surfaces 4+5): rabbi slot keys, the
+ * Multi-tenant phase 1 golden (lane 3, surfaces 4+5): the
  * service-type (template) set and the book list, exactly as e0ad18b4 produced
  * them. None of these were tenant-aware, so brotherslazaroff gets the same
  * answers as crc.
  */
-
-const PHRASES = [
-    'Daniel friday',
-    'karen friday night',
-    'Randy Friday',
-    'daniel saturday',
-    'daniel shabbat morning',
-    'Karen morning',
-    'karen shabbat morning',
-    'randy saturday',
-    'randy shabbat morning',
-    'friday night',
-    'kabbalat shabbat',
-    'shir shabbat',
-    'shabbat morning',
-    'saturday morning',
-    "b'nei mitzvah saturday",
-    'havdalah bnei mitzvah',
-    'rosh hashanah',
-    'kol nidre',
-    'neilah',
-    'sukkot',
-    'something else entirely',
-    'daniel tuesday',
-]
-
-const GOLDEN_PARSES: Array<{ templateKey: string; rabbi?: string } | null> = [
-    { templateKey: 'friday_night', rabbi: 'daniel_karen' },
-    { templateKey: 'friday_night', rabbi: 'daniel_karen' },
-    { templateKey: 'friday_night', rabbi: 'randy' },
-    { templateKey: 'shabbat_morning', rabbi: 'daniel_karen' },
-    { templateKey: 'shabbat_morning', rabbi: 'daniel_karen' },
-    { templateKey: 'shabbat_morning', rabbi: 'daniel_karen' },
-    { templateKey: 'shabbat_morning', rabbi: 'daniel_karen' },
-    { templateKey: 'shabbat_morning', rabbi: 'randy' },
-    { templateKey: 'shabbat_morning', rabbi: 'randy' },
-    { templateKey: 'friday_night' },
-    { templateKey: 'friday_night' },
-    { templateKey: 'shir_shabbat' },
-    { templateKey: 'shabbat_morning' },
-    { templateKey: 'shabbat_morning' },
-    { templateKey: 'bnei_mitzvah_saturday' },
-    { templateKey: 'havdalah_bnei_mitzvah' },
-    { templateKey: 'rosh_hashanah_evening' },
-    { templateKey: 'yom_kippur_kol_nidre' },
-    { templateKey: 'yom_kippur_afternoon' },
-    { templateKey: 'sukkot' },
-    null,
-    null,
-]
 
 const GOLDEN_TEMPLATE_KEYS = [
     'friday_night',
@@ -108,19 +57,10 @@ const GOLDEN_BOOKS = [
     { slug: 'legacy-beit-mitzvah', title: 'CRC Beit Mitzvah Siddur (feed)', tier: 'feed', pages: 63 },
 ]
 
-describe('P1 golden: rabbi slots, service types and books (crc + brotherslazaroff)', () => {
+describe('P1 golden: service types and books (crc + brotherslazaroff)', () => {
     afterEach(() => clearPrimedOrgConfigs())
 
     for (const org of ['crc', 'brotherslazaroff']) {
-        it(`${org}: parseTemplateRequest picks today's rabbi keys`, () => {
-            const got = PHRASES.map((p) => {
-                const r = (parseTemplateRequest as (t: string, o?: string) => ReturnType<typeof parseTemplateRequest>)(p, org)
-                if (!r) return null
-                return r.rabbi ? { templateKey: r.templateKey, rabbi: r.rabbi } : { templateKey: r.templateKey }
-            })
-            expect(got).toEqual(GOLDEN_PARSES)
-        })
-
         it(`${org}: list_books lists every registered book`, () => {
             const res = (listBooksTool as (o?: string) => ReturnType<typeof listBooksTool>)(org)
             expect(res.ok).toBe(true)

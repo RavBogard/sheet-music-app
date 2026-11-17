@@ -47,9 +47,7 @@ const EXEMPT: Record<string, string> = {
     FIRESTORE_EMULATOR_HOST: "set by the Firebase emulator",
     FIREBASE_AUTH_EMULATOR_HOST: "set by the Firebase emulator",
     FIREBASE_STORAGE_EMULATOR_HOST: "set by the Firebase emulator",
-    INTAKE_EXECUTOR: "intake harness, test-only",
     INTAKE_RUN_SECRET: "intake harness, test-only",
-    INNGEST_EVENT_KEY: "test fixture only; no runtime Inngest client",
     P6_WRITE_GOLDEN: "multi-tenant phase 6 golden capture switch, test-only",
 }
 

@@ -1,8 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { WifiOff, Download, Check, Loader2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { WifiOff } from "lucide-react"
 import { useT } from "@/i18n/client"
 
 /**
@@ -37,66 +36,5 @@ export function OfflineIndicator() {
             <WifiOff className="h-3.5 w-3.5" />
             <span>{t("offline.usingCachedData")}</span>
         </div>
-    )
-}
-
-/**
- * Download button for making a setlist available offline.
- * Shows progress during download, checkmark when complete.
- */
-export function OfflineDownloadButton({
-    isFullyOffline,
-    isDownloading,
-    progress,
-    onDownload,
-}: {
-    isFullyOffline: boolean
-    isDownloading: boolean
-    progress?: { current: number; total: number } | null
-    onDownload: () => void
-}) {
-    const t = useT()
-    if (isFullyOffline) {
-        return (
-            <Button
-                type="button"
-                variant="ghost"
-                size="xs"
-                className="text-success bg-success/10"
-                disabled
-            >
-                <Check className="h-3 w-3" />
-                {t("offline.availableOffline")}
-            </Button>
-        )
-    }
-
-    if (isDownloading && progress) {
-        return (
-            <Button
-                type="button"
-                variant="ghost"
-                size="xs"
-                className="text-muted-foreground bg-accent"
-                disabled
-            >
-                <Loader2 className="h-3 w-3 animate-spin" />
-                {progress.current}/{progress.total}
-            </Button>
-        )
-    }
-
-    return (
-        <Button
-            type="button"
-            variant="ghost"
-            size="xs"
-            onClick={onDownload}
-            className="text-muted-foreground hover:text-foreground"
-            title={t("offline.downloadAllTitle")}
-        >
-            <Download className="h-3 w-3" />
-            {t("offline.saveOffline")}
-        </Button>
     )
 }

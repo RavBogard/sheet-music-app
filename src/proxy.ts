@@ -145,7 +145,7 @@ export async function proxy(request: NextRequest) {
     // failure) → not production (preview / localhost → crc) → "no such site".
     // An unknown or suspended production address never falls back to CRC;
     // only server-to-server paths with their own secret (cron, webhooks,
-    // inngest, intake, bridge redemption) keep resolving to crc there.
+    // intake, bridge redemption) keep resolving to crc there.
     const resolution = await resolveRequestOrg(
         {
             host: request.headers.get('host') ?? request.nextUrl.hostname,

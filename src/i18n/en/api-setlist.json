@@ -9,10 +9,6 @@
     "setlistIdRequired": "setlistId parameter required",
     "packetFailed": "Failed to generate packet",
     "chartsOmitted": "Some charts could not be included in the packet.",
-    "renameNotAllowed": "Not allowed to rename this setlist",
-    "invalidRequestSetlistId": "Invalid request: setlistId is required",
-    "noEmailRecipients": "No email recipients found for this setlist",
-    "resendFailed": "Failed to resend emails",
     "transferUserNotFound": "User with email {email} not found. They must sign up first.",
     "transferred": "Transferred \"{setlistName}\" to {email}"
 }

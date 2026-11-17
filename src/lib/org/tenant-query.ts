@@ -27,8 +27,3 @@ interface Whereable<Q> {
 export function scopeRowsToTenant<Q extends Whereable<Q>>(q: Q, org: OrgId): Q {
     return readsUntaggedRows(org) ? q : q.where("orgId", "==", org)
 }
-
-/** `where('orgIds', 'array-contains', org)` on `users` for every tenant but crc. */
-export function scopeUsersToTenant<Q extends Whereable<Q>>(q: Q, org: OrgId): Q {
-    return readsUntaggedRows(org) ? q : q.where("orgIds", "array-contains", org)
-}

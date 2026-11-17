@@ -65,11 +65,6 @@
         "maxLength": 60,
         "context": "'Gemini' is the AI service's brand name; keep it"
     },
-    "broadcastLeadersOnly": {
-        "where": "Setlist editor: error when a non-leader triggers the 'setlist updated' notification to the band",
-        "who": "musicians",
-        "maxLength": 80
-    },
     "extractUnsupportedFormat": { "where": "Setlist importer, document step: error when the file is not a Word, PDF or text document", "who": "leaders", "maxLength": 80, "context": "Keep the file extensions (.docx, .pdf, .txt) as written." },
     "extractPdfPageLimit": { "where": "Setlist importer, document step: error when the PDF has too many pages", "who": "leaders", "maxLength": 60, "context": "{maxPages} is a number of pages." },
     "extractFailed": { "where": "Setlist importer, document step: error when the document could not be read", "who": "leaders", "maxLength": 80, "context": "{format} is the file type: docx, pdf or txt (keep as is)." },

@@ -32,10 +32,6 @@ export const ALLOWLIST: readonly AllowEntry[] = [
         "You do not have a personal monitor bus assigned to you. Use the tools below to manage the monitor system for the band.",
         "Waiting for mixer data...",
     ]),
-    ...exempt("src/app/(main)/monitor/admin/page.tsx", MIXER_CRC_ONLY, [
-        "Monitor Config Restricted",
-        "Only Sound Engineers can configure monitor buses.",
-    ]),
     ...exempt("src/components/monitor/BusAssignmentPanel.tsx", MIXER_CRC_ONLY, [
         "Failed to update bus assignment",
         "Added to Bus",

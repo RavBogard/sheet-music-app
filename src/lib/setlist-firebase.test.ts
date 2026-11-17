@@ -90,7 +90,6 @@ vi.mock('firebase/firestore', () => ({
 vi.mock('@/lib/setlist-audit', () => ({ logSetlistChange: vi.fn() }))
 vi.mock('@/lib/notification-store', () => ({
     notifySetlistPublished: vi.fn(),
-    notifySetlistUpdated: vi.fn(),
 }))
 vi.mock('@/lib/logger', () => ({
     logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },

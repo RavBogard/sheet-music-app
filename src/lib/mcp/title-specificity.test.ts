@@ -27,8 +27,7 @@ describe("bareStem", () => {
 
     // β — trailing media extension strip (case-insensitive, single match,
     // BEFORE parens/hyphen drop). Mirrors STRIPPABLE_EXTENSION_RE in
-    // title-specificity.ts (and parity-mirrored in
-    // scripts/lib/index-name-fields-compute.mjs).
+    // title-specificity.ts.
     it("strips trailing .pdf extension before parens drop", () => {
         // "Hodu (Silver).pdf" → strip .pdf → "Hodu (Silver)" → drop parens
         // → "Hodu" → normalizeStem → "hodu".

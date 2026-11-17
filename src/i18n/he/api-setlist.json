@@ -9,10 +9,6 @@
     "setlistIdRequired": "נדרש הפרמטר setlistId",
     "packetFailed": "לא ניתן ליצור את החוברת להדפסה",
     "chartsOmitted": "חלק מקובצי התווים לא נכללו בחוברת.",
-    "renameNotAllowed": "אין הרשאה לשנות את שם רשימת השירים",
-    "invalidRequestSetlistId": "בקשה לא תקינה: נדרש setlistId",
-    "noEmailRecipients": "לא נמצאו כתובות אימייל של הנגנים ברשימת השירים הזו",
-    "resendFailed": "השליחה החוזרת של האימיילים נכשלה",
     "transferUserNotFound": "לא נמצא חשבון עם הכתובת {email}. צריך להירשם קודם.",
     "transferred": "רשימת השירים \"{setlistName}\" הועברה ל-{email}"
 }
