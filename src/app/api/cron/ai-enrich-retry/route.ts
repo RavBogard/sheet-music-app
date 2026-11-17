@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server"
-import { timingSafeEqual } from "crypto"
 
 import { initAdmin } from "@/lib/firebase-admin"
 import {
@@ -10,6 +9,7 @@ import { logger } from "@/lib/logger"
 import { captureException } from "@/lib/error-reporting"
 import { env } from "@/env.mjs"
 import { httpError } from "@/lib/http/error-envelope"
+import { bearerSecretMatches } from "@/lib/http/bearer-secret"
 
 /**
  * Cycle-3 NEW-3 (A3) — AI enrichment retry drain.
@@ -29,11 +29,6 @@ import { httpError } from "@/lib/http/error-envelope"
  * src/lib/library/ai-enrichment.ts vs src/lib/enrichment-engine.ts.)
  */
 
-function safeCompare(a: string, b: string): boolean {
-    if (a.length !== b.length) return false
-    return timingSafeEqual(Buffer.from(a), Buffer.from(b))
-}
-
 export const dynamic = "force-dynamic"
 export const maxDuration = 300
 
@@ -41,11 +36,7 @@ export async function GET(req: NextRequest) {
     try {
         const authHeader = req.headers.get("authorization")
         const cronSecret = env.CRON_SECRET
-        if (
-            !cronSecret ||
-            !authHeader ||
-            !safeCompare(authHeader, `Bearer ${cronSecret}`)
-        ) {
+        if (!bearerSecretMatches(authHeader, cronSecret)) {
             // Cycle-3 REG-002: rich envelope on the wire.
             return httpError(
                 401,

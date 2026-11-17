@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server"
-import { timingSafeEqual } from "crypto"
 import { getFirestore } from "firebase-admin/firestore"
 
 import { initAdmin } from "@/lib/firebase-admin"
@@ -9,6 +8,7 @@ import { logger } from "@/lib/logger"
 import { captureException } from "@/lib/error-reporting"
 import { env } from "@/env.mjs"
 import { httpError } from "@/lib/http/error-envelope"
+import { bearerSecretMatches } from "@/lib/http/bearer-secret"
 
 /**
  * Batch chart intake — stuck-batch resume sweep.
@@ -25,17 +25,6 @@ import { httpError } from "@/lib/http/error-envelope"
  * Auth: same CRON_SECRET / Bearer dance as the other crons.
  */
 
-function safeCompare(a: string, b: string): boolean {
-    // Compare BYTE lengths, not string lengths: `timingSafeEqual` throws on
-    // unequal-length buffers, and two equal-length strings can encode to
-    // different byte counts once either holds a non-ASCII character. A throw
-    // here would surface as a 500 on what is simply a wrong secret.
-    const left = Buffer.from(a)
-    const right = Buffer.from(b)
-    if (left.byteLength !== right.byteLength) return false
-    return timingSafeEqual(left, right)
-}
-
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
 
@@ -43,11 +32,7 @@ export async function GET(req: NextRequest) {
     try {
         const authHeader = req.headers.get("authorization")
         const cronSecret = env.CRON_SECRET
-        if (
-            !cronSecret ||
-            !authHeader ||
-            !safeCompare(authHeader, `Bearer ${cronSecret}`)
-        ) {
+        if (!bearerSecretMatches(authHeader, cronSecret)) {
             return httpError(
                 401,
                 "unauthenticated",

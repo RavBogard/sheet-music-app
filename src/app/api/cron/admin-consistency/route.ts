@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server"
-import { timingSafeEqual } from "crypto"
 import { getStorage } from "firebase-admin/storage"
 import { initAdmin, getAuth, getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
@@ -20,6 +19,7 @@ import {
     type LibraryBytesHealthResult,
     type LibraryBytesRow,
 } from "@/lib/library/bytes-health"
+import { bearerSecretMatches } from "@/lib/http/bearer-secret"
 
 /**
  * Bridge-health alarm tuning (added 2026-05-25 — closes
@@ -106,18 +106,13 @@ function bridgeHealthParseTimestampMs(raw: unknown): number | null {
     return null
 }
 
-function safeCompare(a: string, b: string): boolean {
-    if (a.length !== b.length) return false
-    return timingSafeEqual(Buffer.from(a), Buffer.from(b))
-}
-
 export const dynamic = "force-dynamic"
 
 export async function GET(req: NextRequest) {
     try {
         const authHeader = req.headers.get("authorization")
         const cronSecret = env.CRON_SECRET
-        if (!cronSecret || !authHeader || !safeCompare(authHeader, `Bearer ${cronSecret}`)) {
+        if (!bearerSecretMatches(authHeader, cronSecret)) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
         }
 

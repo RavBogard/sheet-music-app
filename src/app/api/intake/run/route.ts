@@ -1,5 +1,4 @@
 import { after, NextResponse, type NextRequest } from "next/server"
-import { timingSafeEqual } from "crypto"
 
 import { getFirestore, initAdmin } from "@/lib/firebase-admin"
 import {
@@ -9,6 +8,7 @@ import {
     triggerHttpRun,
 } from "@/lib/intake/http-executor"
 import { logger } from "@/lib/logger"
+import { bearerSecretMatches } from "@/lib/http/bearer-secret"
 
 /**
  * POST /api/intake/run — internal batch executor.
@@ -33,17 +33,6 @@ import { logger } from "@/lib/logger"
 export const dynamic = "force-dynamic"
 export const maxDuration = 300
 
-function safeCompare(a: string, b: string): boolean {
-    // Compare BYTE lengths, not string lengths: `timingSafeEqual` throws on
-    // unequal-length buffers, and two strings of equal length can encode to
-    // different byte counts the moment either holds a non-ASCII character. A
-    // throw here would surface as a 500 on what is simply a wrong secret.
-    const left = Buffer.from(a)
-    const right = Buffer.from(b)
-    if (left.byteLength !== right.byteLength) return false
-    return timingSafeEqual(left, right)
-}
-
 export async function POST(req: NextRequest) {
     const secret = internalRunSecret()
     if (!secret) {
@@ -62,7 +51,7 @@ export async function POST(req: NextRequest) {
     }
 
     const authHeader = req.headers.get("authorization")
-    if (!authHeader || !safeCompare(authHeader, `Bearer ${secret}`)) {
+    if (!bearerSecretMatches(authHeader, secret)) {
         return NextResponse.json(
             {
                 error: "unauthenticated",

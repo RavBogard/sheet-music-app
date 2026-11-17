@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server"
-import { timingSafeEqual } from "crypto"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { FieldValue } from "firebase-admin/firestore"
 import { emitToday, readStoredToday } from "@/lib/today/emit-today"
@@ -12,11 +11,7 @@ import { tenantsWithFeature } from "@/lib/org/features"
 import { logger } from "@/lib/logger"
 import { env } from "@/env.mjs"
 import { httpError } from "@/lib/http/error-envelope"
-
-function safeCompare(a: string, b: string): boolean {
-    if (a.length !== b.length) return false
-    return timingSafeEqual(Buffer.from(a), Buffer.from(b))
-}
+import { bearerSecretMatches } from "@/lib/http/bearer-secret"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
@@ -191,11 +186,7 @@ async function alertIfUnhealthy(
 export async function GET(req: NextRequest) {
     const authHeader = req.headers.get("authorization")
     const cronSecret = env.CRON_SECRET
-    if (
-        !cronSecret ||
-        !authHeader ||
-        !safeCompare(authHeader, `Bearer ${cronSecret}`)
-    ) {
+    if (!bearerSecretMatches(authHeader, cronSecret)) {
         return httpError(
             401,
             "unauthenticated",

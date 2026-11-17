@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server"
-import { timingSafeEqual } from "crypto"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
 import { env } from "@/env.mjs"
@@ -7,6 +6,7 @@ import { deriveSetlistCounts, sameFileIds } from "@/lib/setlist-derived-counts"
 import { recomputeTrackCount } from "@/lib/setlist-track-count"
 import { getTracksForSetlist } from "@/lib/server-tracks"
 import { captureException, captureMessage } from "@/lib/error-reporting"
+import { bearerSecretMatches } from "@/lib/http/bearer-secret"
 
 /**
  * C11M1-001 — weekly backstop heal of `trackCount` + `songCount` across the
@@ -34,11 +34,6 @@ import { captureException, captureMessage } from "@/lib/error-reporting"
 
 const CRON_LANE = "recompute-all-setlist-counts"
 
-function safeCompare(a: string, b: string): boolean {
-    if (a.length !== b.length) return false
-    return timingSafeEqual(Buffer.from(a), Buffer.from(b))
-}
-
 export const dynamic = "force-dynamic"
 
 interface DriftRow {
@@ -54,11 +49,7 @@ export async function GET(req: NextRequest) {
     try {
         const authHeader = req.headers.get("authorization")
         const cronSecret = env.CRON_SECRET
-        if (
-            !cronSecret ||
-            !authHeader ||
-            !safeCompare(authHeader, `Bearer ${cronSecret}`)
-        ) {
+        if (!bearerSecretMatches(authHeader, cronSecret)) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
         }
 

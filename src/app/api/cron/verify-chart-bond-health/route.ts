@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server"
-import { timingSafeEqual } from "crypto"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
 import { env } from "@/env.mjs"
@@ -7,6 +6,7 @@ import { verifySetlistCharts } from "@/lib/mcp/tools/library-verify"
 import { recomputeTrackCount } from "@/lib/setlist-track-count"
 import { captureException, captureMessage } from "@/lib/error-reporting"
 import { isTestUid } from "@/lib/test-isolation"
+import { bearerSecretMatches } from "@/lib/http/bearer-secret"
 
 /**
  * Cycle-7-fixes Lane 3 — chart-bond health cron.
@@ -51,11 +51,6 @@ const MIN_BONDED_FOR_BREACH = 3
 // the route boundary; per-tool calls inherit that.
 const CRON_UID = "system-cron-chart-bond"
 
-function safeCompare(a: string, b: string): boolean {
-    if (a.length !== b.length) return false
-    return timingSafeEqual(Buffer.from(a), Buffer.from(b))
-}
-
 interface PerSetlistSummary {
     setlistId: string
     name: string
@@ -77,7 +72,7 @@ export async function GET(req: NextRequest) {
     try {
         const authHeader = req.headers.get("authorization")
         const cronSecret = env.CRON_SECRET
-        if (!cronSecret || !authHeader || !safeCompare(authHeader, `Bearer ${cronSecret}`)) {
+        if (!bearerSecretMatches(authHeader, cronSecret)) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
         }
 
