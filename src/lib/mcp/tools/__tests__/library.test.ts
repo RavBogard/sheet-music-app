@@ -221,17 +221,10 @@ describe("getSong", () => {
         mockGetSongById.mockResolvedValue({ id: "s1", title: "Lecha Dodi" })
         const r = await getSong("u", { id: "s1" })
         expect(mockGetSongById).toHaveBeenCalledWith("s1")
-        // Cycle-3 AI-001: getSong now spreads the enrichment projection on
-        // top of the song record. Without a Firestore emulator on this unit
-        // test path, loadEnrichmentProjection's caller-side catch degrades
-        // to the empty projection so the wire shape stays consistent.
         expect(r).toMatchObject({ id: "s1", title: "Lecha Dodi" })
-        expect(r).toMatchObject({
-            enrichmentStatus: null,
-            enrichmentConfidence: null,
-            aiSuggestion: null,
-            retryQueued: false,
-        })
+        // The AI enrichment projection is gone from the wire.
+        expect(r).not.toHaveProperty("enrichmentStatus")
+        expect(r).not.toHaveProperty("aiSuggestion")
         // Recordings 2026-11: the featured-take field is always present (null when none).
         expect(r).toHaveProperty("recording", null)
     })

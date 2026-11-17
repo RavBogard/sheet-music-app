@@ -43,7 +43,7 @@ vi.mock("@/lib/firebase-admin", () => ({
                     }),
                 }
             }
-            // aiEnrichmentRetryQueue — ids-only read, empty is fine.
+            // Any other collection: empty.
             return { select: () => ({ get: async () => ({ docs: [] }) }) }
         },
     }),

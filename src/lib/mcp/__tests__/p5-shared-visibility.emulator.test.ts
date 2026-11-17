@@ -26,7 +26,7 @@ import { searchChartText } from "@/lib/mcp/tools/chart-text-search"
 import { getChartStatus } from "@/lib/mcp/tools/library-verify"
 import { updateSong } from "@/lib/mcp/tools/song-metadata"
 import { markChartStatus } from "@/lib/mcp/tools/mark-chart-status"
-import { editEnrichment } from "@/lib/mcp/tools/library-review"
+import { editLibraryEntry } from "@/lib/mcp/tools/library-entry-edit"
 import { deleteChart } from "@/lib/mcp/tools/library-upload"
 import { downloadChart } from "@/lib/mcp/tools/library-download"
 import { tenantDisplayName } from "@/lib/library/visibility-server"
@@ -206,7 +206,7 @@ describe("P5 shared visibility — MCP reads VISIBLE, writes OWNS (emulator)", (
         expect(code(mark)).toBe("not_owner")
         expect(message(mark)).toBe(navaMsg)
 
-        const edit = await editEnrichment(
+        const edit = await editLibraryEntry(
             ADMIN,
             { rowId: "c-nava-2", edits: { tags: ["x"] }, dryRun: false, force: true },
             CRC,

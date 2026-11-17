@@ -383,8 +383,6 @@ describe("tenant-query builders", () => {
         auditLogsQuery: ["crc", 20],
         partPresetsQuery: ["crc"],
         lastSyncRunQuery: ["crc"],
-        tenantAssignmentsQuery: ["crc"],
-        myAssignmentsQuery: ["uid-1"],
         sharedCollectionsQuery: ["sharedWith", "crc"],
         sharedLibraryRowsQuery: ["crc"],
     }

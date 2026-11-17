@@ -128,21 +128,10 @@
         "phonePlaceholder": "050-1234567",
         "phoneHint": "להתראות SMS על שיבוצים (לא חובה)",
         "notifications": "התראות על שיבוצים",
-        "email": "אימייל",
-        "emailDescription": "הודעות אימייל על שיבוצים ותזכורות",
         "sms": "SMS",
         "smsDescription": "התראות בהודעות טקסט",
         "push": "דחיפה",
-        "pushDescription": "התראות דחיפה בדפדפן",
-        "calendarTitle": "מינוי ללוח שנה",
-        "copy": "העתקה",
-        "calendarCopied": "כתובת לוח השנה הועתקה!",
-        "calendarAddHint": "אפשר להוסיף את הכתובת הזו ל-Google Calendar, ל-Apple Calendar או ל-Outlook כדי לראות את לוח הזמנים שלך ב-{community}.",
-        "calendarGenerated": "נוצרה כתובת ללוח השנה!",
-        "calendarGenerateFailed": "יצירת כתובת לוח השנה נכשלה",
-        "calendarGenerating": "ביצירה...",
-        "calendarGenerate": "יצירת כתובת ללוח שנה",
-        "calendarGenerateHint": "אפשר ליצור כתובת כדי להירשם ללוח הזמנים שלך ב-{community} באפליקציית לוח השנה האישית."
+        "pushDescription": "התראות דחיפה בדפדפן"
     },
     "performThemeHint": "מצב נגינה מוצג לפי ההגדרה הזו. לבמה חשוכה כדאי לבחור כהה.",
     "helpDescription": "מדריכים שלב אחר שלב לאייפדים של הלהקה, למערכת הסאונד ולכל תפילה."

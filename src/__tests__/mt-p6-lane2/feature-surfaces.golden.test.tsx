@@ -244,9 +244,6 @@ function withFlags(capture: Print, f: OrgFeatures): Print {
         out.performMonitorButtons = 0
     }
     if (!f.driveInbox && "librarySyncCard" in out) out.librarySyncCard = false
-    if (!f.schedulingEmails && out.schedulingNotificationToggles) {
-        out.schedulingNotificationToggles = without(out.schedulingNotificationToggles, "Email")
-    }
     if (!f.notifyBand) out.emailPacketsButton = false
     if (!f.perform) {
         const relink = (l: string) => (l === "Setlists -> /perform" ? "Setlists -> /setlists" : l)
@@ -258,7 +255,7 @@ function withFlags(capture: Print, f: OrgFeatures): Print {
     return out
 }
 
-const ALL_ON: OrgFeatures = { mixer: true, driveInbox: true, schedulingEmails: true, todayFeed: true, notifyBand: true, perform: true }
+const ALL_ON: OrgFeatures = { mixer: true, driveInbox: true, todayFeed: true, notifyBand: true, perform: true }
 const TODAY = today as Record<"crc" | "brotherslazaroff", Record<Viewer, Print>>
 
 function throwaway(features: Partial<OrgFeatures>, id = "throwaway"): OrgConfig {
@@ -310,7 +307,6 @@ describe("phase 6: each flag switched off on a throwaway tenant removes its UI",
 
     const cases: Array<[keyof OrgFeatures, (p: Print) => void]> = [
         ["driveInbox", (p) => expect(p.librarySyncCard).toBe(false)],
-        ["schedulingEmails", (p) => expect(p.schedulingNotificationToggles).toEqual(["SMS", "Push"])],
         ["notifyBand", (p) => expect(p.emailPacketsButton).toBe(false)],
         ["todayFeed", () => {}],
     ]

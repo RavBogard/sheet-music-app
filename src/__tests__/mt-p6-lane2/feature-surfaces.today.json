@@ -36,7 +36,6 @@
       "openSetlistGoesTo": "/setlists",
       "performMonitorButtons": 2,
       "schedulingNotificationToggles": [
-        "Email",
         "SMS",
         "Push"
       ],
@@ -71,7 +70,6 @@
       "openSetlistGoesTo": "/setlists",
       "performMonitorButtons": 2,
       "schedulingNotificationToggles": [
-        "Email",
         "SMS",
         "Push"
       ],
@@ -119,7 +117,6 @@
       "openSetlistGoesTo": "/setlists",
       "performMonitorButtons": 2,
       "schedulingNotificationToggles": [
-        "Email",
         "SMS",
         "Push"
       ],
@@ -154,7 +151,6 @@
       "openSetlistGoesTo": "/setlists",
       "performMonitorButtons": 2,
       "schedulingNotificationToggles": [
-        "Email",
         "SMS",
         "Push"
       ],

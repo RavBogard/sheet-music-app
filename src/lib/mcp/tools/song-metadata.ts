@@ -28,7 +28,7 @@ import {
  *    getSongById). A wrong/empty key here is why the cowork session saw a
  *    bonded row pull `key: null` from the catalog.
  *  - `library_index/{id}.{key,bpm,leadMusician}` — read by list_library, the
- *    in-app /library catalog, and edit_enrichment.
+ *    in-app /library catalog, and edit_library_entry.
  *
  * `processChartUpload` only writes key/bpm to `library_index` (not
  * songs.defaults), so neither tool here can rely on the upload pipeline to

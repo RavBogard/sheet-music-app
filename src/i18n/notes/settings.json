@@ -571,16 +571,6 @@
         "who": "everyone signed in",
         "maxLength": 35
     },
-    "scheduling.email": {
-        "where": "Settings page, scheduling notifications: toggle name",
-        "who": "everyone signed in",
-        "maxLength": 12
-    },
-    "scheduling.emailDescription": {
-        "where": "Settings page, scheduling notifications: grey line under the Email toggle",
-        "who": "everyone signed in",
-        "maxLength": 45
-    },
     "scheduling.sms": {
         "where": "Settings page, scheduling notifications: toggle name (text messages)",
         "who": "everyone signed in",
@@ -600,53 +590,6 @@
         "where": "Settings page, scheduling notifications: grey line under the Push toggle",
         "who": "everyone signed in",
         "maxLength": 45
-    },
-    "scheduling.calendarTitle": {
-        "where": "Settings page, scheduling section: label of the calendar feed box",
-        "who": "everyone signed in",
-        "maxLength": 30
-    },
-    "scheduling.copy": {
-        "where": "Settings page, calendar feed box: button that copies the feed URL",
-        "who": "everyone signed in",
-        "maxLength": 12
-    },
-    "scheduling.calendarCopied": {
-        "where": "Settings page, calendar feed box: success toast",
-        "who": "everyone signed in",
-        "maxLength": 40
-    },
-    "scheduling.calendarAddHint": {
-        "where": "Settings page, calendar feed box: note under the feed URL",
-        "who": "everyone signed in",
-        "maxLength": 110,
-        "context": "Google Calendar, Apple Calendar and Outlook are product names. {community} is the community's short name. It reads 'CRC' on CRC and on Brothers Lazaroff exactly as before phase 7; other tenants get their own short name."
-    },
-    "scheduling.calendarGenerated": {
-        "where": "Settings page, calendar feed box: success toast",
-        "who": "everyone signed in",
-        "maxLength": 45
-    },
-    "scheduling.calendarGenerateFailed": {
-        "where": "Settings page, calendar feed box: error toast",
-        "who": "everyone signed in",
-        "maxLength": 50
-    },
-    "scheduling.calendarGenerating": {
-        "where": "Settings page, calendar feed box: button text while working",
-        "who": "everyone signed in",
-        "maxLength": 25
-    },
-    "scheduling.calendarGenerate": {
-        "where": "Settings page, calendar feed box: button that creates the feed URL",
-        "who": "everyone signed in",
-        "maxLength": 25
-    },
-    "scheduling.calendarGenerateHint": {
-        "where": "Settings page, calendar feed box: note under the generate button",
-        "who": "everyone signed in",
-        "maxLength": 100,
-        "context": "{community} is the community's short name. It reads 'CRC' on CRC and on Brothers Lazaroff exactly as before phase 7; other tenants get their own short name."
     },
     "performThemeHint": {
         "where": "Settings page, Appearance card: small grey note under the theme buttons",

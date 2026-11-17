@@ -50,7 +50,7 @@ export function testConfig(over: Partial<{ id: string; name: string }> = {}): Or
         locale: { language: "en", direction: "ltr", timeZone: "America/Chicago" },
         email: { fromName: name, headerBg: "#4f46e5", footerText: "" },
         legal: { operatorName: "Op" },
-        features: { mixer: false, driveInbox: false, schedulingEmails: false, todayFeed: false, notifyBand: false, perform: true },
+        features: { mixer: false, driveInbox: false, todayFeed: false, notifyBand: false, perform: true },
         library: {},
         liturgy: {},
         congregationDefaults: { name, shortName: "Probe", themeColor: "#4f46e5" },

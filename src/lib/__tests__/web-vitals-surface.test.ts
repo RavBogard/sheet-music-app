@@ -45,7 +45,7 @@ describe("normalizeSurface", () => {
     })
 
     it("leaves routes that carry no id alone", () => {
-        for (const p of ["/perform", "/setlists", "/library", "/login", "/", "/schedule"]) {
+        for (const p of ["/perform", "/setlists", "/library", "/login", "/"]) {
             expect(normalizeSurface(p)).toBe(p)
         }
     })

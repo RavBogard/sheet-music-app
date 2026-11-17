@@ -26,27 +26,15 @@ import { backfillContentHash } from "./backfill-content-hash"
 import { searchChartText } from "./chart-text-search"
 import { reconcileLibrary } from "./reconcile-library"
 import { salvageChartBytes } from "./salvage-chart-bytes"
-import { backfillHealMetadata } from "./backfill-heal-metadata"
 import { backfillTrackMimetype } from "./backfill-track-mimetype"
 import { backfillChartLineage } from "./backfill-chart-lineage"
 import { backfillLibrarySettingParts } from "./backfill-setting-parts"
 import { backfillLibraryKeys } from "./backfill-library-keys"
 import { archiveNonChartArtifacts } from "./archive-nonchart-artifacts"
-import { getAiConfig, setAiAutoApply, setAiThreshold } from "./ai-config"
-import { getCorrectionStats } from "./correction-stats"
 import { testDeleteStorageObject } from "./test-delete-storage-object"
 import { dumpCollectionSize } from "./dump-collection-size"
 import { getWebVitalsSummary } from "./web-vitals-summary"
-import { getAiSpendSummary } from "./ai-spend-summary"
-import {
-    listReviewQueue,
-    getEnrichmentSuggestion,
-    acceptEnrichment as acceptEnrichmentTool,
-    rejectEnrichment as rejectEnrichmentTool,
-    editEnrichment as editEnrichmentTool,
-    retryEnrichment as retryEnrichmentTool,
-    dismissFailure as dismissFailureTool,
-} from "./library-review"
+import { editLibraryEntry } from "./library-entry-edit"
 import { backfillSetlistTestFlag } from "./setlist-hygiene"
 import { backfillWeekKeys } from "./week-key-backfill"
 import {
@@ -143,15 +131,7 @@ import {
     listMusicians,
     findUser,
     getMusicianProfile,
-    listMusiciansOnDate,
-    listPendingAssignments,
-    suggestMusicians,
-    suggestBand,
-    assignMusician,
-    unassignMusician,
-    respondToAssignment,
 } from "./roster"
-import { listServicePersonnel } from "./service-personnel"
 import { updateSong } from "./song-metadata"
 import { listBooksTool, lookupBookPageTool } from "./books"
 import { getSongHistoryTool, exportSetlistsTool } from "./history"
@@ -2706,7 +2686,7 @@ export function registerWriteTools(server: McpServer): void {
         "salvage_chart_bytes",
         {
             description:
-                "Admin-only HEAL tool — re-upload chart bytes onto an EXISTING orphaned `library_index/{fileId}` row, preserving every setlist/song bond pointing at that fileId (cycle-3 DATA-001). Use this BEFORE `reconcile_library({force:true})` would mark a row orphaned, when the song is load-bearing (the 24-orphan triage surfaced names like Ana B'Koach, Mizmor L'David, Tu Bishvat, Yedid Nefesh, May the Memory). Source-bytes resolution: (1) if `sourceUrl` is provided, fetch it (https only, 25MB cap); (2) else if the row carries `driveFileId`, re-fetch from Drive via the service account; (3) else refuse with `no_source_available`. HEAL contract (NOT a fresh-mint upload): bytes land at the SAME fileId, mimeType + fileSize + source:'salvage' + salvagedAt + status:'active' are merge-updated, every curation field (key, bpm, tags, leadMusician, composer, arranger, bondCorrectionHistory) is preserved, and the derived dedup/search fields (normalizedName, stem, titleSpecificity) are RECOMPUTED + enrichmentStatus reset to 'pending' so the AI enrichment pass re-runs on the new bytes. Atomic-guard: read-verify + compensating-delete on Firestore failure + library_signals broadcast — same contract as reconcile_library and processChartUpload. Defaults `dryRun: true` per the F-05 dry-run-is-observability rule; the dryRun plan resolves bytes (and may fail at this stage if the source is broken) but writes nothing. Real run without `force: true` returns the plan with `refused: true`. Refusal envelopes (rich): `forbidden_role` (admin-only), `row_not_found`, `no_source_available`, `invalid_source_url`, `invalid_source_mime`, `source_fetch_failed`, `source_fetch_empty`, `source_too_large`, `storage_upload_failed`, `storage_verify_missing`, `storage_size_mismatch`, `firestore_write_failed`. Returns `{ok:true, fileId, rowName, source:'sourceUrl'|'drive', mimeType, sizeBytes, storagePath, dryRun, refused?}`.",
+                "Admin-only HEAL tool — re-upload chart bytes onto an EXISTING orphaned `library_index/{fileId}` row, preserving every setlist/song bond pointing at that fileId (cycle-3 DATA-001). Use this BEFORE `reconcile_library({force:true})` would mark a row orphaned, when the song is load-bearing (the 24-orphan triage surfaced names like Ana B'Koach, Mizmor L'David, Tu Bishvat, Yedid Nefesh, May the Memory). Source-bytes resolution: (1) if `sourceUrl` is provided, fetch it (https only, 25MB cap); (2) else if the row carries `driveFileId`, re-fetch from Drive via the service account; (3) else refuse with `no_source_available`. HEAL contract (NOT a fresh-mint upload): bytes land at the SAME fileId, mimeType + fileSize + source:'salvage' + salvagedAt + status:'active' are merge-updated, every curation field (key, bpm, tags, leadMusician, composer, arranger, bondCorrectionHistory) is preserved, and the derived dedup/search fields (normalizedName, stem, titleSpecificity) are RECOMPUTED. Atomic-guard: read-verify + compensating-delete on Firestore failure + library_signals broadcast — same contract as reconcile_library and processChartUpload. Defaults `dryRun: true` per the F-05 dry-run-is-observability rule; the dryRun plan resolves bytes (and may fail at this stage if the source is broken) but writes nothing. Real run without `force: true` returns the plan with `refused: true`. Refusal envelopes (rich): `forbidden_role` (admin-only), `row_not_found`, `no_source_available`, `invalid_source_url`, `invalid_source_mime`, `source_fetch_failed`, `source_fetch_empty`, `source_too_large`, `storage_upload_failed`, `storage_verify_missing`, `storage_size_mismatch`, `firestore_write_failed`. Returns `{ok:true, fileId, rowName, source:'sourceUrl'|'drive', mimeType, sizeBytes, storagePath, dryRun, refused?}`.",
             inputSchema: {
                 fileId: z
                     .string()
@@ -2737,30 +2717,6 @@ export function registerWriteTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await salvageChartBytes(uidFrom(extra), args, orgFrom(extra))),
-    )
-
-    server.registerTool(
-        "backfill_heal_metadata",
-        {
-            description:
-                "Admin-only ONE-TIME backfill — for a single already-healed `library_index/{fileId}` row, recompute the derived dedup/search fields (`normalizedName`, `stem`, `titleSpecificity`) from the row's title and re-trigger the AI enrichment pass on its bytes. Use this ONLY for rows healed before the chart-heal metadata fix (the 271 Shireinu rows in heal-run-report.json `action:'healed'`) — fresh heals (salvage_chart_bytes / finalize_chart_upload) now stamp these fields inline. Skips (action:'skipped') any row whose status is not 'active' (an orphaned/missing-bytes row must be healed first, not metadata-papered). `dryRun` defaults true: it computes + returns the would-be fields (and the row's prior values) WITHOUT writing or spending Gemini tokens. On `dryRun:false` it merge-sets the four fields then runs the enrichment pass (awaited; deterministic) — this DOES spend a Gemini call per row, so drive it from the operator script after reviewing the dry-run. Returns `{ok:true, fileId, name, dryRun, action:'would-stamp'|'stamped'|'skipped', reason?, computed:{normalizedName, stem, titleSpecificity, enrichmentStatus}, prior:{...}, enrichmentStatus?, enrichment?:'ran'|'skipped_no_bytes'}`. Refusals (rich): `forbidden_role`, `row_not_found`, `invalid_argument`, `internal_error`.",
-            inputSchema: {
-                fileId: z
-                    .string()
-                    .min(1)
-                    .describe(
-                        "The healed library_index row's fileId (from heal-run-report.json action:'healed' targetFileId).",
-                    ),
-                dryRun: z
-                    .boolean()
-                    .optional()
-                    .describe(
-                        "When true (default), compute + return the plan + prior values without writing or enriching. Set false to stamp the fields + run the Gemini enrichment pass (token spend).",
-                    ),
-            },
-        },
-        async (args, extra) =>
-            jsonResult(await backfillHealMetadata(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -2921,193 +2877,13 @@ export function registerWriteTools(server: McpServer): void {
             ),
     )
 
-    server.registerTool(
-        "get_ai_config",
-        {
-            description:
-                "Admin-only — read the current AI enrichment config (cycle-3 c2). Returns `{ok: true, autoApplyEnabled: boolean, threshold: number, subscriberActive: boolean, provider: 'gemini'|'anthropic'|null}` where `autoApplyEnabled` is the gate that lets the a3 subscriber auto-apply provider suggestions onto fresh library_index rows (false during the calibration phase forces every row into /manage/library-review) and `threshold` is the confidence floor below which any row enters review_pending regardless of the gate. `subscriberActive` is true when the active provider's API key is present in the environment (today: `GEMINI_API_KEY`). `provider` is the active provider discriminant — `'gemini'` post-a3-gemini-swap, `null` when no key is set; the union keeps `'anthropic'` as a forward-compat slot. Both Firestore-backed values live on the single doc `aiConfig/autoApplyEnabled` — this tool is the read counterpart of set_ai_auto_apply + set_ai_threshold. Defaults surface when the doc is missing or fields are out of range: autoApplyEnabled false, threshold 0.7 (Daniel-ratified per ADDENDUM-1). Read-only — no writes.",
-            inputSchema: {},
-        },
-        async (_args, extra) => jsonResult(await getAiConfig(uidFrom(extra), orgFrom(extra))),
-    )
-
-    server.registerTool(
-        "set_ai_auto_apply",
-        {
-            description:
-                "Admin-only — flip `aiConfig.autoApplyEnabled` (cycle-3 c2). Controls whether the a3 AI enrichment subscriber auto-applies Sonnet's suggestions onto new library_index rows (true → auto-fill empty key/bpm/tags/leadMusician when confidence ≥ threshold; false → every row lands in /manage/library-review for human triage regardless of confidence). Pair `dryRun: false, force: true` for the actual write — F-05 standing rule: dryRun-default + force-required for real writes. dryRun returns the would-be `{previous, new, changed}` without writing. A real run without `force: true` returns the rich `force_required` envelope (REG-003) and still no writes. Idempotent: flipping to the current value returns `changed: false` without surprise side-effects. Returns `{ok: true, previous: boolean, new: boolean, changed: boolean, dryRun}`.",
-            inputSchema: {
-                enabled: z
-                    .boolean()
-                    .describe(
-                        "Desired state for the auto-apply gate. `true` enables auto-apply on high-confidence rows; `false` forces every fresh row into /manage/library-review.",
-                    ),
-                dryRun: z
-                    .boolean()
-                    .optional()
-                    .describe(
-                        "When true (default), returns the plan without writing. F-05 standing rule: dryRun does NOT require force.",
-                    ),
-                force: z
-                    .boolean()
-                    .optional()
-                    .describe(
-                        "Required for real writes. Pair with `dryRun: false`. Omitting it returns the rich `force_required` envelope (REG-003) and no writes. Pair with clear user intent (e.g. \"flip auto-apply on\") — the dryRun → real-run flow is the safety contract.",
-                    ),
-            },
-        },
-        async (args, extra) =>
-            jsonResult(await setAiAutoApply(uidFrom(extra), args, orgFrom(extra))),
-    )
-
-    server.registerTool(
-        "set_ai_threshold",
-        {
-            description:
-                "Admin-only — set `aiConfig.threshold` (cycle-3 c2). Confidence floor in `[0, 1]` used by the a3 AI enrichment subscriber: any row whose Sonnet self-assessed `confidence` is below this threshold lands in /manage/library-review regardless of autoApplyEnabled. Default 0.7 (Daniel-ratified per ADDENDUM-1 §3 NEW-3). Use lower values (e.g. 0.5) to let more borderline AI calls auto-apply during calibration; higher values (e.g. 0.85) to be more conservative once the queue stabilises. Zod-validated: out-of-range values return `validation_error` with hint. Same dryRun/force contract as set_ai_auto_apply: dryRun-default, force-required for writes. Idempotent. Returns `{ok: true, previous: number, new: number, changed: boolean, dryRun}`.",
-            inputSchema: {
-                value: z
-                    .number()
-                    .min(0)
-                    .max(1)
-                    .describe(
-                        "New confidence threshold in [0, 1]. 0.7 is the Daniel-ratified default; 0.5 is loose; 0.85 is conservative.",
-                    ),
-                dryRun: z
-                    .boolean()
-                    .optional()
-                    .describe(
-                        "When true (default), returns the plan without writing. F-05 standing rule: dryRun does NOT require force.",
-                    ),
-                force: z
-                    .boolean()
-                    .optional()
-                    .describe(
-                        "Required for real writes. Pair with `dryRun: false`. Omitting it returns the rich `force_required` envelope (REG-003) and no writes.",
-                    ),
-            },
-        },
-        async (args, extra) =>
-            jsonResult(await setAiThreshold(uidFrom(extra), args, orgFrom(extra))),
-    )
-
-    // ─── Library review queue (cycle-3 a5) ───────────────────────────────
-    // Admin-only MCP-tool counterpart to a4's `/manage/library-review` UI.
-    // Wraps a4's `src/lib/library/review-queue.ts` helper so Daniel can
-    // triage AI enrichment + Drive import failures from Claude Desktop.
-
-    server.registerTool(
-        "list_review_queue",
-        {
-            description:
-                "Admin-only — list the three review queues backing a4's `/manage/library-review` UI (cycle-3 a5). Returns `aiReview` (library_index rows at `enrichmentStatus: 'review_pending'` — Sonnet/Gemini flagged for human triage), `aiFailed` (rows that hit the retry ceiling — joined with `aiEnrichmentRetryQueue/{rowId}` for `lastError`/`attempts`/`exhaustedAt` forensics), and `importFailures` (a1's `chartImportQueue/{driveFileId}` rows from the every-5-min Drive sync cron, excluding dismissed). Per-row shape mirrors the HTTP `/api/admin/library-review/queue` payload — `current` (existing human-set fields), `suggestion` (the AI's structured-output snapshot), `triggers` (which review flags fired), and `duplicateCandidates` (sibling rows hydrated via batched getAll). `config` carries the calibration banner state (autoApplyEnabled + threshold + aiProviderConfigured — true when the active provider's API key is in the env; post-a3-gemini-swap this reads `GEMINI_API_KEY`) so the operator sees the same context the UI shows. Filter with `kind: 'enrichment' | 'import' | 'all'` (default 'all') and `status: 'review_pending' | 'failed'` (omit for both). `limit` defaults 50, max 200. COUNTS vs RETURNED (2026-09-22): `counts` is the TRUE size of each bucket, from a `count()` aggregation, and is independent of both `limit` and the 200-row page cap underneath it; `returned` is how many rows this call actually handed back. `truncated` compares the two, so it now means what it says. Before this it was computed against the already-capped array and could never be `true` — a live queue of 270 reported `counts: 200, truncated: false`, and the handoff that read it recorded '50+ rows' off a default `limit: 50`. When `truncated` is true, drain by acting on rows and re-listing rather than by raising `limit`. Read-only.",
-            inputSchema: {
-                kind: z
-                    .enum(["enrichment", "import", "all"])
-                    .optional()
-                    .describe(
-                        "'enrichment' returns aiReview + aiFailed only. 'import' returns importFailures only. 'all' (default) returns every bucket.",
-                    ),
-                status: z
-                    .enum(["review_pending", "failed"])
-                    .optional()
-                    .describe(
-                        "Optional library_index status filter — 'review_pending' returns only the AI review queue, 'failed' returns only the AI failed queue + Drive import failures.",
-                    ),
-                limit: z
-                    .number()
-                    .int()
-                    .min(1)
-                    .max(200)
-                    .optional()
-                    .describe(
-                        "Per-bucket row cap. Default 50, max 200. `truncated: true` in the response when any bucket exceeded the cap.",
-                    ),
-            },
-        },
-        async (args, extra) =>
-            jsonResult(await listReviewQueue(uidFrom(extra), args, orgFrom(extra))),
-    )
-
-    server.registerTool(
-        "get_enrichment_suggestion",
-        {
-            description:
-                "Admin-only — fetch the full AI suggestion + duplicate-candidates context for one `library_index` row (cycle-3 a5). Returns `suggestion` (the Sonnet/Gemini structured-output snapshot: is_chart, confidence, suggested_title/key/bpm/lead/tags, collection_disagrees_with_folder, duplicate_candidates), `triggers` (which review-pending checks fired), `current` (existing human-set fields so the caller can diff before acting), and `duplicateCandidates` hydrated with title + collection. Use before `accept_enrichment` / `edit_enrichment` to confirm what's actually in the doc — the `list_review_queue` row carries the same fields but capped to 50/page. Read-only; no writes.",
-            inputSchema: {
-                rowId: z
-                    .string()
-                    .min(1)
-                    .describe(
-                        "library_index document id (visible in every `list_review_queue` row).",
-                    ),
-            },
-        },
-        async (args, extra) =>
-            jsonResult(await getEnrichmentSuggestion(uidFrom(extra), args, orgFrom(extra))),
-    )
-
-    server.registerTool(
-        "accept_enrichment",
-        {
-            description:
-                "Admin-only — apply the AI suggestion to a `library_index` row (cycle-3 a5). Calls a4's shared `acceptEnrichment` helper: gap-fill only (never overwrites human-set key/bpm/leadMusician/tags), NEVER overwrites `collection` (David's-subfolder authority — operator must use `edit_enrichment` to override), and only renames the row's `name` when the suggestion differs AND `humanRenamedAt` isn't already set. Sets `enrichmentStatus: 'enriched'` + stamps `enrichmentReviewedAt`/`enrichmentReviewedBy`. F-05 contract: `dryRun: true` (default) returns the would-be `plannedStatus` + `plannedPatch` (the fields that would actually flip) without writing. Real-run without `force: true` returns the rich `force_required` envelope (REG-003) and no writes. Pair `dryRun: false, force: true` for the actual flip. Idempotent: re-running on an already-enriched row succeeds (gap-fill applies nothing new). Returns `{ok: true, rowId, status, plannedStatus, plannedPatch?, dryRun}`. Refusals carry rich `row_not_found` / `invalid_state` envelopes.",
-            inputSchema: {
-                rowId: z
-                    .string()
-                    .min(1)
-                    .describe(
-                        "library_index document id from `list_review_queue` or `get_enrichment_suggestion`.",
-                    ),
-                dryRun: z
-                    .boolean()
-                    .optional()
-                    .describe(
-                        "When true (default), returns the plan without writing. F-05 standing rule: dryRun does NOT require force.",
-                    ),
-                force: z
-                    .boolean()
-                    .optional()
-                    .describe(
-                        "Required for real writes. Pair with `dryRun: false`. Omitting it returns the rich `force_required` envelope (REG-003) and no writes.",
-                    ),
-            },
-        },
-        async (args, extra) =>
-            jsonResult(await acceptEnrichmentTool(uidFrom(extra), args, orgFrom(extra))),
-    )
-
-    server.registerTool(
-        "reject_enrichment",
-        {
-            description:
-                "Admin-only — discard the AI suggestion for one `library_index` row (cycle-3 a5). Calls a4's shared `rejectEnrichment` helper: leaves all field values untouched, flips `enrichmentStatus` to `'human_rejected'`, stamps reviewedAt/reviewedBy, and tidies the `aiEnrichmentRetryQueue/{rowId}` doc so the next cron drain doesn't re-fire enrichment for this row. F-05 contract: `dryRun: true` (default) returns the plan without writing; real-run without `force: true` returns the rich `force_required` envelope (REG-003). Pair `dryRun: false, force: true` for the actual write. Idempotent: re-running on an already-`human_rejected` row is a no-op modulo the timestamp re-stamp. Returns `{ok: true, rowId, status: 'human_rejected', plannedStatus, dryRun}`.",
-            inputSchema: {
-                rowId: z
-                    .string()
-                    .min(1)
-                    .describe(
-                        "library_index document id from `list_review_queue`.",
-                    ),
-                dryRun: z.boolean().optional(),
-                force: z.boolean().optional(),
-            },
-        },
-        async (args, extra) =>
-            jsonResult(await rejectEnrichmentTool(uidFrom(extra), args, orgFrom(extra))),
-    )
-
-    // Cowork #4 — shared input schema for edit_enrichment + its edit_library_entry
-    // alias. The "enrichment" name undersold the tool: it works on ANY
-    // library_index row, not just AI-review-queue rows. The clearer-named alias +
-    // the description note below close that discoverability gap without breaking
-    // the existing `edit_enrichment` name.
+    // edit_library_entry — operator edit of any library_index row.
     const editLibraryEntryInputSchema = {
         rowId: z
             .string()
             .min(1)
             .describe(
-                "ANY library_index document id — from list_library / search_library / get_song (the fileId) OR list_review_queue. The row does NOT need to be in the AI review queue.",
+                "ANY library_index document id — from list_library / search_library / get_song (the fileId).",
             ),
         edits: z
             .object({
@@ -3165,76 +2941,14 @@ export function registerWriteTools(server: McpServer): void {
     }
 
     server.registerTool(
-        "edit_enrichment",
-        {
-            description:
-                "Admin + band-leader — operator edit of a `library_index` row (cycle-3 a5; also available under the clearer alias `edit_library_entry`). DESPITE THE NAME, this works on ANY library_index row, not just AI-review-queue rows — a row with `enrichmentStatus: null` (never enriched) is editable too. Calls a4's shared `editEnrichment` helper: applies the supplied `edits` payload directly to the doc (including `collection` — the operator override path IS allowed even though the AI's acceptEnrichment is NOT), sets `enrichmentStatus: 'human_curated'`, stamps reviewedAt/reviewedBy, and sets `humanRenamedAt` whenever `title` is changed (so future enrichment runs won't re-rename). Editable fields: title (non-empty), collection (core|supplemental|nava|uploads), key (string), bpm (positive number or null to clear), leadMusician (string), tags (string[]). At least one field required. v11.5-01-03 (H9): band leaders may edit tags/title/key/bpm/leadMusician on rows in THEIR OWN tenant (a row in another org returns row_not_found) but cannot change `collection` (admin-only, returns forbidden_field); admins are unscoped. For just a key/bpm fix, update_song also works. F-05 contract: `dryRun: true` (default) validates the edits payload + checks the row exists, returns `plannedPatch` without writing; real-run without `force: true` refuses. Validation failures surface as `invalid_field` rich envelopes. Returns `{ok: true, rowId, status: 'human_curated', plannedStatus, plannedPatch, dryRun}`.",
-            inputSchema: editLibraryEntryInputSchema,
-        },
-        async (args, extra) =>
-            jsonResult(await editEnrichmentTool(uidFrom(extra), args, orgFrom(extra))),
-    )
-
-    server.registerTool(
         "edit_library_entry",
         {
             description:
-                "Admin + band-leader — operator edit of ANY `library_index` row (clearer-named alias for `edit_enrichment`; identical behavior). Use this to set/correct a chart's title, collection (core|supplemental|nava|uploads), key, bpm, leadMusician, or tags on any library entry — the row does NOT need to be in the AI review queue. Sets `enrichmentStatus: 'human_curated'`, stamps reviewedAt/reviewedBy, and `humanRenamedAt` on a title change. v11.5-01-03 (H9): band leaders may edit tags/title/key/bpm/leadMusician on rows in THEIR OWN tenant (a row in another org returns row_not_found) but cannot change `collection` (admin-only, returns forbidden_field); admins are unscoped. For a key/bpm-only fix, update_song also works. F-05 contract: `dryRun: true` (default) returns `plannedPatch` without writing; real run needs `dryRun: false, force: true`. Returns `{ok: true, rowId, status: 'human_curated', plannedStatus, plannedPatch, dryRun}`.",
+                "Admin + band-leader — operator edit of ANY `library_index` row. Use this to set/correct a chart's title, collection (core|supplemental|nava|uploads), key, bpm, leadMusician, or tags on any library entry. Sets `enrichmentStatus: 'human_curated'` (which keeps backfill_library_keys off the row), stamps reviewedAt/reviewedBy, and `humanRenamedAt` on a title change. v11.5-01-03 (H9): band leaders may edit tags/title/key/bpm/leadMusician on rows in THEIR OWN tenant (a row in another org returns row_not_found) but cannot change `collection` (admin-only, returns forbidden_field); admins are unscoped. For a key/bpm-only fix, update_song also works. F-05 contract: `dryRun: true` (default) returns `plannedPatch` without writing; real run needs `dryRun: false, force: true`. Returns `{ok: true, rowId, status: 'human_curated', plannedStatus, plannedPatch, dryRun}`.",
             inputSchema: editLibraryEntryInputSchema,
         },
         async (args, extra) =>
-            jsonResult(await editEnrichmentTool(uidFrom(extra), args, orgFrom(extra))),
-    )
-
-    server.registerTool(
-        "retry_enrichment",
-        {
-            description:
-                "Admin-only — re-enqueue a `failed` enrichment or `chartImportQueue` row (cycle-3 a5). Calls a4's shared `retryFailed` helper. `kind: 'enrichment'` (default) rewinds the `aiEnrichmentRetryQueue/{rowId}` doc to `attempts: 0, nextRetryAt: now`, clears `lastError`/`exhaustedAt`, and flips the library_index status back to `'pending'` so the next 30-min `/api/cron/ai-enrich-retry` tick re-runs enrichment. `kind: 'import'` deletes the `chartImportQueue/{driveFileId}` doc so the next 5-min `/api/cron/drive-sync` tick re-imports the file fresh from David's Drop folder. F-05 contract: `dryRun: true` (default) checks the queue doc exists + returns `plannedStatus` without writing. Real-run without `force: true` refuses with the rich `force_required` envelope (REG-003). `queue_doc_missing` rich envelope when the row already drained. Returns `{ok: true, rowId, status, plannedStatus, plannedPatch:{kind}, dryRun}`.",
-            inputSchema: {
-                rowId: z
-                    .string()
-                    .min(1)
-                    .describe(
-                        "For kind='enrichment', the library_index id (matches aiEnrichmentRetryQueue doc). For kind='import', the driveFileId (chartImportQueue id).",
-                    ),
-                kind: z
-                    .enum(["enrichment", "import"])
-                    .optional()
-                    .describe(
-                        "Which queue to re-enqueue. 'enrichment' (default) rewinds the AI retry doc. 'import' deletes the chartImportQueue doc so the Drive cron re-imports.",
-                    ),
-                dryRun: z.boolean().optional(),
-                force: z.boolean().optional(),
-            },
-        },
-        async (args, extra) =>
-            jsonResult(await retryEnrichmentTool(uidFrom(extra), args, orgFrom(extra))),
-    )
-
-    server.registerTool(
-        "dismiss_failure",
-        {
-            description:
-                "Admin-only — mark a `failed` enrichment or `chartImportQueue` row as handled without re-trying (cycle-3 a5). Calls a4's shared `dismissFailed` helper. `kind: 'enrichment'` flips library_index `enrichmentStatus` to `'human_rejected'`, stamps reviewedAt/reviewedBy, and deletes the `aiEnrichmentRetryQueue/{rowId}` doc so cron stops re-firing. `kind: 'import'` sets `dismissed: true` on the `chartImportQueue/{driveFileId}` doc — this is the dismissed-until-next-failure semantic; the next failure overwrite from the poller resets the flag so the row re-surfaces if the underlying problem recurs. F-05 contract: `dryRun: true` (default) checks the row/queue doc exists + returns `plannedStatus` without writing. Real-run without `force: true` refuses. Returns `{ok: true, rowId, status, plannedStatus, plannedPatch:{kind}, dryRun}`.",
-            inputSchema: {
-                rowId: z
-                    .string()
-                    .min(1)
-                    .describe(
-                        "For kind='enrichment', the library_index id. For kind='import', the driveFileId.",
-                    ),
-                kind: z
-                    .enum(["enrichment", "import"])
-                    .describe(
-                        "Which queue the row lives on. 'enrichment' touches library_index + aiEnrichmentRetryQueue. 'import' touches chartImportQueue only.",
-                    ),
-                dryRun: z.boolean().optional(),
-                force: z.boolean().optional(),
-            },
-        },
-        async (args, extra) =>
-            jsonResult(await dismissFailureTool(uidFrom(extra), args, orgFrom(extra))),
+            jsonResult(await editLibraryEntry(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -3255,29 +2969,6 @@ export function registerWriteTools(server: McpServer): void {
             jsonResult(await testDeleteStorageObject(uidFrom(extra), args, orgFrom(extra))),
     )
 
-    server.registerTool(
-        "get_correction_stats",
-        {
-            description:
-                "Admin-only — read the latest aggregated `/manage/library-review` correction signals (cycle-3 c3). Returns deterministic 6-axis counters captured at every accept/reject/edit/retry/dismiss action: `totalSignals`, `actionDistribution` (count per action), `confidenceDistributionByAction` (count + mean + p50 + p90 per action — answers 'do high-confidence rows get accepted more?'), `collectionMismatchAcceptanceRate` (when AI flagged collection_disagrees_with_folder, what fraction did the human accept?), `editFieldFrequency` (which fields get edited most — title vs key vs bpm vs tags vs leadMusician), `rejectionTriggerAttribution` (which review trigger fired on rejected rows — low_confidence vs collection_disagrees_with_folder vs is_chart_false vs duplicate_candidates vs review_required). Default (no args) returns the latest cron-aggregated snapshot from `aiCorrectionStats/latest` (refreshed every 6h); if the cron hasn't populated it yet, computes inline + sets `snapshotMissing: true` so callers always see a concrete shape. Pass ISO-8601 `since` / `until` for a windowed on-demand aggregation. Read-only, no writes. Observation infrastructure only — a future c4-class auto-tuner reads this same shape to deterministically propose threshold adjustments (out of c3 scope). Returns `{ok: true, onDemand: boolean, snapshotMissing?, totalSignals, actionDistribution, confidenceDistributionByAction, collectionMismatchAcceptanceRate, editFieldFrequency, rejectionTriggerAttribution, computedAt, since, until, truncated}`.",
-            inputSchema: {
-                since: z
-                    .string()
-                    .optional()
-                    .describe(
-                        "ISO-8601 UTC lower bound (inclusive), e.g. '2026-05-01T00:00:00Z'. Omit to read the latest cron snapshot.",
-                    ),
-                until: z
-                    .string()
-                    .optional()
-                    .describe(
-                        "ISO-8601 UTC upper bound (exclusive), e.g. '2026-06-01T00:00:00Z'. Omit to scan up to 'now'.",
-                    ),
-            },
-        },
-        async (args, extra) =>
-            jsonResult(await getCorrectionStats(uidFrom(extra), args, orgFrom(extra))),
-    )
 }
 
 /**
@@ -3836,7 +3527,7 @@ export function registerChartUploadTools(server: McpServer): void {
                     .boolean()
                     .optional()
                     .describe(
-                        "Cycle-5 C5C-008 F-05 dry-run. When true, runs all auth/curated/rate-limit gates plus Drive metadata + dedup probe but does NOT download bytes or write to Storage/Firestore. Returns { ok:true, wouldCommit:false, predictedTitle, predictedMimeType, predictedCollection, targetStoragePath (with `<new-uuid>` placeholder), dedupScore, dedupMatchedRow, aiEnrichmentPlan }. Per [[feedback_dryrun_is_observability]], dryRun is observability and does NOT require force.",
+                        "Cycle-5 C5C-008 F-05 dry-run. When true, runs all auth/curated/rate-limit gates plus Drive metadata + dedup probe but does NOT download bytes or write to Storage/Firestore. Returns { ok:true, wouldCommit:false, predictedTitle, predictedMimeType, predictedCollection, targetStoragePath (with `<new-uuid>` placeholder), dedupScore, dedupMatchedRow }. Per [[feedback_dryrun_is_observability]], dryRun is observability and does NOT require force.",
                     ),
             },
         },
@@ -4122,7 +3813,7 @@ export function registerChartUploadTools(server: McpServer): void {
         "update_song",
         {
             description:
-                "Fix a library entry's musical key, BPM or length (durationSec) without going through admin-only enrichment (cowork #5). Use when the catalog has a wrong/missing key or bpm — e.g. a chart saved with no key so bonded rows pull `key: null`. Admins, band leaders, AND musicians (the same accounts that may add charts) can call this; it is NOT admin-only like edit_enrichment. Writes BOTH the songs catalog (`defaults.key`/`defaults.bpm` — read by get_song / search_library and by bond resolution when you add the song to a setlist) AND the library_index row (read by list_library and the in-app catalog), so the fix shows up everywhere. Pass at least one of key/bpm/durationSec. Idempotent. dryRun:true returns the before/after plan without writing (observability) — no `force` needed for the real write since this is a single-row, non-destructive metadata edit. Returns `{ok, id, dryRun, fieldsChanged, before, after, songWritten, indexWritten}`. To change a chart's collection / title / tags as well, use the admin-only edit_enrichment / edit_library_entry.",
+                "Fix a library entry's musical key, BPM or length (durationSec) without going through admin-only enrichment (cowork #5). Use when the catalog has a wrong/missing key or bpm — e.g. a chart saved with no key so bonded rows pull `key: null`. Admins, band leaders, AND musicians (the same accounts that may add charts) can call this; it is NOT limited to admins and band leaders like edit_library_entry. Writes BOTH the songs catalog (`defaults.key`/`defaults.bpm` — read by get_song / search_library and by bond resolution when you add the song to a setlist) AND the library_index row (read by list_library and the in-app catalog), so the fix shows up everywhere. Pass at least one of key/bpm/durationSec. Idempotent. dryRun:true returns the before/after plan without writing (observability) — no `force` needed for the real write since this is a single-row, non-destructive metadata edit. Returns `{ok, id, dryRun, fieldsChanged, before, after, songWritten, indexWritten}`. To change a chart's collection / title / tags as well, use edit_library_entry.",
             inputSchema: {
                 id: z
                     .string()
@@ -4247,43 +3938,27 @@ export function registerChartUploadTools(server: McpServer): void {
 }
 
 /**
- * Cycle-3 c1 — roster + scheduling MCP tools. Wraps the existing in-app
- * scheduling system (six HTTP routes + state machine + ranking engine)
- * so Daniel + David can manage rosters, assignments, and "who's playing
- * tonight" via Claude Desktop instead of opening the in-app /schedule
- * page. Read + assignment tools only — no set_unavailability (deferred
- * to c1.5).
- *
- * Auth model:
- *   - Trusted-leader (admin OR band_leader) on every tool except
- *     respond_to_assignment.
- *   - respond_to_assignment is musician-self-write — any authenticated
- *     user may accept/decline their OWN pending assignment. The
- *     own-assignment gate is `assignment.musicianUid === callerUid`.
- *   - assign_musician + unassign_musician default `dryRun: true` and
- *     require `force: true` for real writes (F-05 standing rule — these
- *     trigger email + SMS + push fan-out).
- *   - Trusted-leader rate-limit bypass per
- *     [[feedback_admin_rate_limit_bypass]] on writes.
+ * Roster MCP tools (read-only): list_musicians, find_user,
+ * get_musician_profile. Trusted-leader (admin OR band_leader) on each.
  */
 export function registerRosterTools(server: McpServer): void {
     server.registerTool(
         "list_musicians",
         {
             description:
-                "Admin/band_leader only — enumerate every user with a configured `musicianProfile.instrument`. The canonical 'who is in the band' query, returning displayName, role, instrument (slug + label), schedulingTier ('core' | 'regular' | 'guest'), phone, and notification preferences (email/sms/push booleans with sensible defaults: email=true, sms=false, push=true). Optional filters: `instrument` (slug key like 'acoustic_guitar' OR a fragment that matches the preset label/slug like 'guitar') narrows to one instrument; `schedulingTier` narrows to one tier. Sorted alphabetically by displayName. Use this BEFORE assign_musician to find the right uid. Returns `{ok: true, musicians: [...], count}`.",
+                "Admin/band_leader only — enumerate every user with a configured `musicianProfile.instrument`. The canonical 'who is in the band' query, returning displayName, role, instrument (slug + label), schedulingTier ('core' | 'regular' | 'guest'), phone, and notification preferences (email/sms/push booleans with sensible defaults: email=true, sms=false, push=true). Optional filters: `instrument` (slug key like 'acoustic_guitar' OR a fragment that matches the preset label/slug like 'guitar') narrows to one instrument; `schedulingTier` narrows to one tier. Sorted alphabetically by displayName. Use this to find the right uid. Returns `{ok: true, musicians: [...], count}`.",
             inputSchema: {
                 instrument: z
                     .string()
                     .optional()
                     .describe(
-                        "Filter by instrument slug key ('acoustic_guitar', 'electric_bass', 'voice', etc.) or a substring of the preset label. Loose matching mirrors the in-app /schedule picker.",
+                        "Filter by instrument slug key ('acoustic_guitar', 'electric_bass', 'voice', etc.) or a substring of the preset label. Loose matching.",
                     ),
                 schedulingTier: z
                     .enum(["core", "regular", "guest"])
                     .optional()
                     .describe(
-                        "Filter by scheduling tier. 'core' = always-invite (auto-confirmed on assign); 'regular' = standard pending; 'guest' = occasional.",
+                        "Filter by scheduling tier. 'core', 'regular' or 'guest' (the tier recorded on the musician's profile).",
                     ),
                 includeProfileless: z
                     .boolean()
@@ -4301,7 +3976,7 @@ export function registerRosterTools(server: McpServer): void {
         "find_user",
         {
             description:
-                "Admin/band_leader only — the user DIRECTORY search: resolve a person's uid (and profile row) by email, name fragment, or role. Unlike list_musicians, this returns EVERY user in your org INCLUDING those with no instrument set (band leaders, admins) — use it to find the uid you need BEFORE assign_musician, assign_monitor_bus, or get_musician_profile when you only know someone's name or email. Filters (all optional, combine with AND): `email` (exact, case-insensitive), `nameContains` (case-insensitive substring of displayName), `role` (musician|band_leader|admin), `includeProfileless` (default TRUE — pass false to narrow to instrument-bearing musicians). An empty call returns the whole org directory, sorted by displayName. Tenant-scoped: only your org's users, never the other tenant's. Returns `{ok: true, users: [{uid, displayName, email, role, instrument|null, instrumentLabel|null, schedulingTier, phone, notificationPreferences}], count}`.",
+                "Admin/band_leader only — the user DIRECTORY search: resolve a person's uid (and profile row) by email, name fragment, or role. Unlike list_musicians, this returns EVERY user in your org INCLUDING those with no instrument set (band leaders, admins) — use it to find the uid you need BEFORE assign_monitor_bus or get_musician_profile when you only know someone's name or email. Filters (all optional, combine with AND): `email` (exact, case-insensitive), `nameContains` (case-insensitive substring of displayName), `role` (musician|band_leader|admin), `includeProfileless` (default TRUE — pass false to narrow to instrument-bearing musicians). An empty call returns the whole org directory, sorted by displayName. Tenant-scoped: only your org's users, never the other tenant's. Returns `{ok: true, users: [{uid, displayName, email, role, instrument|null, instrumentLabel|null, schedulingTier, phone, notificationPreferences}], count}`.",
             inputSchema: {
                 email: z
                     .string()
@@ -4335,235 +4010,18 @@ export function registerRosterTools(server: McpServer): void {
         "get_musician_profile",
         {
             description:
-                "Admin/band_leader only — read one user's musicianProfile by uid. Returns the same shape as list_musicians but for a single user. Use after list_musicians or suggest_musicians to inspect details (phone, notification prefs, full preset label) before assigning. Returns rich `not_found` envelope when the uid has no profile or doesn't exist as a user.",
+                "Admin/band_leader only — read one user's musicianProfile by uid. Returns the same shape as list_musicians but for a single user. Use after list_musicians to inspect details (phone, notification prefs, full preset label). Returns rich `not_found` envelope when the uid has no profile or doesn't exist as a user.",
             inputSchema: {
                 uid: z
                     .string()
                     .min(1)
                     .describe(
-                        "Firebase user uid. Get from list_musicians, suggest_musicians, or list_pending_assignments.",
+                        "Firebase user uid. Get from list_musicians or find_user.",
                     ),
             },
         },
         async (args, extra) =>
             jsonResult(await getMusicianProfile(uidFrom(extra), args, orgFrom(extra))),
-    )
-
-    server.registerTool(
-        "list_musicians_on_date",
-        {
-            description:
-                "Admin/band_leader only — answer 'who's playing on date X'. Queries setlists whose `eventDate` falls on the given UTC day (optionally narrowed by `templateType` like 'shabbat_morning' or 'friday_night'), then groups every `scheduling_assignments` row for those setlists by status: `pending` (awaiting musician response), `confirmed` (responded yes OR auto-confirmed core musician), `declined` (responded no), `cancelled` (band leader cancelled). Each entry carries `{assignmentId, setlistId, setlistName, musicianUid, musicianName, instrument, status, autoConfirmed}`. Use for the weekly 'who's playing tonight' check. Returns `{ok: true, eventDate, matchedSetlists, grouped:{pending,confirmed,declined,cancelled}, total}`.",
-            inputSchema: {
-                eventDate: z
-                    .string()
-                    .min(1)
-                    .describe(
-                        "Date to query. Accepts YYYY-MM-DD (interpreted as a UTC day) or a full ISO timestamp.",
-                    ),
-                templateType: z
-                    .enum([
-                        "shabbat_morning",
-                        "friday_night",
-                        "rosh_hashanah",
-                        "yom_kippur",
-                        "festival",
-                        "other",
-                    ])
-                    .optional()
-                    .describe(
-                        "Narrow to one service template when multiple services share a date (e.g., 'friday_night' for the Erev Shabbat service).",
-                    ),
-            },
-        },
-        async (args, extra) =>
-            jsonResult(await listMusiciansOnDate(uidFrom(extra), args, orgFrom(extra))),
-    )
-
-    server.registerTool(
-        "list_service_personnel",
-        {
-            description:
-                "Admin/band_leader only — unified 'who's playing & leading this week' pivot (cycle-5 C5C-014). Joins `list_musicians_on_date`'s scheduled-band-roster lookup with `get_setlist`'s per-track `leadMusician` vocal-lead read so authors don't need two round trips to answer the weekly-flow question. Accepts EITHER `setlistId` (one specific service) OR `eventDate` (every setlist on the given UTC day). Returns `scheduling_assignments` grouped by status (pending/confirmed/declined/cancelled — same shape as list_musicians_on_date) AND `vocal_leads`: distinct non-null `track.leadMusician` strings across every bonded track on the matched setlists, sorted alphabetically. Returns `{ok: true, setlistId, eventDate, matchedSetlists, scheduling_assignments, vocal_leads, total}`.",
-            inputSchema: {
-                setlistId: z
-                    .string()
-                    .min(1)
-                    .optional()
-                    .describe(
-                        "Direct setlist lookup. One of `setlistId` or `eventDate` is required.",
-                    ),
-                eventDate: z
-                    .string()
-                    .min(1)
-                    .optional()
-                    .describe(
-                        "UTC-day window across every setlist on the date. Accepts YYYY-MM-DD or a full ISO timestamp. One of `setlistId` or `eventDate` is required.",
-                    ),
-            },
-        },
-        async (args, extra) =>
-            jsonResult(await listServicePersonnel(uidFrom(extra), args, orgFrom(extra))),
-    )
-
-    server.registerTool(
-        "list_pending_assignments",
-        {
-            description:
-                "Admin/band_leader only — list every `scheduling_assignments` row currently in `status: 'pending'`. Optional `uid` filter narrows to one musician's pending invitations. Use to find the queue of un-responded invites that may need a nudge (or to confirm a swap candidate isn't already pending elsewhere). Sorted by setlistName then musicianName. Returns `{ok: true, assignments: [...], count}`.",
-            inputSchema: {
-                uid: z
-                    .string()
-                    .optional()
-                    .describe(
-                        "Optional musician uid filter — only pending assignments for this musician.",
-                    ),
-            },
-        },
-        async (args, extra) =>
-            jsonResult(await listPendingAssignments(uidFrom(extra), args, orgFrom(extra))),
-    )
-
-    server.registerTool(
-        "suggest_musicians",
-        {
-            description:
-                "Admin/band_leader only — suggest available replacement musicians for a declined/empty slot on the given setlist. Filters out anyone already actively assigned (pending OR confirmed) to the setlist, then optionally surfaces instrument matches first (the `instrument` argument matches the preset slug like 'acoustic_guitar' OR a label fragment like 'guitar' — loose match parity with the in-app /schedule picker). Sorted by scheduling tier (core > regular > guest), capped at 10 suggestions. Returns `{ok: true, suggestions: [{uid, name, email, instrument, instrumentLabel, schedulingTier, phone, instrumentMatch}]}` — `instrumentMatch` is true/false when an instrument filter was supplied, null otherwise.",
-            inputSchema: {
-                setlistId: z
-                    .string()
-                    .min(1)
-                    .describe(
-                        "Setlist id — defines the 'already assigned' set to exclude.",
-                    ),
-                instrument: z
-                    .string()
-                    .optional()
-                    .describe(
-                        "Optional instrument filter for 'fill THIS slot' searches (slug or label fragment).",
-                    ),
-            },
-        },
-        async (args, extra) =>
-            jsonResult(await suggestMusicians(uidFrom(extra), args, orgFrom(extra))),
-    )
-
-    server.registerTool(
-        "suggest_band",
-        {
-            description:
-                "Admin/band_leader only — full-band rabbi-aware ranking for the given setlist. Uses the smart suggestion engine (recent play frequency, scheduling tier, instrument coverage gap against the REQUIRED_INSTRUMENTS core set, rabbi musical-role fit). Reads the setlist's `rabbi` field + `config/congregation.scheduling.rabbiProfiles[]` to surface rabbi-specific band-size guidance and avoid double-stacking the rabbi's own instrument. Already-assigned musicians (per `setlist.assignedUids`) drop out of the candidate pool but their instruments count toward coverage. Returns `{ok: true, rabbiGuidance, coverageGap, suggestions: [{uid, name, email, instrumentKey, instrumentLabel, schedulingTier, score, reasons[]}]}` — top 12 ranked.",
-            inputSchema: {
-                setlistId: z
-                    .string()
-                    .min(1)
-                    .describe(
-                        "Setlist id — the rabbi + already-assigned musicians are read from this setlist's fields.",
-                    ),
-            },
-        },
-        async (args, extra) =>
-            jsonResult(await suggestBand(uidFrom(extra), args, orgFrom(extra))),
-    )
-
-    server.registerTool(
-        "assign_musician",
-        {
-            description:
-                "Admin/band_leader only — assign one musician to a setlist. dryRun-default + force-gated per the F-05 dry-run-is-observability rule: a real run requires `dryRun: false, force: true`. dryRun returns the plan with the projected status ('confirmed' for core musicians who auto-confirm; 'pending' otherwise), the resolved musician profile (denormalized name/email/instrument/tier), and `alreadyAssigned: true` when an active assignment already exists (the real run becomes a no-op in that case — idempotent). Force-run commits the assignment AND triggers the notification cascade (email + SMS + push + in-app), honoring the musician's notification preferences. The musician's instrument defaults to their `musicianProfile.instrument` unless overridden via the `instrument` argument (e.g., booking a multi-instrumentalist on their secondary). Trusted-leader (admin/band_leader) bypasses the per-uid rate limiter — non-trusted callers hit the standard 'api' tier limit. Returns `{ok: true, setlistId, setlistName, musician, projectedStatus, alreadyAssigned, dryRun, committed}`.",
-            inputSchema: {
-                setlistId: z
-                    .string()
-                    .min(1)
-                    .describe("Setlist id from list_setlists / create_setlist."),
-                uid: z
-                    .string()
-                    .min(1)
-                    .describe(
-                        "Musician uid — discover via list_musicians or suggest_musicians.",
-                    ),
-                instrument: z
-                    .string()
-                    .optional()
-                    .describe(
-                        "Optional override of the musician's default instrument (slug key or human-readable label). Useful for multi-instrumentalists.",
-                    ),
-                dryRun: z
-                    .boolean()
-                    .optional()
-                    .describe(
-                        "When true (default), returns the plan without writing. F-05 standing rule: dryRun does NOT require force.",
-                    ),
-                force: z
-                    .boolean()
-                    .optional()
-                    .describe(
-                        "Required for real writes. Pair with `dryRun: false`. Omitting it returns the rich `force_required` envelope (REG-003) and no writes. The notification cascade fires on commit — make sure intent is clear before forcing.",
-                    ),
-            },
-        },
-        async (args, extra) =>
-            jsonResult(await assignMusician(uidFrom(extra), args, orgFrom(extra))),
-    )
-
-    server.registerTool(
-        "unassign_musician",
-        {
-            description:
-                "Admin/band_leader only — cancel a musician's active assignment on a setlist (flips status `pending|confirmed → cancelled`). Resolves the assignmentId from `(setlistId, uid)` so the agent never has to fetch it first. dryRun-default + force-gated per F-05: a real run requires `dryRun: false, force: true`. dryRun returns the plan with the previous status (null when no active assignment exists — the real run is a safe no-op). Force-run commits the cancellation, removes the musician from `setlists/{id}.musicians[]` + `assignedUids[]` in the same transaction, and fires the cancellation notification cascade (email + SMS + in-app). Cancelling an assignment already in a terminal state (declined or cancelled) returns the rich `validation_error` envelope. Trusted-leader rate-limit bypass applies. Returns `{ok: true, setlistId, uid, assignmentId, previousStatus, dryRun, committed}`.",
-            inputSchema: {
-                setlistId: z.string().min(1).describe("Setlist id."),
-                uid: z
-                    .string()
-                    .min(1)
-                    .describe(
-                        "Musician uid — the active assignment for (setlistId, uid) will be cancelled.",
-                    ),
-                dryRun: z
-                    .boolean()
-                    .optional()
-                    .describe(
-                        "When true (default), returns the plan without writing. F-05 standing rule.",
-                    ),
-                force: z
-                    .boolean()
-                    .optional()
-                    .describe(
-                        "Required for real writes. Pair with `dryRun: false`. Cancellation notifications fire on commit — make sure intent is clear.",
-                    ),
-            },
-        },
-        async (args, extra) =>
-            jsonResult(await unassignMusician(uidFrom(extra), args, orgFrom(extra))),
-    )
-
-    server.registerTool(
-        "respond_to_assignment",
-        {
-            description:
-                "Musician-self-write — accept or decline YOUR OWN pending assignment. The own-assignment gate is enforced via `assignment.musicianUid === callerUid` — there is no admin/band_leader role gate, so any authenticated musician can call this for their own invites. Accepting flips the status to 'confirmed'; declining flips to 'declined' and removes the musician from the setlist's denormalized `musicians[]` + `assignedUids[]` in the same transaction. The assigning band leader gets an in-app notification post-commit so they can react. Calling on an assignment in a terminal state (already confirmed/declined/cancelled) returns the rich `validation_error` envelope with `currentStatus`. Calling on someone else's assignment returns `forbidden_assignment`. Returns `{ok: true, assignmentId, status}`.",
-            inputSchema: {
-                assignmentId: z
-                    .string()
-                    .min(1)
-                    .describe(
-                        "Assignment id — discover via list_pending_assignments({uid: yourUid}).",
-                    ),
-                status: z
-                    .enum(["confirmed", "declined"])
-                    .describe(
-                        "The new status. 'confirmed' accepts the invitation; 'declined' refuses it.",
-                    ),
-                declineReason: z
-                    .string()
-                    .optional()
-                    .describe(
-                        "Optional free-form reason — surfaced to the assigner in the post-commit notification when status='declined'.",
-                    ),
-            },
-        },
-        async (args, extra) =>
-            jsonResult(await respondToAssignment(uidFrom(extra), args)),
     )
 
     // People and access (the /manage People tab): list_access_requests, set_member_role.
@@ -4657,24 +4115,4 @@ export function registerObservabilityTools(server: McpServer): void {
             jsonResult(await getWebVitalsSummary(uidFrom(extra), args, orgFrom(extra))),
     )
 
-    server.registerTool(
-        "get_ai_spend_summary",
-        {
-            description:
-                "Admin-only — trailing 7-day + 30-day rollup of AI enrichment token spend + estimated USD, read from the `aiSpend` sink (one doc per Gemini enrichment call). Use this to snapshot the AI-cost baseline without leaving Claude. REPORT-ONLY: there is no spend ceiling — Daniel's standing rule is 'AI cost is report, not ceiling'. Args: `maxDocs?` safety cap on docs scanned (default 20000, hard max 100000). Returns `{ok:true, generatedAt, truncated, windows:{last7Days, last30Days}}` where each window is `{sinceDays, since, sampleCount, totalTokens, totalCostUsd, byModel:{<model>:{sampleCount, totalTokens, totalCostUsd}}}`. Cost is an estimate from per-1M-token pricing constants, not billing-grade.",
-            inputSchema: {
-                maxDocs: z
-                    .number()
-                    .int()
-                    .positive()
-                    .max(100_000)
-                    .optional()
-                    .describe(
-                        "Safety cap on aiSpend docs scanned. Default 20000; hard max 100000. `truncated:true` means more docs match the 30-day scan window than fit under the cap.",
-                    ),
-            },
-        },
-        async (args, extra) =>
-            jsonResult(await getAiSpendSummary(uidFrom(extra), args, orgFrom(extra))),
-    )
 }

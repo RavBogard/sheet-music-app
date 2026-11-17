@@ -70,7 +70,7 @@ export const P5_FIXTURE_TRACKS: Record<string, Row> = {
     "t-bl-1": { setlistId: "s-bl-up", songId: "b-core-1", fileId: "b-core-1", title: "Adon Olam (BL)", fileName: "Adon Olam (BL).pdf", mimeType: PDF, order: 0, type: "song", orgId: "brotherslazaroff" },
 }
 
-const CLEAR = ["library_index", "songs", "setlists", "tracks", "collections", "memberships", "users", "orgs", "platformAudit", "auditLogs", "aiEnrichmentRetryQueue"]
+const CLEAR = ["library_index", "songs", "setlists", "tracks", "collections", "memberships", "users", "orgs", "platformAudit", "auditLogs"]
 
 /** Clear the collections this fixture owns, then seed it. */
 export async function seedP5Library(db: Firestore, opts: { admin: string; withCollections?: boolean }): Promise<void> {

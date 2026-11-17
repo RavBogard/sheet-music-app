@@ -22,9 +22,6 @@ const B_READS: Array<[string, string]> = [
     ["contacts", "cB"],
     ["templates", `${B}__shabbat_morning`],
     ["setlistTemplates", "stB"],
-    ["scheduling_assignments", "asgB"],
-    ["scheduling_history", "histB"],
-    ["musician_availability", "avB"],
     ["live_sessions", "lsB"],
     ["bond_flags", "bfB"],
     ["proposal_stages", "psB"],
@@ -42,8 +39,6 @@ const unfiltered = (coll: string) => (db: Db) => db.collection(coll).get()
 const UNFILTERED: Array<[Persona, string]> = [
     ...B_READS.map(([coll]): [Persona, string] => ["aMe", coll]),
     ...B_READS.map(([coll]): [Persona, string] => ["aBL", coll]),
-    ["aMu", "scheduling_assignments"],
-    ["aMu", "musician_availability"],
     ["aMu", "tasks"],
     ["oldBL", "songs"],
     ["oldBL", "contacts"],
@@ -136,7 +131,6 @@ const aAdminCases: Case[] = [
     ["list auditLogs where orgId==B", "aAdmin", listOrg("auditLogs", B)],
     ["list auditLogs unfiltered", "aAdmin", (db) => db.collection("auditLogs").get()],
     ["write system/globalAlert", "aAdmin", (db) => db.doc("system/globalAlert").set({ message: "hi" })],
-    ["read aiConfig", "aAdmin", get("aiConfig/enrichment")],
     ["read dedupeRuns", "aAdmin", get("dedupeRuns/r1")],
     ["read backups", "aAdmin", get("backups/2026-10-12")],
     ["read config/admins (retired)", "aAdmin", get("config/admins")],
@@ -175,7 +169,6 @@ const dualCases: Case[] = [
 
 const legacyCases: Case[] = [
     ["oldAdminBoth reads platform/owners", "oldAdminBoth", get("platform/owners")],
-    ["oldAdminBoth reads aiConfig", "oldAdminBoth", get("aiConfig/enrichment")],
     ["oldAdminBoth reads dedupeRuns", "oldAdminBoth", get("dedupeRuns/r1")],
     ["oldAdminBoth lists users", "oldAdminBoth", (db) => db.collection("users").get()],
     ["oldAdminBoth writes system/globalAlert", "oldAdminBoth", (db) => db.doc("system/globalAlert").set({ message: "x" })],

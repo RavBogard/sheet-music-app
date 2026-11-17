@@ -134,7 +134,6 @@ const FEATURE_LABELS: Record<keyof OrgFeatures, string> = {
     mixer: "monitor mixer",
     driveInbox: "chart inbox",
     notifyBand: "band notifications",
-    schedulingEmails: "scheduling emails",
     todayFeed: "today feed",
 }
 

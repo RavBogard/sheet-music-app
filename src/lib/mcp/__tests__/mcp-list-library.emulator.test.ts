@@ -53,7 +53,7 @@ describe("MCP list_library (emulator)", () => {
     })
 
     beforeEach(async () => {
-        for (const coll of ["library_index", "aiEnrichmentRetryQueue"]) {
+        for (const coll of ["library_index"]) {
             const snap = await db().collection(coll).get()
             await Promise.all(snap.docs.map((d) => d.ref.delete()))
         }
@@ -72,19 +72,6 @@ describe("MCP list_library (emulator)", () => {
                 eligible: 0,
                 scanned: 0,
                 filteredOut: { byStatus: {}, byCollection: {}, byOther: {} },
-            },
-            // Cowork #9 — enrichment backlog summary over the (empty) result set.
-            enrichmentCoverage: {
-                byStatus: {
-                    pending: 0,
-                    review_pending: 0,
-                    enriched: 0,
-                    failed: 0,
-                    human_curated: 0,
-                    human_rejected: 0,
-                    unenriched: 0,
-                },
-                pendingEnrichmentCount: 0,
             },
         })
     })
@@ -314,15 +301,6 @@ describe("MCP list_library (emulator)", () => {
             status: "active",
             // Multi-tenant phase 5: every row names its owning tenant.
             ownerOrgId: "crc",
-            // Cycle-3 AI-001: enrichment projection always present on every
-            // row. Pre-NEW-3 rows (no enrichment fields seeded) surface the
-            // empty projection.
-            enrichmentStatus: null,
-            enrichmentConfidence: null,
-            aiSuggestion: null,
-            retryQueued: false,
-            // Cowork #9 — enrichmentRanAt age signal (null for pre-enrichment rows).
-            enrichmentRanAt: null,
         })
     })
 
@@ -345,110 +323,24 @@ describe("MCP list_library (emulator)", () => {
         expect(byId.get("u2")?.partGroup).toBeUndefined()
     })
 
-    describe("AI-001 enrichment projection", () => {
-        async function seedRetry(fileId: string, attempts = 1) {
-            await db()
-                .collection("aiEnrichmentRetryQueue")
-                .doc(fileId)
-                .set({
-                    rowId: fileId,
-                    attempts,
-                    nextRetryAt: new Date(Date.now() + 60_000).toISOString(),
-                })
+    it("tolerates the legacy AI enrichment fields on a row and does not echo them", async () => {
+        await seedIndex("u-enriched", {
+            name: "Hashkivenu (Klepper)",
+            collection: "core",
+            mimeType: "application/pdf",
+            enrichmentStatus: "enriched",
+            enrichmentRanAt: "2026-05-18T15:00:00.000Z",
+            aiSuggestion: { is_chart: true, confidence: 0.84, suggested_key: "G" },
+            aiReviewTriggers: [],
+        })
+        const r = await listLibrary(ADMIN, {})
+        if (!("rows" in r)) throw new Error("expected rows result")
+        expect(r.rows).toHaveLength(1)
+        const row = r.rows[0] as unknown as Record<string, unknown>
+        expect(row.name).toBe("Hashkivenu (Klepper)")
+        for (const k of ["enrichmentStatus", "enrichmentConfidence", "aiSuggestion", "retryQueued", "enrichmentRanAt"]) {
+            expect(row, k).not.toHaveProperty(k)
         }
-
-        it("rows without enrichment surface the empty projection (back-compat with pre-NEW-3 uploads)", async () => {
-            await seedIndex("legacy", {
-                name: "Pre-enrichment chart",
-                collection: "core",
-                mimeType: "application/pdf",
-            })
-            const r = await listLibrary(ANY_UID, {})
-            if (!("rows" in r)) throw new Error("expected rows result")
-            const row = r.rows[0]
-            expect(row.enrichmentStatus).toBeNull()
-            expect(row.enrichmentConfidence).toBeNull()
-            expect(row.aiSuggestion).toBeNull()
-            expect(row.retryQueued).toBe(false)
-        })
-
-        it("surfaces enrichmentStatus + aiSuggestion + denormalized confidence for an enriched row", async () => {
-            const suggestion = {
-                is_chart: true,
-                confidence: 0.84,
-                suggested_title: "Hashkivenu (Klepper)",
-                suggested_collection: "core",
-                collection_disagrees_with_folder: false,
-                suggested_key: "G",
-                suggested_bpm: null,
-                suggested_lead: null,
-                suggested_tags: ["friday-evening", "klepper"],
-                duplicate_candidates: [],
-                concerns: [],
-                review_required: false,
-            }
-            await seedIndex("u-enriched", {
-                name: "Hashkivenu (Klepper)",
-                collection: "core",
-                mimeType: "application/pdf",
-                enrichmentStatus: "enriched",
-                enrichmentRanAt: "2026-05-18T15:00:00.000Z",
-                aiSuggestion: suggestion,
-                aiReviewTriggers: [],
-            })
-            const r = await listLibrary(ADMIN, {})
-            if (!("rows" in r)) throw new Error("expected rows result")
-            const row = r.rows[0]
-            expect(row.enrichmentStatus).toBe("enriched")
-            expect(row.enrichmentConfidence).toBe(0.84)
-            expect(row.aiSuggestion).toEqual(suggestion)
-            expect(row.retryQueued).toBe(false)
-        })
-
-        it("retryQueued reads true when a matching aiEnrichmentRetryQueue doc exists", async () => {
-            await seedIndex("u-retry", {
-                name: "Mid-flight retry",
-                collection: "core",
-                mimeType: "application/pdf",
-                enrichmentStatus: "pending",
-            })
-            await seedRetry("u-retry", 2)
-            const r = await listLibrary(ADMIN, {})
-            if (!("rows" in r)) throw new Error("expected rows result")
-            const row = r.rows[0]
-            expect(row.retryQueued).toBe(true)
-            expect(row.enrichmentStatus).toBe("pending")
-        })
-
-        it("collapses unknown enrichmentStatus values to null (narrow wire contract)", async () => {
-            await seedIndex("u-unknown", {
-                name: "Future-status chart",
-                collection: "core",
-                mimeType: "application/pdf",
-                // Hypothetical future status the projection doesn't yet recognize.
-                enrichmentStatus: "synthesizing",
-            })
-            const r = await listLibrary(ADMIN, {})
-            if (!("rows" in r)) throw new Error("expected rows result")
-            expect(r.rows[0].enrichmentStatus).toBeNull()
-        })
-
-        it("review_pending + human_curated + human_rejected all pass through", async () => {
-            for (const s of ["review_pending", "human_curated", "human_rejected"]) {
-                await seedIndex(`u-${s}`, {
-                    name: `Chart ${s}`,
-                    collection: "core",
-                    mimeType: "application/pdf",
-                    enrichmentStatus: s,
-                })
-            }
-            const r = await listLibrary(ADMIN, {})
-            if (!("rows" in r)) throw new Error("expected rows result")
-            const byId = Object.fromEntries(r.rows.map((row) => [row.fileId, row]))
-            expect(byId["u-review_pending"].enrichmentStatus).toBe("review_pending")
-            expect(byId["u-human_curated"].enrichmentStatus).toBe("human_curated")
-            expect(byId["u-human_rejected"].enrichmentStatus).toBe("human_rejected")
-        })
     })
 
     it("defaults status to 'active' when omitted on the source doc", async () => {

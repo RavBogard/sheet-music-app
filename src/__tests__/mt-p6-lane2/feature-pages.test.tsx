@@ -27,7 +27,7 @@ import { OrgConfigSchema, type OrgFeatures } from "@/lib/org/config-schema"
 import PerformLayout from "@/app/perform/layout"
 import MonitorLayout from "@/app/(main)/monitor/layout"
 
-const ALL_ON: OrgFeatures = { mixer: true, driveInbox: true, schedulingEmails: true, todayFeed: true, notifyBand: true, perform: true }
+const ALL_ON: OrgFeatures = { mixer: true, driveInbox: true, todayFeed: true, notifyBand: true, perform: true }
 const CRC = codeOrgConfig("crc")!
 const BL = codeOrgConfig("brotherslazaroff")!
 

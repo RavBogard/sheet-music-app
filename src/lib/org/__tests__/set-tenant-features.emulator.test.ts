@@ -9,7 +9,7 @@ import { applySetFeatures, planSetFeatures, undoSetFeatures } from "@/lib/org/se
  * emulator, from the state production is in today (BL's phase 1 placeholder
  * flags, no driveInbox, no config/monitor.orgId).
  */
-const PLACEHOLDER = { mixer: false, driveInbox: false, schedulingEmails: false, todayFeed: false, notifyBand: false, perform: true }
+const PLACEHOLDER = { mixer: false, driveInbox: false, todayFeed: false, notifyBand: false, perform: true }
 
 describe("set-tenant-features (emulator)", () => {
     beforeAll(() => {

@@ -15,7 +15,7 @@ export function testshulConfig(): OrgConfig {
         branding: { ...crc.branding, shortName: "Test Shul", abbreviation: "TS", appName: "Test Shul", baseUrl: "https://testshul.vercel.app" },
         vocabulary: { mode: "shul", overrides: {} },
         locale: { ...crc.locale, timeZone: "America/New_York" },
-        features: { mixer: false, driveInbox: true, schedulingEmails: false, todayFeed: false, notifyBand: false, perform: true },
+        features: { mixer: false, driveInbox: true, todayFeed: false, notifyBand: false, perform: true },
         liturgy: {
             ...crc.liturgy,
             serviceTypes: [

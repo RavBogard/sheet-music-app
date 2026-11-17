@@ -63,13 +63,10 @@ export const env = createEnv({
         // unset the cron is a graceful no-op so the route ships dormant until
         // Daniel sets it in Vercel env.
         CRC_BACKUP_DRIVE_FOLDER_ID: z.string().optional(),
-        // Cycle-3 NEW-3 (a3, swapped 2026-05-18 a3-gemini-swap) — Gemini 3.1 Pro
-        // for AI library enrichment. Optional: when unset the enrichment
-        // subscriber is dormant and every library_index row stays at
-        // enrichmentStatus:'pending'. No prod requirement until Daniel sets
-        // the key in Vercel env. Distinct from GOOGLE_GENERATIVE_AI_API_KEY
-        // which the legacy /api/cron/enrich path reads via src/lib/gemini.ts;
-        // the two surfaces are intentionally disjoint.
+        // Gemini key read by /api/ai/transposer/scan, and by
+        // /api/setlists/import/parse as the fallback when
+        // GOOGLE_GENERATIVE_AI_API_KEY is unset. Optional. (Its first user, the
+        // AI library enrichment layer, was removed 2026-11-17.)
         GEMINI_API_KEY: z.string().optional(),
         // Harness-only admin test-session gate (Daniel-ratified 2026-05-27).
         // The /api/auth/admin-test-session endpoint mints a short-lived

@@ -16,11 +16,6 @@ import type { OrgId } from "@/lib/org/types"
  *                      CRC-only whatever the flag says (effectiveFeatures)
  *   driveInbox       — the shared-Drive chart inbox
  *   notifyBand       — the "setlist updated" message to the band
- *   schedulingEmails — none: no authoring tool exists only to send scheduling
- *                      email. assign_musician / unassign_musician notify as a
- *                      side effect of scheduling; phase 6 suppresses that email
- *                      and SMS in assignment-service.ts rather than removing
- *                      scheduling.
  *   todayFeed        — none: the feed is a cron and a public file, not a tool.
  *   perform          — none: Perform mode is the browser surface.
  *
@@ -55,7 +50,6 @@ export const FEATURE_TOOLS: Readonly<Record<keyof OrgFeatures, readonly string[]
     ],
     driveInbox: ["get_chart_inbox", "sync_chart_inbox"],
     notifyBand: ["notify_band", "preview_notify_band"],
-    schedulingEmails: [],
     todayFeed: [],
     perform: [],
 }
@@ -91,7 +85,6 @@ const FEATURE_OFF_TEXT: Record<FeatureKey, string> = {
     mixer: "The monitor mixer is not available for this organization. It runs only for Central Reform Congregation's sound desk.",
     driveInbox: "The Chart Inbox is switched off for this organization. For a Google Drive folder you already have, use import_drive_folder with its link.",
     notifyBand: "Band notifications are switched off for this organization. Share the setlist link instead.",
-    schedulingEmails: "Scheduling emails are switched off for this organization.",
     todayFeed: "The today feed is switched off for this organization.",
     perform: "Perform mode is switched off for this organization.",
 }

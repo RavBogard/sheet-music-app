@@ -33,7 +33,6 @@
 | Chart belonging to the OTHER tenant via deep link | ✅ D3 | ✅ D3 | ✅ D3 | ✅ D3 | ✅ |
 | Library browse (this host's org) | ❌ D4 | ✅ D4-rev1 (relaxed 2026-06-10, was ❌) | ✅ | ✅ | ✅ |
 | Public schedule = upcoming-services list on `/perform` (D-Q1 2026-06-10) | ✅ | ✅ | ✅ | ✅ | ✅ |
-| `/schedule` page = authed assignments view (D-Q1) | ❌ → /login | ✅ | ✅ | ✅ | ✅ |
 | Transpose / AI chord-scan in Perform (D-Q2 2026-06-10: OPEN to anon, with abuse rate-limits) | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 > ⚠️ **Pending confirmation (D2):** Since anon may open Perform mode (D1), anon
@@ -87,7 +86,6 @@ chart surface — `/api/drive/file/[fileId]` and `/api/library/file/[id]` — se
 | Upload/edit/delete charts & library entries (D2) | ❌ | ❌ | ❌ | ❌ on this org | ✅ | ✅ |
 | Monitor mix: adjust OWN assigned bus (D6) | ❌ | ❌ | ✅ only if assigned a bus by sound engineer | same rule | ✅ | ✅ |
 | Monitor mix: assign buses / others' buses / matrix (D6) | ❌ | ❌ | ❌ | ❌ | sound engineer (+admin) | ✅ |
-| Respond to own assignment (accept/decline) | ❌ | ❌ | ✅ own only | — | ✅ | ✅ |
 | `/manage` (people, org membership toggles) | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | `/admin`, migrations, set-role, delete-user | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | MCP admin tools (mint bearers, test accounts, cleanup) | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ (Daniel) |

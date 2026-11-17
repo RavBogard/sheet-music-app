@@ -107,8 +107,8 @@ describe("Settings page under the pseudo-locale", () => {
         expectNoUntranslatedText(r.container, { allow: [...DATA, ...SPLIT_SENTENCE] })
     })
 
-    it("musician profile with an instrument, capo and calendar feed is fully translated", async () => {
-        h.profile = { instrument: "bb_trumpet", preferCapo: true, calendarFeedToken: "feed-token" }
+    it("musician profile with an instrument and capo is fully translated", async () => {
+        h.profile = { instrument: "bb_trumpet", preferCapo: true }
         let r!: ReturnType<typeof renderPseudo>
         await act(async () => {
             r = renderPseudo(<MusicianProfileSettings />)

@@ -156,15 +156,6 @@ export async function seedFixtures(env: RulesTestEnvironment): Promise<void> {
             set(`recordings/rec${s}`, { songId: `song${s}`, title: "Ref", orgId: t, createdAt: 1 })
             set(`contacts/c${s}`, { name: "Guest", orgId: t })
             set(`setlistTemplates/st${s}`, { name: "Tpl", orgId: t })
-            set(`scheduling_assignments/asg${s}`, {
-                musicianUid: t === A ? "aMu" : "bSE",
-                setlistId: `s${s}`,
-                status: "pending",
-                assignedAt: 1,
-                orgId: t,
-            })
-            set(`scheduling_history/hist${s}`, { setlistId: `s${s}`, orgId: t })
-            set(`musician_availability/av${s}`, { musicianUid: t === A ? "aMu" : "bSE", orgId: t })
             set(`live_sessions/ls${s}`, { broadcasterId: t === A ? "aBL" : "bBL", orgId: t })
             set(`tasks/task${s}`, { assigneeId: t === A ? "aMu" : "bSE", status: "todo", createdAt: 1, orgId: t })
             set(`bond_flags/bf${s}`, { setlistId: `s${s}`, orgId: t })
@@ -199,7 +190,6 @@ export async function seedFixtures(env: RulesTestEnvironment): Promise<void> {
         set("monitor-live/commands/acks/ackMuSE", { uid: "aMuSE", status: "applied" })
         set("mcpTokens/t1", { uid: "aAdmin" })
         set("mcpOAuthCodes/c1", { uid: "aAdmin" })
-        set("aiConfig/enrichment", { autoApplyEnabled: false })
         set("dedupeRuns/r1", { at: 1 })
         set("backups/2026-10-12", { status: "ok" })
         set("library_signals/latest", { at: 1 })

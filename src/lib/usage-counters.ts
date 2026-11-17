@@ -11,7 +11,7 @@ export const PAGEVIEW_DEVICES = ["mobile", "tablet", "desktop", "unknown"] as co
 export type PageViewDevice = (typeof PAGEVIEW_DEVICES)[number]
 
 const KNOWN_FIRST_SEGMENTS = new Set([
-    "", "setlists", "perform", "library", "manage", "monitor", "settings", "schedule",
+    "", "setlists", "perform", "library", "manage", "monitor", "settings",
     "qr", "invite", "login", "privacy", "terms", "accessibility", "platform",
     "integrations", "sms-consent", "changelog", "test-login",
 ])

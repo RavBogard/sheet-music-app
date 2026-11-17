@@ -18,26 +18,6 @@ import bookRegistry from "@/data/books/registry.json"
  * The seed imports this module, so the documents cannot drift from the code.
  */
 
-/** CRC's library conventions block for the Gemini prompt (was ai-enrichment.ts LIBRARY_CONVENTIONS). */
-const CRC_LIBRARY_CONVENTIONS = `Library naming conventions (CRC music library):
-
-- Reform Jewish liturgical music + supplemental.
-- Common naming: "Title (Composer)" or "Title (Arrangement)" — e.g.
-  "Shalom Rav (Frankel)", "Mi Chamocha (Klepper)".
-- Hebrew-Latin transliteration is the canonical form (NOT Hebrew script
-  on chart titles, even if the chart itself is in Hebrew).
-- Collections:
-    - core: high-frequency liturgical music (Shabbat liturgy, Hatzi
-      Kaddish, etc.) — used every week.
-    - supplemental: niggunim, holiday-specific, occasional repertoire.
-    - uploads: provisional landing zone; everything starts here unless
-      David routed it explicitly via Drive subfolder.
-- Tags are short, kebab-case, optional. Examples:
-  "friday-evening", "shabbat-morning", "high-holy-days", "frankel",
-  "klepper", "shireinu", "kavanah".
-
-If you're not sure of a field, return null / [] — do NOT guess.`
-
 /**
  * Liturgy lists as every tenant saw them before phase 1: the whole template
  * catalogue, every registered book, CRC's rabbi slots. Nothing filtered them by
@@ -94,23 +74,12 @@ const BL_VOCAB: Partial<Record<StringKey, string>> = {
 export const BL_FROZEN_CRC_KEYS: StringKey[] = [
     "email.notificationFromName",
     "email.notificationFooter",
-    "email.venueName",
-    "sms.venueShort",
     "sms.publishPrefix",
-    "feed.productName",
-    "feed.calendarNamePrefix",
-    "feed.location",
-    "feed.uidPrefix",
-    "feed.uidDomain",
-    "feed.filePrefix",
     "page.unauthorizedTitle",
     "page.skeletonBrand",
-    "profile.scheduleName",
     "library.ownBadge",
     "seo.baseUrl",
     "library.coreSectionLabel",
-    "ai.systemInstructionLead",
-    "ai.libraryConventions",
 ]
 
 const crcBranding = CODE_BRANDING.crc
@@ -132,12 +101,12 @@ const CRC: OrgConfigInput = {
     },
     vocabulary: {
         mode: "shul",
-        overrides: { "ai.libraryConventions": CRC_LIBRARY_CONVENTIONS },
+        overrides: {},
     },
-    locale: { language: "en", direction: "ltr", timeZone: "America/Chicago", calendar: "diaspora", reminderLocalHour: 5, reminderUtcHour: 10 },
+    locale: { language: "en", direction: "ltr", timeZone: "America/Chicago", calendar: "diaspora" },
     email: { ...crcEmail, fromAddress: "", replyTo: "" },
     legal: { operatorName: "Central Reform Congregation", contactEmail: "music@centralreform.live", useCrcText: true },
-    features: { mixer: true, driveInbox: true, schedulingEmails: true, todayFeed: true, notifyBand: true, perform: true },
+    features: { mixer: true, driveInbox: true, todayFeed: true, notifyBand: true, perform: true },
     // "" means CHART_INBOX_DRIVE_FOLDER_ID, CRC's inbox since before phase 6.
     driveInbox: { folderId: "" },
     library: {
@@ -204,7 +173,7 @@ const BL: OrgConfigInput = {
         mode: "band",
         overrides: { ...BL_VOCAB, ...frozenCrcOverrides() } as Record<string, string>,
     },
-    locale: { language: "en", direction: "ltr", timeZone: "America/Chicago", calendar: "diaspora", reminderLocalHour: 5, reminderUtcHour: 10 },
+    locale: { language: "en", direction: "ltr", timeZone: "America/Chicago", calendar: "diaspora" },
     email: { ...blEmail, fromAddress: "", replyTo: "" },
     // Frozen: BL has always been served CRC's legal pages.
     legal: { operatorName: "Central Reform Congregation", contactEmail: "music@centralreform.live", useCrcText: true },
@@ -213,9 +182,9 @@ const BL: OrgConfigInput = {
     // today.json is emitted every 15 minutes. notifyBand: on because the packet
     // email (/api/setlist/email-packets) leaves no record, so BL's use of it
     // cannot be ruled out (when in doubt, on). mixer: CRC's console (and
-    // CRC-only regardless). driveInbox, schedulingEmails: never used by BL (no
-    // inbox folder, no Drive-synced rows, no assignment ever made).
-    features: { mixer: false, driveInbox: false, schedulingEmails: false, todayFeed: true, notifyBand: true, perform: true },
+    // CRC-only regardless). driveInbox: never used by BL (no
+    // inbox folder, no Drive-synced rows).
+    features: { mixer: false, driveInbox: false, todayFeed: true, notifyBand: true, perform: true },
     driveInbox: { folderId: "" },
     library: {
         collections: [

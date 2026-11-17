@@ -4,7 +4,6 @@ import { formatError } from "@/lib/format-error"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
 import { createSetlistService, type Setlist } from "@/lib/setlist-firebase"
-import { assignMusicians } from "@/lib/scheduling-firebase"
 import type { SetlistTrack, SetlistMusician, DriveFile } from "@/types/models"
 import { toast } from "sonner"
 import { getTemplate, buildSetlistFromTemplate, generateSetlistName, TEMPLATE_LABELS } from "@/lib/liturgical-templates"
@@ -234,30 +233,6 @@ export function useCreationWizard(): UseCreationWizardReturn {
                 musicians,
                 templateType: selectedTemplate as Setlist['templateType'],
             })
-
-            if (musicians.length > 0) {
-                const musiciansToAssign = musicians
-                    .filter(m => m.uid)
-                    .map(m => ({
-                        uid: m.uid!,
-                        name: m.name,
-                        email: m.email,
-                        instrument: m.instrument,
-                    }))
-
-                if (musiciansToAssign.length > 0) {
-                    try {
-                        await assignMusicians({
-                            setlistId,
-                            setlistName: name,
-                            eventDate: eventDate?.toISOString() ?? null,
-                            musicians: musiciansToAssign,
-                        })
-                    } catch {
-                        toast.error(t("hooks.schedulingFailedAfterCreate"))
-                    }
-                }
-            }
 
             const successOpts = loadingId ? { id: loadingId } : undefined
             if (selectedTemplate) {

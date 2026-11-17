@@ -1,7 +1,5 @@
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
-import type { EnrichmentStatus } from "@/lib/library/enrichment-projection"
-import type { EnrichmentOutput } from "@/lib/library/ai-enrichment"
 import { rememberSongVisibility } from "@/lib/mcp/song-visibility"
 
 /**
@@ -77,19 +75,6 @@ export interface SongRecord {
         bindable: boolean
         reason?: string
     }
-    // ─── AI-001 enrichment projection (joined from library_index +
-    //     aiEnrichmentRetryQueue by callers in src/lib/mcp/tools/library.ts).
-    //     `null` ⇒ row never reached the AI subscriber (pre-NEW-3 upload, or
-    //     no matching library_index doc). Loaders are in
-    //     src/lib/library/enrichment-projection.ts.
-    /** library_index/{id}.enrichmentStatus, narrowed to known values. */
-    enrichmentStatus?: EnrichmentStatus | null
-    /** Denormalized from aiSuggestion.confidence (0..1). */
-    enrichmentConfidence?: number | null
-    /** Full EnrichmentOutput blob — ~200 tokens, inline per a5's hydration norm. */
-    aiSuggestion?: EnrichmentOutput | null
-    /** `aiEnrichmentRetryQueue/{id}` doc exists (replay in flight). */
-    retryQueued?: boolean
 }
 
 

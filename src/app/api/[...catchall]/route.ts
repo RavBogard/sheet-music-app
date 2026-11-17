@@ -42,7 +42,7 @@ function envelope(req: NextRequest): NextResponse {
             "route_not_found",
             `No handler at ${method} ${pathname}.`,
             { errorCode: 404, path: pathname, method },
-            "Check the path against your MCP/HTTP route table. /api/* paths must hit a registered handler — see /api/health, /api/version, /api/auth/test-session, /api/admin/library-review/{queue,accept,reject,edit,retry,dismiss}, /api/drive/file/[fileId], /api/cron/{drive-sync,ai-enrich-retry,aggregate-corrections,sync}, /api/mcp/oauth/*. Brand-new API routes need a route.ts under src/app/api/<path>/.",
+            "Check the path against your MCP/HTTP route table. /api/* paths must hit a registered handler — see /api/health, /api/version, /api/auth/test-session, /api/drive/file/[fileId], /api/cron/{drive-sync,sync}, /api/mcp/oauth/*. Brand-new API routes need a route.ts under src/app/api/<path>/.",
         ),
         { status: 404 },
     )
