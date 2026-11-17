@@ -75,24 +75,6 @@ export const STRING_BASE = {
      * configured core label (picker-scope.ts coreSectionLabel).
      */
     "library.coreSectionLabel": "{abbreviation} Charts",
-
-    // ── AI enrichment prompt (Gemini) ──
-    "ai.systemInstructionLead":
-        "You are an enrichment assistant for the {name} music library. You inspect a chart file plus its current library_index metadata and emit a structured enrichment report. You NEVER refuse — you always emit the JSON object. If you're uncertain, return low confidence, populate `concerns`, and set `review_required: true`. Do NOT fabricate fields you can't determine from the input.",
-    "ai.libraryConventions": `Library naming conventions ({name} music library):
-
-- Jewish liturgical music + supplemental.
-- Common naming: "Title (Composer)" or "Title (Arrangement)".
-- Hebrew-Latin transliteration is the canonical form (NOT Hebrew script
-  on chart titles, even if the chart itself is in Hebrew).
-- Collections:
-    - core: high-frequency liturgical music — used every week.
-    - supplemental: niggunim, holiday-specific, occasional repertoire.
-    - uploads: provisional landing zone; everything starts here.
-- Tags are short, kebab-case, optional. Examples:
-  "friday-evening", "shabbat-morning", "high-holy-days".
-
-If you're not sure of a field, return null / [] — do NOT guess.`,
 } as const
 
 export type StringKey = keyof typeof STRING_BASE

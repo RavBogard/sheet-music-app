@@ -11,7 +11,8 @@ import { orgString, STRING_BASE, type StringKey } from "@/lib/org/strings"
  * email.ts, email-scheduling.ts, sms.ts, notify-band, calendar-feed,
  * print-pipeline / congregation-store, library-download, house-chart-html,
  * opengraph-image, unauthorized, (v2)/layout, PublicSetlistSkeleton,
- * MusicianProfileSettings, LibraryFileRow, ai-enrichment, vocab.ts).
+ * MusicianProfileSettings, LibraryFileRow, vocab.ts). The two `ai.*` prompt
+ * keys left with the AI enrichment layer.
  */
 const CRC_LITERALS: Record<StringKey, string> = {
     setlist: "setlist",
@@ -55,26 +56,6 @@ const CRC_LITERALS: Record<StringKey, string> = {
     "seo.baseUrl": "https://centralreform.live",
     // Lane 3: SearchOverlay / UploadDialog / ScraperModal "CRC Charts" (shown to BL too at e0ad18b4).
     "library.coreSectionLabel": "CRC Charts",
-    "ai.systemInstructionLead":
-        "You are an enrichment assistant for the Central Reform Congregation music library. You inspect a chart file plus its current library_index metadata and emit a structured enrichment report. You NEVER refuse — you always emit the JSON object. If you're uncertain, return low confidence, populate `concerns`, and set `review_required: true`. Do NOT fabricate fields you can't determine from the input.",
-    "ai.libraryConventions": `Library naming conventions (CRC music library):
-
-- Reform Jewish liturgical music + supplemental.
-- Common naming: "Title (Composer)" or "Title (Arrangement)" — e.g.
-  "Shalom Rav (Frankel)", "Mi Chamocha (Klepper)".
-- Hebrew-Latin transliteration is the canonical form (NOT Hebrew script
-  on chart titles, even if the chart itself is in Hebrew).
-- Collections:
-    - core: high-frequency liturgical music (Shabbat liturgy, Hatzi
-      Kaddish, etc.) — used every week.
-    - supplemental: niggunim, holiday-specific, occasional repertoire.
-    - uploads: provisional landing zone; everything starts here unless
-      David routed it explicitly via Drive subfolder.
-- Tags are short, kebab-case, optional. Examples:
-  "friday-evening", "shabbat-morning", "high-holy-days", "frankel",
-  "klepper", "shireinu", "kavanah".
-
-If you're not sure of a field, return null / [] — do NOT guess.`,
 }
 
 /** BL's vocab.ts OVERRIDES at a1de9bda; every other key is CRC's text (never tenant-aware). */
@@ -111,6 +92,27 @@ describe("multi-tenant P1: code-table configs reproduce today's strings", () => 
     it("both code configs validate against the schema", () => {
         for (const id of ["crc", "brotherslazaroff"]) {
             expect(OrgConfigSchema.safeParse(codeOrgConfig(id)).success).toBe(true)
+        }
+    })
+
+    it("an orgs/* document still carrying the retired ai.* prompt overrides parses", () => {
+        // Production Firestore docs were seeded with these keys; the AI
+        // enrichment layer that read them is gone, but parsing must not fail.
+        for (const id of ["crc", "brotherslazaroff"]) {
+            const cfg = codeOrgConfig(id)!
+            const legacy = {
+                ...cfg,
+                vocabulary: {
+                    ...cfg.vocabulary,
+                    overrides: {
+                        ...cfg.vocabulary.overrides,
+                        "ai.systemInstructionLead": "You are an enrichment assistant for the {name} music library.",
+                        "ai.libraryConventions": "Library naming conventions ({name} music library): …",
+                    },
+                },
+            }
+            const r = OrgConfigSchema.safeParse(legacy)
+            expect(r.success, id).toBe(true)
         }
     })
 

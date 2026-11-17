@@ -18,26 +18,6 @@ import bookRegistry from "@/data/books/registry.json"
  * The seed imports this module, so the documents cannot drift from the code.
  */
 
-/** CRC's library conventions block for the Gemini prompt (was ai-enrichment.ts LIBRARY_CONVENTIONS). */
-const CRC_LIBRARY_CONVENTIONS = `Library naming conventions (CRC music library):
-
-- Reform Jewish liturgical music + supplemental.
-- Common naming: "Title (Composer)" or "Title (Arrangement)" — e.g.
-  "Shalom Rav (Frankel)", "Mi Chamocha (Klepper)".
-- Hebrew-Latin transliteration is the canonical form (NOT Hebrew script
-  on chart titles, even if the chart itself is in Hebrew).
-- Collections:
-    - core: high-frequency liturgical music (Shabbat liturgy, Hatzi
-      Kaddish, etc.) — used every week.
-    - supplemental: niggunim, holiday-specific, occasional repertoire.
-    - uploads: provisional landing zone; everything starts here unless
-      David routed it explicitly via Drive subfolder.
-- Tags are short, kebab-case, optional. Examples:
-  "friday-evening", "shabbat-morning", "high-holy-days", "frankel",
-  "klepper", "shireinu", "kavanah".
-
-If you're not sure of a field, return null / [] — do NOT guess.`
-
 /**
  * Liturgy lists as every tenant saw them before phase 1: the whole template
  * catalogue, every registered book, CRC's rabbi slots. Nothing filtered them by
@@ -109,8 +89,6 @@ export const BL_FROZEN_CRC_KEYS: StringKey[] = [
     "library.ownBadge",
     "seo.baseUrl",
     "library.coreSectionLabel",
-    "ai.systemInstructionLead",
-    "ai.libraryConventions",
 ]
 
 const crcBranding = CODE_BRANDING.crc
@@ -132,7 +110,7 @@ const CRC: OrgConfigInput = {
     },
     vocabulary: {
         mode: "shul",
-        overrides: { "ai.libraryConventions": CRC_LIBRARY_CONVENTIONS },
+        overrides: {},
     },
     locale: { language: "en", direction: "ltr", timeZone: "America/Chicago", calendar: "diaspora", reminderLocalHour: 5, reminderUtcHour: 10 },
     email: { ...crcEmail, fromAddress: "", replyTo: "" },
