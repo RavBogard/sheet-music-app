@@ -1617,7 +1617,6 @@ describe("MCP chart-upload tools (emulator)", () => {
                 targetStoragePath: string
                 dedupScore: number | null
                 dedupMatchedRow: { fileId: string; name: string; matchKind: string } | null
-                aiEnrichmentPlan: { wouldRun: boolean; reason: string }
             }
             expect(r.ok).toBe(true)
             expect(r.wouldCommit).toBe(false)
@@ -1633,10 +1632,7 @@ describe("MCP chart-upload tools (emulator)", () => {
             // No existing library row → no dedup match.
             expect(r.dedupScore).toBeNull()
             expect(r.dedupMatchedRow).toBeNull()
-            expect(r.aiEnrichmentPlan).toMatchObject({
-                wouldRun: expect.any(Boolean),
-                reason: expect.any(String),
-            })
+            expect(r).not.toHaveProperty("aiEnrichmentPlan")
 
             // Critically: no byte fetch, no Storage write, no library_index doc.
             expect(mockDriveGetFile).not.toHaveBeenCalled()

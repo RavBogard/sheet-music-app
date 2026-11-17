@@ -136,11 +136,6 @@ afterAll(() => {
 // AFTER the mocks: import the module under test.
 import { salvageChartBytes } from "../tools/salvage-chart-bytes"
 import { bareStem, titleSpecificity } from "@/lib/mcp/title-specificity"
-import {
-    onLibraryRowCreated,
-    __resetLibraryEventHandlersForTesting,
-    type LibraryRowCreatedEvent,
-} from "@/lib/library/library-events"
 import { mirrorLegacyRoles } from "@/test-stubs/mirror-legacy-roles"
 
 describe("MCP salvage_chart_bytes — DATA-001 cycle-3 (emulator)", () => {
@@ -191,7 +186,6 @@ describe("MCP salvage_chart_bytes — DATA-001 cycle-3 (emulator)", () => {
         driveState.bytes.clear()
         driveState.getFileThrows.clear()
         fetchState.responses.clear()
-        __resetLibraryEventHandlersForTesting()
     })
 
     afterEach(() => {
@@ -399,12 +393,6 @@ describe("MCP salvage_chart_bytes — DATA-001 cycle-3 (emulator)", () => {
             body: bytes,
         })
 
-        // Capture the library.row.created emit (re-arms AI enrichment on heal).
-        const events: LibraryRowCreatedEvent[] = []
-        onLibraryRowCreated((e) => {
-            events.push(e)
-        })
-
         const r = await salvageChartBytes(ADMIN, {
             fileId: "upload-1",
             sourceUrl: "https://example.com/ana.pdf",
@@ -455,8 +443,8 @@ describe("MCP salvage_chart_bytes — DATA-001 cycle-3 (emulator)", () => {
         expect(data.normalizedName).toBe("anabkoach")
         expect(data.stem).toBe(bareStem(cleanTitle))
         expect(data.titleSpecificity).toBe(titleSpecificity(cleanTitle, 1))
-        // Enrichment re-armed on the new bytes.
-        expect(data.enrichmentStatus).toBe("pending")
+        // No AI enrichment stamp (AI enrichment is gone).
+        expect(data.enrichmentStatus).toBeUndefined()
         // Original name + mimeType preserved (merge didn't clobber them).
         expect(data.name).toBe("Ana B_Koach.pdf")
 
@@ -473,14 +461,6 @@ describe("MCP salvage_chart_bytes — DATA-001 cycle-3 (emulator)", () => {
         // Phase 9: the global signal doc is readable by every tenant, so it
         // no longer names the file or the person who touched it.
         expect(Object.keys(signal.data() ?? {}).sort()).toEqual(["at", "op"])
-
-        // library.row.created emitted to re-trigger AI enrichment on the
-        // freshly-healed bytes (the heal path was previously enrichment-blind).
-        expect(events).toHaveLength(1)
-        expect(events[0].fileId).toBe("upload-1")
-        expect(events[0].title).toBe("Ana B_Koach.pdf")
-        expect(events[0].sizeBytes).toBe(bytes.byteLength)
-        expect(events[0].contentHash).toMatch(/^[0-9a-f]{64}$/)
     })
 
     it("falls back to Drive when sourceUrl omitted + driveFileId present", async () => {

@@ -11,18 +11,6 @@
             "schedule": "*/5 * * * *"
         },
         {
-            "path": "/api/cron/enrich",
-            "schedule": "0 2 * * *"
-        },
-        {
-            "path": "/api/cron/ai-enrich-retry",
-            "schedule": "*/30 * * * *"
-        },
-        {
-            "path": "/api/cron/aggregate-corrections",
-            "schedule": "0 */6 * * *"
-        },
-        {
             "path": "/api/cron/admin-consistency",
             "schedule": "*/15 * * * *"
         },

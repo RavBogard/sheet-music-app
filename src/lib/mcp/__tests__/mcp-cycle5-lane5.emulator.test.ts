@@ -43,7 +43,6 @@ vi.mock("@/lib/song-usage", () => ({
 
 import { listSetlists } from "../tools/setlists"
 import { createSetlist, addTrackToSetlist } from "../tools/setlist-write"
-import { getAiConfig } from "../tools/ai-config"
 import { publishSetlist } from "../tools/setlist-publish"
 
 /**
@@ -51,8 +50,6 @@ import { publishSetlist } from "../tools/setlist-publish"
  * already live in a tool-specific emulator file:
  *  - list_setlists sort discriminant (C5C-010)
  *  - publish_setlist default-audience test-* filter (C5C-005)
- *  - get_ai_config provider discriminant + post-Gemini-swap key shape
- *    (C5A-B4-aien)
  *
  * Pure unit tests for the rich-envelope conformance (api-auth.ts +
  * login proxy intercept + caller-context helper) live next to the source
@@ -60,7 +57,7 @@ import { publishSetlist } from "../tools/setlist-publish"
  *
  * Runs only via `npm run test:emulator` (the Firestore-emulator wrapper).
  */
-describe("Cycle-5 Lane 5 — list_setlists / publish / ai-config (emulator)", () => {
+describe("Cycle-5 Lane 5 — list_setlists / publish (emulator)", () => {
     let app: App
     const ADMIN = "rabbi-daniel"
     const LEADER = "randy"
@@ -239,42 +236,6 @@ describe("Cycle-5 Lane 5 — list_setlists / publish / ai-config (emulator)", ()
             expect(json).not.toContain("test-bot-musician")
             // Real musician should still be derivable in the default audience.
             expect(json).toContain("real-musician")
-        })
-    })
-
-    // ─── C5A-B4-aien: get_ai_config provider discriminant ────────────────
-
-    describe("C5A-B4-aien — get_ai_config provider discriminant", () => {
-        const ORIGINAL_GEMINI_KEY = process.env.GEMINI_API_KEY
-        afterAll(() => {
-            if (ORIGINAL_GEMINI_KEY === undefined) {
-                delete process.env.GEMINI_API_KEY
-            } else {
-                process.env.GEMINI_API_KEY = ORIGINAL_GEMINI_KEY
-            }
-        })
-
-        it("returns provider:'gemini' when GEMINI_API_KEY is set", async () => {
-            process.env.GEMINI_API_KEY = "test-key-not-real"
-            const r = (await getAiConfig(ADMIN)) as {
-                ok: true
-                provider: "gemini" | "anthropic" | null
-                subscriberActive: boolean
-            }
-            expect(r.ok).toBe(true)
-            expect(r.provider).toBe("gemini")
-            expect(r.subscriberActive).toBe(true)
-        })
-
-        it("returns provider:null when no provider key is set", async () => {
-            delete process.env.GEMINI_API_KEY
-            const r = (await getAiConfig(ADMIN)) as {
-                ok: true
-                provider: "gemini" | "anthropic" | null
-                subscriberActive: boolean
-            }
-            expect(r.provider).toBeNull()
-            expect(r.subscriberActive).toBe(false)
         })
     })
 })

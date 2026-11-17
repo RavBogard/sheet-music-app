@@ -10,11 +10,6 @@ import { getChartHealth, type ChartHealth } from "@/lib/file-fetcher"
 import { getTracksForSetlist } from "@/lib/server-tracks"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 import { logger } from "@/lib/logger"
-import {
-    EMPTY_ENRICHMENT_PROJECTION,
-    loadEnrichmentProjection,
-    type EnrichmentProjection,
-} from "@/lib/library/enrichment-projection"
 
 /**
  * Chart-health verification tools — close the orphan/unrenderable-chart
@@ -60,13 +55,6 @@ export interface GetChartStatusResult {
      * bytes-without-a-row case gets its own name rather than a green.
      */
     health: ChartStatusHealth
-    /**
-     * Cycle-3 AI-001 — enrichment projection of the matching
-     * `library_index/{fileId}` row + retry-queue presence. Always populated;
-     * defaults to {@link EMPTY_ENRICHMENT_PROJECTION} when no `library_index`
-     * row exists (phantom bond, pre-NEW-3 upload, raw catalog-only row).
-     */
-    enrichment: EnrichmentProjection
 }
 
 async function readLeaderRole(
@@ -121,22 +109,11 @@ export async function getChartStatus(
         )
 
     const fileIdTrimmed = args.fileId.trim()
-    // Cycle-3 AI-001: probe chart health + project enrichment state in
-    // parallel — both are read-only Firestore/Storage reads. Enrichment is
-    // fail-soft: a Firestore blip degrades to the empty projection so the
-    // health probe still returns.
-    const [health, enrichment, indexSnap] = await Promise.all([
+    // Probe chart health and read the catalog row in parallel — both are
+    // read-only Storage/Firestore reads.
+    const [health, indexSnap] = await Promise.all([
         getChartHealth(fileIdTrimmed, args.mimeType),
-        loadEnrichmentProjection(db, fileIdTrimmed).catch((err) => {
-            logger.warn(
-                `[mcp] get_chart_status enrichment projection failed for ${fileIdTrimmed}:`,
-                err,
-            )
-            return EMPTY_ENRICHMENT_PROJECTION
-        }),
-        // E4 — the catalog fact. Read directly rather than inferred from the
-        // enrichment projection, which cannot tell "no row" from "a row with
-        // no enrichment fields".
+        // E4 — the catalog fact, read directly.
         db
             .collection("library_index")
             .doc(fileIdTrimmed)
@@ -198,19 +175,10 @@ export async function getChartStatus(
                   ...(health.mimeType ? { mimeType: health.mimeType } : {}),
               }
             : health
-    // The enrichment projection is catalog content. A row that is not ours
-    // must not contribute any, for the same reason its status must not: it
-    // would name another org's chart. An absent row projects empty already,
-    // so this keeps the two answers identical.
-    const projectedEnrichment =
-        indexSnap !== null && indexSnap.exists && !indexIsOurs
-            ? EMPTY_ENRICHMENT_PROJECTION
-            : enrichment
     return {
         ok: true,
         fileId: args.fileId,
         health: projected,
-        enrichment: projectedEnrichment,
     }
 }
 

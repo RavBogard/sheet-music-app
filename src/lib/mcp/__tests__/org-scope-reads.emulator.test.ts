@@ -47,7 +47,6 @@ describe("MCP read org-scoping (emulator)", () => {
             "songs",
             "library_index",
             "users",
-            "aiEnrichmentRetryQueue",
         ]) {
             const snap = await db().collection(coll).get()
             await Promise.all(snap.docs.map((d) => d.ref.delete()))

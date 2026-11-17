@@ -50,16 +50,12 @@ export const OPS_TOOLS: ReadonlySet<string> = new Set([
     //     track_mimetype healed 253 tracks, setlist_test_flag 21 setlists,
     //     library_index 4 rows. Deleting them would leave the next 278 rows of
     //     drift with no remedy, so they stay.
-    //   - `backfill_heal_metadata` was mis-classified by the handoff: it takes
-    //     a required `fileId` and repairs one file. It is not a sweep and has
-    //     no "completed" state to confirm.
     //
     // Tenant note: content_hash and library_index are org-scoped via
     // `orgFrom(extra)`, and the confirmation above covers the crc tenant only
     // (927 of 990 library_index rows). The 63 Brothers Lazaroff rows need a
     // BL-org bearer, which is not mintable from a crc one.
     "backfill_content_hash",
-    "backfill_heal_metadata",
     "backfill_track_mimetype",
     "backfill_library_setting_parts",
     "backfill_chart_lineage",
@@ -83,21 +79,6 @@ export const OPS_TOOLS: ReadonlySet<string> = new Set([
     "flag_bond",
     "review_flagged_bonds",
     "review_chart_bonds",
-    "get_correction_stats",
-
-    // AI enrichment calibration + review queue. Admin-only triage of what the
-    // provider suggested; `/manage/library-review` is its real surface.
-    // `edit_library_entry` is NOT here — editing a library row is authoring.
-    "get_ai_config",
-    "set_ai_auto_apply",
-    "set_ai_threshold",
-    "list_review_queue",
-    "get_enrichment_suggestion",
-    "accept_enrichment",
-    "reject_enrichment",
-    "edit_enrichment",
-    "retry_enrichment",
-    "dismiss_failure",
 
     // Bridge housekeeping. `list_monitor_buses`, `get_mix`, `set_send_level`
     // and the rest of the mixing surface stay on authoring — a sound engineer
@@ -113,7 +94,6 @@ export const OPS_TOOLS: ReadonlySet<string> = new Set([
     // Observability.
     "dump_collection_size",
     "get_web_vitals_summary",
-    "get_ai_spend_summary",
 
     // Test accounts and fixture cleanup.
     "create_test_account",

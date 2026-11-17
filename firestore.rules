@@ -535,19 +535,13 @@ service cloud.firestore {
     match /mcpOAuthCodes/{codeHash}      { allow read, write: if false; }
     match /mcpTestUsers/{testUid}        { allow read, write: if false; }
     match /upload_batches/{batchId}      { allow read, write: if false; }
-    match /aiEnrichmentCache/{h}         { allow read, write: if false; }
-    match /aiEnrichmentRetryQueue/{id}   { allow read, write: if false; }
-    match /aiCorrectionSignals/{id}      { allow read, write: if false; }
 
     // Platform-wide operational records: platform owner only (was isAdmin()).
     match /bond_corrections/{id}         { allow read: if po(); allow write: if false; }
     match /titleContextHints/{hintId}    { allow read: if po(); allow write: if false; }
-    match /aiConfig/{configId}           { allow read: if po(); allow write: if false; }
-    match /aiCorrectionStats/{statsId}   { allow read: if po(); allow write: if false; }
     match /chart_bond_alerts/{alertId}   { allow read: if po(); allow write: if false; }
     match /webVitalsObservations/{id}    { allow read: if po(); allow write: if false; }
     match /backups/{backupId}            { allow read: if po(); allow write: if false; }
-    match /aiSpend/{spendId}             { allow read: if po(); allow write: if false; }
     match /dedupeRuns/{runId}            { allow read: if po(); allow write: if false; }
 
     // Deny-all fallback.

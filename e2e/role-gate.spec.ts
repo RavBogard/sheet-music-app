@@ -48,21 +48,17 @@ test.describe('role-gate fixture — mint-on-demand role sessions', () => {
         expect(session.role, 'test-session route must echo member').toBe('member')
     })
 
-    test('gotoAs(musician) cookie drives server-side gating → /manage redirect', async ({
+    test('gotoAs(musician) cookie drives server-side gating → /setlists redirect', async ({
         roleGate,
         page,
     }) => {
-        // The admin-only /manage/library-review surface redirects any non-admin
-        // (musician here) to /manage — proving the fixture's session cookie
-        // authenticates the server route end-to-end.
-        await roleGate.gotoAs('musician', '/manage/library-review', { webSdk: 'optional' })
+        // /manage redirects anyone who is not a band leader (musician here) to
+        // /setlists — proving the fixture's session cookie authenticates the
+        // server route end-to-end.
+        await roleGate.gotoAs('musician', '/manage', { webSdk: 'optional' })
         expect(
             new URL(page.url()).pathname,
-            'musician (no admin claim) must be gated out to /manage',
-        ).toBe('/manage')
-        await expect(
-            page.getByRole('heading', { name: 'Library Review' }),
-            'musician must not see the admin Library Review surface',
-        ).toHaveCount(0)
+            'musician (not a band leader) must be gated out to /setlists',
+        ).toBe('/setlists')
     })
 })

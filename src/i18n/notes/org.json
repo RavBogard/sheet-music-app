@@ -153,15 +153,5 @@
         "where": "Name of the core chart section in search and upload pickers.",
         "who": "leaders",
         "maxLength": 25
-    },
-    "ai.systemInstructionLead": {
-        "where": "Gemini prompt (server).",
-        "who": "nobody (AI prompt, English)",
-        "translate": false
-    },
-    "ai.libraryConventions": {
-        "where": "Gemini prompt (server).",
-        "who": "nobody (AI prompt, English)",
-        "translate": false
     }
 }

@@ -1,20 +1,20 @@
 /**
  * Wave-2 ingest-mutator-matrix F-7 — emulator coverage of the rename +
- * editEnrichment W-02 recompute fix.
+ * applyLibraryEntryEdit W-02 recompute fix.
  *
  * Goals:
- *   1. `editEnrichment` title-branch writes all 5 W-02 fields against
+ *   1. `applyLibraryEntryEdit` title-branch writes all 5 W-02 fields against
  *      a real Firestore (emulator).
  *   2. PCU's fuzzy-dedup range query (`normalizedName >= prefix`)
- *      finds a row by its NEW normalizedName after editEnrichment runs.
+ *      finds a row by its NEW normalizedName after applyLibraryEntryEdit runs.
  *   3. siblingsInCatalog excludes self + orphaned rows when counting.
  *   4. drive-sync's `handleExistingFile` does NOT loop on a row
- *      renamed via editEnrichment when Drive's view of the file is
+ *      renamed via applyLibraryEntryEdit when Drive's view of the file is
  *      unchanged (see also `.paul/research/recompute-w02-fields/
  *      DRIVE-SYNC-LOOP-TRACE.md`).
  *
  * Uses the same emulator-app + cleanup pattern as
- * `review-queue.emulator.test.ts`.
+ * `library-entry-edit.emulator.test.ts`.
  */
 
 import {
@@ -33,7 +33,7 @@ import {
 } from "firebase-admin/app"
 import { getFirestore, type Firestore } from "firebase-admin/firestore"
 
-import { editEnrichment } from "../review-queue"
+import { applyLibraryEntryEdit } from "../library-entry-edit"
 import { bareStem, titleSpecificity } from "@/lib/mcp/title-specificity"
 import { recomputeIndexNameFields } from "../recompute-index-name-fields"
 
@@ -63,16 +63,16 @@ async function seedRow(
             status: "active",
             uploadedBy: ACTOR,
             originalName: `${name}.pdf`,
-            // editEnrichment requires the row to be in a review state
-            // OR be admin-callable on any row. The function itself
-            // gates on row existence; it doesn't gate on review status.
+            // Legacy enrichment fields an existing row may still carry;
+            // applyLibraryEntryEdit gates on row existence only and
+            // tolerates them.
             enrichmentStatus: "review_pending",
             aiSuggestion: null,
             ...extra,
         })
 }
 
-describe("F-7 W-02 recompute on rename + editEnrichment (emulator)", () => {
+describe("F-7 W-02 recompute on rename + applyLibraryEntryEdit (emulator)", () => {
     let app: App
 
     beforeAll(() => {
@@ -97,10 +97,10 @@ describe("F-7 W-02 recompute on rename + editEnrichment (emulator)", () => {
         }
     })
 
-    it("editEnrichment title-edit writes ALL 5 W-02 fields on the row", async () => {
+    it("applyLibraryEntryEdit title-edit writes ALL 5 W-02 fields on the row", async () => {
         await seedRow(db(), "row-1", "Hashkivenu")
 
-        const result = await editEnrichment(
+        const result = await applyLibraryEntryEdit(
             db(),
             "row-1",
             { title: "Hashkivenu (Klepper-Freelander)" },
@@ -126,8 +126,8 @@ describe("F-7 W-02 recompute on rename + editEnrichment (emulator)", () => {
     it("PCU's fuzzy-dedup range query finds the renamed row by NEW normalizedName prefix", async () => {
         await seedRow(db(), "row-old", "Old Made Up Title")
 
-        // Rename via editEnrichment.
-        await editEnrichment(
+        // Rename via applyLibraryEntryEdit.
+        await applyLibraryEntryEdit(
             db(),
             "row-old",
             { title: "Mi Chamocha (Klepper)" },
@@ -152,7 +152,7 @@ describe("F-7 W-02 recompute on rename + editEnrichment (emulator)", () => {
         expect(ids).toContain("row-old")
     })
 
-    it("editEnrichment siblingsInCatalog excludes self + orphans when counting", async () => {
+    it("applyLibraryEntryEdit siblingsInCatalog excludes self + orphans when counting", async () => {
         // Seed 4 rows with stem "hashkivenu":
         //   - row-self  (the one we'll rename TO hashkivenu)
         //   - row-sib-a active
@@ -167,7 +167,7 @@ describe("F-7 W-02 recompute on rename + editEnrichment (emulator)", () => {
             status: "orphaned",
         })
 
-        await editEnrichment(
+        await applyLibraryEntryEdit(
             db(),
             "row-self",
             { title: "Hashkivenu (Klepper)" },
@@ -186,15 +186,15 @@ describe("F-7 W-02 recompute on rename + editEnrichment (emulator)", () => {
         expect(row.stem).toBe(expected.stem)
     })
 
-    it("drive-sync loop trace: editEnrichment does NOT mutate originalName, so handleExistingFile's nameChanged stays false on the next Drive tick", async () => {
+    it("drive-sync loop trace: applyLibraryEntryEdit does NOT mutate originalName, so handleExistingFile's nameChanged stays false on the next Drive tick", async () => {
         // Seed a row whose `originalName` reflects a Drive file name.
         await seedRow(db(), "drive-row-1", "Original Drive Title", {
             driveFileId: "drive-1",
             originalName: "Original Drive Title.pdf",
         })
 
-        // UI rename via editEnrichment.
-        await editEnrichment(
+        // UI rename via applyLibraryEntryEdit.
+        await applyLibraryEntryEdit(
             db(),
             "drive-row-1",
             { title: "New UI Title" },

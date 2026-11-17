@@ -4,13 +4,11 @@ import { getFirestore } from "firebase-admin/firestore"
 
 import { __resetPlatformOwnerMemo } from "@/lib/org/access"
 import { assertEditor } from "@/lib/mcp/server-tracks-write"
-import { getAiConfig } from "@/lib/mcp/tools/ai-config"
 import { _assertAdminForTests as bridgeRecoveryAdmin } from "@/lib/mcp/tools/bridge-recovery"
 import { _assertAdminForTests as bridgeHousekeepingAdmin } from "@/lib/mcp/tools/bridge-housekeeping"
 
 /**
- * SEC-02: the MCP editor gate and the admin gates on the AI-config and bridge
- * tools read the caller's MEMBERSHIP in the request's tenant only. The legacy,
+ * SEC-02: the MCP editor gate and the admin gates on the bridge tools read the caller's MEMBERSHIP in the request's tenant only. The legacy,
  * tenant-blind `users/{uid}.role` never authorises, migrated or not.
  */
 describe("SEC-02 tenant-only MCP role gates (emulator)", () => {
@@ -62,7 +60,6 @@ describe("SEC-02 tenant-only MCP role gates (emulator)", () => {
     it("(a) a legacy users.role admin with no membership is denied by every gate", async () => {
         const gates = [
             await assertEditor(db(), LEGACY_ADMIN, CRC),
-            await getAiConfig(LEGACY_ADMIN, CRC),
             await bridgeRecoveryAdmin(db(), LEGACY_ADMIN, CRC),
             await bridgeHousekeepingAdmin(db(), LEGACY_ADMIN, "bridge_get_log", CRC),
         ]
@@ -75,12 +72,10 @@ describe("SEC-02 tenant-only MCP role gates (emulator)", () => {
 
     it("(b) an admin of tenant A does not pass the gates for tenant B", async () => {
         expect((await assertEditor(db(), CRC_ADMIN, CRC)).ok).toBe(true)
-        expect((await getAiConfig(CRC_ADMIN, CRC)) as { ok: boolean }).toMatchObject({ ok: true })
         expect((await bridgeRecoveryAdmin(db(), CRC_ADMIN, CRC)).ok).toBe(true)
 
         const gates = [
             await assertEditor(db(), CRC_ADMIN, BL),
-            await getAiConfig(CRC_ADMIN, BL),
             await bridgeRecoveryAdmin(db(), CRC_ADMIN, BL),
             await bridgeHousekeepingAdmin(db(), CRC_ADMIN, "bridge_get_log", BL),
         ]
@@ -92,7 +87,6 @@ describe("SEC-02 tenant-only MCP role gates (emulator)", () => {
 
     it("(c) a normal band_leader member still passes the editor gate, not the admin gates", async () => {
         expect((await assertEditor(db(), CRC_EDITOR, CRC)).ok).toBe(true)
-        expect(code(await getAiConfig(CRC_EDITOR, CRC))).toBe("forbidden_role")
         expect(code(await bridgeRecoveryAdmin(db(), CRC_EDITOR, CRC))).toBe("forbidden_role")
     })
 

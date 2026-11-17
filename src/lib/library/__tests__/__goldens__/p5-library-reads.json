@@ -15,11 +15,6 @@
         "status": "active",
         "stem": "adon olam",
         "titleSpecificity": 0.8,
-        "enrichmentStatus": null,
-        "enrichmentConfidence": null,
-        "aiSuggestion": null,
-        "retryQueued": false,
-        "enrichmentRanAt": null,
         "siblingsInCatalog": 1
       },
       {
@@ -33,12 +28,7 @@
         "key": "Em",
         "bpm": null,
         "tags": [],
-        "status": "active",
-        "enrichmentStatus": null,
-        "enrichmentConfidence": null,
-        "aiSuggestion": null,
-        "retryQueued": false,
-        "enrichmentRanAt": null
+        "status": "active"
       },
       {
         "fileId": "c-up-1",
@@ -51,12 +41,7 @@
         "key": "C",
         "bpm": null,
         "tags": [],
-        "status": "active",
-        "enrichmentStatus": null,
-        "enrichmentConfidence": null,
-        "aiSuggestion": null,
-        "retryQueued": false,
-        "enrichmentRanAt": null
+        "status": "active"
       },
       {
         "fileId": "c-nava-1",
@@ -71,12 +56,7 @@
         "tags": [
           "nava"
         ],
-        "status": "active",
-        "enrichmentStatus": null,
-        "enrichmentConfidence": null,
-        "aiSuggestion": null,
-        "retryQueued": false,
-        "enrichmentRanAt": null
+        "status": "active"
       },
       {
         "fileId": "c-nava-2",
@@ -89,12 +69,7 @@
         "key": "Dm",
         "bpm": null,
         "tags": [],
-        "status": "active",
-        "enrichmentStatus": null,
-        "enrichmentConfidence": null,
-        "aiSuggestion": null,
-        "retryQueued": false,
-        "enrichmentRanAt": null
+        "status": "active"
       },
       {
         "fileId": "c-core-2",
@@ -107,12 +82,7 @@
         "key": "D",
         "bpm": null,
         "tags": [],
-        "status": "active",
-        "enrichmentStatus": null,
-        "enrichmentConfidence": null,
-        "aiSuggestion": null,
-        "retryQueued": false,
-        "enrichmentRanAt": null
+        "status": "active"
       }
     ],
     "total": 6,
@@ -133,18 +103,6 @@
           "non_chart": 1
         }
       }
-    },
-    "enrichmentCoverage": {
-      "byStatus": {
-        "pending": 0,
-        "review_pending": 0,
-        "enriched": 0,
-        "failed": 0,
-        "human_curated": 0,
-        "human_rejected": 0,
-        "unenriched": 6
-      },
-      "pendingEnrichmentCount": 6
     }
   },
   "crc.list_library.core": {
@@ -163,11 +121,6 @@
         "status": "active",
         "stem": "adon olam",
         "titleSpecificity": 0.8,
-        "enrichmentStatus": null,
-        "enrichmentConfidence": null,
-        "aiSuggestion": null,
-        "retryQueued": false,
-        "enrichmentRanAt": null,
         "siblingsInCatalog": 1
       },
       {
@@ -181,12 +134,7 @@
         "key": "D",
         "bpm": null,
         "tags": [],
-        "status": "active",
-        "enrichmentStatus": null,
-        "enrichmentConfidence": null,
-        "aiSuggestion": null,
-        "retryQueued": false,
-        "enrichmentRanAt": null
+        "status": "active"
       }
     ],
     "total": 2,
@@ -211,18 +159,6 @@
           "non_chart": 1
         }
       }
-    },
-    "enrichmentCoverage": {
-      "byStatus": {
-        "pending": 0,
-        "review_pending": 0,
-        "enriched": 0,
-        "failed": 0,
-        "human_curated": 0,
-        "human_rejected": 0,
-        "unenriched": 2
-      },
-      "pendingEnrichmentCount": 2
     }
   },
   "crc.list_library.supplemental": {
@@ -238,12 +174,7 @@
         "key": "Em",
         "bpm": null,
         "tags": [],
-        "status": "active",
-        "enrichmentStatus": null,
-        "enrichmentConfidence": null,
-        "aiSuggestion": null,
-        "retryQueued": false,
-        "enrichmentRanAt": null
+        "status": "active"
       }
     ],
     "total": 1,
@@ -269,18 +200,6 @@
           "non_chart": 1
         }
       }
-    },
-    "enrichmentCoverage": {
-      "byStatus": {
-        "pending": 0,
-        "review_pending": 0,
-        "enriched": 0,
-        "failed": 0,
-        "human_curated": 0,
-        "human_rejected": 0,
-        "unenriched": 1
-      },
-      "pendingEnrichmentCount": 1
     }
   },
   "crc.list_library.nava": {
@@ -298,12 +217,7 @@
         "tags": [
           "nava"
         ],
-        "status": "active",
-        "enrichmentStatus": null,
-        "enrichmentConfidence": null,
-        "aiSuggestion": null,
-        "retryQueued": false,
-        "enrichmentRanAt": null
+        "status": "active"
       },
       {
         "fileId": "c-nava-2",
@@ -316,12 +230,7 @@
         "key": "Dm",
         "bpm": null,
         "tags": [],
-        "status": "active",
-        "enrichmentStatus": null,
-        "enrichmentConfidence": null,
-        "aiSuggestion": null,
-        "retryQueued": false,
-        "enrichmentRanAt": null
+        "status": "active"
       }
     ],
     "total": 2,
@@ -347,18 +256,6 @@
           "non_chart": 1
         }
       }
-    },
-    "enrichmentCoverage": {
-      "byStatus": {
-        "pending": 0,
-        "review_pending": 0,
-        "enriched": 0,
-        "failed": 0,
-        "human_curated": 0,
-        "human_rejected": 0,
-        "unenriched": 2
-      },
-      "pendingEnrichmentCount": 2
     }
   },
   "crc.list_library.uploads": {
@@ -374,12 +271,7 @@
         "key": "C",
         "bpm": null,
         "tags": [],
-        "status": "active",
-        "enrichmentStatus": null,
-        "enrichmentConfidence": null,
-        "aiSuggestion": null,
-        "retryQueued": false,
-        "enrichmentRanAt": null
+        "status": "active"
       }
     ],
     "total": 1,
@@ -405,18 +297,6 @@
           "non_chart": 1
         }
       }
-    },
-    "enrichmentCoverage": {
-      "byStatus": {
-        "pending": 0,
-        "review_pending": 0,
-        "enriched": 0,
-        "failed": 0,
-        "human_curated": 0,
-        "human_rejected": 0,
-        "unenriched": 1
-      },
-      "pendingEnrichmentCount": 1
     }
   },
   "crc.list_library.audit": {
@@ -435,11 +315,6 @@
         "status": "active",
         "stem": "adon olam",
         "titleSpecificity": 0.8,
-        "enrichmentStatus": null,
-        "enrichmentConfidence": null,
-        "aiSuggestion": null,
-        "retryQueued": false,
-        "enrichmentRanAt": null,
         "siblingsInCatalog": 1
       },
       {
@@ -453,12 +328,7 @@
         "key": null,
         "bpm": null,
         "tags": [],
-        "status": "archived",
-        "enrichmentStatus": null,
-        "enrichmentConfidence": null,
-        "aiSuggestion": null,
-        "retryQueued": false,
-        "enrichmentRanAt": null
+        "status": "archived"
       },
       {
         "fileId": "c-nava-arch",
@@ -471,12 +341,7 @@
         "key": null,
         "bpm": null,
         "tags": [],
-        "status": "archived",
-        "enrichmentStatus": null,
-        "enrichmentConfidence": null,
-        "aiSuggestion": null,
-        "retryQueued": false,
-        "enrichmentRanAt": null
+        "status": "archived"
       },
       {
         "fileId": "c-sup-1",
@@ -489,12 +354,7 @@
         "key": "Em",
         "bpm": null,
         "tags": [],
-        "status": "active",
-        "enrichmentStatus": null,
-        "enrichmentConfidence": null,
-        "aiSuggestion": null,
-        "retryQueued": false,
-        "enrichmentRanAt": null
+        "status": "active"
       },
       {
         "fileId": "c-up-1",
@@ -507,12 +367,7 @@
         "key": "C",
         "bpm": null,
         "tags": [],
-        "status": "active",
-        "enrichmentStatus": null,
-        "enrichmentConfidence": null,
-        "aiSuggestion": null,
-        "retryQueued": false,
-        "enrichmentRanAt": null
+        "status": "active"
       },
       {
         "fileId": "c-nava-1",
@@ -527,12 +382,7 @@
         "tags": [
           "nava"
         ],
-        "status": "active",
-        "enrichmentStatus": null,
-        "enrichmentConfidence": null,
-        "aiSuggestion": null,
-        "retryQueued": false,
-        "enrichmentRanAt": null
+        "status": "active"
       },
       {
         "fileId": "c-core-orph",
@@ -545,12 +395,7 @@
         "key": null,
         "bpm": null,
         "tags": [],
-        "status": "orphaned",
-        "enrichmentStatus": null,
-        "enrichmentConfidence": null,
-        "aiSuggestion": null,
-        "retryQueued": false,
-        "enrichmentRanAt": null
+        "status": "orphaned"
       },
       {
         "fileId": "c-nava-2",
@@ -563,12 +408,7 @@
         "key": "Dm",
         "bpm": null,
         "tags": [],
-        "status": "active",
-        "enrichmentStatus": null,
-        "enrichmentConfidence": null,
-        "aiSuggestion": null,
-        "retryQueued": false,
-        "enrichmentRanAt": null
+        "status": "active"
       },
       {
         "fileId": "c-core-2",
@@ -581,12 +421,7 @@
         "key": "D",
         "bpm": null,
         "tags": [],
-        "status": "active",
-        "enrichmentStatus": null,
-        "enrichmentConfidence": null,
-        "aiSuggestion": null,
-        "retryQueued": false,
-        "enrichmentRanAt": null
+        "status": "active"
       },
       {
         "fileId": "c-core-mp3",
@@ -599,12 +434,7 @@
         "key": null,
         "bpm": null,
         "tags": [],
-        "status": "active",
-        "enrichmentStatus": null,
-        "enrichmentConfidence": null,
-        "aiSuggestion": null,
-        "retryQueued": false,
-        "enrichmentRanAt": null
+        "status": "active"
       },
       {
         "fileId": "c-core-dup",
@@ -617,12 +447,7 @@
         "key": null,
         "bpm": null,
         "tags": [],
-        "status": "duplicate",
-        "enrichmentStatus": null,
-        "enrichmentConfidence": null,
-        "aiSuggestion": null,
-        "retryQueued": false,
-        "enrichmentRanAt": null
+        "status": "duplicate"
       }
     ],
     "total": 11,
@@ -637,18 +462,6 @@
         "byCollection": {},
         "byOther": {}
       }
-    },
-    "enrichmentCoverage": {
-      "byStatus": {
-        "pending": 0,
-        "review_pending": 0,
-        "enriched": 0,
-        "failed": 0,
-        "human_curated": 0,
-        "human_rejected": 0,
-        "unenriched": 11
-      },
-      "pendingEnrichmentCount": 11
     }
   },
   "crc.search_library.empty": [
@@ -661,12 +474,7 @@
       "stem": "adon olam",
       "titleSpecificity": 0.8,
       "siblingsInCatalog": 1,
-      "collection": "core",
-      "enrichmentStatus": null,
-      "enrichmentConfidence": null,
-      "aiSuggestion": null,
-      "retryQueued": false,
-      "enrichmentRanAt": null
+      "collection": "core"
     },
     {
       "id": "c-sup-1",
@@ -674,12 +482,7 @@
       "orgId": "crc",
       "fileName": "Hashkivenu (Shireinu)",
       "status": "active",
-      "collection": "supplemental",
-      "enrichmentStatus": null,
-      "enrichmentConfidence": null,
-      "aiSuggestion": null,
-      "retryQueued": false,
-      "enrichmentRanAt": null
+      "collection": "supplemental"
     },
     {
       "id": "c-up-1",
@@ -687,12 +490,7 @@
       "orgId": "crc",
       "fileName": "L'Cha Dodi (Nava)",
       "status": "active",
-      "collection": "uploads",
-      "enrichmentStatus": null,
-      "enrichmentConfidence": null,
-      "aiSuggestion": null,
-      "retryQueued": false,
-      "enrichmentRanAt": null
+      "collection": "uploads"
     },
     {
       "id": "c-nava-1",
@@ -700,12 +498,7 @@
       "orgId": "crc",
       "fileName": "Lakh Amar Libi",
       "status": "active",
-      "collection": "nava",
-      "enrichmentStatus": null,
-      "enrichmentConfidence": null,
-      "aiSuggestion": null,
-      "retryQueued": false,
-      "enrichmentRanAt": null
+      "collection": "nava"
     },
     {
       "id": "c-nava-2",
@@ -713,12 +506,7 @@
       "orgId": "crc",
       "fileName": "Niggun Tishrei",
       "status": "active",
-      "collection": "nava",
-      "enrichmentStatus": null,
-      "enrichmentConfidence": null,
-      "aiSuggestion": null,
-      "retryQueued": false,
-      "enrichmentRanAt": null
+      "collection": "nava"
     },
     {
       "id": "c-core-2",
@@ -726,12 +514,7 @@
       "orgId": "crc",
       "fileName": "Oseh Shalom",
       "status": "active",
-      "collection": "core",
-      "enrichmentStatus": null,
-      "enrichmentConfidence": null,
-      "aiSuggestion": null,
-      "retryQueued": false,
-      "enrichmentRanAt": null
+      "collection": "core"
     }
   ],
   "crc.search_library.adon": [
@@ -744,12 +527,7 @@
       "stem": "adon olam",
       "titleSpecificity": 0.8,
       "siblingsInCatalog": 1,
-      "collection": "core",
-      "enrichmentStatus": null,
-      "enrichmentConfidence": null,
-      "aiSuggestion": null,
-      "retryQueued": false,
-      "enrichmentRanAt": null
+      "collection": "core"
     }
   ],
   "crc.search_library.lecha": [],
@@ -760,12 +538,7 @@
       "orgId": "crc",
       "fileName": "Lakh Amar Libi",
       "status": "active",
-      "collection": "nava",
-      "enrichmentStatus": null,
-      "enrichmentConfidence": null,
-      "aiSuggestion": null,
-      "retryQueued": false,
-      "enrichmentRanAt": null
+      "collection": "nava"
     },
     {
       "id": "c-nava-2",
@@ -773,12 +546,7 @@
       "orgId": "crc",
       "fileName": "Niggun Tishrei",
       "status": "active",
-      "collection": "nava",
-      "enrichmentStatus": null,
-      "enrichmentConfidence": null,
-      "aiSuggestion": null,
-      "retryQueued": false,
-      "enrichmentRanAt": null
+      "collection": "nava"
     }
   ],
   "crc.search_library.orphaned": [
@@ -791,12 +559,7 @@
       "stem": "adon olam",
       "titleSpecificity": 0.8,
       "siblingsInCatalog": 1,
-      "collection": "core",
-      "enrichmentStatus": null,
-      "enrichmentConfidence": null,
-      "aiSuggestion": null,
-      "retryQueued": false,
-      "enrichmentRanAt": null
+      "collection": "core"
     },
     {
       "id": "c-sup-1",
@@ -804,12 +567,7 @@
       "orgId": "crc",
       "fileName": "Hashkivenu (Shireinu)",
       "status": "active",
-      "collection": "supplemental",
-      "enrichmentStatus": null,
-      "enrichmentConfidence": null,
-      "aiSuggestion": null,
-      "retryQueued": false,
-      "enrichmentRanAt": null
+      "collection": "supplemental"
     },
     {
       "id": "c-up-1",
@@ -817,12 +575,7 @@
       "orgId": "crc",
       "fileName": "L'Cha Dodi (Nava)",
       "status": "active",
-      "collection": "uploads",
-      "enrichmentStatus": null,
-      "enrichmentConfidence": null,
-      "aiSuggestion": null,
-      "retryQueued": false,
-      "enrichmentRanAt": null
+      "collection": "uploads"
     },
     {
       "id": "c-nava-1",
@@ -830,12 +583,7 @@
       "orgId": "crc",
       "fileName": "Lakh Amar Libi",
       "status": "active",
-      "collection": "nava",
-      "enrichmentStatus": null,
-      "enrichmentConfidence": null,
-      "aiSuggestion": null,
-      "retryQueued": false,
-      "enrichmentRanAt": null
+      "collection": "nava"
     },
     {
       "id": "c-nava-2",
@@ -843,12 +591,7 @@
       "orgId": "crc",
       "fileName": "Niggun Tishrei",
       "status": "active",
-      "collection": "nava",
-      "enrichmentStatus": null,
-      "enrichmentConfidence": null,
-      "aiSuggestion": null,
-      "retryQueued": false,
-      "enrichmentRanAt": null
+      "collection": "nava"
     },
     {
       "id": "c-core-2",
@@ -856,12 +599,7 @@
       "orgId": "crc",
       "fileName": "Oseh Shalom",
       "status": "active",
-      "collection": "core",
-      "enrichmentStatus": null,
-      "enrichmentConfidence": null,
-      "aiSuggestion": null,
-      "retryQueued": false,
-      "enrichmentRanAt": null
+      "collection": "core"
     },
     {
       "id": "c-core-mp3",
@@ -869,12 +607,7 @@
       "orgId": "crc",
       "fileName": "Oseh Shalom",
       "status": "active",
-      "collection": "core",
-      "enrichmentStatus": null,
-      "enrichmentConfidence": null,
-      "aiSuggestion": null,
-      "retryQueued": false,
-      "enrichmentRanAt": null
+      "collection": "core"
     }
   ],
   "crc.get_song": {
@@ -886,11 +619,6 @@
       "status": "active",
       "key": "G",
       "bpm": 92,
-      "enrichmentStatus": null,
-      "enrichmentConfidence": null,
-      "aiSuggestion": null,
-      "retryQueued": false,
-      "enrichmentRanAt": null,
       "recording": null
     },
     "c-core-2": {
@@ -900,11 +628,6 @@
       "fileName": "Oseh Shalom",
       "status": "active",
       "key": "D",
-      "enrichmentStatus": null,
-      "enrichmentConfidence": null,
-      "aiSuggestion": null,
-      "retryQueued": false,
-      "enrichmentRanAt": null,
       "recording": null
     },
     "c-core-arch": {
@@ -913,11 +636,6 @@
       "orgId": "crc",
       "fileName": "Adon Olam (old)",
       "status": "archived",
-      "enrichmentStatus": null,
-      "enrichmentConfidence": null,
-      "aiSuggestion": null,
-      "retryQueued": false,
-      "enrichmentRanAt": null,
       "recording": null
     },
     "c-core-dup": {
@@ -926,11 +644,6 @@
       "orgId": "crc",
       "fileName": "Oseh Shalom copy",
       "status": "duplicate",
-      "enrichmentStatus": null,
-      "enrichmentConfidence": null,
-      "aiSuggestion": null,
-      "retryQueued": false,
-      "enrichmentRanAt": null,
       "recording": null
     },
     "c-core-mp3": {
@@ -939,11 +652,6 @@
       "orgId": "crc",
       "fileName": "Oseh Shalom",
       "status": "active",
-      "enrichmentStatus": null,
-      "enrichmentConfidence": null,
-      "aiSuggestion": null,
-      "retryQueued": false,
-      "enrichmentRanAt": null,
       "recording": null
     },
     "c-sup-1": {
@@ -953,11 +661,6 @@
       "fileName": "Hashkivenu (Shireinu)",
       "status": "active",
       "key": "Em",
-      "enrichmentStatus": null,
-      "enrichmentConfidence": null,
-      "aiSuggestion": null,
-      "retryQueued": false,
-      "enrichmentRanAt": null,
       "recording": null
     },
     "c-nava-1": {
@@ -967,11 +670,6 @@
       "fileName": "Lakh Amar Libi",
       "status": "active",
       "key": "Am",
-      "enrichmentStatus": null,
-      "enrichmentConfidence": null,
-      "aiSuggestion": null,
-      "retryQueued": false,
-      "enrichmentRanAt": null,
       "recording": null
     },
     "c-nava-2": {
@@ -981,11 +679,6 @@
       "fileName": "Niggun Tishrei",
       "status": "active",
       "key": "Dm",
-      "enrichmentStatus": null,
-      "enrichmentConfidence": null,
-      "aiSuggestion": null,
-      "retryQueued": false,
-      "enrichmentRanAt": null,
       "recording": null
     },
     "c-nava-arch": {
@@ -994,11 +687,6 @@
       "orgId": "crc",
       "fileName": "Arbaim Shana (old)",
       "status": "archived",
-      "enrichmentStatus": null,
-      "enrichmentConfidence": null,
-      "aiSuggestion": null,
-      "retryQueued": false,
-      "enrichmentRanAt": null,
       "recording": null
     },
     "c-up-1": {
@@ -1008,11 +696,6 @@
       "fileName": "L'Cha Dodi (Nava)",
       "status": "active",
       "key": "C",
-      "enrichmentStatus": null,
-      "enrichmentConfidence": null,
-      "aiSuggestion": null,
-      "retryQueued": false,
-      "enrichmentRanAt": null,
       "recording": null
     },
     "b-core-1": null,
@@ -1072,12 +755,7 @@
         "key": "A",
         "bpm": null,
         "tags": [],
-        "status": "active",
-        "enrichmentStatus": null,
-        "enrichmentConfidence": null,
-        "aiSuggestion": null,
-        "retryQueued": false,
-        "enrichmentRanAt": null
+        "status": "active"
       },
       {
         "fileId": "b-up-1",
@@ -1090,12 +768,7 @@
         "key": "Dm",
         "bpm": null,
         "tags": [],
-        "status": "active",
-        "enrichmentStatus": null,
-        "enrichmentConfidence": null,
-        "aiSuggestion": null,
-        "retryQueued": false,
-        "enrichmentRanAt": null
+        "status": "active"
       }
     ],
     "total": 2,
@@ -1110,18 +783,6 @@
         "byCollection": {},
         "byOther": {}
       }
-    },
-    "enrichmentCoverage": {
-      "byStatus": {
-        "pending": 0,
-        "review_pending": 0,
-        "enriched": 0,
-        "failed": 0,
-        "human_curated": 0,
-        "human_rejected": 0,
-        "unenriched": 2
-      },
-      "pendingEnrichmentCount": 2
     }
   },
   "brotherslazaroff.list_library.core": {
@@ -1137,12 +798,7 @@
         "key": "A",
         "bpm": null,
         "tags": [],
-        "status": "active",
-        "enrichmentStatus": null,
-        "enrichmentConfidence": null,
-        "aiSuggestion": null,
-        "retryQueued": false,
-        "enrichmentRanAt": null
+        "status": "active"
       }
     ],
     "total": 1,
@@ -1159,18 +815,6 @@
         },
         "byOther": {}
       }
-    },
-    "enrichmentCoverage": {
-      "byStatus": {
-        "pending": 0,
-        "review_pending": 0,
-        "enriched": 0,
-        "failed": 0,
-        "human_curated": 0,
-        "human_rejected": 0,
-        "unenriched": 1
-      },
-      "pendingEnrichmentCount": 1
     }
   },
   "brotherslazaroff.list_library.supplemental": {
@@ -1190,18 +834,6 @@
         },
         "byOther": {}
       }
-    },
-    "enrichmentCoverage": {
-      "byStatus": {
-        "pending": 0,
-        "review_pending": 0,
-        "enriched": 0,
-        "failed": 0,
-        "human_curated": 0,
-        "human_rejected": 0,
-        "unenriched": 0
-      },
-      "pendingEnrichmentCount": 0
     }
   },
   "brotherslazaroff.list_library.nava": {
@@ -1221,18 +853,6 @@
         },
         "byOther": {}
       }
-    },
-    "enrichmentCoverage": {
-      "byStatus": {
-        "pending": 0,
-        "review_pending": 0,
-        "enriched": 0,
-        "failed": 0,
-        "human_curated": 0,
-        "human_rejected": 0,
-        "unenriched": 0
-      },
-      "pendingEnrichmentCount": 0
     }
   },
   "brotherslazaroff.list_library.uploads": {
@@ -1248,12 +868,7 @@
         "key": "Dm",
         "bpm": null,
         "tags": [],
-        "status": "active",
-        "enrichmentStatus": null,
-        "enrichmentConfidence": null,
-        "aiSuggestion": null,
-        "retryQueued": false,
-        "enrichmentRanAt": null
+        "status": "active"
       }
     ],
     "total": 1,
@@ -1270,18 +885,6 @@
         },
         "byOther": {}
       }
-    },
-    "enrichmentCoverage": {
-      "byStatus": {
-        "pending": 0,
-        "review_pending": 0,
-        "enriched": 0,
-        "failed": 0,
-        "human_curated": 0,
-        "human_rejected": 0,
-        "unenriched": 1
-      },
-      "pendingEnrichmentCount": 1
     }
   },
   "brotherslazaroff.list_library.audit": {
@@ -1297,12 +900,7 @@
         "key": "A",
         "bpm": null,
         "tags": [],
-        "status": "active",
-        "enrichmentStatus": null,
-        "enrichmentConfidence": null,
-        "aiSuggestion": null,
-        "retryQueued": false,
-        "enrichmentRanAt": null
+        "status": "active"
       },
       {
         "fileId": "b-up-1",
@@ -1315,12 +913,7 @@
         "key": "Dm",
         "bpm": null,
         "tags": [],
-        "status": "active",
-        "enrichmentStatus": null,
-        "enrichmentConfidence": null,
-        "aiSuggestion": null,
-        "retryQueued": false,
-        "enrichmentRanAt": null
+        "status": "active"
       }
     ],
     "total": 2,
@@ -1335,18 +928,6 @@
         "byCollection": {},
         "byOther": {}
       }
-    },
-    "enrichmentCoverage": {
-      "byStatus": {
-        "pending": 0,
-        "review_pending": 0,
-        "enriched": 0,
-        "failed": 0,
-        "human_curated": 0,
-        "human_rejected": 0,
-        "unenriched": 2
-      },
-      "pendingEnrichmentCount": 2
     }
   },
   "brotherslazaroff.search_library.empty": [
@@ -1356,12 +937,7 @@
       "orgId": "brotherslazaroff",
       "fileName": "Adon Olam (BL)",
       "status": "active",
-      "collection": "core",
-      "enrichmentStatus": null,
-      "enrichmentConfidence": null,
-      "aiSuggestion": null,
-      "retryQueued": false,
-      "enrichmentRanAt": null
+      "collection": "core"
     },
     {
       "id": "b-up-1",
@@ -1369,12 +945,7 @@
       "orgId": "brotherslazaroff",
       "fileName": "Lecha Dodi Nigun (Nava)",
       "status": "active",
-      "collection": "uploads",
-      "enrichmentStatus": null,
-      "enrichmentConfidence": null,
-      "aiSuggestion": null,
-      "retryQueued": false,
-      "enrichmentRanAt": null
+      "collection": "uploads"
     }
   ],
   "brotherslazaroff.search_library.adon": [
@@ -1384,12 +955,7 @@
       "orgId": "brotherslazaroff",
       "fileName": "Adon Olam (BL)",
       "status": "active",
-      "collection": "core",
-      "enrichmentStatus": null,
-      "enrichmentConfidence": null,
-      "aiSuggestion": null,
-      "retryQueued": false,
-      "enrichmentRanAt": null
+      "collection": "core"
     }
   ],
   "brotherslazaroff.search_library.lecha": [
@@ -1399,12 +965,7 @@
       "orgId": "brotherslazaroff",
       "fileName": "Lecha Dodi Nigun (Nava)",
       "status": "active",
-      "collection": "uploads",
-      "enrichmentStatus": null,
-      "enrichmentConfidence": null,
-      "aiSuggestion": null,
-      "retryQueued": false,
-      "enrichmentRanAt": null
+      "collection": "uploads"
     }
   ],
   "brotherslazaroff.search_library.nava": [],
@@ -1415,12 +976,7 @@
       "orgId": "brotherslazaroff",
       "fileName": "Adon Olam (BL)",
       "status": "active",
-      "collection": "core",
-      "enrichmentStatus": null,
-      "enrichmentConfidence": null,
-      "aiSuggestion": null,
-      "retryQueued": false,
-      "enrichmentRanAt": null
+      "collection": "core"
     },
     {
       "id": "b-up-1",
@@ -1428,12 +984,7 @@
       "orgId": "brotherslazaroff",
       "fileName": "Lecha Dodi Nigun (Nava)",
       "status": "active",
-      "collection": "uploads",
-      "enrichmentStatus": null,
-      "enrichmentConfidence": null,
-      "aiSuggestion": null,
-      "retryQueued": false,
-      "enrichmentRanAt": null
+      "collection": "uploads"
     }
   ],
   "brotherslazaroff.get_song": {
@@ -1454,11 +1005,6 @@
       "fileName": "Adon Olam (BL)",
       "status": "active",
       "key": "A",
-      "enrichmentStatus": null,
-      "enrichmentConfidence": null,
-      "aiSuggestion": null,
-      "retryQueued": false,
-      "enrichmentRanAt": null,
       "recording": null
     },
     "b-up-1": {
@@ -1468,11 +1014,6 @@
       "fileName": "Lecha Dodi Nigun (Nava)",
       "status": "active",
       "key": "Dm",
-      "enrichmentStatus": null,
-      "enrichmentConfidence": null,
-      "aiSuggestion": null,
-      "retryQueued": false,
-      "enrichmentRanAt": null,
       "recording": null
     }
   },

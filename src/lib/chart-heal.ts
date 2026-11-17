@@ -14,11 +14,6 @@ import { auditSharedBytesReplaced } from "@/lib/library/shared-bytes-audit"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 import { bareStem, titleSpecificity } from "@/lib/mcp/title-specificity"
 import { settingPartWriteFields } from "@/lib/library/setting-part"
-import {
-    emitLibraryRowCreated,
-    type LibraryRowCreatedEvent,
-} from "@/lib/library/library-events"
-import { createHash } from "node:crypto"
 import { contentHashFor } from "@/lib/library/content-hash"
 
 /**
@@ -39,14 +34,10 @@ import { contentHashFor } from "@/lib/library/content-hash"
  *      same keys a fresh upload would; sets mimeType, fileSize, contentHash
  *      (of the NEW bytes — a row that kept the old hash would claim bytes it
  *      no longer holds), hashFailed:null, source:'salvage', status:'active',
- *      salvaged* meta, and enrichmentStatus:'pending'
+ *      and salvaged* meta
  *   4. compensating-delete on Firestore failure — never leave a reverse
  *      orphan (bytes-without-index-update)
  *   5. `library_signals/latest` broadcast — invalidates in-tab caches
- *   6. `library.row.created` emit — re-triggers the AI enrichment pass on
- *      the freshly-healed bytes. The heal path was previously enrichment-
- *      blind, so the recovered catalog never got a Gemini pass (coder-1 §3
- *      delta + [[feedback_learning_self_healing]]).
  *
  * Healing onto the existing fileId preserves every setlist/song bond that
  * points at it — the reason recovery must heal rather than mint a new id.
@@ -105,9 +96,9 @@ export async function healChartBytes(
 ): Promise<HealChartBytesOk | RichErrorEnvelope> {
     const storagePath = `library/${fileId}${inferChartExt(mimeType)}`
 
-    // ─── Read the row (tenant, title, collection) ───────────────────────────
+    // ─── Read the row (tenant, title) ───────────────────────────────────────
     // Drives the Storage object's tenant metadata (multi-tenant phase 2,
-    // W11), the dedup/search metadata recompute and the enrichment event.
+    // W11) and the dedup/search metadata recompute.
     // The callers already verified the row exists; we re-read here so the
     // shared helper is self-contained (one cheap get per heal).
     const rowSnap = await db.collection("library_index").doc(fileId).get()
@@ -177,18 +168,16 @@ export async function healChartBytes(
         )
     }
 
-    // ─── Row fields for title + collection ─────────────────────────────────
+    // ─── Row title ─────────────────────────────────────────────────────────
     // (row read hoisted above the Storage upload — W11 needs its orgId.)
     const title =
         (typeof rowData.name === "string" && rowData.name) ||
         (typeof rowData.title === "string" && rowData.title) ||
         fileId
-    const collection =
-        typeof rowData.collection === "string" ? rowData.collection : "uploads"
 
     // Recompute the derived dedup/search metadata from the title so a healed
     // row carries the SAME keys a fresh upload would (coder-1 §3 delta: the
-    // heal path previously left these unset → fuzzy-dedup blind + no AI).
+    // heal path previously left these unset → fuzzy-dedup blind).
     const meta = await computeHealRowMetadata(db, fileId, title)
 
     // ─── Firestore merge-update ────────────────────────────────────────────
@@ -205,7 +194,6 @@ export async function healChartBytes(
         stem: meta.stem,
         titleSpecificity: meta.titleSpecificity,
         ...settingPartWriteFields(title, rowData),
-        enrichmentStatus: meta.enrichmentStatus,
         // The row's hash is of the bytes the row points at, so a heal must
         // rewrite it or the row keeps claiming the bytes it no longer holds.
         // It was left stale here until phase 8, which caught it replacing two
@@ -263,28 +251,6 @@ export async function healChartBytes(
         )
     }
 
-    // library.row.created — re-trigger AI enrichment on the freshly-healed
-    // bytes. Fire-and-forget + fully wrapped (atomic-guard contract: an
-    // enrichment failure NEVER rolls back a successful heal).
-    try {
-        emitLibraryRowCreated(
-            buildHealRowCreatedEvent({
-                fileId,
-                title,
-                collection,
-                mimeType,
-                buffer,
-                uid,
-                storagePath,
-                orgId: rowOrg(rowData.orgId),
-            }),
-        )
-    } catch (emitErr) {
-        logger.warn(
-            `[healChartBytes] library.row.created emit failed (non-fatal): ${emitErr instanceof Error ? emitErr.message : String(emitErr)}`,
-        )
-    }
-
     // Multi-tenant phase 5: the upload rewrote the object's metadata (orgId
     // only), so put the visibility back; and a shared chart's new bytes reach
     // every tenant that uses it at once, so the replacement is audited.
@@ -308,8 +274,6 @@ export interface HealRowMetadata {
     stem: string
     /** 0..1 deterministic specificity score (W-02), scored against siblings. */
     titleSpecificity: number
-    /** Always 'pending' on heal so the AI enrichment subscriber re-runs. */
-    enrichmentStatus: "pending"
 }
 
 /**
@@ -320,8 +284,7 @@ export interface HealRowMetadata {
  * (excluding orphans + self) to score `titleSpecificity` with the same
  * `siblingsInCatalog = activeSiblings + 1` formula `processChartUpload` uses.
  *
- * Shared by `healChartBytes` (forward path) and the `backfill_heal_metadata`
- * MCP tool (one-time backfill of rows healed before this fix landed).
+ * Used by `healChartBytes`.
  */
 export async function computeHealRowMetadata(
     db: FirebaseFirestore.Firestore,
@@ -361,41 +324,5 @@ export async function computeHealRowMetadata(
         normalizedName,
         stem,
         titleSpecificity: titleSpecificity(cleanTitle, siblingsInCatalog),
-        enrichmentStatus: "pending",
-    }
-}
-
-/**
- * Build the `library.row.created` event for a healed row. `source` is tagged
- * `'upload'` (the closest existing `LibraryRowSource`; the field is advisory —
- * it only labels the AI prompt's metadata block). `contentHash` is the
- * sha256 of the canonical bytes so the AI enrichment cache keys on the
- * post-heal content. Shared by the forward heal path + the backfill tool.
- */
-export function buildHealRowCreatedEvent(args: {
-    fileId: string
-    title: string
-    collection: string
-    mimeType: string
-    buffer: Buffer
-    uid: string
-    storagePath: string
-    /** The chart's tenant (multi-tenant phase 1: picks the AI prompt). Omitted = crc. */
-    orgId?: string
-}): LibraryRowCreatedEvent {
-    const contentHash = createHash("sha256").update(args.buffer).digest("hex")
-    return {
-        rowId: args.fileId,
-        fileId: args.fileId,
-        source: "upload",
-        nameLower: args.title.toLowerCase(),
-        title: args.title,
-        mimeType: args.mimeType,
-        sizeBytes: args.buffer.byteLength,
-        collection: args.collection,
-        storagePath: args.storagePath,
-        contentHash,
-        uploaderUid: args.uid,
-        ...(args.orgId ? { orgId: args.orgId } : {}),
     }
 }

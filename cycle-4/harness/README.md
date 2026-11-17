@@ -56,7 +56,7 @@ The orchestrator maps the cowork PROMPT categories to the existing specs
 | A | Cold-start performance | `perform-ipad.spec.ts` |
 | B | Perform mode + bonded-chart render sweep | `perform-ipad-deep`, `perform-ipad-real-setlists`, `perform-flow`, `ipad-stuck-spinner-probe` |
 | C | Live Director gesture | `live-director-gesture.spec.ts` |
-| D | Library workflow + chart search | `library-ipad`, `library-review-flow` |
+| D | Library workflow + chart search | `library-ipad` |
 | E | Setlist editing + chart-bind picker | `chart-bind-ipad`, `chart-bind-picker`, `gig-packet-print`, `f023-live-rename` |
 | F | Authoring (Scraper / UploadDialog) | `authoring-stress.spec.ts` |
 | H | Offline behavior | `perform-ipad-offline`, `r1-offline-decisive`, `perform-ipad-pwa-fresh-install` |

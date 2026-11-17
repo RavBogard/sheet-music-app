@@ -190,7 +190,6 @@ export async function seedFixtures(env: RulesTestEnvironment): Promise<void> {
         set("monitor-live/commands/acks/ackMuSE", { uid: "aMuSE", status: "applied" })
         set("mcpTokens/t1", { uid: "aAdmin" })
         set("mcpOAuthCodes/c1", { uid: "aAdmin" })
-        set("aiConfig/enrichment", { autoApplyEnabled: false })
         set("dedupeRuns/r1", { at: 1 })
         set("backups/2026-10-12", { status: "ok" })
         set("library_signals/latest", { at: 1 })

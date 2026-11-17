@@ -52,19 +52,20 @@ vi.mock("@/lib/rate-limit", () => ({
 
 import { updateSong, applySongMetadata } from "../tools/song-metadata"
 import { saveScrapedChart } from "../tools/library-upload"
-import { getSong, listLibrary } from "../tools/library"
+import { getSong } from "../tools/library"
 import type { RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 import { mirrorLegacyRoles } from "@/test-stubs/mirror-legacy-roles"
 
 /**
  * Cowork #3 (save_scraped_chart key/bpm/leadMusician parity) + #5 (update_song)
- * + #9 (list_library enrichmentCoverage) against the Firebase emulator.
+ * against the Firebase emulator. (#9, list_library enrichmentCoverage, went
+ * with AI enrichment.)
  *
  * Real Firestore; mocked Storage + rate-limit. Asserts metadata lands on BOTH
  * catalog surfaces (songs/{id}.defaults + library_index/{id}) so a fix sticks
  * across get_song / search_library / list_library and bond resolution.
  */
-describe("MCP update_song + save_scraped_chart parity + enrichment coverage (emulator)", () => {
+describe("MCP update_song + save_scraped_chart parity (emulator)", () => {
     let app: App
     const ADMIN = "rabbi-daniel"
     const LEADER = "randy-leader"
@@ -276,46 +277,5 @@ describe("MCP update_song + save_scraped_chart parity + enrichment coverage (emu
         const idx = (await db().collection("library_index").doc(res.fileId).get()).data()!
         expect(idx.key).toBeUndefined()
         expect(idx.bpm).toBeUndefined()
-    })
-
-    // ─── list_library enrichment coverage (#9) ───────────────────────────────
-
-    it("list_library surfaces enrichmentCoverage + pendingEnrichmentCount", async () => {
-        await seedChart("upload-c1", { enrichmentStatus: "pending" })
-        await seedChart("upload-c2", { enrichmentStatus: "review_pending" })
-        await seedChart("upload-c3", {
-            enrichmentStatus: "enriched",
-            enrichmentRanAt: "2026-05-22T18:00:00.000Z",
-        })
-        await seedChart("upload-c4", { enrichmentStatus: "failed" })
-        await seedChart("upload-c5") // no enrichmentStatus → unenriched
-        await seedChart("upload-c6", { enrichmentStatus: "human_curated" })
-
-        const res = (await listLibrary(ADMIN, {})) as Awaited<
-            ReturnType<typeof listLibrary>
-        > & { enrichmentCoverage: { byStatus: Record<string, number>; pendingEnrichmentCount: number } }
-
-        expect("enrichmentCoverage" in res).toBe(true)
-        const cov = res.enrichmentCoverage
-        expect(cov.byStatus.pending).toBe(1)
-        expect(cov.byStatus.review_pending).toBe(1)
-        expect(cov.byStatus.enriched).toBe(1)
-        expect(cov.byStatus.failed).toBe(1)
-        expect(cov.byStatus.unenriched).toBe(1)
-        expect(cov.byStatus.human_curated).toBe(1)
-        // pending + review_pending + failed + unenriched = 4 (enriched + human_curated excluded)
-        expect(cov.pendingEnrichmentCount).toBe(4)
-    })
-
-    it("list_library rows carry enrichmentRanAt (age/lag signal)", async () => {
-        await seedChart("upload-ran", {
-            enrichmentStatus: "enriched",
-            enrichmentRanAt: "2026-05-22T18:00:00.000Z",
-        })
-        const res = (await listLibrary(ADMIN, {})) as {
-            rows: Array<{ fileId: string; enrichmentRanAt: string | null }>
-        }
-        const row = res.rows.find((r) => r.fileId === "upload-ran")
-        expect(row?.enrichmentRanAt).toBe("2026-05-22T18:00:00.000Z")
     })
 })

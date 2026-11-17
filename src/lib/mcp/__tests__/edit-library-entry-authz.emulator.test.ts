@@ -10,14 +10,14 @@ import {
 import { initializeApp, deleteApp, getApps, type App } from "firebase-admin/app"
 import { getFirestore } from "firebase-admin/firestore"
 
-import { editEnrichment } from "../tools/library-review"
+import { editLibraryEntry } from "../tools/library-entry-edit"
 import { mirrorLegacyRoles } from "@/test-stubs/mirror-legacy-roles"
 
 /**
  * v11.5-01-03 (H9) — band_leader library-edit authz, against the Firebase emulator.
  *
- * Proves the relaxation + tenancy wall on `edit_library_entry` / `edit_enrichment`
- * (both call `editEnrichment(uid, args, org)`):
+ * Proves the relaxation + tenancy wall on `edit_library_entry`
+ * (`editLibraryEntry(uid, args, org)`):
  *  - AC-1: a band_leader can edit tags (curation-safe subset) on a row IN their org,
  *          in place (bond/row id unchanged).
  *  - AC-2: a band_leader editing a row in ANOTHER org gets row_not_found, no write.
@@ -31,7 +31,7 @@ import { mirrorLegacyRoles } from "@/test-stubs/mirror-legacy-roles"
  * `org` is passed explicitly to simulate orgFrom(extra) — the connector's resolved
  * tenant that the MCP handler threads in.
  */
-describe("edit_library_entry / editEnrichment authz (emulator)", () => {
+describe("edit_library_entry authz (emulator)", () => {
     let app: App
     const ADMIN = "rabbi-daniel"
     const CRC_LEADER = "crc-leader"
@@ -95,7 +95,7 @@ describe("edit_library_entry / editEnrichment authz (emulator)", () => {
     beforeEach(async () => { await mirrorLegacyRoles(db(), { migrate: true }) })
 
     it("AC-1: crc band_leader edits tags on an in-org row, in place", async () => {
-        const res = await editEnrichment(
+        const res = await editLibraryEntry(
             CRC_LEADER,
             { rowId: "li-crc", edits: { tags: ["lyric-chart", "gig"] }, ...realWrite },
             CRC,
@@ -107,7 +107,7 @@ describe("edit_library_entry / editEnrichment authz (emulator)", () => {
     })
 
     it("AC-2: crc band_leader editing a BL row gets row_not_found, no write", async () => {
-        const res = await editEnrichment(
+        const res = await editLibraryEntry(
             CRC_LEADER,
             { rowId: "li-bl", edits: { tags: ["hacked"] }, ...realWrite },
             CRC,
@@ -117,7 +117,7 @@ describe("edit_library_entry / editEnrichment authz (emulator)", () => {
     })
 
     it("AC-3: band_leader cannot edit collection (forbidden_field); admin can", async () => {
-        const denied = await editEnrichment(
+        const denied = await editLibraryEntry(
             CRC_LEADER,
             { rowId: "li-crc", edits: { collection: "core" }, ...realWrite },
             CRC,
@@ -125,7 +125,7 @@ describe("edit_library_entry / editEnrichment authz (emulator)", () => {
         expect(code(denied)).toBe("forbidden_field")
         expect((await db().collection("library_index").doc("li-crc").get()).data()?.collection).toBe("uploads")
 
-        const allowed = await editEnrichment(
+        const allowed = await editLibraryEntry(
             ADMIN,
             { rowId: "li-crc", edits: { collection: "core" }, ...realWrite },
             CRC,
@@ -135,7 +135,7 @@ describe("edit_library_entry / editEnrichment authz (emulator)", () => {
     })
 
     it("AC-4 (phase 5): a tenant admin cannot edit a BL row from a crc connector", async () => {
-        const res = await editEnrichment(
+        const res = await editLibraryEntry(
             ADMIN,
             { rowId: "li-bl", edits: { tags: ["admin-curated"] }, ...realWrite },
             CRC,
@@ -148,7 +148,7 @@ describe("edit_library_entry / editEnrichment authz (emulator)", () => {
         await db().collection("platform").doc("owners").set({ uids: [ADMIN] })
         __resetPlatformOwnerMemo()
         try {
-            const res = await editEnrichment(
+            const res = await editLibraryEntry(
                 ADMIN,
                 { rowId: "li-bl", edits: { tags: ["owner-curated"] }, ...realWrite },
                 CRC,
@@ -162,7 +162,7 @@ describe("edit_library_entry / editEnrichment authz (emulator)", () => {
     })
 
     it("Legacy (no orgId) resolves to crc: crc leader edits, bl leader denied", async () => {
-        const crcRes = await editEnrichment(
+        const crcRes = await editLibraryEntry(
             CRC_LEADER,
             { rowId: "li-legacy", edits: { tags: ["claimed-crc"] }, ...realWrite },
             CRC,
@@ -170,7 +170,7 @@ describe("edit_library_entry / editEnrichment authz (emulator)", () => {
         expect((crcRes as { ok?: boolean }).ok).toBe(true)
         expect(await tagsOf("li-legacy")).toEqual(["claimed-crc"])
 
-        const blRes = await editEnrichment(
+        const blRes = await editLibraryEntry(
             BL_LEADER,
             { rowId: "li-legacy", edits: { tags: ["claimed-bl"] }, ...realWrite },
             BL,

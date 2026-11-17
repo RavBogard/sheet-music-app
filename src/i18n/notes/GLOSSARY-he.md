@@ -71,7 +71,7 @@ admins who manage people and the library.
 | Terms & Conditions / Privacy Policy / Accessibility Statement | תנאי שימוש / מדיניות פרטיות / הצהרת נגישות | — | Standard Israeli titles; one form everywhere. |
 | Musician Profile (settings section) | פרופיל נגינה | — | Same words in the settings page and the legal "Settings → …" paths. |
 | Friday evening / Shabbat morning (service-type options) | קבלת שבת / שבת בבוקר | wizard (fills "{service} הקודמת"): תפילת קבלת שבת / תפילת שבת בבוקר | "ערב שבת" names the day, not the prayer. "שחרית שבת" is not idiomatic; "שחרית של שבת" only where 13+ characters fit. |
-| Retry / Try again (button) | ניסיון חוזר | in sentences: "יש לנסות שוב" / "אפשר לנסות שוב" | One button label everywhere. Exception: manage-library-review.retryButton "לנסות שוב (y)" (max 14). |
+| Retry / Try again (button) | ניסיון חוזר | in sentences: "יש לנסות שוב" / "אפשר לנסות שוב" | One button label everywhere. |
 | Undo (toast action) | ביטול | next to Cancel: ביטול פעולה | — |
 | fret (guitar) | סריג | סריגים | "שריג" is a vine tendril. |
 | Gig Mode (settings: stability toggle) | מצב במה | — | Kept apart from Perform mode (מצב נגינה). |

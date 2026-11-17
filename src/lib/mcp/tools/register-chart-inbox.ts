@@ -13,6 +13,13 @@ import {
     MCP_SYNC_FILE_CAP,
 } from "@/lib/drive-sync/inbox"
 import { tenantInboxFolder, type TenantInbox } from "@/lib/drive-sync/tenant-inbox"
+import {
+    listImportFailures,
+    resolveImportFailure,
+    type ImportFailureAction,
+    type ImportFailureOutcome,
+} from "@/lib/drive-sync/import-failures"
+import { logger } from "@/lib/logger"
 import { isErrorEnvelope } from "./result-iserror"
 import { applyInboxRevisions, type InboxRevisionInput } from "./inbox-revisions"
 import {
@@ -87,6 +94,9 @@ function notConfigured(org: string, inbox: Extract<TenantInbox, { folderId: null
     )
 }
 
+const IMPORT_FAILURES_NOTE =
+    " Files the importer could not bring in are listed in importFailures (status, errorMessage, attemptCount) until they import or are dismissed."
+
 const HOW_IT_WORKS =
     ` HOW CHART FILES GET INTO THE LIBRARY: you never handle file bytes and there is no upload panel. The user puts the file in the shared "CRC Chart Inbox" Google Drive folder (link in folderUrl) from whatever device they are on — phone share sheet, Drive app, or the browser — and the server imports it. Every ${INBOX_POLL_INTERVAL_MINUTES} minutes this happens automatically; call sync_chart_inbox to do it immediately. Files land in the 'supplemental' collection (or the collection mapped to the subfolder they were dropped in), run through the normal duplicate check, and can then be bonded to setlist rows like any other chart.`
 
@@ -98,6 +108,7 @@ export function registerChartInboxTools(server: McpServer): void {
             title: "Chart Inbox — where to drop chart files, and what came in",
             description:
                 "Get the shared Google Drive folder where users drop chart files for the library, plus the importer's health (last run, last error) and its most recent imports. Call this FIRST whenever a user wants to add chart files they have on a device, or asks 'did my chart come in?'. Give them folderUrl and tell them to drop the files there; then call sync_chart_inbox." +
+                IMPORT_FAILURES_NOTE +
                 HOW_IT_WORKS,
             inputSchema: {
                 recentLimit: z
@@ -118,7 +129,24 @@ export function registerChartInboxTools(server: McpServer): void {
             const status = await readChartInboxStatus(db(), folderId, {
                 recentLimit: (args as { recentLimit?: number }).recentLimit,
             })
-            return jsonResult({ ok: true, ...status })
+            // Fail-soft: a failure-list read error must not hide the status.
+            let failures: Awaited<ReturnType<typeof listImportFailures>> | null = null
+            try {
+                failures = await listImportFailures(db(), [
+                    folderId,
+                    ...(status.subfolders ?? []).map((s) => s.id),
+                ])
+            } catch (err) {
+                logger.warn(
+                    `[chart-inbox] import failures read failed: ${err instanceof Error ? err.message : String(err)}`,
+                )
+            }
+            return jsonResult({
+                ok: true,
+                ...status,
+                importFailures: failures?.rows ?? null,
+                importFailureCount: failures?.total ?? null,
+            })
         },
     )
 
@@ -128,7 +156,7 @@ export function registerChartInboxTools(server: McpServer): void {
         {
             title: "Import new files from the Chart Inbox now",
             description:
-                `Import whatever is new in the Chart Inbox Drive folder right now, instead of waiting up to ${INBOX_POLL_INTERVAL_MINUTES} minutes for the scheduled run. Call it right after the user says they have dropped files in the folder. Returns counts (imported / renamed / replaced / skipped / queued) and per-file error notes. Imports up to ${MCP_SYNC_FILE_CAP} files per call; when capReached is true call it again for the rest. Idempotent — running it twice never double-imports. When the user says a file is a new version of a library chart, pass it in revisions with that chart's fileId. Requires upload permission (admin, band leader, musician, or an account with canUpload).` +
+                `Import whatever is new in the Chart Inbox Drive folder right now, instead of waiting up to ${INBOX_POLL_INTERVAL_MINUTES} minutes for the scheduled run. Call it right after the user says they have dropped files in the folder. Returns counts (imported / renamed / replaced / skipped / queued) and per-file error notes. Imports up to ${MCP_SYNC_FILE_CAP} files per call; when capReached is true call it again for the rest. Idempotent — running it twice never double-imports. When the user says a file is a new version of a library chart, pass it in revisions with that chart's fileId. To clear a file listed in get_chart_inbox importFailures, pass it in importFailures (admins only): 'dismiss' hides it until it fails again; 'retry' clears the record so the next import of the file starts fresh (the importer only revisits a file when it changes in Drive, so the user re-saves it or drops it in again). Requires upload permission (admin, band leader, musician, or an account with canUpload).` +
                 HOW_IT_WORKS,
             inputSchema: {
                 maxFiles: z
@@ -152,6 +180,20 @@ export function registerChartInboxTools(server: McpServer): void {
                     .describe(
                         "Files in the inbox that are NEW VERSIONS of charts already in the library. Each becomes the next version of its revisionOf chart (whether or not the scheduled import already filed it): setlists dated today or later move to it with their played key and title kept, past setlists keep the old chart, standing choices follow, and the old one is archived. Admins and band leaders only. Handled before the rest of the folder is imported.",
                     ),
+                importFailures: z
+                    .array(
+                        z.object({
+                            driveFileId: z.string().min(1).describe("The driveFileId of a row in get_chart_inbox importFailures."),
+                            action: z
+                                .enum(["retry", "dismiss"])
+                                .describe("'dismiss' hides the row until the file fails again; 'retry' clears it so the next import of the file starts fresh."),
+                        }),
+                    )
+                    .max(25)
+                    .optional()
+                    .describe(
+                        "Import failures to clear (from get_chart_inbox importFailures). Admins only. Handled before the folder is imported; the result lists each outcome.",
+                    ),
             },
         },
         async (args, extra) => {
@@ -174,11 +216,41 @@ export function registerChartInboxTools(server: McpServer): void {
                 ? await applyInboxRevisions(store, uid, org, roles, declared)
                 : undefined
 
+            const failureActions =
+                (args as { importFailures?: Array<{ driveFileId: string; action: ImportFailureAction }> })
+                    .importFailures ?? []
+            let importFailures: ImportFailureOutcome[] | undefined
+            if (failureActions.length) {
+                if (roles.role !== "admin") {
+                    return jsonResult(
+                        richError(
+                            "forbidden_role",
+                            "Clearing import failures requires an admin account.",
+                            { callerRole: roles.role ?? null, requiredRoles: ["admin"] },
+                            "Ask an admin to dismiss or retry the failed file, or call sync_chart_inbox without importFailures.",
+                        ),
+                    )
+                }
+                const inboxStatus = await readChartInboxStatus(store, folderId, { recentLimit: 1 })
+                const folderIds = [folderId, ...(inboxStatus.subfolders ?? []).map((s) => s.id)]
+                importFailures = []
+                for (const a of failureActions) {
+                    importFailures.push(
+                        await resolveImportFailure(store, folderIds, a.driveFileId, a.action, uid),
+                    )
+                }
+            }
+
             const deps = await buildProdDriveSyncDeps(store, org)
             const result = await syncChartInboxNow(folderId, deps, {
                 fileCap: (args as { maxFiles?: number }).maxFiles,
             })
-            return jsonResult({ ok: true, ...result, ...(revisions ? { revisions } : {}) })
+            return jsonResult({
+                ok: true,
+                ...result,
+                ...(revisions ? { revisions } : {}),
+                ...(importFailures ? { importFailures } : {}),
+            })
         },
     )
 }
