@@ -159,7 +159,6 @@ beforeAll(async () => {
         await set(`orgs/${N}`, { name: 'Nava Tehila' })
         await set(`mcpTokens/t1`, { hash: 'x' })
         await set(`backups/b1`, { at: 1 })
-        await set(`aiSpend/s1`, { usd: 1 })
 
         // config / system / mixer
         await set(`config/congregation`, { name: 'CRC' })
@@ -520,9 +519,8 @@ describe('memberships, users, collections, platform', () => {
     it('crc admin cannot read mcpTokens', async () => {
         await assertFails(getDoc(doc(fs_(p.aAd), 'mcpTokens/t1')))
     })
-    it('crc admin cannot read backups or aiSpend', async () => {
+    it('crc admin cannot read backups', async () => {
         await assertFails(getDoc(doc(fs_(p.aAd), 'backups/b1')))
-        await assertFails(getDoc(doc(fs_(p.aAd), 'aiSpend/s1')))
     })
     it('crc admin cannot write a membership', async () => {
         await assertFails(

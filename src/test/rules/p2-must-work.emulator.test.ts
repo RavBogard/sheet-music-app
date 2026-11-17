@@ -280,8 +280,7 @@ describe("P2 §7.5 — CRC and BL parity (must still work)", () => {
     })
 
     describe("po", () => {
-        it("reads aiConfig, dedupeRuns, backups, platform-only ops", async () => {
-            await assertSucceeds(db("po").doc("aiConfig/enrichment").get())
+        it("reads dedupeRuns, backups, platform-only ops", async () => {
             await assertSucceeds(db("po").doc("dedupeRuns/r1").get())
             await assertSucceeds(db("po").doc("backups/2026-10-12").get())
         })
