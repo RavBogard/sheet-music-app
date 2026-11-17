@@ -27,7 +27,6 @@ export const EXEMPT_PREFIXES = [
     "src/app/api/cron/",
     "src/app/api/webhooks/",
     "src/app/api/bridge/",
-    "src/app/api/inngest/",
     // The i18n plumbing and its catalogues.
     "src/i18n/",
     // Server-only machinery with no user-facing text of its own: AI prompts

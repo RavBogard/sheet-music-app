@@ -156,7 +156,6 @@ describe("production", () => {
         "/api/cron/drive-sync",
         "/api/cron/scheduling-reminder",
         "/api/webhooks/resend",
-        "/api/inngest",
         "/api/intake/run",
         "/api/bridge/setup-code",
     ])("server-to-server %s on an unknown address keeps resolving to crc", async (path) => {
@@ -293,8 +292,8 @@ describe("resolveRequestOrg (pure)", () => {
     it("server-to-server paths", () => {
         expect(isServerToServerPath("/api/cron/backup")).toBe(true)
         expect(isServerToServerPath("/api/webhooks/resend")).toBe(true)
-        expect(isServerToServerPath("/api/inngest")).toBe(true)
-        expect(isServerToServerPath("/api/inngest/")).toBe(true)
+        expect(isServerToServerPath("/api/intake/run")).toBe(true)
+        expect(isServerToServerPath("/api/intake/run/")).toBe(true)
         expect(isServerToServerPath("/api/mcp")).toBe(false)
         expect(isServerToServerPath("/api/cronx")).toBe(false)
         expect(isServerToServerPath("/api/auth/session")).toBe(false)

@@ -85,17 +85,6 @@ vi.mock("@/lib/google-drive", async () => {
     return { ...actual, DriveClient: class {} }
 })
 
-vi.mock("@/inngest/client", () => ({
-    inngest: {
-        send: vi.fn(async () => ({ ids: ["evt-test"] })),
-        createFunction: (config: unknown, trigger: unknown, handler: unknown) => ({
-            config,
-            trigger,
-            handler,
-        }),
-    },
-}))
-
 import { runBatchWithDeadline } from "../http-executor"
 import { addItems, createBatch, getBatch, setBatchStatus } from "../batch-store"
 import { stagedObjectPath } from "../staged-storage"
