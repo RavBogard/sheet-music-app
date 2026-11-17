@@ -42,7 +42,6 @@ vi.mock("@/lib/song-usage", () => ({
 }))
 
 import { listSetlists } from "../tools/setlists"
-import { listServicePersonnel } from "../tools/service-personnel"
 import { createSetlist, addTrackToSetlist } from "../tools/setlist-write"
 import { getAiConfig } from "../tools/ai-config"
 import { publishSetlist } from "../tools/setlist-publish"
@@ -52,7 +51,6 @@ import { publishSetlist } from "../tools/setlist-publish"
  * already live in a tool-specific emulator file:
  *  - list_setlists sort discriminant (C5C-010)
  *  - publish_setlist default-audience test-* filter (C5C-005)
- *  - list_service_personnel new MCP tool (C5C-014)
  *  - get_ai_config provider discriminant + post-Gemini-swap key shape
  *    (C5A-B4-aien)
  *
@@ -62,7 +60,7 @@ import { publishSetlist } from "../tools/setlist-publish"
  *
  * Runs only via `npm run test:emulator` (the Firestore-emulator wrapper).
  */
-describe("Cycle-5 Lane 5 — list_setlists / publish / service-personnel / ai-config (emulator)", () => {
+describe("Cycle-5 Lane 5 — list_setlists / publish / ai-config (emulator)", () => {
     let app: App
     const ADMIN = "rabbi-daniel"
     const LEADER = "randy"
@@ -176,165 +174,6 @@ describe("Cycle-5 Lane 5 — list_setlists / publish / service-personnel / ai-co
             // recent_event: future eventDate wins regardless of when the doc was written.
             expect(rows[0].id).toBe("s-old-doc-future-event")
             expect(rows[1].id).toBe("s-new-doc-past-event")
-        })
-    })
-
-    // ─── C5C-014: list_service_personnel ─────────────────────────────────
-
-    describe("C5C-014 — list_service_personnel", () => {
-        async function seedSetlistWithTracks(opts: {
-            id: string
-            name: string
-            eventDate: Date
-            vocalLeads: (string | null)[]
-        }) {
-            await db()
-                .collection("setlists")
-                .doc(opts.id)
-                .set({
-                    id: opts.id,
-                    name: opts.name,
-                    eventDate: opts.eventDate,
-                    ownerId: ADMIN,
-                    ownerName: "Rabbi Daniel",
-                    trackCount: opts.vocalLeads.length,
-                    isTest: false,
-                })
-            const batch = db().batch()
-            opts.vocalLeads.forEach((lead, idx) => {
-                const trackId = `${opts.id}-t${idx}`
-                const payload: Record<string, unknown> = {
-                    id: trackId,
-                    setlistId: opts.id,
-                    order: idx,
-                    type: "song",
-                    title: `Song ${idx}`,
-                }
-                if (lead !== null) payload.leadMusician = lead
-                batch.set(db().collection("tracks").doc(trackId), payload)
-            })
-            await batch.commit()
-        }
-
-        async function seedAssignment(opts: {
-            assignmentId: string
-            setlistId: string
-            setlistName: string
-            musicianUid: string
-            musicianName: string
-            instrument: string | null
-            status: "pending" | "confirmed" | "declined" | "cancelled"
-        }) {
-            await db().collection("scheduling_assignments").doc(opts.assignmentId).set(opts)
-        }
-
-        beforeEach(async () => {
-            const snap = await db().collection("scheduling_assignments").get()
-            const batch = db().batch()
-            snap.docs.forEach((d) => batch.delete(d.ref))
-            if (snap.docs.length) await batch.commit()
-        })
-
-        it("by setlistId — returns matched setlist, grouped assignments + distinct vocal_leads", async () => {
-            await seedSetlistWithTracks({
-                id: "set-friday",
-                name: "Friday Night",
-                eventDate: new Date("2026-06-12T19:00:00Z"),
-                vocalLeads: ["Cantor", "Daniel", "Cantor", null, "Daniel"],
-            })
-            await seedAssignment({
-                assignmentId: "a1",
-                setlistId: "set-friday",
-                setlistName: "Friday Night",
-                musicianUid: "musician-a",
-                musicianName: "Alice",
-                instrument: "voice",
-                status: "confirmed",
-            })
-            await seedAssignment({
-                assignmentId: "a2",
-                setlistId: "set-friday",
-                setlistName: "Friday Night",
-                musicianUid: "musician-b",
-                musicianName: "Bob",
-                instrument: "acoustic_guitar",
-                status: "pending",
-            })
-
-            const r = (await listServicePersonnel(ADMIN, {
-                setlistId: "set-friday",
-            })) as {
-                ok: true
-                matchedSetlists: { id: string }[]
-                scheduling_assignments: {
-                    pending: Array<{ musicianUid: string }>
-                    confirmed: Array<{ musicianUid: string }>
-                    declined: Array<unknown>
-                    cancelled: Array<unknown>
-                }
-                vocal_leads: string[]
-                total: number
-            }
-            expect(r.ok).toBe(true)
-            expect(r.matchedSetlists.map((s) => s.id)).toEqual(["set-friday"])
-            expect(r.scheduling_assignments.confirmed.map((a) => a.musicianUid)).toEqual([
-                "musician-a",
-            ])
-            expect(r.scheduling_assignments.pending.map((a) => a.musicianUid)).toEqual([
-                "musician-b",
-            ])
-            // distinct + alphabetical
-            expect(r.vocal_leads).toEqual(["Cantor", "Daniel"])
-            expect(r.total).toBe(2)
-        })
-
-        it("by eventDate — joins every setlist on the UTC day", async () => {
-            await seedSetlistWithTracks({
-                id: "set-morning",
-                name: "Shabbat Morning",
-                eventDate: new Date("2026-06-13T10:00:00Z"),
-                vocalLeads: ["Cantor"],
-            })
-            await seedSetlistWithTracks({
-                id: "set-evening",
-                name: "Shabbat Evening",
-                eventDate: new Date("2026-06-13T19:00:00Z"),
-                vocalLeads: ["Daniel"],
-            })
-            const r = (await listServicePersonnel(ADMIN, {
-                eventDate: "2026-06-13",
-            })) as { ok: true; matchedSetlists: { id: string }[]; vocal_leads: string[] }
-            expect(new Set(r.matchedSetlists.map((s) => s.id))).toEqual(
-                new Set(["set-morning", "set-evening"]),
-            )
-            // distinct vocal leads across both setlists, alphabetical
-            expect(r.vocal_leads).toEqual(["Cantor", "Daniel"])
-        })
-
-        it("refuses callers without admin/band_leader (forbidden_role)", async () => {
-            await seedSetlistWithTracks({
-                id: "set-x",
-                name: "X",
-                eventDate: new Date("2026-06-14T19:00:00Z"),
-                vocalLeads: [],
-            })
-            const r = await listServicePersonnel(MEMBER, { setlistId: "set-x" })
-            expect("ok" in r && r.ok === false).toBe(true)
-            if ("ok" in r && r.ok === false) {
-                expect((r.error as { machine_code: string }).machine_code).toBe(
-                    "forbidden_role",
-                )
-            }
-        })
-
-        it("requires setlistId OR eventDate (invalid_argument otherwise)", async () => {
-            const r = await listServicePersonnel(ADMIN, {} as { setlistId?: string })
-            expect("ok" in r && r.ok === false).toBe(true)
-            if ("ok" in r && r.ok === false) {
-                expect((r.error as { machine_code: string }).machine_code).toBe(
-                    "invalid_argument",
-                )
-            }
         })
     })
 

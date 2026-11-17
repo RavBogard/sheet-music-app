@@ -2,11 +2,11 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import { act, cleanup, renderHook } from "@testing-library/react"
 import type { ReactNode } from "react"
 
-import { expectNoUntranslatedText, I18nTestProviders, renderPseudo, renderWithI18n } from "@/test-utils/i18n"
+import { expectNoUntranslatedText, I18nTestProviders, renderPseudo } from "@/test-utils/i18n"
 
 /**
  * Phase 7 (lane A5): the dashboard, the home next-service card, the dashboard
- * widgets, the calendar and the (main) error screen render every string
+ * widgets and the (main) error screen render every string
  * through t() and every date through fmt (which the pseudo-locale also wraps).
  * Fixture setlist names / song titles are data and are allowed. The greeting
  * (src/lib/greeting) is real: it comes through t() too (lane D).
@@ -64,27 +64,16 @@ vi.mock("firebase/firestore", async (orig) => ({
         return () => {}
     },
 }))
-vi.mock("@/hooks/use-calendar-data", () => ({
-    useCalendarData: () => {
-        const now = new Date()
-        const key = new Date(now.getFullYear(), now.getMonth(), 15).toISOString().split("T")[0]
-        const dayMap = new Map([[key, { setlists: [{ id: "c1", name: "Test Calendar Setlist" }], assignmentsBySetlist: new Map() }]])
-        return { dayMap, loading: false }
-    },
-}))
-
 import DashboardClient from "@/app/(main)/DashboardClient"
 import MainError from "@/app/(main)/error"
 import { NextServiceCard } from "@/components/home/NextServiceCard"
 import { OnboardingCard } from "@/components/dashboard/OnboardingCard"
 import { CompactSetlistRow } from "@/components/dashboard/CompactSetlistRow"
-import { UnifiedCalendar } from "@/components/calendar/UnifiedCalendar"
-import { CalendarDayCell } from "@/components/calendar/CalendarDayCell"
 import { useGridKeyboard } from "@/hooks/use-grid-keyboard"
 
 const DAY = 86_400_000
 const inDays = (n: number) => new Date(Date.now() + n * DAY).toISOString()
-const DATA = ["Test Setlist A", "Test Setlist B", "Test Song A", "Test Song B", "CRC", "Test Player", "Test Task", "Test Calendar Setlist"]
+const DATA = ["Test Setlist A", "Test Setlist B", "Test Song A", "Test Song B", "CRC", "Test Player", "Test Task"]
 
 const setlistA = { id: "s1", name: "Test Setlist A", eventDate: inDays(3), trackCount: 2, songCount: 2, fileIds: ["f1", "f2"], musicians: [{ name: "Test Player" }] }
 const setlistB = { id: "s2", name: "Test Setlist B", eventDate: inDays(-7), trackCount: 1, songCount: 1 }
@@ -154,45 +143,7 @@ describe("dashboard widgets (pseudo-locale)", () => {
     })
 })
 
-describe("calendar and error screen (pseudo-locale)", () => {
-    it("UnifiedCalendar (planning) with legend, weekdays, month label and a day cell", () => {
-        const r = renderPseudo(<UnifiedCalendar mode="planning" onCreateSetlist={() => {}} />)
-        expectNoUntranslatedText(r.container, { allow: DATA })
-        // Empty Friday/Saturday placeholders and the "none" coverage marker.
-        const cell = renderPseudo(
-            <CalendarDayCell
-                date={new Date(2026, 9, 10)}
-                dateKey="2026-10-10"
-                dayData={{ setlists: [{ id: "x", name: "Test Setlist A" }], assignmentsBySetlist: new Map() } as never}
-                mode="planning"
-                isToday={false}
-                isPast={false}
-                onSelectSetlist={() => {}}
-            />,
-        )
-        expectNoUntranslatedText(cell.container, { allow: DATA })
-        const empty = renderPseudo(
-            <CalendarDayCell date={new Date(2026, 9, 9)} dateKey="2026-10-09" dayData={undefined} mode="planning" isToday={false} isPast={false} onSelectSetlist={() => {}} onCreateSetlist={() => {}} />,
-        )
-        expectNoUntranslatedText(empty.container, { allow: DATA })
-    })
-
-    it("English weekday headers and month label are unchanged", () => {
-        const { container } = renderWithI18n(<UnifiedCalendar mode="viewer" />)
-        const wide = [...container.querySelectorAll(".grid-cols-7 .hidden")].map((e) => e.textContent)
-        const narrow = [...container.querySelectorAll('.grid-cols-7 [class="sm:hidden"]')].map((e) => e.textContent)
-        expect(wide).toEqual(["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"])
-        expect(narrow).toEqual(["S", "M", "T", "W", "T", "F", "S"])
-        const now = new Date()
-        expect(container.querySelector("h2")!.textContent).toBe(new Date(now.getFullYear(), now.getMonth(), 1).toLocaleDateString("en-US", { month: "long", year: "numeric" }))
-    })
-
-    it("qps-rtl: calendar root is rtl and month arrows are mirrored", () => {
-        const r = renderPseudo(<UnifiedCalendar mode="viewer" />, { rtl: true })
-        expect(r.container.firstElementChild!.getAttribute("dir")).toBe("rtl")
-        expect(r.container.querySelectorAll("button svg.-scale-x-100").length).toBe(2)
-    })
-
+describe("error screen (pseudo-locale)", () => {
     it("(main) error screen", () => {
         const r = renderPseudo(<MainError error={Object.assign(new Error("boom"), {})} reset={() => {}} />)
         // error.message is shown verbatim inside <pre> (skipped by the checker).

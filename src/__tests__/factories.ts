@@ -1,4 +1,4 @@
-import type { SetlistTrack, UserProfile, Setlist, SchedulingAssignment } from '@/types/models'
+import type { SetlistTrack, UserProfile, Setlist } from '@/types/models'
 
 let counter = 0
 
@@ -32,25 +32,6 @@ export function createSetlist(overrides?: Partial<Setlist>): Setlist {
         name: 'Test Setlist',
         date: new Date('2026-01-01'),
         trackCount: 0,
-        ...overrides,
-    }
-}
-
-export function createAssignment(overrides?: Partial<SchedulingAssignment>): SchedulingAssignment {
-    counter++
-    return {
-        id: `assign-${counter}`,
-        setlistId: 'setlist-1',
-        setlistName: 'Test Setlist',
-        eventDate: null,
-        musicianUid: 'user-1',
-        musicianName: 'Test User',
-        musicianEmail: 'test@example.com',
-        status: 'pending',
-        autoConfirmed: false,
-        assignedBy: 'admin-1',
-        assignedByName: 'Admin',
-        assignedAt: new Date('2026-01-01'),
         ...overrides,
     }
 }

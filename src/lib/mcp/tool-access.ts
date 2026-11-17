@@ -49,11 +49,6 @@ export const READ_TOOLS: ReadonlySet<string> = new Set([
     "list_musicians",
     "find_user",
     "get_musician_profile",
-    "list_musicians_on_date",
-    "list_service_personnel",
-    "list_pending_assignments",
-    "suggest_musicians",
-    "suggest_band",
     "list_access_requests",
     // monitor (reads)
     "list_monitor_buses",
@@ -127,9 +122,6 @@ export const WRITE_TOOLS: ReadonlySet<string> = new Set([
     "update_congregation_services",
     "create_contact",
     "delete_contact",
-    "assign_musician",
-    "unassign_musician",
-    "respond_to_assignment",
     "set_member_role",
     // library and chart intake
     "upload_chart",

@@ -21,11 +21,6 @@ vi.mock('@/lib/setlist-firebase', () => ({
   })),
 }))
 
-const mockAssignMusicians = vi.fn().mockResolvedValue(undefined)
-vi.mock('@/lib/scheduling-firebase', () => ({
-  assignMusicians: (...args: unknown[]) => mockAssignMusicians(...args),
-}))
-
 const mockGetFullServiceContext = vi.fn().mockResolvedValue({ type: 'shabbat_morning', parasha: 'Bereshit' })
 const mockGetServiceContext = vi.fn((_d?: unknown) => ({ type: 'friday_night', date: new Date(), hebrewDate: { day: 1, month: 'Nisan', year: '5786', display: '1 Nisan 5786' }, parasha: null, holiday: null, isShabbat: true }))
 vi.mock('@/lib/liturgical-calendar', () => ({
@@ -181,7 +176,7 @@ describe('useCreationWizard (single-step)', () => {
     expect(mockPush).not.toHaveBeenCalled()
   })
 
-  it('create() assigns musicians when musicians selected', async () => {
+  it('create() stores the selected musicians on the new setlist', async () => {
     const { result } = renderHook(() => useCreationWizard())
     act(() => {
       result.current.setName('Service')
@@ -192,9 +187,10 @@ describe('useCreationWizard (single-step)', () => {
 
     await act(async () => { await result.current.create() })
 
-    expect(mockAssignMusicians).toHaveBeenCalledWith(
+    expect(mockCreateSetlist).toHaveBeenCalledWith(
+      'Service',
+      expect.any(Array),
       expect.objectContaining({
-        setlistId: 'new-setlist-id',
         musicians: [expect.objectContaining({ uid: 'u1', name: 'Alice' })],
       })
     )

@@ -324,7 +324,6 @@ describe("OPS-CONTRACT single writer: only src/lib/setlist-ops writes setlists/*
             "lib/mcp/tools/week-key-backfill.ts",
             "lib/mcp/tools/backfill-track-mimetype.ts",
             "lib/beit-mitzvah/service.ts",
-            "lib/scheduling/assignment-service.ts",
             "app/api/setlist/delete/route.ts",
             "app/api/setlist/notify-band/route.ts",
         ]) {

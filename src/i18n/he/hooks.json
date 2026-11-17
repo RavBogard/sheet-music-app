@@ -30,7 +30,6 @@
     "cloningFrom": "בשכפול מ-{setlistName}…",
     "clonedFrom_one": "שוכפלה מ-{setlistName} — שורה אחת",
     "clonedFrom_other": "שוכפלה מ-{setlistName} — {count} שורות",
-    "schedulingFailedAfterCreate": "רשימת השירים נוצרה, אבל שיבוץ הנגנים נכשל",
     "createdFromNamedTemplate": "נוצרה ״{setlistName}״ מהתבנית {templateName} — נמצאה התאמה ל-{matched}/{total} שירים",
     "setlistCreated": "״{setlistName}״ נוצרה!",
     "untitledSong": "ללא שם",

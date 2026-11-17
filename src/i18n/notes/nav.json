@@ -1,7 +1,6 @@
 {
     "dashboard": { "where": "Mobile menu drawer: nav item linking to the home dashboard", "who": "everyone", "maxLength": 20 },
     "setlists": { "where": "Desktop header nav link and mobile menu drawer item: the list of setlists", "who": "everyone", "maxLength": 14, "context": "setlist = the ordered list of songs for a service" },
-    "schedule": { "where": "Desktop header nav link, mobile tab bar button (label and accessible label) and mobile menu item: the musicians' schedule page", "who": "musicians", "maxLength": 12 },
     "library": { "where": "Desktop header nav link and mobile menu item: the chart library", "who": "members", "maxLength": 14, "context": "library of charts (sheet music)" },
     "monitor": { "where": "Desktop header nav link, mobile tab bar button and mobile menu item: the wedge monitor mixer", "who": "musicians with mixer access", "maxLength": 12, "context": "monitor = the wedge (stage monitor) mixer, not a computer screen" },
     "settings": { "where": "Desktop user menu item and mobile menu item: the Settings page", "who": "everyone signed in", "maxLength": 20 },

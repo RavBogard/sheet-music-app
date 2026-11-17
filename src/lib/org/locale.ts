@@ -43,28 +43,3 @@ export function dayInZone(ms: number, timeZone: string): string {
     const get = (t: string) => parts.find((p) => p.type === t)?.value ?? ""
     return `${get("year")}-${get("month")}-${get("day")}`
 }
-
-/** Hour of the day (0-23) an instant falls on in a zone. */
-export function hourInZone(ms: number, timeZone: string): number {
-    const parts = new Intl.DateTimeFormat("en-US", {
-        timeZone,
-        hour: "2-digit",
-        hourCycle: "h23",
-    }).formatToParts(new Date(ms))
-    return Number(parts.find((p) => p.type === "hour")?.value ?? 0)
-}
-
-/**
- * Whether the daily scheduling reminder is due for this tenant in the hour
- * containing `nowMs`. A pinned `reminderUtcHour` wins (CRC and BL: 10, the
- * historical cron slot); otherwise the tenant-local `reminderLocalHour`, so a
- * Jerusalem tenant gets 05:00 local in summer and in winter.
- */
-export function reminderDue(org: OrgId, nowMs: number): boolean {
-    const locale = localeOf(org)
-    if (!locale) return false
-    if (locale.reminderUtcHour !== null && locale.reminderUtcHour !== undefined) {
-        return new Date(nowMs).getUTCHours() === locale.reminderUtcHour
-    }
-    return hourInZone(nowMs, locale.timeZone) === locale.reminderLocalHour
-}

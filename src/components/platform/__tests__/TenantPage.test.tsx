@@ -85,7 +85,7 @@ describe("Tenant page: Features and Status", () => {
         render(<TenantPage orgId="mtprobe" />)
         await loaded()
         const s = section("Features")
-        expect(within(s).getAllByRole("switch")).toHaveLength(6)
+        expect(within(s).getAllByRole("switch")).toHaveLength(5)
         await user.click(within(s).getByRole("switch", { name: "Mixer" }))
         await user.click(within(s).getByRole("button", { name: "Save features" }))
         await within(s).findByTestId("diff-preview")

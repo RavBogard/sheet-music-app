@@ -16,7 +16,6 @@ const firestoreTimestampSchema = z.custom<any>((val: any) => {
 const userRoleSchema = z.enum(['admin', 'band_leader', 'musician', 'member', 'pending', 'denied']).catch('member')
 
 export const schedulingTierSchema = z.enum(['core', 'regular', 'guest']).catch('regular')
-export const assignmentStatusSchema = z.enum(['pending', 'confirmed', 'declined', 'cancelled']).catch('pending')
 
 export const notificationPreferencesSchema = z.object({
     email: z.boolean().catch(true),
@@ -33,7 +32,6 @@ export const musicianProfileSchema = z.object({
     // Scheduling fields
     phone: z.string().nullish().catch(undefined).transform(v => v || undefined),
     schedulingTier: schedulingTierSchema.nullish().catch(undefined).transform(v => v || undefined),
-    calendarFeedToken: z.string().nullish().catch(undefined).transform(v => v || undefined),
     notificationPreferences: notificationPreferencesSchema.nullish().catch(undefined).transform(v => v || undefined),
 }).passthrough() // Allow other fields for future-proofing
 
@@ -114,39 +112,6 @@ export const setlistSchema = z.object({
     templateType: z.enum(['shabbat_morning', 'friday_night', 'rosh_hashanah', 'yom_kippur', 'festival', 'other']).nullish().catch(undefined).transform(v => v || undefined),
     transferredAt: z.string().nullish().catch(undefined).transform(v => v || undefined),
     previousOwnerId: z.string().nullish().catch(undefined).transform(v => v || undefined),
-}).passthrough()
-
-// --- Scheduling Schemas ---
-
-export const schedulingAssignmentSchema = z.object({
-    id: z.string().catch(""),
-    setlistId: z.string(),
-    setlistName: z.string().catch("Unknown Service"),
-    eventDate: firestoreTimestampSchema.nullish().catch(undefined).transform(v => v || null),
-    serviceType: z.string().nullish().catch(undefined).transform(v => v || undefined),
-    musicianUid: z.string(),
-    musicianName: z.string().catch("Unknown"),
-    musicianEmail: z.string().catch(""),
-    musicianPhone: z.string().nullish().catch(undefined).transform(v => v || undefined),
-    instrument: z.string().nullish().catch(undefined).transform(v => v || undefined),
-    status: assignmentStatusSchema,
-    autoConfirmed: z.boolean().catch(false),
-    respondedAt: firestoreTimestampSchema.nullish().catch(undefined).transform(v => v || undefined),
-    declineReason: z.string().nullish().catch(undefined).transform(v => v || undefined),
-    assignedBy: z.string().catch(""),
-    assignedByName: z.string().catch("Unknown"),
-    assignedAt: firestoreTimestampSchema.catch(() => new Date()),
-    notifiedVia: z.array(z.enum(['email', 'sms', 'push', 'in_app'])).nullish().catch(undefined).transform(v => v || undefined),
-}).passthrough()
-
-export const musicianBlockoutSchema = z.object({
-    id: z.string().catch(""),
-    musicianUid: z.string(),
-    startDate: z.string(), // 'YYYY-MM-DD'
-    endDate: z.string(),   // 'YYYY-MM-DD'
-    reason: z.string().nullish().catch(undefined).transform(v => v || undefined),
-    recurring: z.boolean().nullish().catch(undefined).transform(v => v ?? undefined),
-    createdAt: firestoreTimestampSchema.catch(() => new Date()),
 }).passthrough()
 
 export const rabbiProfileSchema = z.object({

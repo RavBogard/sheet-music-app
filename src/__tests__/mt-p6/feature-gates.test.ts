@@ -11,7 +11,7 @@ import { codeOrgConfig } from "@/lib/org/config-code"
 import { OrgConfigSchema, type OrgConfig, type OrgFeatures } from "@/lib/org/config-schema"
 import { FakeFirestore } from "@/lib/org/__tests__/fake-admin-firestore"
 
-const ALL_ON: OrgFeatures = { mixer: true, driveInbox: true, schedulingEmails: true, todayFeed: true, notifyBand: true, perform: true }
+const ALL_ON: OrgFeatures = { mixer: true, driveInbox: true, todayFeed: true, notifyBand: true, perform: true }
 const t = vi.hoisted(() => ({
     features: {} as Record<string, boolean>,
     folderId: "",
@@ -97,8 +97,7 @@ vi.mock("@/lib/today/emit-today", () => ({
     emitToday: (org: string) => emitToday(org),
     readStoredToday: async (org: string) => ({ schemaVersion: 1, org, generatedAt: new Date().toISOString(), services: [] }),
 }))
-vi.mock("@/lib/email-scheduling", () => ({ sendSchedulingEmail: vi.fn(async () => ({ ok: true })) }))
-vi.mock("@/lib/sms", () => ({ sendSchedulingReminderSMS: vi.fn(async () => ({ ok: true })), sendSMS: vi.fn() }))
+vi.mock("@/lib/sms", () => ({ sendSMS: vi.fn() }))
 
 const auth = { headers: { authorization: "Bearer secret" } }
 type PostRoute = (r: NextRequest) => Promise<Response>
@@ -138,12 +137,6 @@ describe("API refused when the flag is off", () => {
         const res = await GET(req())
         expect(res.headers.get("access-control-allow-origin")).toBe("*")
         await expectOff(res, "todayFeed")
-    })
-
-    it("schedulingEmails: POST /api/scheduling/remind", async () => {
-        const { POST } = await import("@/app/api/scheduling/remind/route")
-        t.features = { schedulingEmails: false }
-        await expectOff(await (POST as unknown as PostRoute)(post("/api/scheduling/remind", {})), "schedulingEmails")
     })
 
     it("driveInbox: POST /api/library/sync (and it is only crc's sync)", async () => {
@@ -218,13 +211,6 @@ describe("crons skip a tenant with the flag off", () => {
         t.features = { driveInbox: false }
         await GET(new NextRequest("https://x.test/api/cron/drive-sync", auth))
         expect(runDriveSyncProd.mock.calls.map((c) => c[2])).toEqual(["crc"])
-    })
-
-    it("scheduling-reminder: loops only tenants with schedulingEmails on (BL and an off tenant skipped)", async () => {
-        const { tenantsWithFeature } = await import("@/lib/org/features")
-        expect(await tenantsWithFeature("schedulingEmails")).toEqual(["crc", "throwaway"])
-        t.features = { schedulingEmails: false }
-        expect(await tenantsWithFeature("schedulingEmails")).toEqual(["crc"])
     })
 
     it("bridge-watch: skipped when crc's mixer is off, and when config/monitor names another tenant", async () => {

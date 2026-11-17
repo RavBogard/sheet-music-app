@@ -45,8 +45,6 @@ export interface CongregationConfig {
     stream?: { url: string; leadMinutes?: number }
     scheduling?: {
         rabbiProfiles?: RabbiProfile[]
-        defaultReminderHours?: number     // Hours before service to send reminder (default: 48)
-        allowSelfScheduling?: boolean     // Can musicians volunteer for open slots?
     }
 }
 

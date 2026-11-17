@@ -395,8 +395,7 @@ describe('updateUserRole', () => {
 })
 
 describe('updateUserDisplayName', () => {
-    // v4.4 DL-010: now routes through POST /api/profile/update so the server can
-    // fan the new name out to every scheduling_assignments copy.
+    // Routes through POST /api/profile/update (the server writes users/{uid}).
     it('POSTs to /api/profile/update with displayName body', async () => {
         global.fetch = vi.fn(async () => ({
             ok: true,

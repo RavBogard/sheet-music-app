@@ -30,7 +30,6 @@
     "cloningFrom": "Cloning from {setlistName}…",
     "clonedFrom_one": "Cloned from {setlistName} — {count} track",
     "clonedFrom_other": "Cloned from {setlistName} — {count} tracks",
-    "schedulingFailedAfterCreate": "Setlist created but musician scheduling failed",
     "createdFromNamedTemplate": "Created \"{setlistName}\" from {templateName} — {matched}/{total} songs matched",
     "setlistCreated": "\"{setlistName}\" created!",
     "untitledSong": "Untitled",

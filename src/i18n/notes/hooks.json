@@ -158,11 +158,6 @@
         "maxLength": 100,
         "context": "{setlistName} is the source setlist's name; {count} is the number of rows (songs and other items) copied"
     },
-    "schedulingFailedAfterCreate": {
-        "where": "New-setlist wizard: toast when the setlist was saved but assigning musicians failed",
-        "who": "leaders",
-        "maxLength": 80
-    },
     "createdFromNamedTemplate": {
         "where": "New-setlist wizard: toast after a setlist is created from a template",
         "who": "leaders",

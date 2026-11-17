@@ -99,7 +99,7 @@ describe("reads", () => {
         expect(list.map((t) => t.orgId).sort()).toEqual(["brotherslazaroff", "crc"])
         const crc = await getTenant("crc")
         expect(crc!.config).toEqual(codeOrgConfig("crc"))
-        expect(crc!.summary.featuresOn).toEqual(["mixer", "driveInbox", "schedulingEmails", "todayFeed", "notifyBand", "perform"])
+        expect(crc!.summary.featuresOn).toEqual(["mixer", "driveInbox", "todayFeed", "notifyBand", "perform"])
         expect(await getTenant("nope")).toBeNull()
     })
 

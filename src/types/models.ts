@@ -372,7 +372,6 @@ export interface MusicianProfile {
     // Scheduling fields
     phone?: string // For SMS notifications
     schedulingTier?: SchedulingTier // 'core' | 'regular' | 'guest'
-    calendarFeedToken?: string // Unique token for iCal feed URL
     notificationPreferences?: {
         email: boolean
         sms: boolean
@@ -385,41 +384,6 @@ export interface MusicianProfile {
 /** Scheduling tier determines the default confirmation behavior */
 export type SchedulingTier = 'core' | 'regular' | 'guest'
 
-/** Assignment status tracks the lifecycle of a scheduling request */
-export type AssignmentStatus = 'pending' | 'confirmed' | 'declined' | 'cancelled'
-
-/** A musician's scheduling assignment for a specific setlist/service */
-export interface SchedulingAssignment {
-    id: string
-    /** v11-05-03: tenant scope, denormalized from the parent setlist's orgId at
-     *  create. Optional until the backfill stamps legacy rows; reads default a
-     *  missing value to 'crc' via rowOrg (CRC-safe without backfill). */
-    orgId?: string
-    setlistId: string
-    setlistName: string           // Denormalized
-    eventDate: FirestoreDate | null
-    serviceType?: string          // 'friday_night' | 'shabbat_morning' | etc.
-
-    // Musician
-    musicianUid: string
-    musicianName: string
-    musicianEmail: string
-    musicianPhone?: string
-    instrument?: string
-
-    // Status
-    status: AssignmentStatus
-    autoConfirmed: boolean        // true for core musicians (assumed confirmed)
-    respondedAt?: FirestoreDate
-    declineReason?: string
-
-    // Audit
-    assignedBy: string
-    assignedByName: string
-    assignedAt: FirestoreDate
-    notifiedVia?: ('email' | 'sms' | 'push' | 'in_app')[]
-}
-
 /** Rabbi musical profile for scheduling guidance */
 export interface RabbiProfile {
     name: string                  // "Rabbi Daniel", "Rabbi Randy", "Rabbi Karen"
@@ -427,17 +391,6 @@ export interface RabbiProfile {
     instruments?: string[]        // ["acoustic_guitar", "voice"]
     bandSizeGuidance: string      // "Smaller band OK — Rabbi leads guitar + vocals"
     notes?: string                // Freeform scheduling notes
-}
-
-/** Scheduling history entry for analytics */
-export interface SchedulingHistory {
-    musicianUid: string
-    setlistId: string
-    eventDate: FirestoreDate | null
-    serviceType?: string
-    instrument?: string
-    status: 'played' | 'declined' | 'cancelled' | 'no_show'
-    recordedAt: FirestoreDate
 }
 
 

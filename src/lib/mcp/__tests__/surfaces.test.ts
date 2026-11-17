@@ -46,7 +46,6 @@ describe("surfaceFor — the partition", () => {
             "search_library",
             "lookup_book_page",
             "list_musicians",
-            "assign_musician",
             "notify_band",
         ]) {
             expect(surfaceFor(t), t).toBe("authoring")

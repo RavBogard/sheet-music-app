@@ -14,7 +14,7 @@ import { logger } from '@/lib/logger'
 interface PushNotification {
     title: string
     body: string
-    /** Internal path, e.g. '/schedule' or '/perform/setlist/abc123' */
+    /** Internal path, e.g. '/perform/setlist/abc123' */
     link?: string
 }
 

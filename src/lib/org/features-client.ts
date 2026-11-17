@@ -5,7 +5,7 @@ import type { OrgId } from "@/lib/org/types"
 /**
  * Multi-tenant phase 6 — feature flags, the client-safe half (no server-only).
  *
- * Six flags live on `orgs/{id}.features` (config-schema.ts FEATURE_KEYS).
+ * Five flags live on `orgs/{id}.features` (config-schema.ts FEATURE_KEYS).
  * Charts, setlists and MCP are always on and have no flag.
  *
  * The mixer is CRC-only whatever its flag says: the bare `config/monitor` and

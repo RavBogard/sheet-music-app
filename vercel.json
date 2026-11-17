@@ -23,10 +23,6 @@
             "schedule": "0 */6 * * *"
         },
         {
-            "path": "/api/cron/scheduling-reminder",
-            "schedule": "0 * * * *"
-        },
-        {
             "path": "/api/cron/admin-consistency",
             "schedule": "*/15 * * * *"
         },
