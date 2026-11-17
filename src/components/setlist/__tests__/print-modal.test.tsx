@@ -72,12 +72,6 @@ vi.mock("@/lib/musician-profile", () => ({
 }))
 
 // Mock sub-components to stubs
-vi.mock("../TransposeTrackList", () => ({
-    TransposeTrackList: ({ activeTranspositions }: { activeTranspositions: number }) => (
-        <div data-testid="transpose-track-list">Active: {activeTranspositions}</div>
-    ),
-    TrackTranspose: {},
-}))
 vi.mock("../PrintModeSelector", () => ({
     PrintModeSelector: ({
         printMode,
