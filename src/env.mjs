@@ -14,7 +14,6 @@ const prodRequired = (name) =>
 
 export const env = createEnv({
     server: {
-        FIREBASE_SERVICE_ACCOUNT_KEY: z.string().optional(),
         FIREBASE_CLIENT_EMAIL: prodRequired("FIREBASE_CLIENT_EMAIL"),
         FIREBASE_PRIVATE_KEY: prodRequired("FIREBASE_PRIVATE_KEY"),
         GOOGLE_SERVICE_ACCOUNT_EMAIL: z.string().optional(),
@@ -112,8 +111,6 @@ export const env = createEnv({
         I18N_PSEUDO: z.string().optional(),
         /** Phase 7: force a pseudo-locale ("qps" | "qps-rtl") outside production, to spot untranslated text. Unset: off. */
         I18N_PSEUDO_LOCALE: z.string().optional(),
-        /** "1": drop switched-off features' MCP tools for every tenant, crc and BL included (src/lib/mcp/tenant-tools.ts). Unset: only tenants created through config. */
-        MCP_FEATURE_FILTER: z.string().optional(),
         /** Master switch for the public reader chart endpoint. Unset: off. */
         READER_PUBLIC_CHARTS_ENABLED: z.string().optional(),
         /** CORS allow-list for the public reader chart endpoint. */
@@ -141,8 +138,6 @@ export const env = createEnv({
         NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: z.string().optional(),
         NEXT_PUBLIC_FIREBASE_APP_ID: z.string().optional(),
         NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID: z.string().optional(),
-        NEXT_PUBLIC_GOOGLE_CLIENT_ID: z.string().optional(),
-        NEXT_PUBLIC_GOOGLE_API_KEY: z.string().optional(),
 
         // ── Declared by the 2026-09-19 audit, item (e) ──────────────────────
         /** Absolute base for links in push/email. Unset: the prod domain is hardcoded, which is wrong on a preview deploy. */
@@ -157,7 +152,6 @@ export const env = createEnv({
         NEXT_PUBLIC_PDFJS_VERSION: z.string().optional(),
     },
     runtimeEnv: {
-        FIREBASE_SERVICE_ACCOUNT_KEY: process.env.FIREBASE_SERVICE_ACCOUNT_KEY,
         FIREBASE_CLIENT_EMAIL: process.env.FIREBASE_CLIENT_EMAIL,
         FIREBASE_PRIVATE_KEY: process.env.FIREBASE_PRIVATE_KEY,
         GOOGLE_SERVICE_ACCOUNT_EMAIL: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
@@ -173,8 +167,6 @@ export const env = createEnv({
         NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
         NEXT_PUBLIC_FIREBASE_APP_ID: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
         NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
-        NEXT_PUBLIC_GOOGLE_CLIENT_ID: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
-        NEXT_PUBLIC_GOOGLE_API_KEY: process.env.NEXT_PUBLIC_GOOGLE_API_KEY,
         UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL,
         UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN,
         KV_REST_API_URL: process.env.KV_REST_API_URL,
@@ -205,7 +197,6 @@ export const env = createEnv({
         ORG_CONFIG_SOURCE: process.env.ORG_CONFIG_SOURCE,
         I18N_PSEUDO: process.env.I18N_PSEUDO,
         I18N_PSEUDO_LOCALE: process.env.I18N_PSEUDO_LOCALE,
-        MCP_FEATURE_FILTER: process.env.MCP_FEATURE_FILTER,
         READER_PUBLIC_CHARTS_ENABLED: process.env.READER_PUBLIC_CHARTS_ENABLED,
         READER_MUSIC_ALLOWED_ORIGINS: process.env.READER_MUSIC_ALLOWED_ORIGINS,
         RESEND_FROM_EMAIL_BROSLAZ: process.env.RESEND_FROM_EMAIL_BROSLAZ,

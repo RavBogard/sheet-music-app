@@ -201,22 +201,6 @@ export function createSetlistService(userId: string | null, userName?: string | 
                 throw e;
             }
         },
-        // Subscribe to a single setlist by ID
-        subscribeToSetlist(id: string, callback: (setlist: Setlist | null) => void) {
-            return subscribeWithDb((db) => {
-                const docRef = doc(db, COLLECTION_PATH, id).withConverter(setlistConverter)
-                return onSnapshot(docRef, (snap) => {
-                    if (snap.exists()) {
-                        callback(snap.data() as Setlist);
-                    } else {
-                        callback(null);
-                    }
-                }, (err) => {
-                    logger.error("[Setlist] Listener error for %s:", id, err)
-                });
-            })
-        },
-
         // Setlist sync PR 3: there is no client setlist update here any more.
         // Field edits go through the setlist ops client (editSetlist).
 

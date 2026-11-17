@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { cleanup, fireEvent, render, screen } from "@testing-library/react"
 
-/** Phase 7 i18n: dashboard toolbar, the delete/duplicate/transfer dialogs, the dashboard shell, the audio picker and the editor error page. */
+/** Phase 7 i18n: dashboard toolbar, the delete/duplicate/transfer dialogs, the dashboard shell and the editor error page. */
 
 const dash = vi.hoisted(() => ({ value: {} as Record<string, unknown> }))
 vi.mock("@/hooks/use-setlist-dashboard", () => ({ useSetlistDashboard: () => dash.value }))
@@ -10,14 +10,11 @@ vi.mock("../wizard/CreationWizard", () => ({ CreationWizard: () => null }))
 vi.mock("../importer/ImporterModal", () => ({ ImporterModal: () => null }))
 vi.mock("@/lib/cache-utils", () => ({ isFileCached: vi.fn(async () => false) }))
 vi.mock("next/link", () => ({ default: ({ href, children }: { href: string; children: React.ReactNode }) => <a href={href}>{children}</a> }))
-const lib = vi.hoisted(() => ({ value: { allFiles: [] as Array<{ id: string; name: string; mimeType: string }>, loading: false } }))
-vi.mock("@/lib/library-store", () => ({ useLibraryStore: () => lib.value }))
 
 import { renderPseudo, expectNoUntranslatedText } from "@/test-utils/i18n"
 import { SetlistToolbar } from "../SetlistToolbar"
 import { DeleteSetlistDialog, DuplicateSetlistDialog, TransferSetlistDialog } from "../SetlistDialogs"
 import { SetlistDashboard } from "../SetlistDashboard"
-import { AudioFilePicker } from "../AudioFilePicker"
 import SetlistEditorError from "@/app/(main)/setlists/[id]/error"
 
 const NAME = "Test Setlist A"
@@ -104,26 +101,6 @@ describe.each([false, true])("setlist toolbar + dialogs i18n (rtl=%s)", (rtl) =>
         dash.value = dashboardValue({ pastOrNoDate: [], loadingMore: true })
         renderPseudo(<SetlistDashboard />, { rtl })
         expectNoUntranslatedText(document.body, { allow: ["Test Setlist Upcoming"] })
-    })
-
-    it("AudioFilePicker: empty state and file list", () => {
-        renderPseudo(<AudioFilePicker onSelect={noop} />, { rtl })
-        expectNoUntranslatedText(document.body)
-        fireEvent.click(screen.getByRole("button"))
-        // "Close" is the shared Dialog close button (src/components/ui/dialog.tsx, not this lane's file).
-        expectNoUntranslatedText(document.body, {})
-        cleanup()
-
-        lib.value = { allFiles: [{ id: "a1", name: "Test Track A.mp3", mimeType: "audio/mpeg" }], loading: false }
-        renderPseudo(<AudioFilePicker onSelect={noop} currentFileId="a1" />, { rtl })
-        fireEvent.click(screen.getByRole("button"))
-        expectNoUntranslatedText(document.body, { allow: ["Test Track A.mp3"] })
-        lib.value = { allFiles: [], loading: true }
-        cleanup()
-        renderPseudo(<AudioFilePicker onSelect={noop} />, { rtl })
-        fireEvent.click(screen.getByRole("button"))
-        expectNoUntranslatedText(document.body, {})
-        lib.value = { allFiles: [], loading: false }
     })
 
     it("setlist editor error page", () => {

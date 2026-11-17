@@ -33,8 +33,7 @@ import { join, relative, resolve } from "node:path"
  * call carries `// no-bump: <why nobody renders the field>` on its line or the
  * line above, `bump` is only ever a literal, and the maintenance helpers'
  * options are inline object literals with no spread. The module's unstamped
- * writes (`writeSetlistUnstamped`, `writeSetlistDerived`) are never used
- * outside it.
+ * write (`writeSetlistUnstamped`) is never used outside it.
  */
 
 const ROOT = resolve(process.cwd(), "src")
@@ -282,11 +281,11 @@ describe("OPS-CONTRACT single writer: only src/lib/setlist-ops writes setlists/*
     it("the module's unstamped writes are never used outside it", () => {
         const bad = outside.flatMap((f) => {
             const code = stripComments(f.src)
-            return /\.updateUnstamped\s*\(|\.updateSetlistDerived\s*\(|\bwriteSetlistUnstamped\b|\bwriteSetlistDerived\b/.test(code) ? [f.rel] : []
+            return /\.updateUnstamped\s*\(|\.updateSetlistDerived\s*\(|\bwriteSetlistUnstamped\b/.test(code) ? [f.rel] : []
         })
         expect(bad, bad.join("\n")).toEqual([])
         const index = files.find((x) => x.rel === "lib/setlist-ops/index.ts")!.src
-        expect(index).not.toMatch(/writeSetlistUnstamped|writeSetlistDerived/)
+        expect(index).not.toMatch(/writeSetlistUnstamped/)
     })
 
     it("the guards above see what they claim to (self-test)", () => {
