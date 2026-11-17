@@ -8,8 +8,7 @@ import { join, relative, sep } from "node:path"
  * Any other `setCustomUserClaims(` call could write a `role` claim without `m`,
  * which the transition rule would read as that role in crc.
  *
- * Exempt: tests (they seed emulator fixtures), scripts/.archive and the dated
- * one-off migrations under scripts/migrations (historical, never re-run).
+ * Exempt: tests (they seed emulator fixtures).
  */
 const ROOT = join(__dirname, "..", "..", "..", "..")
 const ALLOWED = new Set([
@@ -36,7 +35,6 @@ function isExempt(rel: string): boolean {
         ALLOWED.has(rel) ||
         /(^|\/)__tests__\//.test(rel) ||
         /\.test\.[cm]?[jt]sx?$/.test(rel) ||
-        rel.startsWith("scripts/migrations/") ||
         rel.startsWith("src/test/") ||
         rel.startsWith("src/test-stubs/")
     )

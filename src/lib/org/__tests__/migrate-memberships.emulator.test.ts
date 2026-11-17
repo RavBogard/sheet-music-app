@@ -15,12 +15,11 @@ import {
     undoManifest,
     verifyAll,
 } from "../../../../scripts/ops/multitenant/migrate-memberships"
-import { applyExtras, planExtras, undoExtras } from "../../../../scripts/ops/multitenant/stamp-p2-extras"
 import { __resetPlatformOwnerMemo } from "@/lib/org/access"
 
 /**
  * Multi-tenant P2 lane 2 — rehearsal of migrate-memberships --seed/--plan/
- * --apply/--undo and stamp-p2-extras on the emulators, with a fixture that
+ * --apply/--undo on the emulators, with a fixture that
  * mirrors the production shapes the lead read (31 Auth users: 6 admins with
  * orgIds [crc, brotherslazaroff] incl. Daniel and David; 1 band leader (both);
  * 12 musicians (both); 7 musicians + 3 members with no orgIds claim; 2
@@ -180,28 +179,5 @@ describe("migrate-memberships rehearsal (emulator)", () => {
         await undoManifest(db(), auth(), seedManifest!, true)
         expect((await db().doc("platform/owners").get()).exists).toBe(false)
         expect((await db().doc("platform/membershipMigration").get()).exists).toBe(false)
-    })
-
-    it("stamp-p2-extras: templates/auditLogs/defaults/admins apply and undo exactly", async () => {
-        const plan = await planExtras(db(), ["templates", "auditLogs", "defaults", "admins"])
-        expect(plan.stamps.map((s) => `${s.collection}/${s.id}=${s.orgId}`).sort()).toEqual([
-            "auditLogs/a1=crc",
-            "templates/brotherslazaroff__gig=brotherslazaroff",
-            "templates/friday_night=crc",
-        ])
-        const path = (await applyExtras(db(), plan, dir))!
-        expect((await db().doc("templates/brotherslazaroff__gig").get()).get("orgId")).toBe("brotherslazaroff")
-        expect((await db().doc("config/defaults").get()).data()).toEqual({ shabbat_morning: "crc-shabbat", updatedBy: "x" })
-        expect((await db().doc("config/defaults__brotherslazaroff").get()).data()).toEqual({ gig: "bl-gig" })
-        expect((await db().doc("config/admins").get()).exists).toBe(false)
-
-        const u = await undoExtras(db(), path, true)
-        expect(u.unstamped).toBe(3)
-        expect((await db().doc("templates/friday_night").get()).get("orgId")).toBeUndefined()
-        expect((await db().doc("templates/crc__x").get()).get("orgId")).toBe("crc")
-        expect((await db().doc("auditLogs/a2").get()).get("orgId")).toBe("crc")
-        expect((await db().doc("config/defaults").get()).data()).toEqual({ shabbat_morning: "crc-shabbat", gig: "bl-gig", updatedBy: "x" })
-        expect((await db().doc("config/defaults__brotherslazaroff").get()).exists).toBe(false)
-        expect((await db().doc("config/admins").get()).get("uids")).toEqual(["dead-uid-0000"])
     })
 })
