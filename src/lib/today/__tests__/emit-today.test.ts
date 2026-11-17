@@ -357,7 +357,7 @@ describe("storage contract", () => {
 
     it("pins the cache posture shared by the object and the route", () => {
         expect(TODAY_CACHE_CONTROL).toBe(
-            "public, max-age=60, s-maxage=60, stale-while-revalidate=600",
+            "public, max-age=60, s-maxage=60, stale-while-revalidate=600, stale-if-error=86400",
         )
     })
 })

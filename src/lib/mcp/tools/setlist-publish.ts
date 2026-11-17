@@ -915,9 +915,8 @@ export async function publishSetlist(
     // No today.json emit here. It used to sit on this path because the reader
     // and the overlays "keyed off publish" — but publish never fired, which is
     // how today.json came to be a cron artifact in practice and then in name
-    // (R2-f, then R-0919-audit-3). /api/cron/emit-today owns the file now,
-    // runs every 15 minutes and checks its own work; a second writer on a
-    // user action was only a way for the two to disagree.
+    // (R2-f, then R-0919-audit-3). /api/today now builds it from the setlists
+    // on request, so there is nothing to write here.
 
     // Song-usage record — fire-and-forget; never fail publish on its account.
     const eventDateRaw = setlist.eventDate ?? setlist.date

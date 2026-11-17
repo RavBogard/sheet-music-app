@@ -92,10 +92,11 @@ const runDriveSyncProd = vi.fn(async (_db: unknown, folder: string, org?: string
 vi.mock("@/lib/drive-sync/poller", () => ({
     runDriveSyncProd: (...a: [unknown, string, string?]) => runDriveSyncProd(...a),
 }))
-const emitToday = vi.fn(async (org: string) => ({ ok: true as const, path: `public/today/${org}.json`, serviceCount: 1 }))
+const buildToday = vi.fn(async (org: string) => ({ schemaVersion: 1, org, generatedAt: new Date().toISOString(), services: [] }))
 vi.mock("@/lib/today/emit-today", () => ({
-    emitToday: (org: string) => emitToday(org),
-    readStoredToday: async (org: string) => ({ schemaVersion: 1, org, generatedAt: new Date().toISOString(), services: [] }),
+    buildToday: (org: string) => buildToday(org),
+    storeToday: vi.fn(async () => true),
+    readStoredToday: async () => null,
 }))
 vi.mock("@/lib/sms", () => ({ sendSMS: vi.fn() }))
 
@@ -110,7 +111,7 @@ beforeEach(() => {
     t.crcMixer = true
     db = new FakeFirestore().seed("config", { monitor: { bridge: { lastSeen: Date.now() } } })
     runDriveSyncProd.mockClear()
-    emitToday.mockClear()
+    buildToday.mockClear()
 })
 
 function post(path: string, body: unknown, org = "throwaway") {
@@ -133,10 +134,13 @@ describe("API refused when the flag is off", () => {
         const { GET } = await import("@/app/api/today/route")
         const req = () => new NextRequest("https://x.test/api/today", { headers: { "x-org-id": "throwaway" } })
         expect((await GET(req())).status).toBe(200)
+        expect(buildToday.mock.calls.map((c) => c[0])).toEqual(["throwaway"])
+        buildToday.mockClear()
         t.features = { todayFeed: false }
         const res = await GET(req())
         expect(res.headers.get("access-control-allow-origin")).toBe("*")
         await expectOff(res, "todayFeed")
+        expect(buildToday).not.toHaveBeenCalled()
     })
 
     it("driveInbox: POST /api/library/sync (and it is only crc's sync)", async () => {
@@ -185,17 +189,6 @@ describe("API refused when the flag is off", () => {
 // ── Crons ───────────────────────────────────────────────────────────────────
 
 describe("crons skip a tenant with the flag off", () => {
-    it("emit-today: throwaway only while todayFeed is on; BL keeps its feed", async () => {
-        const { GET } = await import("@/app/api/cron/emit-today/route")
-        await GET(new NextRequest("https://x.test/api/cron/emit-today", auth))
-        expect(emitToday.mock.calls.map((c) => c[0])).toEqual(["crc", "brotherslazaroff", "throwaway"])
-        emitToday.mockClear()
-        db = new FakeFirestore()
-        t.features = { todayFeed: false }
-        await GET(new NextRequest("https://x.test/api/cron/emit-today", auth))
-        expect(emitToday.mock.calls.map((c) => c[0])).toEqual(["crc", "brotherslazaroff"])
-    })
-
     it("drive-sync: each flagged tenant's own folder, stamped with that tenant", async () => {
         const { GET } = await import("@/app/api/cron/drive-sync/route")
         t.folderId = "throwaway-folder"

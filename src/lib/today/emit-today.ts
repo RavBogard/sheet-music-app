@@ -13,10 +13,12 @@ import { readServicesFromConfig, readStreamFromConfig } from "./config"
 import { TODAY_CACHE_CONTROL, todayStoragePath, type TodayDoc } from "./types"
 
 /**
- * The I/O half of the `today.json` emitter: read the org's setlists + the
- * congregation config, hand them to the pure builder, write the result to a
- * public Storage object. See `build-today.ts` for what it decides and
- * `types.ts` for what may never appear in the output.
+ * The I/O half of `today.json`: read the org's setlists + the congregation
+ * config and hand them to the pure builder. `/api/today` builds on each request
+ * that reaches it (the CDN caches the answer for a minute) and keeps the last
+ * good build in Storage so a failed build can still be answered. See
+ * `build-today.ts` for what it decides and `types.ts` for what may never appear
+ * in the output.
  */
 
 /**
@@ -130,37 +132,35 @@ export async function buildToday(
 }
 
 /**
- * Build and publish the document to `public/today/<org>.json`.
+ * Keep `doc` as the org's last good build at `public/today/<org>.json`.
  *
- * Per-org by construction: the path and the query are both keyed by `org`, so
- * two tenants can never share a file. Best-effort by contract — every caller
- * (publish, cron) logs and continues on failure. A missing `today.json` costs
- * the reader its calendar hint; a failed publish would cost a service.
+ * Per-org by construction: the path is keyed by `org`, so two tenants can never
+ * share a file. The object is not public (storage.rules deny it); only
+ * `/api/today` reads it back, when a build fails. No lock: concurrent writers
+ * write equally good documents and the last one wins. Never throws — a failed
+ * write costs the fallback some freshness, never the response.
  */
-export async function emitToday(
-    org: OrgId = DEFAULT_ORG_ID,
-    now: Date = new Date(),
-): Promise<{ ok: true; path: string; serviceCount: number } | { ok: false; error: string }> {
+export async function storeToday(org: OrgId, doc: TodayDoc): Promise<boolean> {
     try {
-        const doc = await buildToday(org, now)
-        const path = todayStoragePath(org)
+        initAdmin()
         await getStorage()
             .bucket()
-            .file(path)
+            .file(todayStoragePath(org))
             .save(JSON.stringify(doc), {
                 contentType: "application/json",
                 metadata: { cacheControl: TODAY_CACHE_CONTROL },
             })
-        logger.info("[today] emitted", { org, path, services: doc.services.length })
-        return { ok: true, path, serviceCount: doc.services.length }
+        return true
     } catch (err) {
-        const error = err instanceof Error ? err.message : String(err)
-        logger.warn("[today] emit failed (non-blocking)", { org, error })
-        return { ok: false, error }
+        logger.warn("[today] storing the last good copy failed (non-blocking)", {
+            org,
+            error: err instanceof Error ? err.message : String(err),
+        })
+        return false
     }
 }
 
-/** Read back the stored document, or null when none has been emitted yet. */
+/** The last good build, or null when none has been stored yet. */
 export async function readStoredToday(
     org: OrgId = DEFAULT_ORG_ID,
 ): Promise<TodayDoc | null> {

@@ -164,7 +164,7 @@ describe("production", () => {
     })
 
     it("server-to-server paths on a listed third-tenant address resolve to that tenant", async () => {
-        expect(orgOf(await proxy(req("testshul.vercel.app", "/api/cron/emit-today")))).toBe("testshul")
+        expect(orgOf(await proxy(req("testshul.vercel.app", "/api/cron/drive-sync")))).toBe("testshul")
     })
 
     it("the address-list endpoint itself never fetches the list (no recursion)", async () => {
