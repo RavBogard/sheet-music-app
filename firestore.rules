@@ -458,34 +458,6 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // ── SCHEDULING ─────────────────────────────────────────────────────────
-    match /scheduling_assignments/{assignmentId} {
-      allow get: if signedIn()
-        && (resource.data.get('musicianUid', '') == request.auth.uid || atLeast(docOrg(), 'bl'));
-      allow list: if signedIn()
-        && (resource.data.get('musicianUid', '') == request.auth.uid || atLeast(listOrg(), 'bl'));
-      allow write: if false;
-    }
-    match /musician_availability/{blockoutId} {
-      allow get: if signedIn()
-        && (resource.data.get('musicianUid', '') == request.auth.uid || atLeast(docOrg(), 'bl'));
-      allow list: if signedIn()
-        && (resource.data.get('musicianUid', '') == request.auth.uid || atLeast(listOrg(), 'bl'));
-      allow create: if signedIn()
-        && request.resource.data.get('musicianUid', '') == request.auth.uid
-        && newOrgSet() && atLeast(newOrg(), 'me');
-      allow update: if signedIn()
-        && resource.data.get('musicianUid', '') == request.auth.uid
-        && request.resource.data.get('musicianUid', '') == request.auth.uid
-        && orgKept();
-      allow delete: if signedIn() && resource.data.get('musicianUid', '') == request.auth.uid;
-    }
-    match /scheduling_history/{entryId} {
-      allow get: if atLeast(docOrg(), 'bl');
-      allow list: if atLeast(listOrg(), 'bl');
-      allow write: if false;
-    }
-
     // ── CONFIG ─────────────────────────────────────────────────────────────
     // congregation[__t]: branding, read by every signed-in user (unchanged).
     // defaults[__t]: canonical setlist per service type, per tenant.

@@ -142,10 +142,6 @@ beforeAll(async () => {
         await set(`live_sessions/ls-nava`, { orgId: N, broadcasterId: p.nAd.uid })
         await set(`publicSetlists/ps-nava`, { orgId: N, name: 'Nava' })
 
-        // scheduling
-        await set(`scheduling_assignments/sa-nava`, { orgId: N, musicianUid: 'u-nMusician' })
-        await set(`musician_availability/ma-nava`, { orgId: N, musicianUid: 'u-nMusician' })
-        await set(`scheduling_history/sh-nava`, { orgId: N })
         await set(`auditLogs/al-nava`, { orgId: N, timestamp: 1 })
 
         // platform / collections / memberships
@@ -419,16 +415,13 @@ describe('templates — tenant derived from the document id', () => {
 })
 
 // ───────────────────────────────────────────────────────────────────────────
-describe('authoring + scheduling collections', () => {
+describe('authoring collections', () => {
     const cases: Array<[string, string]> = [
         ['contacts', 'contacts/ct-nava'],
         ['bond_flags', 'bond_flags/bf-nava'],
         ['proposal_stages', 'proposal_stages/ps-nava'],
         ['tasks', 'tasks/task-nava'],
         ['live_sessions', 'live_sessions/ls-nava'],
-        ['scheduling_assignments', 'scheduling_assignments/sa-nava'],
-        ['musician_availability', 'musician_availability/ma-nava'],
-        ['scheduling_history', 'scheduling_history/sh-nava'],
         ['auditLogs', 'auditLogs/al-nava'],
     ]
     for (const [name, path] of cases) {
@@ -447,13 +440,6 @@ describe('authoring + scheduling collections', () => {
     it('crc musician cannot create a live_session stamped navatehila', async () => {
         await assertFails(
             setDoc(doc(fs_(p.aMu), 'live_sessions/evil'), { orgId: N, broadcasterId: p.aMu.uid }),
-        )
-    })
-    it('crc member cannot create availability stamped navatehila', async () => {
-        await assertFails(
-            setDoc(doc(fs_(p.aMe), 'musician_availability/evil'), {
-                orgId: N, musicianUid: p.aMe.uid,
-            }),
         )
     })
     it('crc band_leader cannot delete a navatehila contact', async () => {

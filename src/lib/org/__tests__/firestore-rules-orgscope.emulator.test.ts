@@ -300,41 +300,9 @@ describe("v11-01-04 firestore.rules org-scope", () => {
     // are application-only scoped (no client read path / no orgId field).
     // ════════════════════════════════════════════════════════════════════════
     describe("v11-06-01 cross-tenant isolation — v11-05 collections", () => {
-        // A plain musician (reads only their OWN scheduling assignment).
-        function crcMusician() {
-            return testEnv
-                .authenticatedContext("crc-musician", { m: { crc: "mu" } })
-                .firestore()
-        }
-
         beforeEach(async () => {
             await testEnv.withSecurityRulesDisabled(async (ctx) => {
                 const db = ctx.firestore()
-                // scheduling_assignments: crc, bl, and a legacy orgId-absent row.
-                await db.collection("scheduling_assignments").doc("asg-crc").set({
-                    musicianUid: "crc-musician",
-                    setlistId: "sl-crc",
-                    orgId: "crc",
-                })
-                await db.collection("scheduling_assignments").doc("asg-bl").set({
-                    musicianUid: "bl-musician",
-                    setlistId: "sl-bl",
-                    orgId: "brotherslazaroff",
-                })
-                await db.collection("scheduling_assignments").doc("asg-legacy").set({
-                    musicianUid: "crc-musician",
-                    setlistId: "sl-legacy",
-                    // no orgId — pre-stamp legacy row (crc-safe path)
-                })
-                // scheduling_history
-                await db.collection("scheduling_history").doc("hist-crc").set({
-                    setlistId: "sl-crc",
-                    orgId: "crc",
-                })
-                await db.collection("scheduling_history").doc("hist-bl").set({
-                    setlistId: "sl-bl",
-                    orgId: "brotherslazaroff",
-                })
                 // config/congregation (crc bare) + per-org namespaced (bl)
                 await db.collection("config").doc("congregation").set({
                     name: "Central Reform Congregation",
@@ -353,49 +321,6 @@ describe("v11-01-04 firestore.rules org-scope", () => {
                     orgId: "crc",
                 })
             })
-        })
-
-        // ── scheduling_assignments: RULES-LAYER walled (client-readable path) ──
-
-        it("a musician reads their OWN assignment (any tenant, own data)", async () => {
-            await assertSucceeds(
-                crcMusician().collection("scheduling_assignments").doc("asg-crc").get(),
-            )
-        })
-
-        it("LEAK WALLED: a BL leader CANNOT read a CRC assignment", async () => {
-            await assertFails(
-                blLeader().collection("scheduling_assignments").doc("asg-crc").get(),
-            )
-        })
-
-        it("a BL leader CAN read a BL assignment (own tenant)", async () => {
-            await assertSucceeds(
-                blLeader().collection("scheduling_assignments").doc("asg-bl").get(),
-            )
-        })
-
-        it("crc-safe: claimless CRC leader reads crc + legacy(no-orgId) assignments, NOT bl", async () => {
-            await assertSucceeds(
-                crcLeader().collection("scheduling_assignments").doc("asg-crc").get(),
-            )
-            await assertSucceeds(
-                crcLeader().collection("scheduling_assignments").doc("asg-legacy").get(),
-            )
-            await assertFails(
-                crcLeader().collection("scheduling_assignments").doc("asg-bl").get(),
-            )
-        })
-
-        // ── scheduling_history: RULES-LAYER walled ──
-
-        it("LEAK WALLED: a BL leader CANNOT read CRC scheduling_history; CAN read BL", async () => {
-            await assertFails(
-                blLeader().collection("scheduling_history").doc("hist-crc").get(),
-            )
-            await assertSucceeds(
-                blLeader().collection("scheduling_history").doc("hist-bl").get(),
-            )
         })
 
         // ── config/congregation: per-org branding readable; writes admin-only ──
