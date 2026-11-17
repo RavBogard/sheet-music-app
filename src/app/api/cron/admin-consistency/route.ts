@@ -70,9 +70,11 @@ const BRIDGE_ERRCOUNT_DELTA_THRESHOLD = 5
  * Bridge-health (added 2026-05-25) folds a `bridgeHealth` check into
  * the same response, closing bridge-analysis FINDINGS TOP-10 #1+#8.
  * The bridge silently going dark on a Friday night used to be
- * invisible until Daniel noticed; this section adds three independent
- * Sentry alarms — errCount delta > 5/run, lastSeen stale > 3min,
- * x32Connected==false sustained > 5min — patterned on PGR-03. Delta
+ * invisible until Daniel noticed; this section adds two independent
+ * Sentry alarms — errCount delta > 5/run and x32Connected==false sustained
+ * > 5min while the bridge is heartbeating — patterned on PGR-03. A stale
+ * heartbeat alone no longer alarms here: the studio PC is off except around
+ * services, and /api/cron/bridge-watch tells the owner before one. Delta
  * tracking lives at `config/bridgeHealth` (merge-write each run). The
  * `monitor-live/bridgeLog.errCount` doc is the authoritative source
  * for delta computation; `config/monitor.bridge.{lastSeen,x32Connected}`
@@ -581,11 +583,9 @@ type BridgeHealthResponse =
  *                       remote-log debounce means 5 NEW errors in a single
  *                       admin-consistency window is the smallest real spike
  *                       above ambient.  Tune later if noisy.
- *   - lastSeen-stale  — `> 3min` (warning). Bridge heartbeats at 60s; 3min
- *                       = 3 consecutive missed heartbeats, the
- *                       no-misinterpretation threshold for "bridge is
- *                       silent". Lower than storage-backup's 36h because
- *                       bridge silence is a live-service problem.
+ *   - lastSeen-stale  — `> 3min` is reported in the response but does NOT
+ *                       alarm (the PC is off most of the week); it only
+ *                       gates the x32-disconnect alarm below.
  *   - x32-disconnect  — `> 5min sustained` (warning). The desk's transient
  *                       reconnect window is sub-minute; 5min sustained
  *                       means the X32 is genuinely disconnected and worth
@@ -684,7 +684,7 @@ async function readAndAlertBridgeHealth(
             ? Math.max(0, Math.round((nowMs - x32DisconnectedSinceMs) / 1000))
             : null
 
-    // Alarms — all three independent; any subset may fire on a given run.
+    // Alarms — independent; either may fire on a given run.
     if (errCountDelta > BRIDGE_ERRCOUNT_DELTA_THRESHOLD) {
         captureMessage(
             `bridge errCount spike: +${errCountDelta} new errors since last admin-consistency tick (now ${currentErrCount})`,
@@ -702,25 +702,17 @@ async function readAndAlertBridgeHealth(
             "warning",
         )
     }
-    if (
+    // No alarm for a stale heartbeat. The studio PC is switched off except
+    // around services, so "no heartbeat" is the normal state for most of the
+    // week and a warning here fired on every run. Telling the owner the bridge
+    // is down before a service is /api/cron/bridge-watch's job.
+    const heartbeatFresh =
         stalenessSeconds != null &&
-        stalenessSeconds * 1000 > BRIDGE_LASTSEEN_STALENESS_MS
-    ) {
-        captureMessage(
-            `bridge silent: ${(stalenessSeconds / 60).toFixed(1)}min since last heartbeat`,
-            {
-                source: "cron",
-                location: "admin-consistency",
-                extra: {
-                    subsystem: "bridge-health",
-                    lastSeen: lastSeenIso,
-                    stalenessSeconds,
-                },
-            },
-            "warning",
-        )
-    }
+        stalenessSeconds * 1000 <= BRIDGE_LASTSEEN_STALENESS_MS
+    // Only a bridge that is still heartbeating can tell us the desk is
+    // disconnected now; with the PC off, `x32Connected` is its last word.
     if (
+        heartbeatFresh &&
         !x32Connected &&
         x32DisconnectedSeconds != null &&
         x32DisconnectedSeconds * 1000 > BRIDGE_X32_DISCONNECT_ALARM_MS

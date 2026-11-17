@@ -35,8 +35,9 @@ import { bridgeConfigOrg, mixerOn, MIXER_ORG_ID } from "@/lib/org/mixer"
  *
  * ## Relationship to admin-consistency
  *
- * `/api/cron/admin-consistency` ALREADY watches bridge silence, errCount spikes
- * and sustained X32 disconnects — but every one of those alarms is a Sentry
+ * `/api/cron/admin-consistency` watches errCount spikes and sustained X32
+ * disconnects (it no longer warns on bridge silence, which is the normal state
+ * with the PC off) — but every one of those alarms is a Sentry
  * `captureMessage`, which reaches a human only if that human is reading Sentry.
  * This route is the other half: a push + email that arrives on the owner's phone,
  * timed to the service, naming the remedy. It does not replace those alarms and
