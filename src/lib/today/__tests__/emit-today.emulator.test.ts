@@ -1,6 +1,6 @@
 // @vitest-environment node
 //
-// `buildToday` / `emitToday` are pure server code — Firestore reads and one
+// `buildToday` / `storeToday` are pure server code — Firestore reads and one
 // Storage write, no DOM. Node is the right environment, and jsdom's own
 // Uint8Array would only get in the way of the Buffer the Storage stub sees.
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
@@ -14,15 +14,17 @@ import { getFirestore, Timestamp } from "firebase-admin/firestore"
  * asserting; what a bucket does with them is Google's business.
  */
 const saved: Array<{ body: string; options: Record<string, unknown> }> = []
+const paths: string[] = []
 let stored: string | null = null
 /** Flipped by the failure test — the stub's save() throws while it is set. */
 let saveError: string | null = null
 vi.mock("firebase-admin/storage", () => ({
     getStorage: () => ({
         bucket: () => ({
-            file: () => ({
+            file: (path: string) => ({
                 save: async (body: string, options: Record<string, unknown>) => {
                     if (saveError) throw new Error(saveError)
+                    paths.push(path)
                     saved.push({ body, options })
                     stored = body
                 },
@@ -34,7 +36,7 @@ vi.mock("firebase-admin/storage", () => ({
 }))
 vi.mock("@/lib/rate-limit", () => ({ checkUserRateLimit: vi.fn().mockResolvedValue(null) }))
 
-import { buildToday, emitToday, readStoredToday } from "../emit-today"
+import { buildToday, storeToday, readStoredToday } from "../emit-today"
 import { TODAY_CACHE_CONTROL } from "../types"
 
 describe("today.json (emulator)", () => {
@@ -53,6 +55,7 @@ describe("today.json (emulator)", () => {
     })
     beforeEach(async () => {
         saved.length = 0
+        paths.length = 0
         stored = null
         saveError = null
         for (const col of ["setlists", "tracks", "config"]) {
@@ -189,16 +192,13 @@ describe("today.json (emulator)", () => {
         expect(doc.services).toEqual([])
     })
 
-    it("emitToday writes the document with the agreed cache posture", async () => {
+    it("storeToday writes the built document with the agreed cache posture", async () => {
         await seedConfig()
         const id = await seedSetlist("published-3")
         await seedTracks(id)
 
-        const res = await emitToday("crc", NOW)
-        expect(res.ok).toBe(true)
-        if (!res.ok) return
-        expect(res.path).toBe("public/today/crc.json")
-        expect(res.serviceCount).toBe(1)
+        expect(await storeToday("crc", await buildToday("crc", NOW))).toBe(true)
+        expect(paths).toEqual(["public/today/crc.json"])
 
         expect(saved).toHaveLength(1)
         expect(saved[0].options.contentType).toBe("application/json")
@@ -214,26 +214,22 @@ describe("today.json (emulator)", () => {
         expect(await readStoredToday("crc")).toBeNull()
     })
 
-    it("readStoredToday round-trips what emitToday wrote", async () => {
+    it("readStoredToday round-trips what storeToday wrote", async () => {
         await seedConfig()
         await seedSetlist("published-4")
-        await emitToday("crc", NOW)
+        await storeToday("crc", await buildToday("crc", NOW))
 
         const doc = await readStoredToday("crc")
         expect(doc?.services[0].setlistId).toBe("published-4")
     })
 
-    it("emitToday never throws — a Storage failure is reported, not raised", async () => {
-        // The whole contract of this call site: publish must not fail because
-        // today.json could not be written. A missing today.json costs the
-        // reader a calendar hint; a failed publish costs a service.
+    it("storeToday never throws — a Storage failure is reported, not raised", async () => {
+        // `/api/today` must answer with the build it has even when the last
+        // good copy could not be kept.
         await seedConfig()
         await seedSetlist("published-5")
         saveError = "bucket unavailable"
 
-        const res = await emitToday("crc", NOW)
-        expect(res.ok).toBe(false)
-        if (res.ok) return
-        expect(res.error).toContain("bucket unavailable")
+        expect(await storeToday("crc", await buildToday("crc", NOW))).toBe(false)
     })
 })

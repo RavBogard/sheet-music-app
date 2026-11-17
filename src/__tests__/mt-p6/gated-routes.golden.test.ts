@@ -7,7 +7,11 @@
  *
  *   drive-sync cron   one tick over CRC's env inbox folder; dormant when unset
  *   bridge-watch cron reads CRC's bare config/monitor and answers healthy
- *   GET /api/today    serves the stored document for crc and for BL
+ *   GET /api/today    serves crc's document and BL's, each its own
+ *
+ * Edited once, honestly: when `today.json` moved from a stored file to a
+ * build on request, the mocks below moved from `readStoredToday` to
+ * `buildToday`. What each route answers is unchanged.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { NextRequest } from "next/server"
@@ -48,11 +52,11 @@ vi.mock("@/app/api/cron/bridge-watch/evaluate", () => ({
     toMillis: () => null,
 }))
 
-const readStoredToday = vi.fn(async (org: string) => ({ schemaVersion: 1, org, generatedAt: "2026-10-12T00:00:00.000Z", services: [] }))
+const buildToday = vi.fn(async (org: string) => ({ schemaVersion: 1, org, generatedAt: "2026-10-12T00:00:00.000Z", services: [] }))
 vi.mock("@/lib/today/emit-today", () => ({
-    readStoredToday: (org: string) => readStoredToday(org),
-    buildToday: vi.fn(async () => ({ schemaVersion: 1, generatedAt: new Date().toISOString(), services: [] })),
-    emitToday: vi.fn(),
+    buildToday: (org: string) => buildToday(org),
+    storeToday: vi.fn(async () => true),
+    readStoredToday: vi.fn(async () => null),
 }))
 
 const auth = { headers: { authorization: "Bearer secret" } }
@@ -61,7 +65,7 @@ beforeEach(() => {
     db = new FakeFirestore().seed("config", { monitor: { bridge: { lastSeen: Date.now() } } })
     runDriveSyncProd.mockClear()
     evaluateBridge.mockClear()
-    readStoredToday.mockClear()
+    buildToday.mockClear()
     delete envState.env.CHART_INBOX_DRIVE_FOLDER_ID
     delete envState.env.DAVID_DRIVE_DROP_FOLDER_ID
 })
@@ -90,7 +94,7 @@ describe("golden bridge-watch cron", () => {
         // Since the studio PC went on/off per service, the route only checks the bridge 20-40 min
         // before a service: give it one starting in 30 minutes.
         const now = Date.now()
-        readStoredToday.mockResolvedValueOnce({
+        buildToday.mockResolvedValueOnce({
             schemaVersion: 1,
             org: "crc",
             generatedAt: new Date(now).toISOString(),
@@ -112,7 +116,7 @@ describe("golden bridge-watch cron", () => {
 
 describe("golden GET /api/today", () => {
     for (const org of ["crc", "brotherslazaroff"]) {
-        it(`serves ${org}'s stored document`, async () => {
+        it(`serves ${org}'s document`, async () => {
             const { GET } = await import("@/app/api/today/route")
             const res = await GET(new NextRequest("https://x.test/api/today", { headers: { "x-org-id": org } }))
             expect(res.status).toBe(200)

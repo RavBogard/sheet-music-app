@@ -1545,8 +1545,8 @@ export interface RecomputeSetlistTrackCountResult {
  * `setlists/{id}.trackCount` counter. Re-reads the actual `tracks/{*}` top-
  * level subcollection and writes the corrected count when drifted. Idempotent.
  *
- * Backstop for setlists outside the daily verify-chart-bond-health cron's
- * window (past services, drafts). Closes C7I4-002 root-cause repairs that
+ * The manual repair: every setlist writer derives the counts in its own
+ * transaction, so no cron heals them. Closes C7I4-002 root-cause repairs that
  * accumulated before the `/api/setlist/delete` HTTP cascade gap fix shipped.
  *
  * Admin-only: the underlying issue is data-hygiene and the operator should
@@ -1574,7 +1574,7 @@ export async function recomputeSetlistTrackCount(
             "forbidden_role",
             "recompute_setlist_track_count is admin-only.",
             { callerRole: role ?? null, requiredRoles: ["admin"] },
-            "Ask an admin to run the repair, or invoke the verify-chart-bond-health cron which auto-heals upcoming-published setlists.",
+            "Ask an admin to run the repair.",
         )
     }
 

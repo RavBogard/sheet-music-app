@@ -3,7 +3,6 @@ import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
 import { env } from "@/env.mjs"
 import { verifySetlistCharts } from "@/lib/mcp/tools/library-verify"
-import { recomputeTrackCount } from "@/lib/setlist-track-count"
 import { captureException, captureMessage } from "@/lib/error-reporting"
 import { isTestUid } from "@/lib/test-isolation"
 import { bearerSecretMatches } from "@/lib/http/bearer-secret"
@@ -11,24 +10,22 @@ import { bearerSecretMatches } from "@/lib/http/bearer-secret"
 /**
  * Cycle-7-fixes Lane 3 — chart-bond health cron.
  *
- * Daily Thursday-afternoon-UTC run (`0 15 * * 4` in vercel.json). Enumerates
- * every non-test setlist with an upcoming eventDate, runs the same chart-
- * health probe `verify_setlist_charts` would, and writes a row to
- * `chart_bond_alerts/{alertId}` whenever:
+ * Weekly, Thursday afternoon UTC (`0 15 * * 4` in vercel.json), so a broken
+ * chart is found before Friday night. Enumerates every non-test setlist with
+ * an upcoming eventDate (or none), runs the same chart-health probe
+ * `verify_setlist_charts` would, and reports to Sentry (`captureMessage`)
+ * whenever:
  *
  *   - aggregate okCount/bondedCount across the surveyed set is < 80%, OR
  *   - any individual surveyed setlist's okCount/bondedCount is < 70%
  *     (only setlists with at least MIN_BONDED_FOR_BREACH bonded tracks are
  *     evaluated, so stub/skeleton setlists never alert).
  *
- * The alert document is the surface a future admin push notification reads.
- * No push wiring is shipped in this lane; the document is the contract.
- *
- * Side effect: when a setlist's denormalized `trackCount` disagrees with the
- * actual `tracks/` subcollection length, the cron repairs it inline. This
- * closes C7I4-002 (Eitan Shabbat Morning 2/21 reports trackCount=43 but the
- * subcollection is empty) — once the cron runs daily, every stale denormalized
- * counter self-heals before Friday-night.
+ * It writes nothing. It used to also heal each setlist's derived counts
+ * (`trackCount`/`songCount`/`fileIds`) and write a `chart_bond_alerts` row;
+ * every setlist writer now derives the counts in its own transaction
+ * (`recompute_setlist_track_count` remains the manual repair), and nothing
+ * ever read the alert rows.
  *
  * Auth: `CRON_SECRET` Bearer mirrors the other crons. Vercel sets this
  * automatically on its cron invocations.
@@ -63,7 +60,6 @@ interface PerSetlistSummary {
     shortcutUnresolvedCount: number
     phantomBonds: number
     okPct: number
-    repairedTrackCount: { from: number; to: number } | null
 }
 
 export const dynamic = "force-dynamic"
@@ -139,19 +135,8 @@ export async function GET(req: NextRequest) {
         let aggTrack = 0
         let aggBonded = 0
         let aggOk = 0
-        let repaired = 0
-        const repairs: { setlistId: string; from: number; to: number }[] = []
 
         for (const { id, data } of candidates) {
-            const repairResult = await recomputeTrackCount(db, id, data)
-            const repair =
-                repairResult.drifted && repairResult.written
-                    ? { from: repairResult.declared, to: repairResult.actual }
-                    : null
-            if (repair) {
-                repaired++
-                repairs.push({ setlistId: id, ...repair })
-            }
             // verify_setlist_charts: read-only (markOrphaned omitted) since
             // reconcile_library is the authoritative orphan-marker; the cron's
             // purpose is to ALERT, not to actuate.
@@ -184,7 +169,6 @@ export async function GET(req: NextRequest) {
                 shortcutUnresolvedCount: result.shortcutUnresolvedCount,
                 phantomBonds: result.phantomBonds,
                 okPct: Math.round(okPct * 1000) / 10,
-                repairedTrackCount: repair,
             })
             aggTrack += result.trackCount
             aggBonded += result.bondedCount
@@ -201,9 +185,8 @@ export async function GET(req: NextRequest) {
         )
 
         if (aggregateBreached || perSetlistBreached.length > 0) {
-            // PGR-03: chart_bond_alerts is a write-only queue with no reader,
-            // so route the breach to Sentry (live in prod) — that is how it
-            // actually reaches Daniel, the solo maintainer, before Friday.
+            // PGR-03: Sentry (live in prod) is how the breach actually
+            // reaches Daniel, the solo maintainer, before Friday.
             captureMessage(
                 `[chart-bond-alert] ${perSetlistBreached.length} setlist(s) below ${PER_SETLIST_OK_THRESHOLD * 100}% bonded-OK; aggregate ${Math.round(aggregateOkPct * 1000) / 10}% across ${candidates.length} surveyed`,
                 {
@@ -224,33 +207,6 @@ export async function GET(req: NextRequest) {
                     },
                 },
             )
-            try {
-                await db.collection("chart_bond_alerts").add({
-                    detectedAt: nowIso,
-                    aggregateOkPct: Math.round(aggregateOkPct * 1000) / 10,
-                    aggregateBreached,
-                    perSetlistBreachedCount: perSetlistBreached.length,
-                    candidatesSurveyed: candidates.length,
-                    summaries,
-                    perSetlistBreached: perSetlistBreached.map((s) => ({
-                        setlistId: s.setlistId,
-                        name: s.name,
-                        eventDate: s.eventDate,
-                        okPct: s.okPct,
-                        missingCount: s.missingCount,
-                    })),
-                    repairs,
-                    cron: CRON_LANE,
-                })
-            } catch (err) {
-                logger.warn(
-                    `[cron/${CRON_LANE}] chart_bond_alerts write failed: ${err instanceof Error ? err.message : String(err)}`,
-                )
-                captureException(err, {
-                    source: "cron",
-                    location: `${CRON_LANE}:alert-write`,
-                })
-            }
         }
 
         logger.info(`[cron/${CRON_LANE}] complete`, {
@@ -259,7 +215,6 @@ export async function GET(req: NextRequest) {
             aggOk,
             aggregateOkPct: Math.round(aggregateOkPct * 1000) / 10,
             perSetlistBreached: perSetlistBreached.length,
-            repaired,
         })
 
         return NextResponse.json({
@@ -268,8 +223,7 @@ export async function GET(req: NextRequest) {
             aggregateOkPct: Math.round(aggregateOkPct * 1000) / 10,
             aggregateBreached,
             perSetlistBreached: perSetlistBreached.length,
-            repaired,
-            alertWritten: aggregateBreached || perSetlistBreached.length > 0,
+            alerted: aggregateBreached || perSetlistBreached.length > 0,
         })
     } catch (err) {
         logger.error(`[cron/${CRON_LANE}] check failed:`, err)

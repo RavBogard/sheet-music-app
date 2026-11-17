@@ -107,10 +107,13 @@ export function todayStoragePath(orgId: string): string {
 }
 
 /**
- * Cache posture, identical on the Storage object and the serving route.
- * One minute fresh, ten minutes of stale-while-revalidate: a publish should
+ * Cache posture of the serving route (also stamped on the stored copy).
+ * One minute fresh, ten minutes of stale-while-revalidate: an edit should
  * reach the reader within a minute, and a CDN hiccup should never leave the
- * band's surfaces staring at a 404 mid-service.
+ * band's surfaces staring at a 404 mid-service. `stale-if-error` (a day) lets
+ * a cache keep serving its last good copy if the function itself errors or
+ * times out; a build that merely fails is answered from the stored copy by
+ * the route.
  */
 export const TODAY_CACHE_CONTROL =
-    "public, max-age=60, s-maxage=60, stale-while-revalidate=600"
+    "public, max-age=60, s-maxage=60, stale-while-revalidate=600, stale-if-error=86400"

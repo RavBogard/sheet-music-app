@@ -24,9 +24,8 @@
  * `lastNotifiedAt` stays on the setlist doc — it is a notification fact ("when
  * did we last tell the band"), not a publish fact.
  *
- * There is no `today.json` emit here any more. The cron owns that file and
- * runs every 15 minutes with a staleness check behind it; a second writer on
- * a user action was a way for the two to disagree.
+ * There is no `today.json` emit here any more. `/api/today` builds that
+ * document from the setlists on request, so there is nothing to write.
  */
 
 import { NextResponse } from 'next/server'
@@ -159,7 +158,7 @@ export const POST = createApiHandler(
             async (_tx, m) => {
                 m.updateSetlist({ lastNotifiedAt: FieldValue.serverTimestamp() })
             },
-            // no-bump: lastNotifiedAt is read only by the server crons (emit-today, bridge-watch); no device renders it
+            // no-bump: lastNotifiedAt is read only by the server (bridge-watch); no device renders it
             { bump: false },
         )
 
@@ -368,9 +367,7 @@ export const POST = createApiHandler(
             batch.commit().catch(err => logger.warn('[NotifyBand] Email events write failed:', err))
         }
 
-        // No today.json emit here. The cron at /api/cron/emit-today owns that
-        // file, runs every 15 minutes and checks its own work; a second writer
-        // on a user action was only a way for the two to disagree.
+        // No today.json emit here: /api/today builds it from the setlists on request.
 
         // Bust Next.js cache so listings reflect the new notification state
         try {
