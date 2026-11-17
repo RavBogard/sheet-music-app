@@ -10,13 +10,9 @@
     "dist": "tsc && npx electron-builder --win"
   },
   "dependencies": {
-    "@types/selfsigned": "^2.0.4",
-    "@types/ws": "^8.18.1",
     "dotenv": "^16.4.5",
     "electron-updater": "^6.3.9",
-    "firebase-admin": "^12.0.0",
-    "selfsigned": "^5.5.0",
-    "ws": "^8.19.0"
+    "firebase-admin": "^12.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
