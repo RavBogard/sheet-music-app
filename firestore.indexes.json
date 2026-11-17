@@ -33,20 +33,6 @@
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "ownerId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "date",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "setlists",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
           "fieldPath": "orgId",
           "order": "ASCENDING"
         },
@@ -81,20 +67,6 @@
         {
           "fieldPath": "timestamp",
           "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "bridge-setup-codes",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "createdBy",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "used",
-          "order": "ASCENDING"
         }
       ]
     },
@@ -186,20 +158,6 @@
         },
         {
           "fieldPath": "committedAt",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "users",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "orgIds",
-          "arrayConfig": "CONTAINS"
-        },
-        {
-          "fieldPath": "role",
           "order": "ASCENDING"
         }
       ]
