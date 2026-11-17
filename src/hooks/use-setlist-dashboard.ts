@@ -127,7 +127,6 @@ export function useSetlistDashboard({
     const [duplicateConfirmOpen, setDuplicateConfirmOpen] = useState(false)
     const [setlistToDuplicate, setSetlistToDuplicate] = useState<Setlist | null>(null)
     const [showTransferDialog, setShowTransferDialog] = useState(false)
-    const [showImporterModal, setShowImporterModal] = useState(false)
     const [selectedSetlistForTransfer, setSelectedSetlistForTransfer] = useState<Setlist | null>(null)
     const [transferEmail, setTransferEmail] = useState("")
 
@@ -424,7 +423,6 @@ export function useSetlistDashboard({
         deleteConfirmOpen, setDeleteConfirmOpen, setlistToDelete,
         duplicateConfirmOpen, setDuplicateConfirmOpen, setlistToDuplicate,
         showTransferDialog, setShowTransferDialog,
-        showImporterModal, setShowImporterModal,
         selectedSetlistForTransfer, setSelectedSetlistForTransfer,
         transferEmail, setTransferEmail,
         handleSelect, handleDeleteClick, confirmDelete,

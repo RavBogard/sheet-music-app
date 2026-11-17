@@ -11,7 +11,6 @@ import { DEFAULT_SHORT_NAME } from "@/lib/constants"
 import { TEMPLATE_LABELS } from "@/lib/liturgical-templates"
 import { UpcomingSetlistCard, SetlistCard, SetlistInfoLine, PlaceholderCard } from "./SetlistCards"
 import { DeleteSetlistDialog, DuplicateSetlistDialog, TransferSetlistDialog } from "./SetlistDialogs"
-import { ImporterModal } from "./importer/ImporterModal"
 import { SetlistSearchButton, SetlistSearchField } from "./SetlistToolbar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
 import { useCongregation } from "@/lib/congregation-store"
@@ -46,7 +45,6 @@ export function SetlistDashboard({ serverShortName, ...props }: UseSetlistDashbo
         deleteConfirmOpen, setDeleteConfirmOpen, setlistToDelete,
         duplicateConfirmOpen, setDuplicateConfirmOpen, setlistToDuplicate,
         showTransferDialog, setShowTransferDialog,
-        showImporterModal, setShowImporterModal,
         selectedSetlistForTransfer,
         transferEmail, setTransferEmail,
         handleSelect, handleDeleteClick, confirmDelete,
@@ -214,7 +212,6 @@ export function SetlistDashboard({ serverShortName, ...props }: UseSetlistDashbo
 
             {/* Modals */}
             <CreationWizard open={showWizard} onOpenChange={handleWizardOpenChange} prefilledDate={wizardPrefilledDate} />
-            <ImporterModal open={showImporterModal} onOpenChange={setShowImporterModal} onComplete={(id: string) => router.push(`/setlists/${id}`)} />
             <DeleteSetlistDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen} setlistName={setlistToDelete?.name} onConfirm={confirmDelete} />
             <DuplicateSetlistDialog open={duplicateConfirmOpen} onOpenChange={setDuplicateConfirmOpen} setlistName={setlistToDuplicate?.name} onConfirm={confirmDuplicate} />
             <TransferSetlistDialog open={showTransferDialog} onClose={() => setShowTransferDialog(false)} setlistName={selectedSetlistForTransfer?.name} email={transferEmail} onEmailChange={setTransferEmail} onConfirm={handleTransfer} transferring={transferring} />
